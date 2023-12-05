@@ -145,7 +145,9 @@ add to a function created in the previous chapter (``InitializeModule()``):
 
       // Create new pass and analysis managers.
       TheFPM = std::make_unique<FunctionPassManager>();
+      TheLAM = std::make_unique<LoopAnalysisManager>();
       TheFAM = std::make_unique<FunctionAnalysisManager>();
+      TheCGAM = std::make_unique<CGSCCAnalysisManager>();
       TheMAM = std::make_unique<ModuleAnalysisManager>();
       ThePIC = std::make_unique<PassInstrumentationCallbacks>();
       TheSI = std::make_unique<StandardInstrumentations>(*TheContext,
@@ -154,12 +156,11 @@ add to a function created in the previous chapter (``InitializeModule()``):
       ...
 
 After initializing the global module ``TheModule`` and the FunctionPassManager,
-we need to initialize other parts of the framework. The FunctionAnalysisManager
-and ModuleAnalysisManager allow us to add analysis passes that run across the
-function and the whole module, respectively. PassInstrumentationCallbacks
-and StandardInstrumentations are required for the pass instrumentation
-framework, which allows developers to customize what
-happens between passes.
+we need to initialize other parts of the framework. The four AnalysisManagers
+allow us to add analysis passes that run across the four levels of the IR
+hierarchy. PassInstrumentationCallbacks and StandardInstrumentations are
+required for the pass instrumentation framework, which allows developers to
+customize what happens between passes.
 
 Once these managers are set up, we use a series of "addPass" calls to add a
 bunch of LLVM transform passes:
@@ -181,29 +182,15 @@ The passes we choose here are a pretty standard set
 of "cleanup" optimizations that are useful for a wide variety of code. I won't
 delve into what they do but, believe me, they are a good starting place :).
 
-Next, we register the analysis passes used by the transform passes. This is
-generally done using ``PassBuilder::register...Analyses()``, but we'll do it
-manually to make clearer what's under the hood.
+Next, we register the analysis passes used by the transform passes.
 
 .. code-block:: c++
 
       // Register analysis passes used in these transform passes.
-      TheFAM->registerPass([&] { return AAManager(); });
-      TheFAM->registerPass([&] { return AssumptionAnalysis(); });
-      TheFAM->registerPass([&] { return DominatorTreeAnalysis(); });
-      TheFAM->registerPass([&] { return LoopAnalysis(); });
-      TheFAM->registerPass([&] { return MemoryDependenceAnalysis(); });
-      TheFAM->registerPass([&] { return MemorySSAAnalysis(); });
-      TheFAM->registerPass([&] { return OptimizationRemarkEmitterAnalysis(); });
-      TheFAM->registerPass([&] {
-        return OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>(*TheMAM);
-      });
-      TheFAM->registerPass(
-          [&] { return PassInstrumentationAnalysis(ThePIC.get()); });
-      TheFAM->registerPass([&] { return TargetIRAnalysis(); });
-      TheFAM->registerPass([&] { return TargetLibraryAnalysis(); });
-
-      TheMAM->registerPass([&] { return ProfileSummaryAnalysis(); });
+      PassBuilder PB;
+      PB.registerModuleAnalyses(*TheMAM);
+      PB.registerFunctionAnalyses(*TheFAM);
+      PB.crossRegisterProxies(*TheLAM, *TheFAM, *TheCGAM, *TheMAM);
     }
 
 Once the PassManager is set up, we need to make use of it. We do this by

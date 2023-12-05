@@ -83,7 +83,6 @@ bool AMDGPUPALMetadata::setFromLegacyBlob(StringRef Blob) {
 
 // Set PAL metadata from msgpack blob.
 bool AMDGPUPALMetadata::setFromMsgPackBlob(StringRef Blob) {
-  msgpack::Reader Reader(Blob);
   return MsgPackDoc.readFromBlob(Blob, /*Multi=*/false);
 }
 
@@ -244,6 +243,7 @@ void AMDGPUPALMetadata::setScratchSize(CallingConv::ID CC, unsigned Val) {
 void AMDGPUPALMetadata::setFunctionScratchSize(StringRef FnName, unsigned Val) {
   auto Node = getShaderFunction(FnName);
   Node[".stack_frame_size_in_bytes"] = MsgPackDoc.getNode(Val);
+  Node[".backend_stack_size"] = MsgPackDoc.getNode(Val);
 }
 
 // Set the amount of LDS used in bytes in the metadata.

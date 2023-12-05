@@ -102,8 +102,8 @@ test_layout_mapping_stride(E ext, std::array<typename E::index_type, E::rank()> 
 constexpr bool test() {
   constexpr size_t D = std::dynamic_extent;
   test_layout_mapping_stride(std::extents<int>(), std::array<int, 0>{}, true);
-  test_layout_mapping_stride(std::extents<char, 4, 5>(), std::array<char, 2>{1, 4}, true);
-  test_layout_mapping_stride(std::extents<char, 4, 5>(), std::array<char, 2>{1, 5}, false);
+  test_layout_mapping_stride(std::extents<signed char, 4, 5>(), std::array<signed char, 2>{1, 4}, true);
+  test_layout_mapping_stride(std::extents<signed char, 4, 5>(), std::array<signed char, 2>{1, 5}, false);
   test_layout_mapping_stride(std::extents<unsigned, D, 4>(7), std::array<unsigned, 2>{20, 2}, false);
   test_layout_mapping_stride(std::extents<size_t, D, D, D, D>(3, 3, 3, 3), std::array<size_t, 4>{3, 1, 9, 27}, true);
   return true;

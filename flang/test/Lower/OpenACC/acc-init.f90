@@ -1,6 +1,5 @@
 ! This test checks lowering of OpenACC init directive.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 subroutine acc_init

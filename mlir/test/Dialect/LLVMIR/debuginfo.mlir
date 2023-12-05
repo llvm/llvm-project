@@ -162,8 +162,8 @@ llvm.func @addr(%arg: i64) {
 
 // CHECK: llvm.func @value(%[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
 llvm.func @value(%arg1: i32, %arg2: i32) {
-  // CHECK: llvm.intr.dbg.value #[[VAR1]] = %[[ARG1]]
-  llvm.intr.dbg.value #var1 = %arg1 : i32
+  // CHECK: llvm.intr.dbg.value #[[VAR1]] #llvm.di_expression<[DW_OP_LLVM_fragment(16, 8), DW_OP_plus_uconst(2), DW_OP_deref]> = %[[ARG1]]
+  llvm.intr.dbg.value #var1 #llvm.di_expression<[DW_OP_LLVM_fragment(16, 8), DW_OP_plus_uconst(2), DW_OP_deref]> = %arg1 : i32
   // CHECK: llvm.intr.dbg.value #[[VAR2]] = %[[ARG2]]
   llvm.intr.dbg.value #var2 = %arg2 : i32
   // CHECK: llvm.intr.dbg.label #[[LABEL1]]

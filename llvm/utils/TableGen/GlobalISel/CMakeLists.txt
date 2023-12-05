@@ -5,6 +5,9 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_library(LLVMTableGenGlobalISel STATIC DISABLE_LLVM_LINK_LLVM_DYLIB
   CodeExpander.cpp
+  CXXPredicates.cpp
+  MatchDataInfo.cpp
+  Patterns.cpp
 
   DEPENDS
   vt_gen

@@ -878,7 +878,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>{Name,s}</DisplayString>
   </Type>
   <Type Name="clang::FileEntry">
-    <DisplayString>{Name,s}</DisplayString>
+    <DisplayString>{RealPathName,s}</DisplayString>
   </Type>
   <Type Name="clang::DirectoryEntry">
     <DisplayString>{Name,s}</DisplayString>

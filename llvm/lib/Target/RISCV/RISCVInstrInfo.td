@@ -1242,6 +1242,10 @@ def anyext_oneuse : unop_oneuse<anyext>;
 def ext_oneuse    : unop_oneuse<ext>;
 def fpext_oneuse  : unop_oneuse<any_fpextend>;
 
+def 33signbits_node : PatLeaf<(i64 GPR:$src), [{
+  return CurDAG->ComputeNumSignBits(SDValue(N, 0)) > 32;
+}]>;
+
 /// Simple arithmetic operations
 
 def : PatGprGpr<add, ADD>;
@@ -2002,6 +2006,15 @@ def : Pat<(binop_allwusers<add> GPR:$rs1, (AddiPair:$rs2)),
                  (AddiPairImmSmall AddiPair:$rs2))>;
 }
 
+let Predicates = [HasShortForwardBranchOpt] in
+def : Pat<(XLenVT (abs GPR:$rs1)),
+          (PseudoCCSUB (XLenVT GPR:$rs1), (XLenVT X0), /* COND_LT */ 2,
+           (XLenVT GPR:$rs1), (XLenVT X0), (XLenVT GPR:$rs1))>;
+let Predicates = [HasShortForwardBranchOpt, IsRV64] in
+def : Pat<(sext_inreg (abs 33signbits_node:$rs1), i32),
+          (PseudoCCSUBW (i64 GPR:$rs1), (i64 X0), /* COND_LT */ 2,
+           (i64 GPR:$rs1), (i64 X0), (i64 GPR:$rs1))>;
+
 //===----------------------------------------------------------------------===//
 // Experimental RV64 i32 legalization patterns.
 //===----------------------------------------------------------------------===//
@@ -2012,6 +2025,11 @@ def simm12i32 : ImmLeaf<i32, [{return isInt<12>(Imm);}]>;
 // checking happy so we can use ADDIW which expects an XLen immediate.
 def as_i64imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
+}]>;
+
+def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
+  KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0), 0);
+  return Known.isNonNegative();
 }]>;
 
 let Predicates = [IsRV64] in {
@@ -2054,6 +2072,9 @@ def : PatGprImm<sra, SRAIW, uimm5, i32>;
 def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
           (SRLI (SLLI $rs, (i64 (XLenSubTrailingOnes $mask))),
                 (i64 (XLenSubTrailingOnes $mask)))>;
+
+// Use sext if the sign bit of the input is 0.
+def : Pat<(zext_is_sext GPR:$src), (ADDIW GPR:$src, 0)>;
 }
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {
@@ -2106,3 +2127,9 @@ include "RISCVInstrInfoXVentana.td"
 include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
 include "RISCVInstrInfoXCV.td"
+
+//===----------------------------------------------------------------------===//
+// Global ISel
+//===----------------------------------------------------------------------===//
+
+include "RISCVInstrGISel.td"

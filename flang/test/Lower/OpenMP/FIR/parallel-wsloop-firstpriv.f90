@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenMP parallel DO, with the loop bound being
 ! a firstprivate variable
 
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK: func @_QPomp_do_firstprivate(%[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "a"}) 
 subroutine omp_do_firstprivate(a)

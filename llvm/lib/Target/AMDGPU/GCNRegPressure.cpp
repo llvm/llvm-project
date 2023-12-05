@@ -503,6 +503,34 @@ char &llvm::GCNRegPressurePrinterID = GCNRegPressurePrinter::ID;
 
 INITIALIZE_PASS(GCNRegPressurePrinter, "amdgpu-print-rp", "", true, true)
 
+// Return lanemask of Reg's subregs that are live-through at [Begin, End] and
+// are fully covered by Mask.
+static LaneBitmask
+getRegLiveThroughMask(const MachineRegisterInfo &MRI, const LiveIntervals &LIS,
+                      Register Reg, SlotIndex Begin, SlotIndex End,
+                      LaneBitmask Mask = LaneBitmask::getAll()) {
+
+  auto IsInOneSegment = [Begin, End](const LiveRange &LR) -> bool {
+    auto *Segment = LR.getSegmentContaining(Begin);
+    return Segment && Segment->contains(End);
+  };
+
+  LaneBitmask LiveThroughMask;
+  const LiveInterval &LI = LIS.getInterval(Reg);
+  if (LI.hasSubRanges()) {
+    for (auto &SR : LI.subranges()) {
+      if ((SR.LaneMask & Mask) == SR.LaneMask && IsInOneSegment(SR))
+        LiveThroughMask |= SR.LaneMask;
+    }
+  } else {
+    LaneBitmask RegMask = MRI.getMaxLaneMaskForVReg(Reg);
+    if ((RegMask & Mask) == RegMask && IsInOneSegment(LI))
+      LiveThroughMask = RegMask;
+  }
+
+  return LiveThroughMask;
+}
+
 bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
@@ -604,6 +632,19 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
     OS << PFX "  Live-out:" << llvm::print(LiveOut, MRI);
     if (UseDownwardTracker)
       ReportLISMismatchIfAny(LiveOut, getLiveRegs(MBBEndSlot, LIS, MRI));
+
+    GCNRPTracker::LiveRegSet LiveThrough;
+    for (auto [Reg, Mask] : LiveIn) {
+      LaneBitmask MaskIntersection = Mask & LiveOut.lookup(Reg);
+      if (MaskIntersection.any()) {
+        LaneBitmask LTMask = getRegLiveThroughMask(
+            MRI, LIS, Reg, MBBStartSlot, MBBEndSlot, MaskIntersection);
+        if (LTMask.any())
+          LiveThrough[Reg] = LTMask;
+      }
+    }
+    OS << PFX "  Live-thr:" << llvm::print(LiveThrough, MRI);
+    OS << printRP(getRegPressure(MRI, LiveThrough)) << '\n';
   }
   OS << "...\n";
   return false;

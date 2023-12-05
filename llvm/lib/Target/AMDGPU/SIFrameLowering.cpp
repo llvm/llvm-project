@@ -1093,14 +1093,12 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   if (FuncInfo->isChainFunction()) {
     // Functions with the amdgpu_cs_chain[_preserve] CC don't receive a SP, but
     // are free to set one up if they need it.
-    // FIXME: We shouldn't need to set SP just for the stack objects (we should
-    // use 0 as an immediate offset instead).
-    bool UseSP = requiresStackPointerReference(MF) || MFI.hasStackObjects();
+    bool UseSP = requiresStackPointerReference(MF);
     if (UseSP) {
       assert(StackPtrReg != AMDGPU::SP_REG);
 
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B32), StackPtrReg)
-          .addImm(0);
+          .addImm(MFI.getStackSize() * getScratchScaleFactor(ST));
     }
   }
 
@@ -1115,7 +1113,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   Register FramePtrRegScratchCopy;
   if (!HasFP && !hasFP(MF)) {
     // Emit the CSR spill stores with SP base register.
-    emitCSRSpillStores(MF, MBB, MBBI, DL, LiveUnits, StackPtrReg,
+    emitCSRSpillStores(MF, MBB, MBBI, DL, LiveUnits,
+                       FuncInfo->isChainFunction() ? Register() : StackPtrReg,
                        FramePtrRegScratchCopy);
   } else {
     // CSR spill stores will use FP as base register.
@@ -1799,10 +1798,11 @@ static bool frameTriviallyRequiresSP(const MachineFrameInfo &MFI) {
 bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  // For entry functions we can use an immediate offset in most cases, so the
-  // presence of calls doesn't imply we need a distinct frame pointer.
+  // For entry & chain functions we can use an immediate offset in most cases,
+  // so the presence of calls doesn't imply we need a distinct frame pointer.
   if (MFI.hasCalls() &&
-      !MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction()) {
+      !MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction() &&
+      !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) {
     // All offsets are unsigned, so need to be addressed in the same direction
     // as stack growth.
 

@@ -23,6 +23,10 @@ class RISCVSubtarget;
 
 /// This class provides the information for the target register banks.
 class RISCVLegalizerInfo : public LegalizerInfo {
+  const RISCVSubtarget &STI;
+  const unsigned XLen;
+  const LLT sXLen;
+
 public:
   RISCVLegalizerInfo(const RISCVSubtarget &ST);
 
@@ -31,6 +35,8 @@ public:
 private:
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;
+
+  bool legalizeVAStart(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
 };
 } // end namespace llvm
 #endif

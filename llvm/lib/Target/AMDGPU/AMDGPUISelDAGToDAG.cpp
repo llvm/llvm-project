@@ -164,6 +164,7 @@ bool AMDGPUDAGToDAGISel::fp16SrcZerosHighBits(unsigned Opc) const {
   case ISD::FTRUNC:
   case ISD::FRINT:
   case ISD::FNEARBYINT:
+  case ISD::FROUNDEVEN:
   case ISD::FROUND:
   case ISD::FFLOOR:
   case ISD::FMINNUM:
@@ -1151,13 +1152,64 @@ bool AMDGPUDAGToDAGISel::isDSOffset2Legal(SDValue Base, unsigned Offset0,
   return CurDAG->SignBitIsZero(Base);
 }
 
-bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegal(SDValue Base,
-                                                uint64_t FlatVariant) const {
-  if (FlatVariant != SIInstrFlags::FlatScratch)
+// Return whether the operation has NoUnsignedWrap property.
+static bool isNoUnsignedWrap(SDValue Addr) {
+  return (Addr.getOpcode() == ISD::ADD &&
+          Addr->getFlags().hasNoUnsignedWrap()) ||
+         Addr->getOpcode() == ISD::OR;
+}
+
+// Check that the base address of flat scratch load/store in the form of `base +
+// offset` is legal to be put in SGPR/VGPR (i.e. unsigned per hardware
+// requirement). We always treat the first operand as the base address here.
+bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegal(SDValue Addr) const {
+  if (isNoUnsignedWrap(Addr))
     return true;
-  // When value in 32-bit Base can be negative calculate scratch offset using
-  // 32-bit add instruction, otherwise use Base(unsigned) + offset.
-  return CurDAG->SignBitIsZero(Base);
+
+  auto LHS = Addr.getOperand(0);
+  auto RHS = Addr.getOperand(1);
+
+  // If the immediate offset is negative and within certain range, the base
+  // address cannot also be negative. If the base is also negative, the sum
+  // would be either negative or much larger than the valid range of scratch
+  // memory a thread can access.
+  ConstantSDNode *ImmOp = nullptr;
+  if (Addr.getOpcode() == ISD::ADD && (ImmOp = dyn_cast<ConstantSDNode>(RHS))) {
+    if (ImmOp->getSExtValue() < 0 && ImmOp->getSExtValue() > -0x40000000)
+      return true;
+  }
+
+  return CurDAG->SignBitIsZero(LHS);
+}
+
+// Check address value in SGPR/VGPR are legal for flat scratch in the form
+// of: SGPR + VGPR.
+bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegalSV(SDValue Addr) const {
+  if (isNoUnsignedWrap(Addr))
+    return true;
+
+  auto LHS = Addr.getOperand(0);
+  auto RHS = Addr.getOperand(1);
+  return CurDAG->SignBitIsZero(RHS) && CurDAG->SignBitIsZero(LHS);
+}
+
+// Check address value in SGPR/VGPR are legal for flat scratch in the form
+// of: SGPR + VGPR + Imm.
+bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegalSVImm(SDValue Addr) const {
+  auto Base = Addr.getOperand(0);
+  auto *RHSImm = cast<ConstantSDNode>(Addr.getOperand(1));
+  // If the immediate offset is negative and within certain range, the base
+  // address cannot also be negative. If the base is also negative, the sum
+  // would be either negative or much larger than the valid range of scratch
+  // memory a thread can access.
+  if (isNoUnsignedWrap(Base) &&
+      (isNoUnsignedWrap(Addr) ||
+       (RHSImm->getSExtValue() < 0 && RHSImm->getSExtValue() > -0x40000000)))
+    return true;
+
+  auto LHS = Base.getOperand(0);
+  auto RHS = Base.getOperand(1);
+  return CurDAG->SignBitIsZero(RHS) && CurDAG->SignBitIsZero(LHS);
 }
 
 // TODO: If offset is too big, put low 16-bit into offset.
@@ -1554,7 +1606,8 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
   if (Subtarget->hasFlatInstOffsets() && !CanHaveFlatSegmentOffsetBug) {
     SDValue N0, N1;
     if (isBaseWithConstantOffset64(Addr, N0, N1) &&
-        isFlatScratchBaseLegal(N0, FlatVariant)) {
+        (FlatVariant != SIInstrFlags::FlatScratch ||
+         isFlatScratchBaseLegal(Addr))) {
       int64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
 
       const SIInstrInfo *TII = Subtarget->getInstrInfo();
@@ -1786,8 +1839,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *Parent, SDValue Addr,
 
   int64_t COffsetVal = 0;
 
-  if (CurDAG->isBaseWithConstantOffset(Addr) &&
-      isFlatScratchBaseLegal(Addr.getOperand(0))) {
+  if (CurDAG->isBaseWithConstantOffset(Addr) && isFlatScratchBaseLegal(Addr)) {
     COffsetVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
     SAddr = Addr.getOperand(0);
   } else {
@@ -1844,6 +1896,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
   int64_t ImmOffset = 0;
 
   SDValue LHS, RHS;
+  SDValue OrigAddr = Addr;
   if (isBaseWithConstantOffset64(Addr, LHS, RHS)) {
     int64_t COffsetVal = cast<ConstantSDNode>(RHS)->getSExtValue();
     const SIInstrInfo *TII = Subtarget->getInstrInfo();
@@ -1865,7 +1918,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
           CurDAG->getTargetConstant(RemainderOffset, SDLoc(), MVT::i32));
         VAddr = SDValue(VMov, 0);
         SAddr = LHS;
-        if (!isFlatScratchBaseLegal(SAddr) || !isFlatScratchBaseLegal(VAddr))
+        if (!isFlatScratchBaseLegal(Addr))
           return false;
         if (checkFlatScratchSVSSwizzleBug(VAddr, SAddr, SplitImmOffset))
           return false;
@@ -1891,8 +1944,13 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
     return false;
   }
 
-  if (!isFlatScratchBaseLegal(SAddr) || !isFlatScratchBaseLegal(VAddr))
-    return false;
+  if (OrigAddr != Addr) {
+    if (!isFlatScratchBaseLegalSVImm(OrigAddr))
+      return false;
+  } else {
+    if (!isFlatScratchBaseLegalSV(OrigAddr))
+      return false;
+  }
 
   if (checkFlatScratchSVSSwizzleBug(VAddr, SAddr, ImmOffset))
     return false;

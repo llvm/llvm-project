@@ -1,5 +1,5 @@
 ! Test allocatable assignments
-! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module alloc_assign
   type t

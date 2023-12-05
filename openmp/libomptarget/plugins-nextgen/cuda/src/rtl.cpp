@@ -16,10 +16,11 @@
 #include <string>
 #include <unordered_map>
 
-#include "Debug.h"
-#include "Environment.h"
+#include "Shared/Debug.h"
+#include "Shared/Environment.h"
+
 #include "GlobalHandler.h"
-#include "OmptCallback.h"
+#include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
 
 #include "llvm/BinaryFormat/ELF.h"
@@ -1106,30 +1107,30 @@ private:
     for (auto [Name, Priority] : Funcs) {
       GlobalTy FunctionAddr(Name.str(), sizeof(void *), &FunctionPtrs[Idx++]);
       if (auto Err = Handler.readGlobalFromDevice(*this, Image, FunctionAddr))
-        return std::move(Err);
+        return Err;
     }
 
     // Copy the local buffer to the device.
     if (auto Err = dataSubmit(GlobalPtrStart, FunctionPtrs.data(),
                               FunctionPtrs.size() * sizeof(void *), nullptr))
-      return std::move(Err);
+      return Err;
 
     // Copy the created buffer to the appropriate symbols so the kernel can
     // iterate through them.
     GlobalTy StartGlobal(IsCtor ? "__init_array_start" : "__fini_array_start",
                          sizeof(void *), &GlobalPtrStart);
     if (auto Err = Handler.writeGlobalToDevice(*this, Image, StartGlobal))
-      return std::move(Err);
+      return Err;
 
     GlobalTy StopGlobal(IsCtor ? "__init_array_end" : "__fini_array_end",
                         sizeof(void *), &GlobalPtrStop);
     if (auto Err = Handler.writeGlobalToDevice(*this, Image, StopGlobal))
-      return std::move(Err);
+      return Err;
 
     CUDAKernelTy CUDAKernel(KernelName);
 
     if (auto Err = CUDAKernel.init(*this, Image))
-      return std::move(Err);
+      return Err;
 
     AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
 
@@ -1137,7 +1138,7 @@ private:
     if (auto Err = CUDAKernel.launchImpl(*this, /*NumThread=*/1u,
                                          /*NumBlocks=*/1ul, KernelArgs, nullptr,
                                          AsyncInfoWrapper))
-      return std::move(Err);
+      return Err;
 
     Error Err = Plugin::success();
     AsyncInfoWrapper.finalize(Err);
@@ -1145,7 +1146,7 @@ private:
     if (free(Buffer, TARGET_ALLOC_DEVICE) != OFFLOAD_SUCCESS)
       return Plugin::error("Failed to free memory for global buffer");
 
-    return std::move(Err);
+    return Err;
   }
 
   /// Stream manager for CUDA streams.

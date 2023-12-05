@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // <system_error>
 

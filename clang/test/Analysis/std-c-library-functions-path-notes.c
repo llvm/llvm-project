@@ -80,3 +80,12 @@ int test_fileno_arg_note(FILE *f1) {
   // expected-note{{The 1st argument to 'dup' is < 0 but should be >= 0}} \
   // expected-note{{Assuming that 'fileno' fails}}
 }
+
+int test_readlink_bufsize_zero(char *Buf, size_t Bufsize) {
+  ssize_t Ret = readlink("path", Buf, Bufsize); // \
+  // expected-note{{Assuming that argument 'bufsize' is 0}} \
+  // expected-note{{'Ret' initialized here}}
+  return 1 / Ret; // \
+  // expected-warning{{Division by zero}} \
+  // expected-note{{Division by zero}}
+}

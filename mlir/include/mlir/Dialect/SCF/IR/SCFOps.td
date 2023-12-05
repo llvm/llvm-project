@@ -26,6 +26,20 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 def SCF_Dialect : Dialect {
   let name = "scf";
   let cppNamespace = "::mlir::scf";
+
+  let description = [{
+    The `scf` (structured control flow) dialect contains operations that
+    represent control flow constructs such as `if` and `for`. Being
+    _structured_ means that the control flow has a structure unlike, for
+    example, `goto`s or `assert`s. Unstructured control flow operations are
+    located in the `cf` (control flow) dialect.
+
+    Originally, this dialect was developed as a common lowering stage for the
+    `affine` and `linalg` dialects. Both convert to SCF loops instead of
+    targeting branch-based CFGs directly. Typically, `scf` is lowered to `cf`
+    and then lowered to some final target like LLVM or SPIR-V.
+  }];
+
   let dependentDialects = ["arith::ArithDialect"];
 }
 
