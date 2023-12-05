@@ -10,7 +10,7 @@ int main() {
   // CHECK: addr=0x[[#%x,HOST_ADDR:]]
   fprintf(stderr, "addr=%p\n", arr);
 
-  // CHECK-NOT: Libomptarget
+  // CHECK-NOT: omptarget
 #pragma omp target enter data map(alloc : arr[0 : 5])
 #pragma omp target exit data map(present, release : arr[0 : 0])
 
@@ -19,8 +19,8 @@ int main() {
 
   // arr[0:0] doesn't create an actual mapping in the first directive.
   //
-  // CHECK: Libomptarget message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] (0 bytes)
-  // CHECK: Libomptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK: omptarget message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] (0 bytes)
+  // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
 #pragma omp target enter data map(alloc : arr[0 : 0])
 #pragma omp target exit data map(present, release : arr[0 : 0])
 

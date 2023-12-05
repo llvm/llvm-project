@@ -52,7 +52,6 @@ endif()
 target_link_libraries(OMPT
   PUBLIC
     ${llvm_libs}
-    MemoryManager
 )
 
 # Define the TARGET_NAME and DEBUG_PREFIX.

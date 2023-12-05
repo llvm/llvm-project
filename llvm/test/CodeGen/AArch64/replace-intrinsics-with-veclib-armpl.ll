@@ -15,7 +15,7 @@ declare <vscale x 2 x double> @llvm.cos.nxv2f64(<vscale x 2 x double>)
 declare <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float>)
 
 ;.
-; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [16 x ptr] [ptr @armpl_vcosq_f64, ptr @armpl_vcosq_f32, ptr @armpl_vsinq_f64, ptr @armpl_vsinq_f32, ptr @armpl_vexpq_f64, ptr @armpl_vexpq_f32, ptr @armpl_vexp2q_f64, ptr @armpl_vexp2q_f32, ptr @armpl_vexp10q_f64, ptr @armpl_vexp10q_f32, ptr @armpl_vlogq_f64, ptr @armpl_vlogq_f32, ptr @armpl_vlog2q_f64, ptr @armpl_vlog2q_f32, ptr @armpl_vlog10q_f64, ptr @armpl_vlog10q_f32], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending global [16 x ptr] [ptr @armpl_vcosq_f64, ptr @armpl_vcosq_f32, ptr @armpl_vsinq_f64, ptr @armpl_vsinq_f32, ptr @armpl_vexpq_f64, ptr @armpl_vexpq_f32, ptr @armpl_vexp2q_f64, ptr @armpl_vexp2q_f32, ptr @armpl_vexp10q_f64, ptr @armpl_vexp10q_f32, ptr @armpl_vlogq_f64, ptr @armpl_vlogq_f32, ptr @armpl_vlog2q_f64, ptr @armpl_vlog2q_f32, ptr @armpl_vlog10q_f64, ptr @armpl_vlog10q_f32], section "llvm.metadata"
 ;.
 define <2 x double> @llvm_cos_f64(<2 x double> %in) {
 ; CHECK-LABEL: define <2 x double> @llvm_cos_f64

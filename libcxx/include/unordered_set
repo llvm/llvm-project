@@ -10,6 +10,8 @@
 #ifndef _LIBCPP_UNORDERED_SET
 #define _LIBCPP_UNORDERED_SET
 
+// clang-format off
+
 /*
 
     unordered_set synopsis
@@ -527,6 +529,8 @@ template <class Value, class Hash, class Pred, class Alloc>
 
 */
 
+// clang-format on
+
 #include <__algorithm/is_permutation.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
@@ -617,7 +621,7 @@ public:
     template <class _Value2, class _Hash2, class _Pred2, class _Alloc2>
         friend class _LIBCPP_TEMPLATE_VIS unordered_multiset;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     unordered_set()
         _NOEXCEPT_(is_nothrow_default_constructible<__table>::value)
     {
@@ -625,10 +629,10 @@ public:
     explicit _LIBCPP_HIDE_FROM_ABI unordered_set(size_type __n, const hasher& __hf = hasher(),
                            const key_equal& __eql = key_equal());
 #if _LIBCPP_STD_VER >= 14
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     unordered_set(size_type __n, const allocator_type& __a)
         : unordered_set(__n, hasher(), key_equal(), __a) {}
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     unordered_set(size_type __n, const hasher& __hf, const allocator_type& __a)
         : unordered_set(__n, __hf, key_equal(), __a) {}
 #endif
@@ -661,7 +665,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 14
     template <class _InputIterator>
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
         unordered_set(_InputIterator __first, _InputIterator __last,
                     size_type __n, const allocator_type& __a)
             : unordered_set(__first, __last, __n, hasher(), key_equal(), __a) {}
@@ -683,12 +687,12 @@ public:
         : unordered_set(from_range, std::forward<_Range>(__range), __n, __hf, key_equal(), __a) {}
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit unordered_set(const allocator_type& __a);
     _LIBCPP_HIDE_FROM_ABI unordered_set(const unordered_set& __u);
     _LIBCPP_HIDE_FROM_ABI unordered_set(const unordered_set& __u, const allocator_type& __a);
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     unordered_set(unordered_set&& __u)
         _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
     _LIBCPP_HIDE_FROM_ABI unordered_set(unordered_set&& __u, const allocator_type& __a);
@@ -700,92 +704,92 @@ public:
                   const hasher& __hf, const key_equal& __eql,
                   const allocator_type& __a);
 #if _LIBCPP_STD_VER >= 14
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     unordered_set(initializer_list<value_type> __il, size_type __n,
                                                       const allocator_type& __a)
         : unordered_set(__il, __n, hasher(), key_equal(), __a) {}
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     unordered_set(initializer_list<value_type> __il, size_type __n,
                                   const hasher& __hf, const allocator_type& __a)
         : unordered_set(__il, __n, __hf, key_equal(), __a) {}
 #endif
 #endif // _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ~unordered_set() {
         static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     unordered_set& operator=(const unordered_set& __u)
     {
         __table_ = __u.__table_;
         return *this;
     }
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     unordered_set& operator=(unordered_set&& __u)
         _NOEXCEPT_(is_nothrow_move_assignable<__table>::value);
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     unordered_set& operator=(initializer_list<value_type> __il);
 #endif // _LIBCPP_CXX03_LANG
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     allocator_type get_allocator() const _NOEXCEPT
         {return allocator_type(__table_.__node_alloc());}
 
-    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     bool      empty() const _NOEXCEPT {return __table_.size() == 0;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type size() const _NOEXCEPT  {return __table_.size();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type max_size() const _NOEXCEPT {return __table_.max_size();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       begin() _NOEXCEPT        {return __table_.begin();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       end() _NOEXCEPT          {return __table_.end();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator begin()  const _NOEXCEPT {return __table_.begin();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator end()    const _NOEXCEPT {return __table_.end();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator cbegin() const _NOEXCEPT {return __table_.begin();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator cend()   const _NOEXCEPT {return __table_.end();}
 
 #ifndef _LIBCPP_CXX03_LANG
     template <class... _Args>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         pair<iterator, bool> emplace(_Args&&... __args)
-            {return __table_.__emplace_unique(_VSTD::forward<_Args>(__args)...);}
+            {return __table_.__emplace_unique(std::forward<_Args>(__args)...);}
     template <class... _Args>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator emplace_hint(const_iterator, _Args&&... __args) {
         return __table_.__emplace_unique(std::forward<_Args>(__args)...).first;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     pair<iterator, bool> insert(value_type&& __x)
-        {return __table_.__insert_unique(_VSTD::move(__x));}
-    _LIBCPP_INLINE_VISIBILITY
+        {return __table_.__insert_unique(std::move(__x));}
+    _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator, value_type&& __x) {
         return insert(std::move(__x)).first;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void insert(initializer_list<value_type> __il)
         {insert(__il.begin(), __il.end());}
 #endif // _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     pair<iterator, bool> insert(const value_type& __x)
         {return __table_.__insert_unique(__x);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator, const value_type& __x) {
         return insert(__x).first;
     }
     template <class _InputIterator>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         void insert(_InputIterator __first, _InputIterator __last);
 
 #if _LIBCPP_STD_VER >= 23
@@ -798,46 +802,46 @@ public:
     }
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator erase(const_iterator __p) {return __table_.erase(__p);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type erase(const key_type& __k) {return __table_.__erase_unique(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator erase(const_iterator __first, const_iterator __last)
         {return __table_.erase(__first, __last);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void clear() _NOEXCEPT {__table_.clear();}
 
 #if _LIBCPP_STD_VER >= 17
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     insert_return_type insert(node_type&& __nh)
     {
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to unordered_set::insert()");
         return __table_.template __node_handle_insert_unique<
-            node_type, insert_return_type>(_VSTD::move(__nh));
+            node_type, insert_return_type>(std::move(__nh));
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator __h, node_type&& __nh)
     {
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to unordered_set::insert()");
         return __table_.template __node_handle_insert_unique<node_type>(
-            __h, _VSTD::move(__nh));
+            __h, std::move(__nh));
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     node_type extract(key_type const& __key)
     {
         return __table_.template __node_handle_extract<node_type>(__key);
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     node_type extract(const_iterator __it)
     {
         return __table_.template __node_handle_extract<node_type>(__it);
     }
 
     template<class _H2, class _P2>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void merge(unordered_set<key_type, _H2, _P2, allocator_type>& __source)
     {
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__source.get_allocator() == get_allocator(),
@@ -845,7 +849,7 @@ public:
         __table_.__node_handle_merge_unique(__source.__table_);
     }
     template<class _H2, class _P2>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void merge(unordered_set<key_type, _H2, _P2, allocator_type>&& __source)
     {
           _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__source.get_allocator() == get_allocator(),
@@ -853,7 +857,7 @@ public:
         __table_.__node_handle_merge_unique(__source.__table_);
     }
     template<class _H2, class _P2>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void merge(unordered_multiset<key_type, _H2, _P2, allocator_type>& __source)
     {
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__source.get_allocator() == get_allocator(),
@@ -861,7 +865,7 @@ public:
         __table_.__node_handle_merge_unique(__source.__table_);
     }
     template<class _H2, class _P2>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void merge(unordered_multiset<key_type, _H2, _P2, allocator_type>&& __source)
     {
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__source.get_allocator() == get_allocator(),
@@ -870,95 +874,95 @@ public:
     }
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(unordered_set& __u)
         _NOEXCEPT_(__is_nothrow_swappable<__table>::value)
         {__table_.swap(__u.__table_);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     hasher hash_function() const {return __table_.hash_function();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     key_equal key_eq() const {return __table_.key_eq();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       find(const key_type& __k)       {return __table_.find(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator find(const key_type& __k) const {return __table_.find(__k);}
 #if _LIBCPP_STD_VER >= 20
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       find(const _K2& __k)            {return __table_.find(__k);}
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator find(const _K2& __k) const      {return __table_.find(__k);}
 #endif // _LIBCPP_STD_VER >= 20
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type count(const key_type& __k) const {return __table_.__count_unique(__k);}
 #if _LIBCPP_STD_VER >= 20
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type count(const _K2& __k) const      {return __table_.__count_unique(__k);}
 #endif // _LIBCPP_STD_VER >= 20
 
 #if _LIBCPP_STD_VER >= 20
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool contains(const key_type& __k) const {return find(__k) != end();}
 
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool contains(const _K2& __k) const      {return find(__k) != end();}
 #endif // _LIBCPP_STD_VER >= 20
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     pair<iterator, iterator>             equal_range(const key_type& __k)
         {return __table_.__equal_range_unique(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     pair<const_iterator, const_iterator> equal_range(const key_type& __k) const
         {return __table_.__equal_range_unique(__k);}
 #if _LIBCPP_STD_VER >= 20
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     pair<iterator, iterator>             equal_range(const _K2& __k)
         {return __table_.__equal_range_unique(__k);}
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     pair<const_iterator, const_iterator> equal_range(const _K2& __k) const
         {return __table_.__equal_range_unique(__k);}
 #endif // _LIBCPP_STD_VER >= 20
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type bucket_count() const _NOEXCEPT {return __table_.bucket_count();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type max_bucket_count() const _NOEXCEPT {return __table_.max_bucket_count();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type bucket_size(size_type __n) const {return __table_.bucket_size(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type bucket(const key_type& __k) const {return __table_.bucket(__k);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     local_iterator       begin(size_type __n)        {return __table_.begin(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     local_iterator       end(size_type __n)          {return __table_.end(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_local_iterator begin(size_type __n) const  {return __table_.cbegin(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_local_iterator end(size_type __n) const    {return __table_.cend(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_local_iterator cbegin(size_type __n) const {return __table_.cbegin(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_local_iterator cend(size_type __n) const   {return __table_.cend(__n);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     float load_factor() const _NOEXCEPT {return __table_.load_factor();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     float max_load_factor() const _NOEXCEPT {return __table_.max_load_factor();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void max_load_factor(float __mlf) {__table_.max_load_factor(__mlf);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void rehash(size_type __n) {__table_.__rehash_unique(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void reserve(size_type __n) {__table_.__reserve_unique(__n);}
 };
 
@@ -1137,20 +1141,20 @@ inline
 unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(
         unordered_set&& __u)
     _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
-    : __table_(_VSTD::move(__u.__table_))
+    : __table_(std::move(__u.__table_))
 {
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(
         unordered_set&& __u, const allocator_type& __a)
-    : __table_(_VSTD::move(__u.__table_), __a)
+    : __table_(std::move(__u.__table_), __a)
 {
     if (__a != __u.get_allocator())
     {
         iterator __i = __u.begin();
         while (__u.size() != 0)
-            __table_.__insert_unique(_VSTD::move(__u.__table_.remove(__i++)->__get_value()));
+            __table_.__insert_unique(std::move(__u.__table_.remove(__i++)->__get_value()));
     }
 }
 
@@ -1187,7 +1191,7 @@ unordered_set<_Value, _Hash, _Pred, _Alloc>&
 unordered_set<_Value, _Hash, _Pred, _Alloc>::operator=(unordered_set&& __u)
     _NOEXCEPT_(is_nothrow_move_assignable<__table>::value)
 {
-    __table_ = _VSTD::move(__u.__table_);
+    __table_ = std::move(__u.__table_);
     return *this;
 }
 
@@ -1215,7 +1219,7 @@ unordered_set<_Value, _Hash, _Pred, _Alloc>::insert(_InputIterator __first,
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 swap(unordered_set<_Value, _Hash, _Pred, _Alloc>& __x,
      unordered_set<_Value, _Hash, _Pred, _Alloc>& __y)
@@ -1227,11 +1231,11 @@ swap(unordered_set<_Value, _Hash, _Pred, _Alloc>& __x,
 #if _LIBCPP_STD_VER >= 20
 template <class _Value, class _Hash, class _Pred, class _Alloc,
           class _Predicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
     typename unordered_set<_Value, _Hash, _Pred, _Alloc>::size_type
     erase_if(unordered_set<_Value, _Hash, _Pred, _Alloc>& __c,
              _Predicate __pred) {
-  return _VSTD::__libcpp_erase_if_container(__c, __pred);
+  return std::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 
@@ -1257,7 +1261,7 @@ operator==(const unordered_set<_Value, _Hash, _Pred, _Alloc>& __x,
 #if _LIBCPP_STD_VER <= 17
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(const unordered_set<_Value, _Hash, _Pred, _Alloc>& __x,
            const unordered_set<_Value, _Hash, _Pred, _Alloc>& __y)
@@ -1308,7 +1312,7 @@ public:
     template <class _Value2, class _Hash2, class _Pred2, class _Alloc2>
         friend class _LIBCPP_TEMPLATE_VIS unordered_multiset;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     unordered_multiset()
         _NOEXCEPT_(is_nothrow_default_constructible<__table>::value)
     {
@@ -1318,10 +1322,10 @@ public:
     _LIBCPP_HIDE_FROM_ABI unordered_multiset(size_type __n, const hasher& __hf,
                        const key_equal& __eql, const allocator_type& __a);
 #if _LIBCPP_STD_VER >= 14
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     unordered_multiset(size_type __n, const allocator_type& __a)
         : unordered_multiset(__n, hasher(), key_equal(), __a) {}
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     unordered_multiset(size_type __n, const hasher& __hf, const allocator_type& __a)
         : unordered_multiset(__n, __hf, key_equal(), __a) {}
 #endif
@@ -1352,12 +1356,12 @@ public:
 
 #if _LIBCPP_STD_VER >= 14
     template <class _InputIterator>
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     unordered_multiset(_InputIterator __first, _InputIterator __last,
                        size_type __n, const allocator_type& __a)
         : unordered_multiset(__first, __last, __n, hasher(), key_equal(), __a) {}
     template <class _InputIterator>
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     unordered_multiset(_InputIterator __first, _InputIterator __last,
                        size_type __n, const hasher& __hf, const allocator_type& __a)
         : unordered_multiset(__first, __last, __n, __hf, key_equal(), __a) {}
@@ -1375,12 +1379,12 @@ public:
         : unordered_multiset(from_range, std::forward<_Range>(__range), __n, __hf, key_equal(), __a) {}
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit unordered_multiset(const allocator_type& __a);
     _LIBCPP_HIDE_FROM_ABI unordered_multiset(const unordered_multiset& __u);
     _LIBCPP_HIDE_FROM_ABI unordered_multiset(const unordered_multiset& __u, const allocator_type& __a);
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     unordered_multiset(unordered_multiset&& __u)
         _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
     _LIBCPP_HIDE_FROM_ABI unordered_multiset(unordered_multiset&& __u, const allocator_type& __a);
@@ -1392,85 +1396,85 @@ public:
                        const hasher& __hf, const key_equal& __eql,
                        const allocator_type& __a);
 #if _LIBCPP_STD_VER >= 14
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     unordered_multiset(initializer_list<value_type> __il, size_type __n, const allocator_type& __a)
       : unordered_multiset(__il, __n, hasher(), key_equal(), __a) {}
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     unordered_multiset(initializer_list<value_type> __il, size_type __n, const hasher& __hf, const allocator_type& __a)
       : unordered_multiset(__il, __n, __hf, key_equal(), __a) {}
 #endif
 #endif // _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ~unordered_multiset() {
         static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     unordered_multiset& operator=(const unordered_multiset& __u)
     {
         __table_ = __u.__table_;
         return *this;
     }
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     unordered_multiset& operator=(unordered_multiset&& __u)
         _NOEXCEPT_(is_nothrow_move_assignable<__table>::value);
     _LIBCPP_HIDE_FROM_ABI unordered_multiset& operator=(initializer_list<value_type> __il);
 #endif // _LIBCPP_CXX03_LANG
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     allocator_type get_allocator() const _NOEXCEPT
         {return allocator_type(__table_.__node_alloc());}
 
-    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     bool      empty() const _NOEXCEPT {return __table_.size() == 0;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type size() const _NOEXCEPT  {return __table_.size();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type max_size() const _NOEXCEPT {return __table_.max_size();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       begin() _NOEXCEPT        {return __table_.begin();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       end() _NOEXCEPT          {return __table_.end();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator begin()  const _NOEXCEPT {return __table_.begin();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator end()    const _NOEXCEPT {return __table_.end();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator cbegin() const _NOEXCEPT {return __table_.begin();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator cend()   const _NOEXCEPT {return __table_.end();}
 
 #ifndef _LIBCPP_CXX03_LANG
     template <class... _Args>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         iterator emplace(_Args&&... __args)
-            {return __table_.__emplace_multi(_VSTD::forward<_Args>(__args)...);}
+            {return __table_.__emplace_multi(std::forward<_Args>(__args)...);}
     template <class... _Args>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         iterator emplace_hint(const_iterator __p, _Args&&... __args)
-            {return __table_.__emplace_hint_multi(__p, _VSTD::forward<_Args>(__args)...);}
+            {return __table_.__emplace_hint_multi(__p, std::forward<_Args>(__args)...);}
 
-    _LIBCPP_INLINE_VISIBILITY
-    iterator insert(value_type&& __x) {return __table_.__insert_multi(_VSTD::move(__x));}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
+    iterator insert(value_type&& __x) {return __table_.__insert_multi(std::move(__x));}
+    _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator __p, value_type&& __x)
-        {return __table_.__insert_multi(__p, _VSTD::move(__x));}
-    _LIBCPP_INLINE_VISIBILITY
+        {return __table_.__insert_multi(__p, std::move(__x));}
+    _LIBCPP_HIDE_FROM_ABI
     void insert(initializer_list<value_type> __il)
         {insert(__il.begin(), __il.end());}
 #endif // _LIBCPP_CXX03_LANG
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator insert(const value_type& __x) {return __table_.__insert_multi(__x);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator __p, const value_type& __x)
         {return __table_.__insert_multi(__p, __x);}
 
     template <class _InputIterator>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         void insert(_InputIterator __first, _InputIterator __last);
 
 #if _LIBCPP_STD_VER >= 23
@@ -1484,36 +1488,36 @@ public:
 #endif
 
 #if _LIBCPP_STD_VER >= 17
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator insert(node_type&& __nh)
     {
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to unordered_multiset::insert()");
         return __table_.template __node_handle_insert_multi<node_type>(
-            _VSTD::move(__nh));
+            std::move(__nh));
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator __hint, node_type&& __nh)
     {
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to unordered_multiset::insert()");
         return __table_.template __node_handle_insert_multi<node_type>(
-            __hint, _VSTD::move(__nh));
+            __hint, std::move(__nh));
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     node_type extract(const_iterator __position)
     {
         return __table_.template __node_handle_extract<node_type>(
             __position);
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     node_type extract(key_type const& __key)
     {
         return __table_.template __node_handle_extract<node_type>(__key);
     }
 
     template <class _H2, class _P2>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void merge(unordered_multiset<key_type, _H2, _P2, allocator_type>& __source)
     {
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__source.get_allocator() == get_allocator(),
@@ -1521,7 +1525,7 @@ public:
         return __table_.__node_handle_merge_multi(__source.__table_);
     }
     template <class _H2, class _P2>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void merge(unordered_multiset<key_type, _H2, _P2, allocator_type>&& __source)
     {
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__source.get_allocator() == get_allocator(),
@@ -1529,7 +1533,7 @@ public:
         return __table_.__node_handle_merge_multi(__source.__table_);
     }
     template <class _H2, class _P2>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void merge(unordered_set<key_type, _H2, _P2, allocator_type>& __source)
     {
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__source.get_allocator() == get_allocator(),
@@ -1537,7 +1541,7 @@ public:
         return __table_.__node_handle_merge_multi(__source.__table_);
     }
     template <class _H2, class _P2>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void merge(unordered_set<key_type, _H2, _P2, allocator_type>&& __source)
     {
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__source.get_allocator() == get_allocator(),
@@ -1546,105 +1550,105 @@ public:
     }
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator erase(const_iterator __p) {return __table_.erase(__p);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type erase(const key_type& __k) {return __table_.__erase_multi(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator erase(const_iterator __first, const_iterator __last)
         {return __table_.erase(__first, __last);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void clear() _NOEXCEPT {__table_.clear();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(unordered_multiset& __u)
         _NOEXCEPT_(__is_nothrow_swappable<__table>::value)
         {__table_.swap(__u.__table_);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     hasher hash_function() const {return __table_.hash_function();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     key_equal key_eq() const {return __table_.key_eq();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       find(const key_type& __k)       {return __table_.find(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator find(const key_type& __k) const {return __table_.find(__k);}
 #if _LIBCPP_STD_VER >= 20
     template<class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       find(const _K2& __k)            {return __table_.find(__k);}
     template<class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator find(const _K2& __k) const      {return __table_.find(__k);}
 #endif // _LIBCPP_STD_VER >= 20
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type count(const key_type& __k) const {return __table_.__count_multi(__k);}
 #if _LIBCPP_STD_VER >= 20
     template<class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type count(const _K2& __k) const      {return __table_.__count_multi(__k);}
 #endif // _LIBCPP_STD_VER >= 20
 
 #if _LIBCPP_STD_VER >= 20
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool contains(const key_type& __k) const {return find(__k) != end();}
 
     template<class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool contains(const _K2& __k) const      {return find(__k) != end();}
 #endif // _LIBCPP_STD_VER >= 20
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     pair<iterator, iterator>             equal_range(const key_type& __k)
         {return __table_.__equal_range_multi(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     pair<const_iterator, const_iterator> equal_range(const key_type& __k) const
         {return __table_.__equal_range_multi(__k);}
 #if _LIBCPP_STD_VER >= 20
     template<class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     pair<iterator, iterator>             equal_range(const _K2& __k)
         {return __table_.__equal_range_multi(__k);}
     template<class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     pair<const_iterator, const_iterator> equal_range(const _K2& __k) const
         {return __table_.__equal_range_multi(__k);}
 #endif // _LIBCPP_STD_VER >= 20
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type bucket_count() const _NOEXCEPT {return __table_.bucket_count();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type max_bucket_count() const _NOEXCEPT {return __table_.max_bucket_count();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type bucket_size(size_type __n) const {return __table_.bucket_size(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type bucket(const key_type& __k) const {return __table_.bucket(__k);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     local_iterator       begin(size_type __n)        {return __table_.begin(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     local_iterator       end(size_type __n)          {return __table_.end(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_local_iterator begin(size_type __n) const  {return __table_.cbegin(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_local_iterator end(size_type __n) const    {return __table_.cend(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_local_iterator cbegin(size_type __n) const {return __table_.cbegin(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_local_iterator cend(size_type __n) const   {return __table_.cend(__n);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     float load_factor() const _NOEXCEPT {return __table_.load_factor();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     float max_load_factor() const _NOEXCEPT {return __table_.max_load_factor();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void max_load_factor(float __mlf) {__table_.max_load_factor(__mlf);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void rehash(size_type __n) {__table_.__rehash_multi(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void reserve(size_type __n) {__table_.__reserve_multi(__n);}
 };
 
@@ -1822,20 +1826,20 @@ inline
 unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
         unordered_multiset&& __u)
     _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
-    : __table_(_VSTD::move(__u.__table_))
+    : __table_(std::move(__u.__table_))
 {
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
         unordered_multiset&& __u, const allocator_type& __a)
-    : __table_(_VSTD::move(__u.__table_), __a)
+    : __table_(std::move(__u.__table_), __a)
 {
     if (__a != __u.get_allocator())
     {
         iterator __i = __u.begin();
         while (__u.size() != 0)
-            __table_.__insert_multi(_VSTD::move(__u.__table_.remove(__i++)->__get_value()));
+            __table_.__insert_multi(std::move(__u.__table_.remove(__i++)->__get_value()));
     }
 }
 
@@ -1873,7 +1877,7 @@ unordered_multiset<_Value, _Hash, _Pred, _Alloc>::operator=(
         unordered_multiset&& __u)
     _NOEXCEPT_(is_nothrow_move_assignable<__table>::value)
 {
-    __table_ = _VSTD::move(__u.__table_);
+    __table_ = std::move(__u.__table_);
     return *this;
 }
 
@@ -1901,7 +1905,7 @@ unordered_multiset<_Value, _Hash, _Pred, _Alloc>::insert(_InputIterator __first,
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 swap(unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
      unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __y)
@@ -1913,11 +1917,11 @@ swap(unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
 #if _LIBCPP_STD_VER >= 20
 template <class _Value, class _Hash, class _Pred, class _Alloc,
           class _Predicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
     typename unordered_multiset<_Value, _Hash, _Pred, _Alloc>::size_type
     erase_if(unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __c,
              _Predicate __pred) {
-  return _VSTD::__libcpp_erase_if_container(__c, __pred);
+  return std::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 
@@ -1935,9 +1939,9 @@ operator==(const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
     {
         _EqRng __xeq = __x.equal_range(*__i);
         _EqRng __yeq = __y.equal_range(*__i);
-        if (_VSTD::distance(__xeq.first, __xeq.second) !=
-            _VSTD::distance(__yeq.first, __yeq.second) ||
-                  !_VSTD::is_permutation(__xeq.first, __xeq.second, __yeq.first))
+        if (std::distance(__xeq.first, __xeq.second) !=
+            std::distance(__yeq.first, __yeq.second) ||
+                  !std::is_permutation(__xeq.first, __xeq.second, __yeq.first))
             return false;
         __i = __xeq.second;
     }
@@ -1947,7 +1951,7 @@ operator==(const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
 #if _LIBCPP_STD_VER <= 17
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
            const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __y)
