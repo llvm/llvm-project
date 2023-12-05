@@ -1310,3 +1310,14 @@ func.func @test_large_constant_permutation() {
   return
 }
 
+// -----
+
+// CHECK-LABEL: test_rank0_transpose_perms
+// Fail to infer the shape but not crash.
+func.func @test_rank0_transpose_perms() {
+  %14 = tensor.empty() : tensor<5x27xi64>
+  %cst = tensor.empty() : tensor<i32>
+  // CHECK: tosa.transpose
+  %72 = tosa.transpose %14, %cst : (tensor<5x27xi64>, tensor<i32>) -> tensor<?x?xi64>
+  return
+}
