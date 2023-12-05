@@ -30,8 +30,8 @@
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -2720,6 +2720,12 @@ public:
   virtual bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
                                      Type *Ty, unsigned AddrSpace,
                                      Instruction *I = nullptr) const;
+
+  /// Return the prefered common base offset.
+  virtual int64_t getPreferredLargeGEPBaseOffset(int64_t MinOffset,
+                                                 int64_t MaxOffset) const {
+    return 0;
+  }
 
   /// Return true if the specified immediate is legal icmp immediate, that is
   /// the target has icmp instructions which can compare a register against the

@@ -699,6 +699,9 @@ public:
                              unsigned AS,
                              Instruction *I = nullptr) const override;
 
+  int64_t getPreferredLargeGEPBaseOffset(int64_t MinOffset,
+                                         int64_t MaxOffset) const override;
+
   /// Return true if an FMA operation is faster than a pair of fmul and fadd
   /// instructions. fmuladd intrinsics will be expanded to FMAs when this method
   /// returns true, otherwise fmuladd is expanded to fmul + fadd.
