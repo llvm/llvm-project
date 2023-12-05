@@ -5075,7 +5075,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateStaticDefinition) {
   Decl *ToTU = getToTuDecl(
       R"(
       struct A {
-        template <class U, class V>
+        template <class U>
         static int X;
       };
       )",
