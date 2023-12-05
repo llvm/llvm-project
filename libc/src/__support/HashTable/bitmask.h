@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_HASHTABLE_BITMASK_H
 #define LLVM_LIBC_SRC___SUPPORT_HASHTABLE_BITMASK_H
 
-#include "src/__support/bit.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/macros/properties/cpu_features.h"
 #include <stddef.h> // size_t
 #include <stdint.h> // uint8_t, uint64_t
@@ -45,7 +45,7 @@ template <typename T, T WORD_MASK, size_t WORD_STRIDE> struct BitMaskAdaptor {
   // Count trailing zeros with respect to stride. (Assume the bitmask is none
   // zero.)
   LIBC_INLINE constexpr size_t lowest_set_bit_nonzero() const {
-    return unsafe_ctz<T>(word) / WORD_STRIDE;
+    return cpp::countr_zero<T>(word) / WORD_STRIDE;
   }
 };
 
