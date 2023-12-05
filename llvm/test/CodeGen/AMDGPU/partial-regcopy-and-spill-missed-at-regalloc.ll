@@ -32,7 +32,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; PEI-GFX908: bb.0 (%ir-block.0):
   ; PEI-GFX908-NEXT:   liveins: $agpr4, $sgpr4_sgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr7
   ; PEI-GFX908-NEXT: {{  $}}
-  ; PEI-GFX908-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+  ; PEI-GFX908-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; PEI-GFX908-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; PEI-GFX908-NEXT:   $sgpr8_sgpr9_sgpr10_sgpr11 = COPY killed $sgpr0_sgpr1_sgpr2_sgpr3
   ; PEI-GFX908-NEXT:   $sgpr8 = S_ADD_U32 $sgpr8, $sgpr7, implicit-def $scc, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
@@ -81,7 +81,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; PEI-GFX90A: bb.0 (%ir-block.0):
   ; PEI-GFX90A-NEXT:   liveins: $agpr4, $sgpr4_sgpr5, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr7
   ; PEI-GFX90A-NEXT: {{  $}}
-  ; PEI-GFX90A-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+  ; PEI-GFX90A-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; PEI-GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; PEI-GFX90A-NEXT:   $sgpr8_sgpr9_sgpr10_sgpr11 = COPY killed $sgpr0_sgpr1_sgpr2_sgpr3
   ; PEI-GFX90A-NEXT:   $sgpr8 = S_ADD_U32 $sgpr8, $sgpr7, implicit-def $scc, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11

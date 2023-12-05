@@ -5,7 +5,7 @@
 ; CHECK: .cfi_startproc
 ; CHECK-NOT: .cfi_{{.*}}
 ; CHECK: %bb.0:
-; CHECK-NEXT: .cfi_escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+; CHECK-NEXT: .cfi_escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
 ; CHECK-NEXT: .cfi_undefined 16
 ; CHECK-NOT: .cfi_{{.*}}
 ; CHECK: .cfi_endproc

@@ -1,5 +1,5 @@
-; RUN: llc < %s -O0 -filetype=obj -o - | llvm-dwarfdump - | FileCheck --check-prefixes=CHECK,CHECK-ORIG-OPS %s
-; RUN: llc < %s -O0 -filetype=obj -o - -emit-heterogeneous-dwarf-as-user-ops | llvm-dwarfdump - | FileCheck --check-prefixes=CHECK,CHECK-USER-OPS %s
+; RUN: llc < %s -O0 -filetype=obj -o - -emit-heterogeneous-dwarf-as-user-ops=false | llvm-dwarfdump - | FileCheck --check-prefixes=CHECK,CHECK-ORIG-OPS %s
+; RUN: llc < %s -O0 -filetype=obj -o - | llvm-dwarfdump - | FileCheck --check-prefixes=CHECK,CHECK-USER-OPS %s
 
 ; CHECK: DW_TAG_variable
 ; CHECK: DW_AT_name ("x")

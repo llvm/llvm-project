@@ -21,7 +21,7 @@ body:             |
     ; GFX11-LABEL: name: tied_operand_test
     ; GFX11: liveins: $sgpr0_sgpr1
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+    ; GFX11-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; GFX11-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GFX11-NEXT: renamable $vgpr0 = V_MOV_B32_e32 123, implicit $exec
     ; GFX11-NEXT: renamable $vgpr0 = SCRATCH_LOAD_SHORT_D16_HI_ST 4, 0, killed renamable $vgpr0, implicit $exec, implicit $flat_scr

@@ -1,8 +1,8 @@
-; RUN: llc -mcpu=gfx900 -O0 -filetype=obj < %s -o %t.o
+; RUN: llc -mcpu=gfx900 -O0 -filetype=obj -emit-heterogeneous-dwarf-as-user-ops=false < %s -o %t.o
 ; RUN: llvm-dwarfdump -debug-info -show-form %t.o | FileCheck --check-prefixes=DWARF,DWARF-ORIG-OPS %s
 ; RUN: llvm-objdump -r %t.o | FileCheck --check-prefixes=RELOCS,RELOCS-OFF-USER-OPS %s
 
-; RUN: llc -mcpu=gfx900 -O0 -filetype=obj -emit-heterogeneous-dwarf-as-user-ops < %s -o %t.o
+; RUN: llc -mcpu=gfx900 -O0 -filetype=obj < %s -o %t.o
 ; RUN: llvm-dwarfdump -debug-info -show-form %t.o | FileCheck --check-prefixes=DWARF,DWARF-USER-OPS %s
 ; RUN: llvm-objdump -r %t.o | FileCheck --check-prefixes=RELOCS,RELOCS-YES-USER-OPS %s
 

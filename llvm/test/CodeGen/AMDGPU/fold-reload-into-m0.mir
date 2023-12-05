@@ -13,7 +13,7 @@ body:             |
   bb.0:
 
     ; CHECK-LABEL: name: merge_sgpr_spill_into_copy_from_m0
-    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; CHECK-NEXT: renamable $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: S_NOP 0, implicit-def $m0
@@ -45,7 +45,7 @@ body:             |
   bb.0:
 
     ; CHECK-LABEL: name: reload_sgpr_spill_into_copy_to_m0
-    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; CHECK-NEXT: renamable $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: S_NOP 0, implicit-def renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def $m0

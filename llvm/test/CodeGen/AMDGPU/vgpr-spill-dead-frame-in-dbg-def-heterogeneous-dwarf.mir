@@ -46,7 +46,7 @@ body:             |
   ; CHECK-ORIG-OPS-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-ORIG-OPS-NEXT:   liveins: $agpr0
   ; CHECK-ORIG-OPS-NEXT: {{  $}}
-  ; CHECK-ORIG-OPS-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+  ; CHECK-ORIG-OPS-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; CHECK-ORIG-OPS-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-ORIG-OPS-NEXT:   $vgpr2 = IMPLICIT_DEF
   ; CHECK-ORIG-OPS-NEXT:   $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec

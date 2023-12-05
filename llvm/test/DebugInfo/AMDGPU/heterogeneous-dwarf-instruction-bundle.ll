@@ -10,7 +10,7 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias %arg_in_0, ptr addrspace
 ; CHECK-ORIG-OPS-NEXT:    .cfi_sections .debug_frame
 ; CHECK-ORIG-OPS-NEXT:    .cfi_startproc
 ; CHECK-ORIG-OPS-NEXT:  ; %bb.0:
-; CHECK-ORIG-OPS-NEXT:    .cfi_escape 0x0f, 0x03, 0x30, 0x36, 0xe1 ;
+; CHECK-ORIG-OPS-NEXT:    .cfi_escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02 ;
 ; CHECK-ORIG-OPS-NEXT:    .cfi_undefined 16
 ; CHECK-ORIG-OPS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; CHECK-ORIG-OPS-NEXT:    v_mov_b32_e32 v2, 0

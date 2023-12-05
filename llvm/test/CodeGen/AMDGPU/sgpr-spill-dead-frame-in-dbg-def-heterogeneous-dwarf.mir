@@ -44,7 +44,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   renamable $vgpr0 = IMPLICIT_DEF
   ; CHECK-NEXT:   renamable $sgpr10 = IMPLICIT_DEF

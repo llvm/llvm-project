@@ -196,7 +196,7 @@ define hidden void @_ZL3barv() #0 !dbg !1644 {
 ; CHECK-NEXT:    .cfi_offset 2600, 0
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 2
-; CHECK-NEXT:    .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xa8, 0x14, 0xe4, 0x08 ;
+; CHECK-NEXT:    .cfi_escape 0x10, 0x41, 0x06, 0x90, 0xa8, 0x14, 0xe9, 0x05, 0x08 ;
 ; CHECK-NEXT:    .cfi_def_cfa_register 65
 ; CHECK-NEXT:    s_add_i32 s32, s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
