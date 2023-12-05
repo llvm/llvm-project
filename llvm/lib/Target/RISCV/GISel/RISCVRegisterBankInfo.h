@@ -38,6 +38,23 @@ public:
 
   const InstructionMapping &
   getInstrMapping(const MachineInstr &MI) const override;
+
+private:
+  /// \returns true if \p MI only uses and defines FPRs.
+  bool hasFPConstraints(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                        const TargetRegisterInfo &TRI) const;
+
+  /// \returns true if \p MI only uses FPRs.
+  bool onlyUsesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                  const TargetRegisterInfo &TRI) const;
+
+  /// \returns true if any use of \p Def only user FPRs.
+  bool anyUseOnlyUseFP(Register Def, const MachineRegisterInfo &MRI,
+                       const TargetRegisterInfo &TRI) const;
+
+  /// \returns true if \p MI only defines FPRs.
+  bool onlyDefinesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                     const TargetRegisterInfo &TRI) const;
 };
 } // end namespace llvm
 #endif

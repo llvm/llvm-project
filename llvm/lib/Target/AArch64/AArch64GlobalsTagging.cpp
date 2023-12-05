@@ -43,6 +43,18 @@ static bool shouldTagGlobal(GlobalVariable &G) {
     return false;
   }
 
+  // Don't instrument function pointers that are going into various init arrays
+  // via `__attribute__((section(<foo>)))`:
+  // https://github.com/llvm/llvm-project/issues/69939
+  if (G.hasSection() &&
+      (G.getSection() == ".init" || G.getSection() == ".fini" ||
+       G.getSection() == ".init_array" || G.getSection() == ".fini_array" ||
+       G.getSection() == ".ctors" || G.getSection() == ".dtors")) {
+    Meta.Memtag = false;
+    G.setSanitizerMetadata(Meta);
+    return false;
+  }
+
   return true;
 }
 

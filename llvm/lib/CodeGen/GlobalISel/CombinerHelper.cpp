@@ -1557,7 +1557,7 @@ bool CombinerHelper::matchShiftImmedChain(MachineInstr &MI,
 
   // Pass the combined immediate to the apply function.
   MatchInfo.Imm =
-      (MaybeImmVal->Value.getSExtValue() + MaybeImm2Val->Value).getSExtValue();
+      (MaybeImmVal->Value.getZExtValue() + MaybeImm2Val->Value).getZExtValue();
   MatchInfo.Reg = Base;
 
   // There is no simple replacement for a saturating unsigned left shift that
@@ -2349,18 +2349,6 @@ void CombinerHelper::applyCombineExtOfExt(
     Builder.buildInstr(SrcExtOp, {DstReg}, {Reg});
     MI.eraseFromParent();
   }
-}
-
-void CombinerHelper::applyCombineMulByNegativeOne(MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-
-  Builder.setInstrAndDebugLoc(MI);
-  Builder.buildSub(DstReg, Builder.buildConstant(DstTy, 0), SrcReg,
-                   MI.getFlags());
-  MI.eraseFromParent();
 }
 
 bool CombinerHelper::matchCombineTruncOfExt(

@@ -112,6 +112,7 @@ public:
   enum SubArchType {
     NoSubArch,
 
+    ARMSubArch_v9_5a,
     ARMSubArch_v9_4a,
     ARMSubArch_v9_3a,
     ARMSubArch_v9_2a,
@@ -221,7 +222,8 @@ public:
     Emscripten,
     ShaderModel, // DirectX ShaderModel
     LiteOS,
-    LastOSType = LiteOS
+    Serenity,
+    LastOSType = Serenity
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -666,6 +668,10 @@ public:
   /// Tests whether the OS is AIX.
   bool isOSAIX() const {
     return getOS() == Triple::AIX;
+  }
+
+  bool isOSSerenity() const {
+    return getOS() == Triple::Serenity;
   }
 
   /// Tests whether the OS uses the ELF binary format.

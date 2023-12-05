@@ -33,10 +33,8 @@
 #include "llvm/Support/CFGDiff.h"
 #include "llvm/Support/CFGUpdate.h"
 #include "llvm/Support/GenericDomTree.h"
-#include "llvm/Support/GenericDomTreeConstruction.h"
 #include <algorithm>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 

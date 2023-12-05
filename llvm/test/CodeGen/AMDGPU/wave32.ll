@@ -1885,8 +1885,9 @@ define amdgpu_ps float @test_wwm1(i32 inreg %idx0, i32 inreg %idx1, float %src0,
 ; GFX1032-LABEL: test_wwm1:
 ; GFX1032:       ; %bb.0: ; %main_body
 ; GFX1032-NEXT:    s_or_saveexec_b32 s0, -1
-; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
-; GFX1032-NEXT:    v_add_f32_e32 v2, v2, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v3, v0
+; GFX1032-NEXT:    v_add_f32_e32 v2, v3, v2
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1032-NEXT:    ; return to shader part epilog
@@ -1894,8 +1895,9 @@ define amdgpu_ps float @test_wwm1(i32 inreg %idx0, i32 inreg %idx1, float %src0,
 ; GFX1064-LABEL: test_wwm1:
 ; GFX1064:       ; %bb.0: ; %main_body
 ; GFX1064-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
-; GFX1064-NEXT:    v_add_f32_e32 v2, v2, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v3, v0
+; GFX1064-NEXT:    v_add_f32_e32 v2, v3, v2
 ; GFX1064-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1064-NEXT:    ; return to shader part epilog
@@ -1970,8 +1972,9 @@ define amdgpu_ps float @test_strict_wwm1(i32 inreg %idx0, i32 inreg %idx1, float
 ; GFX1032-LABEL: test_strict_wwm1:
 ; GFX1032:       ; %bb.0: ; %main_body
 ; GFX1032-NEXT:    s_or_saveexec_b32 s0, -1
-; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
-; GFX1032-NEXT:    v_add_f32_e32 v2, v2, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v3, v0
+; GFX1032-NEXT:    v_add_f32_e32 v2, v3, v2
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1032-NEXT:    ; return to shader part epilog
@@ -1979,8 +1982,9 @@ define amdgpu_ps float @test_strict_wwm1(i32 inreg %idx0, i32 inreg %idx1, float
 ; GFX1064-LABEL: test_strict_wwm1:
 ; GFX1064:       ; %bb.0: ; %main_body
 ; GFX1064-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
-; GFX1064-NEXT:    v_add_f32_e32 v2, v2, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v3, v0
+; GFX1064-NEXT:    v_add_f32_e32 v2, v3, v2
 ; GFX1064-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1064-NEXT:    ; return to shader part epilog

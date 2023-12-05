@@ -1,0 +1,81 @@
+## NOTE: This file needs to be updated after promoted instruction is supported
+# RUN: llvm-mc -triple x86_64 -disassemble %s | FileCheck %s --check-prefix=ATT
+# RUN: llvm-mc -triple x86_64 -disassemble -output-asm-variant=1 %s | FileCheck %s --check-prefix=INTEL
+
+## MRMDestMem
+
+# ATT:   vextractf32x4	$1, %zmm0, (%r16,%r17)
+# INTEL: vextractf32x4	xmmword ptr [r16 + r17], zmm0, 1
+0x62,0xfb,0x79,0x48,0x19,0x04,0x08,0x01
+
+## MRMSrcMem
+
+# ATT:   vbroadcasti32x4	(%r16,%r17), %zmm0
+# INTEL: vbroadcasti32x4	zmm0, xmmword ptr [r16 + r17]
+0x62,0xfa,0x79,0x48,0x5a,0x04,0x08
+
+## MRM0m
+
+# ATT:   vprorq	$0, (%r16,%r17), %zmm0
+# INTEL: vprorq	zmm0, zmmword ptr [r16 + r17], 0
+0x62,0xf9,0xf9,0x48,0x72,0x04,0x08,0x00
+
+## MRM1m
+
+# ATT:   vprolq	$0, (%r16,%r17), %zmm0
+# INTEL: vprolq	zmm0, zmmword ptr [r16 + r17], 0
+0x62,0xf9,0xf9,0x48,0x72,0x0c,0x08,0x00
+
+## MRM2m
+
+# ATT:   vpsrlq	$0, (%r16,%r17), %zmm0
+# INTEL: vpsrlq	zmm0, zmmword ptr [r16 + r17], 0
+0x62,0xf9,0xf9,0x48,0x73,0x14,0x08,0x00
+
+## MRM3m
+
+# ATT:   vpsrldq	$0, (%r16,%r17), %zmm0
+# INTEL: vpsrldq	zmm0, zmmword ptr [r16 + r17], 0
+0x62,0xf9,0x79,0x48,0x73,0x1c,0x08,0x00
+
+## MRM4m
+
+# ATT:   vpsraq	$0, (%r16,%r17), %zmm0
+# INTEL: vpsraq	zmm0, zmmword ptr [r16 + r17], 0
+0x62,0xf9,0xf9,0x48,0x72,0x24,0x08,0x00
+
+## MRM5m
+
+# ATT:   vscatterpf0dps	(%r16,%zmm0) {%k1}
+# INTEL: vscatterpf0dps	{k1}, zmmword ptr [r16 + zmm0]
+0x62,0xfa,0x7d,0x49,0xc6,0x2c,0x00
+
+## MRM6m
+
+# ATT:   vpsllq	$0, (%r16,%r17), %zmm0
+# INTEL: vpsllq	zmm0, zmmword ptr [r16 + r17], 0
+0x62,0xf9,0xf9,0x48,0x73,0x34,0x08,0x00
+
+## MRM7m
+
+# ATT:   vpslldq	$0, (%r16,%r17), %zmm0
+# INTEL: vpslldq	zmm0, zmmword ptr [r16 + r17], 0
+0x62,0xf9,0x79,0x48,0x73,0x3c,0x08,0x00
+
+## MRMSrcMem4VOp3
+
+# ATT:   bzhiq	%r19, 291(%r28,%r29,4), %r23
+# INTEL: bzhi	r23, qword ptr [r28 + 4*r29 + 291], r19
+0x62,0x8a,0xe0,0x00,0xf5,0xbc,0xac,0x23,0x01,0x00,0x00
+
+## MRMDestReg
+
+# ATT:   vextractps	$1, %xmm16, %r16d
+# INTEL: vextractps	r16d, xmm16, 1
+0x62,0xeb,0x7d,0x08,0x17,0xc0,0x01
+
+## MRMSrcReg4VOp3
+
+# ATT:   bzhiq	%r19, %r23, %r27
+# INTEL: bzhi	r27, r23, r19
+0x62,0x6a,0xe4,0x00,0xf5,0xdf

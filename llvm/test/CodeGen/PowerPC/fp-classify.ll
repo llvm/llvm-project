@@ -18,12 +18,9 @@ define zeroext i1 @abs_isinff(float %x) {
 ;
 ; P9-LABEL: abs_isinff:
 ; P9:       # %bb.0: # %entry
-; P9-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; P9-NEXT:    xsabsdp 0, 1
-; P9-NEXT:    li 4, 1
-; P9-NEXT:    lfs 1, .LCPI0_0@toc@l(3)
+; P9-NEXT:    xststdcsp 0, 1, 48
 ; P9-NEXT:    li 3, 0
-; P9-NEXT:    fcmpu 0, 0, 1
+; P9-NEXT:    li 4, 1
 ; P9-NEXT:    iseleq 3, 4, 3
 ; P9-NEXT:    blr
 entry:
@@ -46,12 +43,9 @@ define zeroext i1 @abs_isinf(double %x) {
 ;
 ; P9-LABEL: abs_isinf:
 ; P9:       # %bb.0: # %entry
-; P9-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
-; P9-NEXT:    xsabsdp 0, 1
-; P9-NEXT:    li 4, 1
-; P9-NEXT:    lfs 1, .LCPI1_0@toc@l(3)
+; P9-NEXT:    xststdcdp 0, 1, 48
 ; P9-NEXT:    li 3, 0
-; P9-NEXT:    fcmpu 0, 0, 1
+; P9-NEXT:    li 4, 1
 ; P9-NEXT:    iseleq 3, 4, 3
 ; P9-NEXT:    blr
 entry:
@@ -91,13 +85,9 @@ define zeroext i1 @abs_isinfq(fp128 %x) {
 ;
 ; P9-LABEL: abs_isinfq:
 ; P9:       # %bb.0: # %entry
-; P9-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
-; P9-NEXT:    xsabsqp 2, 2
-; P9-NEXT:    li 4, 1
-; P9-NEXT:    addi 3, 3, .LCPI2_0@toc@l
-; P9-NEXT:    lxv 35, 0(3)
+; P9-NEXT:    xststdcqp 0, 2, 48
 ; P9-NEXT:    li 3, 0
-; P9-NEXT:    xscmpuqp 0, 2, 3
+; P9-NEXT:    li 4, 1
 ; P9-NEXT:    iseleq 3, 4, 3
 ; P9-NEXT:    blr
 entry:
@@ -119,12 +109,10 @@ define zeroext i1 @abs_isinfornanf(float %x) {
 ;
 ; P9-LABEL: abs_isinfornanf:
 ; P9:       # %bb.0: # %entry
-; P9-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
-; P9-NEXT:    xsabsdp 0, 1
-; P9-NEXT:    lfs 1, .LCPI3_0@toc@l(3)
-; P9-NEXT:    li 3, 1
-; P9-NEXT:    fcmpu 0, 0, 1
-; P9-NEXT:    isellt 3, 0, 3
+; P9-NEXT:    xststdcsp 0, 1, 112
+; P9-NEXT:    li 3, 0
+; P9-NEXT:    li 4, 1
+; P9-NEXT:    iseleq 3, 4, 3
 ; P9-NEXT:    blr
 entry:
   %0 = tail call float @llvm.fabs.f32(float %x)
@@ -145,12 +133,10 @@ define zeroext i1 @abs_isinfornan(double %x) {
 ;
 ; P9-LABEL: abs_isinfornan:
 ; P9:       # %bb.0: # %entry
-; P9-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
-; P9-NEXT:    xsabsdp 0, 1
-; P9-NEXT:    lfs 1, .LCPI4_0@toc@l(3)
-; P9-NEXT:    li 3, 1
-; P9-NEXT:    fcmpu 0, 0, 1
-; P9-NEXT:    isellt 3, 0, 3
+; P9-NEXT:    xststdcdp 0, 1, 112
+; P9-NEXT:    li 3, 0
+; P9-NEXT:    li 4, 1
+; P9-NEXT:    iseleq 3, 4, 3
 ; P9-NEXT:    blr
 entry:
   %0 = tail call double @llvm.fabs.f64(double %x)
@@ -212,13 +198,10 @@ define zeroext i1 @abs_isinfornanq(fp128 %x) {
 ;
 ; P9-LABEL: abs_isinfornanq:
 ; P9:       # %bb.0: # %entry
-; P9-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
-; P9-NEXT:    xsabsqp 2, 2
-; P9-NEXT:    addi 3, 3, .LCPI5_0@toc@l
-; P9-NEXT:    lxv 35, 0(3)
-; P9-NEXT:    li 3, 1
-; P9-NEXT:    xscmpuqp 0, 2, 3
-; P9-NEXT:    isellt 3, 0, 3
+; P9-NEXT:    xststdcqp 0, 2, 112
+; P9-NEXT:    li 3, 0
+; P9-NEXT:    li 4, 1
+; P9-NEXT:    iseleq 3, 4, 3
 ; P9-NEXT:    blr
 entry:
   %0 = tail call fp128 @llvm.fabs.f128(fp128 %x)

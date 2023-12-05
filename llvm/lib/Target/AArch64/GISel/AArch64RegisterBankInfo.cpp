@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Threading.h"
 #include <algorithm>
 #include <cassert>
 
@@ -216,7 +217,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(
 
 unsigned AArch64RegisterBankInfo::copyCost(const RegisterBank &A,
                                            const RegisterBank &B,
-                                           unsigned Size) const {
+                                           TypeSize Size) const {
   // What do we do with different size?
   // copy are same size.
   // Will introduce other hooks for different size:
@@ -245,9 +246,10 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case AArch64::FPR32_with_hsub_in_FPR16_loRegClassID:
   case AArch64::FPR32RegClassID:
   case AArch64::FPR64RegClassID:
-  case AArch64::FPR64_loRegClassID:
   case AArch64::FPR128RegClassID:
+  case AArch64::FPR64_loRegClassID:
   case AArch64::FPR128_loRegClassID:
+  case AArch64::FPR128_0to7RegClassID:
   case AArch64::DDRegClassID:
   case AArch64::DDDRegClassID:
   case AArch64::DDDDRegClassID:
@@ -339,12 +341,16 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
         /*NumOperands*/ 2);
     const InstructionMapping &GPRToFPRMapping = getInstructionMapping(
         /*ID*/ 3,
-        /*Cost*/ copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank, Size),
+        /*Cost*/
+        copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank,
+                 TypeSize::getFixed(Size)),
         getCopyMapping(AArch64::FPRRegBankID, AArch64::GPRRegBankID, Size),
         /*NumOperands*/ 2);
     const InstructionMapping &FPRToGPRMapping = getInstructionMapping(
         /*ID*/ 3,
-        /*Cost*/ copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank, Size),
+        /*Cost*/
+        copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank,
+                 TypeSize::getFixed(Size)),
         getCopyMapping(AArch64::GPRRegBankID, AArch64::FPRRegBankID, Size),
         /*NumOperands*/ 2);
 
@@ -708,7 +714,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       assert(DstRB && SrcRB && "Both RegBank were nullptr");
       unsigned Size = getSizeInBits(DstReg, MRI, TRI);
       return getInstructionMapping(
-          DefaultMappingID, copyCost(*DstRB, *SrcRB, Size),
+          DefaultMappingID, copyCost(*DstRB, *SrcRB, TypeSize::getFixed(Size)),
           getCopyMapping(DstRB->getID(), SrcRB->getID(), Size),
           // We only care about the mapping of the destination.
           /*NumOperands*/ 1);
@@ -727,7 +733,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     const RegisterBank &SrcRB =
         SrcIsGPR ? AArch64::GPRRegBank : AArch64::FPRRegBank;
     return getInstructionMapping(
-        DefaultMappingID, copyCost(DstRB, SrcRB, Size),
+        DefaultMappingID, copyCost(DstRB, SrcRB, TypeSize::getFixed(Size)),
         getCopyMapping(DstRB.getID(), SrcRB.getID(), Size),
         // We only care about the mapping of the destination for COPY.
         /*NumOperands*/ Opc == TargetOpcode::G_BITCAST ? 2 : 1);
@@ -820,7 +826,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       Cost = copyCost(
           *AArch64GenRegisterBankInfo::PartMappings[OpRegBankIdx[0]].RegBank,
           *AArch64GenRegisterBankInfo::PartMappings[OpRegBankIdx[1]].RegBank,
-          OpSize[0]);
+          TypeSize::getFixed(OpSize[0]));
     break;
   case TargetOpcode::G_LOAD: {
     // Loading in vector unit is slightly more expensive.

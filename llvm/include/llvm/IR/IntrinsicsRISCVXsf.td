@@ -42,7 +42,7 @@ let TargetPrefix = "riscv" in {
   //        (bit<27-26>, bit<11-7>, vector_in, vector_in/scalar_in, vl)
   class RISCVSFCustomVC_XV<bit HasDst, bit HasSE, bit ImmScalar>
         : Intrinsic<!if(HasDst, [llvm_anyvector_ty], []),
-                    !listconcat(!if(HasDst, [llvm_anyint_ty, LLVMMatchType<0>],
+                    !listconcat(!if(HasDst, [llvm_anyint_ty, llvm_anyvector_ty],
                                             [llvm_anyint_ty, LLVMMatchType<0>, llvm_anyvector_ty]),
                                 [llvm_any_ty, llvm_anyint_ty]),
                     !listconcat([IntrNoMem, ImmArg<ArgIndex<0>>],                        // bit<27-26>
@@ -61,8 +61,8 @@ let TargetPrefix = "riscv" in {
   //        (bit<27-26>, vector_in, vector_in, vector_in/scalar_in, vl)
   class RISCVSFCustomVC_XVV<bit HasDst, bit HasSE, bit ImmScalar>
         : Intrinsic<!if(HasDst, [llvm_anyvector_ty], []),
-                    !listconcat(!if(HasDst, [llvm_anyint_ty, LLVMMatchType<0>, LLVMMatchType<0>],
-                                            [llvm_anyint_ty, llvm_anyvector_ty, LLVMMatchType<1>]),
+                    !listconcat(!if(HasDst, [llvm_anyint_ty, llvm_anyvector_ty, llvm_anyvector_ty],
+                                            [llvm_anyint_ty, llvm_anyvector_ty, llvm_anyvector_ty]),
                                 [llvm_any_ty, llvm_anyint_ty]),
                     !listconcat([IntrNoMem, ImmArg<ArgIndex<0>>],                        // bit<27-26>
                                 !if(ImmScalar, [ImmArg<ArgIndex<3>>], []),               // ScalarOperand
@@ -76,7 +76,7 @@ let TargetPrefix = "riscv" in {
   //        (bit<27-26>, wvector_in, vector_in, vector_in/scalar_in, vl)
   class RISCVSFCustomVC_XVW<bit HasDst, bit HasSE, bit ImmScalar>
         : Intrinsic<!if(HasDst, [llvm_anyvector_ty], []),
-                    !listconcat(!if(HasDst, [llvm_anyint_ty, LLVMMatchType<0>, llvm_anyvector_ty],
+                    !listconcat(!if(HasDst, [llvm_anyint_ty, llvm_anyvector_ty, llvm_anyvector_ty],
                                             [llvm_anyint_ty, llvm_anyvector_ty, llvm_anyvector_ty]),
                                 [llvm_any_ty, llvm_anyint_ty]),
                     !listconcat([IntrNoMem, ImmArg<ArgIndex<0>>],                        // bit<27-26>
@@ -136,6 +136,30 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 3;
   }
 
+  // Input: (passthru, vector_in, scalar_in, frm, vl)
+  class RISCVSFCustomVFNRCLIPUnMasked
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_anyfloat_ty, LLVMVectorElementType<1>,
+                     llvm_anyint_ty, LLVMMatchType<2>],
+                    [ImmArg<ArgIndex<3>>, IntrNoMem]>, RISCVVIntrinsic {
+    let VLOperand = 4;
+  }
+
+  // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+  class RISCVSFCustomVFNRCLIPMasked
+       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                   [LLVMMatchType<0>, llvm_anyfloat_ty, LLVMVectorElementType<1>,
+                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty,
+                    LLVMMatchType<2>, LLVMMatchType<2>],
+                   [ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<6>>, IntrNoMem]>, RISCVVIntrinsic {
+    let VLOperand = 5;
+  }
+
+  multiclass RISCVSFCustomVFNRCLIP {
+    def NAME : RISCVSFCustomVFNRCLIPUnMasked;
+    def NAME # "_mask" : RISCVSFCustomVFNRCLIPMasked;
+  }
+
   defm "" : RISCVSFCustomVC_X<["x", "i"]>;
   defm "" : RISCVSFCustomVC_XV<["x", "i", "v", "f"]>;
   defm "" : RISCVSFCustomVC_XVV<["x", "i", "v", "f"]>;
@@ -152,4 +176,11 @@ let TargetPrefix = "riscv" in {
   def int_riscv_sf_vqmacc_4x8x4   : RISCVSFCustomVMACC;
   def int_riscv_sf_vqmaccus_4x8x4 : RISCVSFCustomVMACC;
   def int_riscv_sf_vqmaccsu_4x8x4 : RISCVSFCustomVMACC;
+
+  // XSfvfwmaccqqq
+  def int_riscv_sf_vfwmacc_4x4x4 : RISCVSFCustomVMACC;
+
+  // XSfvfnrclipxfqf
+  defm int_riscv_sf_vfnrclip_x_f_qf : RISCVSFCustomVFNRCLIP;
+  defm int_riscv_sf_vfnrclip_xu_f_qf : RISCVSFCustomVFNRCLIP;
 } // TargetPrefix = "riscv"

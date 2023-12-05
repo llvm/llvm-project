@@ -314,7 +314,11 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
       Value value = op.getDynamicSizes()[dynValCounter++];
       APInt intVal;
       if (matchPattern(value, m_ConstantInt(&intVal))) {
-        newShape[i] = intVal.getSExtValue();
+        int64_t dim = intVal.getSExtValue();
+        if (dim >= 0)
+          newShape[i] = intVal.getSExtValue();
+        else
+          newDynamicSizes.push_back(value);
       } else {
         newDynamicSizes.push_back(value);
       }
@@ -581,7 +585,11 @@ MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
     assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
     buffer = getDest();
   }
-  rewriter.create<memref::TensorStoreOp>(getLoc(), getSource(), buffer);
+  auto srcBuffer = getBuffer(rewriter, getSource(), options);
+  if (failed(srcBuffer))
+    return failure();
+  if (failed(options.createMemCpy(rewriter, getLoc(), *srcBuffer, buffer)))
+    return failure();
   replaceOpWithBufferizedValues(rewriter, getOperation(),
                                 tensorDest ? ValueRange(buffer) : ValueRange());
   return success();
@@ -643,6 +651,18 @@ OpOperand &MaterializeInDestinationOp::getSourceOperand() {
   return getOperation()->getOpOperand(0) /*source*/;
 }
 
+bool MaterializeInDestinationOp::operatesOnEquivalentSubset(
+    SubsetOpInterface subsetOp,
+    function_ref<bool(Value, Value)> equivalenceFn) {
+  return false;
+}
+
+bool MaterializeInDestinationOp::operatesOnDisjointSubset(
+    SubsetOpInterface subsetOp,
+    function_ref<bool(Value, Value)> equivalenceFn) {
+  return false;
+}
+
 LogicalResult MaterializeInDestinationOp::verify() {
   if (!isa<TensorType, BaseMemRefType>(getDest().getType()))
     return emitOpError("'dest' must be a tensor or a memref");
@@ -666,8 +686,9 @@ LogicalResult MaterializeInDestinationOp::verify() {
 void MaterializeInDestinationOp::build(OpBuilder &builder,
                                        OperationState &state, Value source,
                                        Value dest) {
-  assert(isa<TensorType>(dest.getType()) && "expected tensor type");
-  build(builder, state, /*result=*/dest.getType(), source, dest);
+  auto destTensorType = dyn_cast<TensorType>(dest.getType());
+  build(builder, state, /*result=*/destTensorType ? destTensorType : Type(),
+        source, dest);
 }
 
 bool MaterializeInDestinationOp::isWritable(Value value,

@@ -182,7 +182,7 @@ void ThreadPlanStepUntil::AnalyzeStop() {
         } else
           m_should_stop = false;
 
-        if (this_site->GetNumberOfOwners() == 1)
+        if (this_site->GetNumberOfConstituents() == 1)
           m_explains_stop = true;
         else
           m_explains_stop = false;
@@ -228,7 +228,7 @@ void ThreadPlanStepUntil::AnalyzeStop() {
             // only breakpoint here, then we do explain the stop, and we'll
             // continue. If not then we should let higher plans handle this
             // stop.
-            if (this_site->GetNumberOfOwners() == 1)
+            if (this_site->GetNumberOfConstituents() == 1)
               m_explains_stop = true;
             else {
               m_should_stop = true;

@@ -19,6 +19,14 @@ subroutine declaretarget()
     call implicit_invocation()
 end subroutine declaretarget
 
+! MLIR: func.func @{{.*}}declaretarget_enter() attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>}
+! MLIR: return
+! LLVM: define {{.*}} @{{.*}}declaretarget_enter{{.*}}(
+subroutine declaretarget_enter()
+!$omp declare target enter(declaretarget_enter) device_type(nohost)
+    call implicit_invocation()
+end subroutine declaretarget_enter
+
 ! MLIR: func.func @{{.*}}no_declaretarget() attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>}
 ! MLIR: return
 ! LLVM: define {{.*}} @{{.*}}no_declaretarget{{.*}}(
@@ -26,9 +34,7 @@ subroutine no_declaretarget()
 end subroutine no_declaretarget
 
 ! MLIR-HOST: func.func @{{.*}}main(
-! MLIR-HOST-NOT: func.func @{{.*}}main_omp_outline{{.*}}()
 ! MLIR-DEVICE-NOT: func.func @{{.*}}main(
-! MLIR-DEVICE: func.func @{{.*}}main_omp_outline{{.*}}() attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>, omp.outline_parent_name = "_QQmain"}
 ! MLIR-ALL: return
 
 ! LLVM-HOST: define {{.*}} @{{.*}}main{{.*}}(

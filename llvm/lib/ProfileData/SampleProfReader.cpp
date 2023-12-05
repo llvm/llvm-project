@@ -1788,8 +1788,11 @@ void SampleProfileReaderItaniumRemapper::applyRemapping(LLVMContext &Ctx) {
 
 std::optional<StringRef>
 SampleProfileReaderItaniumRemapper::lookUpNameInProfile(StringRef Fname) {
-  if (auto Key = Remappings->lookup(Fname))
-    return NameMap.lookup(Key);
+  if (auto Key = Remappings->lookup(Fname)) {
+    StringRef Result = NameMap.lookup(Key);
+    if (!Result.empty())
+      return Result;
+  }
   return std::nullopt;
 }
 

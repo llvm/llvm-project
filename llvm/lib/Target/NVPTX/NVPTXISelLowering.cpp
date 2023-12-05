@@ -436,6 +436,15 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       case ISD::FADD:
       case ISD::FMUL:
       case ISD::FSUB:
+      case ISD::SELECT:
+      case ISD::SELECT_CC:
+      case ISD::SETCC:
+      case ISD::FEXP2:
+      case ISD::FCEIL:
+      case ISD::FFLOOR:
+      case ISD::FNEARBYINT:
+      case ISD::FRINT:
+      case ISD::FTRUNC:
         IsOpSupported = STI.getSmVersion() >= 90 && STI.getPTXVersion() >= 78;
         break;
     }
@@ -488,8 +497,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2bf16, Expand);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2bf16, Expand);
 
-  setBF16OperationAction(ISD::SETCC, MVT::bf16, Legal, Promote);
   setBF16OperationAction(ISD::SETCC, MVT::v2bf16, Legal, Expand);
+  setBF16OperationAction(ISD::SETCC, MVT::bf16, Legal, Promote);
+  if (getOperationAction(ISD::SETCC, MVT::bf16) == Promote)
+    AddPromotedToType(ISD::SETCC, MVT::bf16, MVT::f32);
 
   // Conversion to/from i16/i16x2 is always legal.
   setOperationAction(ISD::BUILD_VECTOR, MVT::v2i16, Custom);
@@ -497,6 +508,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2i16, Expand);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2i16, Expand);
 
+  // Conversion to/from i8/i8x4 is always legal.
   setOperationAction(ISD::BUILD_VECTOR, MVT::v4i8, Custom);
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4i8, Custom);
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i8, Custom);
@@ -595,6 +607,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f32, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8bf16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8bf16, Expand);
   // Turn FP truncstore into trunc + store.
   // FIXME: vector types should also be expanded
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
@@ -702,8 +718,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
-                       ISD::LOAD, ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM,
-                       ISD::VSELECT});
+                       ISD::LOAD, ISD::MUL, ISD::SHL, ISD::SREM, ISD::STORE,
+                       ISD::UREM, ISD::VSELECT});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -719,9 +735,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   for (const auto &Op : {ISD::FADD, ISD::FMUL, ISD::FSUB, ISD::FMA}) {
     setFP16OperationAction(Op, MVT::f16, Legal, Promote);
     setFP16OperationAction(Op, MVT::v2f16, Legal, Expand);
-    setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
     setBF16OperationAction(Op, MVT::v2bf16, Legal, Expand);
     // bf16 must be promoted to f32.
+    setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
     if (getOperationAction(Op, MVT::bf16) == Promote)
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
@@ -741,21 +757,23 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // These map to conversion instructions for scalar FP types.
   for (const auto &Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT,
                          ISD::FROUNDEVEN, ISD::FTRUNC}) {
-    setOperationAction(Op, MVT::bf16, Legal);
     setOperationAction(Op, MVT::f16, Legal);
     setOperationAction(Op, MVT::f32, Legal);
     setOperationAction(Op, MVT::f64, Legal);
     setOperationAction(Op, MVT::v2f16, Expand);
     setOperationAction(Op, MVT::v2bf16, Expand);
+    setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
+    if (getOperationAction(Op, MVT::bf16) == Promote)
+      AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
 
   setOperationAction(ISD::FROUND, MVT::f16, Promote);
   setOperationAction(ISD::FROUND, MVT::v2f16, Expand);
-  setOperationAction(ISD::FROUND, MVT::bf16, Promote);
   setOperationAction(ISD::FROUND, MVT::v2bf16, Expand);
   setOperationAction(ISD::FROUND, MVT::f32, Custom);
   setOperationAction(ISD::FROUND, MVT::f64, Custom);
-
+  setOperationAction(ISD::FROUND, MVT::bf16, Promote);
+  AddPromotedToType(ISD::FROUND, MVT::bf16, MVT::f32);
 
   // 'Expand' implements FCOPYSIGN without calling an external library.
   setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
@@ -769,14 +787,26 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // promoted to f32. v2f16 is expanded to f16, which is then promoted
   // to f32.
   for (const auto &Op :
-       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS, ISD::FABS}) {
+       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS}) {
     setOperationAction(Op, MVT::f16, Promote);
-    setOperationAction(Op, MVT::bf16, Promote);
     setOperationAction(Op, MVT::f32, Legal);
     setOperationAction(Op, MVT::f64, Legal);
     setOperationAction(Op, MVT::v2f16, Expand);
     setOperationAction(Op, MVT::v2bf16, Expand);
+    setOperationAction(Op, MVT::bf16, Promote);
+    AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
+  for (const auto &Op : {ISD::FABS}) {
+    setOperationAction(Op, MVT::f16, Promote);
+    setOperationAction(Op, MVT::f32, Legal);
+    setOperationAction(Op, MVT::f64, Legal);
+    setOperationAction(Op, MVT::v2f16, Expand);
+    setBF16OperationAction(Op, MVT::v2bf16, Legal, Expand);
+    setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
+    if (getOperationAction(Op, MVT::bf16) == Promote)
+      AddPromotedToType(Op, MVT::bf16, MVT::f32);
+  }
+
   // max.f16, max.f16x2 and max.NaN are supported on sm_80+.
   auto GetMinMaxAction = [&](LegalizeAction NotSm80Action) {
     bool IsAtLeastSm80 = STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70;
@@ -784,11 +814,13 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   };
   for (const auto &Op : {ISD::FMINNUM, ISD::FMAXNUM}) {
     setFP16OperationAction(Op, MVT::f16, GetMinMaxAction(Promote), Promote);
-    setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
     setOperationAction(Op, MVT::f32, Legal);
     setOperationAction(Op, MVT::f64, Legal);
     setFP16OperationAction(Op, MVT::v2f16, GetMinMaxAction(Expand), Expand);
     setBF16OperationAction(Op, MVT::v2bf16, Legal, Expand);
+    setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
+    if (getOperationAction(Op, MVT::bf16) == Promote)
+      AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
   for (const auto &Op : {ISD::FMINIMUM, ISD::FMAXIMUM}) {
     setFP16OperationAction(Op, MVT::f16, GetMinMaxAction(Expand), Expand);
@@ -920,6 +952,8 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "NVPTXISD::PRMT";
   case NVPTXISD::SETP_F16X2:
     return "NVPTXISD::SETP_F16X2";
+  case NVPTXISD::SETP_BF16X2:
+    return "NVPTXISD::SETP_BF16X2";
   case NVPTXISD::Dummy:
     return "NVPTXISD::Dummy";
   case NVPTXISD::MUL_WIDE_SIGNED:
@@ -2883,7 +2917,6 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
         DAG.getMemIntrinsicNode(Opcode, DL, DAG.getVTList(MVT::Other), Ops,
                                 MemSD->getMemoryVT(), MemSD->getMemOperand());
 
-    // return DCI.CombineTo(N, NewSt, true);
     return NewSt;
   }
 
@@ -5382,12 +5415,17 @@ static SDValue PerformSHLCombine(SDNode *N,
 }
 
 static SDValue PerformSETCCCombine(SDNode *N,
-                                   TargetLowering::DAGCombinerInfo &DCI) {
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   unsigned int SmVersion) {
   EVT CCType = N->getValueType(0);
   SDValue A = N->getOperand(0);
   SDValue B = N->getOperand(1);
 
-  if (CCType != MVT::v2i1 || A.getValueType() != MVT::v2f16)
+  EVT AType = A.getValueType();
+  if (!(CCType == MVT::v2i1 && (AType == MVT::v2f16 || AType == MVT::v2bf16)))
+    return SDValue();
+
+  if (A.getValueType() == MVT::v2bf16 && SmVersion < 90)
     return SDValue();
 
   SDLoc DL(N);
@@ -5395,9 +5433,10 @@ static SDValue PerformSETCCCombine(SDNode *N,
   // convert back to v2i1. The returned result will be scalarized by
   // the legalizer, but the comparison will remain a single vector
   // instruction.
-  SDValue CCNode = DCI.DAG.getNode(NVPTXISD::SETP_F16X2, DL,
-                                   DCI.DAG.getVTList(MVT::i1, MVT::i1),
-                                   {A, B, N->getOperand(2)});
+  SDValue CCNode = DCI.DAG.getNode(
+      A.getValueType() == MVT::v2f16 ? NVPTXISD::SETP_F16X2
+                                     : NVPTXISD::SETP_BF16X2,
+      DL, DCI.DAG.getVTList(MVT::i1, MVT::i1), {A, B, N->getOperand(2)});
   return DCI.DAG.getNode(ISD::BUILD_VECTOR, DL, CCType, CCNode.getValue(0),
                          CCNode.getValue(1));
 }
@@ -5518,6 +5557,51 @@ static SDValue PerformLOADCombine(SDNode *N,
       DL);
 }
 
+// Lower a v16i8 (or a v8i8) store into a StoreV4 (or StoreV2) operation with
+// i32 results instead of letting ReplaceLoadVector split it into smaller stores
+// during legalization. This is done at dag-combine1 time, so that vector
+// operations with i8 elements can be optimised away instead of being needlessly
+// split during legalization, which involves storing to the stack and loading it
+// back.
+static SDValue PerformSTORECombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  StoreSDNode *ST = cast<StoreSDNode>(N);
+  EVT VT = ST->getValue().getValueType();
+  if (VT != MVT::v16i8 && VT != MVT::v8i8)
+    return SDValue();
+
+  // Create a v4i32 vector store operation, effectively <4 x v4i8>.
+  unsigned Opc = VT == MVT::v16i8 ? NVPTXISD::StoreV4 : NVPTXISD::StoreV2;
+  EVT NewVT = VT == MVT::v16i8 ? MVT::v4i32 : MVT::v2i32;
+  unsigned NumElts = NewVT.getVectorNumElements();
+
+  // Create a vector of the type required by the new store: v16i8 -> v4i32.
+  SDValue NewStoreValue = DCI.DAG.getBitcast(NewVT, ST->getValue());
+
+  // Operands for the store.
+  SmallVector<SDValue, 8> Ops;
+  Ops.reserve(N->getNumOperands() + NumElts - 1);
+  // Chain value.
+  Ops.push_back(N->ops().front());
+
+  SDLoc DL(N);
+  SmallVector<SDValue> Elts(NumElts);
+  // Break v4i32 (or v2i32) into four (or two) elements.
+  for (unsigned I = 0; I < NumElts; ++I)
+    Elts[I] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
+                          NewStoreValue.getValueType().getVectorElementType(),
+                          NewStoreValue, DAG.getIntPtrConstant(I, DL));
+  Ops.append(Elts.begin(), Elts.end());
+  // Any remaining operands.
+  Ops.append(N->op_begin() + 2, N->op_end());
+
+  SDValue NewStore = DAG.getMemIntrinsicNode(Opc, DL, DAG.getVTList(MVT::Other),
+                                             Ops, NewVT, ST->getMemOperand());
+  // Return the new chain.
+  return NewStore.getValue(0);
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -5536,9 +5620,11 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     case ISD::SREM:
       return PerformREMCombine(N, DCI, OptLevel);
     case ISD::SETCC:
-      return PerformSETCCCombine(N, DCI);
+      return PerformSETCCCombine(N, DCI, STI.getSmVersion());
     case ISD::LOAD:
       return PerformLOADCombine(N, DCI);
+    case ISD::STORE:
+      return PerformSTORECombine(N, DCI);
     case NVPTXISD::StoreRetval:
     case NVPTXISD::StoreRetvalV2:
     case NVPTXISD::StoreRetvalV4:

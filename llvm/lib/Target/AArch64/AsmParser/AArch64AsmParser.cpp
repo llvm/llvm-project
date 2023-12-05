@@ -223,6 +223,7 @@ private:
   bool parseDirectiveSEHTrapFrame(SMLoc L);
   bool parseDirectiveSEHMachineFrame(SMLoc L);
   bool parseDirectiveSEHContext(SMLoc L);
+  bool parseDirectiveSEHECContext(SMLoc L);
   bool parseDirectiveSEHClearUnwoundToCall(SMLoc L);
   bool parseDirectiveSEHPACSignLR(SMLoc L);
   bool parseDirectiveSEHSaveAnyReg(SMLoc L, bool Paired, bool Writeback);
@@ -1223,6 +1224,12 @@ public:
                 Reg.RegNum));
   }
 
+  bool isNeonVectorReg0to7() const {
+    return Kind == k_Register && Reg.Kind == RegKind::NeonVector &&
+           (AArch64MCRegisterClasses[AArch64::FPR128_0to7RegClassID].contains(
+               Reg.RegNum));
+  }
+
   bool isMatrix() const { return Kind == k_MatrixRegister; }
   bool isMatrixTileList() const { return Kind == k_MatrixTileList; }
 
@@ -1762,6 +1769,11 @@ public:
   }
 
   void addVectorRegLoOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(getReg()));
+  }
+
+  void addVectorReg0to7Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(getReg()));
   }
@@ -2598,31 +2610,31 @@ static std::optional<std::pair<int, int>> parseVectorKind(StringRef Suffix,
 
   switch (VectorKind) {
   case RegKind::NeonVector:
-    Res =
-        StringSwitch<std::pair<int, int>>(Suffix.lower())
-            .Case("", {0, 0})
-            .Case(".1d", {1, 64})
-            .Case(".1q", {1, 128})
-            // '.2h' needed for fp16 scalar pairwise reductions
-            .Case(".2h", {2, 16})
-            .Case(".2s", {2, 32})
-            .Case(".2d", {2, 64})
-            // '.4b' is another special case for the ARMv8.2a dot product
-            // operand
-            .Case(".4b", {4, 8})
-            .Case(".4h", {4, 16})
-            .Case(".4s", {4, 32})
-            .Case(".8b", {8, 8})
-            .Case(".8h", {8, 16})
-            .Case(".16b", {16, 8})
-            // Accept the width neutral ones, too, for verbose syntax. If those
-            // aren't used in the right places, the token operand won't match so
-            // all will work out.
-            .Case(".b", {0, 8})
-            .Case(".h", {0, 16})
-            .Case(".s", {0, 32})
-            .Case(".d", {0, 64})
-            .Default({-1, -1});
+    Res = StringSwitch<std::pair<int, int>>(Suffix.lower())
+              .Case("", {0, 0})
+              .Case(".1d", {1, 64})
+              .Case(".1q", {1, 128})
+              // '.2h' needed for fp16 scalar pairwise reductions
+              .Case(".2h", {2, 16})
+              .Case(".2b", {2, 8})
+              .Case(".2s", {2, 32})
+              .Case(".2d", {2, 64})
+              // '.4b' is another special case for the ARMv8.2a dot product
+              // operand
+              .Case(".4b", {4, 8})
+              .Case(".4h", {4, 16})
+              .Case(".4s", {4, 32})
+              .Case(".8b", {8, 8})
+              .Case(".8h", {8, 16})
+              .Case(".16b", {16, 8})
+              // Accept the width neutral ones, too, for verbose syntax. If
+              // those aren't used in the right places, the token operand won't
+              // match so all will work out.
+              .Case(".b", {0, 8})
+              .Case(".h", {0, 16})
+              .Case(".s", {0, 32})
+              .Case(".d", {0, 64})
+              .Default({-1, -1});
     break;
   case RegKind::SVEPredicateAsCounter:
   case RegKind::SVEPredicateVector:
@@ -3641,6 +3653,17 @@ static const struct Extension {
     {"fpmr", {AArch64::FeatureFPMR}},
     {"fp8", {AArch64::FeatureFP8}},
     {"faminmax", {AArch64::FeatureFAMINMAX}},
+    {"fp8fma", {AArch64::FeatureFP8FMA}},
+    {"ssve-fp8fma", {AArch64::FeatureSSVE_FP8FMA}},
+    {"fp8dot2", {AArch64::FeatureFP8DOT2}},
+    {"ssve-fp8dot2", {AArch64::FeatureSSVE_FP8DOT2}},
+    {"fp8dot4", {AArch64::FeatureFP8DOT4}},
+    {"ssve-fp8dot4", {AArch64::FeatureSSVE_FP8DOT4}},
+    {"lut", {AArch64::FeatureLUT}},
+    {"sme-lutv2", {AArch64::FeatureSME_LUTv2}},
+    {"sme-f8f16", {AArch64::FeatureSMEF8F16}},
+    {"sme-f8f32", {AArch64::FeatureSMEF8F32}},
+    {"sme-fa64",  {AArch64::FeatureSMEFA64}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -3674,6 +3697,8 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     Str += "ARMv9.3a";
   else if (FBS[AArch64::HasV9_4aOps])
     Str += "ARMv9.4a";
+  else if (FBS[AArch64::HasV9_5aOps])
+    Str += "ARMv9.5a";
   else if (FBS[AArch64::HasV8_0rOps])
     Str += "ARMv8r";
   else {
@@ -4536,7 +4561,7 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
 
   Operands.push_back(AArch64Operand::CreateReg(
       RegNum, RegKind::LookupTable, StartLoc, getLoc(), getContext()));
-  Lex(); // Eat identifier token.
+  Lex(); // Eat register.
 
   // Check if register is followed by an index
   if (parseOptionalToken(AsmToken::LBrac)) {
@@ -4548,16 +4573,17 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(ImmVal);
     if (!MCE)
       return TokError("immediate value expected for vector index");
-    if (parseToken(AsmToken::RBrac, "']' expected"))
-      return ParseStatus::Failure;
-
     Operands.push_back(AArch64Operand::CreateImm(
         MCConstantExpr::create(MCE->getValue(), getContext()), StartLoc,
         getLoc(), getContext()));
+    if (parseOptionalToken(AsmToken::Comma))
+      if (parseOptionalMulOperand(Operands))
+        return ParseStatus::Failure;
+    if (parseToken(AsmToken::RBrac, "']' expected"))
+      return ParseStatus::Failure;
     Operands.push_back(
         AArch64Operand::CreateToken("]", getLoc(), getContext()));
   }
-
   return ParseStatus::Success;
 }
 
@@ -6715,6 +6741,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHMachineFrame(Loc);
     else if (IDVal == ".seh_context")
       parseDirectiveSEHContext(Loc);
+    else if (IDVal == ".seh_ec_context")
+      parseDirectiveSEHECContext(Loc);
     else if (IDVal == ".seh_clear_unwound_to_call")
       parseDirectiveSEHClearUnwoundToCall(Loc);
     else if (IDVal == ".seh_pac_sign_lr")
@@ -7376,6 +7404,13 @@ bool AArch64AsmParser::parseDirectiveSEHMachineFrame(SMLoc L) {
 /// ::= .seh_context
 bool AArch64AsmParser::parseDirectiveSEHContext(SMLoc L) {
   getTargetStreamer().emitARM64WinCFIContext();
+  return false;
+}
+
+/// parseDirectiveSEHECContext
+/// ::= .seh_ec_context
+bool AArch64AsmParser::parseDirectiveSEHECContext(SMLoc L) {
+  getTargetStreamer().emitARM64WinCFIECContext();
   return false;
 }
 

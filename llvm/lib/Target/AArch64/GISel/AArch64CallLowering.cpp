@@ -832,9 +832,9 @@ bool AArch64CallLowering::doCallerAndCalleePassArgsTheSameWay(
 
 bool AArch64CallLowering::areCalleeOutgoingArgsTailCallable(
     CallLoweringInfo &Info, MachineFunction &MF,
-    SmallVectorImpl<ArgInfo> &OutArgs) const {
+    SmallVectorImpl<ArgInfo> &OrigOutArgs) const {
   // If there are no outgoing arguments, then we are done.
-  if (OutArgs.empty())
+  if (OrigOutArgs.empty())
     return true;
 
   const Function &CallerF = MF.getFunction();
@@ -854,6 +854,9 @@ bool AArch64CallLowering::areCalleeOutgoingArgsTailCallable(
 
   AArch64OutgoingValueAssigner CalleeAssigner(AssignFnFixed, AssignFnVarArg,
                                               Subtarget, /*IsReturn*/ false);
+  // determineAssignments() may modify argument flags, so make a copy.
+  SmallVector<ArgInfo, 8> OutArgs;
+  append_range(OutArgs, OrigOutArgs);
   if (!determineAssignments(CalleeAssigner, OutArgs, OutInfo)) {
     LLVM_DEBUG(dbgs() << "... Could not analyze call operands.\n");
     return false;

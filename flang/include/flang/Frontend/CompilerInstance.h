@@ -55,6 +55,8 @@ class CompilerInstance {
 
   std::unique_ptr<Fortran::semantics::RuntimeDerivedTypeTables> rtTyTables;
 
+  std::unique_ptr<Fortran::semantics::SemanticsContext> semaContext;
+
   /// The stream for diagnostics from Semantics
   llvm::raw_ostream *semaOutputStream = &llvm::errs();
 
@@ -120,6 +122,13 @@ public:
   /// }
   /// @name Semantic analysis
   /// {
+
+  Fortran::semantics::SemanticsContext &getSemanticsContext() {
+    return *semaContext;
+  }
+  const Fortran::semantics::SemanticsContext &getSemanticsContext() const {
+    return *semaContext;
+  }
 
   /// Replace the current stream for verbose output.
   void setSemaOutputStream(llvm::raw_ostream &value);

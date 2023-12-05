@@ -10,7 +10,9 @@ let Command = "target modules dump symtab" in {
 
 let Command = "target modules dump separate debug info" in {
   def tm_json : Option<"json", "j">, Group<1>,
-  Desc<"Output the details in JSON format.">;
+    Desc<"Output the details in JSON format.">;
+  def tm_errors_only : Option<"errors-only", "e">, Group<1>,
+    Desc<"Filter to show only debug info files with errors.">;
 }
 
 let Command = "help" in {

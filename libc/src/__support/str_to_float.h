@@ -16,7 +16,7 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
-#include "src/__support/builtin_wrappers.h"
+#include "src/__support/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/detailed_powers_of_ten.h"
@@ -89,7 +89,7 @@ template <class T> LIBC_INLINE void set_implicit_bit(fputil::FPBits<T> &) {
   return;
 }
 
-#if defined(SPECIAL_X86_LONG_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 template <>
 LIBC_INLINE void
 set_implicit_bit<long double>(fputil::FPBits<long double> &result) {
@@ -221,7 +221,7 @@ eisel_lemire(ExpandedFloat<T> init_num,
   return output;
 }
 
-#if !defined(LONG_DOUBLE_IS_DOUBLE)
+#if !defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
 template <>
 LIBC_INLINE cpp::optional<ExpandedFloat<long double>>
 eisel_lemire<long double>(ExpandedFloat<long double> init_num,
@@ -516,7 +516,7 @@ public:
   static constexpr double MAX_EXACT_INT = 9007199254740991.0;
 };
 
-#if defined(LONG_DOUBLE_IS_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
 template <> class ClingerConsts<long double> {
 public:
   static constexpr long double POWERS_OF_TEN_ARRAY[] = {
@@ -529,7 +529,7 @@ public:
   static constexpr long double MAX_EXACT_INT =
       ClingerConsts<double>::MAX_EXACT_INT;
 };
-#elif defined(SPECIAL_X86_LONG_DOUBLE)
+#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 template <> class ClingerConsts<long double> {
 public:
   static constexpr long double POWERS_OF_TEN_ARRAY[] = {
@@ -1220,9 +1220,9 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
         tolower(src[index + 2]) == inf_string[2]) {
       seen_digit = true;
       if (result.get_sign())
-        result = result.neg_inf();
+        result = fputil::FPBits<T>(result.neg_inf());
       else
-        result = result.inf();
+        result = fputil::FPBits<T>(result.inf());
       if (tolower(src[index + 3]) == inf_string[3] &&
           tolower(src[index + 4]) == inf_string[4] &&
           tolower(src[index + 5]) == inf_string[5] &&

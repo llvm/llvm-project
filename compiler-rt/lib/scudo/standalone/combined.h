@@ -522,6 +522,9 @@ public:
 
   NOINLINE void deallocate(void *Ptr, Chunk::Origin Origin, uptr DeleteSize = 0,
                            UNUSED uptr Alignment = MinAlignment) {
+    if (UNLIKELY(!Ptr))
+      return;
+
     // For a deallocation, we only ensure minimal initialization, meaning thread
     // local data will be left uninitialized for now (when using ELF TLS). The
     // fallback cache will be used instead. This is a workaround for a situation
@@ -529,9 +532,6 @@ public:
     // the TLS destructors, ending up in initialized thread specific data never
     // being destroyed properly. Any other heap operation will do a full init.
     initThreadMaybe(/*MinimalInit=*/true);
-
-    if (UNLIKELY(!Ptr))
-      return;
 
 #ifdef GWP_ASAN_HOOKS
     if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr))) {
@@ -827,9 +827,14 @@ public:
   // for it, which then forces realloc to copy the usable size of a chunk as
   // opposed to its actual size.
   uptr getUsableSize(const void *Ptr) {
-    initThreadMaybe();
     if (UNLIKELY(!Ptr))
       return 0;
+
+    return getAllocSize(Ptr);
+  }
+
+  uptr getAllocSize(const void *Ptr) {
+    initThreadMaybe();
 
 #ifdef GWP_ASAN_HOOKS
     if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr)))
@@ -839,9 +844,11 @@ public:
     Ptr = getHeaderTaggedPointer(const_cast<void *>(Ptr));
     Chunk::UnpackedHeader Header;
     Chunk::loadHeader(Cookie, Ptr, &Header);
-    // Getting the usable size of a chunk only makes sense if it's allocated.
+
+    // Getting the alloc size of a chunk only makes sense if it's allocated.
     if (UNLIKELY(Header.State != Chunk::State::Allocated))
       reportInvalidChunkState(AllocatorAction::Sizing, const_cast<void *>(Ptr));
+
     return getSize(Ptr, &Header);
   }
 
@@ -886,7 +893,7 @@ public:
 
   void setTrackAllocationStacks(bool Track) {
     initThreadMaybe();
-    if (getFlags()->allocation_ring_buffer_size == 0) {
+    if (getFlags()->allocation_ring_buffer_size <= 0) {
       DCHECK(!Primary.Options.load().get(OptionBit::TrackAllocationStacks));
       return;
     }
@@ -1490,10 +1497,10 @@ private:
   }
 
   void mapAndInitializeRingBuffer() {
+    if (getFlags()->allocation_ring_buffer_size <= 0)
+      return;
     u32 AllocationRingBufferSize =
         static_cast<u32>(getFlags()->allocation_ring_buffer_size);
-    if (AllocationRingBufferSize < 1)
-      return;
     MemMapT MemMap;
     MemMap.map(
         /*Addr=*/0U,

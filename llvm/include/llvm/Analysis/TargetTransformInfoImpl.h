@@ -235,6 +235,8 @@ public:
 
   bool isNumRegsMajorCostOfLSR() const { return true; }
 
+  bool shouldFoldTerminatingConditionAfterLSR() const { return false; }
+
   bool isProfitableLSRChainElement(Instruction *I) const { return false; }
 
   bool canMacroFuseCmp() const { return false; }
@@ -443,7 +445,7 @@ public:
   }
 
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-    return TypeSize::Fixed(32);
+    return TypeSize::getFixed(32);
   }
 
   unsigned getMinVectorRegisterBitWidth() const { return 128; }
@@ -800,6 +802,11 @@ public:
             Callee->getFnAttribute("target-cpu")) &&
            (Caller->getFnAttribute("target-features") ==
             Callee->getFnAttribute("target-features"));
+  }
+
+  unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
+                                unsigned DefaultCallPenalty) const {
+    return DefaultCallPenalty;
   }
 
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,

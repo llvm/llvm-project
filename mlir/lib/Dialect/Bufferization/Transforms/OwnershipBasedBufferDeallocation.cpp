@@ -973,16 +973,9 @@ void BufferDeallocation::populateRemainingOwnerships(Operation *op) {
     if (!state.getOwnership(res, op->getBlock()).isUninitialized())
       continue;
 
-    // Don't take ownership of a returned memref if no allocate side-effect is
-    // present, relevant for memref.get_global, for example.
-    if (op->getNumOperands() == 0) {
-      OpBuilder builder(op);
-      state.updateOwnership(res, buildBoolValue(builder, op->getLoc(), false));
-      continue;
-    }
-
-    // Assume the result may alias with any operand and thus combine all their
-    // ownerships.
+    // The op does not allocate memory, otherwise, it would have been assigned
+    // an ownership during `handleInterface`. Assume the result may alias with
+    // any memref operand and thus combine all their ownerships.
     for (auto operand : op->getOperands()) {
       if (!isMemref(operand))
         continue;
@@ -990,6 +983,17 @@ void BufferDeallocation::populateRemainingOwnerships(Operation *op) {
       state.updateOwnership(
           res, state.getOwnership(operand, operand.getParentBlock()),
           op->getBlock());
+    }
+
+    // If the ownership value is still uninitialized (e.g., because the op has
+    // no memref operands), assume that no ownership is taken. E.g., this is the
+    // case for "memref.get_global".
+    //
+    // Note: This can lead to memory leaks if memory side effects are not
+    // properly specified on the op.
+    if (state.getOwnership(res, op->getBlock()).isUninitialized()) {
+      OpBuilder builder(op);
+      state.updateOwnership(res, buildBoolValue(builder, op->getLoc(), false));
     }
   }
 }

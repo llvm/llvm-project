@@ -29,11 +29,8 @@ using namespace PatternMatch;
 /// true for, actually insert the code to evaluate the expression.
 Value *InstCombinerImpl::EvaluateInDifferentType(Value *V, Type *Ty,
                                                  bool isSigned) {
-  if (Constant *C = dyn_cast<Constant>(V)) {
-    C = ConstantExpr::getIntegerCast(C, Ty, isSigned /*Sext or ZExt*/);
-    // If we got a constantexpr back, try to simplify it with DL info.
-    return ConstantFoldConstant(C, DL, &TLI);
-  }
+  if (Constant *C = dyn_cast<Constant>(V))
+    return ConstantFoldIntegerCast(C, Ty, isSigned, DL);
 
   // Otherwise, it must be an instruction.
   Instruction *I = cast<Instruction>(V);
@@ -217,7 +214,8 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
 /// free to be evaluated in that type. This is a helper for canEvaluate*.
 static bool canAlwaysEvaluateInType(Value *V, Type *Ty) {
   if (isa<Constant>(V))
-    return true;
+    return match(V, m_ImmConstant());
+
   Value *X;
   if ((match(V, m_ZExtOrSExt(m_Value(X))) || match(V, m_Trunc(m_Value(X)))) &&
       X->getType() == Ty)
@@ -229,7 +227,6 @@ static bool canAlwaysEvaluateInType(Value *V, Type *Ty) {
 /// Filter out values that we can not evaluate in the destination type for free.
 /// This is a helper for canEvaluate*.
 static bool canNotEvaluateInType(Value *V, Type *Ty) {
-  assert(!isa<Constant>(V) && "Constant should already be handled.");
   if (!isa<Instruction>(V))
     return true;
   // We don't extend or shrink something that has multiple uses --  doing so
@@ -505,11 +502,13 @@ Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
   if (!MaskedValueIsZero(ShVal1, HiBitMask, 0, &Trunc))
     return nullptr;
 
-  // We have an unnecessarily wide rotate!
-  // trunc (or (shl ShVal0, ShAmt), (lshr ShVal1, BitWidth - ShAmt))
-  // Narrow the inputs and convert to funnel shift intrinsic:
-  // llvm.fshl.i8(trunc(ShVal), trunc(ShVal), trunc(ShAmt))
-  Value *NarrowShAmt = Builder.CreateTrunc(ShAmt, DestTy);
+  // Adjust the width of ShAmt for narrowed funnel shift operation:
+  // - Zero-extend if ShAmt is narrower than the destination type.
+  // - Truncate if ShAmt is wider, discarding non-significant high-order bits.
+  // This prepares ShAmt for llvm.fshl.i8(trunc(ShVal), trunc(ShVal),
+  // zext/trunc(ShAmt)).
+  Value *NarrowShAmt = Builder.CreateZExtOrTrunc(ShAmt, DestTy);
+
   Value *X, *Y;
   X = Y = Builder.CreateTrunc(ShVal0, DestTy);
   if (ShVal0 != ShVal1)
@@ -582,13 +581,15 @@ Instruction *InstCombinerImpl::narrowBinOp(TruncInst &Trunc) {
                                       APInt(SrcWidth, MaxShiftAmt)))) {
         auto *OldShift = cast<Instruction>(Trunc.getOperand(0));
         bool IsExact = OldShift->isExact();
-        auto *ShAmt = ConstantExpr::getIntegerCast(C, A->getType(), true);
-        ShAmt = Constant::mergeUndefsWith(ShAmt, C);
-        Value *Shift =
-            OldShift->getOpcode() == Instruction::AShr
-                ? Builder.CreateAShr(A, ShAmt, OldShift->getName(), IsExact)
-                : Builder.CreateLShr(A, ShAmt, OldShift->getName(), IsExact);
-        return CastInst::CreateTruncOrBitCast(Shift, DestTy);
+        if (Constant *ShAmt = ConstantFoldIntegerCast(C, A->getType(),
+                                                      /*IsSigned*/ true, DL)) {
+          ShAmt = Constant::mergeUndefsWith(ShAmt, C);
+          Value *Shift =
+              OldShift->getOpcode() == Instruction::AShr
+                  ? Builder.CreateAShr(A, ShAmt, OldShift->getName(), IsExact)
+                  : Builder.CreateLShr(A, ShAmt, OldShift->getName(), IsExact);
+          return CastInst::CreateTruncOrBitCast(Shift, DestTy);
+        }
       }
     }
     break;
@@ -1220,6 +1221,22 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
     }
   }
 
+  if (!Zext.hasNonNeg()) {
+    // If this zero extend is only used by a shift, add nneg flag.
+    if (Zext.hasOneUse() &&
+        SrcTy->getScalarSizeInBits() >
+            Log2_64_Ceil(DestTy->getScalarSizeInBits()) &&
+        match(Zext.user_back(), m_Shift(m_Value(), m_Specific(&Zext)))) {
+      Zext.setNonNeg();
+      return &Zext;
+    }
+
+    if (isKnownNonNegative(Src, SQ.getWithInstruction(&Zext))) {
+      Zext.setNonNeg();
+      return &Zext;
+    }
+  }
+
   return nullptr;
 }
 
@@ -1372,8 +1389,11 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   unsigned DestBitSize = DestTy->getScalarSizeInBits();
 
   // If the value being extended is zero or positive, use a zext instead.
-  if (isKnownNonNegative(Src, DL, 0, &AC, &Sext, &DT))
-    return CastInst::Create(Instruction::ZExt, Src, DestTy);
+  if (isKnownNonNegative(Src, SQ.getWithInstruction(&Sext))) {
+    auto CI = CastInst::Create(Instruction::ZExt, Src, DestTy);
+    CI->setNonNeg(true);
+    return CI;
+  }
 
   // Try to extend the entire expression tree to the wide destination type.
   if (shouldChangeType(SrcTy, DestTy) && canEvaluateSExtd(Src, DestTy)) {
@@ -1933,6 +1953,15 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
     return CastInst::CreateIntegerCast(P, Ty, /*isSigned=*/false);
   }
 
+  // (ptrtoint (ptrmask P, M))
+  //    -> (and (ptrtoint P), M)
+  // This is generally beneficial as `and` is better supported than `ptrmask`.
+  Value *Ptr, *Mask;
+  if (match(SrcOp, m_OneUse(m_Intrinsic<Intrinsic::ptrmask>(m_Value(Ptr),
+                                                            m_Value(Mask)))) &&
+      Mask->getType() == Ty)
+    return BinaryOperator::CreateAnd(Builder.CreatePtrToInt(Ptr, Ty), Mask);
+
   if (auto *GEP = dyn_cast<GetElementPtrInst>(SrcOp)) {
     // Fold ptrtoint(gep null, x) to multiply + constant if the GEP has one use.
     // While this can increase the number of instructions it doesn't actually
@@ -2114,9 +2143,12 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
     Type *ElementIntTy = IntegerType::get(C->getContext(), ElementSize);
 
     for (unsigned i = 0; i != NumElts; ++i) {
-      unsigned ShiftI = Shift+i*ElementSize;
-      Constant *Piece = ConstantExpr::getLShr(C, ConstantInt::get(C->getType(),
-                                                                  ShiftI));
+      unsigned ShiftI = Shift + i * ElementSize;
+      Constant *Piece = ConstantFoldBinaryInstruction(
+          Instruction::LShr, C, ConstantInt::get(C->getType(), ShiftI));
+      if (!Piece)
+        return false;
+
       Piece = ConstantExpr::getTrunc(Piece, ElementIntTy);
       if (!collectInsertionElements(Piece, ShiftI, Elements, VecEltTy,
                                     isBigEndian))

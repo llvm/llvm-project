@@ -748,6 +748,10 @@ void TypeAndOrName::SetName(const char *type_name_cstr) {
   m_type_name.SetCString(type_name_cstr);
 }
 
+void TypeAndOrName::SetName(llvm::StringRef type_name) {
+  m_type_name.SetString(type_name);
+}
+
 void TypeAndOrName::SetTypeSP(lldb::TypeSP type_sp) {
   if (type_sp) {
     m_compiler_type = type_sp->GetForwardCompilerType();

@@ -614,7 +614,7 @@ private:
   void initialize(const ArrayRef<uint64_t> &NodeSizes,
                   const ArrayRef<uint64_t> &NodeCounts,
                   const ArrayRef<EdgeCount> &EdgeCounts) {
-    // Initialize nodes
+    // Initialize nodes.
     AllNodes.reserve(NumNodes);
     for (uint64_t Idx = 0; Idx < NumNodes; Idx++) {
       uint64_t Size = std::max<uint64_t>(NodeSizes[Idx], 1ULL);
@@ -625,7 +625,7 @@ private:
       AllNodes.emplace_back(Idx, Size, ExecutionCount);
     }
 
-    // Initialize jumps between nodes
+    // Initialize jumps between the nodes.
     SuccNodes.resize(NumNodes);
     PredNodes.resize(NumNodes);
     std::vector<uint64_t> OutDegree(NumNodes, 0);
@@ -644,6 +644,9 @@ private:
         AllJumps.emplace_back(&PredNode, &SuccNode, Edge.count);
         SuccNode.InJumps.push_back(&AllJumps.back());
         PredNode.OutJumps.push_back(&AllJumps.back());
+        // Adjust execution counts.
+        PredNode.ExecutionCount = std::max(PredNode.ExecutionCount, Edge.count);
+        SuccNode.ExecutionCount = std::max(SuccNode.ExecutionCount, Edge.count);
       }
     }
     for (JumpT &Jump : AllJumps) {
@@ -667,6 +670,7 @@ private:
     AllEdges.reserve(AllJumps.size());
     for (NodeT &PredNode : AllNodes) {
       for (JumpT *Jump : PredNode.OutJumps) {
+        assert(Jump->ExecutionCount > 0 && "incorrectly initialized jump");
         NodeT *SuccNode = Jump->Target;
         ChainEdge *CurEdge = PredNode.CurChain->getEdge(SuccNode->CurChain);
         // This edge is already present in the graph.
@@ -760,13 +764,13 @@ private:
           // Skip the merge if the ratio between the densities exceeds
           // MaxMergeDensityRatio. Smaller values of the option result in fewer
           // merges, and hence, more chains.
-          auto ChainPredDensity = ChainPred->density();
-          auto ChainSuccDensity = ChainSucc->density();
-          auto [minDensity, maxDensity] =
-              std::minmax(ChainPredDensity, ChainSuccDensity);
-          assert(minDensity > 0.0 && maxDensity > 0.0 &&
+          const double ChainPredDensity = ChainPred->density();
+          const double ChainSuccDensity = ChainSucc->density();
+          assert(ChainPredDensity > 0.0 && ChainSuccDensity > 0.0 &&
                  "incorrectly computed chain densities");
-          const double Ratio = maxDensity / minDensity;
+          auto [MinDensity, MaxDensity] =
+              std::minmax(ChainPredDensity, ChainSuccDensity);
+          const double Ratio = MaxDensity / MinDensity;
           if (Ratio > MaxMergeDensityRatio)
             continue;
 
@@ -1084,6 +1088,9 @@ private:
         AllJumps.back().Offset = EdgeOffsets[I];
         SuccNode.InJumps.push_back(&AllJumps.back());
         PredNode.OutJumps.push_back(&AllJumps.back());
+        // Adjust execution counts.
+        PredNode.ExecutionCount = std::max(PredNode.ExecutionCount, Count);
+        SuccNode.ExecutionCount = std::max(SuccNode.ExecutionCount, Count);
       }
     }
 
@@ -1104,13 +1111,13 @@ private:
       for (JumpT *Jump : PredNode.OutJumps) {
         NodeT *SuccNode = Jump->Target;
         ChainEdge *CurEdge = PredNode.CurChain->getEdge(SuccNode->CurChain);
-        // this edge is already present in the graph.
+        // This edge is already present in the graph.
         if (CurEdge != nullptr) {
           assert(SuccNode->CurChain->getEdge(PredNode.CurChain) != nullptr);
           CurEdge->appendJump(Jump);
           continue;
         }
-        // this is a new edge.
+        // This is a new edge.
         AllEdges.emplace_back(Jump);
         PredNode.CurChain->addEdge(SuccNode->CurChain, &AllEdges.back());
         SuccNode->CurChain->addEdge(PredNode.CurChain, &AllEdges.back());

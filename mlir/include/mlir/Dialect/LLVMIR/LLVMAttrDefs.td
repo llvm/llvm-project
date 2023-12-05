@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/LLVMIR/LLVMDialect.td"
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/CommonAttrConstraints.td"
 
 // All of the attributes will extend this class.
 class LLVM_Attr<string name, string attrMnemonic,
@@ -261,6 +262,36 @@ def LLVM_DITagParameter : LLVM_DIParameter<
   "tag", /*default=*/"", "Tag"
 >;
 
+def LLVM_DIOperationEncodingParameter : LLVM_DIParameter<
+  "operation encoding", /*default=*/"", "OperationEncoding"
+>;
+
+//===----------------------------------------------------------------------===//
+// DIExpressionAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIExpressionElemAttr : LLVM_Attr<"DIExpressionElem",
+                                          "di_expression_elem"> {
+  let parameters = (ins
+    LLVM_DIOperationEncodingParameter:$opcode,
+    OptionalArrayRefParameter<"uint64_t">:$arguments);
+  let assemblyFormat = [{
+    `` $opcode ( `(` custom<ExpressionArg>(ref($opcode), $arguments)^ `)` ) : (``)?
+  }];
+}
+
+def LLVM_DIExpressionAttr : LLVM_Attr<"DIExpression", "di_expression"> {
+  let parameters = (ins
+    OptionalArrayRefParameter<"DIExpressionElemAttr">:$operations
+  );
+  let builders = [
+    AttrBuilder<(ins)>
+  ];
+  let constBuilderCall =
+            "::mlir::LLVM::DIExpressionAttr::get($_builder.getContext(), $0)";
+  let assemblyFormat = "`<` ( `[` $operations^ `]` ) : (``)? `>`";
+}
+
 //===----------------------------------------------------------------------===//
 // DINullTypeAttr
 //===----------------------------------------------------------------------===//
@@ -361,6 +392,39 @@ def LLVM_DIFileAttr : LLVM_Attr<"DIFile", "di_file", /*traits=*/[], "DIScopeAttr
     }]>
   ];
   let assemblyFormat = "`<` $name `in` $directory `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DIGlobalVariableExpressionAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIGlobalVariableExpressionAttr
+    : LLVM_Attr<"DIGlobalVariableExpression", "di_global_variable_expression"> {
+  let parameters = (ins
+    "DIGlobalVariableAttr":$var,
+    OptionalParameter<"DIExpressionAttr">:$expr
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+  let constBuilderCall = "$0";
+}
+
+//===----------------------------------------------------------------------===//
+// DIGlobalVariableAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIGlobalVariable : LLVM_Attr<"DIGlobalVariable", "di_global_variable",
+                                      /*traits=*/[], "DINodeAttr"> {
+  let parameters = (ins
+    "DIScopeAttr":$scope,
+    "StringAttr":$name,
+    "StringAttr":$linkageName,
+    "DIFileAttr":$file,
+    "unsigned":$line,
+    "DITypeAttr":$type,
+    OptionalParameter<"bool">:$isLocalToUnit,
+    OptionalParameter<"bool">:$isDefined,
+    OptionalParameter<"unsigned">:$alignInBits);
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -643,14 +707,14 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
     #domain = #llvm.alias_scope_domain<id = distinct[1]<>, description = "Optional domain description">
     #scope1 = #llvm.alias_scope<id = distinct[2]<>, domain = #domain>
     #scope2 = #llvm.alias_scope<id = distinct[3]<>, domain = #domain, description = "Optional scope description">
-    llvm.func @foo(%ptr1 : !llvm.ptr<i32>) {
+    llvm.func @foo(%ptr1 : !llvm.ptr) {
         %c0 = llvm.mlir.constant(0 : i32) : i32
         %c4 = llvm.mlir.constant(4 : i32) : i32
-        %1 = llvm.ptrtoint %ptr1 : !llvm.ptr<i32> to i32
+        %1 = llvm.ptrtoint %ptr1 : !llvm.ptr to i32
         %2 = llvm.add %1, %c1 : i32
-        %ptr2 = llvm.inttoptr %2 : i32 to !llvm.ptr<i32>
-        llvm.store %c0, %ptr1 { alias_scopes = [#scope1], llvm.noalias = [#scope2] } : !llvm.ptr<i32>
-        llvm.store %c4, %ptr2 { alias_scopes = [#scope2], llvm.noalias = [#scope1] } : !llvm.ptr<i32>
+        %ptr2 = llvm.inttoptr %2 : i32 to !llvm.ptr
+        llvm.store %c0, %ptr1 { alias_scopes = [#scope1], llvm.noalias = [#scope2] } : i32, !llvm.ptr
+        llvm.store %c4, %ptr2 { alias_scopes = [#scope2], llvm.noalias = [#scope1] } : i32, !llvm.ptr
         llvm.return
     }
     ```

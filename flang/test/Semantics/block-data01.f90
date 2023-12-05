@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Test BLOCK DATA subprogram (14.3)
 block data foo
   !ERROR: IMPORT is not allowed in a BLOCK DATA subprogram

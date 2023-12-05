@@ -25,7 +25,8 @@ namespace mlir {
 #define GEN_PASS_DEF_SPARSEREINTERPRETMAP
 #define GEN_PASS_DEF_PRESPARSIFICATIONREWRITE
 #define GEN_PASS_DEF_SPARSIFICATIONPASS
-#define GEN_PASS_DEF_POSTSPARSIFICATIONREWRITE
+#define GEN_PASS_DEF_LOWERSPARSEOPSTOFOREACH
+#define GEN_PASS_DEF_LOWERFOREACHTOSCF
 #define GEN_PASS_DEF_SPARSETENSORCONVERSIONPASS
 #define GEN_PASS_DEF_SPARSETENSORCODEGEN
 #define GEN_PASS_DEF_SPARSEBUFFERREWRITE
@@ -81,27 +82,15 @@ struct SparsificationPass
   SparsificationPass(const SparsificationPass &pass) = default;
   SparsificationPass(const SparsificationOptions &options) {
     parallelization = options.parallelizationStrategy;
-    gpuDataTransfer = options.gpuDataTransferStrategy;
-    enableIndexReduction = options.enableIndexReduction;
-    enableGPULibgen = options.enableGPULibgen;
     enableRuntimeLibrary = options.enableRuntimeLibrary;
   }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     // Translate strategy flags to strategy options.
-    SparsificationOptions options(parallelization, gpuDataTransfer,
-                                  enableIndexReduction, enableGPULibgen,
-                                  enableRuntimeLibrary);
-    // Apply GPU libgen (if requested), sparsification, and cleanup rewriting.
+    SparsificationOptions options(parallelization, enableRuntimeLibrary);
+    // Apply sparsification and cleanup rewriting.
     RewritePatternSet patterns(ctx);
-    if (enableGPULibgen) {
-      // TODO : Zero copy is disabled due to correctness bugs.Tracker #64316
-      assert(gpuDataTransfer != GPUDataTransferStrategy::kZeroCopy &&
-             "zero-copy transfer not supported with GPU libgen");
-      populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary,
-                                      gpuDataTransfer);
-    }
     populateSparsificationPatterns(patterns, options);
     scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
@@ -120,23 +109,34 @@ struct StageSparseOperationsPass
   }
 };
 
-struct PostSparsificationRewritePass
-    : public impl::PostSparsificationRewriteBase<
-          PostSparsificationRewritePass> {
-  PostSparsificationRewritePass() = default;
-  PostSparsificationRewritePass(const PostSparsificationRewritePass &pass) =
+struct LowerSparseOpsToForeachPass
+    : public impl::LowerSparseOpsToForeachBase<LowerSparseOpsToForeachPass> {
+  LowerSparseOpsToForeachPass() = default;
+  LowerSparseOpsToForeachPass(const LowerSparseOpsToForeachPass &pass) =
       default;
-  PostSparsificationRewritePass(bool enableRT, bool foreach, bool convert) {
+  LowerSparseOpsToForeachPass(bool enableRT, bool convert) {
     enableRuntimeLibrary = enableRT;
-    enableForeach = foreach;
     enableConvert = convert;
   }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populatePostSparsificationRewriting(patterns, enableRuntimeLibrary,
-                                        enableForeach, enableConvert);
+    populateLowerSparseOpsToForeachPatterns(patterns, enableRuntimeLibrary,
+                                            enableConvert);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct LowerForeachToSCFPass
+    : public impl::LowerForeachToSCFBase<LowerForeachToSCFPass> {
+  LowerForeachToSCFPass() = default;
+  LowerForeachToSCFPass(const LowerForeachToSCFPass &pass) = default;
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    populateLowerForeachToSCFPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -193,7 +193,8 @@ struct SparseTensorConversionPass
     // The following operations and dialects may be introduced by the
     // rewriting rules, and are therefore marked as legal.
     target.addLegalOp<complex::ConstantOp, complex::NotEqualOp, linalg::FillOp,
-                      linalg::YieldOp, tensor::ExtractOp>();
+                      linalg::YieldOp, tensor::ExtractOp,
+                      tensor::FromElementsOp>();
     target.addLegalDialect<
         arith::ArithDialect, bufferization::BufferizationDialect,
         LLVM::LLVMDialect, memref::MemRefDialect, scf::SCFDialect>();
@@ -318,12 +319,18 @@ struct SparseGPUCodegenPass
     : public impl::SparseGPUCodegenBase<SparseGPUCodegenPass> {
   SparseGPUCodegenPass() = default;
   SparseGPUCodegenPass(const SparseGPUCodegenPass &pass) = default;
-  SparseGPUCodegenPass(unsigned nT) { numThreads = nT; }
+  SparseGPUCodegenPass(unsigned nT, bool enableRT) {
+    numThreads = nT;
+    enableRuntimeLibrary = enableRT;
+  }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateSparseGPUCodegenPatterns(patterns, numThreads);
+    if (numThreads == 0)
+      populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary);
+    else
+      populateSparseGPUCodegenPatterns(patterns, numThreads);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -399,15 +406,17 @@ std::unique_ptr<Pass> mlir::createStageSparseOperationsPass() {
   return std::make_unique<StageSparseOperationsPass>();
 }
 
-std::unique_ptr<Pass> mlir::createPostSparsificationRewritePass() {
-  return std::make_unique<PostSparsificationRewritePass>();
+std::unique_ptr<Pass> mlir::createLowerSparseOpsToForeachPass() {
+  return std::make_unique<LowerSparseOpsToForeachPass>();
 }
 
 std::unique_ptr<Pass>
-mlir::createPostSparsificationRewritePass(bool enableRT, bool enableForeach,
-                                          bool enableConvert) {
-  return std::make_unique<PostSparsificationRewritePass>(
-      enableRT, enableForeach, enableConvert);
+mlir::createLowerSparseOpsToForeachPass(bool enableRT, bool enableConvert) {
+  return std::make_unique<LowerSparseOpsToForeachPass>(enableRT, enableConvert);
+}
+
+std::unique_ptr<Pass> mlir::createLowerForeachToSCFPass() {
+  return std::make_unique<LowerForeachToSCFPass>();
 }
 
 std::unique_ptr<Pass> mlir::createSparseTensorConversionPass() {
@@ -450,8 +459,9 @@ std::unique_ptr<Pass> mlir::createSparseGPUCodegenPass() {
   return std::make_unique<SparseGPUCodegenPass>();
 }
 
-std::unique_ptr<Pass> mlir::createSparseGPUCodegenPass(unsigned numThreads) {
-  return std::make_unique<SparseGPUCodegenPass>(numThreads);
+std::unique_ptr<Pass> mlir::createSparseGPUCodegenPass(unsigned numThreads,
+                                                       bool enableRT) {
+  return std::make_unique<SparseGPUCodegenPass>(numThreads, enableRT);
 }
 
 std::unique_ptr<Pass> mlir::createStorageSpecifierToLLVMPass() {

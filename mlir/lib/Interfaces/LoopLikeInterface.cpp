@@ -58,7 +58,7 @@ LogicalResult detail::verifyLoopLikeOpInterface(Operation *op) {
   // but the LoopLikeOpInterface provides better error messages.
   auto loopLikeOp = cast<LoopLikeOpInterface>(op);
 
-  // Verify number of inits/iter_args/yielded values.
+  // Verify number of inits/iter_args/yielded values/loop results.
   if (loopLikeOp.getInits().size() != loopLikeOp.getRegionIterArgs().size())
     return op->emitOpError("different number of inits and region iter_args: ")
            << loopLikeOp.getInits().size()
@@ -69,21 +69,43 @@ LogicalResult detail::verifyLoopLikeOpInterface(Operation *op) {
                "different number of region iter_args and yielded values: ")
            << loopLikeOp.getRegionIterArgs().size()
            << " != " << loopLikeOp.getYieldedValues().size();
+  if (loopLikeOp.getLoopResults() && loopLikeOp.getLoopResults()->size() !=
+                                         loopLikeOp.getRegionIterArgs().size())
+    return op->emitOpError(
+               "different number of loop results and region iter_args: ")
+           << loopLikeOp.getLoopResults()->size()
+           << " != " << loopLikeOp.getRegionIterArgs().size();
 
-  // Verify types of inits/iter_args/yielded values.
+  // Verify types of inits/iter_args/yielded values/loop results.
   int64_t i = 0;
   for (const auto it :
        llvm::zip_equal(loopLikeOp.getInits(), loopLikeOp.getRegionIterArgs(),
                        loopLikeOp.getYieldedValues())) {
     if (std::get<0>(it).getType() != std::get<1>(it).getType())
-      op->emitOpError(std::to_string(i))
-          << "-th init and " << i << "-th region iter_arg have different type: "
-          << std::get<0>(it).getType() << " != " << std::get<1>(it).getType();
+      return op->emitOpError(std::to_string(i))
+             << "-th init and " << i
+             << "-th region iter_arg have different type: "
+             << std::get<0>(it).getType()
+             << " != " << std::get<1>(it).getType();
     if (std::get<1>(it).getType() != std::get<2>(it).getType())
-      op->emitOpError(std::to_string(i))
-          << "-th region iter_arg and " << i
-          << "-th yielded value have different type: "
-          << std::get<1>(it).getType() << " != " << std::get<2>(it).getType();
+      return op->emitOpError(std::to_string(i))
+             << "-th region iter_arg and " << i
+             << "-th yielded value have different type: "
+             << std::get<1>(it).getType()
+             << " != " << std::get<2>(it).getType();
+    ++i;
+  }
+  i = 0;
+  if (loopLikeOp.getLoopResults()) {
+    for (const auto it : llvm::zip_equal(loopLikeOp.getRegionIterArgs(),
+                                         *loopLikeOp.getLoopResults())) {
+      if (std::get<0>(it).getType() != std::get<1>(it).getType())
+        return op->emitOpError(std::to_string(i))
+               << "-th region iter_arg and " << i
+               << "-th loop result have different type: "
+               << std::get<0>(it).getType()
+               << " != " << std::get<1>(it).getType();
+    }
     ++i;
   }
 

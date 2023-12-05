@@ -157,7 +157,7 @@ define i8 @t6(i8 %x, i1 %y, i8 %z) {
 }
 define i8 @t7(i8 %x, i1 %y, i8 %z) {
 ; CHECK-LABEL: @t7(
-; CHECK-NEXT:    [[T0_NEG:%.*]] = shl i8 -1, [[Z:%.*]]
+; CHECK-NEXT:    [[T0_NEG:%.*]] = shl nsw i8 -1, [[Z:%.*]]
 ; CHECK-NEXT:    [[T1_NEG:%.*]] = select i1 [[Y:%.*]], i8 0, i8 [[T0_NEG]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i8 [[T1_NEG]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[T2]]
@@ -523,8 +523,8 @@ define void @phi_with_duplicate_incoming_basic_blocks(i32 %x, i32 %y, i1 %should
 ; CHECK:       lookup:
 ; CHECK-NEXT:    [[TO_LOOKUP:%.*]] = phi i32 [ [[Y:%.*]], [[ENTRY:%.*]] ], [ [[METAVAL_NEG:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    switch i32 [[TO_LOOKUP]], label [[END:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LOOP]]
-; CHECK-NEXT:    i32 42, label [[LOOP]]
+; CHECK-NEXT:      i32 0, label [[LOOP]]
+; CHECK-NEXT:      i32 42, label [[LOOP]]
 ; CHECK-NEXT:    ]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[METAVAL_NEG]] = phi i32 [ [[X_INC_NEG]], [[LOOKUP]] ], [ [[X_INC_NEG]], [[LOOKUP]] ], [ -84, [[ENTRY]] ]
@@ -1044,7 +1044,7 @@ define i8 @negation_of_increment_via_or_with_no_common_bits_set(i8 %x, i8 %y) {
 define i8 @negation_of_increment_via_or_with_no_common_bits_set_extrause(i8 %x, i8 %y) {
 ; CHECK-LABEL: @negation_of_increment_via_or_with_no_common_bits_set_extrause(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = or i8 [[T0]], 1
+; CHECK-NEXT:    [[T1:%.*]] = or disjoint i8 [[T0]], 1
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
 ; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
 ; CHECK-NEXT:    ret i8 [[T2]]
@@ -1106,7 +1106,7 @@ define i8 @add_via_or_with_no_common_bits_set_extrause(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = shl i8 [[T0]], 2
-; CHECK-NEXT:    [[T2:%.*]] = or i8 [[T1]], 3
+; CHECK-NEXT:    [[T2:%.*]] = or disjoint i8 [[T1]], 3
 ; CHECK-NEXT:    call void @use8(i8 [[T2]])
 ; CHECK-NEXT:    [[T3:%.*]] = sub i8 [[X:%.*]], [[T2]]
 ; CHECK-NEXT:    ret i8 [[T3]]

@@ -74,7 +74,7 @@ llvm.func @func_no_debug() {
 #variableAddr = #llvm.di_local_variable<scope = #blockScope, name = "alloc">
 #noNameVariable = #llvm.di_local_variable<scope = #blockScope>
 #module = #llvm.di_module<
-  file = #file, scope = #file, name = "module", 
+  file = #file, scope = #file, name = "module",
   configMacros = "bar", includePath = "/",
   apinotes = "/", line = 42, isDecl = true
 >
@@ -89,14 +89,16 @@ llvm.func @func_no_debug() {
 llvm.func @func_with_debug(%arg: i64) {
   // CHECK: %[[ALLOC:.*]] = alloca
   %allocCount = llvm.mlir.constant(1 : i32) : i32
-  %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr<i64>
+  %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
 
-  // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression())
-  // CHECK: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression())
+  // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 1))
+  llvm.intr.dbg.value #variable #llvm.di_expression<[DW_OP_LLVM_fragment(0, 1)]> = %arg : i64
+
+  // CHECK: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_LLVM_convert, 4, DW_ATE_signed))
+  llvm.intr.dbg.declare #variableAddr #llvm.di_expression<[DW_OP_deref, DW_OP_LLVM_convert(4, DW_ATE_signed)]> = %alloc : !llvm.ptr
+
   // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[NO_NAME_VAR:[0-9]+]], metadata !DIExpression())
-  llvm.intr.dbg.value #variable = %arg : i64
-  llvm.intr.dbg.declare #variableAddr = %alloc : !llvm.ptr<i64>
-  llvm.intr.dbg.value #noNameVariable= %arg : i64
+  llvm.intr.dbg.value #noNameVariable = %arg : i64
 
   // CHECK: call void @func_no_debug(), !dbg ![[CALLSITE_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc(callsite("mysource.cc":3:4 at "mysource.cc":5:6))
@@ -232,3 +234,55 @@ llvm.func @func_without_subprogram(%0 : i32) {
 // CHECK: ![[FILE:.*]] = !DIFile(filename: "foo.mlir", directory: "/test/")
 // CHECK-DAG: ![[FUNC:.*]] = distinct !DISubprogram(name: "func", scope: ![[FILE]]
 // CHECK-DAG: ![[VAR_LOC]] = !DILocalVariable(name: "a", scope: ![[FUNC]], file: ![[FILE]]
+
+// -----
+
+// Ensures that debug intrinsics without a valid location are not exported to
+// avoid broken LLVM IR.
+
+#di_file = #llvm.di_file<"foo.mlir" in "/test/">
+#di_compile_unit = #llvm.di_compile_unit<
+  sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR",
+  isOptimized = true, emissionKind = Full
+>
+#di_subprogram = #llvm.di_subprogram<
+  compileUnit = #di_compile_unit, scope = #di_file, name = "outer_func",
+  file = #di_file, subprogramFlags = "Definition|Optimized"
+>
+#di_local_variable = #llvm.di_local_variable<scope = #di_subprogram, name = "a">
+#declared_var = #llvm.di_local_variable<scope = #di_subprogram, name = "alloc">
+#di_label = #llvm.di_label<scope = #di_subprogram, name = "label", file = #di_file, line = 42>
+
+// CHECK-LABEL: define i32 @dbg_intrinsics_with_no_location(
+llvm.func @dbg_intrinsics_with_no_location(%arg0: i32) -> (i32) {
+  %allocCount = llvm.mlir.constant(1 : i32) : i32
+  %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
+  // CHECK-NOT: @llvm.dbg.value
+  llvm.intr.dbg.value #di_local_variable = %arg0 : i32
+  // CHECK-NOT: @llvm.dbg.declare
+  llvm.intr.dbg.declare #declared_var = %alloc : !llvm.ptr
+  // CHECK-NOT: @llvm.dbg.label
+  llvm.intr.dbg.label #di_label
+  llvm.return %arg0 : i32
+}
+
+// -----
+
+// CHECK: @global_with_expr_1 = external global i64, !dbg {{.*}}
+// CHECK: @global_with_expr_2 = external global i64, !dbg {{.*}}
+// CHECK: !llvm.module.flags = !{{{.*}}}
+// CHECK: !llvm.dbg.cu = !{{{.*}}}
+// CHECK-DAG: ![[FILE:.*]] = !DIFile(filename: "not", directory: "existence")
+// CHECK-DAG: ![[TYPE:.*]] = !DIBasicType(name: "uint64_t", size: 64, encoding: DW_ATE_unsigned)
+// CHECK-DAG: ![[SCOPE:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[FILE]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: ![[GVALS:.*]])
+// CHECK-DAG: ![[GVAR0:.*]] = distinct !DIGlobalVariable(name: "global_with_expr_1", linkageName: "global_with_expr_1", scope: ![[SCOPE]], file: ![[FILE]], line: 370, type: ![[TYPE]], isLocal: false, isDefinition: false)
+// CHECK-DAG: ![[GVAR1:.*]] = distinct !DIGlobalVariable(name: "global_with_expr_2", linkageName: "global_with_expr_2", scope: ![[SCOPE]], file: ![[FILE]], line: 371, type: ![[TYPE]], isLocal: true, isDefinition: true, align: 8)
+// CHECK-DAG: ![[GEXPR0:.*]] = !DIGlobalVariableExpression(var: ![[GVAR0]], expr: !DIExpression())
+// CHECK-DAG: ![[GEXPR1:.*]] = !DIGlobalVariableExpression(var: ![[GVAR1]], expr: !DIExpression())
+// CHECK-DAG: ![[GVALS]] = !{![[GEXPR0]], ![[GEXPR1]]}
+
+#di_file_2 = #llvm.di_file<"not" in "existence">
+#di_compile_unit_2 = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #di_file_2, producer = "MLIR", isOptimized = true, emissionKind = Full>
+#di_basic_type_2 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "uint64_t", sizeInBits = 64, encoding = DW_ATE_unsigned>
+llvm.mlir.global external @global_with_expr_1() {addr_space = 0 : i32, dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_compile_unit_2, name = "global_with_expr_1", linkageName = "global_with_expr_1", file = #di_file_2, line = 370, type = #di_basic_type_2>, expr = <>>} : i64
+llvm.mlir.global external @global_with_expr_2() {addr_space = 0 : i32, dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_compile_unit_2, name = "global_with_expr_2", linkageName = "global_with_expr_2", file = #di_file_2, line = 371, type = #di_basic_type_2, isLocalToUnit = true, isDefined = true, alignInBits = 8>, expr = <>>} : i64

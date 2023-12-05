@@ -1144,6 +1144,23 @@ static bool getDecodedDSOLocal(unsigned Val) {
   }
 }
 
+static std::optional<CodeModel::Model> getDecodedCodeModel(unsigned Val) {
+  switch (Val) {
+  case 1:
+    return CodeModel::Tiny;
+  case 2:
+    return CodeModel::Small;
+  case 3:
+    return CodeModel::Kernel;
+  case 4:
+    return CodeModel::Medium;
+  case 5:
+    return CodeModel::Large;
+  }
+
+  return {};
+}
+
 static GlobalVariable::ThreadLocalMode getDecodedThreadLocalMode(unsigned Val) {
   switch (Val) {
     case 0: return GlobalVariable::NotThreadLocal;
@@ -1393,6 +1410,9 @@ static bool isConstExprSupported(const BitcodeConstant *BC) {
 
   if (Instruction::isBinaryOp(Opcode))
     return ConstantExpr::isSupportedBinOp(Opcode);
+
+  if (Instruction::isCast(Opcode))
+    return ConstantExpr::isSupportedCastOp(Opcode);
 
   if (Opcode == Instruction::GetElementPtr)
     return ConstantExpr::isSupportedGetElementPtr(BC->SrcElemTy);
@@ -2058,6 +2078,10 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::Hot;
   case bitc::ATTR_KIND_PRESPLIT_COROUTINE:
     return Attribute::PresplitCoroutine;
+  case bitc::ATTR_KIND_WRITABLE:
+    return Attribute::Writable;
+  case bitc::ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE:
+    return Attribute::CoroDestroyOnlyWhenComplete;
   }
 }
 
@@ -2892,11 +2916,7 @@ Error BitcodeReader::resolveGlobalAndIndirectSymbolInits() {
           return error("Alias and aliasee types don't match");
         GA->setAliasee(C);
       } else if (auto *GI = dyn_cast<GlobalIFunc>(GV)) {
-        Type *ResolverFTy =
-            GlobalIFunc::getResolverFunctionType(GI->getValueType());
-        // Transparently fix up the type for compatibility with older bitcode
-        GI->setResolver(ConstantExpr::getBitCast(
-            C, ResolverFTy->getPointerTo(GI->getAddressSpace())));
+        GI->setResolver(C);
       } else {
         return error("Expected an alias or an ifunc");
       }
@@ -3802,6 +3822,7 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   // dllstorageclass, comdat, attributes, preemption specifier,
   // partition strtab offset, partition strtab size] (name in VST)
   // v2: [strtab_offset, strtab_size, v1]
+  // v3: [v2, code_model]
   StringRef Name;
   std::tie(Name, Record) = readNameFromStrtab(Record);
 
@@ -3908,6 +3929,13 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
     llvm::GlobalValue::SanitizerMetadata Meta =
         deserializeSanitizerMetadata(Record[16]);
     NewGV->setSanitizerMetadata(Meta);
+  }
+
+  if (Record.size() > 17 && Record[17]) {
+    if (auto CM = getDecodedCodeModel(Record[17]))
+      NewGV->setCodeModel(*CM);
+    else
+      return error("Invalid global variable code model");
   }
 
   return Error::success();
@@ -4863,12 +4891,14 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
                    Opc == Instruction::AShr) {
           if (Record[OpNum] & (1 << bitc::PEO_EXACT))
             cast<BinaryOperator>(I)->setIsExact(true);
+        } else if (Opc == Instruction::Or) {
+          if (Record[OpNum] & (1 << bitc::PDI_DISJOINT))
+            cast<PossiblyDisjointInst>(I)->setIsDisjoint(true);
         } else if (isa<FPMathOperator>(I)) {
           FastMathFlags FMF = getDecodedFastMathFlags(Record[OpNum]);
           if (FMF.any())
             I->setFastMathFlags(FMF);
         }
-
       }
       break;
     }

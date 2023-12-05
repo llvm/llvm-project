@@ -1,5 +1,7 @@
 # 'ArmSME' Dialect
 
+[TOC]
+
 Basic dialect to target Arm SME architectures This dialect contains the
 definitions necessary to target Arm SME scalable matrix operations.
 

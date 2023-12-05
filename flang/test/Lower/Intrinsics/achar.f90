@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | fir-opt --canonicalize | FileCheck %s
-! RUN: %flang_fc1 -emit-fir %s -o - | fir-opt --canonicalize | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | fir-opt --canonicalize | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | fir-opt --canonicalize | FileCheck %s
 
 
 ! CHECK-LABEL:   func.func @_QPtest1(

@@ -38,15 +38,20 @@ llvm.func @_QPopenmp_target_data() {
 
 // -----
 
-llvm.func @_QPopenmp_target_data_region(%1 : !llvm.ptr) {
-  %2 = omp.map_info var_ptr(%1 : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data map_entries(%2 : !llvm.ptr) {
-    %3 = llvm.mlir.constant(99 : i32) : i32
-    %4 = llvm.mlir.constant(1 : i64) : i64
-    %5 = llvm.mlir.constant(1 : i64) : i64
-    %6 = llvm.mlir.constant(0 : i64) : i64
-    %7 = llvm.getelementptr %1[0, %6] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i32>
-    llvm.store %3, %7 : i32, !llvm.ptr
+llvm.func @_QPopenmp_target_data_region(%0 : !llvm.ptr) {
+  %1 = llvm.mlir.constant(1023 : index) : i64
+  %2 = llvm.mlir.constant(0 : index) : i64
+  %3 = llvm.mlir.constant(1024 : index) : i64
+  %4 = llvm.mlir.constant(1 : index) : i64
+  %5 = omp.bounds   lower_bound(%2 : i64) upper_bound(%1 : i64) extent(%3 : i64) stride(%4 : i64) start_idx(%4 : i64)
+  %6 = omp.map_info var_ptr(%0 : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(from) capture(ByRef) bounds(%5)  -> !llvm.ptr {name = ""}
+  omp.target_data map_entries(%6 : !llvm.ptr) {
+    %7 = llvm.mlir.constant(99 : i32) : i32
+    %8 = llvm.mlir.constant(1 : i64) : i64
+    %9 = llvm.mlir.constant(1 : i64) : i64
+    %10 = llvm.mlir.constant(0 : i64) : i64
+    %11 = llvm.getelementptr %0[0, %10] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i32>
+    llvm.store %7, %11 : i32, !llvm.ptr
     omp.terminator
   }
   llvm.return
@@ -92,16 +97,36 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
   %11 = llvm.mlir.constant(10 : i32) : i32
   %12 = llvm.icmp "slt" %10, %11 : i32
   %13 = llvm.load %5 : !llvm.ptr -> i32
-  %map1 = omp.map_info var_ptr(%1 : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
-  %map2 = omp.map_info var_ptr(%3 : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> !llvm.ptr {name = ""}
+  %14 = llvm.mlir.constant(1023 : index) : i64
+  %15 = llvm.mlir.constant(0 : index) : i64
+  %16 = llvm.mlir.constant(1024 : index) : i64
+  %17 = llvm.mlir.constant(1 : index) : i64
+  %18 = omp.bounds   lower_bound(%15 : i64) upper_bound(%14 : i64) extent(%16 : i64) stride(%17 : i64) start_idx(%17 : i64)
+  %map1 = omp.map_info var_ptr(%1 : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(to) capture(ByRef) bounds(%18) -> !llvm.ptr {name = ""}
+  %19 = llvm.mlir.constant(511 : index) : i64
+  %20 = llvm.mlir.constant(0 : index) : i64
+  %21 = llvm.mlir.constant(512 : index) : i64
+  %22 = llvm.mlir.constant(1 : index) : i64
+  %23 = omp.bounds   lower_bound(%20 : i64) upper_bound(%19 : i64) extent(%21 : i64) stride(%22 : i64) start_idx(%22 : i64)
+  %map2 = omp.map_info var_ptr(%3 : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) bounds(%23) -> !llvm.ptr {name = ""}
   omp.target_enter_data   if(%12 : i1) device(%13 : i32) map_entries(%map1, %map2 : !llvm.ptr, !llvm.ptr)
-  %14 = llvm.load %7 : !llvm.ptr -> i32
-  %15 = llvm.mlir.constant(10 : i32) : i32
-  %16 = llvm.icmp "sgt" %14, %15 : i32
-  %17 = llvm.load %5 : !llvm.ptr -> i32
-  %map3 = omp.map_info var_ptr(%1 : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  %map4 = omp.map_info var_ptr(%3 : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_exit_data   if(%16 : i1) device(%17 : i32) map_entries(%map3, %map4 : !llvm.ptr, !llvm.ptr)
+  %24 = llvm.load %7 : !llvm.ptr -> i32
+  %25 = llvm.mlir.constant(10 : i32) : i32
+  %26 = llvm.icmp "sgt" %24, %25 : i32
+  %27 = llvm.load %5 : !llvm.ptr -> i32
+  %28 = llvm.mlir.constant(1023 : index) : i64
+  %29 = llvm.mlir.constant(0 : index) : i64
+  %30 = llvm.mlir.constant(1024 : index) : i64
+  %31 = llvm.mlir.constant(1 : index) : i64
+  %32 = omp.bounds   lower_bound(%29 : i64) upper_bound(%28 : i64) extent(%30 : i64) stride(%31 : i64) start_idx(%31 : i64)
+  %map3 = omp.map_info var_ptr(%1 : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(from) capture(ByRef) bounds(%32) -> !llvm.ptr {name = ""}
+  %33 = llvm.mlir.constant(511 : index) : i64
+  %34 = llvm.mlir.constant(0 : index) : i64
+  %35 = llvm.mlir.constant(512 : index) : i64
+  %36 = llvm.mlir.constant(1 : index) : i64
+  %37 = omp.bounds   lower_bound(%34 : i64) upper_bound(%33 : i64) extent(%35 : i64) stride(%36 : i64) start_idx(%36 : i64)
+  %map4 = omp.map_info var_ptr(%3 : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) bounds(%37) -> !llvm.ptr {name = ""}
+  omp.target_exit_data   if(%26 : i1) device(%27 : i32) map_entries(%map3, %map4 : !llvm.ptr, !llvm.ptr)
   llvm.return
 }
 

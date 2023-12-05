@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -29,6 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <numeric>
+#include <queue>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -260,8 +262,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // It is safe and potentially profitable to load a vector directly:
   // inselt undef, load Scalar, 0 --> load VecPtr
   IRBuilder<> Builder(Load);
-  Value *CastedPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      SrcPtr, MinVecTy->getPointerTo(AS));
+  Value *CastedPtr =
+      Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
   Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
   VecLd = Builder.CreateShuffleVector(VecLd, Mask);
 
@@ -323,7 +325,7 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
 
   IRBuilder<> Builder(Load);
   Value *CastedPtr =
-      Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Ty->getPointerTo(AS));
+      Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
   Value *VecLd = Builder.CreateAlignedLoad(Ty, CastedPtr, Alignment);
   replaceValue(I, *VecLd);
   ++NumVecLoad;
@@ -752,6 +754,13 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   if (!isSplatValue(Op0) || !isSplatValue(Op1))
     return false;
 
+  // Check getSplatValue early in this function, to avoid doing unnecessary
+  // work.
+  Value *ScalarOp0 = getSplatValue(Op0);
+  Value *ScalarOp1 = getSplatValue(Op1);
+  if (!ScalarOp0 || !ScalarOp1)
+    return false;
+
   // For the binary VP intrinsics supported here, the result on disabled lanes
   // is a poison value. For now, only do this simplification if all lanes
   // are active.
@@ -840,8 +849,6 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   if (!SafeToSpeculate && !isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT))
     return false;
 
-  Value *ScalarOp0 = getSplatValue(Op0);
-  Value *ScalarOp1 = getSplatValue(Op1);
   Value *ScalarVal =
       ScalarIntrID
           ? Builder.CreateIntrinsic(VecTy->getScalarType(), *ScalarIntrID,
@@ -1272,6 +1279,12 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   Instruction *LastCheckedInst = LI;
   unsigned NumInstChecked = 0;
   DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
+  auto FailureGuard = make_scope_exit([&]() {
+    // If the transform is aborted, discard the ScalarizationResults.
+    for (auto &Pair : NeedFreeze)
+      Pair.second.discard();
+  });
+
   // Check if all users of the load are extracts with no memory modifications
   // between the load and the extract. Compute the cost of both the original
   // code and the scalarized version.
@@ -1339,6 +1352,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     replaceValue(*EI, *NewLoad);
   }
 
+  FailureGuard.release();
   return true;
 }
 
@@ -1796,16 +1810,16 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
           return SSV->getOperand(Op);
     return SV->getOperand(Op);
   };
-  Builder.SetInsertPoint(SVI0A->getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*SVI0A->getInsertionPointAfterDef());
   Value *NSV0A = Builder.CreateShuffleVector(GetShuffleOperand(SVI0A, 0),
                                              GetShuffleOperand(SVI0A, 1), V1A);
-  Builder.SetInsertPoint(SVI0B->getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*SVI0B->getInsertionPointAfterDef());
   Value *NSV0B = Builder.CreateShuffleVector(GetShuffleOperand(SVI0B, 0),
                                              GetShuffleOperand(SVI0B, 1), V1B);
-  Builder.SetInsertPoint(SVI1A->getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*SVI1A->getInsertionPointAfterDef());
   Value *NSV1A = Builder.CreateShuffleVector(GetShuffleOperand(SVI1A, 0),
                                              GetShuffleOperand(SVI1A, 1), V2A);
-  Builder.SetInsertPoint(SVI1B->getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*SVI1B->getInsertionPointAfterDef());
   Value *NSV1B = Builder.CreateShuffleVector(GetShuffleOperand(SVI1B, 0),
                                              GetShuffleOperand(SVI1B, 1), V2B);
   Builder.SetInsertPoint(Op0);

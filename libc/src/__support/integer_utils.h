@@ -12,7 +12,8 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 
-#include "builtin_wrappers.h"
+#include "bit.h"
+#include "math_extras.h"
 #include "number_pair.h"
 
 #include <stdint.h>

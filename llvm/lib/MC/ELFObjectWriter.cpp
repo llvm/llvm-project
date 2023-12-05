@@ -843,7 +843,7 @@ bool ELFWriter::maybeWriteCompression(
     uint32_t ChType, uint64_t Size,
     SmallVectorImpl<uint8_t> &CompressedContents, Align Alignment) {
   uint64_t HdrSize =
-      is64Bit() ? sizeof(ELF::Elf32_Chdr) : sizeof(ELF::Elf64_Chdr);
+      is64Bit() ? sizeof(ELF::Elf64_Chdr) : sizeof(ELF::Elf32_Chdr);
   if (Size <= HdrSize + CompressedContents.size())
     return false;
   // Platform specific header is followed by compressed data.

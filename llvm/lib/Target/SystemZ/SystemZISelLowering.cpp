@@ -385,16 +385,12 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, VT, Custom);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Custom);
 
-      // Detect shifts by a scalar amount and convert them into
+      // Detect shifts/rotates by a scalar amount and convert them into
       // V*_BY_SCALAR.
       setOperationAction(ISD::SHL, VT, Custom);
       setOperationAction(ISD::SRA, VT, Custom);
       setOperationAction(ISD::SRL, VT, Custom);
-
-      // At present ROTL isn't matched by DAGCombiner.  ROTR should be
-      // converted into ROTL.
-      setOperationAction(ISD::ROTL, VT, Expand);
-      setOperationAction(ISD::ROTR, VT, Expand);
+      setOperationAction(ISD::ROTL, VT, Custom);
 
       // Map SETCCs onto one of VCE, VCH or VCHL, swapping the operands
       // and inverting the result as necessary.
@@ -870,6 +866,15 @@ bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const
     return MF.getFunction().getFnAttribute("probe-stack").getValueAsString() ==
            "inline-asm";
   return false;
+}
+
+TargetLowering::AtomicExpansionKind
+SystemZTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  return (RMW->isFloatingPointOperation() ||
+          RMW->getOperation() == AtomicRMWInst::UIncWrap ||
+          RMW->getOperation() == AtomicRMWInst::UDecWrap)
+             ? AtomicExpansionKind::CmpXChg
+             : AtomicExpansionKind::None;
 }
 
 bool SystemZTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
@@ -3622,7 +3627,7 @@ SDValue SystemZTargetLowering::lowerFRAMEADDR(SDValue Op,
 
   if (Depth > 0) {
     // FIXME The frontend should detect this case.
-    if (!MF.getFunction().hasFnAttribute("backchain"))
+    if (!MF.getSubtarget<SystemZSubtarget>().hasBackChain())
       report_fatal_error("Unsupported stack frame traversal count");
 
     SDValue Offset = DAG.getConstant(TFL->getBackchainOffset(MF), DL, PtrVT);
@@ -3651,7 +3656,7 @@ SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
 
   if (Depth > 0) {
     // FIXME The frontend should detect this case.
-    if (!MF.getFunction().hasFnAttribute("backchain"))
+    if (!MF.getSubtarget<SystemZSubtarget>().hasBackChain())
       report_fatal_error("Unsupported stack frame traversal count");
 
     SDValue FrameAddr = lowerFRAMEADDR(Op, DAG);
@@ -3877,7 +3882,7 @@ SystemZTargetLowering::lowerDYNAMIC_STACKALLOC_ELF(SDValue Op,
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
   MachineFunction &MF = DAG.getMachineFunction();
   bool RealignOpt = !MF.getFunction().hasFnAttribute("no-realign-stack");
-  bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
+  bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
 
   SDValue Chain = Op.getOperand(0);
   SDValue Size  = Op.getOperand(1);
@@ -4554,7 +4559,7 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   auto *Regs = Subtarget.getSpecialRegisters();
-  bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
+  bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
 
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     report_fatal_error("Variable-sized stack allocations are not supported "
@@ -5970,6 +5975,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerShift(Op, DAG, SystemZISD::VSRL_BY_SCALAR);
   case ISD::SRA:
     return lowerShift(Op, DAG, SystemZISD::VSRA_BY_SCALAR);
+  case ISD::ROTL:
+    return lowerShift(Op, DAG, SystemZISD::VROTL_BY_SCALAR);
   case ISD::IS_FPCLASS:
     return lowerIS_FPCLASS(Op, DAG);
   case ISD::GET_ROUNDING:
@@ -6134,6 +6141,7 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(VSHL_BY_SCALAR);
     OPCODE(VSRL_BY_SCALAR);
     OPCODE(VSRA_BY_SCALAR);
+    OPCODE(VROTL_BY_SCALAR);
     OPCODE(VSUM);
     OPCODE(VICMPE);
     OPCODE(VICMPH);
