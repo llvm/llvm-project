@@ -4194,7 +4194,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
             *this, GD, FD, /*OmitMultiVersionMangling=*/true);
         // In prior versions of Clang, the mangling for ifuncs incorrectly
         // included an .ifunc suffix. This alias is generated for backward
-        // compatibility and should be deprecated in the future.
+        // compatibility. It is deprecated, and may be removed in the future.
         auto *Alias = llvm::GlobalAlias::create(
             DeclTy, 0, getMultiversionLinkage(*this, GD),
             MangledName + ".ifunc", IFunc, &getModule());
