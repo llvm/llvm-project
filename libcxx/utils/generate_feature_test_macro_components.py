@@ -882,7 +882,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_ranges",
-            "values": {"c++20": 202211}, # DR P2602R2 Poison Pills are Too Toxic
+            "values": {"c++20": 202211},  # DR P2602R2 Poison Pills are Too Toxic
             "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
         },
         {
