@@ -21,6 +21,9 @@ extern void llvm::omp::target::ompt::connectLibrary();
 #endif
 
 __attribute__((constructor(101))) void init() {
+  Profiler::get();
+  TIMESCOPE();
+
   DP("Init offload library!\n");
 
   PM = new PluginManager();
@@ -32,7 +35,6 @@ __attribute__((constructor(101))) void init() {
 
   PM->init();
 
-  Profiler::get();
   PM->registerDelayedLibraries();
 }
 
