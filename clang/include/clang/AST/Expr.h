@@ -4857,45 +4857,40 @@ private:
                                IntegerLiteral *>> {
     friend class PPEmbedExpr;
 
-    const ASTContext *Ctx = nullptr;
-    IntegerLiteral *FakeNode = nullptr;
-    StringRef DataRef;
-    LLVM_PREFERRED_TYPE(bool) unsigned long long IsSigned : 1;
-    unsigned long long CurOffset : 63;
+    PPEmbedExpr *PPExpr = nullptr;
+    unsigned long long CurOffset;
     using BaseTy = typename ChildElementIter::iterator_facade_base;
 
-    ChildElementIter(const PPEmbedExpr *E)
-        : IsSigned(E->getType()->isSignedIntegerType()), CurOffset(0) {
-      Ctx = E->Ctx;
-      FakeNode = E->FakeChildNode;
-      DataRef = E->BinaryData->getBytes();
-    }
-
-    // Max value that can be stored in a 31-bit bit-field.
-    static constexpr unsigned EndIterSentinel = 0x7FFFFFFF;
+    ChildElementIter(PPEmbedExpr *E) : PPExpr(E), CurOffset(0) {}
 
   public:
-    ChildElementIter() : IsSigned(false), CurOffset(EndIterSentinel) {}
+    ChildElementIter() : CurOffset(ULLONG_MAX) {}
     typename BaseTy::reference operator*() const {
-      assert(Ctx && FakeNode && CurOffset != EndIterSentinel &&
+      assert(PPExpr && CurOffset != ULLONG_MAX &&
              "trying to dereference an invalid iterator");
-      FakeNode->setValue(*Ctx, llvm::APInt(FakeNode->getValue().getBitWidth(),
-                                           DataRef[CurOffset], IsSigned));
-      return const_cast<typename BaseTy::reference>(FakeNode);
+      IntegerLiteral *N = PPExpr->FakeChildNode;
+      StringRef DataRef = PPExpr->BinaryData->getBytes();
+      N->setValue(*PPExpr->Ctx,
+                  llvm::APInt(N->getValue().getBitWidth(), DataRef[CurOffset],
+                              N->getType()->isSignedIntegerType()));
+      // We want to return a reference to the fake child node in the
+      // PPEmbedExpr, not the local variable N.
+      return const_cast<typename BaseTy::reference>(PPExpr->FakeChildNode);
     }
     typename BaseTy::pointer operator->() const { return **this; }
     using BaseTy::operator++;
     ChildElementIter &operator++() {
-      assert(CurOffset != EndIterSentinel &&
+      assert(PPExpr && "trying to increment an invalid iterator");
+      assert(CurOffset != ULLONG_MAX &&
              "Already at the end of what we can iterate over");
-      if (++CurOffset >= DataRef.size()) {
-        CurOffset = EndIterSentinel;
-        FakeNode = nullptr;
+      if (++CurOffset >= PPExpr->BinaryData->getByteLength()) {
+        CurOffset = ULLONG_MAX;
+        PPExpr = nullptr;
       }
       return *this;
     }
     bool operator==(ChildElementIter Other) const {
-      return (FakeNode == Other.FakeNode && CurOffset == Other.CurOffset);
+      return (PPExpr == Other.PPExpr && CurOffset == Other.CurOffset);
     }
   }; // class ChildElementIter
 
@@ -4909,8 +4904,9 @@ public:
   }
 
   const_fake_child_range underlying_data_elements() const {
-    return const_fake_child_range(ChildElementIter<true>(this),
-                                  ChildElementIter<true>());
+    return const_fake_child_range(
+        ChildElementIter<true>(const_cast<PPEmbedExpr *>(this)),
+        ChildElementIter<true>());
   }
 
   child_range children() {
