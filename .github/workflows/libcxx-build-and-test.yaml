@@ -72,10 +72,10 @@ jobs:
       # FIXME: Change to ./.github/actions/libcxx/run-buildbot
       - uses: libcxx/actions/run-buildbot@main
         with:
-          config: ${{ matrix.config }}
+          configuration: ${{ matrix.config }}
           cc: ${{ matrix.cc }}
           cxx: ${{ matrix.cxx }}
-          clang_tidy: ${{ matrix.clang_tidy }}
+          enable_clang_tidy: ${{ matrix.clang_tidy }}
   stage2:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-runners-8-set
@@ -108,12 +108,12 @@ jobs:
             cxx: 'clang++-17'
             clang_tidy: 'OFF'
     steps:
-      - uses: ./.github/actions/libcxx/run-buildbot
+      - uses: libcxx/actions/run-buildbot@main
         with:
-          config: ${{ matrix.config }}
+          configuration: ${{ matrix.config }}
           cc: ${{ matrix.cc }}
           cxx: ${{ matrix.cxx }}
-          clang_tidy: ${{ matrix.clang_tidy }}
+          enable_clang_tidy: ${{ matrix.clang_tidy }}
 
   stage3:
     if: github.repository_owner == 'llvm'
@@ -170,8 +170,8 @@ jobs:
     steps:
       - uses: libcxx/actions/run-buildbot@main
         with:
-          config: ${{ matrix.config }}
+          configuration: ${{ matrix.config }}
           cc: clang-18
           cxx: clang++-18
-          clang_tidy: "OFF"
-          std_modules: ${{ matrix.std_modules }}
+          enable_clang_tidy: "OFF"
+          enable_std_modules: ${{ matrix.std_modules }}
