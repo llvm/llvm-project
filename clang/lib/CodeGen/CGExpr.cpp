@@ -941,8 +941,10 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 
     if (isa<MemberExpr>(Base->IgnoreParenImpCasts())) {
       if (const ValueDecl *VD = CGF.FindCountedByField(Base)) {
-        IndexedType = Base->getType();
-        return CGF.EmitCountedByFieldExpr(Base, VD);
+        if (llvm::Value *Res = CGF.EmitCountedByFieldExpr(Base, VD)) {
+          IndexedType = Base->getType();
+          return Res;
+        }
       }
     }
   }
@@ -960,9 +962,24 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 
 namespace {
 
-/// \p MemberExprBaseVisitor returns the base \p DeclRefExpr of a field access.
-class MemberExprBaseVisitor
-    : public StmtVisitor<MemberExprBaseVisitor, Expr *> {
+/// \p StructAccessBase returns the base \p Expr of a field access. It returns
+/// either a \p DeclRefExpr, representing the base pointer to the struct, i.e.:
+///
+///     p in p-> a.b.c
+///
+/// or a \p MemberExpr, if the \p MemberExpr has the \p RecordDecl we're
+/// looking for:
+///
+///     struct s {
+///       struct s *ptr;
+///       int count;
+///       char array[] __attribute__((counted_by(count)));
+///     };
+///
+/// If we have an expression like \p p->ptr->array[index], we want the
+/// \p MemberExpr for \p p->ptr instead of \p p.
+class StructAccessBase
+    : public StmtVisitor<StructAccessBase, Expr *> {
   const RecordDecl *ExpectedRD;
 
   bool IsExpectedRecordDecl(const Expr *E) const {
@@ -973,14 +990,13 @@ class MemberExprBaseVisitor
   }
 
 public:
-  MemberExprBaseVisitor(const RecordDecl *ExpectedRD)
-      : ExpectedRD(ExpectedRD) {}
+  StructAccessBase(const RecordDecl *ExpectedRD) : ExpectedRD(ExpectedRD) {}
 
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
   //===--------------------------------------------------------------------===//
 
-  // Note: if we build C++ support for counted_by, then we'll have to handle
+  // NOTE: If we build C++ support for counted_by, then we'll have to handle
   // horrors like this:
   //
   //     struct S {
@@ -994,31 +1010,55 @@ public:
   //     }
 
   Expr *Visit(Expr *E) {
-    return StmtVisitor<MemberExprBaseVisitor, Expr *>::Visit(E);
+    return StmtVisitor<StructAccessBase, Expr *>::Visit(E);
   }
 
-  Expr *VisitCastExpr(CastExpr *E) {
-    return IsExpectedRecordDecl(E) ? E : Visit(E->getSubExpr());
-  }
-  Expr *VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
-    return IsExpectedRecordDecl(E) ? E : nullptr;
-  }
+  // These are the types we expect to return (in order of most to least
+  // likely):
+  //
+  //   1. DeclRefExpr - This is the expression for the base of the structure.
+  //      It's exactly what we want to build an access to the \p counted_by
+  //      field.
+  //   2. MemberExpr - This is the expression that has the same \p RecordDecl
+  //      as the flexble array member's lexical enclosing \p RecordDecl. This
+  //      allows us to catch things like: "p->p->array"
+  //   3. CompoundLiteralExpr - This is for people who create something
+  //      heretical like (struct foo has a flexible array member):
+  //
+  //        (struct foo){ 1, 2 }.blah[idx];
   Expr *VisitDeclRefExpr(DeclRefExpr *E) {
     return IsExpectedRecordDecl(E) ? E : nullptr;
   }
   Expr *VisitMemberExpr(MemberExpr *E) {
+    if (IsExpectedRecordDecl(E) && E->isArrow())
+      return E;
     Expr *Res = Visit(E->getBase());
     return !Res && IsExpectedRecordDecl(E) ? E : Res;
   }
-  Expr *VisitParenExpr(ParenExpr *E) {
-    return IsExpectedRecordDecl(E) ? E : Visit(E->getSubExpr());
+  Expr *VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
+    return IsExpectedRecordDecl(E) ? E : nullptr;
   }
 
+  // "Pass This On" --The Knife
   Expr *VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
+    if (IsExpectedRecordDecl(E))
+      return E;
     return Visit(E->getBase());
   }
-  Expr *VisitImplicitCastExpr(CastExpr *E) { return Visit(E->getSubExpr()); }
-  Expr *VisitUnaryOperator(UnaryOperator *E) { return Visit(E->getSubExpr()); }
+  Expr *VisitCastExpr(CastExpr *E) { return Visit(E->getSubExpr()); }
+  Expr *VisitImplicitCastExpr(ImplicitCastExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  Expr *VisitParenExpr(ParenExpr *E) { return Visit(E->getSubExpr()); }
+  Expr *VisitUnaryAddrOf(UnaryOperator *E) { return Visit(E->getSubExpr()); }
+  Expr *VisitUnaryDeref(UnaryOperator *E) { return Visit(E->getSubExpr()); }
+
+  // Invalid operations. Pointer arithmetic may lead to security violations.
+  Expr *VisitBinaryOperator(BinaryOperator *E) { return nullptr; }
+  Expr *VisitUnaryPostDec(UnaryOperator *E) { return nullptr; }
+  Expr *VisitUnaryPostInc(UnaryOperator *E) { return nullptr; }
+  Expr *VisitUnaryPreDec(UnaryOperator *E) { return nullptr; }
+  Expr *VisitUnaryPreInc(UnaryOperator *E) { return nullptr; }
 };
 
 } // end anonymous namespace
@@ -1031,18 +1071,28 @@ CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
 
   // Find the outer struct expr (i.e. p in p->a.b.c.d).
   Expr *CountedByExpr =
-      MemberExprBaseVisitor(CountedByRD).Visit(const_cast<Expr *>(Base));
-  if (!CountedByExpr)
+      StructAccessBase(CountedByRD).Visit(const_cast<Expr *>(Base));
+  if (!CountedByExpr || CountedByExpr->HasSideEffects(getContext()))
     return nullptr;
 
   llvm::Value *Res = nullptr;
-  if (CountedByExpr->getType()->isPointerType())
-    Res = EmitPointerWithAlignment(CountedByExpr).getPointer();
-  else
-    Res = EmitLValue(CountedByExpr).getPointer(*this);
+  auto I = ExprLValueMap.find(CountedByExpr);
+  if (I != ExprLValueMap.end()) {
+    Res = I->second.getPointer(*this);
+  } else if (auto *DRE = dyn_cast<DeclRefExpr>(CountedByExpr)) {
+    Res = EmitDeclRefLValue(DRE).getPointer(*this);
+  } else {
+    auto I = LocalDeclMap.find(CountedByVD);
+    if (I != LocalDeclMap.end())
+      Res = I->second.getPointer();
+  }
+
+  if (!Res || (!isa<llvm::GetElementPtrInst>(Res) &&
+               !isa<llvm::AllocaInst>(Res) && !isa<llvm::GlobalVariable>(Res)))
+    return nullptr;
 
   auto *Zero = llvm::ConstantInt::get(Int32Ty, 0);
-  SmallVector<llvm::Value *, 4> Indices{Zero};
+  SmallVector<llvm::Value *, 8> Indices{Zero};
   if (const auto *FD = dyn_cast<FieldDecl>(CountedByVD)) {
     Indices.emplace_back(llvm::ConstantInt::get(Int32Ty, FD->getFieldIndex()));
   } else if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
@@ -1056,32 +1106,39 @@ CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
 
   llvm::Type *Ty =
       CGM.getTypes().ConvertType(QualType(CountedByRD->getTypeForDecl(), 0));
-  Res = Builder.CreateInBoundsGEP(Ty, Res, Indices);
-
-  QualType CountedByTy(CountedByVD->getType());
-  TypeInfo TI = getContext().getTypeInfo(CountedByTy);
-  Ty = CGM.getTypes().ConvertType(CountedByTy);
-  Address Addr(Res, Ty,
-               CharUnits::fromQuantity(TI.Align / getContext().getCharWidth()));
-  return Builder.CreateLoad(Addr, /*IsVolatile=*/false);
+  Res = Builder.CreateAlignedLoad(Res->getType(), Res, getPointerAlign(), "struct.load");
+  Res = Builder.CreateInBoundsGEP(Ty, Res, Indices, "counted_by.gep");
+  Ty = llvm::GetElementPtrInst::getIndexedType(Ty, Indices);
+  return Builder.CreateAlignedLoad(Ty, Res, getIntAlign(), "counted_by.load");
 }
 
 const ValueDecl *
 CodeGenFunction::FindFlexibleArrayMemberField(ASTContext &Ctx,
-                                              const RecordDecl *RD) {
+                                              const RecordDecl *RD,
+                                              uint64_t &Offset) {
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       getLangOpts().getStrictFlexArraysLevel();
+  unsigned FieldNo = 0;
 
   for (const Decl *D : RD->decls()) {
     if (const auto *VD = dyn_cast<ValueDecl>(D);
         VD && Decl::isFlexibleArrayMemberLike(
                   Ctx, VD, VD->getType(), StrictFlexArraysLevel,
-                  /*IgnoreTemplateOrMacroSubstitution=*/true))
+                  /*IgnoreTemplateOrMacroSubstitution=*/true)) {
+      const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+      Offset += Layout.getFieldOffset(FieldNo);
       return VD;
+    }
 
     if (const auto *Record = dyn_cast<RecordDecl>(D))
-      if (const ValueDecl *VD = FindFlexibleArrayMemberField(Ctx, Record))
+      if (const ValueDecl *VD = FindFlexibleArrayMemberField(Ctx, Record, Offset)) {
+        const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+        Offset += Layout.getFieldOffset(FieldNo);
         return VD;
+      }
+
+    if (isa<FieldDecl>(D))
+      ++FieldNo;
   }
 
   return nullptr;
@@ -1120,7 +1177,8 @@ const ValueDecl *CodeGenFunction::FindCountedByField(const Expr *Base) {
     return nullptr;
 
   if (!FD) {
-    const ValueDecl *VD = FindFlexibleArrayMemberField(Ctx, OuterRD);
+    uint64_t Offset = 0;
+    const ValueDecl *VD = FindFlexibleArrayMemberField(Ctx, OuterRD, Offset);
     FD = dyn_cast_if_present<FieldDecl>(VD);
     if (!FD)
       return nullptr;
@@ -1441,6 +1499,11 @@ LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
     LV = EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E), /*Accessed*/true);
   else
     LV = EmitLValue(E);
+
+  if (SanOpts.has(SanitizerKind::ArrayBounds))
+    // Store the code for potential counted_by processing.
+    ExprLValueMap[E] = LV;
+
   if (!isa<DeclRefExpr>(E) && !LV.isBitField() && LV.isSimple()) {
     SanitizerSet SkippedChecks;
     if (const auto *ME = dyn_cast<MemberExpr>(E)) {
@@ -1599,8 +1662,14 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitExtVectorElementExpr(cast<ExtVectorElementExpr>(E));
   case Expr::CXXThisExprClass:
     return MakeAddrLValue(LoadCXXThisAddress(), E->getType());
-  case Expr::MemberExprClass:
-    return EmitMemberExpr(cast<MemberExpr>(E));
+  case Expr::MemberExprClass: {
+    LValue LV = EmitMemberExpr(cast<MemberExpr>(E));
+
+    if (SanOpts.has(SanitizerKind::ArrayBounds))
+      // Store the code for potential counted_by processing.
+      ExprLValueMap[E] = LV;
+    return LV;
+  }
   case Expr::CompoundLiteralExprClass:
     return EmitCompoundLiteralLValue(cast<CompoundLiteralExpr>(E));
   case Expr::ConditionalOperatorClass:

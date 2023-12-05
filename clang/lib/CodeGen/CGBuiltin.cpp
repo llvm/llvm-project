@@ -879,30 +879,25 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   }
 
   // Get the flexible array member Decl.
-  const ValueDecl *FAMDecl = nullptr;
+  const RecordDecl *OuterRD = nullptr;
   if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
     // Check if \p Base is referencing the FAM itself.
-    if (const ValueDecl *MD = ME->getMemberDecl()) {
-      const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-          getLangOpts().getStrictFlexArraysLevel();
-      if (!Decl::isFlexibleArrayMemberLike(
-              Ctx, MD, MD->getType(), StrictFlexArraysLevel,
-              /*IgnoreTemplateOrMacroSubstitution=*/true))
-        return nullptr;
-
-      FAMDecl = MD;
-    }
+    if (const ValueDecl *VD = dyn_cast<FieldDecl>(ME->getMemberDecl()))
+      OuterRD = VD->getDeclContext()->getOuterLexicalRecordContext();
   } else if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
     // Check if we're pointing to the whole struct.
     QualType Ty = DRE->getDecl()->getType();
     if (Ty->isPointerType())
       Ty = Ty->getPointeeType();
-
-    if (const auto *RD = Ty->getAsRecordDecl())
-      // Don't use the outer lexical record because the FAM might be in a
-      // different RecordDecl.
-      FAMDecl = FindFlexibleArrayMemberField(Ctx, RD);
+    OuterRD = Ty->getAsRecordDecl();
   }
+
+  if (!OuterRD)
+    return nullptr;
+
+  uint64_t Offset = 0;
+  const ValueDecl *FAMDecl = FindFlexibleArrayMemberField(Ctx, OuterRD, Offset);
+  Offset = Ctx.toCharUnitsFromBits(Offset).getQuantity();
 
   if (!FAMDecl || !FAMDecl->hasAttr<CountedByAttr>())
     // No flexible array member found or it doesn't have the "counted_by"
@@ -949,14 +944,10 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
 
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
     // The whole struct is specificed in the __bdos.
-    const RecordDecl *OuterRD =
-        CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
     const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(OuterRD);
 
     // Get the offset of the FAM.
-    CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAMDecl));
-    llvm::Constant *FAMOffset =
-        ConstantInt::get(ResType, Offset.getQuantity(), IsSigned);
+    llvm::Constant *FAMOffset = ConstantInt::get(ResType, Offset, IsSigned);
     Value *OffsetAndFAMSize =
         Builder.CreateAdd(FAMOffset, Res, "", !IsSigned, IsSigned);
 

@@ -1411,6 +1411,8 @@ private:
   /// decls.
   DeclMapTy LocalDeclMap;
 
+  llvm::SmallDenseMap<const Expr *, LValue, 32> ExprLValueMap;
+
   // Keep track of the cleanups for callee-destructed parameters pushed to the
   // cleanup stack so that they can be deactivated later.
   llvm::DenseMap<const ParmVarDecl *, EHScopeStack::stable_iterator>
@@ -3025,7 +3027,8 @@ public:
   // Find a struct's flexible array member. It may be embedded inside multiple
   // sub-structs, but must still be the last field.
   const ValueDecl *FindFlexibleArrayMemberField(ASTContext &Ctx,
-                                                const RecordDecl *RD);
+                                                const RecordDecl *RD,
+                                                uint64_t &Offset);
 
   /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns
   /// \p nullptr if either the attribute or the field doesn't exist.
