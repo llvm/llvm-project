@@ -425,6 +425,7 @@ bool objdump::isRelocAddressLess(RelocationRef A, RelocationRef B) {
 }
 
 static Error getRelocationValueString(const RelocationRef &Rel,
+                                      bool SymbolDescription,
                                       SmallVectorImpl<char> &Result) {
   const ObjectFile *Obj = Rel.getObject();
   if (auto *ELF = dyn_cast<ELFObjectFileBase>(Obj))
@@ -436,7 +437,7 @@ static Error getRelocationValueString(const RelocationRef &Rel,
   if (auto *MachO = dyn_cast<MachOObjectFile>(Obj))
     return getMachORelocationValueString(MachO, Rel, Result);
   if (auto *XCOFF = dyn_cast<XCOFFObjectFile>(Obj))
-    return getXCOFFRelocationValueString(*XCOFF, Rel, Result);
+    return getXCOFFRelocationValueString(*XCOFF, Rel, SymbolDescription, Result);
   llvm_unreachable("unknown object file format");
 }
 
@@ -528,7 +529,7 @@ static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
   SmallString<16> Name;
   SmallString<32> Val;
   Rel.getTypeName(Name);
-  if (Error E = getRelocationValueString(Rel, Val))
+  if (Error E = getRelocationValueString(Rel, SymbolDescription, Val))
     reportError(std::move(E), FileName);
   OS << (Is64Bits || !LeadingAddr ? "\t\t" : "\t\t\t");
   if (LeadingAddr)
@@ -2054,7 +2055,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             uint64_t MaxOffset = End - Index;
             // For --reloc: print zero blocks patched by relocations, so that
             // relocations can be shown in the dump.
-            if (RelCur != RelEnd)
+            if (InlineRelocs && RelCur != RelEnd)
               MaxOffset = std::min(RelCur->getOffset() - RelAdjustment - Index,
                                    MaxOffset);
 
@@ -2216,7 +2217,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   // If we have a valid relocation, try to print the
                   // corresponding symbol name. Multiple relocations on the
                   // same instruction are not handled.
-                  if (!getRelocationValueString(*RelCur, Val))
+                  if (!getRelocationValueString(*RelCur, false, Val))
                     *TargetOS << Val;
                   else
                     *TargetOS << TargetName;
@@ -2455,7 +2456,8 @@ void Dumper::printRelocations() {
         if (Address < StartAddress || Address > StopAddress || getHidden(Reloc))
           continue;
         Reloc.getTypeName(RelocName);
-        if (Error E = getRelocationValueString(Reloc, ValueStr))
+        if (Error E = getRelocationValueString(Reloc, SymbolDescription,
+                                               ValueStr))
           reportUniqueWarning(std::move(E));
 
         outs() << format(Fmt.data(), Address) << " "
