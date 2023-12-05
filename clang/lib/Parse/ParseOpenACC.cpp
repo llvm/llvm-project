@@ -278,10 +278,10 @@ ExprResult Parser::ParseOpenACCIDExpression() {
 ///
 /// arr[lower:length]
 ///
-void Parser::ParseOpenACCCacheVar() {
+bool Parser::ParseOpenACCCacheVar() {
   ExprResult ArrayName = ParseOpenACCIDExpression();
-  // FIXME: Pass this to Sema.
-  (void)ArrayName;
+  if (ArrayName.isInvalid())
+    return true;
 
   // If the expression is invalid, just continue parsing the brackets, there
   // is likely other useful diagnostics we can emit inside of those.
@@ -294,12 +294,12 @@ void Parser::ParseOpenACCCacheVar() {
   if (SquareBrackets.expectAndConsume()) {
     SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openacc_end,
               Parser::StopBeforeMatch);
-    return;
+    return true;
   }
 
   ExprResult Lower = getActions().CorrectDelayedTyposInExpr(ParseExpression());
-  // FIXME: Pass this to Sema.
-  (void)Lower;
+  if (Lower.isInvalid())
+    return true;
 
   // The 'length' expression is optional, as this could be a single array
   // element. If there is no colon, we can treat it as that.
@@ -307,12 +307,12 @@ void Parser::ParseOpenACCCacheVar() {
     ConsumeToken();
     ExprResult Length =
         getActions().CorrectDelayedTyposInExpr(ParseExpression());
-    // FIXME: Pass this to Sema.
-    (void)Length;
+    if (Length.isInvalid())
+      return true;
   }
 
   // Diagnose the square bracket being in the wrong place and continue.
-  SquareBrackets.consumeClose();
+  return SquareBrackets.consumeClose();
 }
 
 /// OpenACC 3.3, section 2.10:
@@ -343,7 +343,9 @@ void Parser::ParseOpenACCCacheVarList() {
     if (!FirstArray)
       ExpectAndConsume(tok::comma);
     FirstArray = false;
-    ParseOpenACCCacheVar();
+    if (ParseOpenACCCacheVar())
+      SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end, tok::comma,
+                StopBeforeMatch);
   }
 }
 
