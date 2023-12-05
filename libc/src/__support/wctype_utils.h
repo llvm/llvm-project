@@ -28,15 +28,14 @@ namespace internal {
 LIBC_INLINE cpp::optional<int> wctob(wint_t c) {
   // This needs to be translated to EOF at the callsite. This is to avoid
   // including stdio.h in this file.
-  // The standard states that wint_t may either be an alias of wchar_t or
-  // an alias of an integer type where different platforms define this type with
-  // different signedness, so we need to keep the c < 0 check, hence the
-  // pragmas.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
-  if (c > 127 || c < 0)
+  if (c > 127)
     return cpp::nullopt;
-#pragma GCC diagnostic pop
+  // The standard states that wint_t may either be an alias of wchar_t or
+  // an alias of an integer type, different platforms define this type with
+  // different signedness, so we may need the c < 0 check.
+  if constexpr (cpp::is_signed_v<wint_t>)
+    if (c < 0)
+      return cpp::nullopt;
   return static_cast<int>(c);
 }
 
