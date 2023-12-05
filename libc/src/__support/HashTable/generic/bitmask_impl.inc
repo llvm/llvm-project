@@ -41,7 +41,7 @@ struct Group {
   bitmask_t data;
 
   // Load a group of control words from an arbitary address.
-  LIBC_INLINE static Group load(const void *__restrict addr) {
+  LIBC_INLINE static Group load(const void *addr) {
     union {
       bitmask_t value;
       char bytes[sizeof(bitmask_t)];
@@ -52,7 +52,7 @@ struct Group {
   }
 
   // Load a group of control words from an aligned address.
-  LIBC_INLINE static Group load_aligned(const void *__restrict addr) {
+  LIBC_INLINE static Group load_aligned(const void *addr) {
     return *static_cast<const Group *>(addr);
   }
 
