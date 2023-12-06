@@ -375,7 +375,7 @@ static bool isSignExtendingOpW(const MachineInstr &MI,
   case RISCV::PseudoVMV_X_S_M2:
   case RISCV::PseudoVMV_X_S_M4:
   case RISCV::PseudoVMV_X_S_M8: {
-    // vmv.x.s returns a sign extended value if log2(sew) <= 5.
+    // vmv.x.s has at least 33 sign bits if log2(sew) <= 5.
     int64_t Log2SEW = MI.getOperand(2).getImm();
     assert(Log2SEW >= 3 && Log2SEW <= 6 && "Unexpected Log2SEW");
     return Log2SEW <= 5;
