@@ -782,6 +782,12 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(
     break;
 
   case X86::LOAD_STACK_GUARD:
+  case X86::LD_Fp032:
+  case X86::LD_Fp064:
+  case X86::LD_Fp080:
+  case X86::LD_Fp132:
+  case X86::LD_Fp164:
+  case X86::LD_Fp180:
   case X86::AVX1_SETALLONES:
   case X86::AVX2_SETALLONES:
   case X86::AVX512_128_SET0:
