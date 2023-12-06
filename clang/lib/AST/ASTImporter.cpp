@@ -5930,7 +5930,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     DeclContext *DC = TD->getDeclContext();
     DeclContext *LexicalDC = TD->getLexicalDeclContext();
     bool IsDependentContext = DC != LexicalDC ? LexicalDC->isDependentContext()
-                                            : DC->isDependentContext();
+                                              : DC->isDependentContext();
     return IsFriendTemplate && IsDependentContext;
   };
   bool DependentFriend = IsDependentFriend(D);
