@@ -4050,8 +4050,9 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
   for (auto &RI : FS->refs())
     NameVals.push_back(VE.getValueID(RI.getValue()));
 
-  bool UseRelBFRecord = WriteRelBFToSummary && !F.hasProfileData() &&
-                        ForceSummaryEdgesCold == FunctionSummary::FSHT_None;
+  const bool UseRelBFRecord =
+      WriteRelBFToSummary && !F.hasProfileData() &&
+      ForceSummaryEdgesCold == FunctionSummary::FSHT_None;
   for (auto &ECI : FS->calls()) {
     NameVals.push_back(getValueId(ECI.first));
     if (UseRelBFRecord)

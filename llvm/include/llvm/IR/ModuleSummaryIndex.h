@@ -81,8 +81,8 @@ struct CalleeInfo {
   CalleeInfo()
       : Hotness(static_cast<uint32_t>(HotnessType::Unknown)),
         HasTailCall(false), RelBlockFreq(0) {}
-  explicit CalleeInfo(HotnessType Hotness, bool hasTC, uint64_t RelBF)
-      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(hasTC),
+  explicit CalleeInfo(HotnessType Hotness, bool HasTC, uint64_t RelBF)
+      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC),
         RelBlockFreq(RelBF) {}
 
   void updateHotness(const HotnessType OtherHotness) {
@@ -91,7 +91,7 @@ struct CalleeInfo {
 
   bool hasTailCall() const { return HasTailCall; }
 
-  void setHasTailCall(const bool hasTC) { HasTailCall = hasTC; }
+  void setHasTailCall(const bool HasTC) { HasTailCall = HasTC; }
 
   HotnessType getHotness() const { return HotnessType(Hotness); }
 

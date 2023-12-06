@@ -1117,11 +1117,12 @@ static GlobalVarSummary::GVarFlags getDecodedGVarFlags(uint64_t RawFlags) {
       (GlobalObject::VCallVisibility)(RawFlags >> 3));
 }
 
-static void getDecodedHotnessCallEdgeInfo(uint64_t RawFlags,
-                                          CalleeInfo::HotnessType &Hotness,
-                                          bool &HasTailCall) {
-  Hotness = static_cast<CalleeInfo::HotnessType>(RawFlags & 0x7); // 3 bits
-  HasTailCall = (RawFlags & 0x8);                                 // 1 bit
+static std::pair<CalleeInfo::HotnessType, bool>
+getDecodedHotnessCallEdgeInfo(uint64_t RawFlags) {
+  CalleeInfo::HotnessType Hotness =
+      static_cast<CalleeInfo::HotnessType>(RawFlags & 0x7); // 3 bits
+  bool HasTailCall = (RawFlags & 0x8);                      // 1 bit
+  return {Hotness, HasTailCall};
 }
 
 static void getDecodedRelBFCallEdgeInfo(uint64_t RawFlags, uint64_t &RelBF,
@@ -7030,7 +7031,8 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
       if (HasProfile)
         I += 1; // Skip old profilecount field
     } else if (HasProfile)
-      getDecodedHotnessCallEdgeInfo(Record[++I], Hotness, HasTailCall);
+      std::tie(Hotness, HasTailCall) =
+          getDecodedHotnessCallEdgeInfo(Record[++I]);
     else if (HasRelBF)
       getDecodedRelBFCallEdgeInfo(Record[++I], RelBF, HasTailCall);
     Ret.push_back(FunctionSummary::EdgeTy{
