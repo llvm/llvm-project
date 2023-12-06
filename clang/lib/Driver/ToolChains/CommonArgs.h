@@ -87,10 +87,9 @@ unsigned ParseFunctionAlignment(const ToolChain &TC,
                                 const llvm::opt::ArgList &Args);
 
 void addDebugInfoKind(llvm::opt::ArgStringList &CmdArgs,
-                      llvm::codegenoptions::DebugInfoKind DebugInfoKind);
+                      llvm::debugoptions::DebugInfoKind DebugInfoKind);
 
-llvm::codegenoptions::DebugInfoKind
-debugLevelToInfoKind(const llvm::opt::Arg &A);
+llvm::debugoptions::DebugInfoKind debugLevelToInfoKind(const llvm::opt::Arg &A);
 
 // Extract the integer N from a string spelled "-dwarf-N", returning 0
 // on mismatch. The StringRef input (rather than an Arg) allows

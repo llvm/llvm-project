@@ -168,8 +168,8 @@ RewriteObjCAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
       return CreateModernObjCRewriter(std::string(InFile), std::move(OS),
                                       CI.getDiagnostics(), CI.getLangOpts(),
                                       CI.getDiagnosticOpts().NoRewriteMacros,
-                                      (CI.getCodeGenOpts().getDebugInfo() !=
-                                       llvm::codegenoptions::NoDebugInfo));
+                                      (CI.getDebugOpts().getDebugInfo() !=
+                                       llvm::debugoptions::NoDebugInfo));
     return CreateObjCRewriter(std::string(InFile), std::move(OS),
                               CI.getDiagnostics(), CI.getLangOpts(),
                               CI.getDiagnosticOpts().NoRewriteMacros);

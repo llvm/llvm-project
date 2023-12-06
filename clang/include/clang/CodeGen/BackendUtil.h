@@ -28,6 +28,7 @@ namespace clang {
   class DiagnosticsEngine;
   class HeaderSearchOptions;
   class CodeGenOptions;
+  class DebugOptions;
   class TargetOptions;
   class LangOptions;
   class BackendConsumer;
@@ -43,8 +44,9 @@ namespace clang {
 
   void EmitBackendOutput(DiagnosticsEngine &Diags, const HeaderSearchOptions &,
                          const CodeGenOptions &CGOpts,
-                         const TargetOptions &TOpts, const LangOptions &LOpts,
-                         StringRef TDesc, llvm::Module *M, BackendAction Action,
+                         const DebugOptions &DOpts, const TargetOptions &TOpts,
+                         const LangOptions &LOpts, StringRef TDesc,
+                         llvm::Module *M, BackendAction Action,
                          llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                          std::unique_ptr<raw_pwrite_stream> OS,
                          BackendConsumer *BC = nullptr);

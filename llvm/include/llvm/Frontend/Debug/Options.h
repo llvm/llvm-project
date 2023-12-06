@@ -10,7 +10,7 @@
 #define LLVM_FRONTEND_DEBUG_OPTIONS_H
 
 namespace llvm {
-namespace codegenoptions {
+namespace debugoptions {
 
 enum DebugInfoFormat {
   DIF_DWARF,
@@ -56,7 +56,7 @@ enum DebugInfoKind {
 
 enum class DebugTemplateNamesKind { Full, Simple, Mangled };
 
-} // end namespace codegenoptions
+} // namespace debugoptions
 } // end namespace llvm
 
 #endif

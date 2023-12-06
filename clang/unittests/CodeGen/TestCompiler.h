@@ -59,7 +59,8 @@ struct TestCompiler {
     CG.reset(CreateLLVMCodeGen(
         compiler.getDiagnostics(), "main-module",
         &compiler.getVirtualFileSystem(), compiler.getHeaderSearchOpts(),
-        compiler.getPreprocessorOpts(), compiler.getCodeGenOpts(), Context));
+        compiler.getPreprocessorOpts(), compiler.getCodeGenOpts(),
+        compiler.getDebugOpts(), Context));
   }
 
   void init(const char *TestProgram,

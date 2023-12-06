@@ -60,10 +60,9 @@ public:
   /// Set CodeView as the default debug info format for non-MachO binary
   /// formats, and to DWARF otherwise. Users can use -gcodeview and -gdwarf to
   /// override the default.
-  llvm::codegenoptions::DebugInfoFormat getDefaultDebugFormat() const override {
-    return getTriple().isOSBinFormatMachO()
-               ? llvm::codegenoptions::DIF_DWARF
-               : llvm::codegenoptions::DIF_CodeView;
+  llvm::debugoptions::DebugInfoFormat getDefaultDebugFormat() const override {
+    return getTriple().isOSBinFormatMachO() ? llvm::debugoptions::DIF_DWARF
+                                            : llvm::debugoptions::DIF_CodeView;
   }
 
   /// Set the debugger tuning to "default", since we're definitely not tuning

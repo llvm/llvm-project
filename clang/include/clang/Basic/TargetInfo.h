@@ -16,7 +16,6 @@
 
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/BitmaskEnum.h"
-#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Specifiers.h"
@@ -48,7 +47,6 @@ struct fltSemantics;
 namespace clang {
 class DiagnosticsEngine;
 class LangOptions;
-class CodeGenOptions;
 class MacroBuilder;
 
 /// Contains information gathered from parsing the contents of TargetAttr.

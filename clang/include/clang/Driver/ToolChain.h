@@ -557,8 +557,8 @@ public:
   virtual void CheckObjCARC() const {}
 
   /// Get the default debug info format. Typically, this is DWARF.
-  virtual llvm::codegenoptions::DebugInfoFormat getDefaultDebugFormat() const {
-    return llvm::codegenoptions::DIF_DWARF;
+  virtual llvm::debugoptions::DebugInfoFormat getDefaultDebugFormat() const {
+    return llvm::debugoptions::DIF_DWARF;
   }
 
   /// UseDwarfDebugFlags - Embed the compile options to clang into the Dwarf
@@ -595,7 +595,7 @@ public:
 
   /// Adjust debug information kind considering all passed options.
   virtual void
-  adjustDebugInfoKind(llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
+  adjustDebugInfoKind(llvm::debugoptions::DebugInfoKind &DebugInfoKind,
                       const llvm::opt::ArgList &Args) const {}
 
   /// GetExceptionModel - Return the tool chain exception model.

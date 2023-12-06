@@ -32,6 +32,7 @@ class BackendConsumer : public ASTConsumer {
   BackendAction Action;
   const HeaderSearchOptions &HeaderSearchOpts;
   const CodeGenOptions &CodeGenOpts;
+  const DebugOptions &DebugOpts;
   const TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
   std::unique_ptr<raw_pwrite_stream> AsmOutStream;
@@ -74,8 +75,9 @@ public:
                   const HeaderSearchOptions &HeaderSearchOpts,
                   const PreprocessorOptions &PPOpts,
                   const CodeGenOptions &CodeGenOpts,
-                  const TargetOptions &TargetOpts,
-                  const LangOptions &LangOpts, const std::string &InFile,
+                  const DebugOptions &DebugOpts,
+                  const TargetOptions &TargetOpts, const LangOptions &LangOpts,
+                  const std::string &InFile,
                   SmallVector<LinkModule, 4> LinkModules,
                   std::unique_ptr<raw_pwrite_stream> OS, llvm::LLVMContext &C,
                   CoverageSourceInfo *CoverageInfo = nullptr);
@@ -88,9 +90,10 @@ public:
                   const HeaderSearchOptions &HeaderSearchOpts,
                   const PreprocessorOptions &PPOpts,
                   const CodeGenOptions &CodeGenOpts,
-                  const TargetOptions &TargetOpts,
-                  const LangOptions &LangOpts, llvm::Module *Module,
-                  SmallVector<LinkModule, 4> LinkModules, llvm::LLVMContext &C,
+                  const DebugOptions &DebugOpts,
+                  const TargetOptions &TargetOpts, const LangOptions &LangOpts,
+                  llvm::Module *Module, SmallVector<LinkModule, 4> LinkModules,
+                  llvm::LLVMContext &C,
                   CoverageSourceInfo *CoverageInfo = nullptr);
 
   llvm::Module *getModule() const;

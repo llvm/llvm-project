@@ -200,7 +200,7 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
   Inv->getLangOpts().CXXExceptions = true;
   // Needed for testing dynamic_cast.
   Inv->getLangOpts().RTTI = true;
-  Inv->getCodeGenOpts().setDebugInfo(llvm::codegenoptions::FullDebugInfo);
+  Inv->getDebugOpts().setDebugInfo(llvm::debugoptions::FullDebugInfo);
   Inv->getTargetOpts().Triple = llvm::sys::getDefaultTargetTriple();
 
   Ins->setInvocation(std::move(Inv));
@@ -232,7 +232,7 @@ std::unique_ptr<CodeGenerator> BuildCodeGen(CompilerInstance &CI,
   return std::unique_ptr<CodeGenerator>(CreateLLVMCodeGen(
       CI.getDiagnostics(), ModuleName, &CI.getVirtualFileSystem(),
       CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
-      LLVMCtx));
+      CI.getDebugOpts(), LLVMCtx));
 }
 } // namespace init_convenience
 
