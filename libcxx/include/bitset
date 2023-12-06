@@ -252,7 +252,7 @@ __bitset<_N_words, _Size>::__bitset() _NOEXCEPT
 #endif
 {
 #ifdef _LIBCPP_CXX03_LANG
-    _VSTD::fill_n(__first_, _N_words, __storage_type(0));
+    std::fill_n(__first_, _N_words, __storage_type(0));
 #endif
 }
 
@@ -270,8 +270,8 @@ __bitset<_N_words, _Size>::__init(unsigned long long __v, false_type) _NOEXCEPT
         else
             __t[__i] = static_cast<__storage_type>(__v);
 
-    _VSTD::copy(__t, __t + sizeof(__t)/sizeof(__t[0]), __first_);
-    _VSTD::fill(__first_ + sizeof(__t)/sizeof(__t[0]), __first_ + sizeof(__first_)/sizeof(__first_[0]),
+    std::copy(__t, __t + sizeof(__t)/sizeof(__t[0]), __first_);
+    std::fill(__first_ + sizeof(__t)/sizeof(__t[0]), __first_ + sizeof(__first_)/sizeof(__first_[0]),
                __storage_type(0));
 }
 
@@ -284,7 +284,7 @@ __bitset<_N_words, _Size>::__init(unsigned long long __v, true_type) _NOEXCEPT
     if (_Size < __bits_per_word)
         __first_[0] &= ( 1ULL << _Size ) - 1;
 
-    _VSTD::fill(__first_ + 1, __first_ + sizeof(__first_)/sizeof(__first_[0]), __storage_type(0));
+    std::fill(__first_ + 1, __first_ + sizeof(__first_)/sizeof(__first_[0]), __storage_type(0));
 }
 
 #endif // _LIBCPP_CXX03_LANG
@@ -361,7 +361,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long
 __bitset<_N_words, _Size>::to_ulong(false_type) const
 {
     const_iterator __e = __make_iter(_Size);
-    const_iterator __i = _VSTD::find(__make_iter(sizeof(unsigned long) * CHAR_BIT), __e, true);
+    const_iterator __i = std::find(__make_iter(sizeof(unsigned long) * CHAR_BIT), __e, true);
     if (__i != __e)
         __throw_overflow_error("bitset to_ulong overflow error");
 
@@ -381,7 +381,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long
 __bitset<_N_words, _Size>::to_ullong(false_type) const
 {
     const_iterator __e = __make_iter(_Size);
-    const_iterator __i = _VSTD::find(__make_iter(sizeof(unsigned long long) * CHAR_BIT), __e, true);
+    const_iterator __i = std::find(__make_iter(sizeof(unsigned long long) * CHAR_BIT), __e, true);
     if (__i != __e)
         __throw_overflow_error("bitset to_ullong overflow error");
 
@@ -884,9 +884,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
 bitset<_Size>&
 bitset<_Size>::operator<<=(size_t __pos) _NOEXCEPT
 {
-    __pos = _VSTD::min(__pos, _Size);
-    _VSTD::copy_backward(base::__make_iter(0), base::__make_iter(_Size - __pos), base::__make_iter(_Size));
-    _VSTD::fill_n(base::__make_iter(0), __pos, false);
+    __pos = std::min(__pos, _Size);
+    std::copy_backward(base::__make_iter(0), base::__make_iter(_Size - __pos), base::__make_iter(_Size));
+    std::fill_n(base::__make_iter(0), __pos, false);
     return *this;
 }
 
@@ -895,9 +895,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
 bitset<_Size>&
 bitset<_Size>::operator>>=(size_t __pos) _NOEXCEPT
 {
-    __pos = _VSTD::min(__pos, _Size);
-    _VSTD::copy(base::__make_iter(__pos), base::__make_iter(_Size), base::__make_iter(0));
-    _VSTD::fill_n(base::__make_iter(_Size - __pos), __pos, false);
+    __pos = std::min(__pos, _Size);
+    std::copy(base::__make_iter(__pos), base::__make_iter(_Size), base::__make_iter(0));
+    std::fill_n(base::__make_iter(_Size - __pos), __pos, false);
     return *this;
 }
 
@@ -907,7 +907,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
 bitset<_Size>&
 bitset<_Size>::set() _NOEXCEPT
 {
-    _VSTD::fill_n(base::__make_iter(0), _Size, true);
+    std::fill_n(base::__make_iter(0), _Size, true);
     return *this;
 }
 
@@ -929,7 +929,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
 bitset<_Size>&
 bitset<_Size>::reset() _NOEXCEPT
 {
-    _VSTD::fill_n(base::__make_iter(0), _Size, false);
+    std::fill_n(base::__make_iter(0), _Size, false);
     return *this;
 }
 
@@ -1056,7 +1056,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
 bool
 bitset<_Size>::operator==(const bitset& __rhs) const _NOEXCEPT
 {
-    return _VSTD::equal(base::__make_iter(0), base::__make_iter(_Size), __rhs.__make_iter(0));
+    return std::equal(base::__make_iter(0), base::__make_iter(_Size), __rhs.__make_iter(0));
 }
 
 #if _LIBCPP_STD_VER <= 17

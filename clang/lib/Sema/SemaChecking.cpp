@@ -712,8 +712,13 @@ static ExprResult SemaBuiltinDumpStruct(Sema &S, CallExpr *TheCall) {
         << 1 << TheCall->getDirectCallee() << PtrArgType;
     return ExprError();
   }
-  const RecordDecl *RD = PtrArgType->getPointeeType()->getAsRecordDecl();
-
+  QualType Pointee = PtrArgType->getPointeeType();
+  const RecordDecl *RD = Pointee->getAsRecordDecl();
+  // Try to instantiate the class template as appropriate; otherwise, access to
+  // its data() may lead to a crash.
+  if (S.RequireCompleteType(PtrArgResult.get()->getBeginLoc(), Pointee,
+                            diag::err_incomplete_type))
+    return ExprError();
   // Second argument is a callable, but we can't fully validate it until we try
   // calling it.
   QualType FnArgType = TheCall->getArg(1)->getType();

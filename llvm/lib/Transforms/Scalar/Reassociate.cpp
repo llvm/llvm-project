@@ -2554,7 +2554,7 @@ ReassociatePass::BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT) {
   // Make a "pairmap" of how often each operand pair occurs.
   for (BasicBlock *BI : RPOT) {
     for (Instruction &I : *BI) {
-      if (!I.isAssociative())
+      if (!I.isAssociative() || !I.isBinaryOp())
         continue;
 
       // Ignore nodes that aren't at the root of trees.

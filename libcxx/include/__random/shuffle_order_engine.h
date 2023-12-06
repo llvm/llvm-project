@@ -94,7 +94,7 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
     explicit shuffle_order_engine(_Engine&& __e)
-        : __e_(_VSTD::move(__e)) {__init();}
+        : __e_(std::move(__e)) {__init();}
 #endif // _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
     explicit shuffle_order_engine(result_type __sd) : __e_(__sd) {__init();}
@@ -210,7 +210,7 @@ operator==(
     const shuffle_order_engine<_Eng, _Kp>& __x,
     const shuffle_order_engine<_Eng, _Kp>& __y)
 {
-    return __x.__y_ == __y.__y_ && _VSTD::equal(__x.__v_, __x.__v_ + _Kp, __y.__v_) &&
+    return __x.__y_ == __y.__y_ && std::equal(__x.__v_, __x.__v_ + _Kp, __y.__v_) &&
            __x.__e_ == __y.__e_;
 }
 

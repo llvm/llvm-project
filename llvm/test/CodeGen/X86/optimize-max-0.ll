@@ -324,7 +324,7 @@ bb14:                                             ; preds = %bb15, %bb.nph3
   %29 = getelementptr i8, i8* %j, i32 %.sum
   store i8 %28, i8* %29, align 1
   %30 = shl i32 %x.12, 2
-  %31 = or i32 %30, 2
+  %31 = or disjoint i32 %30, 2
   %32 = add i32 %31, %21
   %33 = getelementptr i8, i8* %r, i32 %32
   %34 = load i8, i8* %33, align 1
@@ -761,7 +761,7 @@ bb14:                                             ; preds = %bb15, %bb.nph3
   %29 = getelementptr i8, i8* %j, i32 %.sum
   store i8 %28, i8* %29, align 1
   %30 = shl i32 %x.12, 2
-  %31 = or i32 %30, 2
+  %31 = or disjoint i32 %30, 2
   %32 = add i32 %31, %21
   %33 = getelementptr i8, i8* %r, i32 %32
   %34 = load i8, i8* %33, align 1

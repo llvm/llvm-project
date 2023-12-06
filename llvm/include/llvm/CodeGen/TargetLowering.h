@@ -4715,25 +4715,6 @@ public:
     return Chain;
   }
 
-  /// Should SelectionDAG lower an atomic store of the given kind as a normal
-  /// StoreSDNode (as opposed to an AtomicSDNode)?  NOTE: The intention is to
-  /// eventually migrate all targets to the using StoreSDNodes, but porting is
-  /// being done target at a time.
-  virtual bool lowerAtomicStoreAsStoreSDNode(const StoreInst &SI) const {
-    assert(SI.isAtomic() && "violated precondition");
-    return false;
-  }
-
-  /// Should SelectionDAG lower an atomic load of the given kind as a normal
-  /// LoadSDNode (as opposed to an AtomicSDNode)?  NOTE: The intention is to
-  /// eventually migrate all targets to the using LoadSDNodes, but porting is
-  /// being done target at a time.
-  virtual bool lowerAtomicLoadAsLoadSDNode(const LoadInst &LI) const {
-    assert(LI.isAtomic() && "violated precondition");
-    return false;
-  }
-
-
   /// This callback is invoked by the type legalizer to legalize nodes with an
   /// illegal operand type but legal result types.  It replaces the
   /// LowerOperation callback in the type Legalizer.  The reason we can not do

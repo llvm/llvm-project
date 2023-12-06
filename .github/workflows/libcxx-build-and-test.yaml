@@ -53,7 +53,7 @@ jobs:
     runs-on: libcxx-runners-8-set
     continue-on-error: false
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         config: [
           'generic-cxx03',
@@ -92,7 +92,7 @@ jobs:
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         config: [
           'generic-cxx11',

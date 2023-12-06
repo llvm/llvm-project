@@ -295,7 +295,7 @@ condition_variable_any::wait_for(_Lock& __lock,
                                  _Predicate __pred)
 {
     return wait_until(__lock, chrono::steady_clock::now() + __d,
-                      _VSTD::move(__pred));
+                      std::move(__pred));
 }
 
 #if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)

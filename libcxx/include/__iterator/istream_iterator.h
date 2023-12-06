@@ -51,14 +51,14 @@ public:
 #if _LIBCPP_STD_VER >= 20
     _LIBCPP_HIDE_FROM_ABI constexpr istream_iterator(default_sentinel_t) : istream_iterator() {}
 #endif // _LIBCPP_STD_VER >= 20
-    _LIBCPP_HIDE_FROM_ABI istream_iterator(istream_type& __s) : __in_stream_(_VSTD::addressof(__s))
+    _LIBCPP_HIDE_FROM_ABI istream_iterator(istream_type& __s) : __in_stream_(std::addressof(__s))
         {
             if (!(*__in_stream_ >> __value_))
                 __in_stream_ = nullptr;
         }
 
     _LIBCPP_HIDE_FROM_ABI const _Tp& operator*() const {return __value_;}
-    _LIBCPP_HIDE_FROM_ABI const _Tp* operator->() const {return _VSTD::addressof((operator*()));}
+    _LIBCPP_HIDE_FROM_ABI const _Tp* operator->() const {return std::addressof((operator*()));}
     _LIBCPP_HIDE_FROM_ABI istream_iterator& operator++()
         {
             if (!(*__in_stream_ >> __value_))

@@ -257,8 +257,8 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
     istrstream(istrstream&& __rhs)  // extension
-        : istream(_VSTD::move(static_cast<istream&>(__rhs))),
-          __sb_(_VSTD::move(__rhs.__sb_))
+        : istream(std::move(static_cast<istream&>(__rhs))),
+          __sb_(std::move(__rhs.__sb_))
     {
         istream::set_rdbuf(&__sb_);
     }
@@ -266,8 +266,8 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     istrstream& operator=(istrstream&& __rhs)
     {
-        __sb_ = _VSTD::move(__rhs.__sb_);
-        istream::operator=(_VSTD::move(__rhs));
+        __sb_ = std::move(__rhs.__sb_);
+        istream::operator=(std::move(__rhs));
         return *this;
     }
 #endif // _LIBCPP_CXX03_LANG
@@ -300,14 +300,14 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     ostrstream(char* __s, int __n, ios_base::openmode __mode = ios_base::out)
         : ostream(&__sb_),
-          __sb_(__s, __n, __s + (__mode & ios::app ? _VSTD::strlen(__s) : 0))
+          __sb_(__s, __n, __s + (__mode & ios::app ? std::strlen(__s) : 0))
         {}
 
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
     ostrstream(ostrstream&& __rhs)  // extension
-        : ostream(_VSTD::move(static_cast<ostream&>(__rhs))),
-          __sb_(_VSTD::move(__rhs.__sb_))
+        : ostream(std::move(static_cast<ostream&>(__rhs))),
+          __sb_(std::move(__rhs.__sb_))
     {
         ostream::set_rdbuf(&__sb_);
     }
@@ -315,8 +315,8 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     ostrstream& operator=(ostrstream&& __rhs)
     {
-        __sb_ = _VSTD::move(__rhs.__sb_);
-        ostream::operator=(_VSTD::move(__rhs));
+        __sb_ = std::move(__rhs.__sb_);
+        ostream::operator=(std::move(__rhs));
         return *this;
     }
 #endif // _LIBCPP_CXX03_LANG
@@ -360,14 +360,14 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     strstream(char* __s, int __n, ios_base::openmode __mode = ios_base::in | ios_base::out)
         : iostream(&__sb_),
-          __sb_(__s, __n, __s + (__mode & ios::app ? _VSTD::strlen(__s) : 0))
+          __sb_(__s, __n, __s + (__mode & ios::app ? std::strlen(__s) : 0))
         {}
 
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
     strstream(strstream&& __rhs)  // extension
-        : iostream(_VSTD::move(static_cast<iostream&>(__rhs))),
-          __sb_(_VSTD::move(__rhs.__sb_))
+        : iostream(std::move(static_cast<iostream&>(__rhs))),
+          __sb_(std::move(__rhs.__sb_))
     {
         iostream::set_rdbuf(&__sb_);
     }
@@ -375,8 +375,8 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     strstream& operator=(strstream&& __rhs)
     {
-        __sb_ = _VSTD::move(__rhs.__sb_);
-        iostream::operator=(_VSTD::move(__rhs));
+        __sb_ = std::move(__rhs.__sb_);
+        iostream::operator=(std::move(__rhs));
         return *this;
     }
 #endif // _LIBCPP_CXX03_LANG

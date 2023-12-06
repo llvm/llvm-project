@@ -50,7 +50,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
 typename iterator_traits<_InputIter>::difference_type
 distance(_InputIter __first, _InputIter __last)
 {
-    return _VSTD::__distance(__first, __last, typename iterator_traits<_InputIter>::iterator_category());
+    return std::__distance(__first, __last, typename iterator_traits<_InputIter>::iterator_category());
 }
 
 #if _LIBCPP_STD_VER >= 20

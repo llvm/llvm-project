@@ -24301,10 +24301,7 @@ void AArch64TargetLowering::ReplaceExtractSubVectorResults(
 // Create an even/odd pair of X registers holding integer value V.
 static SDValue createGPRPairNode(SelectionDAG &DAG, SDValue V) {
   SDLoc dl(V.getNode());
-  SDValue VLo = DAG.getAnyExtOrTrunc(V, dl, MVT::i64);
-  SDValue VHi = DAG.getAnyExtOrTrunc(
-      DAG.getNode(ISD::SRL, dl, MVT::i128, V, DAG.getConstant(64, dl, MVT::i64)),
-      dl, MVT::i64);
+  auto [VLo, VHi] = DAG.SplitScalar(V, dl, MVT::i64, MVT::i64);
   if (DAG.getDataLayout().isBigEndian())
     std::swap (VLo, VHi);
   SDValue RegClass =

@@ -637,6 +637,12 @@ appropriate fencing is inserted.  Since the appropriate fencing is
 implementation defined, the optimizer can't do the latter.  The former is
 challenging as many commonly expected properties, such as
 ``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for non-integral types.
+Similar restrictions apply to intrinsics that might examine the pointer bits,
+such as :ref:`llvm.ptrmask<int_ptrmask>`. 
+
+The alignment information provided by the frontend for a non-integral pointer
+(typically using attributes or metadata) must be valid for every possible 
+representation of the pointer.
 
 .. _globalvars:
 
@@ -705,6 +711,13 @@ information. Attaching section information to an external declaration is an
 assertion that its definition is located in the specified section. If the
 definition is located in a different section, the behavior is undefined.
 
+LLVM allows an explicit code model to be specified for globals. If the
+target supports it, it will emit globals in the code model specified,
+overriding the code model used to compile the translation unit.
+The allowed values are "tiny", "small", "kernel", "medium", "large".
+This may be extended in the future to specify global data layout that
+doesn't cleanly fit into a specific code model.
+
 By default, global initializers are optimized by assuming that global
 variables defined within the module are not modified from their
 initial values before the start of the global initializer. This is
@@ -761,6 +774,7 @@ Syntax::
                          <global | constant> <Type> [<InitializerConstant>]
                          [, section "name"] [, partition "name"]
                          [, comdat [($name)]] [, align <Alignment>]
+                         [, code_model "model"]
                          [, no_sanitize_address] [, no_sanitize_hwaddress]
                          [, sanitize_address_dyninit] [, sanitize_memtag]
                          (, !name !N)*
@@ -777,6 +791,13 @@ The following example just declares a global variable
 .. code-block:: llvm
 
    @G = external global i32
+
+The following example defines a global variable with the
+``large`` code model:
+
+.. code-block:: llvm
+
+    @G = internal global i32 0, code_model "large"
 
 The following example defines a thread-local global with the
 ``initialexec`` TLS model:
