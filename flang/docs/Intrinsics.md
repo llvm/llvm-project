@@ -657,11 +657,6 @@ CALL CO_REDUCE
 CALL CO_SUM
 ```
 
-### Library subroutine 
-```
-CALL GETLOG(USRNAME)
-```
-
 ## Non-standard intrinsics
 ### PGI
 ```
@@ -698,6 +693,11 @@ IARG, IARGC, NARGS, NUMARG
 BADDRESS, IADDR
 CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, LOC
 MALLOC
+```
+
+### Library subroutine 
+```
+CALL GETLOG(USRNAME)
 ```
 
 ## Intrinsic Procedure Name Resolution
