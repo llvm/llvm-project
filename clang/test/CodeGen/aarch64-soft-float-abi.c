@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64 -target-feature +fp-armv8 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD
-// RUN: %clang_cc1 -triple aarch64 -target-feature -fp-armv8 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,SOFT
+// RUN: %clang_cc1 -triple aarch64 -target-feature +fp-armv8 -target-abi aapcs -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD
+// RUN: %clang_cc1 -triple aarch64 -target-feature -fp-armv8 -target-abi aapcs-soft -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,SOFT
 
 // See also llvm/test/CodeGen/AArch64/soft-float-abi.ll, which checks the LLVM
 // backend parts of the soft-float ABI.
