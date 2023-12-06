@@ -120,7 +120,7 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
                          const char *Modifier);
   void PrintIntelMemReference(const MachineInstr *MI, unsigned OpNo,
                               raw_ostream &O, const char *Modifier);
-  const MCSubtargetInfo &getMachOSubtargetInfo() const override;
+  const MCSubtargetInfo *getIFuncMCSubtargetInfo() const override;
   void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                               MCSymbol *LazyPointer) override;
   void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI,

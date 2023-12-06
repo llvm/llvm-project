@@ -532,9 +532,9 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
   O << ']';
 }
 
-const MCSubtargetInfo &X86AsmPrinter::getMachOSubtargetInfo() const {
+const MCSubtargetInfo *X86AsmPrinter::getIFuncMCSubtargetInfo() const {
   assert(Subtarget);
-  return *Subtarget;
+  return Subtarget;
 }
 
 void X86AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,

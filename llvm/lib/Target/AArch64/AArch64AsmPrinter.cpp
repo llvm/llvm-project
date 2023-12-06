@@ -202,9 +202,9 @@ private:
     return ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags;
   }
 
-  const MCSubtargetInfo &getMachOSubtargetInfo() const override {
+  const MCSubtargetInfo *getIFuncMCSubtargetInfo() const override {
     assert(STI);
-    return *STI;
+    return STI;
   }
   void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                               MCSymbol *LazyPointer) override;
