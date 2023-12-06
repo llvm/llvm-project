@@ -377,6 +377,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-nullptr>` check by adding option
   `IgnoredTypes` that can be used to exclude some pointer types.
 
+- New :doc:`modernize-replace-memcpy-with-stdcopy
+  <clang-tidy/checks/modernize-replace-memcpy-by-stdcopy>` check.
+
+  Replaces all occurrences of the C ``memcpy`` function by ``std::copy``.
+
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to accurately generate
   fixes for reordering arguments.
