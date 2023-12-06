@@ -100,20 +100,23 @@ llvm.func @func_with_debug(%arg: i64) {
   // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[NO_NAME_VAR:[0-9]+]], metadata !DIExpression())
   llvm.intr.dbg.value #noNameVariable = %arg : i64
 
-  // CHECK: call void @func_no_debug(), !dbg ![[CALLSITE_LOC:[0-9]+]]
-  llvm.call @func_no_debug() : () -> () loc(callsite("mysource.cc":3:4 at "mysource.cc":5:6))
-
   // CHECK: call void @func_no_debug(), !dbg ![[FILE_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc("foo.mlir":1:2)
 
   // CHECK: call void @func_no_debug(), !dbg ![[NAMED_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc("named"("foo.mlir":10:10))
 
+  // CHECK: call void @func_no_debug(), !dbg ![[CALLSITE_LOC:[0-9]+]]
+  llvm.call @func_no_debug() : () -> () loc(callsite("nodebug.cc":3:4 at "mysource.cc":5:6))
+
+  // CHECK: call void @func_no_debug(), !dbg ![[CALLSITE_LOC:[0-9]+]]
+  llvm.call @func_no_debug() : () -> () loc(callsite("nodebug.cc":3:4 at fused<#sp0>["mysource.cc":5:6]))
+
   // CHECK: call void @func_no_debug(), !dbg ![[FUSED_LOC:[0-9]+]]
-  llvm.call @func_no_debug() : () -> () loc(fused[callsite("mysource.cc":5:6 at "mysource.cc":1:1), "mysource.cc":1:1])
+  llvm.call @func_no_debug() : () -> () loc(fused[callsite(fused<#callee>["mysource.cc":5:6] at "mysource.cc":1:1), "mysource.cc":1:1])
 
   // CHECK: add i64 %[[ARG]], %[[ARG]], !dbg ![[FUSEDWITH_LOC:[0-9]+]]
-  %sum = llvm.add %arg, %arg : i64 loc(fused<#callee>[callsite("foo.mlir":2:4 at fused<#sp0>["foo.mlir":28:5])])
+  %sum = llvm.add %arg, %arg : i64 loc(callsite(fused<#callee>["foo.mlir":2:4] at fused<#sp0>["foo.mlir":28:5]))
 
   llvm.return
 } loc(fused<#sp0>["foo.mlir":1:1])
@@ -148,7 +151,7 @@ llvm.func @empty_types() {
 // CHECK: ![[BLOCK_LOC]] = distinct !DILexicalBlock(scope: ![[FUNC_LOC]])
 // CHECK: ![[NO_NAME_VAR]] = !DILocalVariable(scope: ![[BLOCK_LOC]])
 
-// CHECK-DAG: ![[CALLSITE_LOC]] = !DILocation(line: 3, column: 4,
+// CHECK-DAG: ![[CALLSITE_LOC]] = !DILocation(line: 5, column: 6,
 // CHECK-DAG: ![[FILE_LOC]] = !DILocation(line: 1, column: 2,
 // CHECK-DAG: ![[NAMED_LOC]] = !DILocation(line: 10, column: 10
 // CHECK-DAG: ![[FUSED_LOC]] = !DILocation(line: 1, column: 1
@@ -186,7 +189,7 @@ llvm.func @empty_types() {
 #di_label = #llvm.di_label<scope = #di_lexical_block_file, name = "label", file = #di_file, line = 42>
 
 #loc0 = loc("foo.mlir":0:0)
-#loc1 = loc(callsite(#loc0 at fused<#di_subprogram>["foo.mlir":4:2]))
+#loc1 = loc(callsite(fused<#di_lexical_block_file>[#loc0] at fused<#di_subprogram>["foo.mlir":4:2]))
 
 // CHECK-LABEL: define i32 @func_with_inlined_dbg_value(
 // CHECK-SAME: i32 %[[ARG:.*]]) !dbg ![[OUTER_FUNC:[0-9]+]]
@@ -194,9 +197,9 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
   // CHECK: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC0:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
   llvm.intr.dbg.value #di_local_variable0 = %arg0 : i32 loc(fused<#di_subprogram>[#loc0])
   // CHECK: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC1:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC1:.*]]
-  llvm.intr.dbg.value #di_local_variable1 = %arg0 : i32 loc(fused<#di_lexical_block_file>[#loc1])
+  llvm.intr.dbg.value #di_local_variable1 = %arg0 : i32 loc(#loc1)
   // CHECK: call void @llvm.dbg.label(metadata ![[LABEL:[0-9]+]]), !dbg ![[DBG_LOC1:.*]]
-  llvm.intr.dbg.label #di_label loc(fused<#di_lexical_block_file>[#loc1])
+  llvm.intr.dbg.label #di_label loc(#loc1)
   llvm.return %arg0 : i32
 } loc(fused<#di_subprogram>["caller"])
 

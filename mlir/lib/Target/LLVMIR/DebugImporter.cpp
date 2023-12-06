@@ -282,14 +282,15 @@ Location DebugImporter::translateLoc(llvm::DILocation *loc) {
   Location result = FileLineColLoc::get(context, loc->getFilename(),
                                         loc->getLine(), loc->getColumn());
 
-  // Add call site information, if available.
-  if (llvm::DILocation *inlinedAt = loc->getInlinedAt())
-    result = CallSiteLoc::get(result, translateLoc(inlinedAt));
-
   // Add scope information.
   assert(loc->getScope() && "expected non-null scope");
   result = FusedLocWith<DIScopeAttr>::get({result}, translate(loc->getScope()),
                                           context);
+
+  // Add call site information, if available.
+  if (llvm::DILocation *inlinedAt = loc->getInlinedAt())
+    result = CallSiteLoc::get(result, translateLoc(inlinedAt));
+
   return result;
 }
 
