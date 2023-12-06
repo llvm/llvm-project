@@ -5,6 +5,7 @@ from mlir.dialects import func
 from mlir.dialects import arith
 from mlir.dialects import memref
 from mlir.dialects import affine
+import mlir.extras.types as T
 
 
 def constructAndPrintInModule(f):
@@ -41,6 +42,15 @@ def testAffineStoreOp():
         affine.AffineStoreOp(a1, mem, indices=[arg0, arg0], map=map)
 
         return mem
+
+
+# CHECK-LABEL: TEST: testAffineDelinearizeInfer
+@constructAndPrintInModule
+def testAffineDelinearizeInfer():
+    c0 = arith.ConstantOp(T.index(), 0)
+    c1 = arith.ConstantOp(T.index(), 1)
+    # CHECK: %0:2 = affine.delinearize_index %c1 into (%c1, %c0) : index, index
+    two_indices = affine.AffineDelinearizeIndexOp(c1, [c1, c0])
 
 
 # CHECK-LABEL: TEST: testAffineLoadOp
