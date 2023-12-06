@@ -16,10 +16,10 @@
 #include <cstdlib>
 
 #ifdef _WIN32
-#include <lmcons.h> // UNLEN=256
+#include <lmcons.h> // UNLEN
 #define LOGIN_NAME_MAX UNLEN
 #else
-#include <limits.h>
+#include <limits.h> // LOGIN_NAME_MAX
 #endif
 
 using namespace Fortran::runtime;
@@ -37,8 +37,9 @@ TEST_F(ExtensionTests, GetlogGetName) {
 }
 
 TEST_F(ExtensionTests, GetlogPadSpace) {
-  const int charLen{LOGIN_NAME_MAX +
-      2}; // guarantee 1 char longer than max, last char should be pad space
+  // guarantee 1 char longer than max, last char should be pad with space
+  const int charLen{LOGIN_NAME_MAX + 2};
+
   char input[charLen];
 
   FORTRAN_PROCEDURE_NAME(getlog)

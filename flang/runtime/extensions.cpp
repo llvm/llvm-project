@@ -80,13 +80,16 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
       n, &value, nullptr, nullptr, __FILE__, __LINE__);
 }
 
+// CALL GETLOG(USRNAME)
 void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *arg, std::int64_t length) {
   const int nameMaxLen{LOGIN_NAME_MAX + 1};
   char str[nameMaxLen];
 
   int error{getlogin_r(str, nameMaxLen)};
   Terminator terminator{__FILE__, __LINE__};
-  RUNTIME_CHECK(terminator, error == 0);
+  if (error != 0) {
+    terminator.Crash("getlogin_r fail with a nonzero value: %d.\n", error);
+  }
 
   // find first \0 in string then pad from there
   CopyAndPad(reinterpret_cast<char *>(arg), str, length, std::strlen(str));
