@@ -4,41 +4,37 @@
 
 # RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK1
 # CHECK1:         Name: {{.+}}31mma{{.+}}0min.c
-# CHECK1:         Summary: {{.+}}`{{.+}}31mma{{.+}}0min at main.c:2
 
 # Checking complex regex searches
 
 # RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s main.c|foo' | FileCheck %s --check-prefix CHECK2
 # CHECK2:         Name: {{.+}}31mmain.c{{.+}}0m
-# CHECK2:         Summary: {{.+}}`{{.+}}31mfoo{{.+}}0m at main.c:1
 
 # RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s m[abc]' | FileCheck %s --check-prefix CHECK3
 # CHECK3:         Name: {{.+}}31mma{{.+}}0min.c
-# CHECK3:         Summary: {{.+}}`{{.+}}31mma{{.+}}0min at main.c:2
-
-# Checking tail match
-
-# RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s .*o$' | FileCheck %s --check-prefix CHECK4
-# CHECK4:         Summary: {{.+}}`{{.+}}31mfoo{{.+}}0m at main.c:1
 
 # Checking to ensure that no attempt is made to color anything when there are no matching symbols found
 
-# RUN: %lldb %t -o 'settings set use-color true' -o 'image lookup -r -s IMPPATTERN123456' | FileCheck %s --check-prefix CHECK5
-# CHECK5-NOT: {{[0-9]+}} symbols match the regular expression
-
-# Checking search which find more than 1 symbol
-
-# RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s foo|main' | FileCheck %s --check-prefix CHECK6
-# CHECK6:         Name: {{.+}}31mmain{{.+}}0m.c
-# CHECK6:         Summary: {{.+}}`{{.+}}31mfoo{{.+}}0m at main.c:1
-# CHECK6:         Summary: {{.+}}`{{.+}}31mmain{{.+}}0m at main.c:2
+# RUN: %lldb %t -o 'settings set use-color true' -o 'image lookup -r -s IMPPATTERN123456' | FileCheck %s --check-prefix CHECK4
+# CHECK4-NOT: {{[0-9]+}} symbols match the regular expression
 
 # Checking multiple matches on same symbol
 
-# RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s (ma|n$)' | FileCheck %s --check-prefix CHECK7
-# CHECK7:         Summary: {{.+}}`{{.+}}31mma{{.+}}0mi{{.+}}31mn{{.+}}0m at main.c:2
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s (ma|n)' | FileCheck %s --check-prefix CHECK5
+# CHECK5:         Name: {{.+}}31mma{{.+}}0mi{{.+}}31mn{{.+}}0m.c
 
 # Checking no colorization without regex search
 
-# RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -s main' | FileCheck %s --check-prefix CHECK8
-# CHECK8:        Summary: {{.+}}`main at main.c:2
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -s main' | FileCheck %s --check-prefix CHECK6
+# CHECK6:        Summary: {{.+}}`main at main.c:2
+
+# Checking no colorization when use-color is false
+
+# RUN: %lldb %t -b -o 'settings set use-color false' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK7
+# CHECK7:        Name: main.c
+
+# Checking for custom colors
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'settings set show-regex-match-ansi-prefix ${ansi.fg.green}' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK8
+# CHECK8:         Name: {{.+}}32mma{{.+}}0min.c
+

@@ -96,8 +96,12 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
       if (!name)
         name = function->GetName();
       if (name) {
-        llvm::StringRef ansi_prefix = "${ansi.fg.red}";
-        llvm::StringRef ansi_suffix = "${ansi.normal}";
+        llvm::StringRef ansi_prefix;
+        llvm::StringRef ansi_suffix;
+        if (target_sp) {
+          ansi_prefix = target_sp->GetDebugger().GetRegexMatchAnsiPrefix();
+          ansi_suffix = target_sp->GetDebugger().GetRegexMatchAnsiSuffix();
+        }
         s->PutCStringColorHighlighted(name.GetStringRef(), pattern, ansi_prefix,
                                       ansi_suffix);
       }

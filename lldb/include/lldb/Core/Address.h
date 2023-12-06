@@ -239,6 +239,12 @@ public:
   ///     contains the address, otherwise dumping the range that contains the
   ///     address.
   ///
+  /// \param[in] pattern
+  ///     An optional regex pattern to match against the description. If
+  ///     specified, parts of the description matching this pattern may be
+  ///     highlighted or processed differently. If this parameter is an empty
+  ///     string or not provided, no highlighting is applied.
+  ///
   /// \return
   ///     Returns \b true if the address was able to be displayed.
   ///     File and load addresses may be unresolved and it may not be
