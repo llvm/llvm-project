@@ -60,9 +60,8 @@ global variable or function should be in after translation.
 def CodeModelDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
-The ``model`` attribute allows you to use a different code model for
-addressing this variable, than the code model specified by the global
-``-mcmodel`` option.
+The ``model`` attribute allows overriding the translation unit's
+code model (specified by ``-mcmodel``) for a specific global variable.
   }];
   let Heading = "model";
 }
