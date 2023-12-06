@@ -64,10 +64,15 @@ static bool EditBOZInput(
   }
   // Count significant digits after any leading white space & zeroes
   int digits{0};
+  int significantBits{0};
   for (; next; next = io.NextInField(remaining, edit)) {
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
-      continue;
+      if (edit.modes.editingFlags & blankZero) {
+        ch = '0'; // BZ mode - treat blank as if it were zero
+      } else {
+        continue;
+      }
     }
     if (ch >= '0' && ch <= '1') {
     } else if (LOG2_BASE >= 3 && ch >= '2' && ch <= '7') {
@@ -79,9 +84,22 @@ static bool EditBOZInput(
           "Bad character '%lc' in B/O/Z input field", ch);
       return false;
     }
-    ++digits;
+    if (digits++ == 0) {
+      significantBits = 4;
+      if (ch >= '0' && ch <= '1') {
+        significantBits = 1;
+      } else if (ch >= '2' && ch <= '3') {
+        significantBits = 2;
+      } else if (ch >= '4' && ch <= '7') {
+        significantBits = 3;
+      } else {
+        significantBits = 4;
+      }
+    } else {
+      significantBits += LOG2_BASE;
+    }
   }
-  auto significantBytes{static_cast<std::size_t>(digits * LOG2_BASE + 7) / 8};
+  auto significantBytes{static_cast<std::size_t>(significantBits + 7) / 8};
   if (significantBytes > bytes) {
     io.GetIoErrorHandler().SignalError(IostatBOZInputOverflow,
         "B/O/Z input of %d digits overflows %zd-byte variable", digits, bytes);
@@ -96,12 +114,17 @@ static bool EditBOZInput(
   auto *data{reinterpret_cast<unsigned char *>(n) +
       (isHostLittleEndian ? significantBytes - 1 : 0)};
   int shift{((digits - 1) * LOG2_BASE) & 7};
-  if (shift + LOG2_BASE > 8) {
-    shift -= 8; // misaligned octal
-  }
   while (digits > 0) {
     char32_t ch{*io.NextInField(remaining, edit)};
     int digit{0};
+    if (ch == ' ' || ch == '\t') {
+      if (edit.modes.editingFlags & blankZero) {
+        ch = '0'; // BZ mode - treat blank as if it were zero
+      } else {
+        continue;
+      }
+    }
+    --digits;
     if (ch >= '0' && ch <= '9') {
       digit = ch - '0';
     } else if (ch >= 'A' && ch <= 'F') {
@@ -111,12 +134,11 @@ static bool EditBOZInput(
     } else {
       continue;
     }
-    --digits;
     if (shift < 0) {
-      shift += 8;
-      if (shift + LOG2_BASE > 8) { // misaligned octal
-        *data |= digit >> (8 - shift);
+      if (shift + LOG2_BASE > 0) { // misaligned octal
+        *data |= digit >> -shift;
       }
+      shift += 8;
       data += increment;
     }
     *data |= digit << shift;
