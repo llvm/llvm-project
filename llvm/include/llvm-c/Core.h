@@ -3975,15 +3975,26 @@ LLVMBool LLVMGetExact(LLVMValueRef DivOrShrInst);
 void LLVMSetExact(LLVMValueRef DivOrShrInst, LLVMBool IsExact);
 
 /**
- * Gets if the instruction has the non-negative flag set
- * Only valid for zext instructions
+ * Gets if the instruction has the non-negative flag set.
+ * Only valid for zext instructions.
  */
 LLVMBool LLVMGetNNeg(LLVMValueRef NonNegInst);
 /**
- * Sets the non-negative flag for the instruction
- * Only valid for zext instructions
+ * Sets the non-negative flag for the instruction.
+ * Only valid for zext instructions.
  */
 void LLVMSetNNeg(LLVMValueRef NonNegInst, LLVMBool IsNonNeg);
+
+/**
+ * Gets whether the instruction has the disjoint flag set.
+ * Only valid for or instructions.
+ */
+LLVMBool LLVMGetIsDisjoint(LLVMValueRef Inst);
+/**
+ * Sets the disjoint flag for the instruction.
+ * Only valid for or instructions.
+ */
+void LLVMSetIsDisjoint(LLVMValueRef Inst, LLVMBool IsDisjoint);
 
 /* Memory */
 LLVMValueRef LLVMBuildMalloc(LLVMBuilderRef, LLVMTypeRef Ty, const char *Name);

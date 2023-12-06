@@ -82,7 +82,8 @@ protected:
       Args.push_back(Constant::getNullValue(ParamTy->getScalarType()));
     }
     std::unique_ptr<CallInst> CI(CallInst::Create(F, Args));
-    const auto OptInfo = VFABI::tryDemangleForVFABI(MangledName, *(CI.get()));
+    const auto OptInfo =
+        VFABI::tryDemangleForVFABI(MangledName, CI->getFunctionType());
     if (OptInfo) {
       Info = *OptInfo;
       return true;

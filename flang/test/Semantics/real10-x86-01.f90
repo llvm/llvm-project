@@ -1,4 +1,5 @@
 ! RUN: %python %S/test_symbols.py %s %flang_fc1 -triple x86_64-unknown-linux-gnu
+! REQUIRES: x86-registered-target
 
  !DEF: /MainProgram1/rpdt DerivedType
  !DEF: /MainProgram1/rpdt/k TypeParam INTEGER(4)
