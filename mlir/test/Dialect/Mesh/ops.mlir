@@ -3,10 +3,10 @@
 // CHECK: mesh.cluster @mesh0
 mesh.cluster @mesh0(rank = 3, dim_sizes = 2x2x4)
 
-// CHECK: mesh.cluster @mesh1
+// CHECK: mesh.cluster @mesh1(rank = 2, dim_sizes = 4)
 mesh.cluster @mesh1(rank = 2, dim_sizes = 4)
 
-// CHECK: mesh.cluster @mesh2
+// CHECK: mesh.cluster @mesh2(rank = 2, dim_sizes = ?x4)
 mesh.cluster @mesh2(rank = 2, dim_sizes = ?x4)
 
 // CHECK: mesh.cluster @mesh3

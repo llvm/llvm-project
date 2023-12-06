@@ -3948,6 +3948,10 @@ void printDimensionList(OpAsmPrinter &printer, Operation *op,
 ParseResult parseDimensionList(OpAsmParser &parser,
                                DenseI64ArrayAttr &dimensions) {
   bool hasOpeningSquare = succeeded(parser.parseOptionalLSquare());
+  if (hasOpeningSquare && failed(parser.parseRSquare())) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "Failed parsing dimension list.";
+  }
   SmallVector<int64_t> shapeArr;
   if (failed(parser.parseDimensionList(shapeArr, true, false))) {
     return parser.emitError(parser.getCurrentLocation())
@@ -3958,10 +3962,6 @@ ParseResult parseDimensionList(OpAsmParser &parser,
            << "Failed parsing dimension list. Did you mean an empty list? It "
               "must be "
               "denoted by \"[]\".";
-  }
-  if (hasOpeningSquare && failed(parser.parseRSquare())) {
-    return parser.emitError(parser.getCurrentLocation())
-           << "Failed parsing dimension list.";
   }
 
   dimensions = DenseI64ArrayAttr::get(parser.getContext(), shapeArr);
