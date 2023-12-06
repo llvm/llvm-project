@@ -17,7 +17,6 @@ extern "C" {
 __attribute__((weak)) const char *__scudo_default_options(void);
 
 // Post-allocation & pre-deallocation hooks.
-// They must be thread-safe and not use heap related functions.
 __attribute__((weak)) void __scudo_allocate_hook(void *ptr, size_t size);
 __attribute__((weak)) void __scudo_deallocate_hook(void *ptr);
 
@@ -73,7 +72,8 @@ typedef void (*iterate_callback)(uintptr_t base, size_t size, void *arg);
 // pointer.
 void __scudo_get_error_info(struct scudo_error_info *error_info,
                             uintptr_t fault_addr, const char *stack_depot,
-                            const char *region_info, const char *ring_buffer,
+                            size_t stack_depot_size, const char *region_info,
+                            const char *ring_buffer, size_t ring_buffer_size,
                             const char *memory, const char *memory_tags,
                             uintptr_t memory_addr, size_t memory_size);
 

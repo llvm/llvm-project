@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
+#include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
@@ -681,7 +682,7 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
     // We support using both GCC-style and MSVC-style exceptions on Windows, so
     // add both preparation passes. Each pass will only actually run if it
     // recognizes the personality function.
-    addPass(WinEHPass());
+    addPass(WinEHPreparePass());
     addPass(DwarfEHPass(getOptLevel()));
     break;
   case ExceptionHandling::Wasm:
@@ -689,7 +690,7 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
     // on catchpads and cleanuppads because it does not outline them into
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
     // should remove PHIs there.
-    addPass(WinEHPass(/*DemoteCatchSwitchPHIOnly=*/false));
+    addPass(WinEHPreparePass(/*DemoteCatchSwitchPHIOnly=*/false));
     addPass(WasmEHPass());
     break;
   case ExceptionHandling::None:

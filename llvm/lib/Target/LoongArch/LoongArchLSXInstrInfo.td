@@ -1294,6 +1294,10 @@ defm : PatVrUimm5<umin, "VMINI">;
 // VMUL_{B/H/W/D}
 defm : PatVrVr<mul, "VMUL">;
 
+// VMUH_{B/H/W/D}[U]
+defm : PatVrVr<mulhs, "VMUH">;
+defm : PatVrVrU<mulhu, "VMUH">;
+
 // VMADD_{B/H/W/D}
 defm : PatVrVrVr<muladd, "VMADD">;
 // VMSUB_{B/H/W/D}
@@ -1349,6 +1353,9 @@ defm : PatShiftVrUimm<srl, "VSRLI">;
 defm : PatVrVr<sra, "VSRA">;
 defm : PatShiftVrVr<sra, "VSRA">;
 defm : PatShiftVrUimm<sra, "VSRAI">;
+
+// VCLZ_{B/H/W/D}
+defm : PatVr<ctlz, "VCLZ">;
 
 // VPCNT_{B/H/W/D}
 defm : PatVr<ctpop, "VPCNT">;
@@ -1557,6 +1564,14 @@ def : Pat<(f32 (vector_extract v4f32:$vj, i64:$rk)),
 def : Pat<(f64 (vector_extract v2f64:$vj, i64:$rk)),
           (f64 (EXTRACT_SUBREG (VREPLVE_D v2f64:$vj, i64:$rk), sub_64))>;
 
+// vselect
+def : Pat<(v16i8 (vselect LSX128:$vj, LSX128:$vd,
+                          (v16i8 (SplatPat_uimm8 uimm8:$imm)))),
+          (VBITSELI_B LSX128:$vd, LSX128:$vj, uimm8:$imm)>;
+foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in
+  def  : Pat<(vt (vselect LSX128:$va, LSX128:$vk, LSX128:$vj)),
+             (VBITSEL_V LSX128:$vj, LSX128:$vk, LSX128:$va)>;
+
 } // Predicates = [HasExtLSX]
 
 /// Intrinsic pattern
@@ -1674,21 +1689,21 @@ foreach Inst = ["VMADDWEV_Q_D", "VMADDWOD_Q_D", "VMADDWEV_Q_DU",
 //     (LAInst vty:$vj)>;
 foreach Inst = ["VEXTH_H_B", "VEXTH_HU_BU",
                 "VMSKLTZ_B", "VMSKGEZ_B", "VMSKNZ_B",
-                "VCLO_B", "VCLZ_B"] in
+                "VCLO_B"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v16i8 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
 foreach Inst = ["VEXTH_W_H", "VEXTH_WU_HU", "VMSKLTZ_H",
-                "VCLO_H", "VCLZ_H", "VFCVTL_S_H", "VFCVTH_S_H"] in
+                "VCLO_H", "VFCVTL_S_H", "VFCVTH_S_H"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v8i16 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
 foreach Inst = ["VEXTH_D_W", "VEXTH_DU_WU", "VMSKLTZ_W",
-                "VCLO_W", "VCLZ_W", "VFFINT_S_W", "VFFINT_S_WU",
+                "VCLO_W", "VFFINT_S_W", "VFFINT_S_WU",
                 "VFFINTL_D_W", "VFFINTH_D_W"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v4i32 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
 foreach Inst = ["VEXTH_Q_D", "VEXTH_QU_DU", "VMSKLTZ_D",
                 "VEXTL_Q_D", "VEXTL_QU_DU",
-                "VCLO_D", "VCLZ_D", "VFFINT_D_L", "VFFINT_D_LU"] in
+                "VCLO_D", "VFFINT_D_L", "VFFINT_D_LU"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v2i64 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
 

@@ -31,7 +31,7 @@ void test_impl() {
 
   // assignment
   {
-    MaybeVolatile<std::atomic<T>> a(3.1);
+    MaybeVolatile<std::atomic<T>> a(T(3.1));
     std::same_as<T> decltype(auto) r = (a = T(1.2));
     assert(a.load() == T(1.2));
     assert(r == T(1.2));

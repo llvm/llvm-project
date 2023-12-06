@@ -88,6 +88,7 @@ namespace Hwreg {
 
 // Disable lint checking for this block since it makes the table unreadable.
 // NOLINTBEGIN
+// clang-format off
 const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   {{""}},
   {{"HW_REG_MODE"},          ID_MODE},
@@ -148,6 +149,7 @@ const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   // Aliases
   {{"HW_REG_HW_ID"},                  ID_HW_ID1,                 isGFX10},
 };
+// clang-format on
 // NOLINTEND
 
 const int OPR_SIZE = static_cast<int>(

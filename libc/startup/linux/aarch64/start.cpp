@@ -74,7 +74,7 @@ void init_tls(TLSDescriptor &tls_descriptor) {
       MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   // We cannot check the return value with MAP_FAILED as that is the return
   // of the mmap function and not the mmap syscall.
-  if (mmap_ret_val < 0 && static_cast<uintptr_t>(mmap_ret_val) > -app.pageSize)
+  if (mmap_ret_val < 0 && static_cast<uintptr_t>(mmap_ret_val) > -app.page_size)
     LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, 1);
   uintptr_t thread_ptr = uintptr_t(reinterpret_cast<uintptr_t *>(mmap_ret_val));
   uintptr_t tls_addr = thread_ptr + size_of_pointers + padding;
@@ -144,7 +144,7 @@ __attribute__((noinline)) static void do_start() {
   // value. We step over it (the "+ 1" below) to get to the env values.
   uint64_t *env_ptr = app.args->argv + app.args->argc + 1;
   uint64_t *env_end_marker = env_ptr;
-  app.envPtr = env_ptr;
+  app.env_ptr = env_ptr;
   while (*env_end_marker)
     ++env_end_marker;
 
@@ -153,19 +153,19 @@ __attribute__((noinline)) static void do_start() {
 
   // After the env array, is the aux-vector. The end of the aux-vector is
   // denoted by an AT_NULL entry.
-  Elf64_Phdr *programHdrTable = nullptr;
-  uintptr_t programHdrCount;
+  Elf64_Phdr *program_hdr_table = nullptr;
+  uintptr_t program_hdr_count;
   for (AuxEntry *aux_entry = reinterpret_cast<AuxEntry *>(env_end_marker + 1);
        aux_entry->type != AT_NULL; ++aux_entry) {
     switch (aux_entry->type) {
     case AT_PHDR:
-      programHdrTable = reinterpret_cast<Elf64_Phdr *>(aux_entry->value);
+      program_hdr_table = reinterpret_cast<Elf64_Phdr *>(aux_entry->value);
       break;
     case AT_PHNUM:
-      programHdrCount = aux_entry->value;
+      program_hdr_count = aux_entry->value;
       break;
     case AT_PAGESZ:
-      app.pageSize = aux_entry->value;
+      app.page_size = aux_entry->value;
       break;
     default:
       break; // TODO: Read other useful entries from the aux vector.
@@ -173,8 +173,8 @@ __attribute__((noinline)) static void do_start() {
   }
 
   app.tls.size = 0;
-  for (uintptr_t i = 0; i < programHdrCount; ++i) {
-    Elf64_Phdr *phdr = programHdrTable + i;
+  for (uintptr_t i = 0; i < program_hdr_count; ++i) {
+    Elf64_Phdr *phdr = program_hdr_table + i;
     if (phdr->p_type != PT_TLS)
       continue;
     // TODO: p_vaddr value has to be adjusted for static-pie executables.
