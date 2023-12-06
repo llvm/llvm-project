@@ -1415,6 +1415,8 @@ public:
   /// Get the base operand and byte offset of an instruction that reads/writes
   /// memory. This is a convenience function for callers that are only prepared
   /// to handle a single base operand.
+  /// FIXME: Move Offset and OffsetIsScalable to some ElementCount-style
+  /// abstraction that supports negative offsets.
   bool getMemOperandWithOffset(const MachineInstr &MI,
                                const MachineOperand *&BaseOp, int64_t &Offset,
                                bool &OffsetIsScalable,
@@ -1427,6 +1429,8 @@ public:
   /// It returns false if base operands and offset could not be determined.
   /// It is not guaranteed to always recognize base operands and offsets in all
   /// cases.
+  /// FIXME: Move Offset and OffsetIsScalable to some ElementCount-style
+  /// abstraction that supports negative offsets.
   virtual bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
       int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
@@ -1497,12 +1501,18 @@ public:
   /// to TargetPassConfig::createMachineScheduler() to have an effect.
   ///
   /// \p BaseOps1 and \p BaseOps2 are memory operands of two memory operations.
+  /// \p Offset1 and \p Offset2 are the byte offsets for the memory
+  /// operations.
+  /// \p OffsetIsScalable1 and \p OffsetIsScalable2 indicate if the offset is
+  /// scaled by a runtime quantity.
   /// \p ClusterSize is the number of operations in the resulting load/store
   /// cluster if this hook returns true.
   /// \p NumBytes is the number of bytes that will be loaded from all the
   /// clustered loads if this hook returns true.
   virtual bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                                   int64_t Offset1, bool OffsetIsScalable1,
                                    ArrayRef<const MachineOperand *> BaseOps2,
+                                   int64_t Offset2, bool OffsetIsScalable2,
                                    unsigned ClusterSize,
                                    unsigned NumBytes) const {
     llvm_unreachable("target did not implement shouldClusterMemOps()");
