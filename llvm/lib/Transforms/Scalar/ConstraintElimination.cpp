@@ -544,10 +544,8 @@ static Decomposition decompose(Value *V,
   }
 
   // Decompose or as an add if there are no common bits between the operands.
-  if (match(V, m_Or(m_Value(Op0), m_ConstantInt(CI))) &&
-      haveNoCommonBitsSet(Op0, CI, DL)) {
+  if (match(V, m_DisjointOr(m_Value(Op0), m_ConstantInt(CI))))
     return MergeResults(Op0, CI, IsSigned);
-  }
 
   if (match(V, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
     if (CI->getSExtValue() < 0 || CI->getSExtValue() >= 64)
