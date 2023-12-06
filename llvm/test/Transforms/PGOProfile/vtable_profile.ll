@@ -2,6 +2,9 @@
 ; RUN: opt < %s -passes=pgo-instr-gen -enable-vtable-value-profiling -S | FileCheck %s --check-prefix=GEN
 ; RUN: opt < %s -passes=pgo-instr-gen,instrprof -enable-vtable-value-profiling -S | FileCheck %s --check-prefix=LOWER
 
+; __llvm_prf_vnm stores zlib-compressed vtable names.
+; REQUIRES: zlib
+
 source_filename = "vtable_local.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
