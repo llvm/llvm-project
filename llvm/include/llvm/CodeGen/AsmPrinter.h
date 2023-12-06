@@ -599,6 +599,21 @@ public:
   /// instructions in verbose mode.
   virtual void emitImplicitDef(const MachineInstr *MI) const;
 
+  virtual const MCSubtargetInfo &getMachOSubtargetInfo() const {
+    // getSubtargetInfo() cannot be used where this is needed, because we don't
+    // have a MachineFunction when we're lowering a GlobalIFunc, and
+    // getSubtargetInfo requires one.
+    llvm_unreachable("Mach-O IFunc lowering is not yet supported on this target");
+  }
+
+  virtual void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) {
+    llvm_unreachable("Mach-O IFunc lowering is not yet supported on this target");
+  }
+
+  virtual void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) {
+    llvm_unreachable("Mach-O IFunc lowering is not yet supported on this target");
+  }
+
   /// Emit N NOP instructions.
   void emitNops(unsigned N);
 
@@ -614,7 +629,7 @@ public:
                                          StringRef Suffix) const;
 
   /// Return the MCSymbol for the specified ExternalSymbol.
-  MCSymbol *GetExternalSymbolSymbol(StringRef Sym) const;
+  MCSymbol *GetExternalSymbolSymbol(Twine Sym) const;
 
   /// Return the symbol for the specified jump table entry.
   MCSymbol *GetJTISymbol(unsigned JTID, bool isLinkerPrivate = false) const;
@@ -882,9 +897,7 @@ private:
 
   GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
   void emitGlobalAlias(Module &M, const GlobalAlias &GA);
-
-protected:
-  virtual void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
+  void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
 private:
   /// This method decides whether the specified basic block requires a label.

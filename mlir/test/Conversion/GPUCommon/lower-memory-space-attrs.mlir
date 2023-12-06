@@ -46,3 +46,20 @@ gpu.module @kernel {
 //       CHECK: [[value:%.+]] = llvm.load
 //  CHECK-SAME:   : !llvm.ptr<1> -> f32
 //       CHECK: llvm.return [[value]]
+
+// -----
+
+gpu.module @kernel {
+  gpu.func @dynamic_shmem(%arg0: f32)  {
+    %0 = arith.constant 0 : index
+    %1 = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
+    %2 = memref.view %1[%0][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<4xf32, #gpu.address_space<workgroup>>
+    memref.store %arg0, %2[%0] : memref<4xf32, #gpu.address_space<workgroup>>
+    gpu.return
+  }
+}
+
+// CHECK-LABEL:  llvm.func @dynamic_shmem
+//       CHECK:  llvm.store
+//  CHECK-SAME:   : f32, !llvm.ptr<3>
+
