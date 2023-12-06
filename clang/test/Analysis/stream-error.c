@@ -301,11 +301,17 @@ void error_fseek_0(void) {
 
 void error_fflush(void) {
   FILE *F = tmpfile();
-  if (!F)
+  int Ret;
+  fflush(NULL);                      // no-warning
+  if (!F) {
+    if ((Ret = fflush(F)) != EOF)    // no-warning
+      clang_analyzer_eval(Ret == 0); // expected-warning {{TRUE}}
     return;
+  }
+  if ((Ret = fflush(F)) != 0)
+    clang_analyzer_eval(Ret == EOF); // expected-warning {{TRUE}}
   fclose(F);
-  fflush(F);    // expected-warning {{Stream might be already closed}}
-  fflush(NULL); // no-warning
+  fflush(F);                         // expected-warning {{Stream might be already closed}}
 }
 
 void error_indeterminate(void) {

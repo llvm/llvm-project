@@ -266,7 +266,8 @@ private:
        {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
       {{{"ftell"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalFtell, 0}},
-      {{{"fflush"}, 1}, {&StreamChecker::preFflush, nullptr, 0}},
+      {{{"fflush"}, 1},
+       {&StreamChecker::preFflush, &StreamChecker::evalFflush, 0}},
       {{{"rewind"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalRewind, 0}},
       {{{"fgetpos"}, 2},
@@ -363,6 +364,9 @@ private:
 
   void preFflush(const FnDescription *Desc, const CallEvent &Call,
                  CheckerContext &C) const;
+
+  void evalFflush(const FnDescription *Desc, const CallEvent &Call,
+                  CheckerContext &C) const;
 
   /// Check that the stream (in StreamVal) is not NULL.
   /// If it can only be NULL a fatal error is emitted and nullptr returned.
@@ -1197,14 +1201,45 @@ void StreamChecker::evalSetFeofFerror(const FnDescription *Desc,
 
 void StreamChecker::preFflush(const FnDescription *Desc, const CallEvent &Call,
                               CheckerContext &C) const {
-  // Skip if the stream is NULL/nullptr, which means flush all streams.
-  if (!Call.getArgExpr(Desc->StreamArgNo)
-           ->isNullPointerConstant(C.getASTContext(),
-                                   Expr::NPC_ValueDependentIsNotNull)) {
-    ProgramStateRef State = C.getState();
-    if (State = ensureStreamOpened(getStreamArg(Desc, Call), C, State))
+  ProgramStateRef State = C.getState();
+  SVal StreamVal = getStreamArg(Desc, Call);
+  std::optional<DefinedSVal> Stream = StreamVal.getAs<DefinedSVal>();
+  if (!Stream)
+    return;
+
+  ConstraintManager::ProgramStatePair SP =
+      C.getConstraintManager().assumeDual(State, *Stream);
+  if (State = SP.first)
+    if (State = ensureStreamOpened(StreamVal, C, State))
       C.addTransition(State);
+}
+
+void StreamChecker::evalFflush(const FnDescription *Desc, const CallEvent &Call,
+                               CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+
+  // We will check the result even if the input is `NULL`,
+  // but do nothing if the input state is unknown.
+  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
+  if (StreamSym) {
+    const StreamState *OldSS = State->get<StreamMap>(StreamSym);
+    if (!OldSS)
+      return;
+    assertStreamStateOpened(OldSS);
   }
+
+  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
+    return;
+
+  // `fflush` returns 0 on success, otherwise returns EOF.
+  ProgramStateRef StateNotFailed = bindInt(0, State, C, CE);
+  ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
+
+  // This function does not affect the stream state.
+  // Still we add success and failure state with the appropriate return value.
+  C.addTransition(StateNotFailed);
+  C.addTransition(StateFailed);
 }
 
 ProgramStateRef
