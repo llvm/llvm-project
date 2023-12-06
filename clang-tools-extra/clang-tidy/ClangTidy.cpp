@@ -148,7 +148,7 @@ public:
             tooling::Replacement R(FixAbsoluteFilePath, Repl.getOffset(),
                                    Repl.getLength(), Repl.getReplacementText());
             auto &Entry = FileReplacements[R.getFilePath()];
-            Replacements &Replacements = Entry.Replacements;
+            Replacements &Replacements = Entry.Replaces;
             llvm::Error Err = Replacements.add(R);
             if (Err) {
               // FIXME: Implement better conflict handling.
@@ -216,7 +216,7 @@ public:
         }
         llvm::Expected<tooling::Replacements> Replacements =
             format::cleanupAroundReplacements(
-                Code, FileAndReplacements.second.Replacements, *Style);
+                Code, FileAndReplacements.second.Replaces, *Style);
         if (!Replacements) {
           llvm::errs() << llvm::toString(Replacements.takeError()) << "\n";
           continue;
@@ -303,7 +303,7 @@ private:
 
   struct ReplacementsWithBuildDir {
     StringRef BuildDir;
-    Replacements Replacements;
+    Replacements Replaces;
   };
 
   FileManager Files;
