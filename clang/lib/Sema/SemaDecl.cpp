@@ -8398,6 +8398,7 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   if (isa<VarDecl>(D) && NewDC && isa<CXXMethodDecl>(NewDC)) {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(NewDC->getParent())) {
       if (RD->isLambda() && OldDC->Encloses(NewDC->getLexicalParent())) {
+        // If it is not VarDecl then it can not shadow.
         if (!isa<VarDecl>(ShadowedDecl))
           return;
         if (RD->getLambdaCaptureDefault() == LCD_None) {

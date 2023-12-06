@@ -184,14 +184,14 @@ namespace GH71976 {
 struct A {
   int b = 5;
   int foo() {
-    return [b = b]() { return b; }();
+    return [b = b]() { return b; }(); // no diagnostic, init-capture does not shadow b
   }
 };
 
 struct B {
   int a;
   void foo() {
-    auto b = [a = this->a] {
+    auto b = [a = this->a] { // no diagnostic, init-capture does not shadow a
 
     };
   }

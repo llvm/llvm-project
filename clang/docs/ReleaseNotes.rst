@@ -661,8 +661,8 @@ Bug Fixes in This Version
 - Fixed false positive error emitted when templated alias inside a class
   used private members of the same class.
   Fixes (`#41693 <https://github.com/llvm/llvm-project/issues/41693>`_)
-- Clang's ``-Wshadow`` no longer warns when init-capture named same as class
-  field.
+- Clang's ``-Wshadow`` no longer warns when an init-capture is named the same as
+  a class field.
   Fixes (`#71976 <https://github.com/llvm/llvm-project/issues/71976>`_)
 
 Bug Fixes to Compiler Builtins
