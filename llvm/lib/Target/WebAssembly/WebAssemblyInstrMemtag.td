@@ -11,10 +11,10 @@
 /// Instructions that handle memtags
 //===----------------------------------------------------------------------===//
 
-defm MEMORY_RANDOMTAG : I<(outs I64:$res), (ins table32_op:$src),
+defm MEMORY_RANDOMTAG: I<(outs I64:$dst), (ins I64:$src),
                     (outs), (ins),
-                    [(int_wasm_memory_randomtag (WebAssemblyWrapper tglobaladdr:$table))],
-                    "memory.randomtag\t$res",
+                    [(set I64:$dst,
+		    	(int_wasm_memory_randomtag (WebAssemblyWrapper I64:$src)))],
+                    "memory.randomtag\t$dst, $src",
                     "memory.randomtag\t",
-                    0xfc12, true>,
-                    Requires<[HasReferenceTypes]>;
+                    0xfc12, true>;
