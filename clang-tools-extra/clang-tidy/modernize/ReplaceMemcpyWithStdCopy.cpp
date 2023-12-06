@@ -1,4 +1,4 @@
-//===--- ReplaceMemcpyByStdCopy.cpp - clang-tidy------------------*- C++-*-===//
+//===--- ReplaceMemcpyWithStdCopy.cpp - clang-tidy------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ReplaceMemcpyByStdCopy.h"
+#include "ReplaceMemcpyWithStdCopy.h"
 #include "../utils/OptionsUtils.h"
 #include <array>
 
@@ -17,13 +17,13 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
-ReplaceMemcpyByStdCopy::ReplaceMemcpyByStdCopy(StringRef Name,
+ReplaceMemcpyWithStdCopy::ReplaceMemcpyWithStdCopy(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
           Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
 
-void ReplaceMemcpyByStdCopy::registerMatchers(MatchFinder *Finder) {
+void ReplaceMemcpyWithStdCopy::registerMatchers(MatchFinder *Finder) {
   assert(Finder != nullptr);
 
   if (!getLangOpts().CPlusPlus)
@@ -38,7 +38,7 @@ void ReplaceMemcpyByStdCopy::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(MemcpyMatcher, this);
 }
 
-void ReplaceMemcpyByStdCopy::registerPPCallbacks(
+void ReplaceMemcpyWithStdCopy::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   if (!getLangOpts().CPlusPlus)
     return;
@@ -48,7 +48,7 @@ void ReplaceMemcpyByStdCopy::registerPPCallbacks(
   PP->addPPCallbacks(Inserter->CreatePPCallbacks());
 }
 
-void ReplaceMemcpyByStdCopy::check(const MatchFinder::MatchResult &Result) {
+void ReplaceMemcpyWithStdCopy::check(const MatchFinder::MatchResult &Result) {
   const auto *MemcpyNode = Result.Nodes.getNodeAs<CallExpr>("memcpy_function");
   assert(MemcpyNode != nullptr);
 
@@ -60,12 +60,12 @@ void ReplaceMemcpyByStdCopy::check(const MatchFinder::MatchResult &Result) {
   insertHeader(Diag, MemcpyNode, Result.SourceManager);
 }
 
-void ReplaceMemcpyByStdCopy::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+void ReplaceMemcpyWithStdCopy::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle",
                 utils::IncludeSorter::toString(IncludeStyle));
 }
 
-void ReplaceMemcpyByStdCopy::renameFunction(DiagnosticBuilder &Diag,
+void ReplaceMemcpyWithStdCopy::renameFunction(DiagnosticBuilder &Diag,
                                             const CallExpr *MemcpyNode) {
   const CharSourceRange FunctionNameSourceRange = CharSourceRange::getCharRange(
       MemcpyNode->getBeginLoc(), MemcpyNode->getArg(0)->getBeginLoc());
@@ -73,7 +73,7 @@ void ReplaceMemcpyByStdCopy::renameFunction(DiagnosticBuilder &Diag,
   Diag << FixItHint::CreateReplacement(FunctionNameSourceRange, "std::copy(");
 }
 
-void ReplaceMemcpyByStdCopy::reorderArgs(DiagnosticBuilder &Diag,
+void ReplaceMemcpyWithStdCopy::reorderArgs(DiagnosticBuilder &Diag,
                                          const CallExpr *MemcpyNode) {
   std::array<std::string, 3> arg;
 
@@ -102,7 +102,7 @@ void ReplaceMemcpyByStdCopy::reorderArgs(DiagnosticBuilder &Diag,
   Diag << FixItHint::CreateReplacement(getSourceRange(2), arg[0]);
 }
 
-void ReplaceMemcpyByStdCopy::insertHeader(DiagnosticBuilder &Diag,
+void ReplaceMemcpyWithStdCopy::insertHeader(DiagnosticBuilder &Diag,
                                           const CallExpr *MemcpyNode,
                                           SourceManager *const SM) {
   Optional<FixItHint> FixInclude = Inserter->CreateIncludeInsertion(

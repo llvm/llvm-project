@@ -1,4 +1,4 @@
-//===--- ReplaceMemcpyByStdCopy.h - clang-tidy--------------------*- C++-*-===//
+//===--- ReplaceMemcpyWithStdCopy.h - clang-tidy--------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,10 +20,10 @@ namespace tidy {
 namespace modernize {
 
 /// Replace the C memcpy function by std::copy
-class ReplaceMemcpyByStdCopy : public ClangTidyCheck {
+class ReplaceMemcpyWithStdCopy : public ClangTidyCheck {
 public:
-  ReplaceMemcpyByStdCopy(StringRef Name, ClangTidyContext *Context);
-  ~ReplaceMemcpyByStdCopy() override = default;
+  ReplaceMemcpyWithStdCopy(StringRef Name, ClangTidyContext *Context);
+  ~ReplaceMemcpyWithStdCopy() override = default;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
