@@ -15,8 +15,6 @@
 #include "SerialSnippetGenerator.h"
 #include "TestBase.h"
 
-#include <unordered_set>
-
 namespace llvm {
 namespace exegesis {
 namespace {

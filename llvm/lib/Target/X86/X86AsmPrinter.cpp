@@ -537,7 +537,8 @@ const MCSubtargetInfo &X86AsmPrinter::getMachOSubtargetInfo() const {
   return *Subtarget;
 }
 
-void X86AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) {
+void X86AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
+                                           MCSymbol *LazyPointer) {
   // _ifunc:
   //   jmpq *lazy_pointer(%rip)
 
@@ -552,7 +553,9 @@ void X86AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI, MCS
       *Subtarget);
 }
 
-void X86AsmPrinter::emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) {
+void X86AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
+                                                 const GlobalIFunc &GI,
+                                                 MCSymbol *LazyPointer) {
   // _ifunc.stub_helper:
   //   push %rax
   //   push %rdi

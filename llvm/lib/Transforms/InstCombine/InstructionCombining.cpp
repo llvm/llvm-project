@@ -3106,6 +3106,7 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     return nullptr;
   }
 
+  DC.registerBranch(&BI);
   return nullptr;
 }
 
