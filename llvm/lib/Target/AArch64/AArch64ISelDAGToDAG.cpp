@@ -327,7 +327,7 @@ public:
   }
 
   template <unsigned BaseReg, unsigned Max>
-  bool ImmToTile(SDValue N, SDValue &Imm) {
+  bool ImmToReg(SDValue N, SDValue &Imm) {
     if (auto *CI = dyn_cast<ConstantSDNode>(N)) {
       uint64_t C = CI->getZExtValue();
 
@@ -403,6 +403,9 @@ public:
   bool SelectSVERegRegAddrMode(SDValue N, SDValue &Base, SDValue &Offset) {
     return SelectSVERegRegAddrMode(N, Scale, Base, Offset);
   }
+
+  void SelectMultiVectorLuti(SDNode *Node, unsigned NumOutVecs, unsigned Opc,
+                             uint32_t MaxImm);
 
   template <unsigned MaxIdx, unsigned Scale>
   bool SelectSMETileSlice(SDValue N, SDValue &Vector, SDValue &Offset) {
@@ -1862,6 +1865,34 @@ void AArch64DAGToDAGISel::SelectFrintFromVT(SDNode *N, unsigned NumVecs,
   if (N->getValueType(0) != MVT::nxv4f32)
     return;
   SelectUnaryMultiIntrinsic(N, NumVecs, true, Opcode);
+}
+
+void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
+                                                unsigned NumOutVecs,
+                                                unsigned Opc, uint32_t MaxImm) {
+  if (ConstantSDNode *Imm = dyn_cast<ConstantSDNode>(Node->getOperand(4)))
+    if (Imm->getZExtValue() > MaxImm)
+      return;
+
+  SDValue ZtValue;
+  if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
+    return;
+  SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4)};
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+
+  SDNode *Instruction =
+      CurDAG->getMachineNode(Opc, DL, {MVT::Untyped, MVT::Other}, Ops);
+  SDValue SuperReg = SDValue(Instruction, 0);
+
+  for (unsigned I = 0; I < NumOutVecs; ++I)
+    ReplaceUses(SDValue(Node, I), CurDAG->getTargetExtractSubreg(
+                                      AArch64::zsub0 + I, DL, VT, SuperReg));
+
+  // Copy chain
+  unsigned ChainIdx = NumOutVecs;
+  ReplaceUses(SDValue(Node, ChainIdx), SDValue(Instruction, 1));
+  CurDAG->RemoveDeadNode(Node);
 }
 
 void AArch64DAGToDAGISel::SelectClamp(SDNode *N, unsigned NumVecs,
@@ -5070,6 +5101,23 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       auto &MF = CurDAG->getMachineFunction();
       MF.getFrameInfo().setFrameAddressIsTaken(true);
       MF.getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
+      return;
+    }
+    case Intrinsic::aarch64_sme_luti2_lane_zt_x4: {
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::LUTI2_4ZTZI_B, AArch64::LUTI2_4ZTZI_H,
+               AArch64::LUTI2_4ZTZI_S}))
+        // Second Immediate must be <= 3:
+        SelectMultiVectorLuti(Node, 4, Opc, 3);
+      return;
+    }
+    case Intrinsic::aarch64_sme_luti4_lane_zt_x4: {
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {0, AArch64::LUTI4_4ZTZI_H, AArch64::LUTI4_4ZTZI_S}))
+        // Second Immediate must be <= 1:
+        SelectMultiVectorLuti(Node, 4, Opc, 1);
       return;
     }
     }
