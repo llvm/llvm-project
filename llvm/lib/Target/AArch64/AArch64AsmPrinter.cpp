@@ -202,7 +202,9 @@ private:
     return ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags;
   }
 
-  void emitGlobalIFunc(Module &M, const GlobalIFunc &GI) override;
+  const MCSubtargetInfo &getMachOSubtargetInfo() const override { assert(STI); return *STI; }
+  void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) override;
+  void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) override;
 };
 
 } // end anonymous namespace
@@ -1814,66 +1816,12 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
-void AArch64AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
-  if (!TM.getTargetTriple().isOSBinFormatMachO())
-    return AsmPrinter::emitGlobalIFunc(M, GI);
-
-  // On Darwin platforms, emit a manually-constructed .symbol_resolver that
-  // implements the symbol resolution duties of the IFunc.
-  //
-  // Normally, this would be handled by linker magic, but unfortunately there
-  // are a few limitations in ld64 and ld-prime's implementation of
-  // .symbol_resolver that mean we can't always use them:
-  //
-  //    *  resolvers cannot be the target of an alias
-  //    *  resolvers cannot have private linkage
-  //    *  resolvers cannot have linkonce linkage
-  //    *  resolvers cannot appear in executables
-  //    *  resolvers cannot appear in bundles
-  //
-  // This works around that by emitting a close approximation of what the linker
-  // would have done.
-
-  auto EmitLinkage = [&](MCSymbol *Sym) {
-    if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
-      OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
-    else if (GI.hasWeakLinkage() || GI.hasLinkOnceLinkage())
-      OutStreamer->emitSymbolAttribute(Sym, MCSA_WeakReference);
-    else
-      assert(GI.hasLocalLinkage() && "Invalid ifunc linkage");
-  };
-
-  MCSymbol *LazyPointer =
-      TM.getObjFileLowering()->getContext().getOrCreateSymbol(
-          "_" + GI.getName() + ".lazy_pointer");
-  MCSymbol *StubHelper =
-      TM.getObjFileLowering()->getContext().getOrCreateSymbol(
-          "_" + GI.getName() + ".stub_helper");
-
-  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getDataSection());
-
-  // _ifunc.lazy_pointer:
-  //   .quad _ifunc.stub_helper
-
-  EmitLinkage(LazyPointer);
-  OutStreamer->emitValueToAlignment(Align(8), /*Value=*/0);
-  OutStreamer->emitLabel(LazyPointer);
-  emitVisibility(LazyPointer, GI.getVisibility());
-  OutStreamer->emitValue(MCSymbolRefExpr::create(StubHelper, OutContext), 8);
-
-  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getTextSection());
-
+void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) {
   // _ifunc:
-  //   adrp	x16, lazy_pointer@GOTPAGE
-  //   ldr	x16, [x16, lazy_pointer@GOTPAGEOFF]
-  //   ldr	x16, [x16]
-  //   br	x16
-
-  MCSymbol *Stub = getSymbol(&GI);
-  EmitLinkage(Stub);
-  OutStreamer->emitCodeAlignment(Align(4), STI);
-  OutStreamer->emitLabel(Stub);
-  emitVisibility(Stub, GI.getVisibility());
+  //   adrp    x16, lazy_pointer@GOTPAGE
+  //   ldr     x16, [x16, lazy_pointer@GOTPAGEOFF]
+  //   ldr     x16, [x16]
+  //   br      x16
 
   {
     MCInst Adrp;
@@ -1914,7 +1862,9 @@ void AArch64AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
                                                  : AArch64::BR)
                                    .addReg(AArch64::X16),
                                *STI);
+}
 
+void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) {
   // These stub helpers are only ever called once, so here we're optimizing for
   // minimum size by using the pre-indexed store variants, which saves a few
   // bytes of instructions to bump & restore sp.
@@ -1945,11 +1895,6 @@ void AArch64AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   //   ldp	x1, x0, [sp], #16
   //   ldp	fp, lr, [sp], #16
   //   br	x16
-
-  EmitLinkage(StubHelper);
-  OutStreamer->emitCodeAlignment(Align(4), STI);
-  OutStreamer->emitLabel(StubHelper);
-  emitVisibility(StubHelper, GI.getVisibility());
 
   OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
                                    .addReg(AArch64::SP)

@@ -144,11 +144,11 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   // Try looking through a bitcast from one function type to another.
   // Commonly happens with calls to objc_msgSend().
   const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
-  if (const GlobalIFunc *IF = dyn_cast<GlobalIFunc>(CalleeV);
-      IF && MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
+  if (isa<GlobalIFunc>(CalleeV) &&
+      MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
     // ld64 requires that .symbol_resolvers to be called via a stub, so these
     // must always be a direct call.
-    Info.Callee = MachineOperand::CreateGA(IF, 0);
+    Info.Callee = MachineOperand::CreateGA(cast<GlobalIFunc>(CalleeV), 0);
   } else if (const Function *F = dyn_cast<Function>(CalleeV))
     Info.Callee = MachineOperand::CreateGA(F, 0);
   else
