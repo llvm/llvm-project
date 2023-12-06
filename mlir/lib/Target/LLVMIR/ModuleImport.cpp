@@ -628,8 +628,7 @@ void ModuleImport::setIntegerFlagsAttr(llvm::Instruction *inst,
   value =
       bitEnumSet(value, IntegerOverflowFlags::nuw, inst->hasNoUnsignedWrap());
 
-  auto attr =
-      IntegerOverflowFlagsAttr::get(op->getContext(), value);
+  auto attr = IntegerOverflowFlagsAttr::get(op->getContext(), value);
   iface->setAttr(iface.getIntegerOverflowAttrName(), attr);
 }
 
