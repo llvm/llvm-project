@@ -4344,6 +4344,10 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     DP("No hostrpc buffer or service thread required\n");
   }
 
+  // If this kernel requires an RPC server we attach its pointer to the stream.
+  if (GenericDevice.getRPCHandle())
+    Stream->setRPCHandle(GenericDevice.getRPCHandle());
+
   if (getImplicitArgsSize() == sizeof(utils::AMDGPUImplicitArgsTy)) {
     DP("Setting fields of ImplicitArgs for COV5\n");
     ImplArgs->BlockCountX = NumBlocks;
@@ -4356,18 +4360,6 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     ImplArgs->HeapV1Ptr =
         (uint64_t)AMDGPUDevice.getPreAllocatedDeviceMemoryPool();
   }
-
-  // If this kernel requires an RPC server we attach its pointer to the stream.
-  if (GenericDevice.getRPCHandle())
-    Stream->setRPCHandle(GenericDevice.getRPCHandle());
-
-  if (auto Err = AMDGPUDevice.getStream(AsyncInfoWrapper, Stream))
-    return Err;
-
-  // If this kernel requires an RPC server we attach its pointer to the stream.
-  // Eventually use getRPCServer
-  if (GenericDevice.getRPCHandle())
-    Stream->setRPCHandle(GenericDevice.getRPCHandle());
 
   // Push the kernel launch into the stream.
   return Stream->pushKernelLaunch(*this, AllArgs, NumThreads, NumBlocks,
