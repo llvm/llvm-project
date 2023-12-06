@@ -649,7 +649,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#ifndef _LIBCPP_HAS_NO_ASAN
+#if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
 #  define _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS __attribute__((__no_sanitize__("address")))
 // This macro disables AddressSanitizer (ASan) instrumentation for a specific function,
 // allowing memory accesses that would normally trigger ASan errors to proceed without crashing.
@@ -1899,7 +1899,7 @@ private:
     // The following functions are no-ops outside of AddressSanitizer mode.
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_contiguous_container(
         [[__maybe_unused__]] const void* __old_mid, [[__maybe_unused__]] const void* __new_mid) const {
-#ifndef _LIBCPP_HAS_NO_ASAN
+#if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
         const void* __begin = data();
         const void* __end = data() + capacity() + 1;
         if (!__libcpp_is_constant_evaluated() && __begin != nullptr && is_same<allocator_type, __default_allocator_type>::value)

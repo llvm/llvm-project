@@ -269,6 +269,13 @@ add_definitions(-D_LIBCXXABI_BUILDING_LIBRARY)
 # it is being built as part of libcxx.
 add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
 
+# To ensure that all ASan functionalities are built into the binary.
+# For context, read: https://github.com/llvm/llvm-project/pull/72677#pullrequestreview-1765402800
+string(FIND "${LLVM_USE_SANITIZER}" "Address" building_with_asan)
+if (NOT "${building_with_asan}" STREQUAL "-1")
+  add_definitions(-D_LIBCPP_INSTRUMENTED_WITH_ASAN)
+endif()
+
 # Get feature flags.
 add_compile_flags_if_supported(-fstrict-aliasing)
 
