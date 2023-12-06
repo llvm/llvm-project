@@ -331,8 +331,9 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
     // For callsites, the caller is fed as the inlinedAt for the callee.
     auto *callerLoc = translateLoc(callLoc.getCaller(), scope, inlinedAt);
     llvmLoc = translateLoc(callLoc.getCallee(), nullptr, callerLoc);
+    // Fallback: Ignore callee if it has no debug scope.
     if (!llvmLoc)
-      return callerLoc; // Fallback: Ignore callee if it has no debug scope.
+      llvmLoc = callerLoc;
 
   } else if (auto fileLoc = dyn_cast<FileLineColLoc>(loc)) {
     // A scope of a DILocation cannot be null.
