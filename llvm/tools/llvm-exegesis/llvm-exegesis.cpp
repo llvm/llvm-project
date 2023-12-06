@@ -533,10 +533,8 @@ void benchmarkMain() {
     for (const auto &Configuration : Configurations) {
       if (ExecutionMode != BenchmarkRunner::ExecutionModeE::SubProcess &&
           (Configuration.Key.MemoryMappings.size() != 0 ||
-           Configuration.Key.MemoryValues.size() != 0 ||
-           Configuration.Key.SnippetAddress != 0))
-        ExitWithError("Memory and snippet address annotations are only "
-                      "supported in subprocess "
+           Configuration.Key.MemoryValues.size() != 0))
+        ExitWithError("Memory annotations are only supported in subprocess "
                       "execution mode");
     }
   }
