@@ -31,8 +31,6 @@ struct Session {
 
   orc::ExecutionSession ES;
   orc::JITDylib *MainJD = nullptr;
-  orc::JITDylib *ProcessSymsJD = nullptr;
-  orc::JITDylib *PlatformJD = nullptr;
   orc::ObjectLinkingLayer ObjLayer;
   orc::JITDylibSearchOrder JDSearchOrder;
   SubtargetFeatures Features;
