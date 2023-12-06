@@ -166,14 +166,15 @@ void LoopExpand::runOnOperation() {
     for (unsigned i = 0; i < nbLoop; ++i) {
       bool isInnerLoop = i == (nbLoop - 1);
 
-      lbs.push_back(
-          createConvertOrConstant(builder, loc, idxTy, accLoopOp.getLowerbound()[i]));
-      ubs.push_back(
-          createConvertOrConstant(builder, loc, idxTy, accLoopOp.getUpperbound()[i]));
+      lbs.push_back(createConvertOrConstant(builder, loc, idxTy,
+                                            accLoopOp.getLowerbound()[i]));
+      ubs.push_back(createConvertOrConstant(builder, loc, idxTy,
+                                            accLoopOp.getUpperbound()[i]));
       steps.push_back(
           createConvertOrConstant(builder, loc, idxTy, accLoopOp.getStep()[i]));
       iterArgs.push_back(
-        builder.createConvert(loc, fir::unwrapRefType(ivs[i].getType()), accLoopOp.getLowerbound()[i]));
+          builder.createConvert(loc, fir::unwrapRefType(ivs[i].getType()),
+                                accLoopOp.getLowerbound()[i]));
       fir::DoLoopOp doLoopOp = builder.create<fir::DoLoopOp>(
           loc, lbs[i], ubs[i], steps[i], /*unordered=*/false, finalCountValue,
           mlir::ValueRange{iterArgs[i]});
