@@ -2,8 +2,8 @@
 
 # RUN: yaml2obj %s -o %t
 
-# RUN: not llvm-objcopy --regex --strip-symbol='f[^)' %t /dev/null 2>&1 | FileCheck %s
-# CHECK: cannot compile regular expression
+# RUN: not llvm-objcopy --regex --strip-symbol='[^)\' %t /dev/null 2>&1 | FileCheck %s
+# CHECK: error: cannot compile regular expression '[^)\'
 
 !ELF
 FileHeader:
@@ -11,10 +11,3 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
   Machine: EM_X86_64
-Sections:
-  - Name:  .text
-    Type:  SHT_PROGBITS
-    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
-Symbols:
-  - Name:    foo
-    Section: .text

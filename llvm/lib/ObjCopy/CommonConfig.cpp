@@ -39,16 +39,15 @@ NameOrPattern::create(StringRef Pattern, MatchStyle MS,
                          IsPositiveMatch);
   }
   case MatchStyle::Regex: {
-    SmallVector<char, 32> Data;
-    auto AnchoredPattern =
-        ("^" + Pattern.ltrim('^').rtrim('$') + "$").toStringRef(Data);
-    auto RegEx = std::make_shared<Regex>(AnchoredPattern);
+    auto RegEx = Regex(Pattern);
     std::string Err;
-    if (!RegEx->isValid(Err))
+    if (!RegEx.isValid(Err))
       return createStringError(errc::invalid_argument,
                                "cannot compile regular expression \'" +
                                    Pattern + "\': " + Err);
-    return NameOrPattern(RegEx);
+    SmallVector<char, 32> Data;
+    return NameOrPattern(std::make_shared<Regex>(
+        ("^" + Pattern.ltrim('^').rtrim('$') + "$").toStringRef(Data)));
   }
   }
   llvm_unreachable("Unhandled llvm.objcopy.MatchStyle enum");
