@@ -3986,13 +3986,13 @@ LLVMBool LLVMGetNNeg(LLVMValueRef NonNegInst);
 void LLVMSetNNeg(LLVMValueRef NonNegInst, LLVMBool IsNonNeg);
 
 /**
- * Gets if the instruction has the disjoint flag set
- * Only valid for or instructions
+ * Gets whether the instruction has the disjoint flag set.
+ * Only valid for or instructions.
  */
 LLVMBool LLVMGetIsDisjoint(LLVMValueRef Inst);
 /**
- * Sets the disjoint flag for the instruction
- * Only valid for or instructions
+ * Sets the disjoint flag for the instruction.
+ * Only valid for or instructions.
  */
 void LLVMSetIsDisjoint(LLVMValueRef Inst, LLVMBool IsDisjoint);
 
