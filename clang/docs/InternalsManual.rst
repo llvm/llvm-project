@@ -477,9 +477,8 @@ mode.  Instead of formatting and printing out the diagnostics, this
 implementation just captures and remembers the diagnostics as they fly by.
 Then ``-verify`` compares the list of produced diagnostics to the list of
 expected ones.  If they disagree, it prints out its own output.  Full
-documentation for the ``-verify`` mode can be found in the Clang API
-documentation for `VerifyDiagnosticConsumer
-</doxygen/classclang_1_1VerifyDiagnosticConsumer.html#details>`_.
+documentation for the ``-verify`` mode can be found at
+:ref:`verifying-diagnostics`.
 
 There are many other possible implementations of this interface, and this is
 why we prefer diagnostics to pass down rich structured information in
@@ -3313,6 +3312,8 @@ Testing
 -------
 All functional changes to Clang should come with test coverage demonstrating
 the change in behavior.
+
+.. _verifying-diagnostics:
 
 Verifying Diagnostics
 ^^^^^^^^^^^^^^^^^^^^^
