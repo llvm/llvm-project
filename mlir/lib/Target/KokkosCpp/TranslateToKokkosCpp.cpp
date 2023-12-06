@@ -3464,12 +3464,14 @@ static void emitCppBoilerplate(KokkosCppEmitter &emitter, bool enablePythonWrapp
     emitter << "template<typename V>\n";
     emitter << "StridedMemRefType<typename V::value_type, V::rank> viewToStridedMemref(const V& v)\n";
     emitter << "{\n";
-    emitter << "  static_assert(std::is_same_v<typename V::memory_space, Kokkos::HostSpace>, \"Only Kokkos::Views in HostSpace can be converted to StridedMemRefType.\");\n";
+    emitter << "  static_assert(std::is_same_v<typename V::memory_space, Kokkos::HostSpace> ||\n";
+    emitter << "                std::is_same_v<typename V::memory_space, Kokkos::AnonymousSpace>,\n";
+    emitter << "                \"Only Kokkos::Views in HostSpace can be converted to StridedMemRefType.\");\n";
     emitter << "  StridedMemRefType<typename V::value_type, V::rank> smr;\n";
     emitter << "  smr.basePtr = v.data();\n";
     emitter << "  smr.data = v.data();\n";
     emitter << "  smr.offset = 0;\n";
-    emitter << "  for(int i = 0; i < V::rank; i++)\n";
+    emitter << "  for(int i = 0; i < int(V::rank); i++)\n";
     emitter << "  {\n";
     emitter << "    smr.sizes[i] = v.extent(i);\n";
     emitter << "    smr.strides[i] = v.stride(i);\n";
@@ -3487,7 +3489,9 @@ static void emitCppBoilerplate(KokkosCppEmitter &emitter, bool enablePythonWrapp
     emitter << "V stridedMemrefToView(const StridedMemRefType<typename V::value_type, V::rank>& smr)\n";
     emitter << "{\n";
     emitter << "  using Layout = typename V::array_layout;\n";
-    emitter << "  static_assert(std::is_same_v<typename V::memory_space, Kokkos::HostSpace>, \"Can only convert a StridedMemRefType to a Kokkos::View in HostSpace.\");\n";
+    emitter << "  static_assert(std::is_same_v<typename V::memory_space, Kokkos::HostSpace> ||\n";
+    emitter << "                std::is_same_v<typename V::memory_space, Kokkos::AnonymousSpace>,\n";
+    emitter << "                \"Can only convert a StridedMemRefType to a Kokkos::View in HostSpace.\");\n";
     emitter << "  if constexpr(std::is_same_v<Layout, Kokkos::LayoutStride>)\n";
     emitter << "  {\n";
     emitter << "    Layout layout(\n";
@@ -3515,7 +3519,7 @@ static void emitCppBoilerplate(KokkosCppEmitter &emitter, bool enablePythonWrapp
     emitter << "  if constexpr(std::is_same_v<Layout, Kokkos::LayoutLeft>)\n";
     emitter << "  {\n";
     emitter << "    int64_t expectedStride = 1;\n";
-    emitter << "    for(int i = 0; i < V::rank; i++)\n";
+    emitter << "    for(int i = 0; i < int(V::rank); i++)\n";
     emitter << "    {\n";
     emitter << "      if(expectedStride != smr.strides[i])\n";
     emitter << "        Kokkos::abort(\"Cannot convert non-contiguous StridedMemRefType to LayoutLeft Kokkos::View\");\n";
@@ -3525,7 +3529,7 @@ static void emitCppBoilerplate(KokkosCppEmitter &emitter, bool enablePythonWrapp
     emitter << "  else if constexpr(std::is_same_v<Layout, Kokkos::LayoutRight>)\n";
     emitter << "  {\n";
     emitter << "    int64_t expectedStride = 1;\n";
-    emitter << "    for(int i = V::rank - 1; i >= 0; i--)\n";
+    emitter << "    for(int i = int(V::rank) - 1; i >= 0; i--)\n";
     emitter << "    {\n";
     emitter << "      if(expectedStride != smr.strides[i])\n";
     emitter << "        Kokkos::abort(\"Cannot convert non-contiguous StridedMemRefType to LayoutRight Kokkos::View\");\n";
