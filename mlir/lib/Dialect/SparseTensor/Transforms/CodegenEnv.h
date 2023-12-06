@@ -118,9 +118,7 @@ public:
   /// It also sets the sparseOut if the output tensor is sparse.
   bool isAdmissibleTensorExp(ExprId e);
 
-  /// Returns the induction-variable for the loop identified by the given
-  /// `LoopId`.  This method handles application of the topological sort
-  /// in order to convert the `LoopId` into the corresponding `LoopOrd`.
+  /// Returns the induction-variable for the given loop.
   Value getLoopVar(LoopId i) const;
 
   //
@@ -133,8 +131,7 @@ public:
   Value getInsertionChain() const { return insChain; }
   void updateInsertionChain(Value chain);
 
-  // FIXME: clarify what this "rank" is really supposed to mean/be.
-  bool atExpandLevel(OpOperand *o, unsigned rank, LoopOrd n) const;
+  bool atExpandLevel(OpOperand *o, unsigned rank, LoopId n) const;
   void startExpand(Value values, Value filled, Value added, Value count);
   bool isExpand() const { return expValues != nullptr; }
   void updateExpandCount(Value count);
@@ -180,7 +177,7 @@ private:
   // expansion in the innermost loop nest (`expValues` through `expCount`).
   OpOperand *sparseOut;
   // The count of outer non-filter loops, as defined by `isAdmissibleTopoOrder`.
-  LoopOrd outerParNest;
+  LoopId outerParNest;
   Value insChain;
   Value expValues;
   Value expFilled;

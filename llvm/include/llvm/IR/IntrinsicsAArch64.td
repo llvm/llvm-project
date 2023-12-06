@@ -3550,6 +3550,25 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_zero_zt : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrWriteMem]>;
 
   //
+  // Lookup table expand one register
+  //
+  def int_aarch64_sme_luti2_lane_zt
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
+  def int_aarch64_sme_luti4_lane_zt
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
+                            
+  // Lookup table expand two registers
+  //
+  def int_aarch64_sme_luti2_lane_zt_x2
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
+  def int_aarch64_sme_luti4_lane_zt_x2
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
+                            
+  //
   // Lookup table expand four registers
   //
   def int_aarch64_sme_luti2_lane_zt_x4
@@ -3560,17 +3579,6 @@ let TargetPrefix = "aarch64" in {
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
                             [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
-  
-  //
-  // Lookup table expand two registers
-  //
-  def int_aarch64_sme_luti2_lane_zt_x2
-    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
-  def int_aarch64_sme_luti4_lane_zt_x2
-    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
-
 }
 
 // SVE2.1 - ZIPQ1, ZIPQ2, UZPQ1, UZPQ2
