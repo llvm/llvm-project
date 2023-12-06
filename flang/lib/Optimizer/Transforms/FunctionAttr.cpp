@@ -52,9 +52,7 @@ public:
   FunctionAttrPass(const fir::FunctionAttrOptions &options) {
     framePointerKind = options.framePointerKind;
   }
-  FunctionAttrPass() {
-    
-  }
+  FunctionAttrPass() {}
   void runOnOperation() override;
 };
 
@@ -67,31 +65,36 @@ void FunctionAttrPass::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "Func-name:" << func.getSymName() << "\n");
 
   auto context = &getContext();
-  
-  func->setAttr("frame_pointer", mlir::LLVM::FramePointerKindAttr::get( context, framePointerKind ));
+
+  func->setAttr("frame_pointer", mlir::LLVM::FramePointerKindAttr::get(
+                                     context, framePointerKind));
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
 }
 
-std::unique_ptr<mlir::Pass> fir::createFunctionAttrPass(fir::FunctionAttrTypes &functionAttr) {
+std::unique_ptr<mlir::Pass>
+fir::createFunctionAttrPass(fir::FunctionAttrTypes &functionAttr) {
   FunctionAttrOptions opts;
 
-  // Frame pointer 
+  // Frame pointer
   switch (functionAttr.framePointerKind) {
   case llvm::FramePointerKind::None:
-    opts.framePointerKind = mlir::LLVM::framePointerKind::symbolizeFramePointerKind(0).value();
+    opts.framePointerKind =
+        mlir::LLVM::framePointerKind::symbolizeFramePointerKind(0).value();
     break;
   case llvm::FramePointerKind::NonLeaf:
-    opts.framePointerKind = mlir::LLVM::framePointerKind::symbolizeFramePointerKind(1).value();
+    opts.framePointerKind =
+        mlir::LLVM::framePointerKind::symbolizeFramePointerKind(1).value();
     break;
   case llvm::FramePointerKind::All:
-    opts.framePointerKind = mlir::LLVM::framePointerKind::symbolizeFramePointerKind(2).value();
+    opts.framePointerKind =
+        mlir::LLVM::framePointerKind::symbolizeFramePointerKind(2).value();
     break;
   }
 
   return std::make_unique<FunctionAttrPass>(opts);
 }
-  
+
 std::unique_ptr<mlir::Pass> fir::createFunctionAttrPass() {
   return std::make_unique<FunctionAttrPass>();
 }

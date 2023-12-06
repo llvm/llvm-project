@@ -84,12 +84,13 @@ std::unique_ptr<mlir::Pass> createVScaleAttrPass();
 std::unique_ptr<mlir::Pass>
 createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
 
-struct FunctionAttrTypes{
-    llvm::FramePointerKind framePointerKind;
+struct FunctionAttrTypes {
+  llvm::FramePointerKind framePointerKind;
 };
 
 std::unique_ptr<mlir::Pass> createFunctionAttrPass();
-std::unique_ptr<mlir::Pass> createFunctionAttrPass(FunctionAttrTypes &functionAttr);
+std::unique_ptr<mlir::Pass>
+createFunctionAttrPass(FunctionAttrTypes &functionAttr);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION
