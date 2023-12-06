@@ -10,14 +10,15 @@
 
 #include "PluginInterface.h"
 
+#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
+#include "Shared/PluginAPI.h"
 
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "Utils/ELF.h"
 #include "omptarget.h"
-#include "omptargetplugin.h"
 
 #ifdef OMPT_SUPPORT
 #include "OpenMP/OMPT/Callback.h"
@@ -464,6 +465,10 @@ GenericKernelTy::getKernelLaunchEnvironment(
   if (isCtorOrDtor() || RecordReplay.isReplaying())
     return nullptr;
 
+  if (!KernelEnvironment.Configuration.ReductionDataSize ||
+      !KernelEnvironment.Configuration.ReductionBufferLength)
+    return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
+
   // TODO: Check if the kernel needs a launch environment.
   auto AllocOrErr = GenericDevice.dataAlloc(sizeof(KernelLaunchEnvironmentTy),
                                             /*HostPtr=*/nullptr,
@@ -478,8 +483,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
   /// async data transfer.
   auto &LocalKLE = (*AsyncInfoWrapper).KernelLaunchEnvironment;
   LocalKLE = KernelLaunchEnvironment;
-  if (KernelEnvironment.Configuration.ReductionDataSize &&
-      KernelEnvironment.Configuration.ReductionBufferLength) {
+  {
     auto AllocOrErr = GenericDevice.dataAlloc(
         KernelEnvironment.Configuration.ReductionDataSize *
             KernelEnvironment.Configuration.ReductionBufferLength,
@@ -490,6 +494,12 @@ GenericKernelTy::getKernelLaunchEnvironment(
     // Remember to free the memory later.
     AsyncInfoWrapper.freeAllocationAfterSynchronization(*AllocOrErr);
   }
+
+  INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
+       "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
+       ", Size=%" PRId64 ", Name=KernelLaunchEnv\n",
+       DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
+       sizeof(KernelLaunchEnvironmentTy));
 
   auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
                                       sizeof(KernelLaunchEnvironmentTy),
@@ -775,12 +785,9 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
     for (auto *Image : LoadedImages) {
       DeviceMemoryPoolTrackingTy ImageDeviceMemoryPoolTracking = {0, 0, ~0U, 0};
-      GlobalTy TrackerGlobal("__omp_rtl_device_memory_pool_tracker",
-                             sizeof(DeviceMemoryPoolTrackingTy),
-                             &ImageDeviceMemoryPoolTracking);
-      if (auto Err =
-              GHandler.readGlobalFromDevice(*this, *Image, TrackerGlobal))
-        return Err;
+      if (!GHandler.isSymbolInImage(*this, *Image,
+                                    "__omp_rtl_device_memory_pool_tracker"))
+        continue;
       DeviceMemoryPoolTracking.combine(ImageDeviceMemoryPoolTracking);
     }
 
@@ -965,6 +972,12 @@ Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
                          sizeof(DeviceMemoryPoolTrackingTy),
                          &DeviceMemoryPoolTracking);
   GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
+  if (auto Err = GHandler.readGlobalFromImage(*this, Image, TrackerGlobal)) {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Avoid the memory pool: %s.\n", ErrStr.c_str());
+    return Error::success();
+  }
+
   if (auto Err = GHandler.writeGlobalToDevice(*this, Image, TrackerGlobal))
     return Err;
 
@@ -1694,7 +1707,7 @@ int32_t __tgt_rtl_number_of_devices() { return Plugin::get().getNumDevices(); }
 
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   Plugin::get().setRequiresFlag(RequiresFlags);
-  return RequiresFlags;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_is_data_exchangable(int32_t SrcDeviceId,

@@ -334,6 +334,18 @@ void DPMarker::absorbDebugValues(DPMarker &Src, bool InsertAtHead) {
   StoredDPValues.splice(It, Src.StoredDPValues);
 }
 
+void DPMarker::absorbDebugValues(iterator_range<DPValue::self_iterator> Range,
+                                 DPMarker &Src, bool InsertAtHead) {
+  for (DPValue &DPV : Range)
+    DPV.setMarker(this);
+
+  auto InsertPos =
+      (InsertAtHead) ? StoredDPValues.begin() : StoredDPValues.end();
+
+  StoredDPValues.splice(InsertPos, Src.StoredDPValues, Range.begin(),
+                        Range.end());
+}
+
 iterator_range<simple_ilist<DPValue>::iterator> DPMarker::cloneDebugInfoFrom(
     DPMarker *From, std::optional<simple_ilist<DPValue>::iterator> from_here,
     bool InsertAtHead) {

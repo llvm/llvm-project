@@ -83,13 +83,6 @@ static cl::opt<bool> MulConstantOptimization(
              "SHIFT, LEA, etc."),
     cl::Hidden);
 
-static cl::opt<bool> ExperimentalUnorderedISEL(
-    "x86-experimental-unordered-atomic-isel", cl::init(false),
-    cl::desc("Use LoadSDNode and StoreSDNode instead of "
-             "AtomicSDNode for unordered atomic loads and "
-             "stores respectively."),
-    cl::Hidden);
-
 X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                                      const X86Subtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -1135,6 +1128,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSUB, MVT::v8f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v8f16, Expand);
     setOperationAction(ISD::FDIV, MVT::v8f16, Expand);
+    setOperationAction(ISD::FNEG, MVT::v8f16, Custom);
+    setOperationAction(ISD::FABS, MVT::v8f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v8f16, Custom);
 
     // Custom lower v2i64 and v2f64 selects.
     setOperationAction(ISD::SELECT,             MVT::v2f64, Custom);
@@ -1396,8 +1392,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FMINIMUM,          VT, Custom);
     }
 
-    setOperationAction(ISD::FABS, MVT::v8f16, Custom);
-
     // (fp_to_int:v8i16 (v8f32 ..)) requires the result type to be promoted
     // even though v8i16 is a legal type.
     setOperationPromotedToType(ISD::FP_TO_SINT,        MVT::v8i16, MVT::v8i32);
@@ -1596,7 +1590,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STORE,              VT, Custom);
     }
     setF16Action(MVT::v16f16, Expand);
+    setOperationAction(ISD::FNEG, MVT::v16f16, Custom);
     setOperationAction(ISD::FABS, MVT::v16f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v16f16, Custom);
     setOperationAction(ISD::FADD, MVT::v16f16, Expand);
     setOperationAction(ISD::FSUB, MVT::v16f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v16f16, Expand);
@@ -2053,7 +2049,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64 })
         setOperationAction(ISD::CTPOP, VT, Legal);
     }
+    setOperationAction(ISD::FNEG, MVT::v32f16, Custom);
     setOperationAction(ISD::FABS, MVT::v32f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v32f16, Custom);
   }
 
   // This block control legalization of v32i1/v64i1 which are available with
@@ -30593,18 +30591,6 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   return Loaded;
 }
 
-bool X86TargetLowering::lowerAtomicStoreAsStoreSDNode(const StoreInst &SI) const {
-  if (!SI.isUnordered())
-    return false;
-  return ExperimentalUnorderedISEL;
-}
-bool X86TargetLowering::lowerAtomicLoadAsLoadSDNode(const LoadInst &LI) const {
-  if (!LI.isUnordered())
-    return false;
-  return ExperimentalUnorderedISEL;
-}
-
-
 /// Emit a locked operation on a stack location which does not change any
 /// memory location, but does involve a lock prefix.  Location is chosen to be
 /// a) very likely accessed only by a single thread to minimize cache traffic,
@@ -50486,11 +50472,14 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   bool NoImplicitFloatOps = F.hasFnAttribute(Attribute::NoImplicitFloat);
   bool F64IsLegal =
       !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE2();
-  if ((VT == MVT::i64 && F64IsLegal && !Subtarget.is64Bit()) &&
-      isa<LoadSDNode>(St->getValue()) &&
+
+  if (!F64IsLegal || Subtarget.is64Bit())
+    return SDValue();
+
+  if (VT == MVT::i64 && isa<LoadSDNode>(St->getValue()) &&
       cast<LoadSDNode>(St->getValue())->isSimple() &&
       St->getChain().hasOneUse() && St->isSimple()) {
-    LoadSDNode *Ld = cast<LoadSDNode>(St->getValue().getNode());
+    auto *Ld = cast<LoadSDNode>(St->getValue());
 
     if (!ISD::isNormalLoad(Ld))
       return SDValue();
@@ -50517,7 +50506,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // to get past legalization. The execution dependencies fixup pass will
   // choose the optimal machine instruction for the store if this really is
   // an integer or v2f32 rather than an f64.
-  if (VT == MVT::i64 && F64IsLegal && !Subtarget.is64Bit() &&
+  if (VT == MVT::i64 &&
       St->getOperand(1).getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     SDValue OldExtract = St->getOperand(1);
     SDValue ExtOp0 = OldExtract.getOperand(0);

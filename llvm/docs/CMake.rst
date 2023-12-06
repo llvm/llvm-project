@@ -389,7 +389,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   will limit code coverage summaries to just the listed directories. If unset,
   coverage reports will include all sources identified by the tooling.
 
- **LLVM_INDIVIDUAL_TEST_COVERAGE**: BOOL
+**LLVM_INDIVIDUAL_TEST_COVERAGE**:BOOL
   Enable individual test case coverage. When set to ON, code coverage data for
   each test case will be generated and stored in a separate directory under the
   config.test_exec_root path. This feature allows code coverage analysis of each

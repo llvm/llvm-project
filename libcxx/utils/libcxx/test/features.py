@@ -169,14 +169,11 @@ DEFAULT_FEATURES = [
         when=lambda cfg: hasCompileFlag(cfg, "-Xclang -verify-ignore-unexpected"),
     ),
     Feature(
-        name="has-latomic",
+        name="add-latomic-workaround",  # https://github.com/llvm/llvm-project/issues/73361
         when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            int main(int, char**) { return 0; }
-          """,
-            ["-latomic"],
+            cfg, "int main(int, char**) { return 0; }", ["-latomic"]
         ),
+        actions=[AddLinkFlag("-latomic")],
     ),
     Feature(
         name="non-lockfree-atomics",

@@ -41,14 +41,14 @@ public:
     public:
         typedef discrete_distribution distribution_type;
 
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         param_type() {}
         template<class _InputIterator>
-            _LIBCPP_INLINE_VISIBILITY
+            _LIBCPP_HIDE_FROM_ABI
             param_type(_InputIterator __f, _InputIterator __l)
             : __p_(__f, __l) {__init();}
 #ifndef _LIBCPP_CXX03_LANG
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         param_type(initializer_list<double> __wl)
             : __p_(__wl.begin(), __wl.end()) {__init();}
 #endif // _LIBCPP_CXX03_LANG
@@ -58,10 +58,10 @@ public:
 
         _LIBCPP_HIDE_FROM_ABI vector<double> probabilities() const;
 
-        friend _LIBCPP_INLINE_VISIBILITY
+        friend _LIBCPP_HIDE_FROM_ABI
             bool operator==(const param_type& __x, const param_type& __y)
             {return __x.__p_ == __y.__p_;}
-        friend _LIBCPP_INLINE_VISIBILITY
+        friend _LIBCPP_HIDE_FROM_ABI
             bool operator!=(const param_type& __x, const param_type& __y)
             {return !(__x == __y);}
 
@@ -88,55 +88,55 @@ private:
 
 public:
     // constructor and reset functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     discrete_distribution() {}
     template<class _InputIterator>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         discrete_distribution(_InputIterator __f, _InputIterator __l)
             : __p_(__f, __l) {}
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     discrete_distribution(initializer_list<double> __wl)
         : __p_(__wl) {}
 #endif // _LIBCPP_CXX03_LANG
     template<class _UnaryOperation>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         discrete_distribution(size_t __nw, double __xmin, double __xmax,
                               _UnaryOperation __fw)
         : __p_(__nw, __xmin, __xmax, __fw) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit discrete_distribution(const param_type& __p)
         : __p_(__p) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void reset() {}
 
     // generating functions
     template<class _URNG>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         result_type operator()(_URNG& __g)
         {return (*this)(__g, __p_);}
     template<class _URNG>
     _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
     // property functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     vector<double> probabilities() const {return __p_.probabilities();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     param_type param() const {return __p_;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void param(const param_type& __p) {__p_ = __p;}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type min() const {return 0;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type max() const {return __p_.__p_.size();}
 
-    friend _LIBCPP_INLINE_VISIBILITY
+    friend _LIBCPP_HIDE_FROM_ABI
         bool operator==(const discrete_distribution& __x,
                         const discrete_distribution& __y)
         {return __x.__p_ == __y.__p_;}
-    friend _LIBCPP_INLINE_VISIBILITY
+    friend _LIBCPP_HIDE_FROM_ABI
         bool operator!=(const discrete_distribution& __x,
                         const discrete_distribution& __y)
         {return !(__x == __y);}
@@ -180,11 +180,11 @@ discrete_distribution<_IntType>::param_type::__init()
     {
         if (__p_.size() > 1)
         {
-            double __s = _VSTD::accumulate(__p_.begin(), __p_.end(), 0.0);
+            double __s = std::accumulate(__p_.begin(), __p_.end(), 0.0);
             for (vector<double>::iterator __i = __p_.begin(), __e = __p_.end(); __i < __e; ++__i)
                 *__i /= __s;
             vector<double> __t(__p_.size() - 1);
-            _VSTD::partial_sum(__p_.begin(), __p_.end() - 1, __t.begin());
+            std::partial_sum(__p_.begin(), __p_.end() - 1, __t.begin());
             swap(__p_, __t);
         }
         else
@@ -201,7 +201,7 @@ discrete_distribution<_IntType>::param_type::probabilities() const
 {
     size_t __n = __p_.size();
     vector<double> __p(__n+1);
-    _VSTD::adjacent_difference(__p_.begin(), __p_.end(), __p.begin());
+    std::adjacent_difference(__p_.begin(), __p_.end(), __p.begin());
     if (__n > 0)
         __p[__n] = 1 - __p_[__n-1];
     else
@@ -217,7 +217,7 @@ discrete_distribution<_IntType>::operator()(_URNG& __g, const param_type& __p)
     static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     uniform_real_distribution<double> __gen;
     return static_cast<_IntType>(
-           _VSTD::upper_bound(__p.__p_.begin(), __p.__p_.end(), __gen(__g)) -
+           std::upper_bound(__p.__p_.begin(), __p.__p_.end(), __gen(__g)) -
                                                               __p.__p_.begin());
 }
 

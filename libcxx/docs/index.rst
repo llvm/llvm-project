@@ -133,7 +133,7 @@ Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no
 Android 5.0+          i386, x86_64, arm, arm64
 Windows               i386, x86_64              Both MSVC and MinGW style environments, ABI in MSVC environments is :doc:`unstable <DesignDocs/ABIVersioning>`
 AIX 7.2TL5+           powerpc, powerpc64
-Embedded (picolibc)   arm                       Support for building with picolibc is currently work-in-progress
+Embedded (picolibc)   arm
 ===================== ========================= ============================
 
 Generally speaking, libc++ should work on any platform that provides a fairly complete
