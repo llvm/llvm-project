@@ -267,17 +267,16 @@ void UnnecessaryCopyInitialization::check(
   const auto &NewVar = *Result.Nodes.getNodeAs<VarDecl>("newVarDecl");
   const auto &BlockStmt = *Result.Nodes.getNodeAs<Stmt>("blockStmt");
   const auto &VarDeclStmt = *Result.Nodes.getNodeAs<DeclStmt>("declStmt");
+  // Do not propose fixes if the DeclStmt has multiple VarDecls or in
+  // macros since we cannot place them correctly.
+  const bool IssueFix =
+      VarDeclStmt.isSingleDecl() && !NewVar.getLocation().isMacroID();
+  const bool IsVarUnused = isVariableUnused(NewVar, BlockStmt, *Result.Context);
+  const bool IsVarOnlyUsedAsConst =
+      isOnlyUsedAsConst(NewVar, BlockStmt, *Result.Context);
   const CheckContext Context{
-      NewVar, BlockStmt, VarDeclStmt, *Result.Context,
-      // Do not propose fixes if the DeclStmt has multiple VarDecls or in
-      // macros since we cannot place them correctly.
-      /*IssueFix*/ VarDeclStmt.isSingleDecl() &&
-          !NewVar.getLocation().isMacroID(),
-      /*IsVarUnused*/ isVariableUnused(NewVar, BlockStmt, *Result.Context),
-      /*IsVarOnlyUsedAsConst*/
-      isOnlyUsedAsConst(NewVar, BlockStmt, *Result.Context)
-
-  };
+      NewVar,   BlockStmt,   VarDeclStmt,         *Result.Context,
+      IssueFix, IsVarUnused, IsVarOnlyUsedAsConst};
   const auto *OldVar = Result.Nodes.getNodeAs<VarDecl>(OldVarDeclId);
   const auto *ObjectArg = Result.Nodes.getNodeAs<VarDecl>(ObjectArgId);
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctorCall");
@@ -358,11 +357,10 @@ void UnnecessaryCopyInitialization::diagnoseCopyFromLocalVar(
 void UnnecessaryCopyInitialization::maybeIssueFixes(
     const CheckContext &Ctx, DiagnosticBuilder &Diagnostic) {
   if (Ctx.IssueFix) {
-    if (Ctx.IsVarUnused) {
+    if (Ctx.IsVarUnused)
       recordRemoval(Ctx.VarDeclStmt, Ctx.ASTCtx, Diagnostic);
-    } else {
+    else
       recordFixes(Ctx.Var, Ctx.ASTCtx, Diagnostic);
-    }
   }
 }
 
