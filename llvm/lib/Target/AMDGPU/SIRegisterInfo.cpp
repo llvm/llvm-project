@@ -503,7 +503,7 @@ Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   // functions, but never actually want to reference it when accessing our own
   // frame. If we need a frame pointer we use it, but otherwise we can just use
   // an immediate "0" which we represent by returning NoRegister.
-  if (FuncInfo->isEntryFunction() || FuncInfo->isChainFunction()) {
+  if (FuncInfo->isBottomOfStack()) {
     return TFI->hasFP(MF) ? FuncInfo->getFrameOffsetReg() : Register();
   }
   return TFI->hasFP(MF) ? FuncInfo->getFrameOffsetReg()
@@ -738,7 +738,7 @@ bool SIRegisterInfo::shouldRealignStack(const MachineFunction &MF) const {
 
   // FIXME: Should be able to specify the entry frame alignment per calling
   // convention instead.
-  if (Info->isEntryFunction() || Info->isChainFunction())
+  if (Info->isBottomOfStack())
     return false;
 
   return TargetRegisterInfo::shouldRealignStack(MF);
@@ -1649,7 +1649,7 @@ void SIRegisterInfo::buildSpillLoadStore(
         if (UseVGPROffset && ScratchOffsetReg) {
           MIB.addReg(ScratchOffsetReg);
         } else {
-          assert(FuncInfo->isEntryFunction() || FuncInfo->isChainFunction());
+          assert(FuncInfo->isBottomOfStack());
           MIB.addImm(0);
         }
       }
@@ -2424,7 +2424,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
       bool IsMUBUF = TII->isMUBUF(*MI);
 
-      if (!IsMUBUF && !MFI->isEntryFunction() && !MFI->isChainFunction()) {
+      if (!IsMUBUF && !MFI->isBottomOfStack()) {
         // Convert to a swizzled stack address by scaling by the wave size.
         // In an entry function/kernel the offset is already swizzled.
         bool IsSALU = isSGPRClass(TII->getOpRegClass(*MI, FIOperandNum));
