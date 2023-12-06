@@ -2147,24 +2147,73 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   assert(!TM.getTargetTriple().isOSBinFormatXCOFF() &&
          "IFunc is not supported on AIX.");
 
-  MCSymbol *Name = getSymbol(&GI);
+  auto EmitLinkage = [&](MCSymbol *Sym) {
+    if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
+    else if (GI.hasWeakLinkage() || GI.hasLinkOnceLinkage())
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_WeakReference);
+    else
+      assert(GI.hasLocalLinkage() && "Invalid ifunc linkage");
+  };
 
-  if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
-    OutStreamer->emitSymbolAttribute(Name, MCSA_Global);
-  else if (GI.hasWeakLinkage() || GI.hasLinkOnceLinkage())
-    OutStreamer->emitSymbolAttribute(Name, MCSA_WeakReference);
-  else
-    assert(GI.hasLocalLinkage() && "Invalid ifunc linkage");
+  if (TM.getTargetTriple().isOSBinFormatELF()) {
+    MCSymbol *Name = getSymbol(&GI);
+    EmitLinkage(Name);
+    OutStreamer->emitSymbolAttribute(Name, MCSA_ELF_TypeIndFunction);
+    emitVisibility(Name, GI.getVisibility());
 
-  OutStreamer->emitSymbolAttribute(Name, MCSA_ELF_TypeIndFunction);
-  emitVisibility(Name, GI.getVisibility());
+    // Emit the directives as assignments aka .set:
+    const MCExpr *Expr = lowerConstant(GI.getResolver());
+    OutStreamer->emitAssignment(Name, Expr);
+    MCSymbol *LocalAlias = getSymbolPreferLocal(GI);
+    if (LocalAlias != Name)
+      OutStreamer->emitAssignment(LocalAlias, Expr);
+  } else if (TM.getTargetTriple().isOSBinFormatMachO()) {
+    // On Darwin platforms, emit a manually-constructed .symbol_resolver that
+    // implements the symbol resolution duties of the IFunc.
+    //
+    // Normally, this would be handled by linker magic, but unfortunately there
+    // are a few limitations in ld64 and ld-prime's implementation of
+    // .symbol_resolver that mean we can't always use them:
+    //
+    //    *  resolvers cannot be the target of an alias
+    //    *  resolvers cannot have private linkage
+    //    *  resolvers cannot have linkonce linkage
+    //    *  resolvers cannot appear in executables
+    //    *  resolvers cannot appear in bundles
+    //
+    // This works around that by emitting a close approximation of what the linker
+    // would have done.
 
-  // Emit the directives as assignments aka .set:
-  const MCExpr *Expr = lowerConstant(GI.getResolver());
-  OutStreamer->emitAssignment(Name, Expr);
-  MCSymbol *LocalAlias = getSymbolPreferLocal(GI);
-  if (LocalAlias != Name)
-    OutStreamer->emitAssignment(LocalAlias, Expr);
+    MCSymbol *LazyPointer = GetExternalSymbolSymbol(GI.getName() + ".lazy_pointer");
+    MCSymbol *StubHelper = GetExternalSymbolSymbol(GI.getName() + ".stub_helper");
+
+    OutStreamer->switchSection(OutContext.getObjectFileInfo()->getDataSection());
+
+    const DataLayout &DL = M.getDataLayout();
+    emitAlignment(Align(DL.getPointerSize()));
+    OutStreamer->emitLabel(LazyPointer);
+    emitVisibility(LazyPointer, GI.getVisibility());
+    OutStreamer->emitValue(MCSymbolRefExpr::create(StubHelper, OutContext), 8);
+
+    OutStreamer->switchSection(OutContext.getObjectFileInfo()->getTextSection());
+
+    auto *STI = TM.getSubtargetImpl(*GI.getResolverFunction());
+    const TargetLowering *TLI = STI->getTargetLowering();
+    Align TextAlign(TLI->getMinFunctionAlignment());
+
+    MCSymbol *Stub = getSymbol(&GI);
+    EmitLinkage(Stub);
+    OutStreamer->emitCodeAlignment(TextAlign, &getMachOSubtargetInfo());
+    OutStreamer->emitLabel(Stub);
+    emitVisibility(Stub, GI.getVisibility());
+    emitMachOIFuncStubBody(M, GI, LazyPointer);
+
+    OutStreamer->emitCodeAlignment(TextAlign, &getMachOSubtargetInfo());
+    OutStreamer->emitLabel(StubHelper);
+    emitVisibility(StubHelper, GI.getVisibility());
+    emitMachOIFuncStubHelperBody(M, GI, LazyPointer);
+  }
 }
 
 void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
@@ -3749,7 +3798,7 @@ MCSymbol *AsmPrinter::getSymbolWithGlobalValueBase(const GlobalValue *GV,
 }
 
 /// Return the MCSymbol for the specified ExternalSymbol.
-MCSymbol *AsmPrinter::GetExternalSymbolSymbol(StringRef Sym) const {
+MCSymbol *AsmPrinter::GetExternalSymbolSymbol(Twine Sym) const {
   SmallString<60> NameStr;
   Mangler::getNameWithPrefix(NameStr, Sym, getDataLayout());
   return OutContext.getOrCreateSymbol(NameStr);

@@ -966,25 +966,27 @@ public:
 // __asan_annotate_container_with_allocator to false.
 // For more details, see the "Using libc++" documentation page or
 // the documentation for __sanitizer_annotate_contiguous_container.
-#if !defined(_LIBCPP_HAS_NO_ASAN)
     _LIBCPP_HIDE_FROM_ABI void __annotate_double_ended_contiguous_container(
-        const void* __beg,
-        const void* __end,
-        const void* __old_con_beg,
-        const void* __old_con_end,
-        const void* __new_con_beg,
-        const void* __new_con_end) const {
+       [[__maybe_unused__]] const void* __beg,
+       [[__maybe_unused__]] const void* __end,
+       [[__maybe_unused__]] const void* __old_con_beg,
+       [[__maybe_unused__]] const void* __old_con_end,
+       [[__maybe_unused__]] const void* __new_con_beg,
+       [[__maybe_unused__]] const void* __new_con_end) const {
+#ifndef _LIBCPP_HAS_NO_ASAN
         if (__beg != nullptr && __asan_annotate_container_with_allocator<_Allocator>::value)
             __sanitizer_annotate_double_ended_contiguous_container(
                 __beg, __end, __old_con_beg, __old_con_end, __new_con_beg, __new_con_end);
+#endif
     }
-#else
-    _LIBCPP_HIDE_FROM_ABI void __annotate_double_ended_contiguous_container(
-        const void*, const void*, const void*, const void*, const void*, const void*) const _NOEXCEPT {}
-#endif // !defined(_LIBCPP_HAS_NO_ASAN)
 
     _LIBCPP_HIDE_FROM_ABI
-    void __annotate_from_to(size_type __beg, size_type __end, __asan_annotation_type __annotation_type, __asan_annotation_place __place) const _NOEXCEPT {
+    void __annotate_from_to(
+            [[__maybe_unused__]] size_type __beg,
+            [[__maybe_unused__]] size_type __end,
+            [[__maybe_unused__]] __asan_annotation_type __annotation_type,
+            [[__maybe_unused__]] __asan_annotation_place __place) const _NOEXCEPT {
+#ifndef _LIBCPP_HAS_NO_ASAN
         // __beg - index of the first item to annotate
         // __end - index behind the last item to annotate (so last item + 1)
         // __annotation_type - __asan_unposion or __asan_poison
@@ -1075,6 +1077,7 @@ public:
 
             __annotate_double_ended_contiguous_container(__mem_beg, __mem_end, __old_beg, __old_end, __new_beg, __new_end);
         }
+#endif // !_LIBCPP_HAS_NO_ASAN
     }
 
     _LIBCPP_HIDE_FROM_ABI
