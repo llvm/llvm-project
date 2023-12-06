@@ -118,7 +118,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %2 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %2, 4
   store i32 %add, ptr %arrayidx, align 4
-  %indvars.iv.next = or i64 %indvars.iv, 1
+  %indvars.iv.next = or disjoint i64 %indvars.iv, 1
   %arrayidx.1 = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.next
   %3 = load i32, ptr %arrayidx.1, align 4
   %add.1 = add nsw i32 %3, 4

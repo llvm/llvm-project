@@ -2241,6 +2241,26 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "warn-stack-size", V);
+
+  if (auto A = Attrs.getFnAttr("sign-return-address"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (S != "none" && S != "all" && S != "non-leaf")
+      CheckFailed("invalid value for 'sign-return-address' attribute: " + S, V);
+  }
+
+  if (auto A = Attrs.getFnAttr("sign-return-address-key"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (S != "a_key" && S != "b_key")
+      CheckFailed("invalid value for 'sign-return-address-key' attribute: " + S,
+                  V);
+  }
+
+  if (auto A = Attrs.getFnAttr("branch-target-enforcement"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (S != "true" && S != "false")
+      CheckFailed(
+          "invalid value for 'branch-target-enforcement' attribute: " + S, V);
+  }
 }
 
 void Verifier::verifyFunctionMetadata(

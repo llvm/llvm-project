@@ -1217,6 +1217,10 @@ defm : PatXrUimm5<umin, "XVMINI">;
 // XVMUL_{B/H/W/D}
 defm : PatXrXr<mul, "XVMUL">;
 
+// XVMUH_{B/H/W/D}[U]
+defm : PatXrXr<mulhs, "XVMUH">;
+defm : PatXrXrU<mulhu, "XVMUH">;
+
 // XVMADD_{B/H/W/D}
 defm : PatXrXrXr<muladd, "XVMADD">;
 // XVMSUB_{B/H/W/D}

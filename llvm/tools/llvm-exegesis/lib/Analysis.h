@@ -24,7 +24,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <set>
-#include <string>
 
 namespace llvm {
 namespace exegesis {

@@ -33,7 +33,6 @@
 #include <deque>
 #include <map>
 #include <memory>
-#include <vector>
 
 namespace llvm {
 

@@ -654,6 +654,13 @@ Bug Fixes in This Version
 - Fix a ``clang-17`` regression where a templated friend with constraints is not
   properly applied when its parameters reference an enclosing non-template class.
   Fixes (`#71595 <https://github.com/llvm/llvm-project/issues/71595>`_)
+- Fix the name of the ifunc symbol emitted for multiversion functions declared with the
+  ``target_clones`` attribute. This addresses a linker error that would otherwise occur
+  when these functions are referenced from other TUs.
+- Fixes compile error that double colon operator cannot resolve macro with parentheses.
+  Fixes (`#64467 <https://github.com/llvm/llvm-project/issues/64467>`_)
+- Clang's ``-Wchar-subscripts`` no longer warns on chars whose values are known non-negative constants.
+  Fixes (`#18763 <https://github.com/llvm/llvm-project/issues/18763>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -794,6 +801,9 @@ Bug Fixes to C++ Support
 - Fix crash when template class static member imported to other translation unit.
   Fixes:
   (`#68769 <https://github.com/llvm/llvm-project/issues/68769>`_)
+
+- Clang now rejects incomplete types for ``__builtin_dump_struct``. Fixes:
+  (`#63506 <https://github.com/llvm/llvm-project/issues/63506>`_)
 
 - Fixed a crash for C++98/03 while checking an ill-formed ``_Static_assert`` expression.
   Fixes: (`#72025 <https://github.com/llvm/llvm-project/issues/72025>`_)

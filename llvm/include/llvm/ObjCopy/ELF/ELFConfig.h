@@ -10,7 +10,6 @@
 #define LLVM_OBJCOPY_ELF_ELFCONFIG_H
 
 #include "llvm/Object/ELFTypes.h"
-#include <vector>
 
 namespace llvm {
 namespace objcopy {
