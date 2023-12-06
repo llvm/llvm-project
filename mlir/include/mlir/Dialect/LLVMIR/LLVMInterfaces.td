@@ -70,7 +70,7 @@ def IntegerOverflowFlagsInterface : OpInterface<"IntegerOverflowFlagsInterface">
     InterfaceMethod<
       /*desc=*/        "Returns whether the operation has the No Unsigned Wrap keyword",
       /*returnType=*/  "bool",
-      /*methodName=*/  "hasNuw",
+      /*methodName=*/  "hasNoUnsignedWrap",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
@@ -82,7 +82,7 @@ def IntegerOverflowFlagsInterface : OpInterface<"IntegerOverflowFlagsInterface">
     InterfaceMethod<
       /*desc=*/        "Returns whether the operation has the No Signed Wrap keyword",
       /*returnType=*/  "bool",
-      /*methodName=*/  "hasNsw",
+      /*methodName=*/  "hasNoSignedWrap",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
