@@ -82,5 +82,7 @@ end program
 ! ALL-NEXT: ExternalNameConversion
 ! DEBUG-NEXT: AddDebugFoundation
 ! NO-DEBUG-NOT: AddDebugFoundation
+! ALL-NEXT:  'func.func' Pipeline
+! ALL-NEXT:    FunctionAttr
 ! ALL-NEXT: FIRToLLVMLowering
 ! ALL-NOT: LLVMIRLoweringPass

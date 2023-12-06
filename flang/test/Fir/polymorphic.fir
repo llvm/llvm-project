@@ -10,7 +10,7 @@ func.func @_QMpolymorphic_testPtest_allocate_unlimited_polymorphic_non_derived()
   return
 }
 
-// CHECK-LABEL: define void @_QMpolymorphic_testPtest_allocate_unlimited_polymorphic_non_derived() {
+// CHECK-LABEL: define void @_QMpolymorphic_testPtest_allocate_unlimited_polymorphic_non_derived(){{.*}}{
 // CHECK:   %[[MEM:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
 // CHECK:   %[[DESC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
 // CHECK:   store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr null, i64 0, i32 20180515, i8 0, i8 -1, i8 1, i8 1, ptr null, [1 x i64] undef }, ptr %[[MEM]]
@@ -87,7 +87,7 @@ func.func @_QMunlimitedPsub1(%arg0: !fir.class<!fir.array<?xnone>> {fir.bindc_na
 }
 
 // CHECK-LABEL: define void @_QMunlimitedPsub1(
-// CHECK-SAME: ptr %[[ARRAY:.*]]) {
+// CHECK-SAME: ptr %[[ARRAY:.*]]){{.*}}{
 // CHECK: %[[BOX:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
 // CHECK: %{{.}} = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[ARRAY]], i32 0, i32 7, i32 0, i32 2
 // CHECK: %[[TYPE_DESC_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[ARRAY]], i32 0, i32 8
@@ -151,7 +151,7 @@ func.func @_QQmain() {
   return
 }
 
-// CHECK-LABEL: define void @_QQmain() {
+// CHECK-LABEL: define void @_QQmain(){{.*}}{
 // CHECK: %[[CLASS_NONE:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
 // CHECK: %[[DESC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
 // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr @_QMmod1Ea, i64 ptrtoint (ptr getelementptr (%_QMmod1TtK2, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 42, i8 1, i8 1, ptr @_QMmod1E.dt.t.2, [1 x i64] undef }, ptr %[[CLASS_NONE]], align 8
@@ -175,7 +175,7 @@ func.func @_QMmod2Pinitp(%arg0: !fir.ref<!fir.class<!fir.ptr<none>>> {fir.bindc_
 func.func private @_FortranAPointerAssociate(!fir.ref<!fir.box<none>>, !fir.box<none>) -> none attributes {fir.runtime}
 
 // CHECK-LABEL: define void @_QMmod2Pinitp(
-// CHECK-SAME: ptr %[[ARG0:.*]]) {
+// CHECK-SAME: ptr %[[ARG0:.*]]){{.*}}{
 // CHECK: %[[ALLOCA_CLASS_NONE:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
 // CHECK: %[[LOAD:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[ARG0]]
 // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD]], ptr %[[ALLOCA_CLASS_NONE]]

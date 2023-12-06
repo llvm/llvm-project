@@ -311,6 +311,10 @@ inline void createDefaultFIRCodeGenPassPipeline(
   if (config.VScaleMin != 0)
     pm.addPass(fir::createVScaleAttrPass({config.VScaleMin, config.VScaleMax}));
 
+  fir::FunctionAttrTypes functionAttrs;
+  functionAttrs.framePointerKind = config.FramePointerKind;
+  pm.addPass(fir::createFunctionAttrPass(functionAttrs));
+
   fir::addFIRToLLVMPass(pm, config);
 }
 
