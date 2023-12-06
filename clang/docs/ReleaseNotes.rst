@@ -157,7 +157,7 @@ C++23 Feature Support
   was not set in this version.
 
 - Added a separate warning to warn the use of attributes on lambdas as a C++23 extension
-  in previous language versions: ``-Wc++23-attrs-on-lambda``.
+  in previous language versions: ``-Wc++23-lambda-attributes``.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
