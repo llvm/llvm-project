@@ -5120,6 +5120,24 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         SelectMultiVectorLuti(Node, 4, Opc, 1);
       return;
     }
+    case Intrinsic::aarch64_sme_luti2_lane_zt_x2: {
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::LUTI2_2ZTZI_B, AArch64::LUTI2_2ZTZI_H,
+               AArch64::LUTI2_2ZTZI_S}))
+        // Second Immediate must be <= 7:
+        SelectMultiVectorLuti(Node, 2, Opc, 7);
+      return;
+    }
+    case Intrinsic::aarch64_sme_luti4_lane_zt_x2: {
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::LUTI4_2ZTZI_B, AArch64::LUTI4_2ZTZI_H,
+               AArch64::LUTI4_2ZTZI_S}))
+        // Second Immediate must be <= 3:
+        SelectMultiVectorLuti(Node, 2, Opc, 3);
+      return;
+    }
     }
   } break;
   case ISD::INTRINSIC_WO_CHAIN: {
