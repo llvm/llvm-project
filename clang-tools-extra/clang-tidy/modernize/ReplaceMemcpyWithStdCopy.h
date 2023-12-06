@@ -1,4 +1,4 @@
-//===--- ReplaceMemcpyWithStdCopy.h - clang-tidy--------------------*- C++-*-===//
+//===--- ReplaceMemcpyWithStdCopy.h - clang-tidy------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_REPLACE_MEMCPY_BY_STDCOPY_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_REPLACE_MEMCPY_BY_STDCOPY_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_REPLACE_MEMCPY_WITH_STDCOPY_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_REPLACE_MEMCPY_WITH_STDCOPY_H
 
 #include "../ClangTidyCheck.h"
 #include "../utils/IncludeInserter.h"
@@ -19,7 +19,7 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
-/// Replace the C memcpy function by std::copy
+// Replace the C memcpy function with std::copy
 class ReplaceMemcpyWithStdCopy : public ClangTidyCheck {
 public:
   ReplaceMemcpyWithStdCopy(StringRef Name, ClangTidyContext *Context);
@@ -38,6 +38,7 @@ private:
 
 private:
   std::unique_ptr<utils::IncludeInserter> Inserter;
+  utils::IncludeInserter IncludeInserter;
   const utils::IncludeSorter::IncludeStyle IncludeStyle;
 };
 
@@ -45,4 +46,4 @@ private:
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_REPLACE_MEMCPY_BY_STDCOPY_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_REPLACE_MEMCPY_WITH_STDCOPY_H

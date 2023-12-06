@@ -1,4 +1,4 @@
-//===--- ReplaceMemcpyWithStdCopy.cpp - clang-tidy------------------*- C++-*-===//
+//===--- ReplaceMemcpyWithStdCopy.cpp - clang-tidy----------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,10 +18,11 @@ namespace tidy {
 namespace modernize {
 
 ReplaceMemcpyWithStdCopy::ReplaceMemcpyWithStdCopy(StringRef Name,
-                                               ClangTidyContext *Context)
+                                                   ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
+      IncludeInserter(
+        Options.getLocalOrGlobal(
+          "IncludeStyle", utils::IncludeSorter::IS_LLVM)) {}
 
 void ReplaceMemcpyWithStdCopy::registerMatchers(MatchFinder *Finder) {
   assert(Finder != nullptr);
@@ -43,7 +44,7 @@ void ReplaceMemcpyWithStdCopy::registerPPCallbacks(
   if (!getLangOpts().CPlusPlus)
     return;
 
-  Inserter = llvm::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
+  Inserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
                                                        IncludeStyle);
   PP->addPPCallbacks(Inserter->CreatePPCallbacks());
 }
