@@ -2253,14 +2253,22 @@ void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
       TheDwarfEmitter->emitPubTypesForUnit(Unit);
     } break;
     case AccelTableKind::DebugNames: {
+      auto ParentOffsetOrNull = [](const DIE *Die) -> std::optional<uint64_t> {
+        if (const DIE *Parent = Die->getParent())
+          return Die->getParent()->getOffset();
+        return std::nullopt;
+      };
       for (const auto &Namespace : Unit.getNamespaces())
         DebugNames.addName(Namespace.Name, Namespace.Die->getOffset(),
+                           ParentOffsetOrNull(Namespace.Die),
                            Namespace.Die->getTag(), Unit.getUniqueID());
       for (const auto &Pubname : Unit.getPubnames())
         DebugNames.addName(Pubname.Name, Pubname.Die->getOffset(),
+                           ParentOffsetOrNull(Pubname.Die),
                            Pubname.Die->getTag(), Unit.getUniqueID());
       for (const auto &Pubtype : Unit.getPubtypes())
         DebugNames.addName(Pubtype.Name, Pubtype.Die->getOffset(),
+                           ParentOffsetOrNull(Pubtype.Die),
                            Pubtype.Die->getTag(), Unit.getUniqueID());
     } break;
     }

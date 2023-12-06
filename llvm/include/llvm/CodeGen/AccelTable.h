@@ -261,9 +261,12 @@ public:
 
   DWARF5AccelTableData(const DIE &Die, const uint32_t UnitID,
                        const bool IsTU = false);
-  DWARF5AccelTableData(const uint64_t DieOffset, const unsigned DieTag,
-                       const unsigned UnitID, const bool IsTU = false)
-      : OffsetVal(DieOffset), DieTag(DieTag), UnitID(UnitID), IsTU(IsTU) {}
+  DWARF5AccelTableData(const uint64_t DieOffset,
+                       const std::optional<uint64_t> ParentOffset,
+                       const unsigned DieTag, const unsigned UnitID,
+                       const bool IsTU = false)
+      : OffsetVal(DieOffset), ParentOffset(ParentOffset), DieTag(DieTag),
+        UnitID(UnitID), IsTU(IsTU) {}
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override;
@@ -278,14 +281,24 @@ public:
   bool isTU() const { return IsTU; }
   void normalizeDIEToOffset() {
     assert(!isNormalized() && "Accessing offset after normalizing.");
-    OffsetVal = std::get<const DIE *>(OffsetVal)->getOffset();
+    const DIE *Entry = std::get<const DIE *>(OffsetVal);
+    ParentOffset = Entry->getParent() ? Entry->getParent()->getOffset()
+                                      : std::optional<uint64_t>();
+    OffsetVal = Entry->getOffset();
   }
   bool isNormalized() const {
     return std::holds_alternative<uint64_t>(OffsetVal);
   }
 
+  std::optional<uint64_t> getParentDieOffset() const {
+    assert(std::holds_alternative<uint64_t>(OffsetVal) &&
+           "Accessing DIE Offset before normalizing.");
+    return ParentOffset;
+  }
+
 protected:
   std::variant<const DIE *, uint64_t> OffsetVal;
+  std::optional<uint64_t> ParentOffset;
   uint32_t DieTag : 16;
   uint32_t UnitID : 15;
   uint32_t IsTU : 1;
@@ -334,7 +347,8 @@ public:
     for (auto &Entry : Table.getEntries()) {
       for (AccelTableData *Value : Entry.second.Values) {
         DWARF5AccelTableData *Data = static_cast<DWARF5AccelTableData *>(Value);
-        addName(Entry.second.Name, Data->getDieOffset(), Data->getDieTag(),
+        addName(Entry.second.Name, Data->getDieOffset(),
+                Data->getParentDieOffset(), Data->getDieTag(),
                 Data->getUnitID(), true);
       }
     }

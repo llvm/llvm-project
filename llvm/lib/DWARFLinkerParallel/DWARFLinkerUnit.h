@@ -125,6 +125,9 @@ public:
     /// Output offset of the DIE this entry describes.
     uint64_t OutOffset;
 
+    /// Output offset of the parent of the DIE this entry describes.
+    std::optional<uint64_t> ParentOutOffset;
+
     /// Hash of the fully qualified name.
     uint32_t QualifiedNameHash = 0;
 
