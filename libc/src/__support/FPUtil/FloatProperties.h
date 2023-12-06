@@ -40,7 +40,7 @@ enum class FPEncoding {
 template <FPType> struct FPBaseProperties {};
 
 template <> struct FPBaseProperties<FPType::IEEE754_Binary16> {
-  LIBC_INLINE_VAR static constexpr int FP_BITS = 16;
+  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 16;
   LIBC_INLINE_VAR static constexpr int SIG_BITS = 10;
   LIBC_INLINE_VAR static constexpr int EXP_BITS = 5;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
@@ -48,7 +48,7 @@ template <> struct FPBaseProperties<FPType::IEEE754_Binary16> {
 };
 
 template <> struct FPBaseProperties<FPType::IEEE754_Binary32> {
-  LIBC_INLINE_VAR static constexpr int FP_BITS = 32;
+  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 32;
   LIBC_INLINE_VAR static constexpr int SIG_BITS = 23;
   LIBC_INLINE_VAR static constexpr int EXP_BITS = 8;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
@@ -56,7 +56,7 @@ template <> struct FPBaseProperties<FPType::IEEE754_Binary32> {
 };
 
 template <> struct FPBaseProperties<FPType::IEEE754_Binary64> {
-  LIBC_INLINE_VAR static constexpr int FP_BITS = 64;
+  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 64;
   LIBC_INLINE_VAR static constexpr int SIG_BITS = 52;
   LIBC_INLINE_VAR static constexpr int EXP_BITS = 11;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
@@ -64,7 +64,7 @@ template <> struct FPBaseProperties<FPType::IEEE754_Binary64> {
 };
 
 template <> struct FPBaseProperties<FPType::IEEE754_Binary128> {
-  LIBC_INLINE_VAR static constexpr int FP_BITS = 128;
+  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 128;
   LIBC_INLINE_VAR static constexpr int SIG_BITS = 112;
   LIBC_INLINE_VAR static constexpr int EXP_BITS = 15;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
@@ -72,7 +72,7 @@ template <> struct FPBaseProperties<FPType::IEEE754_Binary128> {
 };
 
 template <> struct FPBaseProperties<FPType::X86_Binary80> {
-  LIBC_INLINE_VAR static constexpr int FP_BITS = 80;
+  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 80;
   LIBC_INLINE_VAR static constexpr int SIG_BITS = 64;
   LIBC_INLINE_VAR static constexpr int EXP_BITS = 15;
   LIBC_INLINE_VAR static constexpr auto ENCODING =
@@ -88,7 +88,7 @@ struct FPCommonProperties : private FPBaseProperties<fp_type> {
   using UP = FPBaseProperties<fp_type>;
   using BitsType = typename UP::UIntType;
 
-  LIBC_INLINE_VAR static constexpr uint32_t BIT_WIDTH = UP::FP_BITS;
+  LIBC_INLINE_VAR static constexpr uint32_t BIT_WIDTH = UP::TOTAL_BITS;
   LIBC_INLINE_VAR static constexpr uint32_t MANTISSA_WIDTH = UP::SIG_BITS;
   LIBC_INLINE_VAR static constexpr uint32_t EXPONENT_WIDTH = UP::EXP_BITS;
 
