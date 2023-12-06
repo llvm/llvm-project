@@ -197,7 +197,7 @@ public:
     for (auto &Occurrence : Results) {
       const std::pair<FileID, unsigned> DecomposedLocation =
           SM.getDecomposedLoc(Occurrence.locations()[0]);
-      const FileEntry *Entry = SM.getFileEntryForID(DecomposedLocation.first);
+      OptionalFileEntryRef Entry = SM.getFileEntryRefForID(DecomposedLocation.first);
       assert(Entry && "Invalid file entry");
       auto &FileOccurrences =
           FilenamesToSymbolOccurrences
@@ -226,7 +226,7 @@ public:
   void addMainFilename(const SourceManager &SM) {
     assert(Filenames.empty() && "Main filename should be added only once");
     Filenames.push_back(cxstring::createDup(
-        SM.getFileEntryForID(SM.getMainFileID())->getName()));
+        SM.getFileEntryRefForID(SM.getMainFileID())->getName()));
     Occurrences.push_back(std::vector<CXRenamedSymbolOccurrence>());
   }
 
@@ -340,7 +340,8 @@ public:
     for (auto &Occurrence : Results) {
       const std::pair<FileID, unsigned> DecomposedLocation =
           SM.getDecomposedLoc(Occurrence.locations()[0]);
-      const FileEntry *Entry = SM.getFileEntryForID(DecomposedLocation.first);
+      OptionalFileEntryRef Entry =
+          SM.getFileEntryRefForID(DecomposedLocation.first);
       assert(Entry && "Invalid file entry");
       auto &FileOccurrences =
           FilenamesToSymbolOccurrences
@@ -369,7 +370,7 @@ public:
   void addMainFilename(const SourceManager &SM) {
     assert(Filenames.empty() && "Main filename should be added only once");
     Filenames.push_back(cxstring::createDup(
-        SM.getFileEntryForID(SM.getMainFileID())->getName()));
+        SM.getFileEntryRefForID(SM.getMainFileID())->getName()));
     SymbolOccurrences.push_back(std::vector<CXSymbolOccurrence>());
   }
 
@@ -882,15 +883,15 @@ public:
 
     // Find the set of files that have to be modified and gather the indices of
     // the occurrences for each file.
-    llvm::DenseMap<const FileEntry *, std::vector<unsigned>>
-        FilesToReplacements;
+    llvm::DenseMap<FileEntryRef, std::vector<unsigned>> FilesToReplacements;
     for (const auto &Replacement : llvm::enumerate(Replacements)) {
       SourceLocation Loc = Replacement.value().Range.getBegin();
       const std::pair<FileID, unsigned> DecomposedLocation =
           SM.getDecomposedLoc(Loc);
       assert(DecomposedLocation.first.isValid() && "Invalid file!");
-      const FileEntry *Entry = SM.getFileEntryForID(DecomposedLocation.first);
-      FilesToReplacements.try_emplace(Entry, std::vector<unsigned>())
+      OptionalFileEntryRef Entry =
+          SM.getFileEntryRefForID(DecomposedLocation.first);
+      FilesToReplacements.try_emplace(*Entry, std::vector<unsigned>())
           .first->second.push_back(Replacement.index());
     }
 
@@ -905,7 +906,7 @@ public:
           FileReplacementSets[FileIndex];
       ++FileIndex;
       ArrayRef<unsigned> ReplacementIndices = Entry.second;
-      FileSet.Filename = cxstring::createDup(Entry.first->getName());
+      FileSet.Filename = cxstring::createDup(Entry.first.getName());
       FileSet.NumReplacements = ReplacementIndices.size();
       auto *FileReplacements =
           new CXRefactoringReplacement_Old[ReplacementIndices.size()];
@@ -966,7 +967,7 @@ public:
             FileReplacementSets[FileIndex];
         ++FileIndex;
         ArrayRef<unsigned> ReplacementIndices = Entry.second;
-        FileSet.Filename = cxstring::createDup(Entry.first->getName());
+        FileSet.Filename = cxstring::createDup(Entry.first.getName());
         FileSet.NumReplacements = ReplacementIndices.size();
         auto *FileReplacements = Allocator.Allocate<CXRefactoringReplacement>(
             ReplacementIndices.size());

@@ -128,7 +128,7 @@ struct DFGMMCallback : public ModuleMapCallbacks {
                                     /*IsMissing*/ false);
   }
 
-  void moduleMapFoundForModule(const FileEntry &Entry, const Module *M,
+  void moduleMapFoundForModule(FileEntryRef Entry, const Module *M,
                                bool IsSystem) override {
     if (!SkipUnusedModuleMaps)
       return;

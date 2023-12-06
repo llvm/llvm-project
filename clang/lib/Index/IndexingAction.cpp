@@ -725,7 +725,7 @@ static void writeUnitData(const CompilerInstance &CI,
                           IndexDependencyProvider &DepProvider,
                           IndexingOptions IndexOpts,
                           RecordingOptions RecordOpts, StringRef OutputFile,
-                          const FileEntry *RootFile, Module *UnitModule,
+                          OptionalFileEntryRef RootFile, Module *UnitModule,
                           StringRef SysrootPath);
 
 void IndexRecordActionBase::finish(CompilerInstance &CI) {
@@ -767,12 +767,12 @@ void IndexRecordActionBase::finish(CompilerInstance &CI) {
     OutputFile += ".o";
   }
 
-  const FileEntry *RootFile = nullptr;
+  OptionalFileEntryRef RootFile;
   Module *UnitMod = nullptr;
   bool isModuleGeneration = CI.getLangOpts().isCompilingModule();
   if (!isModuleGeneration &&
       CI.getFrontendOpts().ProgramAction != frontend::GeneratePCH) {
-    RootFile = SM.getFileEntryForID(SM.getMainFileID());
+    RootFile = SM.getFileEntryRefForID(SM.getMainFileID());
   }
   if (isModuleGeneration) {
     UnitMod = HS.lookupModule(CI.getLangOpts().CurrentModule, SourceLocation(),
@@ -796,7 +796,7 @@ static void writeUnitData(const CompilerInstance &CI,
                           IndexDependencyProvider &DepProvider,
                           IndexingOptions IndexOpts,
                           RecordingOptions RecordOpts, StringRef OutputFile,
-                          const FileEntry *RootFile, Module *UnitModule,
+                          OptionalFileEntryRef RootFile, Module *UnitModule,
                           StringRef SysrootPath) {
 
   SourceManager &SM = CI.getSourceManager();
@@ -979,7 +979,7 @@ static void indexModule(serialization::ModuleFile &Mod,
 
   ModuleFileIndexDependencyCollector DepCollector(Mod, RecordOpts);
   writeUnitData(CI, Recorder, DepCollector, IndexOpts, RecordOpts, Mod.FileName,
-                /*RootFile=*/nullptr, UnitMod, SysrootPath);
+                /*RootFile=*/std::nullopt, UnitMod, SysrootPath);
 }
 
 static bool produceIndexDataForModuleFile(serialization::ModuleFile &Mod,
