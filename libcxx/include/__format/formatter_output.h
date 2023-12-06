@@ -23,8 +23,9 @@
 #include <__format/unicode.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/concepts.h>
-#include <__iterator/iterator_traits.h> // iter_value_t
+#include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
+#include <__memory/pointer_traits.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <cstddef>
@@ -110,26 +111,32 @@ _LIBCPP_HIDE_FROM_ABI auto __copy(basic_string_view<_CharT> __str, output_iterat
   }
 }
 
-template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__copy(const _CharT* __first, const _CharT* __last, output_iterator<const _OutCharT&> auto __out_it)
+template <contiguous_iterator _Iterator,
+          __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
+          __fmt_char_type _OutCharT = _CharT>
+_LIBCPP_HIDE_FROM_ABI auto __copy(_Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it)
     -> decltype(__out_it) {
   return __formatter::__copy(basic_string_view{__first, __last}, std::move(__out_it));
 }
 
-template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __copy(const _CharT* __first, size_t __n, output_iterator<const _OutCharT&> auto __out_it)
+template <contiguous_iterator _Iterator,
+          __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
+          __fmt_char_type _OutCharT = _CharT>
+_LIBCPP_HIDE_FROM_ABI auto __copy(_Iterator __first, size_t __n, output_iterator<const _OutCharT&> auto __out_it)
     -> decltype(__out_it) {
-  return __formatter::__copy(basic_string_view{__first, __n}, std::move(__out_it));
+  return __formatter::__copy(basic_string_view{std::to_address(__first), __n}, std::move(__out_it));
 }
 
 /// Transform wrapper.
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
-template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT, class _UnaryOperation>
+template <contiguous_iterator _Iterator,
+          __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
+          __fmt_char_type _OutCharT = _CharT,
+          class _UnaryOperation>
 _LIBCPP_HIDE_FROM_ABI auto
-__transform(const _CharT* __first,
-            const _CharT* __last,
+__transform(_Iterator __first,
+            _Iterator __last,
             output_iterator<const _OutCharT&> auto __out_it,
             _UnaryOperation __operation) -> decltype(__out_it) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
@@ -260,8 +267,11 @@ __write(_Iterator __first,
   return __formatter::__write(__first, __last, std::move(__out_it), __specs, __last - __first);
 }
 
-template <class _CharT, class _ParserCharT, class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI auto __write_transformed(const _CharT* __first, const _CharT* __last,
+template <contiguous_iterator _Iterator,
+          class _CharT = typename iterator_traits<_Iterator>::value_type,
+          class _ParserCharT,
+          class _UnaryOperation>
+_LIBCPP_HIDE_FROM_ABI auto __write_transformed(_Iterator __first, _Iterator __last,
                                                output_iterator<const _CharT&> auto __out_it,
                                                __format_spec::__parsed_specifications<_ParserCharT> __specs,
                                                _UnaryOperation __op) -> decltype(__out_it) {

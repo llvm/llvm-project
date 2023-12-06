@@ -130,8 +130,10 @@ public:
   /// A std::transform wrapper.
   ///
   /// Like @ref __copy it may need to do type conversion.
-  template <__fmt_char_type _InCharT, class _UnaryOperation>
-  _LIBCPP_HIDE_FROM_ABI void __transform(const _InCharT* __first, const _InCharT* __last, _UnaryOperation __operation) {
+  template <contiguous_iterator _Iterator,
+            class _UnaryOperation,
+            __fmt_char_type _InCharT = typename iterator_traits<_Iterator>::value_type>
+  _LIBCPP_HIDE_FROM_ABI void __transform(_Iterator __first, _Iterator __last, _UnaryOperation __operation) {
     _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "not a valid range");
 
     size_t __n = static_cast<size_t>(__last - __first);
@@ -590,8 +592,10 @@ public:
     __size_ += __n;
   }
 
-  template <__fmt_char_type _InCharT, class _UnaryOperation>
-  _LIBCPP_HIDE_FROM_ABI void __transform(const _InCharT* __first, const _InCharT* __last, _UnaryOperation __operation) {
+  template <contiguous_iterator _Iterator,
+            class _UnaryOperation,
+            __fmt_char_type _InCharT = typename iterator_traits<_Iterator>::value_type>
+  _LIBCPP_HIDE_FROM_ABI void __transform(_Iterator __first, _Iterator __last, _UnaryOperation __operation) {
     _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "not a valid range");
 
     size_t __n = static_cast<size_t>(__last - __first);
