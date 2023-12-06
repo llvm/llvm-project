@@ -22,17 +22,7 @@ using namespace llvm::sys;
 PluginManager *PM;
 
 // List of all plugins that can support offloading.
-static const char *RTLNames[] = {
-#ifdef ENABLED_OFFLOAD_PLUGINS
-    ENABLED_OFFLOAD_PLUGINS
-#else
-    /* PowerPC target       */ "libomptarget.rtl.ppc64",
-    /* x86_64 target        */ "libomptarget.rtl.x86_64",
-    /* CUDA target          */ "libomptarget.rtl.cuda",
-    /* AArch64 target       */ "libomptarget.rtl.aarch64",
-    /* AMDGPU target        */ "libomptarget.rtl.amdgpu",
-#endif
-};
+static const char *RTLNames[] = {ENABLED_OFFLOAD_PLUGINS};
 
 PluginAdaptorTy::PluginAdaptorTy(const std::string &Name) : Name(Name) {
   DP("Attempting to load library '%s'...\n", Name.c_str());
