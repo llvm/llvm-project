@@ -51,9 +51,9 @@ private:
     const char_type* __delim_;
 public:
     _LIBCPP_HIDE_FROM_ABI ostream_iterator(ostream_type& __s) _NOEXCEPT
-        : __out_stream_(_VSTD::addressof(__s)), __delim_(nullptr) {}
+        : __out_stream_(std::addressof(__s)), __delim_(nullptr) {}
     _LIBCPP_HIDE_FROM_ABI ostream_iterator(ostream_type& __s, const _CharT* __delimiter) _NOEXCEPT
-        : __out_stream_(_VSTD::addressof(__s)), __delim_(__delimiter) {}
+        : __out_stream_(std::addressof(__s)), __delim_(__delimiter) {}
     _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator=(const _Tp& __value)
         {
             *__out_stream_ << __value;

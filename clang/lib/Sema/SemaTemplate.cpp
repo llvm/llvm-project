@@ -3990,9 +3990,16 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     if (Inst.isInvalid())
       return QualType();
 
-    CanonType = SubstType(Pattern->getUnderlyingType(),
-                          TemplateArgLists, AliasTemplate->getLocation(),
-                          AliasTemplate->getDeclName());
+    {
+      bool ForLambdaCallOperator = false;
+      if (const auto *Rec = dyn_cast<CXXRecordDecl>(Pattern->getDeclContext()))
+        ForLambdaCallOperator = Rec->isLambda();
+      Sema::ContextRAII SavedContext(*this, Pattern->getDeclContext(),
+                                     !ForLambdaCallOperator);
+      CanonType =
+          SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
+                    AliasTemplate->getLocation(), AliasTemplate->getDeclName());
+    }
     if (CanonType.isNull()) {
       // If this was enable_if and we failed to find the nested type
       // within enable_if in a SFINAE context, dig out the specific

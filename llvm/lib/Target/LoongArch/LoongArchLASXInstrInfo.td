@@ -1480,6 +1480,14 @@ def : Pat<(f32 (vector_extract v8f32:$xj, i64:$rk)),
 def : Pat<(f64 (vector_extract v4f64:$xj, i64:$rk)),
           (f64 (EXTRACT_SUBREG (XVREPLVE_D v4f64:$xj, i64:$rk), sub_64))>;
 
+// vselect
+def : Pat<(v32i8 (vselect LASX256:$xj, LASX256:$xd,
+                          (v32i8 (SplatPat_uimm8 uimm8:$imm)))),
+          (XVBITSELI_B LASX256:$xd, LASX256:$xj, uimm8:$imm)>;
+foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
+  def  : Pat<(vt (vselect LASX256:$xa, LASX256:$xk, LASX256:$xj)),
+             (XVBITSEL_V LASX256:$xj, LASX256:$xk, LASX256:$xa)>;
+
 } // Predicates = [HasExtLASX]
 
 /// Intrinsic pattern

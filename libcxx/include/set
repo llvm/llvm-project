@@ -591,8 +591,8 @@ public:
     typedef typename __base::difference_type       difference_type;
     typedef typename __base::const_iterator        iterator;
     typedef typename __base::const_iterator        const_iterator;
-    typedef _VSTD::reverse_iterator<iterator>       reverse_iterator;
-    typedef _VSTD::reverse_iterator<const_iterator> const_reverse_iterator;
+    typedef std::reverse_iterator<iterator>       reverse_iterator;
+    typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
 #if _LIBCPP_STD_VER >= 17
     typedef __set_node_handle<typename __base::__node, allocator_type> node_type;
@@ -682,7 +682,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     set(set&& __s)
         _NOEXCEPT_(is_nothrow_move_constructible<__base>::value)
-        : __tree_(_VSTD::move(__s.__tree_)) {}
+        : __tree_(std::move(__s.__tree_)) {}
 #endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_HIDE_FROM_ABI
@@ -731,7 +731,7 @@ public:
     set& operator=(set&& __s)
         _NOEXCEPT_(is_nothrow_move_assignable<__base>::value)
         {
-            __tree_ = _VSTD::move(__s.__tree_);
+            __tree_ = std::move(__s.__tree_);
             return *this;
         }
 #endif // _LIBCPP_CXX03_LANG
@@ -784,11 +784,11 @@ public:
     template <class... _Args>
         _LIBCPP_HIDE_FROM_ABI
         pair<iterator, bool> emplace(_Args&&... __args)
-            {return __tree_.__emplace_unique(_VSTD::forward<_Args>(__args)...);}
+            {return __tree_.__emplace_unique(std::forward<_Args>(__args)...);}
     template <class... _Args>
         _LIBCPP_HIDE_FROM_ABI
         iterator emplace_hint(const_iterator __p, _Args&&... __args)
-            {return __tree_.__emplace_hint_unique(__p, _VSTD::forward<_Args>(__args)...);}
+            {return __tree_.__emplace_hint_unique(__p, std::forward<_Args>(__args)...);}
 #endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_HIDE_FROM_ABI
@@ -820,11 +820,11 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
     pair<iterator,bool> insert(value_type&& __v)
-        {return __tree_.__insert_unique(_VSTD::move(__v));}
+        {return __tree_.__insert_unique(std::move(__v));}
 
     _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator __p, value_type&& __v)
-        {return __tree_.__insert_unique(__p, _VSTD::move(__v));}
+        {return __tree_.__insert_unique(__p, std::move(__v));}
 
     _LIBCPP_HIDE_FROM_ABI
     void insert(initializer_list<value_type> __il)
@@ -849,7 +849,7 @@ public:
         _LIBCPP_ASSERT_UNCATEGORIZED(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to set::insert()");
         return __tree_.template __node_handle_insert_unique<
-            node_type, insert_return_type>(_VSTD::move(__nh));
+            node_type, insert_return_type>(std::move(__nh));
     }
     _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator __hint, node_type&& __nh)
@@ -857,7 +857,7 @@ public:
         _LIBCPP_ASSERT_UNCATEGORIZED(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to set::insert()");
         return __tree_.template __node_handle_insert_unique<node_type>(
-            __hint, _VSTD::move(__nh));
+            __hint, std::move(__nh));
     }
     _LIBCPP_HIDE_FROM_ABI
     node_type extract(key_type const& __key)
@@ -1052,13 +1052,13 @@ set(initializer_list<_Key>, _Allocator)
 
 template <class _Key, class _Compare, class _Allocator>
 set<_Key, _Compare, _Allocator>::set(set&& __s, const allocator_type& __a)
-    : __tree_(_VSTD::move(__s.__tree_), __a)
+    : __tree_(std::move(__s.__tree_), __a)
 {
     if (__a != __s.get_allocator())
     {
         const_iterator __e = cend();
         while (!__s.empty())
-            insert(__e, _VSTD::move(__s.__tree_.remove(__s.begin())->__value_));
+            insert(__e, std::move(__s.__tree_.remove(__s.begin())->__value_));
     }
 }
 
@@ -1070,7 +1070,7 @@ bool
 operator==(const set<_Key, _Compare, _Allocator>& __x,
            const set<_Key, _Compare, _Allocator>& __y)
 {
-    return __x.size() == __y.size() && _VSTD::equal(__x.begin(), __x.end(), __y.begin());
+    return __x.size() == __y.size() && std::equal(__x.begin(), __x.end(), __y.begin());
 }
 
 #if _LIBCPP_STD_VER <= 17
@@ -1081,7 +1081,7 @@ bool
 operator< (const set<_Key, _Compare, _Allocator>& __x,
            const set<_Key, _Compare, _Allocator>& __y)
 {
-    return _VSTD::lexicographical_compare(__x.begin(), __x.end(), __y.begin(), __y.end());
+    return std::lexicographical_compare(__x.begin(), __x.end(), __y.begin(), __y.end());
 }
 
 template <class _Key, class _Compare, class _Allocator>
@@ -1147,7 +1147,7 @@ template <class _Key, class _Compare, class _Allocator, class _Predicate>
 inline _LIBCPP_HIDE_FROM_ABI
     typename set<_Key, _Compare, _Allocator>::size_type
     erase_if(set<_Key, _Compare, _Allocator>& __c, _Predicate __pred) {
-  return _VSTD::__libcpp_erase_if_container(__c, __pred);
+  return std::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 
@@ -1185,8 +1185,8 @@ public:
     typedef typename __base::difference_type       difference_type;
     typedef typename __base::const_iterator        iterator;
     typedef typename __base::const_iterator        const_iterator;
-    typedef _VSTD::reverse_iterator<iterator>       reverse_iterator;
-    typedef _VSTD::reverse_iterator<const_iterator> const_reverse_iterator;
+    typedef std::reverse_iterator<iterator>       reverse_iterator;
+    typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
 #if _LIBCPP_STD_VER >= 17
     typedef __set_node_handle<typename __base::__node, allocator_type> node_type;
@@ -1275,7 +1275,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     multiset(multiset&& __s)
         _NOEXCEPT_(is_nothrow_move_constructible<__base>::value)
-        : __tree_(_VSTD::move(__s.__tree_)) {}
+        : __tree_(std::move(__s.__tree_)) {}
 
     _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s, const allocator_type& __a);
 #endif // _LIBCPP_CXX03_LANG
@@ -1322,7 +1322,7 @@ public:
     multiset& operator=(multiset&& __s)
         _NOEXCEPT_(is_nothrow_move_assignable<__base>::value)
         {
-            __tree_ = _VSTD::move(__s.__tree_);
+            __tree_ = std::move(__s.__tree_);
             return *this;
         }
 #endif // _LIBCPP_CXX03_LANG
@@ -1375,11 +1375,11 @@ public:
     template <class... _Args>
         _LIBCPP_HIDE_FROM_ABI
         iterator emplace(_Args&&... __args)
-            {return __tree_.__emplace_multi(_VSTD::forward<_Args>(__args)...);}
+            {return __tree_.__emplace_multi(std::forward<_Args>(__args)...);}
     template <class... _Args>
         _LIBCPP_HIDE_FROM_ABI
         iterator emplace_hint(const_iterator __p, _Args&&... __args)
-            {return __tree_.__emplace_hint_multi(__p, _VSTD::forward<_Args>(__args)...);}
+            {return __tree_.__emplace_hint_multi(__p, std::forward<_Args>(__args)...);}
 #endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_HIDE_FROM_ABI
@@ -1411,11 +1411,11 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
     iterator insert(value_type&& __v)
-        {return __tree_.__insert_multi(_VSTD::move(__v));}
+        {return __tree_.__insert_multi(std::move(__v));}
 
     _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator __p, value_type&& __v)
-        {return __tree_.__insert_multi(__p, _VSTD::move(__v));}
+        {return __tree_.__insert_multi(__p, std::move(__v));}
 
     _LIBCPP_HIDE_FROM_ABI
     void insert(initializer_list<value_type> __il)
@@ -1439,7 +1439,7 @@ public:
         _LIBCPP_ASSERT_UNCATEGORIZED(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to multiset::insert()");
         return __tree_.template __node_handle_insert_multi<node_type>(
-            _VSTD::move(__nh));
+            std::move(__nh));
     }
     _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator __hint, node_type&& __nh)
@@ -1447,7 +1447,7 @@ public:
         _LIBCPP_ASSERT_UNCATEGORIZED(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to multiset::insert()");
         return __tree_.template __node_handle_insert_multi<node_type>(
-            __hint, _VSTD::move(__nh));
+            __hint, std::move(__nh));
     }
     _LIBCPP_HIDE_FROM_ABI
     node_type extract(key_type const& __key)
@@ -1643,13 +1643,13 @@ multiset(initializer_list<_Key>, _Allocator)
 
 template <class _Key, class _Compare, class _Allocator>
 multiset<_Key, _Compare, _Allocator>::multiset(multiset&& __s, const allocator_type& __a)
-    : __tree_(_VSTD::move(__s.__tree_), __a)
+    : __tree_(std::move(__s.__tree_), __a)
 {
     if (__a != __s.get_allocator())
     {
         const_iterator __e = cend();
         while (!__s.empty())
-            insert(__e, _VSTD::move(__s.__tree_.remove(__s.begin())->__value_));
+            insert(__e, std::move(__s.__tree_.remove(__s.begin())->__value_));
     }
 }
 
@@ -1661,7 +1661,7 @@ bool
 operator==(const multiset<_Key, _Compare, _Allocator>& __x,
            const multiset<_Key, _Compare, _Allocator>& __y)
 {
-    return __x.size() == __y.size() && _VSTD::equal(__x.begin(), __x.end(), __y.begin());
+    return __x.size() == __y.size() && std::equal(__x.begin(), __x.end(), __y.begin());
 }
 
 #if _LIBCPP_STD_VER <= 17
@@ -1672,7 +1672,7 @@ bool
 operator< (const multiset<_Key, _Compare, _Allocator>& __x,
            const multiset<_Key, _Compare, _Allocator>& __y)
 {
-    return _VSTD::lexicographical_compare(__x.begin(), __x.end(), __y.begin(), __y.end());
+    return std::lexicographical_compare(__x.begin(), __x.end(), __y.begin(), __y.end());
 }
 
 template <class _Key, class _Compare, class _Allocator>
@@ -1737,7 +1737,7 @@ template <class _Key, class _Compare, class _Allocator, class _Predicate>
 inline _LIBCPP_HIDE_FROM_ABI
     typename multiset<_Key, _Compare, _Allocator>::size_type
     erase_if(multiset<_Key, _Compare, _Allocator>& __c, _Predicate __pred) {
-  return _VSTD::__libcpp_erase_if_container(__c, __pred);
+  return std::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 

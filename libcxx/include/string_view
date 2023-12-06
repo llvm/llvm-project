@@ -285,7 +285,7 @@ public:
     using const_iterator         = const_pointer; // See [string.view.iterators]
 #endif
     using iterator               = const_iterator;
-    using const_reverse_iterator = _VSTD::reverse_iterator<const_iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
     using reverse_iterator       = const_reverse_iterator;
     using size_type              = size_t;
     using difference_type        = ptrdiff_t;
@@ -324,7 +324,7 @@ public:
     template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
       requires (is_same_v<iter_value_t<_It>, _CharT> && !is_convertible_v<_End, size_type>)
     constexpr _LIBCPP_HIDE_FROM_ABI basic_string_view(_It __begin, _End __end)
-       : __data_(_VSTD::to_address(__begin)), __size_(__end - __begin)
+       : __data_(std::to_address(__begin)), __size_(__end - __begin)
     {
       _LIBCPP_ASSERT_VALID_INPUT_RANGE((__end - __begin) >= 0,
                                        "std::string_view::string_view(iterator, sentinel) received invalid range");
@@ -340,7 +340,7 @@ public:
         is_same_v<ranges::range_value_t<_Range>, _CharT> &&
         !is_convertible_v<_Range, const _CharT*> &&
         (!requires(remove_cvref_t<_Range>& __d) {
-          __d.operator _VSTD::basic_string_view<_CharT, _Traits>();
+          __d.operator std::basic_string_view<_CharT, _Traits>();
         })
       )
     constexpr explicit _LIBCPP_HIDE_FROM_ABI
@@ -349,7 +349,7 @@ public:
 
     _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI
     basic_string_view(const _CharT* __s)
-        : __data_(__s), __size_(_VSTD::__char_traits_length_checked<_Traits>(__s)) {}
+        : __data_(__s), __size_(std::__char_traits_length_checked<_Traits>(__s)) {}
 
 #if _LIBCPP_STD_VER >= 23
     basic_string_view(nullptr_t) = delete;
@@ -468,7 +468,7 @@ public:
     {
         if (__pos > size())
             __throw_out_of_range("string_view::copy");
-        size_type __rlen = _VSTD::min(__n, size() - __pos);
+        size_type __rlen = std::min(__n, size() - __pos);
         _Traits::copy(__s, data() + __pos, __rlen);
         return __rlen;
     }
@@ -478,12 +478,12 @@ public:
     {
         return __pos > size()
             ? (__throw_out_of_range("string_view::substr"), basic_string_view())
-            : basic_string_view(data() + __pos, _VSTD::min(__n, size() - __pos));
+            : basic_string_view(data() + __pos, std::min(__n, size() - __pos));
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX14 int compare(basic_string_view __sv) const _NOEXCEPT
     {
-        size_type __rlen = _VSTD::min(size(), __sv.size());
+        size_type __rlen = std::min(size(), __sv.size());
         int __retval = _Traits::compare(data(), __sv.data(), __rlen);
         if (__retval == 0) // first __rlen chars matched
             __retval = size() == __sv.size() ? 0 : (size() < __sv.size() ? -1 : 1);
