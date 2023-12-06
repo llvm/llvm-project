@@ -2,10 +2,6 @@ Johannes: breakage
   [OpenMP][FIX] Move workaround code to avoid races 
    see smoke-fails, smoke-limbo, smoke, examples
 
-defer to post merge:
-[OpenMP] Reorganize the initialization of `PluginAdaptorTy` 
-
 revert: breaks MIOpen composableKernel build 
 [clang][Sema] Add -Wswitch-default warning option (#73077)  
-
 

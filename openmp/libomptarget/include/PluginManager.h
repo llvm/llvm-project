@@ -34,13 +34,29 @@
 #include <mutex>
 #include <string>
 
+struct PluginManager;
+
+/// Plugin adaptors should be created via `PluginAdaptorTy::create` which will
+/// invoke the constructor and call `PluginAdaptorTy::init`. Eventual errors are
+/// reported back to the caller, otherwise a valid and initialized adaptor is
+/// returned.
 struct PluginAdaptorTy {
-  PluginAdaptorTy(const std::string &Name);
+  /// Try to create a plugin adaptor from a filename.
+  static llvm::Expected<std::unique_ptr<PluginAdaptorTy>>
+  create(const std::string &Name);
+
+  /// Initialize as many devices as possible for this plugin adaptor. Devices
+  /// that fail to initialize are ignored.
+  void initDevices(PluginManager &PM);
 
   bool isUsed() const { return DeviceOffset >= 0; }
 
-  /// Return the number of devices available to this plugin.
-  int32_t getNumDevices() const { return NumberOfDevices; }
+  /// Return the number of devices visible to the underlying plugin.
+  int32_t getNumberOfPluginDevices() const { return NumberOfPluginDevices; }
+
+  /// Return the number of devices successfully initialized and visible to the
+  /// user.
+  int32_t getNumberOfUserDevices() const { return NumberOfUserDevices; }
 
   /// Add all offload entries described by \p DI to the devices managed by this
   /// plugin.
@@ -50,9 +66,6 @@ struct PluginAdaptorTy {
   /// registered before, i.e. the OpenMP index of the first device to be
   /// registered with this RTL.
   int32_t DeviceOffset = -1;
-
-  /// Number of devices this RTL deals with.
-  int32_t NumberOfDevices = -1;
 
   /// Name of the shared object file representing the plugin.
   std::string Name;
@@ -73,6 +86,22 @@ struct PluginAdaptorTy {
   // It is easier to enforce thread-safety at the libomptarget level,
   // so that developers of new RTLs do not have to worry about it.
   std::mutex Mtx;
+
+private:
+  /// Number of devices the underling plugins sees.
+  int32_t NumberOfPluginDevices = -1;
+
+  /// Number of devices exposed to the user. This can be less than the number of
+  /// devices for the plugin if some failed to initialize.
+  int32_t NumberOfUserDevices = 0;
+
+  /// Create a plugin adaptor for filename \p Name with a dynamic library \p DL.
+  PluginAdaptorTy(const std::string &Name,
+                  std::unique_ptr<llvm::sys::DynamicLibrary> DL);
+
+  /// Initialize the plugin adaptor, this can fail in which case the adaptor is
+  /// useless.
+  llvm::Error init();
 };
 
 /// Struct for the data required to handle plugins
@@ -150,20 +179,15 @@ struct PluginManager {
   int getNumUsedPlugins() const {
     int NCI = 0;
     for (auto &P : PluginAdaptors)
-      NCI += P.isUsed();
+      NCI += P->isUsed();
     return NCI;
   }
-
-  // Initialize \p Plugin if it has not been initialized.
-  void initPlugin(PluginAdaptorTy &Plugin);
 
   // Initialize all plugins.
   void initAllPlugins();
 
   /// Iterator range for all plugin adaptors (in use or not, but always valid).
-  auto pluginAdaptors() {
-    return llvm::make_range(PluginAdaptors.begin(), PluginAdaptors.end());
-  }
+  auto pluginAdaptors() { return llvm::make_pointee_range(PluginAdaptors); }
 
   /// Return the user provided requirements.
   int64_t getRequirements() const { return Requirements.getRequirements(); }
@@ -176,7 +200,7 @@ private:
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 
   // List of all plugin adaptors, in use or not.
-  std::list<PluginAdaptorTy> PluginAdaptors;
+  llvm::SmallVector<std::unique_ptr<PluginAdaptorTy>> PluginAdaptors;
 
   /// Executable images and information extracted from the input images passed
   /// to the runtime.

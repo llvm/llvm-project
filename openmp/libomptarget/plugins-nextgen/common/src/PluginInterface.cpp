@@ -1904,7 +1904,7 @@ void __tgt_rtl_set_up_env() { Plugin::get().setUpEnv(); }
 
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   Plugin::get().setRequiresFlag(RequiresFlags);
-  return RequiresFlags;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_is_data_exchangable(int32_t SrcDeviceId,
