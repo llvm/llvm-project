@@ -62,14 +62,6 @@ static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   return filteredAttrs;
 }
 
-static auto processIntOverflowAttr(ArrayRef<NamedAttribute> attrs) {
-  SmallVector<NamedAttribute, 8> filteredAttrs(
-      llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
-        return attr.getName() != "overflowFlags";
-      }));
-  return filteredAttrs;
-}
-
 static ParseResult parseLLVMOpAttrs(OpAsmParser &parser,
                                     NamedAttrList &result) {
   return parser.parseOptionalAttrDict(result);
@@ -77,8 +69,8 @@ static ParseResult parseLLVMOpAttrs(OpAsmParser &parser,
 
 static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
                              DictionaryAttr attrs) {
-  printer.printOptionalAttrDict(
-      processFMFAttr(processIntOverflowAttr(attrs.getValue())));
+  printer.printOptionalAttrDict(processFMFAttr(attrs.getValue()),
+                                /*elidedAttrs=*/{"overflowFlags"});
 }
 
 /// Verifies `symbol`'s use in `op` to ensure the symbol is a valid and
