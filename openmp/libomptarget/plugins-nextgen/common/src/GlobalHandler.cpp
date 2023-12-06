@@ -105,6 +105,26 @@ Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
   return Plugin::success();
 }
 
+bool GenericGlobalHandlerTy::isSymbolInImage(GenericDeviceTy &Device,
+                                             DeviceImageTy &Image,
+                                             StringRef SymName) {
+  // Get the ELF object file for the image. Notice the ELF object may already
+  // be created in previous calls, so we can reuse it. If this is unsuccessful
+  // just return false as we couldn't find it.
+  const ELF64LEObjectFile *ELFObj = getOrCreateELFObjectFile(Device, Image);
+  if (!ELFObj)
+    return false;
+
+  // Search the ELF symbol using the symbol name.
+  auto SymOrErr = utils::elf::getSymbol(*ELFObj, SymName);
+  if (!SymOrErr) {
+    consumeError(SymOrErr.takeError());
+    return false;
+  }
+
+  return *SymOrErr;
+}
+
 Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
     GenericDeviceTy &Device, DeviceImageTy &Image, GlobalTy &ImageGlobal) {
 
