@@ -218,7 +218,7 @@ void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
 
     // If we're inserting at point I, and not in front of the DPValues attached
     // there, then we should absorb the DPValues attached to I.
-    if (!InsertAtHead)
+    if (NextMarker && !InsertAtHead)
       DbgMarker->absorbDebugValues(*NextMarker, false);
   }
 

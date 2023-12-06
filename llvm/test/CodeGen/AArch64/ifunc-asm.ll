@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=arm64-unknown-linux-gnu %s -filetype=asm -o - | FileCheck %s --check-prefixes=ELF
-; RUN: llc -mtriple=arm64-apple-darwin %s -filetype=asm -o - | FileCheck %s --check-prefix=MACHO
-; RUN: llc -mtriple=arm64-apple-darwin %s -filetype=asm -o - -global-isel | FileCheck %s --check-prefix=MACHO
+; RUN: llc -mtriple=arm64-unknown-linux-gnu %s -o - | FileCheck %s --check-prefixes=ELF
+; RUN: llc -mtriple=arm64-apple-darwin %s -o - | FileCheck %s --check-prefix=MACHO
+; RUN: llc -mtriple=arm64-apple-darwin %s -global-isel -o - | FileCheck %s --check-prefix=MACHO
 
 define internal ptr @the_resolver() {
 entry:
@@ -19,7 +19,6 @@ entry:
 ; ELF-NEXT:        .set global_ifunc, the_resolver
 
 ; MACHO:           .section __DATA,__data
-; MACHO-NEXT:      .globl _global_ifunc.lazy_pointer
 ; MACHO-NEXT:      .p2align 3, 0x0
 ; MACHO-NEXT:  _global_ifunc.lazy_pointer:
 ; MACHO-NEXT:      .quad _global_ifunc.stub_helper
@@ -32,7 +31,6 @@ entry:
 ; MACHO-NEXT:      ldr     x16, [x16, _global_ifunc.lazy_pointer@GOTPAGEOFF]
 ; MACHO-NEXT:      ldr     x16, [x16]
 ; MACHO-NEXT:      br      x16
-; MACHO-NEXT:      .globl  _global_ifunc.stub_helper
 ; MACHO-NEXT:      .p2align        2
 ; MACHO-NEXT:  _global_ifunc.stub_helper:
 ; MACHO-NEXT:      stp     x29, x30, [sp, #-16]!
@@ -64,9 +62,9 @@ entry:
 
 @weak_ifunc = weak ifunc i32 (i32), ptr @the_resolver
 ; ELF:             .type weak_ifunc,@gnu_indirect_function
-; MACHO:           .weak_reference _weak_ifunc.lazy_pointer
+; MACHO-NOT:       .weak_reference _weak_ifunc.lazy_pointer
 ; MACHO:       _weak_ifunc.lazy_pointer:
 ; MACHO:           .weak_reference _weak_ifunc
 ; MACHO:       _weak_ifunc:
-; MACHO:           .weak_reference _weak_ifunc.stub_helper
+; MACHO-NOT:       .weak_reference _weak_ifunc.stub_helper
 ; MACHO:       _weak_ifunc.stub_helper:
