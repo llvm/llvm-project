@@ -79,8 +79,8 @@ ExegesisTarget::createBenchmarkRunner(
     Benchmark::ModeE Mode, const LLVMState &State,
     BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
     BenchmarkRunner::ExecutionModeE ExecutionMode,
-    Benchmark::ResultAggregationModeE ResultAggMode,
-    unsigned BenchmarkRepeatCount) const {
+    unsigned BenchmarkRepeatCount,
+    Benchmark::ResultAggregationModeE ResultAggMode) const {
   PfmCountersInfo PfmCounters = State.getPfmCounters();
   switch (Mode) {
   case Benchmark::Unknown:

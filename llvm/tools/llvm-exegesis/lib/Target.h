@@ -262,8 +262,8 @@ public:
       Benchmark::ModeE Mode, const LLVMState &State,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       BenchmarkRunner::ExecutionModeE ExecutionMode,
-      Benchmark::ResultAggregationModeE ResultAggMode = Benchmark::Min,
-      unsigned BenchmarkRepeatCount = 30) const;
+      unsigned BenchmarkRepeatCount,
+      Benchmark::ResultAggregationModeE ResultAggMode = Benchmark::Min) const;
 
   // Returns the ExegesisTarget for the given triple or nullptr if the target
   // does not exist.
