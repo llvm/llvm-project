@@ -249,7 +249,9 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
     // ops that broadcast the constant to each tile slice.
     auto loc = constantOp.getLoc();
 
-    // Unpack 1-d vector type from 2-d vector type.
+    // To fill a tile with a constant, we create a 1-D splat of the constant,
+    // then move that into each tile slice (the largest unit we can set at once,
+    // outside of operations like the outerproduct).
     VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
     auto denseAttr1D = DenseElementsAttr::get(
         tileSliceType, denseAttr.getSplatValue<Attribute>());
