@@ -68,7 +68,7 @@ class LLVM_IntArithmeticOpWithFlag<string mnemonic, string instName,
     $res = op;
   }];
   let assemblyFormat = [{
-    $lhs `,` $rhs (`flags` ` ` $overflowFlags^)?
+    $lhs `,` $rhs (`overflow` $overflowFlags^)?
     custom<LLVMOpAttrs>(attr-dict) `:` type($res)
   }];
   string llvmBuilder =
