@@ -117,9 +117,16 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<X86ELFTargetObjectFile>();
 }
 
-static std::string computeDataLayout(const Triple &TT) {
+static std::string computeDataLayout(const Triple &TT,
+                                     const TargetOptions &Options) {
   // X86 is little endian
   std::string Ret = "e";
+
+  // Decimal floating-point encoding.
+  // TODO: assert (Options.DFPEncoding == BinaryEncoding::BID)
+  // and diagnose.
+  if (Options.DFPEncoding != BinaryEncoding::None)
+    Ret += "-d:bid";
 
   Ret += DataLayout::getManglingComponent(TT);
   // X86 and x32 have 32 bit pointers.
@@ -226,7 +233,7 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
     : LLVMTargetMachine(
-          T, computeDataLayout(TT), TT, CPU, FS, Options,
+	  T, computeDataLayout(TT, Options), TT, CPU, FS, Options,
           getEffectiveRelocModel(TT, JIT, RM),
           getEffectiveX86CodeModel(CM, JIT, TT.getArch() == Triple::x86_64),
           OL),

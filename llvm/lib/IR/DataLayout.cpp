@@ -197,6 +197,7 @@ void DataLayout::reset(StringRef Desc) {
 
   LayoutMap = nullptr;
   BigEndian = false;
+  DFPBinaryEncoding = None;
   AllocaAddrSpace = 0;
   StackNaturalAlign.reset();
   ProgramAddrSpace = 0;
@@ -317,6 +318,14 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
       break;
     case 'e':
       BigEndian = false;
+      break;
+    case 'd':
+      if (Split.second == "bid")
+        DFPBinaryEncoding = BID;
+      else if (Split.second == "dpd")
+        DFPBinaryEncoding = DPD;
+      else
+        DFPBinaryEncoding = None;
       break;
     case 'p': {
       // Address space.
