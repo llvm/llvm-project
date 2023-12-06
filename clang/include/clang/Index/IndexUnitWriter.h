@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_INDEX_INDEXUNITWRITER_H
 #define LLVM_CLANG_INDEX_INDEXUNITWRITER_H
 
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -51,7 +52,7 @@ class IndexUnitWriter {
   std::string ProviderVersion;
   std::string OutputFile;
   std::string ModuleName;
-  const FileEntry *MainFile;
+  OptionalFileEntryRef MainFile;
   bool IsSystemUnit;
   bool IsModuleUnit;
   bool IsDebugCompilation;
@@ -66,7 +67,7 @@ class IndexUnitWriter {
     unsigned Line;
   };
   struct FileEntryData {
-    const FileEntry *File;
+    FileEntryRef File;
     bool IsSystem;
     int ModuleIndex;
     std::vector<FileInclude> Includes;
@@ -96,7 +97,7 @@ public:
                   StringRef ProviderIdentifier, StringRef ProviderVersion,
                   StringRef OutputFile,
                   StringRef ModuleName,
-                  const FileEntry *MainFile,
+                  OptionalFileEntryRef MainFile,
                   bool IsSystem,
                   bool IsModuleUnit,
                   bool IsDebugCompilation,
@@ -106,14 +107,15 @@ public:
                   writer::ModuleInfoWriterCallback GetInfoForModule);
   ~IndexUnitWriter();
 
-  int addFileDependency(const FileEntry *File, bool IsSystem,
+  int addFileDependency(OptionalFileEntryRef File, bool IsSystem,
                         writer::OpaqueModule Mod);
-  void addRecordFile(StringRef RecordFile, const FileEntry *File, bool IsSystem,
-                     writer::OpaqueModule Mod);
-  void addASTFileDependency(const FileEntry *File, bool IsSystem,
-                            writer::OpaqueModule Mod, bool withoutUnitName = false);
-  void addUnitDependency(StringRef UnitFile, const FileEntry *File, bool IsSystem,
-                         writer::OpaqueModule Mod);
+  void addRecordFile(StringRef RecordFile, OptionalFileEntryRef File,
+                     bool IsSystem, writer::OpaqueModule Mod);
+  void addASTFileDependency(OptionalFileEntryRef File, bool IsSystem,
+                            writer::OpaqueModule Mod,
+                            bool withoutUnitName = false);
+  void addUnitDependency(StringRef UnitFile, OptionalFileEntryRef File,
+                         bool IsSystem, writer::OpaqueModule Mod);
   bool addInclude(const FileEntry *Source, unsigned Line, const FileEntry *Target);
 
   bool write(std::string &Error);

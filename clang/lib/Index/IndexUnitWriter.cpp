@@ -49,10 +49,10 @@ public:
 
   ArrayRef<FileBitPath> getBitPaths() const { return FileBitPaths; }
 
-  int getPathIndex(const FileEntry *FE) {
+  int getPathIndex(OptionalFileEntryRef FE) {
     if (!FE)
       return -1;
-    auto Pair = FileToIndex.insert(std::make_pair(FE, FileBitPaths.size()));
+    auto Pair = FileToIndex.insert(std::make_pair(*FE, FileBitPaths.size()));
     bool IsNew = Pair.second;
     size_t Index = Pair.first->getSecond();
 
@@ -122,7 +122,7 @@ IndexUnitWriter::IndexUnitWriter(FileManager &FileMgr,
                                  StringRef ProviderVersion,
                                  StringRef OutputFile,
                                  StringRef ModuleName,
-                                 const FileEntry *MainFile,
+                                 OptionalFileEntryRef MainFile,
                                  bool IsSystem,
                                  bool IsModuleUnit,
                                  bool IsDebugCompilation,
@@ -165,28 +165,30 @@ int IndexUnitWriter::addModule(writer::OpaqueModule Mod) {
   return Pair.first->second;
 }
 
-int IndexUnitWriter::addFileDependency(const FileEntry *File, bool IsSystem,
+int IndexUnitWriter::addFileDependency(OptionalFileEntryRef File, bool IsSystem,
                                        writer::OpaqueModule Mod) {
   assert(File);
-  auto Pair = IndexByFile.insert(std::make_pair(File, Files.size()));
+  auto Pair = IndexByFile.insert(std::make_pair(*File, Files.size()));
   bool WasInserted = Pair.second;
   if (WasInserted) {
-    Files.push_back(FileEntryData{File, IsSystem, addModule(Mod), {}});
+    Files.push_back(FileEntryData{*File, IsSystem, addModule(Mod), {}});
   }
   return Pair.first->second;
 }
 
-void IndexUnitWriter::addRecordFile(StringRef RecordFile, const FileEntry *File,
-                                    bool IsSystem, writer::OpaqueModule Mod) {
+void IndexUnitWriter::addRecordFile(StringRef RecordFile,
+                                    OptionalFileEntryRef File, bool IsSystem,
+                                    writer::OpaqueModule Mod) {
   int Dep = File ? addFileDependency(File, IsSystem, /*module=*/nullptr) : -1;
   Records.push_back(RecordOrUnitData{std::string(RecordFile), Dep, addModule(Mod), IsSystem});
 }
 
-void IndexUnitWriter::addASTFileDependency(const FileEntry *File, bool IsSystem,
+void IndexUnitWriter::addASTFileDependency(OptionalFileEntryRef File,
+                                           bool IsSystem,
                                            writer::OpaqueModule Mod,
                                            bool withoutUnitName) {
   assert(File);
-  if (!SeenASTFiles.insert(File).second)
+  if (!SeenASTFiles.insert(*File).second)
     return;
 
   SmallString<64> UnitName;
@@ -196,7 +198,8 @@ void IndexUnitWriter::addASTFileDependency(const FileEntry *File, bool IsSystem,
 }
 
 void IndexUnitWriter::addUnitDependency(StringRef UnitFile,
-                                        const FileEntry *File, bool IsSystem,
+                                        OptionalFileEntryRef File,
+                                        bool IsSystem,
                                         writer::OpaqueModule Mod) {
   int Dep = File ? addFileDependency(File, IsSystem, /*module=*/nullptr) : -1;
   ASTFileUnits.emplace_back(RecordOrUnitData{std::string(UnitFile), Dep, addModule(Mod), IsSystem});

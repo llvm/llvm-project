@@ -493,7 +493,7 @@ static hash_code hashLoc(const SourceManager &SM, SourceLocation Loc,
   hash_code Hash = INITIAL_HASH;
   Loc = SM.getFileLoc(Loc);
   const std::pair<FileID, unsigned> &Decomposed = SM.getDecomposedLoc(Loc);
-  const FileEntry *FE = SM.getFileEntryForID(Decomposed.first);
+  OptionalFileEntryRef FE = SM.getFileEntryRefForID(Decomposed.first);
   if (FE) {
     COMBINE_HASH(llvm::sys::path::filename(FE->getName()));
   } else {
