@@ -14,6 +14,13 @@
 #include "flang/Runtime/main.h"
 #include <cstdlib>
 
+#ifdef _WIN32
+#include <lmcons.h> // UNLEN=256
+#define LOGIN_NAME_MAX UNLEN
+#else
+#include <limits.h> // LOGIN_NAME_MAX
+#endif
+
 using namespace Fortran::runtime;
 
 template <std::size_t n = 64>
@@ -501,32 +508,24 @@ TEST_F(EnvironmentVariables, ErrMsgTooShort) {
   CheckDescriptorEqStr(errMsg.get(), "Mis");
 }
 
+// username first char must not be null
 TEST_F(EnvironmentVariables, GetlogGetName) {
-  const int charLen{11};
-  char input[charLen]{"XXXXXXXXX"};
+  const int charLen{3};
+  char input[charLen]{"\0\0"};
 
   FORTRAN_PROCEDURE_NAME(getlog)
   (reinterpret_cast<std::int8_t *>(input), charLen);
 
-  EXPECT_NE(input, "loginName");
-}
-
-TEST_F(EnvironmentVariables, GetlogBufferShort) {
-  const int charLen{7};
-  char input[charLen]{"XXXXXX"};
-
-  FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::int8_t *>(input), charLen);
-
-  EXPECT_NE(input, "loginN");
+  EXPECT_NE(input[0], '\0');
 }
 
 TEST_F(EnvironmentVariables, GetlogPadSpace) {
-  const int charLen{12};
-  char input[charLen]{"XXXXXXXXXX"};
+  // guarantee 1 char longer than max, last char should be pad space
+  const int charLen{LOGIN_NAME_MAX + 2};
+  char input[charLen];
 
   FORTRAN_PROCEDURE_NAME(getlog)
   (reinterpret_cast<std::int8_t *>(input), charLen);
 
-  EXPECT_NE(input, "loginName ");
+  EXPECT_EQ(input[charLen - 1], ' ');
 }

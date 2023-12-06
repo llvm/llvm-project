@@ -88,11 +88,24 @@ void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *arg, std::int64_t length) {
   int error{getlogin_r(str, nameMaxLen)};
   Terminator terminator{__FILE__, __LINE__};
   if (error != 0) {
-    terminator.Crash("getlogin_r fail with a nonzero value: %d.\n", error);
-  }
+    // if there is error, then get username from environment variable
+#ifdef _WIN32
+    const int charLen = 9;
+    char envName[charLen] = "USERNAME";
+#else
+    const int charLen = 8;
+    char envName[charLen] = "LOGNAME";
+#endif
+    std::size_t n{std::strlen(envName)};
+    Descriptor name{*Descriptor::Create(1, n, envName, 0)};
+    Descriptor value{*Descriptor::Create(1, length, arg, 0)};
 
-  // find first \0 in string then pad from there
-  CopyAndPad(reinterpret_cast<char *>(arg), str, length, std::strlen(str));
+    RTNAME(GetEnvVariable)
+    (name, &value, nullptr, false, nullptr, __FILE__, __LINE__);
+  } else {
+    // find first \0 in string then pad from there
+    CopyAndPad(reinterpret_cast<char *>(arg), str, length, std::strlen(str));
+  }
 }
 
 } // namespace Fortran::runtime
