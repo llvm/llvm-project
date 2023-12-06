@@ -147,4 +147,24 @@ end subroutine
 ! CHECK:   }
 ! CHECK:   acc.yield
 ! CHECK: }
-     
+
+subroutine loop_lbound_ubound(arr)
+  implicit none
+  real(8) :: arr(:)
+  integer(4) :: i
+  !$acc parallel loop copy(arr)
+  do i = lbound(arr, 1), ubound(arr, 1)
+    arr(i) = 1.0
+  end do
+  !$acc end parallel loop
+end subroutine
+
+! CHECK-LABEL: func.func @_QPloop_lbound_ubound
+! CHECK: acc.parallel dataOperands(%{{.*}} : !fir.ref<!fir.array<?xf64>>) {
+! CHECK: acc.loop {
+! CHECK: %[[LBOUND:.*]] = fir.convert %{{.*}} : (i32) -> index
+! CHECK: %[[UBOUND:.*]] = fir.convert %{{.*}} : (i32) -> index
+! CHECK: %[[STEP:.*]] = arith.constant 1 : index
+! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %[[LBOUND]] to %[[UBOUND]] step %[[STEP]] iter_args(%{{.*}} = %{{.*}}) -> (index, i32) {
+! CHECK: acc.yield
+! CHECK: acc.yield
