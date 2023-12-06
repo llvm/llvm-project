@@ -26,6 +26,7 @@
 ;
 ; The run with workload definitions - same other options.
 ;
+; RUN: mkdir -p %t
 ; RUN: llvm-lto2 run %t/workload1.bc %t/workload2.bc %t/workload3.bc \
 ; RUN:  -thinlto-workload-def=%t/workload_defs.json -o %t/result.o -save-temps \
 ; RUN:  -r %t/workload1.bc,m1_f1,plx \
