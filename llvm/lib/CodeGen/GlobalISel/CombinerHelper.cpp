@@ -1176,9 +1176,8 @@ bool CombinerHelper::matchCombineExtractedVectorLoad(MachineInstr &MI,
 
   Register Vector = MI.getOperand(1).getReg();
   LLT VecEltTy = MRI.getType(Vector).getElementType();
-  LLT ResultTy = MRI.getType(MI.getOperand(0).getReg());
 
-  assert(ResultTy == VecEltTy);
+  assert(MRI.getType(MI.getOperand(0).getReg()) == VecEltTy);
 
   // Checking whether we should reduce the load width.
   if (!MRI.hasOneNonDBGUse(Vector))
