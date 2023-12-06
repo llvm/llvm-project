@@ -23,7 +23,7 @@
 
 int main(int argc, char *argv[]) {
   int var = 0;
-  
+
 #pragma omp parallel reduction(+ : var)
   { var = 1; }
 

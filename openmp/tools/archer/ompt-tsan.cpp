@@ -149,7 +149,7 @@ static ArcherFlags *archer_flags;
 // Thread Sanitizer is a tool that finds races in code.
 // See http://code.google.com/p/data-race-test/wiki/DynamicAnnotations .
 // tsan detects these exact functions by name.
-//extern "C" {
+// extern "C" {
 static void (*AnnotateHappensAfter)(const char *, int, const volatile void *);
 static void (*AnnotateHappensBefore)(const char *, int, const volatile void *);
 static void (*AnnotateIgnoreWritesBegin)(const char *, int);
@@ -177,7 +177,7 @@ static void (*AnnotateReductionEnd)(const char *, int);
 // Resume checking for racy writes.
 #define TsanIgnoreWritesEnd() AnnotateIgnoreWritesEnd(__FILE__, __LINE__)
 
-// Maps to either AnnotateAllAtomics or AnnotateIgnoreWrites 
+// Maps to either AnnotateAllAtomics or AnnotateIgnoreWrites
 #define TsanReductionBegin() AnnotateReductionBegin(__FILE__, __LINE__)
 #define TsanReductionEnd() AnnotateReductionEnd(__FILE__, __LINE__)
 
@@ -1187,13 +1187,17 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
       (void (*)(const char *, int, const volatile void *, size_t)));
   findTsanFunction(__tsan_func_entry, (void (*)(const void *)));
   findTsanFunction(__tsan_func_exit, (void (*)(void)));
-  findTsanFunctionName(AnnotateReductionBegin, AnnotateAllAtomicBegin, (void (*)(const char *, int)));
-  findTsanFunctionName(AnnotateReductionEnd, AnnotateAllAtomicEnd, (void (*)(const char *, int)));
+  findTsanFunctionName(AnnotateReductionBegin, AnnotateAllAtomicBegin,
+                       (void (*)(const char *, int)));
+  findTsanFunctionName(AnnotateReductionEnd, AnnotateAllAtomicEnd,
+                       (void (*)(const char *, int)));
   if (!AnnotateReductionBegin) {
     AnnotateReductionBegin = AnnotateIgnoreWritesBegin;
     AnnotateReductionEnd = AnnotateIgnoreWritesEnd;
     if (archer_flags->verbose)
-      std::cout << "Archer uses fallback solution for reductions: might miss some race" << std::endl;
+      std::cout << "Archer uses fallback solution for reductions: might miss "
+                   "some race"
+                << std::endl;
   }
 
   SET_CALLBACK(thread_begin);

@@ -23,12 +23,13 @@
 
 int main(int argc, char *argv[]) {
   int var = 0;
-  
+
 #pragma omp parallel
   {
 #pragma omp for reduction(+ : var) nowait
-    for (int i = 0; i < 100; i++)
-      { var++; }
+    for (int i = 0; i < 100; i++) {
+      var++;
+    }
 #pragma omp masked
     var = 23;
   }

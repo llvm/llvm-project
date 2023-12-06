@@ -1055,12 +1055,12 @@ void ThreadIgnoreEnd(ThreadState *thr) {
 
 void ThreadAtomicBegin(ThreadState* thr, uptr pc) {
   thr->all_atomic++;
-//  CHECK_GT(thr->ignore_reads_and_writes, 0);
+  //  CHECK_GT(thr->ignore_reads_and_writes, 0);
   CHECK_EQ(thr->all_atomic, 1);
   thr->fast_state.SetAtomicBit();
 }
 
-void ThreadAtomicEnd(ThreadState *thr) {
+void ThreadAtomicEnd(ThreadState* thr) {
   CHECK_GT(thr->all_atomic, 0);
   thr->all_atomic--;
   if (thr->all_atomic == 0) {

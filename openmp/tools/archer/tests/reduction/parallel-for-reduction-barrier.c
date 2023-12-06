@@ -23,20 +23,21 @@
 
 int main(int argc, char *argv[]) {
   int var = 0;
-  
+
 #pragma omp parallel
   {
 #pragma omp masked
     var = 23;
 #pragma omp barrier
 #pragma omp for reduction(+ : var)
-    for (int i = 0; i < 100; i++)
-      { var++; }
+    for (int i = 0; i < 100; i++) {
+      var++;
+    }
 #pragma omp masked
     var += 42;
   }
   fprintf(stderr, "DONE\n");
-  int error = (var != 23+100+42);
+  int error = (var != 23 + 100 + 42);
   return error;
 }
 
