@@ -1065,9 +1065,8 @@ public:
 
 } // end anonymous namespace
 
-llvm::Value *
-CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
-                                        const ValueDecl *VD) {
+llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
+                                                     const ValueDecl *VD) {
   // This method is typically called in contexts where we can't generate
   // side-effects, like in __builtin{_dynamic}_object_size. When finding
   // expressions, only choose those that have either already been emitted or
@@ -1098,10 +1097,9 @@ CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
   return EmitCountedByFieldExpr(Res, CountedByRD, VD);
 }
 
-llvm::Value *
-CodeGenFunction::EmitCountedByFieldExpr(llvm::Value *CountedByInst,
-                                        const RecordDecl *RD,
-                                        const ValueDecl *VD) {
+llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(llvm::Value *CountedByInst,
+                                                     const RecordDecl *RD,
+                                                     const ValueDecl *VD) {
   auto *Zero = llvm::ConstantInt::get(Int32Ty, 0);
   SmallVector<llvm::Value *, 8> Indices{Zero};
 
@@ -1119,8 +1117,8 @@ CodeGenFunction::EmitCountedByFieldExpr(llvm::Value *CountedByInst,
 
   llvm::Type *Ty =
       CGM.getTypes().ConvertType(QualType(RD->getTypeForDecl(), 0));
-  CountedByInst = Builder.CreateInBoundsGEP(Ty, CountedByInst, Indices,
-                                            "counted_by.gep");
+  CountedByInst =
+      Builder.CreateInBoundsGEP(Ty, CountedByInst, Indices, "counted_by.gep");
   Ty = llvm::GetElementPtrInst::getIndexedType(Ty, Indices);
   return Builder.CreateAlignedLoad(Ty, CountedByInst, getIntAlign(),
                                    "counted_by.load");
@@ -1239,7 +1237,7 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
   assert(SanOpts.has(SanitizerKind::ArrayBounds) &&
          "should not be called unless adding bounds checks");
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-    getLangOpts().getStrictFlexArraysLevel();
+      getLangOpts().getStrictFlexArraysLevel();
   QualType IndexedType;
   llvm::Value *Bound =
       getArrayIndexingBound(*this, Base, IndexedType, StrictFlexArraysLevel);
@@ -4178,11 +4176,12 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
           getLangOpts().getStrictFlexArraysLevel();
 
       if (const auto *ME = dyn_cast<MemberExpr>(Array);
-          ME && ME->isFlexibleArrayMemberLike(getContext(),
-                                              StrictFlexArraysLevel) &&
+          ME &&
+          ME->isFlexibleArrayMemberLike(getContext(), StrictFlexArraysLevel) &&
           ME->getMemberDecl()->hasAttr<CountedByAttr>()) {
-        RecordDecl *RD =
-            ME->getMemberDecl()->getDeclContext()->getOuterLexicalRecordContext();
+        RecordDecl *RD = ME->getMemberDecl()
+                             ->getDeclContext()
+                             ->getOuterLexicalRecordContext();
         Expr *StructBase =
             StructAccessBase(RD).Visit(const_cast<MemberExpr *>(ME));
 
@@ -4190,7 +4189,8 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
           if (const ValueDecl *VD = FindCountedByField(Array)) {
             Addr = EmitPointerWithAlignment(StructBase, &EltBaseInfo,
                                             &EltTBAAInfo);
-            llvm::Value *Res = EmitCountedByFieldExpr(Addr.getPointer(), RD, VD);
+            llvm::Value *Res =
+                EmitCountedByFieldExpr(Addr.getPointer(), RD, VD);
             EmitBoundsCheck(E, Res, Idx, E->getIdx()->getType(),
                             Array->getType(), Accessed);
           }

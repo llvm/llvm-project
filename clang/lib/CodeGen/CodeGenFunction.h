@@ -3023,8 +3023,7 @@ public:
                        QualType IndexType, bool Accessed);
 
   void EmitBoundsCheck(const Expr *E, llvm::Value *Bound, llvm::Value *Index,
-                       QualType IndexType, QualType IndexedType,
-                       bool Accessed);
+                       QualType IndexType, QualType IndexedType, bool Accessed);
 
   // Find a struct's flexible array member. It may be embedded inside multiple
   // sub-structs, but must still be the last field.
@@ -3037,8 +3036,7 @@ public:
   const ValueDecl *FindCountedByField(const Expr *Base);
 
   /// Build an expression accessing the "counted_by" field.
-  llvm::Value *EmitCountedByFieldExpr(const Expr *Base,
-                                      const ValueDecl *VD);
+  llvm::Value *EmitCountedByFieldExpr(const Expr *Base, const ValueDecl *VD);
   llvm::Value *EmitCountedByFieldExpr(llvm::Value *CountedByInst,
                                       const RecordDecl *RD,
                                       const ValueDecl *VD);
