@@ -7,6 +7,7 @@ add_flang_unittest(FlangRuntimeTests
   Complex.cpp
   CrashHandlerFixture.cpp
   Derived.cpp
+  ExtensionTest.cpp
   ExternalIOTest.cpp
   Format.cpp
   Inquiry.cpp

@@ -28,6 +28,7 @@ std::int32_t FORTRAN_PROCEDURE_NAME(iargc)();
 void FORTRAN_PROCEDURE_NAME(getarg)(
     std::int32_t &n, std::int8_t *arg, std::int64_t length);
 
+// GNU extension subroutine GETLOG(C).
 void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *name, std::int64_t length);
 
 } // extern "C"

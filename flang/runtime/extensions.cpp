@@ -81,7 +81,7 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 }
 
 void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *arg, std::int64_t length) {
-  const int nameMaxLen = LOGIN_NAME_MAX + 1;
+  const int nameMaxLen{LOGIN_NAME_MAX + 1};
   char str[nameMaxLen];
 
   int error{getlogin_r(str, nameMaxLen)};
