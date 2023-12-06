@@ -81,6 +81,12 @@ namespace llvm {
     GNU
   };
 
+  enum class BinaryEncoding {
+      None,
+      BID,
+      DPD
+  };
+
   /// Identify a debugger for "tuning" the debug info.
   ///
   /// The "debugger tuning" concept allows us to present a more intuitive
@@ -403,6 +409,7 @@ namespace llvm {
 
     /// Which debugger to tune for.
     DebuggerKind DebuggerTuning = DebuggerKind::Default;
+    BinaryEncoding DFPEncoding = BinaryEncoding::None;
 
   private:
     /// Flushing mode to assume in default FP environment.

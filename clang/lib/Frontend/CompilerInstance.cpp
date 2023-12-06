@@ -105,9 +105,19 @@ void CompilerInstance::setTarget(TargetInfo *Value) { Target = Value; }
 void CompilerInstance::setAuxTarget(TargetInfo *Value) { AuxTarget = Value; }
 
 bool CompilerInstance::createTarget() {
+  if (getLangOpts().DecimalFloatingPoint) {
+    std::string mycpu = getInvocation().getTargetOpts().CPU;
+    if (getInvocation().getTargetOpts().CPU == "x86" ||
+        getInvocation().getTargetOpts().CPU == "x86-64")
+      getInvocation().getTargetOpts().DFPEncoding =
+          TargetOptions::TODFPBinaryEncodingKind::BID;
+    else
+      getInvocation().getTargetOpts().DFPEncoding =
+          TargetOptions::TODFPBinaryEncodingKind::DPD;
+  }
   // Create the target instance.
-  setTarget(TargetInfo::CreateTargetInfo(getDiagnostics(),
-                                         getInvocation().TargetOpts));
+  setTarget(TargetInfo::CreateTargetInfo(
+      getDiagnostics(), getInvocation().TargetOpts, getLangOpts()));
   if (!hasTarget())
     return false;
 
