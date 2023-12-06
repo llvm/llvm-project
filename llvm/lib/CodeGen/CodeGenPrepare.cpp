@@ -6987,9 +6987,9 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // Increment the current iterator to skip all the rest of select instructions
   // because they will be either "not lowered" or "all lowered" to branch.
   CurInstIterator = std::next(LastSI->getIterator());
-  // Examine any debug-info attached to those instructions, which won't be seen
-  // elsewhere. But only do it once we return and have potentially rewritten
-  // valeus.
+  // Examine debug-info attached to the consecutive select instructions. They
+  // won't be individually optimised by optimizeInst, so we need to perform
+  // DPValue maintenence here instead.
   for (SelectInst *SI : ArrayRef(ASI).drop_front())
     fixupDPValuesOnInst(*SI);
 
