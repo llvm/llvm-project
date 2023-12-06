@@ -1414,6 +1414,8 @@ public:
   /// Get the base operand and byte offset of an instruction that reads/writes
   /// memory. This is a convenience function for callers that are only prepared
   /// to handle a single base operand.
+  /// FIXME: Move Offset and OffsetIsScalable to some ElementCount-style
+  /// abstraction that supports negative offsets.
   bool getMemOperandWithOffset(const MachineInstr &MI,
                                const MachineOperand *&BaseOp, int64_t &Offset,
                                bool &OffsetIsScalable,
@@ -1426,6 +1428,8 @@ public:
   /// It returns false if base operands and offset could not be determined.
   /// It is not guaranteed to always recognize base operands and offsets in all
   /// cases.
+  /// FIXME: Move Offset and OffsetIsScalable to some ElementCount-style
+  /// abstraction that supports negative offsets.
   virtual bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
       int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
