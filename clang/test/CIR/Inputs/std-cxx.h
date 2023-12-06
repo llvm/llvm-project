@@ -1310,4 +1310,17 @@ template <typename T, typename... Args>
     return shared_ptr<T>(new T(static_cast<Args &&>(args)...));
   }
 
+template<typename T, unsigned N> struct array {
+  T arr[N];
+  struct iterator {
+    T *p;
+    constexpr explicit iterator(T *p) : p(p) {}
+    constexpr bool operator!=(iterator o) { return p != o.p; }
+    constexpr iterator &operator++() { ++p; return *this; }
+    constexpr T &operator*() { return *p; }
+  };
+  constexpr iterator begin() { return iterator(arr); }
+  constexpr iterator end() { return iterator(arr + N); }
+};
+
 } // namespace std
