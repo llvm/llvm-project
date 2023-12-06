@@ -286,6 +286,7 @@ public:
   /// representation has been converted, and the ordering of DPValues is
   /// meaningful in the same was a dbg.values.
   simple_ilist<DPValue> StoredDPValues;
+  bool empty() const { return StoredDPValues.empty(); }
 
   const BasicBlock *getParent() const;
   BasicBlock *getParent();

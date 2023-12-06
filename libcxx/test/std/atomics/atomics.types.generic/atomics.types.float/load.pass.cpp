@@ -41,7 +41,7 @@ void test_impl() {
 
   // load
   {
-    MaybeVolatile<std::atomic<T>> a(3.1);
+    MaybeVolatile<std::atomic<T>> a(T(3.1));
     a.store(T(1.2));
     std::same_as<T> decltype(auto) r = a.load(std::memory_order::relaxed);
     assert(r == T(1.2));
