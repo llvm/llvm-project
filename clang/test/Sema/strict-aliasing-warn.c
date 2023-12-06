@@ -153,6 +153,15 @@ typedef unsigned char uchar;
 
 void Double(double);
 
+int *Bad() {
+  static double d;
+  // GCC: 1, 2, 3
+  // level2-warning@+2{{type-punned pointer breaks}}
+  // level1-warning@+1{{type-punned pointer might break}}
+  return (int *)&d;
+  // level12-note@-1{{not alias compatible}}
+}
+
 int main() {
   double d = 2.34;
   int i[2];
