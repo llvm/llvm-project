@@ -1,6 +1,8 @@
 // RUN: mlir-opt -split-input-file -transform-interpreter %s | FileCheck %s
 
-func.func @flatten_tensor(%input: tensor<1x8x3xi8>, %filter: tensor<1x3xi8>, %output: tensor<1x8x3xi8>) -> (tensor<1x8x3xi8>) {
+func.func @depthwise_conv1d_nwc_wc_1x8x3xi8_tensor(%input: tensor<1x8x3xi8>,
+                                                   %filter: tensor<1x3xi8>,
+                                                   %output: tensor<1x8x3xi8>) -> (tensor<1x8x3xi8>) {
   %res = linalg.depthwise_conv_1d_nwc_wc
     {dilations = dense<1> : vector<1xi64>,
     strides = dense<1> : vector<1xi64>}
@@ -17,121 +19,37 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-// CHECK-LABEL:   func.func @flatten_tensor(
-// CHECK-SAME:                              %[[VAL_0:.*]]: tensor<1x8x3xi8>,
-// CHECK-SAME:                              %[[VAL_1:.*]]: tensor<1x3xi8>,
-// CHECK-SAME:                              %[[VAL_2:.*]]: tensor<1x8x3xi8>) -> tensor<1x8x3xi8> {
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i8
-// CHECK:           %[[VAL_5:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true, true]} : tensor<1x8x3xi8>, vector<1x8x3xi8>
-// CHECK:           %[[VAL_6:.*]] = vector.transfer_read %[[VAL_1]]{{\[}}%[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true]} : tensor<1x3xi8>, vector<1x3xi8>
-// CHECK:           %[[VAL_7:.*]] = vector.transfer_read %[[VAL_2]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true, true]} : tensor<1x8x3xi8>, vector<1x8x3xi8>
-// CHECK:           %[[VAL_8:.*]] = vector.extract %[[VAL_6]][0] : vector<3xi8> from vector<1x3xi8>
-// CHECK:           %[[VAL_9:.*]] = vector.shape_cast %[[VAL_5]] : vector<1x8x3xi8> to vector<1x24xi8>
-// CHECK:           %[[VAL_10:.*]] = vector.shape_cast %[[VAL_7]] : vector<1x8x3xi8> to vector<1x24xi8>
-// CHECK:           %[[VAL_11:.*]] = vector.broadcast %[[VAL_8]] : vector<3xi8> to vector<1x8x3xi8>
-// CHECK:           %[[VAL_12:.*]] = vector.shape_cast %[[VAL_11]] : vector<1x8x3xi8> to vector<1x24xi8>
-// CHECK:           %[[VAL_13:.*]] = arith.muli %[[VAL_9]], %[[VAL_12]] : vector<1x24xi8>
-// CHECK:           %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[VAL_10]] : vector<1x24xi8>
-// CHECK:           %[[VAL_15:.*]] = vector.shape_cast %[[VAL_14]] : vector<1x24xi8> to vector<1x8x3xi8>
-// CHECK:           %[[VAL_16:.*]] = vector.transfer_write %[[VAL_15]], %[[VAL_2]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]] {in_bounds = [true, true, true]} : vector<1x8x3xi8>, tensor<1x8x3xi8>
-// CHECK:           return %[[VAL_16]] : tensor<1x8x3xi8>
-// CHECK:         }
+// CHECK-LABEL:   func.func @depthwise_conv1d_nwc_wc_1x8x3xi8_tensor
+// CHECK-SAME:      %[[INPUT:.*]]: tensor<1x8x3xi8>,
+// CHECK-SAME:      %[[FILTER:.*]]: tensor<1x3xi8>,
+// CHECK-SAME:      %[[OUTPUT:.*]]: tensor<1x8x3xi8>) -> tensor<1x8x3xi8> {
+
+// CHECK-DAG:       %[[C0_IDX:.*]] = arith.constant 0 : index
+
+/// Read the whole data in one shot.
+// CHECK:           %[[V_INPUT_R:.*]] = vector.transfer_read %[[INPUT]][%[[C0_IDX]], %[[C0_IDX]], %[[C0_IDX]]]
+// CHECK:           %[[V_FILTER_R:.*]] = vector.transfer_read %[[FILTER]][%[[C0_IDX]], %[[C0_IDX]]]
+// CHECK:           %[[V_OUTPUT_R:.*]] = vector.transfer_read %[[OUTPUT]][%[[C0_IDX]], %[[C0_IDX]], %[[C0_IDX]]]
+
+// CHECK:           %[[V_FILTER_0:.*]] = vector.extract %[[V_FILTER_R]][0] : vector<3xi8> from vector<1x3xi8>
+
+/// w == 0, kw = 0
+// CHECK:           %[[SC_INPUT:.*]] = vector.shape_cast %[[V_INPUT_R]] : vector<1x8x3xi8> to vector<1x24xi8>
+// CHECK:           %[[SC_OUTPUT:.*]] = vector.shape_cast %[[V_OUTPUT_R]] : vector<1x8x3xi8> to vector<1x24xi8>
+// CHECK:           %[[B_FILTER:.*]] = vector.broadcast %[[V_FILTER_0]] : vector<3xi8> to vector<1x8x3xi8>
+// CHECK:           %[[SC_FILTER:.*]] = vector.shape_cast %[[B_FILTER]] : vector<1x8x3xi8> to vector<1x24xi8>
+// CHECK:           %[[MULI:.*]] = arith.muli %[[SC_INPUT]], %[[SC_FILTER]] : vector<1x24xi8>
+// CHECK:           %[[ADDI:.*]] = arith.addi %[[MULI]], %[[SC_OUTPUT]] : vector<1x24xi8>
+
+// Write the result back in one shot.
+// CHECK:           %[[SC_ADDI:.*]] = vector.shape_cast %[[ADDI]] : vector<1x24xi8> to vector<1x8x3xi8>
+// CHECK:           vector.transfer_write %[[SC_ADDI]], %[[OUTPUT]][%[[C0_IDX]], %[[C0_IDX]], %[[C0_IDX]]]
 
 //------
 
-func.func @flatten_memref(%input: memref<1x8x3xi8>, %filter: memref<1x3xi8>, %output: memref<1x8x3xi8>) {
-  linalg.depthwise_conv_1d_nwc_wc
-    {dilations = dense<1> : vector<1xi64>,
-    strides = dense<1> : vector<1xi64>}
-    ins(%input, %filter : memref<1x8x3xi8>, memref<1x3xi8>)
-    outs(%output : memref<1x8x3xi8>)
-  return
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1 {flatten_1d_depthwise_conv} : (!transform.any_op) -> !transform.any_op
-    transform.yield
-  }
-}
-
-// CHECK-LABEL:   func.func @flatten_memref(
-// CHECK-SAME:                              %[[VAL_0:.*]]: memref<1x8x3xi8>,
-// CHECK-SAME:                              %[[VAL_1:.*]]: memref<1x3xi8>,
-// CHECK-SAME:                              %[[VAL_2:.*]]: memref<1x8x3xi8>) {
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i8
-// CHECK:           %[[VAL_5:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true, true]} : memref<1x8x3xi8>, vector<1x8x3xi8>
-// CHECK:           %[[VAL_6:.*]] = vector.transfer_read %[[VAL_1]]{{\[}}%[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true]} : memref<1x3xi8>, vector<1x3xi8>
-// CHECK:           %[[VAL_7:.*]] = vector.transfer_read %[[VAL_2]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true, true]} : memref<1x8x3xi8>, vector<1x8x3xi8>
-// CHECK:           %[[VAL_8:.*]] = vector.extract %[[VAL_6]][0] : vector<3xi8> from vector<1x3xi8>
-// CHECK:           %[[VAL_9:.*]] = vector.shape_cast %[[VAL_5]] : vector<1x8x3xi8> to vector<1x24xi8>
-// CHECK:           %[[VAL_10:.*]] = vector.shape_cast %[[VAL_7]] : vector<1x8x3xi8> to vector<1x24xi8>
-// CHECK:           %[[VAL_11:.*]] = vector.broadcast %[[VAL_8]] : vector<3xi8> to vector<1x8x3xi8>
-// CHECK:           %[[VAL_12:.*]] = vector.shape_cast %[[VAL_11]] : vector<1x8x3xi8> to vector<1x24xi8>
-// CHECK:           %[[VAL_13:.*]] = arith.muli %[[VAL_9]], %[[VAL_12]] : vector<1x24xi8>
-// CHECK:           %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[VAL_10]] : vector<1x24xi8>
-// CHECK:           %[[VAL_15:.*]] = vector.shape_cast %[[VAL_14]] : vector<1x24xi8> to vector<1x8x3xi8>
-// CHECK:           vector.transfer_write %[[VAL_15]], %[[VAL_2]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]] {in_bounds = [true, true, true]} : vector<1x8x3xi8>, memref<1x8x3xi8>
-// CHECK:           return
-// CHECK:         }
-
-// -----
-
-func.func @flatten_memref_wider_filter(%input: memref<1x8x3xi8>, %filter: memref<2x3xi8>, %output: memref<1x7x3xi8>) {
-  linalg.depthwise_conv_1d_nwc_wc
-    {dilations = dense<1> : vector<1xi64>,
-    strides = dense<1> : vector<1xi64>}
-    ins(%input, %filter : memref<1x8x3xi8>, memref<2x3xi8>)
-    outs(%output : memref<1x7x3xi8>)
-  return
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1 {flatten_1d_depthwise_conv} : (!transform.any_op) -> !transform.any_op
-    transform.yield
-  }
-}
-
-// CHECK-LABEL:   func.func @flatten_memref_wider_filter(
-// CHECK-SAME:                                           %[[VAL_0:.*]]: memref<1x8x3xi8>,
-// CHECK-SAME:                                           %[[VAL_1:.*]]: memref<2x3xi8>,
-// CHECK-SAME:                                           %[[VAL_2:.*]]: memref<1x7x3xi8>) {
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i8
-// CHECK:           %[[VAL_5:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true, true]} : memref<1x8x3xi8>, vector<1x8x3xi8>
-// CHECK:           %[[VAL_6:.*]] = vector.transfer_read %[[VAL_1]]{{\[}}%[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true]} : memref<2x3xi8>, vector<2x3xi8>
-// CHECK:           %[[VAL_7:.*]] = vector.transfer_read %[[VAL_2]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true, true]} : memref<1x7x3xi8>, vector<1x7x3xi8>
-// CHECK:           %[[VAL_8:.*]] = vector.extract_strided_slice %[[VAL_5]] {offsets = [0, 0, 0], sizes = [1, 7, 3], strides = [1, 1, 1]} : vector<1x8x3xi8> to vector<1x7x3xi8>
-// CHECK:           %[[VAL_9:.*]] = vector.extract_strided_slice %[[VAL_5]] {offsets = [0, 1, 0], sizes = [1, 7, 3], strides = [1, 1, 1]} : vector<1x8x3xi8> to vector<1x7x3xi8>
-// CHECK:           %[[VAL_10:.*]] = vector.extract %[[VAL_6]][0] : vector<3xi8> from vector<2x3xi8>
-// CHECK:           %[[VAL_11:.*]] = vector.extract %[[VAL_6]][1] : vector<3xi8> from vector<2x3xi8>
-// CHECK:           %[[VAL_12:.*]] = vector.shape_cast %[[VAL_8]] : vector<1x7x3xi8> to vector<1x21xi8>
-// CHECK:           %[[VAL_13:.*]] = vector.shape_cast %[[VAL_7]] : vector<1x7x3xi8> to vector<1x21xi8>
-// CHECK:           %[[VAL_14:.*]] = vector.broadcast %[[VAL_10]] : vector<3xi8> to vector<1x7x3xi8>
-// CHECK:           %[[VAL_15:.*]] = vector.shape_cast %[[VAL_14]] : vector<1x7x3xi8> to vector<1x21xi8>
-// CHECK:           %[[VAL_16:.*]] = arith.muli %[[VAL_12]], %[[VAL_15]] : vector<1x21xi8>
-// CHECK:           %[[VAL_17:.*]] = arith.addi %[[VAL_16]], %[[VAL_13]] : vector<1x21xi8>
-// CHECK:           %[[VAL_18:.*]] = vector.shape_cast %[[VAL_9]] : vector<1x7x3xi8> to vector<1x21xi8>
-// CHECK:           %[[VAL_19:.*]] = vector.broadcast %[[VAL_11]] : vector<3xi8> to vector<1x7x3xi8>
-// CHECK:           %[[VAL_20:.*]] = vector.shape_cast %[[VAL_19]] : vector<1x7x3xi8> to vector<1x21xi8>
-// CHECK:           %[[VAL_21:.*]] = arith.muli %[[VAL_18]], %[[VAL_20]] : vector<1x21xi8>
-// CHECK:           %[[VAL_22:.*]] = arith.addi %[[VAL_21]], %[[VAL_17]] : vector<1x21xi8>
-// CHECK:           %[[VAL_23:.*]] = vector.shape_cast %[[VAL_22]] : vector<1x21xi8> to vector<1x7x3xi8>
-// CHECK:           vector.transfer_write %[[VAL_23]], %[[VAL_2]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]] {in_bounds = [true, true, true]} : vector<1x7x3xi8>, memref<1x7x3xi8>
-// CHECK:           return
-// CHECK:         }
-
-
-// -----
-
-func.func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref(%input: memref<3x5x4xf32>, %filter: memref<2x4xf32>, %output: memref<3x2x4xf32>) {
+func.func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref_dillation_2(%input: memref<3x5x4xf32>,
+                                                                %filter: memref<2x4xf32>,
+                                                                %output: memref<3x2x4xf32>) {
   linalg.depthwise_conv_1d_nwc_wc
     {dilations = dense<2> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
     ins(%input, %filter : memref<3x5x4xf32>, memref<2x4xf32>)
@@ -139,6 +57,44 @@ func.func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref(%input: memref<3x5x4xf32>, %
   return
 }
 
+//       CHECK: func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref_dillation_2
+//  CHECK-SAME:   (%[[INPUT:[0-9a-z]+]]: memref<3x5x4xf32>, %[[FILTER:[0-9a-z]+]]: memref<2x4xf32>, %[[OUTPUT:[0-9a-z]+]]: memref<3x2x4xf32>)
+
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[F0:.+]] = arith.constant 0.000000e+00 : f32
+
+/// Read the whole data in one shot.
+//      CHECK-DAG:   %[[V_INPUT_R:.+]] = vector.transfer_read %[[INPUT]][%[[C0]], %[[C0]], %[[C0]]]
+//      CHECK-DAG:  %[[V_FILTER_R:.+]] = vector.transfer_read %[[FILTER]][%[[C0]], %[[C0]]]
+//      CHECK-DAG:  %[[V_OUTPUT_R:.+]] = vector.transfer_read %[[OUTPUT]][%[[C0]], %[[C0]], %[[C0]]]
+
+//      CHECK:   %[[V_INPUT_0:.+]] = vector.extract_strided_slice %[[V_INPUT_R]]
+// CHECK-SAME:     {offsets = [0, 0, 0], sizes = [3, 2, 4], strides = [1, 1, 1]} : vector<3x4x4xf32> to vector<3x2x4xf32>
+//      CHECK:   %[[V_INPUT_1:.+]] = vector.extract_strided_slice %[[V_INPUT_R]]
+// CHECK-SAME:     {offsets = [0, 2, 0], sizes = [3, 2, 4], strides = [1, 1, 1]} : vector<3x4x4xf32> to vector<3x2x4xf32>
+
+//      CHECK:  %[[V_FILTER_0:.+]] = vector.extract %[[V_FILTER_R]][0] : vector<4xf32> from vector<2x4xf32>
+//      CHECK:  %[[V_FILTER_1:.+]] = vector.extract %[[V_FILTER_R]][1] : vector<4xf32> from vector<2x4xf32>
+
+
+/// w == 0, kw = 0
+// CHECK:           %[[SC_V_INPUT_0:.*]] = vector.shape_cast %[[V_INPUT_0]] : vector<3x2x4xf32> to vector<3x8xf32>
+// CHECK:           %[[SC_V_OUTPUT_R:.*]] = vector.shape_cast %[[V_OUTPUT_R]] : vector<3x2x4xf32> to vector<3x8xf32>
+// CHECK:           %[[B_FILTER_0:.*]] = vector.broadcast %[[V_FILTER_0]] : vector<4xf32> to vector<3x2x4xf32>
+// CHECK:           %[[SC_B_FILTER_0:.*]] = vector.shape_cast %[[B_FILTER_0]] : vector<3x2x4xf32> to vector<3x8xf32>
+// CHECK:           %[[FMA_0:.*]] = vector.fma %[[SC_V_INPUT_0]], %[[SC_B_FILTER_0]], %[[SC_V_OUTPUT_R]] : vector<3x8xf32>
+
+/// w == 0, kw = 1
+// CHECK:           %[[SC_V_INPUT_1:.*]] = vector.shape_cast %[[V_INPUT_1]] : vector<3x2x4xf32> to vector<3x8xf32>
+// CHECK:           %[[B_V_FILTER_1:.*]] = vector.broadcast %[[V_FILTER_1]] : vector<4xf32> to vector<3x2x4xf32>
+// CHECK:           %[[SC_B_FILTER_1:.*]] = vector.shape_cast %[[B_V_FILTER_1]] : vector<3x2x4xf32> to vector<3x8xf32>
+// CHECK:           %[[FMA_1:.*]] = vector.fma %[[SC_V_INPUT_1]], %[[SC_B_FILTER_1]], %[[FMA_0]] : vector<3x8xf32>
+
+// Write the result back in one shot.
+//      CHECK:   %[[SC_FMA_1:.*]] = vector.shape_cast %[[FMA_1]] : vector<3x8xf32> to vector<3x2x4xf32>
+//      CHECK:   vector.transfer_write %[[SC_FMA_1]], %[[OUTPUT]][%[[C0]], %[[C0]], %[[C0]]]
+
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc"]} in %arg0 : (!transform.any_op) -> !transform.any_op
@@ -148,36 +104,11 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// CHECK-LABEL:   func.func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref(
-// CHECK-SAME:                                                        %[[VAL_0:.*]]: memref<3x5x4xf32>,
-// CHECK-SAME:                                                        %[[VAL_1:.*]]: memref<2x4xf32>,
-// CHECK-SAME:                                                        %[[VAL_2:.*]]: memref<3x2x4xf32>) {
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_5:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true, true]} : memref<3x5x4xf32>, vector<3x4x4xf32>
-// CHECK:           %[[VAL_6:.*]] = vector.transfer_read %[[VAL_1]]{{\[}}%[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true]} : memref<2x4xf32>, vector<2x4xf32>
-// CHECK:           %[[VAL_7:.*]] = vector.transfer_read %[[VAL_2]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true, true]} : memref<3x2x4xf32>, vector<3x2x4xf32>
-// CHECK:           %[[VAL_8:.*]] = vector.extract_strided_slice %[[VAL_5]] {offsets = [0, 0, 0], sizes = [3, 2, 4], strides = [1, 1, 1]} : vector<3x4x4xf32> to vector<3x2x4xf32>
-// CHECK:           %[[VAL_9:.*]] = vector.extract_strided_slice %[[VAL_5]] {offsets = [0, 2, 0], sizes = [3, 2, 4], strides = [1, 1, 1]} : vector<3x4x4xf32> to vector<3x2x4xf32>
-// CHECK:           %[[VAL_10:.*]] = vector.extract %[[VAL_6]][0] : vector<4xf32> from vector<2x4xf32>
-// CHECK:           %[[VAL_11:.*]] = vector.extract %[[VAL_6]][1] : vector<4xf32> from vector<2x4xf32>
-// CHECK:           %[[VAL_12:.*]] = vector.shape_cast %[[VAL_8]] : vector<3x2x4xf32> to vector<3x8xf32>
-// CHECK:           %[[VAL_13:.*]] = vector.shape_cast %[[VAL_7]] : vector<3x2x4xf32> to vector<3x8xf32>
-// CHECK:           %[[VAL_14:.*]] = vector.broadcast %[[VAL_10]] : vector<4xf32> to vector<3x2x4xf32>
-// CHECK:           %[[VAL_15:.*]] = vector.shape_cast %[[VAL_14]] : vector<3x2x4xf32> to vector<3x8xf32>
-// CHECK:           %[[VAL_16:.*]] = vector.fma %[[VAL_12]], %[[VAL_15]], %[[VAL_13]] : vector<3x8xf32>
-// CHECK:           %[[VAL_17:.*]] = vector.shape_cast %[[VAL_9]] : vector<3x2x4xf32> to vector<3x8xf32>
-// CHECK:           %[[VAL_18:.*]] = vector.broadcast %[[VAL_11]] : vector<4xf32> to vector<3x2x4xf32>
-// CHECK:           %[[VAL_19:.*]] = vector.shape_cast %[[VAL_18]] : vector<3x2x4xf32> to vector<3x8xf32>
-// CHECK:           %[[VAL_20:.*]] = vector.fma %[[VAL_17]], %[[VAL_19]], %[[VAL_16]] : vector<3x8xf32>
-// CHECK:           %[[VAL_21:.*]] = vector.shape_cast %[[VAL_20]] : vector<3x8xf32> to vector<3x2x4xf32>
-// CHECK:           vector.transfer_write %[[VAL_21]], %[[VAL_2]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]] {in_bounds = [true, true, true]} : vector<3x2x4xf32>, memref<3x2x4xf32>
-// CHECK:           return
-// CHECK:         }
-
 // -----
 
-func.func @depthwise_conv1d_nwc_wc_3x5x4xi8_memref(%input: memref<3x5x4xi8>, %filter: memref<2x4xi8>, %output: memref<3x2x4xi32>) {
+func.func @depthwise_conv1d_nwc_wc_3x5x4xi8_memref_dilation_2(%input: memref<3x5x4xi8>,
+                                                              %filter: memref<2x4xi8>,
+                                                              %output: memref<3x2x4xi32>) {
   linalg.depthwise_conv_1d_nwc_wc
     {dilations = dense<2> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
     ins(%input, %filter : memref<3x5x4xi8>, memref<2x4xi8>)
@@ -185,40 +116,194 @@ func.func @depthwise_conv1d_nwc_wc_3x5x4xi8_memref(%input: memref<3x5x4xi8>, %fi
   return
 }
 
+//       CHECK: func @depthwise_conv1d_nwc_wc_3x5x4xi8_memref_dilation_2
+//  CHECK-SAME:   (%[[INPUT:[0-9a-z]+]]: memref<3x5x4xi8>, %[[FILTER:[0-9a-z]+]]: memref<2x4xi8>, %[[OUTPUT:[0-9a-z]+]]: memref<3x2x4xi32>)
+
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+
+/// Read the whole data in one shot.
+//      CHECK-DAG:   %[[V_INPUT_R:.+]] = vector.transfer_read %[[INPUT]][%[[C0]], %[[C0]], %[[C0]]]
+//      CHECK-DAG:  %[[V_FILTER_R:.+]] = vector.transfer_read %[[FILTER]][%[[C0]], %[[C0]]]
+//      CHECK-DAG:  %[[V_OUTPUT_R:.+]] = vector.transfer_read %[[OUTPUT]][%[[C0]], %[[C0]], %[[C0]]]
+
+//      CHECK:   %[[V_INPUT_0:.+]] = vector.extract_strided_slice %[[V_INPUT_R]]
+// CHECK-SAME:     {offsets = [0, 0, 0], sizes = [3, 2, 4], strides = [1, 1, 1]} : vector<3x4x4xi8> to vector<3x2x4xi8>
+//      CHECK:   %[[V_INPUT_1:.+]] = vector.extract_strided_slice %[[V_INPUT_R]]
+// CHECK-SAME:     {offsets = [0, 2, 0], sizes = [3, 2, 4], strides = [1, 1, 1]} : vector<3x4x4xi8> to vector<3x2x4xi8>
+
+//      CHECK:  %[[V_FILTER_0:.+]] = vector.extract %[[V_FILTER_R]][0] : vector<4xi8> from vector<2x4xi8>
+//      CHECK:  %[[V_FILTER_1:.+]] = vector.extract %[[V_FILTER_R]][1] : vector<4xi8> from vector<2x4xi8>
+
+/// w == 0, kw = 0
+//      CHECK:  %[[SC_V_INPUT_0:.*]] = vector.shape_cast %[[V_INPUT_0]] : vector<3x2x4xi8> to vector<3x8xi8>
+//      CHECK:  %[[SC_V_OUTPUT_R:.*]] = vector.shape_cast %[[V_OUTPUT_R]] : vector<3x2x4xi32> to vector<3x8xi32>
+//      CHECK:  %[[EXT_INPUT_0:.*]] = arith.extsi %[[SC_V_INPUT_0]] : vector<3x8xi8> to vector<3x8xi32>
+//      CHECK:  %[[B_FILTER_0:.*]] = vector.broadcast %[[V_FILTER_0]] : vector<4xi8> to vector<3x2x4xi8>
+//      CHECK:  %[[SC_B_FILTER_0:.*]] = vector.shape_cast %[[B_FILTER_0]] : vector<3x2x4xi8> to vector<3x8xi8>
+//      CHECK:  %[[EXT_FILTER_0:.*]] = arith.extsi %[[SC_B_FILTER_0]] : vector<3x8xi8> to vector<3x8xi32>
+//      CHECK:  %[[MUL_0:.*]] = arith.muli %[[EXT_INPUT_0]], %[[EXT_FILTER_0]] : vector<3x8xi32>
+//      CHECK:  %[[ADD_0:.*]] = arith.addi %[[MUL_0]], %[[SC_V_OUTPUT_R]] : vector<3x8xi32>
+
+/// w == 0, kw = 1
+//      CHECK:  %[[SC_V_INPUT_1:.*]] = vector.shape_cast %[[V_INPUT_1]] : vector<3x2x4xi8> to vector<3x8xi8>
+//      CHECK:  %[[EXT_INPUT_1:.*]] = arith.extsi %[[SC_V_INPUT_1]] : vector<3x8xi8> to vector<3x8xi32>
+//      CHECK:  %[[B_FILTER_1:.*]] = vector.broadcast %[[V_FILTER_1]] : vector<4xi8> to vector<3x2x4xi8>
+//      CHECK:  %[[SC_B_FILTER_1:.*]] = vector.shape_cast %[[B_FILTER_1]] : vector<3x2x4xi8> to vector<3x8xi8>
+//      CHECK:  %[[EXT_FILTER_1:.*]] = arith.extsi %[[SC_B_FILTER_1]] : vector<3x8xi8> to vector<3x8xi32>
+//      CHECK:  %[[MUL_1:.*]] = arith.muli %[[EXT_INPUT_1]], %[[EXT_FILTER_1]] : vector<3x8xi32>
+//      CHECK:  %[[ADD_1:.*]] = arith.addi %[[MUL_1]], %[[ADD_0]] : vector<3x8xi32>
+
+// Write the result back in one shot.
+//      CHECK:   %[[SC_ADD_1:.*]] = vector.shape_cast %[[ADD_1]] : vector<3x8xi32> to vector<3x2x4xi32>
+//      CHECK:   vector.transfer_write %[[SC_ADD_1]], %[[OUTPUT]][%[[C0]], %[[C0]], %[[C0]]]
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 {flatten_1d_depthwise_conv} : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
 
-// CHECK-LABEL:   func.func @depthwise_conv1d_nwc_wc_3x5x4xi8_memref(
-// CHECK-SAME:                                                       %[[VAL_0:.*]]: memref<3x5x4xi8>,
-// CHECK-SAME:                                                       %[[VAL_1:.*]]: memref<2x4xi8>,
-// CHECK-SAME:                                                       %[[VAL_2:.*]]: memref<3x2x4xi32>) {
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i8
-// CHECK:           %[[VAL_5:.*]] = arith.constant 0 : i32
-// CHECK:           %[[VAL_6:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true, true]} : memref<3x5x4xi8>, vector<3x4x4xi8>
-// CHECK:           %[[VAL_7:.*]] = vector.transfer_read %[[VAL_1]]{{\[}}%[[VAL_3]], %[[VAL_3]]], %[[VAL_4]] {in_bounds = [true, true]} : memref<2x4xi8>, vector<2x4xi8>
-// CHECK:           %[[VAL_8:.*]] = vector.transfer_read %[[VAL_2]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_5]] {in_bounds = [true, true, true]} : memref<3x2x4xi32>, vector<3x2x4xi32>
-// CHECK:           %[[VAL_9:.*]] = vector.extract_strided_slice %[[VAL_6]] {offsets = [0, 0, 0], sizes = [3, 2, 4], strides = [1, 1, 1]} : vector<3x4x4xi8> to vector<3x2x4xi8>
-// CHECK:           %[[VAL_10:.*]] = vector.extract_strided_slice %[[VAL_6]] {offsets = [0, 2, 0], sizes = [3, 2, 4], strides = [1, 1, 1]} : vector<3x4x4xi8> to vector<3x2x4xi8>
-// CHECK:           %[[VAL_11:.*]] = vector.extract %[[VAL_7]][0] : vector<4xi8> from vector<2x4xi8>
-// CHECK:           %[[VAL_12:.*]] = vector.extract %[[VAL_7]][1] : vector<4xi8> from vector<2x4xi8>
-// CHECK:           %[[VAL_13:.*]] = arith.extsi %[[VAL_9]] : vector<3x2x4xi8> to vector<3x2x4xi32>
-// CHECK:           %[[VAL_14:.*]] = arith.extsi %[[VAL_11]] : vector<4xi8> to vector<4xi32>
-// CHECK:           %[[VAL_15:.*]] = vector.broadcast %[[VAL_14]] : vector<4xi32> to vector<3x2x4xi32>
-// CHECK:           %[[VAL_16:.*]] = arith.muli %[[VAL_13]], %[[VAL_15]] : vector<3x2x4xi32>
-// CHECK:           %[[VAL_17:.*]] = arith.addi %[[VAL_16]], %[[VAL_8]] : vector<3x2x4xi32>
-// CHECK:           %[[VAL_18:.*]] = arith.extsi %[[VAL_10]] : vector<3x2x4xi8> to vector<3x2x4xi32>
-// CHECK:           %[[VAL_19:.*]] = arith.extsi %[[VAL_12]] : vector<4xi8> to vector<4xi32>
-// CHECK:           %[[VAL_20:.*]] = vector.broadcast %[[VAL_19]] : vector<4xi32> to vector<3x2x4xi32>
-// CHECK:           %[[VAL_21:.*]] = arith.muli %[[VAL_18]], %[[VAL_20]] : vector<3x2x4xi32>
-// CHECK:           %[[VAL_22:.*]] = arith.addi %[[VAL_21]], %[[VAL_17]] : vector<3x2x4xi32>
-// CHECK:           vector.transfer_write %[[VAL_22]], %[[VAL_2]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]] {in_bounds = [true, true, true]} : vector<3x2x4xi32>, memref<3x2x4xi32>
-// CHECK:           return
-// CHECK:         }
+// -----
+
+func.func @depthwise_conv1d_nwc_wc_3x9x4xi8_tensor_stride_2(%input: tensor<3x9x4xi8>,
+                                                            %filter: tensor<3x4xi8>,
+                                                            %output: tensor<3x3x4xi8>) -> tensor<3x3x4xi8> {
+  %res = linalg.depthwise_conv_1d_nwc_wc
+    {dilations = dense<1> : tensor<1xi64>, strides = dense<2> : tensor<1xi64>}
+    ins(%input, %filter : tensor<3x9x4xi8>, tensor<3x4xi8>)
+    outs(%output : tensor<3x3x4xi8>) -> tensor<3x3x4xi8>
+  return %res : tensor<3x3x4xi8>
+}
+// CHECK-LABEL:   func.func @depthwise_conv1d_nwc_wc_3x9x4xi8_tensor_stride_2
+// CHECK-SAME:      %[[INPUT:.*]]: tensor<3x9x4xi8>,
+// CHECK-SAME:      %[[FILTER:.*]]: tensor<3x4xi8>,
+// CHECK-SAME:      %[[OUTPUT:.*]]: tensor<3x3x4xi8>) -> tensor<3x3x4xi8> {
+
+// CHECK-DAG:           %[[C0_IDX:.*]] = arith.constant 0 : index
+// CHECK-DAG:           %[[C0_I8:.*]] = arith.constant 0 : i8
+
+/// Read the whole data in one shot.
+// CHECK:           %[[V_INPUT_R:.*]] = vector.transfer_read %[[INPUT]][%[[C0_IDX]], %[[C0_IDX]], %[[C0_IDX]]], %[[C0_I8]]
+// CHECK:           %[[V_FILTER_R:.*]] = vector.transfer_read %[[FILTER]][%[[C0_IDX]], %[[C0_IDX]]], %[[C0_I8]]
+// CHECK:           %[[V_OUTPUT_R:.*]] = vector.transfer_read %[[OUTPUT]][%[[C0_IDX]], %[[C0_IDX]], %[[C0_IDX]]], %[[C0_I8]]
+
+// CHECK:           %[[V_INPUT_0:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
+// CHECK-SAME:        {offsets = [0, 0, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[V_INPUT_1:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
+// CHECK-SAME:        {offsets = [0, 2, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[V_INPUT_2:.*]] = vector.extract_strided_slice %[[V_INPUT_R]] 
+// CHECK-SAME:        {offsets = [0, 4, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[V_INPUT_3:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
+// CHECK-SAME:        {offsets = [0, 1, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[V_INPUT_4:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
+// CHECK-SAME:        {offsets = [0, 3, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[V_INPUT_5:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
+// CHECK-SAME:        {offsets = [0, 5, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[V_INPUT_6:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
+// CHECK-SAME:        {offsets = [0, 2, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[V_INPUT_7:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
+// CHECK-SAME:        {offsets = [0, 4, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[V_INPUT_8:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
+// CHECK-SAME:        {offsets = [0, 6, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+
+// CHECK:           %[[V_FILTER_0:.*]] = vector.extract %[[V_FILTER_R]][0] : vector<4xi8> from vector<3x4xi8>
+// CHECK:           %[[V_FILTER_1:.*]] = vector.extract %[[V_FILTER_R]][1] : vector<4xi8> from vector<3x4xi8>
+// CHECK:           %[[V_FILTER_2:.*]] = vector.extract %[[V_FILTER_R]][2] : vector<4xi8> from vector<3x4xi8>
+
+// CHECK:           %[[V_OUTPUT_0:.*]] = vector.extract_strided_slice %[[V_OUTPUT_R]]
+// CHECK-SAME:        {offsets = [0, 0, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x3x4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[V_OUTPUT_1:.*]] = vector.extract_strided_slice %[[V_OUTPUT_R]]
+// CHECK-SAME:       {offsets = [0, 1, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x3x4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[V_OUTPUT_2:.*]] = vector.extract_strided_slice %[[V_OUTPUT_R]]
+// CHECK-SAME:        {offsets = [0, 2, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x3x4xi8> to vector<3x1x4xi8>
+
+/// w == 0, kw == 0
+// CHECK:           %[[VAL_23:.*]] = vector.shape_cast %[[V_INPUT_0]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[VAL_24:.*]] = vector.shape_cast %[[V_OUTPUT_0]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[B_FILTER_0:.*]] = vector.broadcast %[[V_FILTER_0]] : vector<4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[VAL_26:.*]] = vector.shape_cast %[[B_FILTER_0]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[VAL_27:.*]] = arith.muli %[[VAL_23]], %[[VAL_26]] : vector<3x4xi8>
+// CHECK:           %[[VAL_28:.*]] = arith.addi %[[VAL_27]], %[[VAL_24]] : vector<3x4xi8>
+
+/// w == 1, kw == 0
+// CHECK:           %[[VAL_29:.*]] = vector.shape_cast %[[V_INPUT_1]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[VAL_30:.*]] = vector.shape_cast %[[V_OUTPUT_1]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[B_FILTER_0:.*]] = vector.broadcast %[[V_FILTER_0]] : vector<4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[VAL_32:.*]] = vector.shape_cast %[[B_FILTER_0]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[VAL_33:.*]] = arith.muli %[[VAL_29]], %[[VAL_32]] : vector<3x4xi8>
+// CHECK:           %[[VAL_34:.*]] = arith.addi %[[VAL_33]], %[[VAL_30]] : vector<3x4xi8>
+
+/// w == 2, kw == 0
+// CHECK:           %[[VAL_35:.*]] = vector.shape_cast %[[V_INPUT_2]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[VAL_36:.*]] = vector.shape_cast %[[V_OUTPUT_2]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[B_FILTER_0:.*]] = vector.broadcast %[[V_FILTER_0]] : vector<4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[VAL_38:.*]] = vector.shape_cast %[[B_FILTER_0]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[VAL_39:.*]] = arith.muli %[[VAL_35]], %[[VAL_38]] : vector<3x4xi8>
+// CHECK:           %[[VAL_40:.*]] = arith.addi %[[VAL_39]], %[[VAL_36]] : vector<3x4xi8>
+
+/// w == 3, kw == 1
+// CHECK:           %[[VAL_41:.*]] = vector.shape_cast %[[V_INPUT_3]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[B_FILTER_1:.*]] = vector.broadcast %[[V_FILTER_1]] : vector<4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[VAL_43:.*]] = vector.shape_cast %[[B_FILTER_1]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[VAL_44:.*]] = arith.muli %[[VAL_41]], %[[VAL_43]] : vector<3x4xi8>
+// CHECK:           %[[VAL_45:.*]] = arith.addi %[[VAL_44]], %[[VAL_28]] : vector<3x4xi8>
+
+/// w == 4, kw == 1
+// CHECK:           %[[VAL_46:.*]] = vector.shape_cast %[[V_INPUT_4]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[B_FILTER_1:.*]] = vector.broadcast %[[V_FILTER_1]] : vector<4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[VAL_48:.*]] = vector.shape_cast %[[B_FILTER_1]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[VAL_49:.*]] = arith.muli %[[VAL_46]], %[[VAL_48]] : vector<3x4xi8>
+// CHECK:           %[[VAL_50:.*]] = arith.addi %[[VAL_49]], %[[VAL_34]] : vector<3x4xi8>
+
+/// w == 5, kw == 1
+// CHECK:           %[[VAL_51:.*]] = vector.shape_cast %[[V_INPUT_5]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[B_FILTER_1:.*]] = vector.broadcast %[[V_FILTER_1]] : vector<4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[VAL_53:.*]] = vector.shape_cast %[[B_FILTER_1]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[VAL_54:.*]] = arith.muli %[[VAL_51]], %[[VAL_53]] : vector<3x4xi8>
+// CHECK:           %[[VAL_55:.*]] = arith.addi %[[VAL_54]], %[[VAL_40]] : vector<3x4xi8>
+
+/// w == 6, kw == 2
+// CHECK:           %[[VAL_56:.*]] = vector.shape_cast %[[V_INPUT_6]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[B_FILTER_2:.*]] = vector.broadcast %[[V_FILTER_2]] : vector<4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[VAL_58:.*]] = vector.shape_cast %[[B_FILTER_2]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[VAL_59:.*]] = arith.muli %[[VAL_56]], %[[VAL_58]] : vector<3x4xi8>
+// CHECK:           %[[VAL_60:.*]] = arith.addi %[[VAL_59]], %[[VAL_45]] : vector<3x4xi8>
+
+/// w == 7, kw == 2
+// CHECK:           %[[VAL_61:.*]] = vector.shape_cast %[[VAL_60]] : vector<3x4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[VAL_62:.*]] = vector.shape_cast %[[V_INPUT_7]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[B_FILTER_2:.*]] = vector.broadcast %[[V_FILTER_2]] : vector<4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[VAL_64:.*]] = vector.shape_cast %[[B_FILTER_2]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[VAL_65:.*]] = arith.muli %[[VAL_62]], %[[VAL_64]] : vector<3x4xi8>
+// CHECK:           %[[VAL_66:.*]] = arith.addi %[[VAL_65]], %[[VAL_50]] : vector<3x4xi8>
+
+/// w == 8, kw == 2
+// CHECK:           %[[VAL_67:.*]] = vector.shape_cast %[[VAL_66]] : vector<3x4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[VAL_68:.*]] = vector.shape_cast %[[V_INPUT_8]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[B_FILTER_2:.*]] = vector.broadcast %[[V_FILTER_2]] : vector<4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[VAL_70:.*]] = vector.shape_cast %[[B_FILTER_2]] : vector<3x1x4xi8> to vector<3x4xi8>
+// CHECK:           %[[VAL_71:.*]] = arith.muli %[[VAL_68]], %[[VAL_70]] : vector<3x4xi8>
+// CHECK:           %[[VAL_72:.*]] = arith.addi %[[VAL_71]], %[[VAL_55]] : vector<3x4xi8>
+
+// Write the result back.
+// CHECK:           %[[VAL_73:.*]] = vector.shape_cast %[[VAL_72]] : vector<3x4xi8> to vector<3x1x4xi8>
+// CHECK:           %[[VAL_74:.*]] = vector.insert_strided_slice %[[VAL_61]], %[[V_OUTPUT_R]]
+// CHECK-SAME:        {offsets = [0, 0, 0], strides = [1, 1, 1]} : vector<3x1x4xi8> into vector<3x3x4xi8>
+// CHECK:           %[[VAL_75:.*]] = vector.insert_strided_slice %[[VAL_67]], %[[VAL_74]]
+// CHECK-SAME:        {offsets = [0, 1, 0], strides = [1, 1, 1]} : vector<3x1x4xi8> into vector<3x3x4xi8>
+// CHECK:           %[[VAL_76:.*]] = vector.insert_strided_slice %[[VAL_73]], %[[VAL_75]]
+// CHECK-SAME:        {offsets = [0, 2, 0], strides = [1, 1, 1]} : vector<3x1x4xi8> into vector<3x3x4xi8>
+// CHECK:           %[[VAL_77:.*]] = vector.transfer_write %[[VAL_76]], %[[OUTPUT]][%[[C0_IDX]], %[[C0_IDX]], %[[C0_IDX]]]
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 {flatten_1d_depthwise_conv} : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
 

@@ -2881,8 +2881,7 @@ struct Conv1DGenerator
         lhsVals.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
             loc, lhs,
             /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
-            inOutSliceSizes,
-            inOutStrides));
+            inOutSliceSizes, inOutStrides));
       }
     }
     // Extract rhs slice of size {c} @ [kw].
@@ -2894,8 +2893,7 @@ struct Conv1DGenerator
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       resVals.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
           loc, res,
-          /*offsets=*/ArrayRef<int64_t>{0, w, 0},
-          inOutSliceSizes,
+          /*offsets=*/ArrayRef<int64_t>{0, w, 0}, inOutSliceSizes,
           inOutStrides));
     }
 
@@ -2903,9 +2901,10 @@ struct Conv1DGenerator
       return kw * (wSize / wSizeStep) + w;
     };
 
-    auto inOutFlattenSliceSizes = SmallVector<int64_t>{nSize, wSizeStep * cSize};
+    auto inOutFlattenSliceSizes =
+        SmallVector<int64_t>{nSize, wSizeStep * cSize};
     auto lhsCastType = VectorType::get(inOutFlattenSliceSizes, lhsEltType);
-    auto resCastType = VectorType::get(inOutFlattenSliceSizes, lhsEltType);
+    auto resCastType = VectorType::get(inOutFlattenSliceSizes, resEltType);
     // Compute contraction: O{n, w, c} += I{n, sw * w + dw * kw, c} * F{c}
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
@@ -2913,6 +2912,8 @@ struct Conv1DGenerator
         Value resVal = resVals[w];
         ShapedType filterBCastTy = cast<ShapedType>(resVal.getType());
         if (flatten) {
+          // Flatten the input and filter vectors (collapse the channel
+          // dimension)
           lhsVal = rewriter.create<vector::ShapeCastOp>(
               loc, lhsCastType, lhsVals[linearIndex(kw, w)]);
           resVal = rewriter.create<vector::ShapeCastOp>(loc, resCastType,
@@ -2920,9 +2921,11 @@ struct Conv1DGenerator
         }
         resVals[w] = depthwiseConv1dSliceAsMulAcc(
             rewriter, loc, lhsVal, rhsVals[kw], resVal, filterBCastTy, flatten);
-        if (flatten)
+        if (flatten) {
+          // Un-flatten the output vector (restore the channel dimension)
           resVals[w] = rewriter.create<vector::ShapeCastOp>(
               loc, VectorType::get(inOutSliceSizes, resEltType), resVals[w]);
+        }
       }
     }
 
@@ -2970,8 +2973,11 @@ struct Conv1DGenerator
 
     rhs = rewriter.create<vector::BroadcastOp>(
         loc, bcastTy.clone(rhsTy.getElementType()), rhs);
-    if (flatten)
-      rhs = rewriter.create<vector::ShapeCastOp>(loc, resTy, rhs);
+    if (flatten) {
+      // Flatten the channel dimension
+      rhs = rewriter.create<vector::ShapeCastOp>(
+          loc, resTy.clone(rhsTy.getElementType()), rhs);
+    }
 
     rhs = promote(rewriter, loc, rhs, resTy);
 
