@@ -6462,10 +6462,9 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
   auto IntrinsicCost =
     TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
 
-  auto Shape = VFShape::get(
-      CI->getFunctionType(),
-      ElementCount::getFixed(static_cast<unsigned>(VecTy->getNumElements())),
-      false /*HasGlobalPred*/);
+  auto Shape = VFShape::get(CI->getFunctionType(),
+                            ElementCount::getFixed(VecTy->getNumElements()),
+                            false /*HasGlobalPred*/);
   Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
   auto LibCost = IntrinsicCost;
   if (!CI->isNoBuiltin() && VecFunc) {
