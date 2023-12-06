@@ -79,16 +79,17 @@ define amdgpu_kernel void @store_load_sindex_kernel(i32 %idx) {
 ; GFX12-LABEL: store_load_sindex_kernel:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_load_b32 s0, s[0:1], 0x24
+; GFX12-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_and_b32 s1, s0, 15
+; GFX12-NEXT:    s_lshl_b32 s1, s0, 2
+; GFX12-NEXT:    s_and_b32 s0, s0, 15
+; GFX12-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX12-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX12-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    v_dual_mov_b32 v0, 15 :: v_dual_mov_b32 v1, s1
-; GFX12-NEXT:    s_add_co_i32 s0, s0, 4
-; GFX12-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:4 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v1, off offset:4 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b32 v0, v2, off offset:4 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -172,8 +173,7 @@ define amdgpu_kernel void @store_load_vindex_kernel() {
 ; GFX12-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_lshlrev_b32 v1, 2, v1
 ; GFX12-NEXT:    scratch_store_b32 v0, v2, off offset:4 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    v_add_nc_u32_e32 v1, 4, v1
-; GFX12-NEXT:    scratch_load_b32 v0, v1, off offset:124 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b32 v0, v1, off offset:128 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -256,14 +256,13 @@ define void @store_load_vindex_foo(i32 %idx) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_lshlrev_b32 v1, 2, v0
-; GFX12-NEXT:    v_and_b32_e32 v0, 15, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_add_nc_u32_e32 v1, s32, v1
+; GFX12-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX12-NEXT:    scratch_store_b32 v1, v2, off scope:SCOPE_SYS
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX12-NEXT:    scratch_store_b32 v0, v2, s32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v0, s32 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b32 v0, v1, s32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -405,20 +404,21 @@ define amdgpu_kernel void @store_load_sindex_small_offset_kernel(i32 %idx) {
 ; GFX12-LABEL: store_load_sindex_small_offset_kernel:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_load_b32 s0, s[0:1], 0x24
-; GFX12-NEXT:    scratch_load_b32 v2, off, off offset:4 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b32 v3, off, off offset:4 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_and_b32 s1, s0, 15
+; GFX12-NEXT:    s_lshl_b32 s1, s0, 2
+; GFX12-NEXT:    s_and_b32 s0, s0, 15
+; GFX12-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX12-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX12-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    v_dual_mov_b32 v0, 15 :: v_dual_mov_b32 v1, s1
-; GFX12-NEXT:    s_addk_co_i32 s0, 0x104
-; GFX12-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:260 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v1, off offset:260 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b32 v0, v2, off offset:260 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -509,15 +509,15 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel() {
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_sub_nc_u32_e32 v1, 0, v0
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 15
 ; GFX12-NEXT:    scratch_load_b32 v3, off, off offset:4 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_lshlrev_b32 v1, 2, v1
+; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; GFX12-NEXT:    scratch_store_b32 v0, v2, off offset:260 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    v_add_nc_u32_e32 v1, 0x104, v1
-; GFX12-NEXT:    scratch_load_b32 v0, v1, off offset:124 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b32 v0, v1, off offset:384 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -616,18 +616,16 @@ define void @store_load_vindex_small_offset_foo(i32 %idx) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_lshlrev_b32 v1, 2, v0
-; GFX12-NEXT:    v_and_b32_e32 v0, 15, v0
-; GFX12-NEXT:    s_add_co_i32 s0, s32, 0x100
+; GFX12-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX12-NEXT:    scratch_load_b32 v3, off, s32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_add_nc_u32_e32 v1, s0, v1
-; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX12-NEXT:    scratch_store_b32 v1, v2, off scope:SCOPE_SYS
+; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX12-NEXT:    scratch_store_b32 v0, v2, s32 offset:256 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v0, s32 offset:256 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b32 v0, v1, s32 offset:256 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -728,20 +726,21 @@ define amdgpu_kernel void @store_load_sindex_large_offset_kernel(i32 %idx) {
 ; GFX12-LABEL: store_load_sindex_large_offset_kernel:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_load_b32 s0, s[0:1], 0x24
-; GFX12-NEXT:    scratch_load_b32 v2, off, off offset:4 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b32 v3, off, off offset:4 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_and_b32 s1, s0, 15
+; GFX12-NEXT:    s_lshl_b32 s1, s0, 2
+; GFX12-NEXT:    s_and_b32 s0, s0, 15
+; GFX12-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX12-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX12-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    v_dual_mov_b32 v0, 15 :: v_dual_mov_b32 v1, s1
-; GFX12-NEXT:    s_addk_co_i32 s0, 0x4004
-; GFX12-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:16388 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v1, off offset:16388 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b32 v0, v2, off offset:16388 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -834,15 +833,15 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel() {
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_sub_nc_u32_e32 v1, 0, v0
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 15
 ; GFX12-NEXT:    scratch_load_b32 v3, off, off offset:4 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_lshlrev_b32 v1, 2, v1
+; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; GFX12-NEXT:    scratch_store_b32 v0, v2, off offset:16388 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    v_add_nc_u32_e32 v1, 0x4004, v1
-; GFX12-NEXT:    scratch_load_b32 v0, v1, off offset:124 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b32 v0, v1, off offset:16512 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -943,18 +942,16 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_lshlrev_b32 v1, 2, v0
-; GFX12-NEXT:    v_and_b32_e32 v0, 15, v0
-; GFX12-NEXT:    s_add_co_i32 s0, s32, 0x4000
+; GFX12-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX12-NEXT:    scratch_load_b32 v3, off, s32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_add_nc_u32_e32 v1, s0, v1
-; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX12-NEXT:    scratch_store_b32 v1, v2, off scope:SCOPE_SYS
+; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX12-NEXT:    scratch_store_b32 v0, v2, s32 offset:16384 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v0, s32 offset:16384 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b32 v0, v1, s32 offset:16384 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -1210,11 +1207,9 @@ define amdgpu_kernel void @store_load_vidx_sidx_offset(i32 %sidx) {
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_add_lshl_u32 v0, s0, v0, 2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add_nc_u32_e32 v0, 4, v0
-; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:1024 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:1028 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v0, off offset:1024 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b32 v0, v0, off offset:1028 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
