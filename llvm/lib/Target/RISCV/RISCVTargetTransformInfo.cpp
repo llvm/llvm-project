@@ -515,8 +515,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (LT.second.isFixedLengthVector())
       // vrsub.vi has a 5 bit immediate field, otherwise an li suffices
       LenCost = isInt<5>(LT.second.getVectorNumElements() - 1) ? 0 : 1;
-    // FIXME: replace the constant `2` below with cost of VSIMPLE_INT (vid.v &
-    // vrsub.vx)
+    // FIXME: replace the constant `2` below with cost of {VID_V,VRSUB_VX}
     InstructionCost GatherCost =
         2 + getRISCVInstructionCost(RISCV::VRGATHER_VV, LT.second, CostKind);
     // Mask operation additionally required extend and truncate
