@@ -11,6 +11,7 @@ try:
         get_op_result_or_value as _get_op_result_or_value,
         get_op_results_or_values as _get_op_results_or_values,
         _cext as _ods_cext,
+        ResultValueTypeTuple as _ResultValueTypeTuple,
         ResultValueT as _ResultValueT,
         VariadicResultValueT as _VariadicResultValueT,
     )
@@ -27,8 +28,8 @@ class AffineForOp(AffineForOp):
     def __init__(
         self,
         lower_bound: Union[int, _ResultValueT, AffineMap],
-        upper_bound: Optional[Union[int, _ResultValueT, AffineMap]] = None,
-        step: Optional[Union[int, _ResultValueT]] = None,
+        upper_bound: Optional[Union[int, _ResultValueT, AffineMap]],
+        step: Optional[Union[int, Attribute]] = None,
         iter_args: Optional[_ResultValueT] = None,
         *,
         lower_bound_operands: Optional[_VariadicResultValueT] = None,
@@ -44,7 +45,7 @@ class AffineForOp(AffineForOp):
         - `iter_args` is a list of additional loop-carried arguments or an operation
           producing them as results.
         - `lower_bound_operands` is the list of arguments to substitute the dimensions,
-          then symbols in the `lower_bound` affine map, in an increasing order
+          then symbols in the `lower_bound` affine map, in an increasing order.
         - `upper_bound_operands` is the list of arguments to substitute the dimensions,
           then symbols in the `upper_bound` affine map, in an increasing order.
         """
@@ -56,36 +57,41 @@ class AffineForOp(AffineForOp):
 
         if step is None:
             step = 1
-        if upper_bound is None:
-            upper_bound, lower_bound = lower_bound, 0
 
-        if isinstance(lower_bound, int):
-            lower_bound = AffineMap.get_constant(lower_bound)
-        elif isinstance(lower_bound, (Operation, OpView, Value)):
-            if len(lower_bound_operands):
+        bounds_operands = [lower_bound_operands, upper_bound_operands]
+        bounds = [lower_bound, upper_bound]
+        bounds_names = ["lower", "upper"]
+        for i, name in enumerate(bounds_names):
+            if isinstance(bounds[i], int):
+                bounds[i] = AffineMap.get_constant(bounds[i])
+            elif isinstance(bounds[i], _ResultValueTypeTuple):
+                if len(bounds_operands[i]):
+                    raise ValueError(
+                        f"Either a concrete {name} bound or an AffineMap in combination "
+                        f"with {name} bound operands, but not both, is supported."
+                    )
+                if (
+                    isinstance(bounds[i], (OpView, Operation))
+                    and len(bounds[i].results) > 1
+                ):
+                    raise ValueError(
+                        f"Only a single concrete value is supported for {name} bound."
+                    )
+
+                bounds_operands[i].append(_get_op_result_or_value(bounds[i]))
+                bounds[i] = AffineMap.get_identity(1)
+
+            if not isinstance(bounds[i], AffineMap):
                 raise ValueError(
-                    f"Either a concrete lower bound or an AffineMap in combination "
-                    f"with lower bound operands, but not both, is supported."
+                    f"{name} bound must be int | ResultValueT | AffineMap."
                 )
-            lower_bound_operands.append(lower_bound)
-            lower_bound = AffineMap.get_identity(1)
-
-        if not isinstance(lower_bound, AffineMap):
-            raise ValueError(f"{lower_bound=} must be int | ResultValueT | AffineMap")
-
-        if isinstance(upper_bound, int):
-            upper_bound = AffineMap.get_constant(upper_bound)
-        elif isinstance(upper_bound, (Operation, OpView, Value)):
-            if len(upper_bound_operands):
+            if len(bounds_operands[i]) != bounds[i].n_inputs:
                 raise ValueError(
-                    f"Either a concrete upper bound or an AffineMap in combination "
-                    f"with upper bound operands, but not both, is supported."
+                    f"Wrong number of {name} bound operands passed to AffineForOp; "
+                    + f"Expected {bounds[i].n_inputs}, got {len(bounds_operands[i])}."
                 )
-            upper_bound_operands.append(upper_bound)
-            upper_bound = AffineMap.get_identity(1)
 
-        if not isinstance(upper_bound, AffineMap):
-            raise ValueError(f"{upper_bound=} must be int | ResultValueT | AffineMap")
+        lower_bound, upper_bound = bounds
 
         if iter_args is None:
             iter_args = []
@@ -126,7 +132,7 @@ class AffineForOp(AffineForOp):
 
 def for_(
     start,
-    stop=None,
+    stop,
     step=None,
     iter_args: Optional[Sequence[Value]] = None,
     *,

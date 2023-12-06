@@ -108,10 +108,69 @@ def testAffineForOp():
             # CHECK: %[[TMP:.*]] = memref.load %[[BUFFER]][%[[INDVAR]]] : memref<1024xf32>
             tmp = memref.LoadOp(buffer, [sum.induction_variable])
             sum_next = arith.AddFOp(sum.inner_iter_args[0], tmp)
-
             affine.AffineYieldOp([sum_next])
 
-        return
+
+# CHECK-LABEL: TEST: testAffineForOpErrors
+@constructAndPrintInModule
+def testAffineForOpErrors():
+    c1 = arith.ConstantOp(T.index(), 1)
+    c2 = arith.ConstantOp(T.index(), 2)
+    c3 = arith.ConstantOp(T.index(), 3)
+    d0 = AffineDimExpr.get(0)
+
+    try:
+        affine.AffineForOp(
+            c1,
+            c2,
+            1,
+            lower_bound_operands=[c3],
+            upper_bound_operands=[],
+        )
+    except ValueError as e:
+        assert (
+            e.args[0]
+            == "Either a concrete lower bound or an AffineMap in combination with lower bound operands, but not both, is supported."
+        )
+
+    try:
+        affine.AffineForOp(
+            AffineMap.get_constant(1),
+            c2,
+            1,
+            lower_bound_operands=[c3, c3],
+            upper_bound_operands=[],
+        )
+    except ValueError as e:
+        assert (
+            e.args[0]
+            == "Wrong number of lower bound operands passed to AffineForOp; Expected 0, got 2."
+        )
+
+    try:
+        two_indices = affine.AffineDelinearizeIndexOp(
+            [T.index(), T.index()], c1, [c1, c1]
+        )
+        affine.AffineForOp(
+            two_indices,
+            c2,
+            1,
+            lower_bound_operands=[],
+            upper_bound_operands=[],
+        )
+    except ValueError as e:
+        assert e.args[0] == "Only a single concrete value is supported for lower bound."
+
+    try:
+        affine.AffineForOp(
+            1.0,
+            c2,
+            1,
+            lower_bound_operands=[],
+            upper_bound_operands=[],
+        )
+    except ValueError as e:
+        assert e.args[0] == "lower bound must be int | ResultValueT | AffineMap."
 
 
 @constructAndPrintInModule
@@ -182,51 +241,6 @@ def testForSugar():
             memref.store(add, memref_v, [i])
             affine.yield_([])
 
-    # CHECK-LABEL:   func.func @range_loop_5(
-    # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
-    # CHECK:           affine.for %[[VAL_3:.*]] = 0 to 10 {
-    # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
-    # CHECK:             memref.store %[[VAL_4]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<10xindex>
-    # CHECK:           }
-    # CHECK:           return
-    # CHECK:         }
-    @func.FuncOp.from_py_func(T.index(), T.index(), memref_t)
-    def range_loop_5(lb, ub, memref_v):
-        for i in range(0, 10, step=1):
-            add = arith.addi(i, i)
-            memref.store(add, memref_v, [i])
-            affine.yield_([])
-
-    # CHECK-LABEL:   func.func @range_loop_6(
-    # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
-    # CHECK:           affine.for %[[VAL_3:.*]] = 0 to 10 {
-    # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
-    # CHECK:             memref.store %[[VAL_4]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<10xindex>
-    # CHECK:           }
-    # CHECK:           return
-    # CHECK:         }
-    @func.FuncOp.from_py_func(T.index(), T.index(), memref_t)
-    def range_loop_6(lb, ub, memref_v):
-        for i in range(0, 10):
-            add = arith.addi(i, i)
-            memref.store(add, memref_v, [i])
-            affine.yield_([])
-
-    # CHECK-LABEL:   func.func @range_loop_7(
-    # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
-    # CHECK:           affine.for %[[VAL_3:.*]] = 0 to 10 {
-    # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
-    # CHECK:             memref.store %[[VAL_4]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<10xindex>
-    # CHECK:           }
-    # CHECK:           return
-    # CHECK:         }
-    @func.FuncOp.from_py_func(T.index(), T.index(), memref_t)
-    def range_loop_7(lb, ub, memref_v):
-        for i in range(10):
-            add = arith.addi(i, i)
-            memref.store(add, memref_v, [i])
-            affine.yield_([])
-
     # CHECK-LABEL:   func.func @range_loop_8(
     # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
     # CHECK:           %[[VAL_3:.*]] = affine.for %[[VAL_4:.*]] = 0 to 10 iter_args(%[[VAL_5:.*]] = %[[VAL_2]]) -> (memref<10xindex>) {
@@ -238,7 +252,7 @@ def testForSugar():
     # CHECK:         }
     @func.FuncOp.from_py_func(T.index(), T.index(), memref_t)
     def range_loop_8(lb, ub, memref_v):
-        for i, it in range(10, iter_args=[memref_v]):
+        for i, it in range(0, 10, iter_args=[memref_v]):
             add = arith.addi(i, i)
             memref.store(add, it, [i])
             affine.yield_([it])
