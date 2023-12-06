@@ -35,7 +35,12 @@ class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   // PTX version x.y is represented as 10*x+y, e.g. 3.1 == 31
   unsigned PTXVersion;
 
-  // SM version x.y is represented as 10*x+y, e.g. 3.1 == 31
+  // Full SM version x.y is represented as 100*x+10*y+feature, e.g. 3.1 == 310
+  // sm_90a == 901
+  unsigned int FullSmVersion;
+
+  // SM version x.y is represented as 10*x+y, e.g. 3.1 == 31. Derived from
+  // FullSmVersion.
   unsigned int SmVersion;
 
   const NVPTXTargetMachine &TM;
@@ -80,8 +85,10 @@ public:
   bool allowFP16Math() const;
   bool hasMaskOperator() const { return PTXVersion >= 71; }
   bool hasNoReturn() const { return SmVersion >= 30 && PTXVersion >= 64; }
-  unsigned int getSmVersion() const { return SmVersion; }
+  unsigned int getSmVersion() const { return FullSmVersion / 10; }
+  unsigned int getFullSmVersion() const { return FullSmVersion; }
   std::string getTargetName() const { return TargetName; }
+  bool isSm90a() const { return getFullSmVersion() == 901; }
 
   // Get maximum value of required alignments among the supported data types.
   // From the PTX ISA doc, section 8.2.3:
