@@ -1411,11 +1411,6 @@ private:
   /// decls.
   DeclMapTy LocalDeclMap;
 
-  /// ExprLValueMap - This keeps track of the \p LValue of emitted expressions.
-  /// It's useful when processing the \p counted_by attribute so that we don't
-  /// duplicate the calculations.
-  llvm::SmallDenseMap<const Expr *, LValue, 32> ExprLValueMap;
-
   // Keep track of the cleanups for callee-destructed parameters pushed to the
   // cleanup stack so that they can be deactivated later.
   llvm::DenseMap<const ParmVarDecl *, EHScopeStack::stable_iterator>
@@ -3027,6 +3022,10 @@ public:
   void EmitBoundsCheck(const Expr *E, const Expr *Base, llvm::Value *Index,
                        QualType IndexType, bool Accessed);
 
+  void EmitBoundsCheck(const Expr *E, llvm::Value *Bound, llvm::Value *Index,
+                       QualType IndexType, QualType IndexedType,
+                       bool Accessed);
+
   // Find a struct's flexible array member. It may be embedded inside multiple
   // sub-structs, but must still be the last field.
   const ValueDecl *FindFlexibleArrayMemberField(ASTContext &Ctx,
@@ -3039,7 +3038,10 @@ public:
 
   /// Build an expression accessing the "counted_by" field.
   llvm::Value *EmitCountedByFieldExpr(const Expr *Base,
-                                      const ValueDecl *CountedByVD);
+                                      const ValueDecl *VD);
+  llvm::Value *EmitCountedByFieldExpr(llvm::Value *CountedByInst,
+                                      const RecordDecl *RD,
+                                      const ValueDecl *VD);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);

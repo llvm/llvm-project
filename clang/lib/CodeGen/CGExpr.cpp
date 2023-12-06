@@ -938,15 +938,6 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
         return CGF.getVLASize(VAT).NumElts;
       // Ignore pass_object_size here. It's not applicable on decayed pointers.
     }
-
-    if (isa<MemberExpr>(Base->IgnoreParenImpCasts())) {
-      if (const ValueDecl *VD = CGF.FindCountedByField(Base)) {
-        if (llvm::Value *Res = CGF.EmitCountedByFieldExpr(Base, VD)) {
-          IndexedType = Base->getType();
-          return Res;
-        }
-      }
-    }
   }
 
   CodeGenFunction::SanitizerScope SanScope(&CGF);
@@ -1048,9 +1039,21 @@ public:
   Expr *VisitImplicitCastExpr(ImplicitCastExpr *E) {
     return Visit(E->getSubExpr());
   }
-  Expr *VisitParenExpr(ParenExpr *E) { return Visit(E->getSubExpr()); }
-  Expr *VisitUnaryAddrOf(UnaryOperator *E) { return Visit(E->getSubExpr()); }
-  Expr *VisitUnaryDeref(UnaryOperator *E) { return Visit(E->getSubExpr()); }
+  Expr *VisitParenExpr(ParenExpr *E) {
+    if (IsExpectedRecordDecl(E))
+      return E;
+    return Visit(E->getSubExpr());
+  }
+  Expr *VisitUnaryAddrOf(UnaryOperator *E) {
+    if (IsExpectedRecordDecl(E))
+      return E;
+    return Visit(E->getSubExpr());
+  }
+  Expr *VisitUnaryDeref(UnaryOperator *E) {
+    if (IsExpectedRecordDecl(E))
+      return E;
+    return Visit(E->getSubExpr());
+  }
 
   // Invalid operations. Pointer arithmetic may lead to security violations.
   Expr *VisitBinaryOperator(BinaryOperator *E) { return nullptr; }
@@ -1064,39 +1067,48 @@ public:
 
 llvm::Value *
 CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
-                                        const ValueDecl *CountedByVD) {
-  const DeclContext *DC = CountedByVD->getLexicalDeclContext();
+                                        const ValueDecl *VD) {
+  // This method is typically called in contexts where we can't generate
+  // side-effects, like in __builtin{_dynamic}_object_size. When finding
+  // expressions, only choose those that have either already been emitted or
+  // can be loaded without side-effects.
+  const DeclContext *DC = VD->getLexicalDeclContext();
   const auto *CountedByRD = cast<RecordDecl>(DC);
 
   // Find the outer struct expr (i.e. p in p->a.b.c.d).
   Expr *CountedByExpr =
       StructAccessBase(CountedByRD).Visit(const_cast<Expr *>(Base));
-  if (!CountedByExpr || CountedByExpr->HasSideEffects(getContext()))
+  if (!CountedByExpr)
     return nullptr;
 
   llvm::Value *Res = nullptr;
-  auto I = ExprLValueMap.find(CountedByExpr);
-  if (I != ExprLValueMap.end()) {
-    Res = I->second.getPointer(*this);
-  } else if (auto *DRE = dyn_cast<DeclRefExpr>(CountedByExpr)) {
+  if (auto *DRE = dyn_cast<DeclRefExpr>(CountedByExpr)) {
     Res = EmitDeclRefLValue(DRE).getPointer(*this);
-  } else {
-    auto I = LocalDeclMap.find(CountedByVD);
+  } else if (CountedByExpr->HasSideEffects(getContext())) {
+    auto I = LocalDeclMap.find(VD);
     if (I != LocalDeclMap.end())
       Res = I->second.getPointer();
   }
 
-  if (!Res || (!isa<llvm::GetElementPtrInst>(Res) &&
-               !isa<llvm::AllocaInst>(Res) && !isa<llvm::GlobalVariable>(Res)))
+  if (!Res)
     return nullptr;
 
+  Res = Builder.CreateAlignedLoad(Res->getType(), Res, getPointerAlign(),
+                                  "struct.load");
+  return EmitCountedByFieldExpr(Res, CountedByRD, VD);
+}
+
+llvm::Value *
+CodeGenFunction::EmitCountedByFieldExpr(llvm::Value *CountedByInst,
+                                        const RecordDecl *RD,
+                                        const ValueDecl *VD) {
   auto *Zero = llvm::ConstantInt::get(Int32Ty, 0);
   SmallVector<llvm::Value *, 8> Indices{Zero};
-  if (const auto *FD = dyn_cast<FieldDecl>(CountedByVD)) {
-    unsigned Idx =
-        CGM.getTypes().getCGRecordLayout(CountedByRD).getLLVMFieldNo(FD);
+
+  if (const auto *FD = dyn_cast<FieldDecl>(VD)) {
+    unsigned Idx = CGM.getTypes().getCGRecordLayout(RD).getLLVMFieldNo(FD);
     Indices.emplace_back(llvm::ConstantInt::get(Int32Ty, Idx));
-  } else if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
+  } else if (const auto *IFD = dyn_cast<IndirectFieldDecl>(VD)) {
     for (NamedDecl *ND : IFD->chain())
       if (auto *FD = dyn_cast<FieldDecl>(ND)) {
         const RecordDecl *RD = FD->getParent();
@@ -1106,12 +1118,12 @@ CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
   }
 
   llvm::Type *Ty =
-      CGM.getTypes().ConvertType(QualType(CountedByRD->getTypeForDecl(), 0));
-  Res = Builder.CreateAlignedLoad(Res->getType(), Res, getPointerAlign(),
-                                  "struct.load");
-  Res = Builder.CreateInBoundsGEP(Ty, Res, Indices, "counted_by.gep");
+      CGM.getTypes().ConvertType(QualType(RD->getTypeForDecl(), 0));
+  CountedByInst = Builder.CreateInBoundsGEP(Ty, CountedByInst, Indices,
+                                            "counted_by.gep");
   Ty = llvm::GetElementPtrInst::getIndexedType(Ty, Indices);
-  return Builder.CreateAlignedLoad(Ty, Res, getIntAlign(), "counted_by.load");
+  return Builder.CreateAlignedLoad(Ty, CountedByInst, getIntAlign(),
+                                   "counted_by.load");
 }
 
 const ValueDecl *CodeGenFunction::FindFlexibleArrayMemberField(
@@ -1198,17 +1210,9 @@ const ValueDecl *CodeGenFunction::FindCountedByField(const Expr *Base) {
   return dyn_cast<ValueDecl>(Lookup.front());
 }
 
-void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
+void CodeGenFunction::EmitBoundsCheck(const Expr *E, llvm::Value *Bound,
                                       llvm::Value *Index, QualType IndexType,
-                                      bool Accessed) {
-  assert(SanOpts.has(SanitizerKind::ArrayBounds) &&
-         "should not be called unless adding bounds checks");
-  const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-    getLangOpts().getStrictFlexArraysLevel();
-
-  QualType IndexedType;
-  llvm::Value *Bound =
-      getArrayIndexingBound(*this, Base, IndexedType, StrictFlexArraysLevel);
+                                      QualType IndexedType, bool Accessed) {
   if (!Bound)
     return;
 
@@ -1227,6 +1231,20 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
                                 : Builder.CreateICmpULE(IndexVal, BoundVal);
   EmitCheck(std::make_pair(Check, SanitizerKind::ArrayBounds),
             SanitizerHandler::OutOfBounds, StaticData, Index);
+}
+
+void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
+                                      llvm::Value *Index, QualType IndexType,
+                                      bool Accessed) {
+  assert(SanOpts.has(SanitizerKind::ArrayBounds) &&
+         "should not be called unless adding bounds checks");
+  const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+    getLangOpts().getStrictFlexArraysLevel();
+  QualType IndexedType;
+  llvm::Value *Bound =
+      getArrayIndexingBound(*this, Base, IndexedType, StrictFlexArraysLevel);
+
+  EmitBoundsCheck(E, Bound, Index, IndexedType, IndexType, Accessed);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
@@ -1499,11 +1517,6 @@ LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
     LV = EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E), /*Accessed*/true);
   else
     LV = EmitLValue(E);
-
-  if (SanOpts.has(SanitizerKind::ArrayBounds))
-    // Store the code for potential counted_by processing.
-    ExprLValueMap[E] = LV;
-
   if (!isa<DeclRefExpr>(E) && !LV.isBitField() && LV.isSimple()) {
     SanitizerSet SkippedChecks;
     if (const auto *ME = dyn_cast<MemberExpr>(E)) {
@@ -1662,14 +1675,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitExtVectorElementExpr(cast<ExtVectorElementExpr>(E));
   case Expr::CXXThisExprClass:
     return MakeAddrLValue(LoadCXXThisAddress(), E->getType());
-  case Expr::MemberExprClass: {
-    LValue LV = EmitMemberExpr(cast<MemberExpr>(E));
-
-    if (SanOpts.has(SanitizerKind::ArrayBounds))
-      // Store the code for potential counted_by processing.
-      ExprLValueMap[E] = LV;
-    return LV;
-  }
+  case Expr::MemberExprClass:
+    return EmitMemberExpr(cast<MemberExpr>(E));
   case Expr::CompoundLiteralExprClass:
     return EmitCompoundLiteralLValue(cast<CompoundLiteralExpr>(E));
   case Expr::ConditionalOperatorClass:
@@ -4163,7 +4170,33 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       ArrayLV = EmitArraySubscriptExpr(ASE, /*Accessed*/ true);
     else
       ArrayLV = EmitLValue(Array);
+
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+
+    if (SanOpts.has(SanitizerKind::ArrayBounds)) {
+      const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+          getLangOpts().getStrictFlexArraysLevel();
+
+      if (const auto *ME = dyn_cast<MemberExpr>(Array);
+          ME && ME->isFlexibleArrayMemberLike(getContext(),
+                                              StrictFlexArraysLevel) &&
+          ME->getMemberDecl()->hasAttr<CountedByAttr>()) {
+        RecordDecl *RD =
+            ME->getMemberDecl()->getDeclContext()->getOuterLexicalRecordContext();
+        Expr *StructBase =
+            StructAccessBase(RD).Visit(const_cast<MemberExpr *>(ME));
+
+        if (StructBase && StructBase->getType()->isPointerType()) {
+          if (const ValueDecl *VD = FindCountedByField(Array)) {
+            Addr = EmitPointerWithAlignment(StructBase, &EltBaseInfo,
+                                            &EltTBAAInfo);
+            llvm::Value *Res = EmitCountedByFieldExpr(Addr.getPointer(), RD, VD);
+            EmitBoundsCheck(E, Res, Idx, E->getIdx()->getType(),
+                            Array->getType(), Accessed);
+          }
+        }
+      }
+    }
 
     // Propagate the alignment from the array itself to the result.
     QualType arrayType = Array->getType();
