@@ -680,9 +680,6 @@ public:
     return get(PT->getContext(), AddressSpace);
   }
 
-  [[deprecated("Always returns true")]]
-  bool isOpaque() const { return true; }
-
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);
 
@@ -691,24 +688,6 @@ public:
 
   /// Return the address space of the Pointer type.
   inline unsigned getAddressSpace() const { return getSubclassData(); }
-
-  /// Return true if either this is an opaque pointer type or if this pointee
-  /// type matches Ty. Primarily used for checking if an instruction's pointer
-  /// operands are valid types. Will be useless after non-opaque pointers are
-  /// removed.
-  [[deprecated("Always returns true")]]
-  bool isOpaqueOrPointeeTypeMatches(Type *) {
-    return true;
-  }
-
-  /// Return true if both pointer types have the same element type. Two opaque
-  /// pointers are considered to have the same element type, while an opaque
-  /// and a non-opaque pointer have different element types.
-  /// TODO: Remove after opaque pointer transition is complete.
-  [[deprecated("Always returns true")]]
-  bool hasSameElementTypeAs(PointerType *Other) {
-    return true;
-  }
 
   /// Implement support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Type *T) {
