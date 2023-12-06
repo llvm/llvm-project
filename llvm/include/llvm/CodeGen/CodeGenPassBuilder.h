@@ -701,6 +701,7 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
+  case ExceptionHandling::ZOS:
     addPass(DwarfEHPreparePass(&TM));
     break;
   case ExceptionHandling::WinEH:
