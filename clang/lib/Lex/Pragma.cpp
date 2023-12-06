@@ -987,10 +987,8 @@ bool Preprocessor::LexOnOffSwitch(tok::OnOffSwitch &Result) {
 
   // Verify that this is followed by EOD.
   LexUnexpandedToken(Tok);
-  if (Tok.isNot(tok::eod)) {
+  if (Tok.isNot(tok::eod))
     Diag(Tok, diag::ext_pragma_syntax_eod);
-    DiscardUntilEndOfDirective();
-  }
   return false;
 }
 
