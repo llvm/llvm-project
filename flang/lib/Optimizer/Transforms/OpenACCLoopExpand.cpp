@@ -93,7 +93,6 @@ static void clearIVPrivatizations(llvm::SmallVector<mlir::Value> &ivs,
 
   // Next remove the private operations associated with IVs.
   for (auto priv : privOps) {
-    llvm::errs() << priv << "\n";
     mlir::Value varPtr{mlir::acc::getVarPtr(priv.getDefiningOp())};
     auto pos = getOperandPosition(accLoopOp.getPrivateOperands(), priv);
 
@@ -119,6 +118,13 @@ static void clearIVPrivatizations(llvm::SmallVector<mlir::Value> &ivs,
     // 3) Now remove the private op.
     priv.getDefiningOp()->erase();
   }
+}
+
+static mlir::Value createConvertOrConstant(fir::FirOpBuilder &builder,
+    mlir::Location loc, mlir::Type ty, mlir::Value originalValue) {
+  if (auto intValue = fir::getIntIfConstant(originalValue))
+    return builder.createIntegerConstant(loc, ty, *intValue);
+  return builder.createConvert(loc, ty, originalValue);
 }
 
 void LoopExpand::runOnOperation() {
@@ -165,7 +171,7 @@ void LoopExpand::runOnOperation() {
       ubs.push_back(
           builder.createConvert(loc, idxTy, accLoopOp.getUpperbound()[i]));
       steps.push_back(
-          builder.createConvert(loc, idxTy, accLoopOp.getStep()[i]));
+          createConvertOrConstant(builder, loc, idxTy, accLoopOp.getStep()[i]));
       iterArgs.push_back(builder.createConvert(loc, fir::unwrapRefType(ivs[i].getType()), accLoopOp.getLowerbound()[i]));
       fir::DoLoopOp doLoopOp = builder.create<fir::DoLoopOp>(
           loc, lbs[i], ubs[i], steps[i], /*unordered=*/false, finalCountValue,
@@ -212,13 +218,13 @@ void LoopExpand::runOnOperation() {
 
       // Convert ops have been created outside of the acc.loop operation. They
       // need to be moved back before their uses.
-      if (mlir::isa<fir::ConvertOp>(lbs[i].getDefiningOp()))
+      if (lbs[i] != accLoopOp.getLowerbound()[i])
         lbs[i].getDefiningOp()->moveBefore(loops[i].getOperation());
-      if (mlir::isa<fir::ConvertOp>(ubs[i].getDefiningOp()))
+      if (ubs[i] != accLoopOp.getUpperbound()[i])
         ubs[i].getDefiningOp()->moveBefore(loops[i].getOperation());
-      if (mlir::isa<fir::ConvertOp>(steps[i].getDefiningOp()))
+      if (steps[i] != accLoopOp.getStep()[i])
         steps[i].getDefiningOp()->moveBefore(loops[i].getOperation());
-      if (mlir::isa<fir::ConvertOp>(iterArgs[i].getDefiningOp()))
+      if (iterArgs[i] != accLoopOp.getLowerbound()[i])
         iterArgs[i].getDefiningOp()->moveBefore(loops[i].getOperation());
     }
 
