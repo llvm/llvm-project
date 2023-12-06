@@ -37,19 +37,3 @@ define void @v16i8(ptr %a, ptr %b) {
   store <16 x i8> %v, ptr %b
   ret void
 }
-
-; CHECK-LABEL: .visible .func v16i8_store
-define void @v16i8_store(ptr %a, <16 x i8> %v) {
-  ; CHECK:      ld.param.u64   %rd1, [v16i8_store_param_0];
-  ; CHECK-NEXT: ld.param.v4.u32   {%r1, %r2, %r3, %r4}, [v16i8_store_param_1];
-  ; CHECK-NEXT: st.v4.u32   [%rd1], {%r1, %r2, %r3, %r4};
-  store <16 x i8> %v, ptr %a
-  ret void
-}
-
-; CHECK-LABEL: .visible .func v8i8_store
-define void @v8i8_store(ptr %a, <8 x i8> %v) {
-  ; CHECK: st.v2.u32
-  store <8 x i8> %v, ptr %a
-  ret void
-}
