@@ -2024,9 +2024,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         }
 
         auto findRel = [&]() {
-          // Hexagon handles relocs in pretty printer
-          if (Obj.getArch() == Triple::hexagon)
-            return false;
           while (RelCur != RelEnd) {
             RelOffset = RelCur->getOffset() - RelAdjustment;
             // If this relocation is hidden, skip it.
@@ -2218,10 +2215,16 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   // If we have a valid relocation, try to print the
                   // corresponding symbol name. Multiple relocations on the
                   // same instruction are not handled.
-                  if (!getRelocationValueString(*RelCur, false, Val))
-                    *TargetOS << Val;
-                  else
+                  if (Error E = getRelocationValueString(*RelCur, false,
+                                                         Val)) {
+                    // If -r was used, this error will be printed later.
+                    // Otherwise, we ignore the error and print what
+                    // would have been printed without using relocations.
+                    consumeError(std::move(E));
                     *TargetOS << TargetName;
+                  }
+                  else
+                    *TargetOS << Val;
                   if (Disp)
                     *TargetOS << "+0x" << Twine::utohexstr(Disp);
                 } else if (!Disp) {
@@ -2261,7 +2264,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         if (BTF)
           printBTFRelocation(FOS, *BTF, {Index, Section.getIndex()}, LVP);
 
-        if (InlineRelocs) {
+        // Hexagon handles relocs in pretty printer
+        if (InlineRelocs && Obj.getArch() != Triple::hexagon) {
           while (findRel()) {
             // When --adjust-vma is used, update the address printed.
             if (RelCur->getSymbol() != Obj.symbol_end()) {
