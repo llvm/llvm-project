@@ -2572,6 +2572,11 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
           os << 'x';
         }
         printType(vectorTy.getElementType());
+        VectorLayoutAttrInterface layout = vectorTy.getLayout();
+        if (layout) {
+          os << ", ";
+          printAttribute(vectorTy.getLayout(), AttrTypeElision::May);
+        }
         os << '>';
       })
       .Case<RankedTensorType>([&](RankedTensorType tensorTy) {

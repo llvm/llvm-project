@@ -468,14 +468,37 @@ VectorType Parser::parseVectorType() {
   // Parse the element type.
   auto typeLoc = getToken().getLoc();
   auto elementType = parseType();
-  if (!elementType || parseToken(Token::greater, "expected '>' in vector type"))
+  if (!elementType)
     return nullptr;
 
   if (!VectorType::isValidElementType(elementType))
     return emitError(typeLoc, "vector elements must be int/index/float type"),
            nullptr;
 
-  return VectorType::get(dimensions, elementType, scalableDims);
+  VectorLayoutAttrInterface layout;
+  auto parseElt = [&]() -> ParseResult {
+    Attribute attr = parseAttribute();
+    if (!attr)
+      return failure();
+    if (isa<VectorLayoutAttrInterface>(attr)) {
+      layout = cast<VectorLayoutAttrInterface>(attr);
+    }
+    return success();
+  };
+
+  // Parse the vector layout
+  if (!consumeIf(Token::greater)) {
+    if (parseToken(Token::comma, "expected ',' or '>' in vector type") ||
+        parseCommaSeparatedListUntil(Token::greater, parseElt,
+                                     /*allowEmptyList=*/false)) {
+      return nullptr;
+    }
+  }
+
+  if (!layout)
+    return VectorType::get(dimensions, elementType, scalableDims);
+
+  return VectorType::get(dimensions, elementType, scalableDims, layout);
 }
 
 /// Parse a dimension list in a vector type. This populates the dimension list.

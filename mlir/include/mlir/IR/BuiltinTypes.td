@@ -1030,11 +1030,13 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector", [ShapedTypeInterface], "Ty
     Syntax:
 
     ```
-    vector-type ::= `vector` `<` vector-dim-list vector-element-type `>`
+    vector-type ::= `vector` `<` vector-dim-list vector-element-type
+                    (`,` layout-specification)? `>`
     vector-element-type ::= float-type | integer-type | index-type
     vector-dim-list := (static-dim-list `x`)?
     static-dim-list ::= static-dim (`x` static-dim)*
     static-dim ::= (decimal-literal | `[` decimal-literal `]`)
+    layout-specification ::= attribute-value
     ```
 
     The vector type represents a SIMD style vector used by target-specific
@@ -1050,6 +1052,16 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector", [ShapedTypeInterface], "Ty
     Note: hexadecimal integer literals are not allowed in vector type
     declarations, `vector<0x42xi32>` is invalid because it is interpreted as a
     2D vector with shape `(0, 42)` and zero shapes are not allowed.
+
+    ##### Layout
+
+    A vector may optionally have a layout that can be used to capture
+    the mapping of the vector indices to a an arbitrary coordinate sytem.
+    An example of such a mapping is the mapping of vector indices to
+    indices of the vector fragments that are held by individual threads
+    in a SIMT execution model. Such layouts are common in a wide variety of
+    GPU matrix multiplication instructions. The layout can be any attribute
+    that implements `VectorLayoutAttrInterface`.
 
     Examples:
 
@@ -1069,17 +1081,20 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector", [ShapedTypeInterface], "Ty
     // A 3D mixed fixed/scalable vector in which only the inner dimension is
     // scalable.
     vector<2x[4]x8xf32>
+
     ```
   }];
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,
     "Type":$elementType,
-    ArrayRefParameter<"bool">:$scalableDims
+    ArrayRefParameter<"bool">:$scalableDims,
+    "VectorLayoutAttrInterface":$layout
   );
   let builders = [
     TypeBuilderWithInferredContext<(ins
       "ArrayRef<int64_t>":$shape, "Type":$elementType,
-      CArg<"ArrayRef<bool>", "{}">:$scalableDims
+      CArg<"ArrayRef<bool>", "{}">:$scalableDims,
+      CArg<"VectorLayoutAttrInterface", "{}">:$layout
     ), [{
       // While `scalableDims` is optional, its default value should be
       // `false` for every dim in `shape`.
@@ -1088,7 +1103,7 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector", [ShapedTypeInterface], "Ty
         isScalableVec.resize(shape.size(), false);
         scalableDims = isScalableVec;
       }
-      return $_get(elementType.getContext(), shape, elementType, scalableDims);
+      return $_get(elementType.getContext(), shape, elementType, scalableDims, layout);
     }]>
   ];
   let extraClassDeclaration = [{

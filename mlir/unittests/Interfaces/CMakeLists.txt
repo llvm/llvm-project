@@ -3,6 +3,7 @@ add_mlir_unittest(MLIRInterfacesTests
   DataLayoutInterfacesTest.cpp
   InferIntRangeInterfaceTest.cpp
   InferTypeOpInterfaceTest.cpp
+  VectorLayoutInterfaceTest.cpp
 )
 
 target_link_libraries(MLIRInterfacesTests
