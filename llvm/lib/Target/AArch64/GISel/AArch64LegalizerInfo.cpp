@@ -760,9 +760,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
       .clampScalar(0, s32, s128)
       .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)))
-      .customIf([](const LegalityQuery &Query) {
-        return Query.Types[0].getSizeInBits() == 128;
-      });
+      .custom();
 
   getActionDefinitionsBuilder(
       {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
