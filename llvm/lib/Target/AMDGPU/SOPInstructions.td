@@ -1100,10 +1100,14 @@ let SubtargetPredicate = isGFX10Plus in {
       "$simm16"> {
     let has_sdst = 0;
   }
+} // End SubtargetPredicate = isGFX10Plus
 
+let SubtargetPredicate = isGFX10GFX11 in {
   def S_SUBVECTOR_LOOP_BEGIN : SOPK_32_BR<"s_subvector_loop_begin">;
   def S_SUBVECTOR_LOOP_END   : SOPK_32_BR<"s_subvector_loop_end">;
+} // End SubtargetPredicate = isGFX10GFX11
 
+let SubtargetPredicate = isGFX10Plus in {
   def S_WAITCNT_VSCNT   : SOPK_WAITCNT<"s_waitcnt_vscnt">;
   def S_WAITCNT_VMCNT   : SOPK_WAITCNT<"s_waitcnt_vmcnt">;
   def S_WAITCNT_EXPCNT  : SOPK_WAITCNT<"s_waitcnt_expcnt">;
