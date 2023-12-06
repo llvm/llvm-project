@@ -55,21 +55,6 @@ MlirLogicalResult mlirPassManagerEmitKokkosSparse(MlirPassManager passManager,
                                      MlirModule module,
                                      const char* cxxSourceFile,
                                      const char* pySourceFile,
-                                     bool useHierarchical) {
-  return wrap(unwrap(passManager)->emitKokkosSparse(unwrap(module), cxxSourceFile, pySourceFile, useHierarchical));
-}
-
-MlirLogicalResult mlirPassManagerEmitKokkos(MlirPassManager passManager,
-                                     MlirModule module,
-                                     const char* cxxSourceFile,
-                                     const char* pySourceFile) {
-  return wrap(unwrap(passManager)->emitKokkos(unwrap(module), cxxSourceFile, pySourceFile));
-}
-
-MlirLogicalResult mlirPassManagerEmitKokkosSparse(MlirPassManager passManager,
-                                     MlirModule module,
-                                     const char* cxxSourceFile,
-                                     const char* pySourceFile,
                                      bool useHierarchical,
                                      bool isLastKernel) {
   return wrap(unwrap(passManager)->emitKokkosSparse(unwrap(module), cxxSourceFile, pySourceFile, useHierarchical, isLastKernel));

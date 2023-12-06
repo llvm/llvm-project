@@ -36,7 +36,8 @@ namespace {
 /// and nothing else. All memrefs are expected to be in device space
 /// (DefaultExecutionSpace::memory_space), not HostSpace.
 static func::FuncOp genKokkosFunc(OpBuilder &builder, ModuleOp module,
-                                 SmallVectorImpl<Value> &args) {
+                                 SmallVectorImpl<Value> &args,
+                                 scf::ParallelOp forallOp) {
   static unsigned kernelNumber = 0;
   SmallString<16> kernelName;
   ("kokkos_sparse_kernel_" + Twine(kernelNumber++)).toStringRef(kernelName);
@@ -45,7 +46,11 @@ static func::FuncOp genKokkosFunc(OpBuilder &builder, ModuleOp module,
   SmallVector<Type> argsTp;
   for (unsigned i = 0, e = args.size(); i < e; i++)
     argsTp.push_back(args[i].getType());
-  FunctionType type = FunctionType::get(builder.getContext(), argsTp, {});
+  auto results = forallOp.getResults();
+  SmallVector<Type> resultsTp;
+  for (auto r : results)
+    resultsTp.push_back(r.getType());
+  FunctionType type = FunctionType::get(builder.getContext(), argsTp, resultsTp);
   func::FuncOp func = builder.create<func::FuncOp>(module.getLoc(), kernelName, type);
   func.setPrivate();
   // Add a body to the function (not done by default)
@@ -85,12 +90,7 @@ static Value genAllocCopy(OpBuilder &builder, Location loc, Value hostMem) {
 /// a set of properly chained asynchronous allocation/copy pairs to increase
 /// overlap before launching the kernel.
 static void genParametersIn(OpBuilder &builder, Location loc,
-                             SmallVectorImpl<Value> &scalars,
-                             SmallVectorImpl<Value> &buffers,
-                             SmallVectorImpl<Value> &args) {
-  // Scalars are passed by value.
-  for (Value s : scalars)
-    args.push_back(s);
+                             SmallVectorImpl<Value> &buffers) {
   // Buffers are need to be made visible on device.
   for (Value b : buffers) {
     args.push_back(genAllocCopy(builder, loc, b));
@@ -101,10 +101,7 @@ static void genParametersIn(OpBuilder &builder, Location loc,
 /// on the kernel token and then deallocated. All other buffers are simply
 /// deallocated. Then we wait for all operations to complete.
 static void genParametersOut(OpBuilder &builder, Location loc,
-                             SmallVectorImpl<Value> &scalars,
-                             SmallVectorImpl<Value> &buffers,
-                             SmallVectorImpl<Value> &args) {
-  unsigned base = scalars.size();
+                             SmallVectorImpl<Value> &buffers) {
   // Go through the buffer (memref-typed) args.
   // The first one is the output buffer, and must be copied back to host.
   // The others are inputs and just need to be deallocated.
@@ -135,10 +132,10 @@ static void genKokkosCode(PatternRewriter &rewriter, func::FuncOp func,
 
   // Copy the outer scf.parallel to this function, but redefine
   // all constants, and replace scalars and buffers with corresponding arguments to func.
-  rewriter.clone(*forallOp, irMap);
+  auto newForall = rewriter.clone(*forallOp, irMap);
   
   //TODO: if forallOp has at least one reduction at the top level, func should return those result(s)
-  rewriter.create<func::ReturnOp>(forallOp.getLoc());
+  rewriter.create<func::ReturnOp>(forallOp.getLoc(), newForall->getResults());
 }
 
 struct KokkosForallRewriter : public OpRewritePattern<scf::ParallelOp> {
@@ -153,10 +150,12 @@ struct KokkosForallRewriter : public OpRewritePattern<scf::ParallelOp> {
     if(forallOp->getParentOfType<scf::ParallelOp>()) {
       return failure();
     }
-    // Do not run on ParallelOps that are already in 
+    // Do not run on ParallelOps that have already been moved into a sparse kernel function
     auto enclosingFuncName = forallOp->getParentOfType<func::FuncOp>().getSymName();
     if(enclosingFuncName.starts_with("kokkos_sparse_kernel_"))
       return failure();
+    puts("Hello from KokkosForallRewriter, processing top-level ParallelOp:");
+    forallOp.dump();
     // Check the forallOp for operations that can't be executed on device
     // NOTE: Kokkos emitter will have to check for this again, since we have
     // no way to mark an scf.parallel as executing in a particular place.
@@ -176,6 +175,9 @@ struct KokkosForallRewriter : public OpRewritePattern<scf::ParallelOp> {
       // it will execute on host (but can still be parallel).
       return failure();
     }
+    ModuleOp module = forallOp->getParentOfType<ModuleOp>();
+    puts("The module before:");
+    module.dump();
     // Collect every value that is computed outside the parallel loop.
     SetVector<Value> invariants; // stable iteration!
     forallOp->walk([&](Operation *op) {
@@ -191,41 +193,48 @@ struct KokkosForallRewriter : public OpRewritePattern<scf::ParallelOp> {
           invariants.insert(val);
       }
     });
-    // Outline the outside values as proper parameters. Fail when sharing
-    // value between host and device is not straightforward.
-    SmallVector<Value> constants;
-    SmallVector<Value> scalars;
     SmallVector<Value> buffers;
     for (Value val : invariants) {
       Type tp = val.getType();
-      if (val.getDefiningOp<arith::ConstantOp>())
-        constants.push_back(val);
-      else if (isa<FloatType>(tp) || tp.isIntOrIndex())
-        scalars.push_back(val);
-      else if (isa<MemRefType>(tp))
+      if (isa<MemRefType>(tp))
         buffers.push_back(val);
-      else
-        return failure(); // don't know how to share
     }
     // Pass outlined non-constant values.
     Location loc = forallOp->getLoc();
     SmallVector<Value> args;
     genParametersIn(rewriter, loc, scalars, buffers, args);
+    puts("The module 1:");
+    module.dump();
     auto saveIp = rewriter.saveInsertionPoint();
-    ModuleOp module = forallOp->getParentOfType<ModuleOp>();
-    auto func = genKokkosFunc(rewriter, module, args);
+    auto func = genKokkosFunc(rewriter, module, args, forallOp);
+    puts("The module 2:");
+    module.dump();
     genKokkosCode(rewriter, func, forallOp, constants, scalars, buffers);
+    puts("The module 3:");
+    module.dump();
     // Move the rewriter back to the kernel launch site
     rewriter.restoreInsertionPoint(saveIp);
     // Call the Kokkos function
-    rewriter.create<func::CallOp>(loc, func, args);
+    auto kernelCall = rewriter.create<func::CallOp>(loc, func, args);
+    auto origForallResults = forallOp.getResults();
+    auto callResults = kernelCall->getResults();
     // Finalize the outlined arguments.
     genParametersOut(rewriter, loc, scalars, buffers, args);
+    // Replace the original forall's results with the new kernel call's results.
+    for(size_t i = 0; i < callResults.size(); i++)
+    {
+      module->replaceUsesOfWith(origForallResults[i], callResults[i]);
+    }
+    puts("The module 4:");
+    module.dump();
     // Lastly, add a Kokkos::fence() to make sure the kernel
     // and following deep copy have completed
     rewriter.create<emitc::CallOp>(loc, TypeRange(),
         "Kokkos::DefaultExecutionSpace().fence", ArrayAttr(), ArrayAttr(), ValueRange());
     rewriter.eraseOp(forallOp);
+    puts("Finished rewriting!");
+    puts("The module now:");
+    module.dump();
     return success();
   }
 
