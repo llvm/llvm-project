@@ -49,7 +49,7 @@ static void bm_contains(benchmark::State& state) {
   for (auto _ : state) {
     benchmark::DoNotOptimize(a);
 
-    benchmark::DoNotOptimize(std::ranges::contains(a.begin(), a.end(), 'a'));
+    benchmark::DoNotOptimize(std::ranges::contains(a.begin(), a.end(), 'B'));
   }
 }
 BENCHMARK(bm_contains)->RangeMultiplier(16)->Range(16, 16 << 20);
@@ -60,7 +60,7 @@ static void bm_contains_with_trivially_comparable(benchmark::State& state) {
   for (auto _ : state) {
     benchmark::DoNotOptimize(a);
 
-    benchmark::DoNotOptimize(std::ranges::contains(a.begin(), a.end(), 'a'));
+    benchmark::DoNotOptimize(std::ranges::contains(a.begin(), a.end(), 'B'));
   }
 }
 BENCHMARK(bm_contains_with_trivially_comparable)->RangeMultiplier(16)->Range(16, 16 << 20);
@@ -71,7 +71,7 @@ static void bm_contains_with_comparable(benchmark::State& state) {
   for (auto _ : state) {
     benchmark::DoNotOptimize(a);
 
-    benchmark::DoNotOptimize(std::ranges::contains(a.begin(), a.end(), 'a'));
+    benchmark::DoNotOptimize(std::ranges::contains(a.begin(), a.end(), 'B'));
   }
 }
 BENCHMARK(bm_contains_with_comparable)->RangeMultiplier(16)->Range(16, 16 << 20);
