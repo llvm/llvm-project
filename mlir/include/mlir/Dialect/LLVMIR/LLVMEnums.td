@@ -587,7 +587,6 @@ def Linkage : DialectAttr<
           "::mlir::LLVM::LinkageAttr::get($_builder.getContext(), $0)";
 }
 
-
 //===----------------------------------------------------------------------===//
 // Comdat
 //===----------------------------------------------------------------------===//
@@ -662,6 +661,25 @@ def ModRefInfoEnum : LLVM_EnumAttr<
     "LLVM ModRefInfo",
     [ModRefInfoNoModRef, ModRefInfoRef, ModRefInfoMod, ModRefInfoModRef]> {
   let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
+// FramePointerKind
+//===----------------------------------------------------------------------===//
+
+def FramePointerKindNone
+    : LLVM_EnumAttrCase<"None", "none", "None", 0>;
+def FramePointerKindNonLeaf
+    : LLVM_EnumAttrCase<"NonLeaf", "non-leaf", "NonLeaf", 1>;
+def FramePointerKindAll
+    : LLVM_EnumAttrCase<"All", "all", "All", 2>;
+
+def FramePointerKindEnum : LLVM_EnumAttr<
+    "FramePointerKind",
+    "::llvm::FramePointerKind",
+    "LLVM FramePointerKind",
+    [FramePointerKindNone, FramePointerKindNonLeaf, FramePointerKindAll]> {
+  let cppNamespace = "::mlir::LLVM::framePointerKind";
 }
 
 #endif // LLVMIR_ENUMS

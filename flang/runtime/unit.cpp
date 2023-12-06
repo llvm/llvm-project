@@ -20,6 +20,7 @@ namespace Fortran::runtime::io {
 // The per-unit data structures are created on demand so that Fortran I/O
 // should work without a Fortran main program.
 static Lock unitMapLock;
+static Lock createOpenLock;
 static UnitMap *unitMap{nullptr};
 static ExternalFileUnit *defaultInput{nullptr}; // unit 5
 static ExternalFileUnit *defaultOutput{nullptr}; // unit 6
@@ -52,6 +53,9 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
     Direction dir, std::optional<bool> isUnformatted,
     const Terminator &terminator) {
+  // Make sure that the returned anonymous unit has been opened
+  // not just created in the unitMap.
+  CriticalSection critical{createOpenLock};
   bool exists{false};
   ExternalFileUnit *result{
       GetUnitMap().LookUpOrCreate(unit, terminator, exists)};

@@ -104,6 +104,10 @@ private:
   // Custom renderers for tablegen
   void renderNegImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                     int OpIdx) const;
+  void renderImmSubFromXLen(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                            int OpIdx) const;
+  void renderImmSubFrom32(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                          int OpIdx) const;
   void renderImmPlus1(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx) const;
   void renderImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
@@ -540,6 +544,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
                       GV->hasExternalWeakLinkage());
   }
   case TargetOpcode::G_JUMP_TABLE:
+  case TargetOpcode::G_CONSTANT_POOL:
     return selectAddr(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
     Register LHS, RHS;
@@ -720,6 +725,24 @@ void RISCVInstructionSelector::renderNegImm(MachineInstrBuilder &MIB,
   MIB.addImm(-CstVal);
 }
 
+void RISCVInstructionSelector::renderImmSubFromXLen(MachineInstrBuilder &MIB,
+                                                    const MachineInstr &MI,
+                                                    int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  uint64_t CstVal = MI.getOperand(1).getCImm()->getZExtValue();
+  MIB.addImm(STI.getXLen() - CstVal);
+}
+
+void RISCVInstructionSelector::renderImmSubFrom32(MachineInstrBuilder &MIB,
+                                                  const MachineInstr &MI,
+                                                  int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  uint64_t CstVal = MI.getOperand(1).getCImm()->getZExtValue();
+  MIB.addImm(32 - CstVal);
+}
+
 void RISCVInstructionSelector::renderImmPlus1(MachineInstrBuilder &MIB,
                                               const MachineInstr &MI,
                                               int OpIdx) const {
@@ -875,7 +898,8 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
                                           bool IsLocal,
                                           bool IsExternWeak) const {
   assert((MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
-          MI.getOpcode() == TargetOpcode::G_JUMP_TABLE) &&
+          MI.getOpcode() == TargetOpcode::G_JUMP_TABLE ||
+          MI.getOpcode() == TargetOpcode::G_CONSTANT_POOL) &&
          "Unexpected opcode");
 
   const MachineOperand &DispMO = MI.getOperand(1);

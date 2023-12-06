@@ -58,7 +58,6 @@
 
 #include <cstring>
 #include <deque>
-#include <list>
 #include <string>
 
 #ifdef LLVM_ON_UNIX
