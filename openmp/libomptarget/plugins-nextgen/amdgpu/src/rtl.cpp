@@ -812,14 +812,23 @@ private:
       if (TeamsThreadLimitEnvVar > 0)
         return std::min(static_cast<int32_t>(ConstWGSize),
                         TeamsThreadLimitEnvVar);
-
       if ((ThreadLimitClause[0] > 0) && (ThreadLimitClause[0] != (uint32_t)-1))
         return std::min(static_cast<uint32_t>(ConstWGSize),
                         ThreadLimitClause[0]);
+      return ConstWGSize;
     }
 
-    if (isNoLoopMode() || isBigJumpLoopMode() || isXTeamReductionsMode())
+    if (isXTeamReductionsMode()) {
+      if (TeamsThreadLimitEnvVar > 0 &&
+          TeamsThreadLimitEnvVar <= static_cast<int32_t>(ConstWGSize))
+        return llvm::omp::getBlockSizeAsPowerOfTwo(TeamsThreadLimitEnvVar);
+      if (ThreadLimitClause[0] > 0 && ThreadLimitClause[0] != (uint32_t)-1 &&
+          ThreadLimitClause[0] <= static_cast<int32_t>(ConstWGSize))
+        return llvm::omp::getBlockSizeAsPowerOfTwo(ThreadLimitClause[0]);
+      assert(((ConstWGSize & (ConstWGSize - 1)) == 0) &&
+             "XTeam Reduction blocksize must be a power of two");
       return ConstWGSize;
+    }
 
     if (ThreadLimitClause[0] > 0 && isGenericMode()) {
       if (ThreadLimitClause[0] == (uint32_t)-1)

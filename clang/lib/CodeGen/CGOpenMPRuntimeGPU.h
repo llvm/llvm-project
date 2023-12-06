@@ -168,9 +168,6 @@ public:
   /// Get the number of blocks on the GPU
   llvm::Value *getGPUNumBlocks(CodeGenFunction &CGF);
 
-  /// Get the number of blocks on the GPU for special reduction
-  llvm::Value *getXteamRedBlockSize(CodeGenFunction &CGF, int BlockSize);
-
   std::pair<llvm::Value *, llvm::Value *>
   getXteamRedFunctionPtrs(CodeGenFunction &CGF, llvm::Type *RedVarType);
 

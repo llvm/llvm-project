@@ -3779,11 +3779,6 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUBlockID(CodeGenFunction &CGF) {
   return Bld.CreateCall(F, std::nullopt, "gpu_block_id");
 }
 
-llvm::Value *CGOpenMPRuntimeGPU::getXteamRedBlockSize(CodeGenFunction &CGF,
-                                                      int BlockSize) {
-  return llvm::ConstantInt::get(CGF.Int32Ty, BlockSize);
-}
-
 llvm::Value *CGOpenMPRuntimeGPU::getGPUNumBlocks(CodeGenFunction &CGF) {
   return CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
       CGM.getModule(), OMPRTL___kmpc_get_hardware_num_blocks));
@@ -3872,10 +3867,22 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
   unsigned WarpSize = CGF.getTarget().getGridValue().GV_Warp_Size;
   assert(WarpSize == 32 || WarpSize == 64);
 
+  assert(BlockSize > 0 && BlockSize <= llvm::omp::xteam_red::MaxBlockSize &&
+         "XTeam Reduction blocksize outside expected range");
+  assert(((BlockSize & (BlockSize - 1)) == 0) &&
+         "XTeam Reduction blocksize must be a power of two");
+
   if (SumType->isIntegerTy()) {
     if (SumType->getPrimitiveSizeInBits() == 32) {
       if (WarpSize == 32) {
         switch (BlockSize) {
+        default:
+          return CGF.EmitRuntimeCall(
+              OMPBuilder.getOrCreateRuntimeFunction(
+                  CGM.getModule(), IsFast
+                                       ? OMPRTL___kmpc_xteamr_ui_1x32_fast_sum
+                                       : OMPRTL___kmpc_xteamr_ui_1x32),
+              Args);
         case 64:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
@@ -3914,7 +3921,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
         }
       } else {
         switch (BlockSize) {
-        case 64:
+        default:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
                   CGM.getModule(), IsFast
@@ -3955,6 +3962,13 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
     if (SumType->getPrimitiveSizeInBits() == 64) {
       if (WarpSize == 32) {
         switch (BlockSize) {
+        default:
+          return CGF.EmitRuntimeCall(
+              OMPBuilder.getOrCreateRuntimeFunction(
+                  CGM.getModule(), IsFast
+                                       ? OMPRTL___kmpc_xteamr_ul_1x32_fast_sum
+                                       : OMPRTL___kmpc_xteamr_ul_1x32),
+              Args);
         case 64:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
@@ -3993,7 +4007,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
         }
       } else {
         switch (BlockSize) {
-        case 64:
+        default:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
                   CGM.getModule(), IsFast
@@ -4035,6 +4049,12 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
   if (SumType->isFloatTy()) {
     if (WarpSize == 32) {
       switch (BlockSize) {
+      default:
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_f_1x32_fast_sum
+                                        : OMPRTL___kmpc_xteamr_f_1x32),
+            Args);
       case 64:
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(
@@ -4068,7 +4088,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
       }
     } else {
       switch (BlockSize) {
-      case 64:
+      default:
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(
                 CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_f_1x64_fast_sum
@@ -4104,6 +4124,12 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
   if (SumType->isDoubleTy()) {
     if (WarpSize == 32) {
       switch (BlockSize) {
+      default:
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_d_1x32_fast_sum
+                                        : OMPRTL___kmpc_xteamr_d_1x32),
+            Args);
       case 64:
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(
@@ -4137,7 +4163,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
       }
     } else {
       switch (BlockSize) {
-      case 64:
+      default:
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(
                 CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_d_1x64_fast_sum

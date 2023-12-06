@@ -8281,20 +8281,23 @@ int CodeGenModule::getOptKernelWorkGroupSize(
                           ? llvm::omp::xteam_red::DefaultBlockSize
                           : getTarget().getGridValue().GV_Default_WG_Size;
 
+  int ThreadLimit = isXteamRed ? llvm::omp::xteam_red::MaxBlockSize
+                               : getTarget().getGridValue().GV_Max_WG_Size;
+
   // Allow command-line option override clauses on the OpenMP construct.
   // Exception: If the command line value is the same as the default, the clause
   // overrides.
   int CmdLineOption = isXteamRed
                           ? getLangOpts().OpenMPTargetXteamReductionBlockSize
                           : getLangOpts().OpenMPGPUThreadsPerTeam;
-  if (CmdLineOption != WGSizeDefault)
+  if (CmdLineOption > 0 && CmdLineOption <= ThreadLimit &&
+      CmdLineOption != WGSizeDefault)
     return CmdLineOption;
 
   // The blocksize used by optimized kernels is the minimum of the
   // max_wg_size and any thread_limit or num_threads specified on any OpenMP
   // clauses.
-  int WGSize = isXteamRed ? llvm::omp::xteam_red::MaxBlockSize
-                          : getTarget().getGridValue().GV_Max_WG_Size;
+  int WGSize = ThreadLimit;
   for (const auto &Dir : NestDirs)
     WGSize = std::min(WGSize, getWorkGroupSizeSPMDHelper(*Dir));
   return WGSize;
@@ -8305,17 +8308,8 @@ int CodeGenModule::computeOptKernelBlockSize(
   int InitialBlockSize = getOptKernelWorkGroupSize(NestDirs, isXteamRed);
   if (!isXteamRed)
     return InitialBlockSize;
-  // We support block sizes 64, 128, 256, 512, and 1024 only for Xteam
-  // reduction.
-  if (InitialBlockSize < 128)
-    return 64;
-  if (InitialBlockSize < 256)
-    return 128;
-  if (InitialBlockSize < 512)
-    return 256;
-  if (InitialBlockSize < 1024)
-    return 512;
-  return 1024;
+  // We support block sizes that are a power of 2 for Xteam reduction.
+  return llvm::omp::getBlockSizeAsPowerOfTwo(InitialBlockSize);
 }
 
 std::pair<CodeGenModule::NoLoopXteamErr, bool>
@@ -8746,8 +8740,7 @@ CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
                    RedVarMapPair.second.second, isFastXteamSumReduction())));
 
     // The blocksize has to be computed after adding this kernel to the metadata
-    // above, since the computation below depends on that metadata. Compute
-    // block size during device compilation only.
+    // above, since the computation below depends on that metadata.
     int BlockSize = computeOptKernelBlockSize(NestDirs, /*isXteamRed=*/true);
     if (BlockSize > 0)
       updateXteamRedKernel(FStmt, BlockSize);

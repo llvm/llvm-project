@@ -88,10 +88,7 @@ CodeGenFunction::EmitBigJumpLoopStartingIndex(const ForStmt &FStmt) {
   llvm::Value *GpuThreadId = RT.getGPUThreadID(*this);
 
   // workgroup_size
-  llvm::Value *WorkGroupSize =
-      CGM.isXteamRedKernel(&FStmt)
-          ? RT.getXteamRedBlockSize(*this, CGM.getXteamRedBlockSize(&FStmt))
-          : RT.getGPUNumThreads(*this);
+  llvm::Value *WorkGroupSize = RT.getGPUNumThreads(*this);
 
   // workgroup_id
   llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);
@@ -147,11 +144,7 @@ void CodeGenFunction::EmitBigJumpLoopInc(const ForStmt &FStmt,
   const OMPLoopDirective &LD = *(cast<OMPLoopDirective>(Directives.back()));
 
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
-  llvm::Value *BlockSize =
-      CGM.isXteamRedKernel(&FStmt)
-          ? RT.getXteamRedBlockSize(*this, CGM.getXteamRedBlockSize(&FStmt))
-          : RT.getGPUNumThreads(*this);
-
+  llvm::Value *BlockSize = RT.getGPUNumThreads(*this);
   llvm::Value *NumBlocks = CGM.isXteamRedKernel(&FStmt)
                                ? CGM.getXteamRedNumTeams(&FStmt)
                                : RT.getGPUNumBlocks(*this);

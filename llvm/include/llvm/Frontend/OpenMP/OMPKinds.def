@@ -704,6 +704,14 @@ __OMP_RTL(__kmpc_xteamr_f_2x32, false, Void, Float, FloatPtr, FloatPtr, Int32Ptr
 
 __OMP_RTL(__kmpc_xteamr_d_2x32, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32)
 
+__OMP_RTL(__kmpc_xteamr_ui_1x32, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32)
+
+__OMP_RTL(__kmpc_xteamr_ul_1x32, false, Void, Int64, Int64Ptr, Int64Ptr, Int32Ptr, VoidPtr, VoidPtr, Int64, Int64, Int32)
+
+__OMP_RTL(__kmpc_xteamr_f_1x32, false, Void, Float, FloatPtr, FloatPtr, Int32Ptr, VoidPtr, VoidPtr, Float, Int64, Int32)
+
+__OMP_RTL(__kmpc_xteamr_d_1x32, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32)
+
 __OMP_RTL(__kmpc_xteamr_ui_32x32_fast_sum, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32)
 
 __OMP_RTL(__kmpc_xteamr_ul_32x32_fast_sum, false, Void, Int64, Int64Ptr, Int64Ptr, Int32Ptr, VoidPtr, VoidPtr, Int64, Int64, Int32)
@@ -743,6 +751,14 @@ __OMP_RTL(__kmpc_xteamr_ul_2x32_fast_sum, false, Void, Int64, Int64Ptr, Int64Ptr
 __OMP_RTL(__kmpc_xteamr_f_2x32_fast_sum, false, Void, Float, FloatPtr, FloatPtr, Int32Ptr, VoidPtr, VoidPtr, Float, Int64, Int32)
 
 __OMP_RTL(__kmpc_xteamr_d_2x32_fast_sum, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32)
+
+__OMP_RTL(__kmpc_xteamr_ui_1x32_fast_sum, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32)
+
+__OMP_RTL(__kmpc_xteamr_ul_1x32_fast_sum, false, Void, Int64, Int64Ptr, Int64Ptr, Int32Ptr, VoidPtr, VoidPtr, Int64, Int64, Int32)
+
+__OMP_RTL(__kmpc_xteamr_f_1x32_fast_sum, false, Void, Float, FloatPtr, FloatPtr, Int32Ptr, VoidPtr, VoidPtr, Float, Int64, Int32)
+
+__OMP_RTL(__kmpc_xteamr_d_1x32_fast_sum, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32)
 
 __OMP_RTL(__last, false, Void, )
 

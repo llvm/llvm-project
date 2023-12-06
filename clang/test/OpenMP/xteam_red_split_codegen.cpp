@@ -156,8 +156,9 @@ int main()
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK-NEXT:    [[GPU_BLOCK_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
-// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], 1024
+// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], [[NVPTX_NUM_THREADS]]
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], [[TMP10]]
 // CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -185,7 +186,8 @@ int main()
 // CHECK-NEXT:    store double [[TMP24]], ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
-// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 1024, [[TMP16]]
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS4:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
+// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[NVPTX_NUM_THREADS4]], [[TMP16]]
 // CHECK-NEXT:    [[TMP26:%.*]] = mul i32 [[TMP25]], 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
@@ -255,8 +257,9 @@ int main()
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK-NEXT:    [[GPU_BLOCK_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
-// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], 64
+// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], [[NVPTX_NUM_THREADS]]
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], [[TMP10]]
 // CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -284,7 +287,8 @@ int main()
 // CHECK-NEXT:    store double [[TMP24]], ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
-// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 64, [[TMP16]]
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS4:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
+// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[NVPTX_NUM_THREADS4]], [[TMP16]]
 // CHECK-NEXT:    [[TMP26:%.*]] = mul i32 [[TMP25]], 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
@@ -354,8 +358,9 @@ int main()
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK-NEXT:    [[GPU_BLOCK_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
-// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], 1024
+// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], [[NVPTX_NUM_THREADS]]
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], [[TMP10]]
 // CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -383,7 +388,8 @@ int main()
 // CHECK-NEXT:    store double [[TMP24]], ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
-// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 1024, [[TMP16]]
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS4:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
+// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[NVPTX_NUM_THREADS4]], [[TMP16]]
 // CHECK-NEXT:    [[TMP26:%.*]] = mul i32 [[TMP25]], 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
@@ -453,8 +459,9 @@ int main()
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK-NEXT:    [[GPU_BLOCK_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
-// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], 128
+// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], [[NVPTX_NUM_THREADS]]
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], [[TMP10]]
 // CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -482,7 +489,8 @@ int main()
 // CHECK-NEXT:    store double [[TMP24]], ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
-// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 128, [[TMP16]]
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS4:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
+// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[NVPTX_NUM_THREADS4]], [[TMP16]]
 // CHECK-NEXT:    [[TMP26:%.*]] = mul i32 [[TMP25]], 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
@@ -552,8 +560,9 @@ int main()
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK-NEXT:    [[GPU_BLOCK_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
-// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], 1024
+// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], [[NVPTX_NUM_THREADS]]
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], [[TMP10]]
 // CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -581,7 +590,8 @@ int main()
 // CHECK-NEXT:    store double [[TMP24]], ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
-// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 1024, [[TMP16]]
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS4:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
+// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[NVPTX_NUM_THREADS4]], [[TMP16]]
 // CHECK-NEXT:    [[TMP26:%.*]] = mul i32 [[TMP25]], 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
@@ -651,8 +661,9 @@ int main()
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK-NEXT:    [[GPU_BLOCK_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
-// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], 128
+// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], [[NVPTX_NUM_THREADS]]
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], [[TMP10]]
 // CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -680,7 +691,8 @@ int main()
 // CHECK-NEXT:    store double [[TMP24]], ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
-// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 128, [[TMP16]]
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS4:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
+// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[NVPTX_NUM_THREADS4]], [[TMP16]]
 // CHECK-NEXT:    [[TMP26:%.*]] = mul i32 [[TMP25]], 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
@@ -750,8 +762,9 @@ int main()
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK-NEXT:    [[GPU_BLOCK_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
-// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], 1024
+// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], [[NVPTX_NUM_THREADS]]
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], [[TMP10]]
 // CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -779,7 +792,8 @@ int main()
 // CHECK-NEXT:    store double [[TMP24]], ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
-// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 1024, [[TMP16]]
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS4:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
+// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[NVPTX_NUM_THREADS4]], [[TMP16]]
 // CHECK-NEXT:    [[TMP26:%.*]] = mul i32 [[TMP25]], 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
@@ -849,8 +863,9 @@ int main()
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK-NEXT:    [[GPU_BLOCK_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
-// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], 128
+// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], [[NVPTX_NUM_THREADS]]
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], [[TMP10]]
 // CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -878,7 +893,8 @@ int main()
 // CHECK-NEXT:    store double [[TMP24]], ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
-// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 128, [[TMP16]]
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS4:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
+// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[NVPTX_NUM_THREADS4]], [[TMP16]]
 // CHECK-NEXT:    [[TMP26:%.*]] = mul i32 [[TMP25]], 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
@@ -948,8 +964,9 @@ int main()
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK-NEXT:    [[GPU_BLOCK_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
-// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], 1024
+// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], [[NVPTX_NUM_THREADS]]
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], [[TMP10]]
 // CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -977,7 +994,8 @@ int main()
 // CHECK-NEXT:    store double [[TMP24]], ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
-// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 1024, [[TMP16]]
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS4:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
+// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[NVPTX_NUM_THREADS4]], [[TMP16]]
 // CHECK-NEXT:    [[TMP26:%.*]] = mul i32 [[TMP25]], 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
@@ -1047,8 +1065,9 @@ int main()
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK-NEXT:    [[GPU_BLOCK_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
-// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], 256
+// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], [[NVPTX_NUM_THREADS]]
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], [[TMP10]]
 // CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -1076,7 +1095,8 @@ int main()
 // CHECK-NEXT:    store double [[TMP24]], ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
-// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 256, [[TMP16]]
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS4:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
+// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[NVPTX_NUM_THREADS4]], [[TMP16]]
 // CHECK-NEXT:    [[TMP26:%.*]] = mul i32 [[TMP25]], 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
@@ -1146,8 +1166,9 @@ int main()
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK-NEXT:    [[GPU_BLOCK_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
-// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], 1024
+// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], [[NVPTX_NUM_THREADS]]
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], [[TMP10]]
 // CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -1176,7 +1197,8 @@ int main()
 // CHECK-NEXT:    store double [[TMP24]], ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
-// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 1024, [[TMP16]]
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS5:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
+// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[NVPTX_NUM_THREADS5]], [[TMP16]]
 // CHECK-NEXT:    [[TMP26:%.*]] = mul i32 [[TMP25]], 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
@@ -1246,8 +1268,9 @@ int main()
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
 // CHECK-NEXT:    [[GPU_BLOCK_ID:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
-// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], 128
+// CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[GPU_BLOCK_ID]], [[NVPTX_NUM_THREADS]]
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], [[TMP10]]
 // CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -1276,7 +1299,8 @@ int main()
 // CHECK-NEXT:    store double [[TMP24]], ptr addrspace(5) [[TMP5]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
-// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 128, [[TMP16]]
+// CHECK-NEXT:    [[NVPTX_NUM_THREADS5:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
+// CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[NVPTX_NUM_THREADS5]], [[TMP16]]
 // CHECK-NEXT:    [[TMP26:%.*]] = mul i32 [[TMP25]], 1
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
