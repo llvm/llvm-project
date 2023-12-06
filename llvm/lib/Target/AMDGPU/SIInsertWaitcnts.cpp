@@ -719,30 +719,27 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       // written can be accessed. A load from LDS to VMEM does not need a wait.
       unsigned Slot = 0;
       for (const auto *MemOp : Inst.memoperands()) {
-        if (MemOp->isStore() &&
-            MemOp->getAddrSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-          // Comparing just AA info does not guarantee memoperands are equal
-          // in general, but this is so for LDS DMA on practice.
-          auto AAI = MemOp->getAAInfo();
-          if (!AAI)
-            break;
-          auto I = llvm::find_if(LDSDMAStores, [&AAI](const MachineInstr *I) {
-            for (const auto *MemOp : I->memoperands()) {
-              if (MemOp->isStore())
-                return AAI == MemOp->getAAInfo();
-            }
-            return false;
-          });
-          if (I != LDSDMAStores.end()) {
-            Slot = I - LDSDMAStores.begin() + 1;
-            break;
-          }
-          if (LDSDMAStores.size() == NUM_EXTRA_VGPRS - 1)
-            break;
-          LDSDMAStores.push_back(&Inst);
-          Slot = LDSDMAStores.size();
+        if (!MemOp->isStore() ||
+            MemOp->getAddrSpace() != AMDGPUAS::LOCAL_ADDRESS)
+          continue;
+        // Comparing just AA info does not guarantee memoperands are equal
+        // in general, but this is so for LDS DMA on practice.
+        auto AAI = MemOp->getAAInfo();
+        if (!AAI)
           break;
+        for (unsigned I = 0, E = LDSDMAStores.size(); I != E && !Slot; ++I) {
+          for (const auto *MemOp : LDSDMAStores[I]->memoperands()) {
+            if (MemOp->isStore() && AAI == MemOp->getAAInfo()) {
+              Slot = I + 1;
+              break;
+            }
+          }
         }
+        if (Slot || LDSDMAStores.size() == NUM_EXTRA_VGPRS - 1)
+          break;
+        LDSDMAStores.push_back(&Inst);
+        Slot = LDSDMAStores.size();
+        break;
       }
       setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS + Slot, T, CurrScore);
       if (Slot)
