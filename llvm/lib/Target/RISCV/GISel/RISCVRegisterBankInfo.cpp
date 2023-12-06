@@ -207,6 +207,14 @@ bool RISCVRegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
   return hasFPConstraints(MI, MRI, TRI);
 }
 
+bool RISCVRegisterBankInfo::anyUseOnlyUseFP(
+    Register Def, const MachineRegisterInfo &MRI,
+    const TargetRegisterInfo &TRI) const {
+  return any_of(
+      MRI.use_nodbg_instructions(Def),
+      [&](const MachineInstr &UseMI) { return onlyUsesFP(UseMI, MRI, TRI); });
+}
+
 const RegisterBankInfo::InstructionMapping &
 RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
@@ -277,6 +285,19 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                                  getFPValueMapping(Ty.getSizeInBits()),
                                  NumOperands);
   }
+  case TargetOpcode::G_IMPLICIT_DEF: {
+    Register Dst = MI.getOperand(0).getReg();
+    auto Mapping = GPRValueMapping;
+    // FIXME: May need to do a better job determining when to use FPRB.
+    // For example, the look through COPY case:
+    // %0:_(s32) = G_IMPLICIT_DEF
+    // %1:_(s32) = COPY %0
+    // $f10_d = COPY %1(s32)
+    if (anyUseOnlyUseFP(Dst, MRI, TRI))
+      Mapping = getFPValueMapping(MRI.getType(Dst).getSizeInBits());
+    return getInstructionMapping(DefaultMappingID, /*Cost=*/1, Mapping,
+                                 NumOperands);
+  }
   }
 
   SmallVector<const ValueMapping *, 4> OpdsMapping(NumOperands);
@@ -296,14 +317,11 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Check if that load feeds fp instructions.
     // In that case, we want the default mapping to be on FPR
     // instead of blind map every scalar to GPR.
-    if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
-               [&](const MachineInstr &UseMI) {
-                 // If we have at least one direct use in a FP instruction,
-                 // assume this was a floating point load in the IR. If it was
-                 // not, we would have had a bitcast before reaching that
-                 // instruction.
-                 return onlyUsesFP(UseMI, MRI, TRI);
-               }))
+    if (anyUseOnlyUseFP(MI.getOperand(0).getReg(), MRI, TRI))
+      // If we have at least one direct use in a FP instruction,
+      // assume this was a floating point load in the IR. If it was
+      // not, we would have had a bitcast before reaching that
+      // instruction.
       OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
 
     break;
@@ -403,6 +421,28 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     OpdsMapping[0] = GPRValueMapping;
     OpdsMapping[2] = OpdsMapping[3] = getFPValueMapping(Size);
+    break;
+  }
+  case TargetOpcode::G_MERGE_VALUES: {
+    // Use FPR64 for s64 merge on rv32.
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
+      OpdsMapping[1] = GPRValueMapping;
+      OpdsMapping[2] = GPRValueMapping;
+    }
+    break;
+  }
+  case TargetOpcode::G_UNMERGE_VALUES: {
+    // Use FPR64 for s64 unmerge on rv32.
+    LLT Ty = MRI.getType(MI.getOperand(2).getReg());
+    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      OpdsMapping[0] = GPRValueMapping;
+      OpdsMapping[1] = GPRValueMapping;
+      OpdsMapping[2] = getFPValueMapping(Ty.getSizeInBits());
+    }
     break;
   }
   default:

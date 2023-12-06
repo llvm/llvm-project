@@ -142,54 +142,6 @@ static bool ShouldIgnoreArtificialField(llvm::StringRef FieldName) {
          || FieldName.starts_with("_vptr.");
 }
 
-std::optional<DWARFFormValue>
-DWARFASTParserClang::FindConstantOnVariableDefinition(DWARFDIE die) {
-  assert(die.Tag() == DW_TAG_member || die.Tag() == DW_TAG_variable);
-
-  auto *dwarf = die.GetDWARF();
-  if (!dwarf)
-    return {};
-
-  ConstString name{die.GetName()};
-  if (!name)
-    return {};
-
-  auto *CU = die.GetCU();
-  if (!CU)
-    return {};
-
-  DWARFASTParser *dwarf_ast = dwarf->GetDWARFParser(*CU);
-  auto parent_decl_ctx = dwarf_ast->GetDeclContextContainingUIDFromDWARF(die);
-
-  // Make sure we populate the GetDieToVariable cache.
-  VariableList variables;
-  dwarf->FindGlobalVariables(name, parent_decl_ctx, UINT_MAX, variables);
-
-  // The cache contains the variable definition whose DW_AT_specification
-  // points to our declaration DIE. Look up that definition using our
-  // declaration.
-  auto const &die_to_var = dwarf->GetDIEToVariable();
-  auto it = die_to_var.find(die.GetDIE());
-  if (it == die_to_var.end())
-    return {};
-
-  auto var_sp = it->getSecond();
-  assert(var_sp != nullptr);
-
-  if (!var_sp->GetLocationIsConstantValueData())
-    return {};
-
-  auto def = dwarf->GetDIE(var_sp->GetID());
-  auto def_attrs = def.GetAttributes();
-  DWARFFormValue form_value;
-  if (!def_attrs.ExtractFormValueAtIndex(
-          def_attrs.FindAttributeIndex(llvm::dwarf::DW_AT_const_value),
-          form_value))
-    return {};
-
-  return form_value;
-}
-
 TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
                                                      const DWARFDIE &die,
                                                      Log *log) {
@@ -980,8 +932,9 @@ ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
   return clang::CC_C;
 }
 
-TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
-                           ParsedDWARFTypeAttributes &attrs) {
+TypeSP
+DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
+                                     const ParsedDWARFTypeAttributes &attrs) {
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
@@ -1090,16 +1043,10 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
         }
 
         if (class_opaque_type) {
-          // If accessibility isn't set to anything valid, assume public
-          // for now...
-          if (attrs.accessibility == eAccessNone)
-            attrs.accessibility = eAccessPublic;
-
           clang::ObjCMethodDecl *objc_method_decl =
               m_ast.AddMethodToObjCObjectType(
                   class_opaque_type, attrs.name.GetCString(), clang_type,
-                  attrs.accessibility, attrs.is_artificial, is_variadic,
-                  attrs.is_objc_direct_call);
+                  attrs.is_artificial, is_variadic, attrs.is_objc_direct_call);
           type_handled = objc_method_decl != nullptr;
           if (type_handled) {
             LinkDeclContextToDIE(objc_method_decl, die);
@@ -1206,14 +1153,15 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
                   // Neither GCC 4.2 nor clang++ currently set a valid
                   // accessibility in the DWARF for C++ methods...
                   // Default to public for now...
-                  if (attrs.accessibility == eAccessNone)
-                    attrs.accessibility = eAccessPublic;
+                  const auto accessibility = attrs.accessibility == eAccessNone
+                                                 ? eAccessPublic
+                                                 : attrs.accessibility;
 
                   clang::CXXMethodDecl *cxx_method_decl =
                       m_ast.AddMethodToCXXRecordType(
                           class_opaque_type.GetOpaqueQualType(),
                           attrs.name.GetCString(), attrs.mangled_name,
-                          clang_type, attrs.accessibility, attrs.is_virtual,
+                          clang_type, accessibility, attrs.is_virtual,
                           is_static, attrs.is_inline, attrs.is_explicit,
                           is_attr_used, attrs.is_artificial);
 
@@ -2920,23 +2868,11 @@ void DWARFASTParserClang::CreateStaticMemberVariable(
 
   bool unused;
   // TODO: Support float/double static members as well.
-  if (!ct.IsIntegerOrEnumerationType(unused))
+  if (!ct.IsIntegerOrEnumerationType(unused) || !attrs.const_value_form)
     return;
 
-  auto maybe_const_form_value = attrs.const_value_form;
-
-  // Newer versions of Clang don't emit the DW_AT_const_value
-  // on the declaration of an inline static data member. Instead
-  // it's attached to the definition DIE. If that's the case,
-  // try and fetch it.
-  if (!maybe_const_form_value) {
-    maybe_const_form_value = FindConstantOnVariableDefinition(die);
-    if (!maybe_const_form_value)
-      return;
-  }
-
   llvm::Expected<llvm::APInt> const_value_or_err =
-      ExtractIntFromFormValue(ct, *maybe_const_form_value);
+      ExtractIntFromFormValue(ct, *attrs.const_value_form);
   if (!const_value_or_err) {
     LLDB_LOG_ERROR(log, const_value_or_err.takeError(),
                    "Failed to add const value to variable {1}: {0}",

@@ -43,10 +43,6 @@ definitions:
 
 # Define agents using YAML anchors to reduce duplication
 agents_definitions:
-  _linux_agent: &linux_agent
-    agents:
-      queue: libcxx-builders
-      os: linux
   _windows_agent: &windows_agent
     agents:
       queue: windows
@@ -101,20 +97,6 @@ environment_definitions:
 
 
 steps:
-- label: Bootstrapping build
-  command: libcxx/utils/ci/run-buildbot bootstrapping-build
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: Benchmarks
-  command: libcxx/utils/ci/run-buildbot benchmarks
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
 - group: ':windows: Windows'
   steps:
   - label: Clang-cl (DLL)

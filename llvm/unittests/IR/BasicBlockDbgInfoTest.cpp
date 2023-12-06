@@ -42,6 +42,78 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
 
 namespace {
 
+// We can occasionally moveAfter an instruction so that it moves to the
+// position that it already resides at. This is fine -- but gets complicated
+// with dbg.value intrinsics. By moving an instruction, we can end up changing
+// nothing but the location of debug-info intrinsics. That has to be modelled
+// by DPValues, the dbg.value replacement.
+TEST(BasicBlockDbgInfoTest, InsertAfterSelf) {
+  LLVMContext C;
+  UseNewDbgInfoFormat = true;
+
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
+      %b = add i16 %a, 1, !dbg !11
+      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
+      %c = add i16 %b, 1, !dbg !11
+      ret i16 0, !dbg !11
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  // Convert the module to "new" form debug-info.
+  M->convertToNewDbgValues();
+  // Fetch the entry block.
+  BasicBlock &BB = M->getFunction("f")->getEntryBlock();
+
+  Instruction *Inst1 = &*BB.begin();
+  Instruction *Inst2 = &*std::next(BB.begin());
+  Instruction *RetInst = &*std::next(Inst2->getIterator());
+  EXPECT_TRUE(Inst1->hasDbgValues());
+  EXPECT_TRUE(Inst2->hasDbgValues());
+  EXPECT_FALSE(RetInst->hasDbgValues());
+
+  // If we move Inst2 to be after Inst1, then it comes _immediately_ after. Were
+  // we in dbg.value form we would then have:
+  //    dbg.value
+  //    %b = add
+  //    %c = add
+  //    dbg.value
+  // Check that this is replicated by DPValues.
+  Inst2->moveAfter(Inst1);
+
+  // Inst1 should only have one DPValue on it.
+  EXPECT_TRUE(Inst1->hasDbgValues());
+  auto Range1 = Inst1->getDbgValueRange();
+  EXPECT_EQ(std::distance(Range1.begin(), Range1.end()), 1u);
+  // Inst2 should have none.
+  EXPECT_FALSE(Inst2->hasDbgValues());
+  // While the return inst should now have one on it.
+  EXPECT_TRUE(RetInst->hasDbgValues());
+  auto Range2 = RetInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(Range2.begin(), Range2.end()), 1u);
+
+  M->convertFromNewDbgValues();
+
+  UseNewDbgInfoFormat = false;
+}
+
 TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   LLVMContext C;
   UseNewDbgInfoFormat = true;
@@ -1106,6 +1178,358 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceTrailing) {
   Instruction *BInst = &*Entry.begin();
   ASSERT_TRUE(BInst->DbgMarker);
   EXPECT_EQ(BInst->DbgMarker->StoredDPValues.size(), 1u);
+
+  UseNewDbgInfoFormat = false;
+}
+
+// When we remove instructions from the program, adjacent DPValues coalesce
+// together into one DPMarker. In "old" dbg.value mode you could re-insert
+// the removed instruction back into the middle of a sequence of dbg.values.
+// Test that this can be replicated correctly by DPValues
+TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
+  LLVMContext C;
+  UseNewDbgInfoFormat = true;
+
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+    entry:
+      %qux = sub i16 %a, 0
+      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
+      %foo = add i16 %a, %a
+      call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
+      ret i16 1
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  BasicBlock &Entry = M->getFunction("f")->getEntryBlock();
+  M->convertToNewDbgValues();
+
+  // Fetch the relevant instructions from the converted function.
+  Instruction *SubInst = &*Entry.begin();
+  ASSERT_TRUE(isa<BinaryOperator>(SubInst));
+  Instruction *AddInst = SubInst->getNextNode();
+  ASSERT_TRUE(isa<BinaryOperator>(AddInst));
+  Instruction *RetInst = AddInst->getNextNode();
+  ASSERT_TRUE(isa<ReturnInst>(RetInst));
+
+  // add and sub should both have one DPValue on add and ret.
+  EXPECT_FALSE(SubInst->hasDbgValues());
+  EXPECT_TRUE(AddInst->hasDbgValues());
+  EXPECT_TRUE(RetInst->hasDbgValues());
+  auto R1 = AddInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R1.begin(), R1.end()), 1u);
+  auto R2 = RetInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R2.begin(), R2.end()), 1u);
+
+  // The Supported (TM) code sequence for removing then reinserting insts
+  // after another instruction:
+  std::optional<DPValue::self_iterator> Pos =
+      AddInst->getDbgReinsertionPosition();
+  AddInst->removeFromParent();
+
+  // We should have a re-insertion position.
+  ASSERT_TRUE(Pos);
+  // Both DPValues should now be attached to the ret inst.
+  auto R3 = RetInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R3.begin(), R3.end()), 2u);
+
+  // Re-insert and re-insert.
+  AddInst->insertAfter(SubInst);
+  Entry.reinsertInstInDPValues(AddInst, Pos);
+  // We should be back into a position of having one DPValue on add and ret.
+  EXPECT_FALSE(SubInst->hasDbgValues());
+  EXPECT_TRUE(AddInst->hasDbgValues());
+  EXPECT_TRUE(RetInst->hasDbgValues());
+  auto R4 = AddInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R4.begin(), R4.end()), 1u);
+  auto R5 = RetInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R5.begin(), R5.end()), 1u);
+
+  UseNewDbgInfoFormat = false;
+}
+
+// Test instruction removal and re-insertion, this time with one DPValue that
+// should hop up one instruction.
+TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDPValue) {
+  LLVMContext C;
+  UseNewDbgInfoFormat = true;
+
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+    entry:
+      %qux = sub i16 %a, 0
+      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
+      %foo = add i16 %a, %a
+      ret i16 1
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  BasicBlock &Entry = M->getFunction("f")->getEntryBlock();
+  M->convertToNewDbgValues();
+
+  // Fetch the relevant instructions from the converted function.
+  Instruction *SubInst = &*Entry.begin();
+  ASSERT_TRUE(isa<BinaryOperator>(SubInst));
+  Instruction *AddInst = SubInst->getNextNode();
+  ASSERT_TRUE(isa<BinaryOperator>(AddInst));
+  Instruction *RetInst = AddInst->getNextNode();
+  ASSERT_TRUE(isa<ReturnInst>(RetInst));
+
+  // There should be one DPValue.
+  EXPECT_FALSE(SubInst->hasDbgValues());
+  EXPECT_TRUE(AddInst->hasDbgValues());
+  EXPECT_FALSE(RetInst->hasDbgValues());
+  auto R1 = AddInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R1.begin(), R1.end()), 1u);
+
+  // The Supported (TM) code sequence for removing then reinserting insts:
+  std::optional<DPValue::self_iterator> Pos =
+      AddInst->getDbgReinsertionPosition();
+  AddInst->removeFromParent();
+
+  // No re-insertion position as there were no DPValues on the ret.
+  ASSERT_FALSE(Pos);
+  // The single DPValue should now be attached to the ret inst.
+  EXPECT_TRUE(RetInst->hasDbgValues());
+  auto R2 = RetInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R2.begin(), R2.end()), 1u);
+
+  // Re-insert and re-insert.
+  AddInst->insertAfter(SubInst);
+  Entry.reinsertInstInDPValues(AddInst, Pos);
+  // We should be back into a position of having one DPValue on the AddInst.
+  EXPECT_FALSE(SubInst->hasDbgValues());
+  EXPECT_TRUE(AddInst->hasDbgValues());
+  EXPECT_FALSE(RetInst->hasDbgValues());
+  auto R3 = AddInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R3.begin(), R3.end()), 1u);
+
+  UseNewDbgInfoFormat = false;
+}
+
+// Similar to the above, what if we splice into an empty block with debug-info,
+// with debug-info at the start of the moving range, that we intend to be
+// transferred. The dbg.value of %a should remain at the start, but come ahead
+// of the i16 0 dbg.value.
+TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty1) {
+  LLVMContext C;
+  UseNewDbgInfoFormat = true;
+
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+    entry:
+      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
+      br label %exit
+
+    exit:
+      call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
+      %b = add i16 %a, 1, !dbg !11
+      call void @llvm.dbg.value(metadata i16 1, metadata !9, metadata !DIExpression()), !dbg !11
+      ret i16 0, !dbg !11
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  Function &F = *M->getFunction("f");
+  BasicBlock &Entry = F.getEntryBlock();
+  BasicBlock &Exit = *Entry.getNextNode();
+  M->convertToNewDbgValues();
+
+  // Begin by forcing entry block to have dangling DPValue.
+  Entry.getTerminator()->eraseFromParent();
+  ASSERT_NE(Entry.getTrailingDPValues(), nullptr);
+  EXPECT_TRUE(Entry.empty());
+
+  // Now transfer the entire contents of the exit block into the entry. This
+  // includes both dbg.values.
+  Entry.splice(Entry.end(), &Exit, Exit.begin(), Exit.end());
+
+  // We should now have two dbg.values on the first instruction, and they
+  // should be in the correct order of %a, then 0.
+  Instruction *BInst = &*Entry.begin();
+  ASSERT_TRUE(BInst->hasDbgValues());
+  EXPECT_EQ(BInst->DbgMarker->StoredDPValues.size(), 2u);
+  SmallVector<DPValue *, 2> DPValues;
+  for (DPValue &DPV : BInst->getDbgValueRange())
+    DPValues.push_back(&DPV);
+
+  EXPECT_EQ(DPValues[0]->getVariableLocationOp(0), F.getArg(0));
+  Value *SecondDPVValue = DPValues[1]->getVariableLocationOp(0);
+  ASSERT_TRUE(isa<ConstantInt>(SecondDPVValue));
+  EXPECT_EQ(cast<ConstantInt>(SecondDPVValue)->getZExtValue(), 0ull);
+
+  // No trailing DPValues in the entry block now.
+  EXPECT_EQ(Entry.getTrailingDPValues(), nullptr);
+
+  UseNewDbgInfoFormat = false;
+}
+
+// Similar test again, but this time: splice the contents of exit into entry,
+// with the intention of leaving the first dbg.value (i16 0) behind.
+TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty2) {
+  LLVMContext C;
+  UseNewDbgInfoFormat = true;
+
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+    entry:
+      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
+      br label %exit
+
+    exit:
+      call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
+      %b = add i16 %a, 1, !dbg !11
+      call void @llvm.dbg.value(metadata i16 1, metadata !9, metadata !DIExpression()), !dbg !11
+      ret i16 0, !dbg !11
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  Function &F = *M->getFunction("f");
+  BasicBlock &Entry = F.getEntryBlock();
+  BasicBlock &Exit = *Entry.getNextNode();
+  M->convertToNewDbgValues();
+
+  // Begin by forcing entry block to have dangling DPValue.
+  Entry.getTerminator()->eraseFromParent();
+  ASSERT_NE(Entry.getTrailingDPValues(), nullptr);
+  EXPECT_TRUE(Entry.empty());
+
+  // Now transfer into the entry block -- fetching the first instruction with
+  // begin and then calling getIterator clears the "head" bit, meaning that the
+  // range to move will not include any leading DPValues.
+  Entry.splice(Entry.end(), &Exit, Exit.begin()->getIterator(), Exit.end());
+
+  // We should now have one dbg.values on the first instruction, %a.
+  Instruction *BInst = &*Entry.begin();
+  ASSERT_TRUE(BInst->hasDbgValues());
+  EXPECT_EQ(BInst->DbgMarker->StoredDPValues.size(), 1u);
+  SmallVector<DPValue *, 2> DPValues;
+  for (DPValue &DPV : BInst->getDbgValueRange())
+    DPValues.push_back(&DPV);
+
+  EXPECT_EQ(DPValues[0]->getVariableLocationOp(0), F.getArg(0));
+  // No trailing DPValues in the entry block now.
+  EXPECT_EQ(Entry.getTrailingDPValues(), nullptr);
+
+  // We should have nothing left in the exit block...
+  EXPECT_TRUE(Exit.empty());
+  // ... except for some dangling DPValues.
+  EXPECT_NE(Exit.getTrailingDPValues(), nullptr);
+  EXPECT_FALSE(Exit.getTrailingDPValues()->empty());
+  Exit.deleteTrailingDPValues();
+
+  UseNewDbgInfoFormat = false;
+}
+
+// What if we moveBefore end() -- there might be no debug-info there, in which
+// case we shouldn't crash.
+TEST(BasicBlockDbgInfoTest, DbgMoveToEnd) {
+  LLVMContext C;
+  UseNewDbgInfoFormat = true;
+
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+    entry:
+      br label %exit
+
+    exit:
+      ret i16 0, !dbg !11
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  Function &F = *M->getFunction("f");
+  BasicBlock &Entry = F.getEntryBlock();
+  BasicBlock &Exit = *Entry.getNextNode();
+  M->convertToNewDbgValues();
+
+  // Move the return to the end of the entry block.
+  Instruction *Br = Entry.getTerminator();
+  Instruction *Ret = Exit.getTerminator();
+  EXPECT_EQ(Entry.getTrailingDPValues(), nullptr);
+  Ret->moveBefore(Entry, Entry.end());
+  Br->eraseFromParent();
+
+  // There should continue to not be any debug-info anywhere.
+  EXPECT_EQ(Entry.getTrailingDPValues(), nullptr);
+  EXPECT_EQ(Exit.getTrailingDPValues(), nullptr);
+  EXPECT_FALSE(Ret->hasDbgValues());
 
   UseNewDbgInfoFormat = false;
 }

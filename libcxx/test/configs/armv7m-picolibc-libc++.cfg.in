@@ -26,10 +26,16 @@ config.substitutions.append(('%{link_flags}',
     ' -Wl,--defsym=__ram_size=0x1000000'
     ' -Wl,--defsym=__stack_size=0x1000'
 ))
+
+config.executor = (
+    '@LIBCXX_SOURCE_DIR@/utils/qemu_baremetal.py'
+    ' --qemu @QEMU_SYSTEM_ARM@'
+    ' --machine mps2-an385'
+    ' --cpu cortex-m3')
 config.substitutions.append(('%{exec}',
-    'true' # TODO use qemu-system-arm
+    '%{executor}'
+    ' --execdir %T'
 ))
-config.available_features.add('libcxx-fake-executor')
 
 import os, site
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
