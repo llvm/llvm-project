@@ -2187,14 +2187,18 @@ static ISD::NodeType GetPromotionOpcode(EVT OpVT, EVT RetVT) {
 }
 
 static ISD::NodeType GetPromotionOpcodeStrict(EVT OpVT, EVT RetVT) {
-  if (OpVT == MVT::f16) {
+  if (OpVT == MVT::f16)
     return ISD::STRICT_FP16_TO_FP;
-  } else if (RetVT == MVT::f16) {
+
+  if (RetVT == MVT::f16)
     return ISD::STRICT_FP_TO_FP16;
-  } else if (OpVT == MVT::bf16) {
-    // return ISD::STRICT_BF16_TO_FP;
-  } else if (RetVT == MVT::bf16) {
-    // return ISD::STRICT_FP_TO_BF16;
+
+  if (OpVT == MVT::bf16) {
+    // TODO: return ISD::STRICT_BF16_TO_FP;
+  }
+
+  if (RetVT == MVT::bf16) {
+    // TODO: return ISD::STRICT_FP_TO_BF16;
   }
 
   report_fatal_error("Attempt at an invalid promotion-related conversion");
@@ -2300,7 +2304,7 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_FP_EXTEND(SDNode *N, unsigned OpNo) {
 
 SDValue DAGTypeLegalizer::PromoteFloatOp_STRICT_FP_EXTEND(SDNode *N,
                                                           unsigned OpNo) {
-  assert(OpNo == 1);
+  assert(OpNo == 1 && "Promoting unpromotable operand");
 
   SDValue Op = GetPromotedFloat(N->getOperand(1));
   EVT VT = N->getValueType(0);
