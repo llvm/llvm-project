@@ -62,7 +62,7 @@ AST_MATCHER(clang::QualType, isFloating) {
 }
 
 AST_MATCHER_P(clang::Expr, anyOfExhaustive,
-              llvm::ArrayRef<const Matcher<clang::Stmt>>, Exprs) {
+              llvm::ArrayRef<Matcher<clang::Stmt>>, Exprs) {
   bool FoundMatch = false;
   for (const auto &InnerMatcher : Exprs) {
     clang::ast_matchers::internal::BoundNodesTreeBuilder Result = *Builder;
