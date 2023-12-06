@@ -1351,7 +1351,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ConditionOp 
   return success();
 }
 
-static LogicalResult printSeralOperation(KokkosCppEmitter &emitter, scf::ParallelOp op, KokkosParallelEnv &kokkosParallelEnv) {
+static LogicalResult printSerialOperation(KokkosCppEmitter &emitter, scf::ParallelOp op, KokkosParallelEnv &kokkosParallelEnv) {
   emitter << "// the scf.parallel is serialized as no more parallel level is available\n";
   OperandRange lowerBounds = op.getLowerBound();
   OperandRange upperBounds = op.getUpperBound();
@@ -1386,7 +1386,7 @@ static LogicalResult printSeralOperation(KokkosCppEmitter &emitter, scf::Paralle
   int rank = inductionVars.size();
 
   if(rank == 0)
-    return op.emitError("Rank-0 (single element) parallel iteration space not supported in printSeralOperation");
+    return op.emitError("Rank-0 (single element) parallel iteration space not supported in printSerialOperation");
 
   for(int i = 0; i < rank; i++)
   {
@@ -1438,7 +1438,7 @@ static LogicalResult printSeralOperation(KokkosCppEmitter &emitter, scf::Paralle
 
 static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp op, KokkosParallelEnv &kokkosParallelEnv) {
   if (kokkosParallelEnv.useSerialLoop())
-    return printSeralOperation(emitter, op, kokkosParallelEnv);
+    return printSerialOperation(emitter, op, kokkosParallelEnv);
 
   OperandRange lowerBounds = op.getLowerBound();
   OperandRange upperBounds = op.getUpperBound();
