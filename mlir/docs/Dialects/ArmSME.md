@@ -3,11 +3,12 @@
 Basic dialect to target Arm SME.
 
 This dialect defines custom and LLVM IR intrinsic operations that are used to
-target Arm Scalable Matrix Extension. Through the available lowerings one can,
-for example, lower a [linalg.matmul](https://mlir.llvm.org/docs/Dialects/Linalg/#linalgmatmul-linalgmatmulop)
+target Arm Scalable Matrix Extension. Through the available conversion and
+ArmSME passes you can, for example, lower a
+[linalg.matmul](https://mlir.llvm.org/docs/Dialects/Linalg/#linalgmatmul-linalgmatmulop)
 opereation to Arm SME
 [FMOPA](https://developer.arm.com/documentation/ddi0602/2023-03/SME-Instructions/FMOPA--widening---Half-precision-floating-point-sum-of-outer-products-and-accumulate-)
-(floating point outer product) operations. See one of the in-tree end-to-end
+(floating-point outer product) operations. See one of the in-tree end-to-end
 integration tests for reference:
 
 * [Linalg/CPU/ArmSME/matmul.mlir](https://github.com/llvm/llvm-project/blob/main/mlir/test/Integration/Dialect/Linalg/CPU/ArmSME/matmul.mlir)
