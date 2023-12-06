@@ -411,7 +411,7 @@ static void genInsertionStore(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
   Location loc = op.getLoc();
   // Direct insertion in lexicographic coordinate order.
   if (!env.isExpand()) {
-    const LoopOrd numLoops = op.getRank(t);
+    const LoopId numLoops = op.getRank(t);
     // Retrieves the first `numLoop` induction variables.
     SmallVector<Value> ivs = llvm::to_vector(
         llvm::drop_end(env.emitter().getLoopIVsRange(),
@@ -713,7 +713,7 @@ static void genInvariants(CodegenEnv &env, OpBuilder &builder, ExprId exp,
 }
 
 /// Generates an expanded access pattern in innermost dimension.
-static void genExpand(CodegenEnv &env, OpBuilder &builder, LoopOrd at,
+static void genExpand(CodegenEnv &env, OpBuilder &builder, LoopId at,
                       bool atStart) {
   linalg::GenericOp op = env.op();
   OpOperand *lhs = op.getDpsInitOperand(0);
@@ -740,7 +740,7 @@ static void genExpand(CodegenEnv &env, OpBuilder &builder, LoopOrd at,
                     r.getResult(3));
   } else {
     SmallVector<Value> indices;
-    for (LoopOrd i = 0; i < at; i++)
+    for (LoopId i = 0; i < at; i++)
       indices.push_back(env.emitter().getLoopIV(i));
     Value values = env.getExpandValues();
     Value filled = env.getExpandFilled();
@@ -815,7 +815,7 @@ static Operation *genCoIteration(CodegenEnv &env, OpBuilder &builder,
 
 /// Generates a for-loop or a while-loop, depending on whether it implements
 /// singleton iteration or co-iteration over the given conjunction.
-static Operation *genLoop(CodegenEnv &env, OpBuilder &builder, LoopOrd at,
+static Operation *genLoop(CodegenEnv &env, OpBuilder &builder, LoopId at,
                           bool needsUniv, ArrayRef<TensorLevel> tidLvls) {
   bool tryParallel = shouldTryParallize(env, at, at == 0, tidLvls);
   return genCoIteration(env, builder, at, tidLvls, tryParallel, needsUniv);
@@ -943,7 +943,7 @@ static void endIf(CodegenEnv &env, OpBuilder &builder, scf::IfOp ifOp,
 /// Starts a loop sequence at given level. Returns true if
 /// the universal loop index must be maintained at this level.
 static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
-                         LoopOrd idx, LoopId ldx, LatSetId lts) {
+                         LoopId idx, LoopId ldx, LatSetId lts) {
   assert(!env.getLoopVar(idx));
   // Emit invariants at this loop sequence level.
   genInvariants(env, builder, exp, ldx, /*atStart=*/true);
@@ -1127,7 +1127,7 @@ static bool translateBitsToTidLvlPairs(
 
 /// Starts a single loop in current sequence.
 static std::pair<Operation *, bool> startLoop(CodegenEnv &env,
-                                              OpBuilder &builder, LoopOrd at,
+                                              OpBuilder &builder, LoopId at,
                                               LatPointId li, bool needsUniv) {
   // The set of tensors + lvls to generate loops on
   SmallVector<TensorLevel> tidLvls;
@@ -1199,7 +1199,7 @@ static void endLoopSeq(CodegenEnv &env, OpBuilder &builder, unsigned exp,
 /// to manage the complexity of implementing co-iteration over unions
 /// and intersections of sparse iterations spaces.
 static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
-                    LoopOrd at) {
+                    LoopId at) {
   // At each leaf, assign remaining tensor (sub)expression to output tensor.
   if (at == env.getLoopNum()) {
     Value rhs = genExp(env, rewriter, exp);

@@ -87,7 +87,7 @@ constexpr void mixin_accessor() {
 }
 
 template <class E>
-using mapping_t = typename std::layout_right::template mapping<E>;
+using mapping_t = std::layout_right::mapping<E>;
 
 constexpr bool test() {
   mixin_accessor<int>();

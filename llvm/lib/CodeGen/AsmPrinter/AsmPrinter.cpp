@@ -2182,13 +2182,16 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
     //    *  resolvers cannot appear in executables
     //    *  resolvers cannot appear in bundles
     //
-    // This works around that by emitting a close approximation of what the linker
-    // would have done.
+    // This works around that by emitting a close approximation of what the
+    // linker would have done.
 
-    MCSymbol *LazyPointer = GetExternalSymbolSymbol(GI.getName() + ".lazy_pointer");
-    MCSymbol *StubHelper = GetExternalSymbolSymbol(GI.getName() + ".stub_helper");
+    MCSymbol *LazyPointer =
+        GetExternalSymbolSymbol(GI.getName() + ".lazy_pointer");
+    MCSymbol *StubHelper =
+        GetExternalSymbolSymbol(GI.getName() + ".stub_helper");
 
-    OutStreamer->switchSection(OutContext.getObjectFileInfo()->getDataSection());
+    OutStreamer->switchSection(
+        OutContext.getObjectFileInfo()->getDataSection());
 
     const DataLayout &DL = M.getDataLayout();
     emitAlignment(Align(DL.getPointerSize()));
@@ -2196,7 +2199,8 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
     emitVisibility(LazyPointer, GI.getVisibility());
     OutStreamer->emitValue(MCSymbolRefExpr::create(StubHelper, OutContext), 8);
 
-    OutStreamer->switchSection(OutContext.getObjectFileInfo()->getTextSection());
+    OutStreamer->switchSection(
+        OutContext.getObjectFileInfo()->getTextSection());
 
     auto *STI = TM.getSubtargetImpl(*GI.getResolverFunction());
     const TargetLowering *TLI = STI->getTargetLowering();
