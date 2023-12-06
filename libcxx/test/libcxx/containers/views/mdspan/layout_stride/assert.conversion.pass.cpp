@@ -73,9 +73,8 @@ int main(int, char**) {
   // all strides must be larger than zero
   {
     always_convertible_layout::mapping<std::dextents<int, 2>> offset_map(std::dextents<int, 2>{10, 10}, 100, -1);
-    TEST_LIBCPP_ASSERT_FAILURE(
-        ([=] { std::layout_stride::mapping<std::extents<char, D, D>> m(offset_map); }()),
-        "layout_stride::mapping converting ctor: all strides must be greater than 0");
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_stride::mapping<std::extents<char, D, D>> m(offset_map); }()),
+                               "layout_stride::mapping converting ctor: all strides must be greater than 0");
   }
   // required_span_size not representable, while individual extents are
   {
@@ -105,9 +104,8 @@ int main(int, char**) {
   // base offset must be 0 (i.e. mapping(0,...,0)==0) for a strided layout with positive strides
   {
     always_convertible_layout::mapping<std::dextents<int, 2>> offset_map(std::dextents<int, 2>{10, 10}, 3);
-    TEST_LIBCPP_ASSERT_FAILURE(
-        ([=] { std::layout_stride::mapping<std::extents<char, D, D>> m(offset_map); }()),
-        "layout_stride::mapping converting ctor: base offset of mapping must be zero.");
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_stride::mapping<std::extents<char, D, D>> m(offset_map); }()),
+                               "layout_stride::mapping converting ctor: base offset of mapping must be zero.");
   }
   return 0;
 }
