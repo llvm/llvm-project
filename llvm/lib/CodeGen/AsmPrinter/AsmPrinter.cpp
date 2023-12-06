@@ -59,6 +59,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Comdat.h"
@@ -2168,7 +2169,8 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
     MCSymbol *LocalAlias = getSymbolPreferLocal(GI);
     if (LocalAlias != Name)
       OutStreamer->emitAssignment(LocalAlias, Expr);
-  } else if (TM.getTargetTriple().isOSBinFormatMachO()) {
+  } else if (TM.getTargetTriple().isOSBinFormatMachO() &&
+             getIFuncMCSubtargetInfo()) {
     // On Darwin platforms, emit a manually-constructed .symbol_resolver that
     // implements the symbol resolution duties of the IFunc.
     //
@@ -2202,22 +2204,24 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
     OutStreamer->switchSection(
         OutContext.getObjectFileInfo()->getTextSection());
 
-    auto *STI = TM.getSubtargetImpl(*GI.getResolverFunction());
+    const TargetSubtargetInfo *STI =
+        TM.getSubtargetImpl(*GI.getResolverFunction());
     const TargetLowering *TLI = STI->getTargetLowering();
     Align TextAlign(TLI->getMinFunctionAlignment());
 
     MCSymbol *Stub = getSymbol(&GI);
     EmitLinkage(Stub);
-    OutStreamer->emitCodeAlignment(TextAlign, &getMachOSubtargetInfo());
+    OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
     OutStreamer->emitLabel(Stub);
     emitVisibility(Stub, GI.getVisibility());
     emitMachOIFuncStubBody(M, GI, LazyPointer);
 
-    OutStreamer->emitCodeAlignment(TextAlign, &getMachOSubtargetInfo());
+    OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
     OutStreamer->emitLabel(StubHelper);
     emitVisibility(StubHelper, GI.getVisibility());
     emitMachOIFuncStubHelperBody(M, GI, LazyPointer);
-  }
+  } else
+    llvm::report_fatal_error("IFuncs are not supported on this platform");
 }
 
 void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {

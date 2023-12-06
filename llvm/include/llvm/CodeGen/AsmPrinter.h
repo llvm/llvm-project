@@ -599,12 +599,12 @@ public:
   /// instructions in verbose mode.
   virtual void emitImplicitDef(const MachineInstr *MI) const;
 
-  virtual const MCSubtargetInfo &getMachOSubtargetInfo() const {
-    // getSubtargetInfo() cannot be used where this is needed, because we don't
-    // have a MachineFunction when we're lowering a GlobalIFunc, and
-    // getSubtargetInfo requires one.
-    llvm_unreachable(
-        "Mach-O IFunc lowering is not yet supported on this target");
+  /// getSubtargetInfo() cannot be used where this is needed because we don't
+  /// have a MachineFunction when we're lowering a GlobalIFunc, and
+  /// getSubtargetInfo requires one. Override the implementation in targets
+  /// that support the Mach-O IFunc lowering.
+  virtual const MCSubtargetInfo *getIFuncMCSubtargetInfo() const {
+    return nullptr;
   }
 
   virtual void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
