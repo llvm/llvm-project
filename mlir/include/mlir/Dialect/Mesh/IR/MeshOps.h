@@ -30,6 +30,9 @@
 namespace mlir {
 namespace mesh {
 
+using MeshAxis = int16_t;
+using MeshAxesAttr = DenseI16ArrayAttr;
+
 bool isReductionLoop(IteratorType iType);
 
 bool areReductionAndPartialMatch(IteratorType iType, Partial partial);
