@@ -1497,11 +1497,21 @@ let SchedRW = [WriteStore] in {
 def MOVDIRI32 : I<0xF9, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
                   "movdiri\t{$src, $dst|$dst, $src}",
                   [(int_x86_directstore32 addr:$dst, GR32:$src)]>,
-                 T8PS, Requires<[HasMOVDIRI]>;
+                 T8PS, Requires<[HasMOVDIRI, NoEGPR]>;
 def MOVDIRI64 : RI<0xF9, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
                    "movdiri\t{$src, $dst|$dst, $src}",
                    [(int_x86_directstore64 addr:$dst, GR64:$src)]>,
-                  T8PS, Requires<[In64BitMode, HasMOVDIRI]>;
+                  T8PS, Requires<[In64BitMode, HasMOVDIRI, NoEGPR]>;
+let CD8_Scale = 0 in {
+def MOVDIRI32_EVEX : I<0xF9, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
+                       "movdiri\t{$src, $dst|$dst, $src}",
+                       [(int_x86_directstore32 addr:$dst, GR32:$src)]>,
+                     EVEX, T_MAP4PS, Requires<[HasMOVDIRI, HasEGPR]>;
+def MOVDIRI64_EVEX : RI<0xF9, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
+                        "movdiri\t{$src, $dst|$dst, $src}",
+                        [(int_x86_directstore64 addr:$dst, GR64:$src)]>,
+                     EVEX, T_MAP4PS, Requires<[In64BitMode, HasMOVDIRI, HasEGPR]>;
+}
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
@@ -1519,6 +1529,14 @@ def MOVDIR64B64 : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
                     "movdir64b\t{$src, $dst|$dst, $src}",
                     [(int_x86_movdir64b GR64:$dst, addr:$src)]>,
                    T8PD, AdSize64, Requires<[HasMOVDIR64B, In64BitMode]>;
+def MOVDIR64B32_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
+                         "movdir64b\t{$src, $dst|$dst, $src}",
+                         [(int_x86_movdir64b GR32:$dst, addr:$src)]>,
+                       EVEX_NoCD8, T_MAP4PD, AdSize32, Requires<[HasMOVDIR64B, NoEGPR]>;
+def MOVDIR64B64_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
+                         "movdir64b\t{$src, $dst|$dst, $src}",
+                         [(int_x86_movdir64b GR64:$dst, addr:$src)]>,
+                       EVEX_NoCD8, T_MAP4PD, AdSize64, Requires<[HasMOVDIR64B, HasEGPR, In64BitMode]>;
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
