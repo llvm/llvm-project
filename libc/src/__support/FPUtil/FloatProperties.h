@@ -72,8 +72,8 @@ template <> struct FPBaseProperties<FPType::IEEE754_Binary128> {
 };
 
 template <> struct FPBaseProperties<FPType::X86_Binary80> {
-  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 80;
   using UIntType = UInt128;
+  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 80;
   LIBC_INLINE_VAR static constexpr int SIG_BITS = 64;
   LIBC_INLINE_VAR static constexpr int EXP_BITS = 15;
   LIBC_INLINE_VAR static constexpr auto ENCODING =
