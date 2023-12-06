@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+#include "/tmp/debug.h"
 #include "Driver.h"
 #include "COFFLinkerContext.h"
 #include "Config.h"
@@ -2380,6 +2380,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (config->mingw) {
     ctx.symtab.addAbsolute(mangle("__CTOR_LIST__"), 0);
     ctx.symtab.addAbsolute(mangle("__DTOR_LIST__"), 0);
+  }
+
+  if (config->debug || config->buildIDHash != BuildIDHash::None) {
+    ctx.symtab.addAbsolute(mangle("__lld_buildid"), 0);
   }
 
   // This code may add new undefined symbols to the link, which may enqueue more
