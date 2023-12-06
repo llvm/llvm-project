@@ -81,7 +81,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
           NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
           NewRecipe = new VPWidenCastRecipe(
-              CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), CI);
+              CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), *CI);
         } else {
           NewRecipe = new VPWidenRecipe(*Inst, Ingredient.operands());
         }
@@ -935,6 +935,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       Type *OldResTy = TypeInfo.inferScalarType(ResultVPV);
       unsigned OldResSizeInBits = OldResTy->getScalarSizeInBits();
       assert(OldResTy->isIntegerTy() && "only integer types supported");
+      if (OldResSizeInBits == NewResSizeInBits)
+        continue;
       assert(OldResSizeInBits > NewResSizeInBits && "Nothing to shrink?");
       (void)OldResSizeInBits;
 

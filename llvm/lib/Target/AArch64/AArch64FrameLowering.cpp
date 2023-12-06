@@ -992,6 +992,16 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   }
 }
 
+static void getLiveRegsForEntryMBB(LivePhysRegs &LiveRegs,
+                                   const MachineBasicBlock &MBB) {
+  const MachineFunction *MF = MBB.getParent();
+  LiveRegs.addLiveIns(MBB);
+  // Mark callee saved registers as used so we will not choose them.
+  const MCPhysReg *CSRegs = MF->getRegInfo().getCalleeSavedRegs();
+  for (unsigned i = 0; CSRegs[i]; ++i)
+    LiveRegs.addReg(CSRegs[i]);
+}
+
 // Find a scratch register that we can use at the start of the prologue to
 // re-align the stack pointer.  We avoid using callee-save registers since they
 // may appear to be free when this is called from canUseAsPrologue (during
@@ -1013,12 +1023,7 @@ static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
   LivePhysRegs LiveRegs(TRI);
-  LiveRegs.addLiveIns(*MBB);
-
-  // Mark callee saved registers as used so we will not choose them.
-  const MCPhysReg *CSRegs = MF->getRegInfo().getCalleeSavedRegs();
-  for (unsigned i = 0; CSRegs[i]; ++i)
-    LiveRegs.addReg(CSRegs[i]);
+  getLiveRegsForEntryMBB(LiveRegs, *MBB);
 
   // Prefer X9 since it was historically used for the prologue scratch reg.
   const MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -1039,6 +1044,19 @@ bool AArch64FrameLowering::canUseAsPrologue(
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   const AArch64TargetLowering *TLI = Subtarget.getTargetLowering();
+  const AArch64FunctionInfo *AFI = MF->getInfo<AArch64FunctionInfo>();
+
+  if (AFI->hasSwiftAsyncContext()) {
+    const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
+    const MachineRegisterInfo &MRI = MF->getRegInfo();
+    LivePhysRegs LiveRegs(TRI);
+    getLiveRegsForEntryMBB(LiveRegs, MBB);
+    // The StoreSwiftAsyncContext clobbers X16 and X17. Make sure they are
+    // available.
+    if (!LiveRegs.available(MRI, AArch64::X16) ||
+        !LiveRegs.available(MRI, AArch64::X17))
+      return false;
+  }
 
   // Don't need a scratch register if we're not going to re-align the stack or
   // emit stack probes.

@@ -292,6 +292,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
    :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
    :doc:`modernize-use-override <modernize/use-override>`, "Yes"
+   :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
    :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
    :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"
    :doc:`modernize-use-transparent-functors <modernize/use-transparent-functors>`, "Yes"

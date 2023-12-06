@@ -158,7 +158,10 @@ def main():
       die('--diff is required when two commits are given')
   elif opts.diff_from_common_commit:
     die('--diff_from_common_commit is only allowed when two commits are given')
-  opts.binary=os.path.abspath(opts.binary)
+
+  if os.path.dirname(opts.binary):
+    opts.binary = os.path.abspath(opts.binary)
+
   changed_lines = compute_diff_and_extract_lines(commits,
                                                  files,
                                                  opts.staged,
