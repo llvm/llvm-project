@@ -119,6 +119,9 @@ private:
   /// Defaults to false.
   bool BigEndian;
 
+  enum DFPBinaryEncodingT { BID, DPD, None };
+  DFPBinaryEncodingT DFPBinaryEncoding;
+
   unsigned AllocaAddrSpace;
   MaybeAlign StackNaturalAlign;
   unsigned ProgramAddrSpace;
@@ -205,6 +208,7 @@ public:
     clear();
     StringRepresentation = DL.StringRepresentation;
     BigEndian = DL.isBigEndian();
+    DFPBinaryEncoding = DL.DFPBinaryEncoding;
     AllocaAddrSpace = DL.AllocaAddrSpace;
     StackNaturalAlign = DL.StackNaturalAlign;
     FunctionPtrAlign = DL.FunctionPtrAlign;

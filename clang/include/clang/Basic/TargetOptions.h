@@ -90,6 +90,9 @@ public:
   /// \brief Code object version for AMDGPU.
   CodeObjectVersionKind CodeObjectVersion = CodeObjectVersionKind::COV_None;
 
+  enum class TODFPBinaryEncodingKind { BID, DPD, None };
+  TODFPBinaryEncodingKind DFPEncoding = TODFPBinaryEncodingKind::None;
+
   /// \brief Enumeration values for AMDGPU printf lowering scheme
   enum class AMDGPUPrintfKind {
     /// printf lowering scheme involving hostcalls, currently used by HIP

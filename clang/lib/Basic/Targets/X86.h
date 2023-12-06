@@ -719,6 +719,27 @@ public:
     Int64Type = IsX32 ? SignedLongLong : SignedLong;
     RegParmMax = 6;
 
+    bool isBIDEncoding =
+        Opts.DFPEncoding == TargetOptions::TODFPBinaryEncodingKind::BID;
+    bool isDPDEncoding =
+        Opts.DFPEncoding == TargetOptions::TODFPBinaryEncodingKind::DPD;
+
+    if (isBIDEncoding)
+      resetDataLayout(IsX32 ? "e-d:-bid-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
+                              "i64:64-f80:128-n8:16:32:64-S128"
+                      : IsWinCOFF ? "e-d:bid-m:w-p270:32:32-p271:32:32-p272:64:"
+                                    "64-i64:64-f80:128-n8:16:32:64-S128"
+                                  : "e-d:bid-m:e-p270:32:32-p271:32:32-p272:64:"
+                                    "64-i64:64-f80:128-n8:16:32:64-S128");
+    else if (isDPDEncoding)
+      resetDataLayout(
+          IsX32 ? "e-d:dpd-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
+                  "i64:64-f80:128-n8:16:32:64-S128"
+          : IsWinCOFF ? "e-d:dpd-m:w-p270:32:32-p271:32:32-p272:64:"
+                        "64-i64:64-f80:128-n8:16:32:64-S128"
+                      : "e-d:dpd-m:e-p270:32:32-p271:32:32-p272:64:"
+                        "64-i64:64-f80:128-n8:16:32:64-S128");
+    else
     // Pointers are 32-bit in x32.
     resetDataLayout(IsX32 ? "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
                             "i64:64-f80:128-n8:16:32:64-S128"
