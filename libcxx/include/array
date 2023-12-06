@@ -280,7 +280,8 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0>
     typedef std::reverse_iterator<iterator>       reverse_iterator;
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-    typedef __conditional_t<is_const<_Tp>::value, const char, char> _CharType;
+    struct _EmptyAggregate { };
+    typedef __conditional_t<is_const<_Tp>::value, const _EmptyAggregate, _EmptyAggregate> _CharType;
 
     struct  _ArrayInStructT { _Tp __data_[1]; };
     _ALIGNAS_TYPE(_ArrayInStructT) _CharType __elems_[sizeof(_ArrayInStructT)];

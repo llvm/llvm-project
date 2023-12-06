@@ -19,11 +19,9 @@ struct NoDefault {
 };
 
 // Test default initialization
-// This one isn't constexpr because omitting to initialize fundamental types
-// isn't valid in a constexpr context.
 struct test_default_initialization {
     template <typename T>
-    void operator()() const
+    TEST_CONSTEXPR_CXX14 void operator()() const
     {
         std::array<T, 0> a0; (void)a0;
         std::array<T, 1> a1; (void)a1;
@@ -31,6 +29,20 @@ struct test_default_initialization {
         std::array<T, 3> a3; (void)a3;
 
         std::array<NoDefault, 0> nodefault; (void)nodefault;
+    }
+};
+
+// Additional tests for constexpr default initialization of empty arrays since
+// it seems that making a variable constexpr and merely having a non-constexpr
+// variable in a constexpr function behave differently.
+//
+// Reproducer for https://github.com/llvm/llvm-project/issues/74375
+struct test_default_initialization_74375 {
+    template <typename T>
+    TEST_CONSTEXPR_CXX14 void operator()() const
+    {
+        constexpr std::array<T, 0> a0; (void)a0;
+        constexpr std::array<NoDefault, 0> nodefault; (void)nodefault;
     }
 };
 
@@ -177,10 +189,15 @@ TEST_CONSTEXPR_CXX14 bool with_all_types()
 int main(int, char**)
 {
     with_all_types<test_nondefault_initialization>();
-    with_all_types<test_default_initialization>(); // not constexpr
+    with_all_types<test_default_initialization>();
+    with_all_types<test_default_initialization_74375>();
     test_initializer_list();
 #if TEST_STD_VER >= 14
     static_assert(with_all_types<test_nondefault_initialization>(), "");
+#if TEST_STD_VER >= 20
+    static_assert(with_all_types<test_default_initialization>(), "");
+#endif
+    static_assert(with_all_types<test_default_initialization_74375>(), "");
     static_assert(test_initializer_list(), "");
 #endif
 
