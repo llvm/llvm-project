@@ -3000,58 +3000,15 @@ static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
 
 enum ArmStreamingType { ArmNonStreaming, ArmStreaming, ArmStreamingCompatible };
 
-static ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD) {
-  if (FD->hasAttr<ArmLocallyStreamingAttr>())
-    return ArmStreaming;
-  if (const auto *T = FD->getType()->getAs<FunctionProtoType>()) {
-    if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
-      return ArmStreaming;
-    if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMCompatibleMask)
-      return ArmStreamingCompatible;
-  }
-  return ArmNonStreaming;
-}
-
-static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
-                                     const FunctionDecl *FD,
-                                     ArmStreamingType BuiltinType) {
-  ArmStreamingType FnType = getArmStreamingFnType(FD);
-
-  if (FnType == ArmStreaming && BuiltinType == ArmNonStreaming) {
-    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
-        << TheCall->getSourceRange() << "streaming";
-  }
-
-  if (FnType == ArmStreamingCompatible &&
-      BuiltinType != ArmStreamingCompatible) {
-    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
-        << TheCall->getSourceRange() << "streaming compatible";
-    return;
-  }
-}
-
-bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
-  // Range check SVE intrinsics that take immediate values.
-  SmallVector<std::tuple<int,int,int>, 3> ImmChecks;
-
-  switch (BuiltinID) {
-  default:
-    return false;
-#define GET_SVE_IMMEDIATE_CHECK
-#include "clang/Basic/arm_sve_sema_rangechecks.inc"
-#undef GET_SVE_IMMEDIATE_CHECK
-#define GET_SME_IMMEDIATE_CHECK
-#include "clang/Basic/arm_sme_sema_rangechecks.inc"
-#undef GET_SME_IMMEDIATE_CHECK
-  }
-
+bool Sema::ParseSVEImmChecks(
+    CallExpr *TheCall, SmallVector<std::tuple<int, int, int>, 3> &ImmChecks) {
   // Perform all the immediate checks for this builtin call.
   bool HasError = false;
   for (auto &I : ImmChecks) {
     int ArgNum, CheckTy, ElementSizeInBits;
     std::tie(ArgNum, CheckTy, ElementSizeInBits) = I;
 
-    typedef bool(*OptionSetCheckFnTy)(int64_t Value);
+    typedef bool (*OptionSetCheckFnTy)(int64_t Value);
 
     // Function that checks whether the operand (ArgNum) is an immediate
     // that is one of the predefined values.
@@ -3181,6 +3138,54 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
 
   return HasError;
+}
+
+static ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD) {
+  if (FD->hasAttr<ArmLocallyStreamingAttr>())
+    return ArmStreaming;
+  if (const auto *T = FD->getType()->getAs<FunctionProtoType>()) {
+    if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
+      return ArmStreaming;
+    if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMCompatibleMask)
+      return ArmStreamingCompatible;
+  }
+  return ArmNonStreaming;
+}
+
+static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
+                                     const FunctionDecl *FD,
+                                     ArmStreamingType BuiltinType) {
+  ArmStreamingType FnType = getArmStreamingFnType(FD);
+
+  if (FnType == ArmStreaming && BuiltinType == ArmNonStreaming) {
+    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
+        << TheCall->getSourceRange() << "streaming";
+  }
+
+  if (FnType == ArmStreamingCompatible &&
+      BuiltinType != ArmStreamingCompatible) {
+    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
+        << TheCall->getSourceRange() << "streaming compatible";
+    return;
+  }
+}
+
+bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+  // Range check SVE intrinsics that take immediate values.
+  SmallVector<std::tuple<int, int, int>, 3> ImmChecks;
+
+  switch (BuiltinID) {
+  default:
+    return false;
+#define GET_SVE_IMMEDIATE_CHECK
+#include "clang/Basic/arm_sve_sema_rangechecks.inc"
+#undef GET_SVE_IMMEDIATE_CHECK
+#define GET_SME_IMMEDIATE_CHECK
+#include "clang/Basic/arm_sme_sema_rangechecks.inc"
+#undef GET_SME_IMMEDIATE_CHECK
+  }
+
+  return ParseSVEImmChecks(TheCall, ImmChecks);
 }
 
 bool Sema::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
