@@ -768,16 +768,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)));
 
   getActionDefinitionsBuilder({G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD,
-                               G_ATOMICRMW_AND, G_ATOMICRMW_OR,
+                               G_ATOMICRMW_SUB, G_ATOMICRMW_AND, G_ATOMICRMW_OR,
                                G_ATOMICRMW_XOR})
       .libcallIf([&ST](const LegalityQuery &Query) {
-        return ST.outlineAtomics() && !ST.hasLSE();
-      })
-      .clampScalar(0, s32, s64)
-      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)));
-
-  getActionDefinitionsBuilder(G_ATOMICRMW_SUB)
-      .lowerIf([&ST](const LegalityQuery &Query) {
         return ST.outlineAtomics() && !ST.hasLSE();
       })
       .clampScalar(0, s32, s64)

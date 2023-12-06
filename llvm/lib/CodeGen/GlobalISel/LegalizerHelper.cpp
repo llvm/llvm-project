@@ -824,6 +824,10 @@ getOutlineAtomicLibcall(unsigned Opc, AtomicOrdering Order, uint64_t MemSize) {
     const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDADD)};
     return LC[ModeN][ModelN];
   }
+  case TargetOpcode::G_ATOMICRMW_SUB: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDADD)};
+    return LC[ModeN][ModelN];
+  }
   case TargetOpcode::G_ATOMICRMW_AND: {
     const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDCLR)};
     return LC[ModeN][ModelN];
@@ -879,6 +883,7 @@ createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
   }
   case TargetOpcode::G_ATOMICRMW_XCHG:
   case TargetOpcode::G_ATOMICRMW_ADD:
+  case TargetOpcode::G_ATOMICRMW_SUB:
   case TargetOpcode::G_ATOMICRMW_AND:
   case TargetOpcode::G_ATOMICRMW_OR:
   case TargetOpcode::G_ATOMICRMW_XOR: {
@@ -888,6 +893,10 @@ createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
     if (Opc == TargetOpcode::G_ATOMICRMW_AND) {
       Register Tmp = MRI.createGenericVirtualRegister(ValLLT);
       MIRBuilder.buildXor(Tmp, MIRBuilder.buildConstant(ValLLT, -1), Val);
+      Val = Tmp;
+    } else if (Opc == TargetOpcode::G_ATOMICRMW_SUB) {
+      Register Tmp = MRI.createGenericVirtualRegister(ValLLT);
+      MIRBuilder.buildSub(Tmp, MIRBuilder.buildConstant(ValLLT, 0), Val);
       Val = Tmp;
     }
     Args.push_back({Val, IntegerType::get(Ctx, ValLLT.getSizeInBits()), 0});
@@ -1182,6 +1191,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   }
   case TargetOpcode::G_ATOMICRMW_XCHG:
   case TargetOpcode::G_ATOMICRMW_ADD:
+  case TargetOpcode::G_ATOMICRMW_SUB:
   case TargetOpcode::G_ATOMICRMW_AND:
   case TargetOpcode::G_ATOMICRMW_OR:
   case TargetOpcode::G_ATOMICRMW_XOR:
@@ -3965,17 +3975,6 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerTRUNC(MI);
   GISEL_VECREDUCE_CASES_NONSEQ
     return lowerVectorReduction(MI);
-  case G_ATOMICRMW_SUB: {
-    auto Val = MI.getOperand(2).getReg();
-    LLT ValLLT = MRI.getType(Val);
-    Register Tmp = MRI.createGenericVirtualRegister(ValLLT);
-    MIRBuilder.buildSub(Tmp, MIRBuilder.buildConstant(ValLLT, 0), Val);
-    auto [Ret, Mem] = MI.getFirst2Regs();
-    auto &MMO = cast<GMemOperation>(MI).getMMO();
-    MIRBuilder.buildAtomicRMWAdd(Ret, Mem, Tmp, MMO);
-    MI.eraseFromParent();
-    return Legalized;
-  }
   }
 }
 
