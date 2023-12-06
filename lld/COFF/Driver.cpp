@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "/tmp/debug.h"
+
 #include "Driver.h"
 #include "COFFLinkerContext.h"
 #include "Config.h"
