@@ -1,6 +1,6 @@
 ! Basic offloading test of arrays with provided lower 
 ! and upper bounds as specified by OpenMP's sectioning
-! REQUIRES: flang, amdgcn-amd-amdhsa, nvptx64-nvidia-cuda
+! REQUIRES: flang
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 ! UNSUPPORTED: aarch64-unknown-linux-gnu
 ! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
