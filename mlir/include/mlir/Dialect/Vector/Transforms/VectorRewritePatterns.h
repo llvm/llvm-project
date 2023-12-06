@@ -294,6 +294,10 @@ void populateCastAwayVectorLeadingOneDimPatterns(RewritePatternSet &patterns,
 void populateVectorTransferDropUnitDimsPatterns(RewritePatternSet &patterns,
                                                 PatternBenefit benefit = 1);
 
+/// Collect a set of vector.shape_cast folding patterns.
+void populateReorderShapeCastPatterns(RewritePatternSet &patterns,
+                                      PatternBenefit benefit = 1);
+
 /// Collect a set of patterns to flatten n-D vector transfers on contiguous
 /// memref.
 ///
