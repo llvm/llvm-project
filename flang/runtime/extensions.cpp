@@ -90,13 +90,11 @@ void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *arg, std::int64_t length) {
   } else {
     // error occur: get username from environment variable
 #ifdef _WIN32
-    const int charLen{9};
-    char envName[charLen]{"USERNAME"};
+    char envName[]{"USERNAME"};
 #else
-    const int charLen{8};
-    char envName[charLen]{"LOGNAME"};
+    char envName[]{"LOGNAME"};
 #endif
-    Descriptor name{*Descriptor::Create(1, charLen, envName, 0)};
+    Descriptor name{*Descriptor::Create(1, sizeof(envName), envName, 0)};
     Descriptor value{*Descriptor::Create(1, length, arg, 0)};
 
     RTNAME(GetEnvVariable)
