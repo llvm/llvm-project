@@ -16,7 +16,6 @@
 #include "PerfHelper.h"
 #include "SubprocessMemory.h"
 #include "Target.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
