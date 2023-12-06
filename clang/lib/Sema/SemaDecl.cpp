@@ -13863,7 +13863,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       VDecl->setStorageClass(SC_Extern);
 
     // C99 6.7.8p4. All file scoped initializers need to be constant.
-    // Avoid double diagnosing for constexpr variables.
+    // Avoid double diagnoses for constexpr variables.
     if (!getLangOpts().CPlusPlus && !VDecl->isInvalidDecl() &&
         !VDecl->isConstexpr())
       CheckForConstantInitializer(Init, DclT);
@@ -14381,8 +14381,7 @@ static bool CheckC23ConstexprInitConversion(Sema &S, const Expr *Init) {
 }
 
 static bool CheckC23ConstexprInitStringLiteral(const StringLiteral *SE,
-                                               Sema &SemaRef,
-                                               SourceLocation Loc) {
+                                               Sema &SemaRef) {
   assert(SemaRef.getLangOpts().C23);
   // String literals have the target type attached but underneath may contain
   // values that don't really fit into the target type. Check that every
@@ -14397,7 +14396,8 @@ static bool CheckC23ConstexprInitStringLiteral(const StringLiteral *SE,
     int64_t C = SE->getCodeUnitS(I, SemaRef.Context.getCharWidth());
     Value = C;
     if (Value != C) {
-      SemaRef.Diag(Loc, diag::err_c23_constexpr_init_not_representable)
+      SemaRef.Diag(SemaRef.getLocationOfStringLiteralByte(SE, I),
+                   diag::err_c23_constexpr_init_not_representable)
           << C << CharType;
       return true;
     }
@@ -14412,7 +14412,7 @@ static bool CheckC23ConstexprInitializer(Sema &S, const Expr *Init) {
       return true;
 
   if (const auto *SE = dyn_cast<StringLiteral>(Init))
-    if (CheckC23ConstexprInitStringLiteral(SE, S, Init->getBeginLoc()))
+    if (CheckC23ConstexprInitStringLiteral(SE, S))
       return true;
 
   for (const Stmt *SubStmt : Init->children()) {

@@ -1915,10 +1915,10 @@ public:
   }
 
   // Get code unit but preserve sign info.
-  int64_t getCodeUnitS(size_t I, uint64_t ByteWidth) const {
+  int64_t getCodeUnitS(size_t I, uint64_t BitWidth) const {
     int64_t V = getCodeUnit(I);
     if (isOrdinary() || isWide()) {
-      unsigned Width = getCharByteWidth() * ByteWidth;
+      unsigned Width = getCharByteWidth() * BitWidth;
       llvm::APInt AInt(Width, (uint64_t)V);
       V = AInt.getSExtValue();
     }
