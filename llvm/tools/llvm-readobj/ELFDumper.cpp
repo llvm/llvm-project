@@ -2027,6 +2027,18 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
   uint64_t StringTableSize = 0;
   std::optional<DynRegionInfo> DynSymFromTable;
   for (const Elf_Dyn &Dyn : dynamic_table()) {
+    if (Obj.getHeader().e_machine == EM_AARCH64) {
+      switch (Dyn.d_tag) {
+      case ELF::DT_AARCH64_AUTH_RELRSZ:
+        DynRelrRegion.Size = Dyn.getVal();
+        DynRelrRegion.SizePrintName = "DT_AARCH64_AUTH_RELRSZ value";
+        continue;
+      case ELF::DT_AARCH64_AUTH_RELRENT:
+        DynRelrRegion.EntSize = Dyn.getVal();
+        DynRelrRegion.EntSizePrintName = "DT_AARCH64_AUTH_RELRENT value";
+        continue;
+      }
+    }
     switch (Dyn.d_tag) {
     case ELF::DT_HASH:
       HashTable = reinterpret_cast<const Elf_Hash *>(
@@ -2097,27 +2109,17 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
     case ELF::DT_ANDROID_RELRSZ:
     case ELF::DT_AARCH64_AUTH_RELRSZ:
       DynRelrRegion.Size = Dyn.getVal();
-      if (Dyn.d_tag == ELF::DT_RELRSZ)
-        DynRelrRegion.SizePrintName = "DT_RELRSZ value";
-      else if (Dyn.d_tag == ELF::DT_ANDROID_RELRSZ)
-        DynRelrRegion.SizePrintName = "DT_ANDROID_RELRSZ value";
-      else if (Dyn.d_tag == ELF::DT_AARCH64_AUTH_RELRSZ)
-        DynRelrRegion.SizePrintName = "DT_AARCH64_AUTH_RELRSZ value";
-      else
-        llvm_unreachable("unexpected Dyn.d_tag value");
+      DynRelrRegion.SizePrintName = Dyn.d_tag == ELF::DT_RELRSZ
+                                        ? "DT_RELRSZ value"
+                                        : "DT_ANDROID_RELRSZ value";
       break;
     case ELF::DT_RELRENT:
     case ELF::DT_ANDROID_RELRENT:
     case ELF::DT_AARCH64_AUTH_RELRENT:
       DynRelrRegion.EntSize = Dyn.getVal();
-      if (Dyn.d_tag == ELF::DT_RELRENT)
-        DynRelrRegion.EntSizePrintName = "DT_RELRENT value";
-      else if (Dyn.d_tag == ELF::DT_ANDROID_RELRENT)
-        DynRelrRegion.EntSizePrintName = "DT_ANDROID_RELRENT value";
-      else if (Dyn.d_tag == ELF::DT_AARCH64_AUTH_RELRENT)
-        DynRelrRegion.EntSizePrintName = "DT_AARCH64_AUTH_RELRENT value";
-      else
-        llvm_unreachable("unexpected Dyn.d_tag value");
+      DynRelrRegion.EntSizePrintName = Dyn.d_tag == ELF::DT_RELRENT
+                                           ? "DT_RELRENT value"
+                                           : "DT_ANDROID_RELRENT value";
       break;
     case ELF::DT_PLTREL:
       if (Dyn.getVal() == DT_REL)
@@ -5342,11 +5344,11 @@ static bool printAArch64Note(raw_ostream &OS, uint32_t NoteType,
     return false;
   }
 
-  uint64_t platform =
+  uint64_t Platform =
       support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 0);
-  uint64_t version =
+  uint64_t Version =
       support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
-  OS << format("platform 0x%x, version 0x%x", platform, version);
+  OS << format("platform 0x%x, version 0x%x", Platform, Version);
 
   if (Desc.size() > 16)
     OS << ", additional info 0x"
