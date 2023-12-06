@@ -365,7 +365,7 @@ define i8 @lshr_xor_or_good_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @lshr_xor_or_good_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], 4
-; CHECK-NEXT:    [[BW1:%.*]] = or i8 [[TMP2]], 48
+; CHECK-NEXT:    [[BW1:%.*]] = or disjoint i8 [[TMP2]], 48
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = lshr i8 %x, 4

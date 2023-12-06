@@ -346,14 +346,10 @@ private:
             return false;
 
           // Check if the found line starts a record.
-          const FormatToken *LastNonComment = Line->Last;
+          const auto *LastNonComment = Line->getLastNonComment();
+          // There must be another token (usually `{`), because we chose a
+          // non-PPDirective and non-comment line that has a smaller level.
           assert(LastNonComment);
-          if (LastNonComment->is(tok::comment)) {
-            LastNonComment = LastNonComment->getPreviousNonComment();
-            // There must be another token (usually `{`), because we chose a
-            // non-PPDirective and non-comment line that has a smaller level.
-            assert(LastNonComment);
-          }
           return isRecordLBrace(*LastNonComment);
         }
       }
@@ -363,12 +359,9 @@ private:
 
     bool MergeShortFunctions = ShouldMergeShortFunctions();
 
-    const FormatToken *FirstNonComment = TheLine->First;
-    if (FirstNonComment->is(tok::comment)) {
-      FirstNonComment = FirstNonComment->getNextNonComment();
-      if (!FirstNonComment)
-        return 0;
-    }
+    const auto *FirstNonComment = TheLine->getFirstNonComment();
+    if (!FirstNonComment)
+      return 0;
     // FIXME: There are probably cases where we should use FirstNonComment
     // instead of TheLine->First.
 

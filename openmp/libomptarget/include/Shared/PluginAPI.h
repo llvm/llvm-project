@@ -215,6 +215,16 @@ int32_t __tgt_rtl_data_notify_unmapped(int32_t ID, void *HstPtr);
 // Set the global device identifier offset, such that the plugin may determine a
 // unique device number.
 int32_t __tgt_rtl_set_device_offset(int32_t DeviceIdOffset);
+
+int32_t __tgt_rtl_launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
+                                void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                KernelArgsTy *KernelArgs,
+                                __tgt_async_info *AsyncInfoPtr);
+
+int32_t __tgt_rtl_initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
+                                           void *VAddr, bool isRecord,
+                                           bool SaveOutput,
+                                           uint64_t &ReqPtrArgOffset);
 }
 
 #endif // OMPTARGET_SHARED_PLUGIN_API_H

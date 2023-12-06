@@ -206,9 +206,8 @@ void CodegenEnv::updateInsertionChain(Value chain) {
   insChain = chain;
 }
 
-// FIXME: clarify what this "rank" is really supposed to mean/be.
-bool CodegenEnv::atExpandLevel(OpOperand *o, unsigned rank, LoopOrd n) const {
-  return sparseOut == o && outerParNest == static_cast<LoopOrd>(rank - 1) &&
+bool CodegenEnv::atExpandLevel(OpOperand *o, unsigned rank, LoopId n) const {
+  return sparseOut == o && outerParNest == static_cast<LoopId>(rank - 1) &&
          outerParNest == n;
 }
 
