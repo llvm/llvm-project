@@ -1,5 +1,7 @@
-; RUN: opt < %s -winehprepare -demote-catchswitch-only -wasmehprepare -S | FileCheck %s
-; RUN: opt < %s -winehprepare -demote-catchswitch-only -wasmehprepare -S --mattr=+atomics,+bulk-memory | FileCheck %s
+; RUN: opt < %s -winehprepare -demote-catchswitch-only -wasm-eh-prepare -S | FileCheck %s
+; RUN: opt < %s -winehprepare -demote-catchswitch-only -wasm-eh-prepare -S --mattr=+atomics,+bulk-memory | FileCheck %s
+; RUN: opt < %s -passes='win-eh-prepare<demote-catchswitch-only>,wasm-eh-prepare' -S | FileCheck %s
+; RUN: opt < %s -passes='win-eh-prepare<demote-catchswitch-only>,wasm-eh-prepare' -S --mattr=+atomics,+bulk-memory | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
