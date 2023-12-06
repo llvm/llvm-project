@@ -48,7 +48,7 @@ def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
   ];
 }
 
-def IntegerArithFlagsInterface : OpInterface<"IntegerArithFlagsInterface"> {
+def IntegerOverflowFlagsInterface : OpInterface<"IntegerOverflowFlagsInterface"> {
   let description = [{
     Access to op integer overflow flags.
   }];
@@ -57,14 +57,14 @@ def IntegerArithFlagsInterface : OpInterface<"IntegerArithFlagsInterface"> {
 
   let methods = [
     InterfaceMethod<
-      /*desc=*/        "Returns a IntegerArithFlagsAttr attribute for the operation",
-      /*returnType=*/  "IntegerArithFlagsAttr",
-      /*methodName=*/  "getArithAttr",
+      /*desc=*/        "Returns an IntegerOverflowFlagsAttr attribute for the operation",
+      /*returnType=*/  "IntegerOverflowFlagsAttr",
+      /*methodName=*/  "getOverflowAttr",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
         auto op = cast<ConcreteOp>(this->getOperation());
-        return op.getArithFlagsAttr();
+        return op.getOverflowFlagsAttr();
       }]
       >,
     InterfaceMethod<
@@ -75,8 +75,8 @@ def IntegerArithFlagsInterface : OpInterface<"IntegerArithFlagsInterface"> {
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
         auto op = cast<ConcreteOp>(this->getOperation());
-        IntegerArithFlags flags = op.getArithFlagsAttr().getValue();
-        return bitEnumContainsAll(flags, IntegerArithFlags::nuw);
+        IntegerOverflowFlags flags = op.getOverflowFlagsAttr().getValue();
+        return bitEnumContainsAll(flags, IntegerOverflowFlags::nuw);
       }]
       >,
     InterfaceMethod<
@@ -87,19 +87,19 @@ def IntegerArithFlagsInterface : OpInterface<"IntegerArithFlagsInterface"> {
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
         auto op = cast<ConcreteOp>(this->getOperation());
-        IntegerArithFlags flags = op.getArithFlagsAttr().getValue();
-        return bitEnumContainsAll(flags, IntegerArithFlags::nsw);
+        IntegerOverflowFlags flags = op.getOverflowFlagsAttr().getValue();
+        return bitEnumContainsAll(flags, IntegerOverflowFlags::nsw);
       }]
       >,
     StaticInterfaceMethod<
-      /*desc=*/        [{Returns the name of the IntegerArithFlagsAttr attribute
+      /*desc=*/        [{Returns the name of the IntegerOveflowFlagsAttr attribute
                          for the operation}],
       /*returnType=*/  "StringRef",
-      /*methodName=*/  "getIntegerArithAttrName",
+      /*methodName=*/  "getIntegerOverflowAttrName",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
-        return "arithFlags";
+        return "overflowFlags";
       }]
       >
   ];

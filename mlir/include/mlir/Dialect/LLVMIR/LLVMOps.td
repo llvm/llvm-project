@@ -58,16 +58,16 @@ class LLVM_IntArithmeticOp<string mnemonic, string instName,
 class LLVM_IntArithmeticOpWithFlag<string mnemonic, string instName,
                                    list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<AnyInteger, mnemonic, instName,
-    !listconcat([DeclareOpInterfaceMethods<IntegerArithFlagsInterface>], traits)> {
-  dag iafArg = (
-    ins DefaultValuedAttr<LLVM_IntegerArithFlagsAttr, "{}">:$arithFlags);
-  let arguments = !con(commonArgs, iafArg);
+    !listconcat([DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)> {
+  dag iofArg = (
+    ins DefaultValuedAttr<LLVM_IntegerOverflowFlagsAttr, "{}">:$overflowFlags);
+  let arguments = !con(commonArgs, iofArg);
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
     moduleImport.setIntegerFlagsAttr(inst, op);
     $res = op;
   }];
-  let assemblyFormat = "$lhs `,` $rhs (`flags` ` ` $arithFlags^)? custom<LLVMOpAttrs>(attr-dict) `:` type($res)";
+  let assemblyFormat = "$lhs `,` $rhs (`flags` ` ` $overflowFlags^)? custom<LLVMOpAttrs>(attr-dict) `:` type($res)";
   string llvmBuilder = "$res = builder.Create" # instName # "($lhs, $rhs, /*Name=*/\"\", op.hasNuw(), op.hasNsw());";
 }
 class LLVM_FloatArithmeticOp<string mnemonic, string instName,
