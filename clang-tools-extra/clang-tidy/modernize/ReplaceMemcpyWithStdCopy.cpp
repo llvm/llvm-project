@@ -20,9 +20,9 @@ namespace modernize {
 ReplaceMemcpyWithStdCopy::ReplaceMemcpyWithStdCopy(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IncludeInserter(
-        Options.getLocalOrGlobal(
-          "IncludeStyle", utils::IncludeSorter::IS_LLVM)) {}
+      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
+                                               utils::IncludeSorter::IS_LLVM)) {
+}
 
 void ReplaceMemcpyWithStdCopy::registerMatchers(MatchFinder *Finder) {
   assert(Finder != nullptr);
@@ -44,7 +44,8 @@ void ReplaceMemcpyWithStdCopy::registerPPCallbacks(
   if (!getLangOpts().CPlusPlus)
     return;
 
-  Inserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
+  Inserter =
+      std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
                                                        IncludeStyle);
   PP->addPPCallbacks(Inserter->CreatePPCallbacks());
 }
@@ -67,7 +68,7 @@ void ReplaceMemcpyWithStdCopy::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ReplaceMemcpyWithStdCopy::renameFunction(DiagnosticBuilder &Diag,
-                                            const CallExpr *MemcpyNode) {
+                                              const CallExpr *MemcpyNode) {
   const CharSourceRange FunctionNameSourceRange = CharSourceRange::getCharRange(
       MemcpyNode->getBeginLoc(), MemcpyNode->getArg(0)->getBeginLoc());
 
@@ -75,7 +76,7 @@ void ReplaceMemcpyWithStdCopy::renameFunction(DiagnosticBuilder &Diag,
 }
 
 void ReplaceMemcpyWithStdCopy::reorderArgs(DiagnosticBuilder &Diag,
-                                         const CallExpr *MemcpyNode) {
+                                           const CallExpr *MemcpyNode) {
   std::array<std::string, 3> arg;
 
   LangOptions LangOpts;
@@ -104,8 +105,8 @@ void ReplaceMemcpyWithStdCopy::reorderArgs(DiagnosticBuilder &Diag,
 }
 
 void ReplaceMemcpyWithStdCopy::insertHeader(DiagnosticBuilder &Diag,
-                                          const CallExpr *MemcpyNode,
-                                          SourceManager *const SM) {
+                                            const CallExpr *MemcpyNode,
+                                            SourceManager *const SM) {
   Optional<FixItHint> FixInclude = Inserter->CreateIncludeInsertion(
       /*FileID=*/SM->getMainFileID(), /*Header=*/"algorithm",
       /*IsAngled=*/true);
