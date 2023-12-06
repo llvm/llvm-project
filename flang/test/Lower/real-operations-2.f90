@@ -8,7 +8,7 @@ REAL(4) :: x0
 REAL(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:[[reg3:%[0-9]+]] = arith.cmpf oeq, [[reg1]], [[reg2]] : f32
+! CHECK:[[reg3:%[0-9]+]] = arith.cmpf oeq, [[reg1]], [[reg2]] {{.*}} : f32
 ! CHECK:fir.convert [[reg3]] {{.*}} -> !fir.logical<4>
 eq0_test = x0 .EQ. x1
 END FUNCTION
@@ -19,7 +19,7 @@ REAL(4) :: x0
 REAL(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:[[reg3:%[0-9]+]] = arith.cmpf une, [[reg1]], [[reg2]] : f32
+! CHECK:[[reg3:%[0-9]+]] = arith.cmpf une, [[reg1]], [[reg2]] {{.*}} : f32
 ! CHECK:fir.convert [[reg3]] {{.*}} -> !fir.logical<4>
 ne1_test = x0 .NE. x1
 END FUNCTION
@@ -30,7 +30,7 @@ REAL(4) :: x0
 REAL(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:[[reg3:%[0-9]+]] = arith.cmpf olt, [[reg1]], [[reg2]] : f32
+! CHECK:[[reg3:%[0-9]+]] = arith.cmpf olt, [[reg1]], [[reg2]] {{.*}} : f32
 ! CHECK:fir.convert [[reg3]] {{.*}} -> !fir.logical<4>
 lt2_test = x0 .LT. x1
 END FUNCTION
@@ -41,7 +41,7 @@ REAL(4) :: x0
 REAL(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:[[reg3:%[0-9]+]] = arith.cmpf ole, [[reg1]], [[reg2]] : f32
+! CHECK:[[reg3:%[0-9]+]] = arith.cmpf ole, [[reg1]], [[reg2]] {{.*}} : f32
 ! CHECK:fir.convert [[reg3]] {{.*}} -> !fir.logical<4>
 le3_test = x0 .LE. x1
 END FUNCTION
@@ -52,7 +52,7 @@ REAL(4) :: x0
 REAL(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:[[reg3:%[0-9]+]] = arith.cmpf ogt, [[reg1]], [[reg2]] : f32
+! CHECK:[[reg3:%[0-9]+]] = arith.cmpf ogt, [[reg1]], [[reg2]] {{.*}} : f32
 ! CHECK:fir.convert [[reg3]] {{.*}} -> !fir.logical<4>
 gt4_test = x0 .GT. x1
 END FUNCTION
@@ -63,7 +63,7 @@ REAL(4) :: x0
 REAL(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:[[reg3:%[0-9]+]] = arith.cmpf oge, [[reg1]], [[reg2]] : f32
+! CHECK:[[reg3:%[0-9]+]] = arith.cmpf oge, [[reg1]], [[reg2]] {{.*}} : f32
 ! CHECK:fir.convert [[reg3]] {{.*}} -> !fir.logical<4>
 ge5_test = x0 .GE. x1
 END FUNCTION

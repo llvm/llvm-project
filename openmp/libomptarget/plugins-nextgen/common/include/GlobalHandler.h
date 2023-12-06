@@ -120,6 +120,11 @@ public:
   const ELF64LEObjectFile *
   getOrCreateELFObjectFile(const GenericDeviceTy &Device, DeviceImageTy &Image);
 
+  /// Returns whether the symbol named \p SymName is present in the given \p
+  /// Image.
+  bool isSymbolInImage(GenericDeviceTy &Device, DeviceImageTy &Image,
+                       StringRef SymName);
+
   /// Get the address and size of a global in the image. Address and size are
   /// return in \p ImageGlobal, the global name is passed in \p ImageGlobal.
   Error getGlobalMetadataFromImage(GenericDeviceTy &Device,

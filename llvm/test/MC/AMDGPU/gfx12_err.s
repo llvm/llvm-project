@@ -41,3 +41,8 @@ image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_HT scope:SCOPE
 
 image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D scope:SCOPE_SE th:TH_LOAD_HT scope:SCOPE_SE
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
+
+s_prefetch_inst s[14:15], 0xffffff, m0, 7
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 24-bit signed offset
+// GFX12-ERR: s_prefetch_inst s[14:15], 0xffffff, m0, 7
+// GFX12-ERR:                           ^

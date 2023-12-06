@@ -202,9 +202,14 @@ private:
     return ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags;
   }
 
-  const MCSubtargetInfo &getMachOSubtargetInfo() const override { assert(STI); return *STI; }
-  void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) override;
-  void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) override;
+  const MCSubtargetInfo &getMachOSubtargetInfo() const override {
+    assert(STI);
+    return *STI;
+  }
+  void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
+                              MCSymbol *LazyPointer) override;
+  void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI,
+                                    MCSymbol *LazyPointer) override;
 };
 
 } // end anonymous namespace
@@ -1816,7 +1821,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
-void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) {
+void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
+                                               MCSymbol *LazyPointer) {
   // _ifunc:
   //   adrp    x16, lazy_pointer@GOTPAGE
   //   ldr     x16, [x16, lazy_pointer@GOTPAGEOFF]
@@ -1864,7 +1870,9 @@ void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                                *STI);
 }
 
-void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) {
+void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
+                                                     const GlobalIFunc &GI,
+                                                     MCSymbol *LazyPointer) {
   // These stub helpers are only ever called once, so here we're optimizing for
   // minimum size by using the pre-indexed store variants, which saves a few
   // bytes of instructions to bump & restore sp.
