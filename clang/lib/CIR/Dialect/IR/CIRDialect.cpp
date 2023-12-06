@@ -186,6 +186,28 @@ bool omitRegionTerm(mlir::Region &r) {
 }
 
 //===----------------------------------------------------------------------===//
+// CIR Custom Parsers/Printers
+//===----------------------------------------------------------------------===//
+
+static mlir::ParseResult
+parseOmittedTerminatorRegion(mlir::OpAsmParser &parser, mlir::Region &region) {
+  auto regionLoc = parser.getCurrentLocation();
+  if (parser.parseRegion(region))
+    return failure();
+  if (ensureRegionTerm(parser, region, regionLoc).failed())
+    return failure();
+  return success();
+}
+
+static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
+                                          mlir::cir::ScopeOp &op,
+                                          mlir::Region &region) {
+  printer.printRegion(region,
+                      /*printEntryBlockArgs=*/false,
+                      /*printBlockTerminators=*/!omitRegionTerm(region));
+}
+
+//===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
@@ -581,35 +603,6 @@ LogicalResult IfOp::verify() { return success(); }
 // ScopeOp
 //===----------------------------------------------------------------------===//
 
-ParseResult cir::ScopeOp::parse(OpAsmParser &parser, OperationState &result) {
-  // Create one region within 'scope'.
-  result.regions.reserve(1);
-  Region *scopeRegion = result.addRegion();
-  auto loc = parser.getCurrentLocation();
-
-  // Parse the scope region.
-  if (parser.parseRegion(*scopeRegion, /*arguments=*/{}, /*argTypes=*/{}))
-    return failure();
-
-  if (ensureRegionTerm(parser, *scopeRegion, loc).failed())
-    return failure();
-
-  // Parse the optional attribute list.
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-  return success();
-}
-
-void cir::ScopeOp::print(OpAsmPrinter &p) {
-  p << ' ';
-  auto &scopeRegion = this->getScopeRegion();
-  p.printRegion(scopeRegion,
-                /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/!omitRegionTerm(scopeRegion));
-
-  p.printOptionalAttrDict(getOperation()->getAttrs());
-}
-
 /// Given the region at `index`, or the parent operation if `index` is None,
 /// return the successor regions. These are the regions that may be selected
 /// during the flow of control. `operands` is a set of optional attributes that
@@ -619,7 +612,7 @@ void ScopeOp::getSuccessorRegions(mlir::RegionBranchPoint point,
                                   SmallVectorImpl<RegionSuccessor> &regions) {
   // The only region always branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor(getResults()));
+    regions.push_back(RegionSuccessor(getODSResults(0)));
     return;
   }
 
