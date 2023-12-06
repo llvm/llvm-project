@@ -129,15 +129,15 @@ public:
     // VisitScalarExprClassName(...) to get this working.
     emitError(CGF.getLoc(E->getExprLoc()), "scalar exp no implemented: '")
         << E->getStmtClassName() << "'";
-    assert(0 && "shouldn't be here!");
+    llvm_unreachable("NYI");
     return {};
   }
 
   mlir::Value VisitConstantExpr(ConstantExpr *E) { llvm_unreachable("NYI"); }
   mlir::Value VisitParenExpr(ParenExpr *PE) { return Visit(PE->getSubExpr()); }
   mlir::Value
-  VisitSubstnonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *E) {
-    llvm_unreachable("NYI");
+  VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *E) {
+    return Visit(E->getReplacement());
   }
   mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *GE) {
     llvm_unreachable("NYI");
