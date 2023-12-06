@@ -36,7 +36,6 @@ protected:
   // A helper to manipulate the state common to
   // `CopyFromMethodReturn` and `CopyFromLocalVar`.
   struct CheckContext {
-    CheckContext(const ast_matchers::MatchFinder::MatchResult &Result);
     const VarDecl &Var;
     const Stmt &BlockStmt;
     const DeclStmt &VarDeclStmt;

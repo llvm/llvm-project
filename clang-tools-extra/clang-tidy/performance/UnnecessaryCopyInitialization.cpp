@@ -262,21 +262,22 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-UnnecessaryCopyInitialization::CheckContext::CheckContext(
-    const ast_matchers::MatchFinder::MatchResult &Result)
-    : Var(*Result.Nodes.getNodeAs<VarDecl>("newVarDecl")),
-      BlockStmt(*Result.Nodes.getNodeAs<Stmt>("blockStmt")),
-      VarDeclStmt(*Result.Nodes.getNodeAs<DeclStmt>("declStmt")),
-      ASTCtx(*Result.Context),
-      // Do not propose fixes if the DeclStmt has multiple VarDecls or in macros
-      // since we cannot place them correctly.
-      IssueFix(VarDeclStmt.isSingleDecl() && !Var.getLocation().isMacroID()),
-      IsVarUnused(isVariableUnused(Var, BlockStmt, ASTCtx)),
-      IsVarOnlyUsedAsConst(isOnlyUsedAsConst(Var, BlockStmt, ASTCtx)) {}
-
 void UnnecessaryCopyInitialization::check(
     const MatchFinder::MatchResult &Result) {
-  const CheckContext Context(Result);
+  const auto &NewVar = *Result.Nodes.getNodeAs<VarDecl>("newVarDecl");
+  const auto &BlockStmt = *Result.Nodes.getNodeAs<Stmt>("blockStmt");
+  const auto &VarDeclStmt = *Result.Nodes.getNodeAs<DeclStmt>("declStmt");
+  const CheckContext Context{
+      NewVar, BlockStmt, VarDeclStmt, *Result.Context,
+      // Do not propose fixes if the DeclStmt has multiple VarDecls or in
+      // macros since we cannot place them correctly.
+      /*IssueFix*/ VarDeclStmt.isSingleDecl() &&
+          !NewVar.getLocation().isMacroID(),
+      /*IsVarUnused*/ isVariableUnused(NewVar, BlockStmt, *Result.Context),
+      /*IsVarOnlyUsedAsConst*/
+      isOnlyUsedAsConst(NewVar, BlockStmt, *Result.Context)
+
+  };
   const auto *OldVar = Result.Nodes.getNodeAs<VarDecl>(OldVarDeclId);
   const auto *ObjectArg = Result.Nodes.getNodeAs<VarDecl>(ObjectArgId);
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctorCall");
