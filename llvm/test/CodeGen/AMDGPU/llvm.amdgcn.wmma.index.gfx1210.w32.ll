@@ -16,16 +16,17 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_f16(<16 x half> %A, <32 x half> 
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x64_f16:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v32, v[32:33], off offset:2
+; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], v32 index_key:1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.f16.v8f32.v16f16.v32f16.v8f32.i16(i1 0, <16 x half> %A, i1 0, <32 x half> %B, <8 x float> %C, i16 %Index)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -46,16 +47,17 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_bf16(<16 x i16> %A, <32 x i16> %
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x64_bf16:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v32, v[32:33], off offset:2
+; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 index_key:1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.bf16.v8f32.v16i16.v32i16.v8f32.i16(i1 0, <16 x i16> %A, i1 0, <32 x i16> %B, <8 x float> %C, i16 %Index)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -74,14 +76,15 @@ define amdgpu_ps void @test_swmmac_f16_16x16x64_f16(<16 x half> %A, <32 x half> 
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x64_f16:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v28, v[28:29], off offset:2
+; GISEL-NEXT:    global_load_b32 v28, v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28
+; GISEL-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 index_key:1
 ; GISEL-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x64.f16.v8f16.v16f16.v32f16.v8f16.i16(i1 0, <16 x half> %A, i1 0, <32 x half> %B, <8 x half> %C, i16 %Index)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -100,14 +103,15 @@ define amdgpu_ps void @test_swmmac_bf16_16x16x64_bf16(<16 x i16> %A, <32 x i16> 
 ;
 ; GISEL-LABEL: test_swmmac_bf16_16x16x64_bf16:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v28, v[28:29], off offset:2
+; GISEL-NEXT:    global_load_b32 v28, v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28
+; GISEL-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28 index_key:1
 ; GISEL-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x i16> @llvm.amdgcn.swmmac.bf16.16x16x64.bf16.v8i16.v16i16.v32i16.v8i16.i16(i1 0, <16 x i16> %A, i1 0, <32 x i16> %B, <8 x i16> %C, i16 %Index)
   store <8 x i16> %res, ptr addrspace(1) %out
@@ -128,16 +132,17 @@ define amdgpu_ps void @test_swmmac_bf16f32_16x16x64_bf16(<16 x i16> %A, <32 x i1
 ;
 ; GISEL-LABEL: test_swmmac_bf16f32_16x16x64_bf16:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v32, v[32:33], off offset:2
+; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 index_key:1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x float> @llvm.amdgcn.swmmac.bf16f32.16x16x64.bf16.v8f32.v16i16.v32i16.v8f32.i16(i1 0, <16 x i16> %A, i1 0, <32 x i16> %B, <8 x float> %C, i16 %Index)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -158,16 +163,17 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_fp8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_fp8_fp8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v32, v[32:33], off offset:2
+; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v32 index_key:1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x128.fp8.fp8.v8f32.v8i32.v16i32.v8f32.i16(<8 x i32> %A, <16 x i32> %B, <8 x float> %C, i16 %Index)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -188,16 +194,17 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_bf8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_fp8_bf8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v32, v[32:33], off offset:2
+; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v32 index_key:1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x128.fp8.bf8.v8f32.v8i32.v16i32.v8f32.i16(<8 x i32> %A, <16 x i32> %B, <8 x float> %C, i16 %Index)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -218,16 +225,17 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_fp8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_bf8_fp8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v32, v[32:33], off offset:2
+; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v32 index_key:1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x128.bf8.fp8.v8f32.v8i32.v16i32.v8f32.i16(<8 x i32> %A, <16 x i32> %B, <8 x float> %C, i16 %Index)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -248,16 +256,17 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_bf8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_bf8_bf8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v32, v[32:33], off offset:2
+; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v32 index_key:1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x128.bf8.bf8.v8f32.v8i32.v16i32.v8f32.i16(<8 x i32> %A, <16 x i32> %B, <8 x float> %C, i16 %Index)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -276,14 +285,15 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_fp8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_fp8_fp8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v28, v[28:29], off offset:2
+; GISEL-NEXT:    global_load_b32 v28, v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v28
+; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v28 index_key:1
 ; GISEL-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.fp8.fp8.v8f16.v8i32.v16i32.v8f16.i16(<8 x i32> %A, <16 x i32> %B, <8 x half> %C, i16 %Index)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -302,14 +312,15 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_bf8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_fp8_bf8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v28, v[28:29], off offset:2
+; GISEL-NEXT:    global_load_b32 v28, v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v28
+; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v28 index_key:1
 ; GISEL-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.fp8.bf8.v8f16.v8i32.v16i32.v8f16.i16(<8 x i32> %A, <16 x i32> %B, <8 x half> %C, i16 %Index)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -328,14 +339,15 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_fp8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_bf8_fp8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v28, v[28:29], off offset:2
+; GISEL-NEXT:    global_load_b32 v28, v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v28
+; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v28 index_key:1
 ; GISEL-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.bf8.fp8.v8f16.v8i32.v16i32.v8f16.i16(<8 x i32> %A, <16 x i32> %B, <8 x half> %C, i16 %Index)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -354,14 +366,15 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_bf8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_bf8_bf8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v28, v[28:29], off offset:2
+; GISEL-NEXT:    global_load_b32 v28, v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v28
+; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v28 index_key:1
 ; GISEL-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.bf8.bf8.v8f16.v8i32.v16i32.v8f16.i16(<8 x i32> %A, <16 x i32> %B, <8 x half> %C, i16 %Index)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -382,16 +395,17 @@ define amdgpu_ps void @test_swmmac_i32_16x16x128_iu8(<8 x i32> %A, <16 x i32> %B
 ;
 ; GISEL-LABEL: test_swmmac_i32_16x16x128_iu8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v32, v[32:33], off offset:2
+; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v32 index_key:1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x128.iu8.v8i32.v8i32.v16i32.v8i32.i16(i1 0, <8 x i32> %A, i1 0, <16 x i32> %B, <8 x i32> %C, i16 %Index)
   store <8 x i32> %res, ptr addrspace(1) %out
@@ -412,16 +426,17 @@ define amdgpu_ps void @test_swmmac_i32_16x16x256_iu4(<8 x i32> %A, <16 x i32> %B
 ;
 ; GISEL-LABEL: test_swmmac_i32_16x16x256_iu4:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_u16 v32, v[32:33], off offset:2
+; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 index_key:1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
+  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
   %Index = extractelement <2 x i16> %IndexVec, i32 1
   %res = call <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x256.iu4.v8i32.v8i32.v16i32.v8i32.i16(i1 0, <8 x i32> %A, i1 0, <16 x i32> %B, <8 x i32> %C, i16 %Index)
   store <8 x i32> %res, ptr addrspace(1) %out
