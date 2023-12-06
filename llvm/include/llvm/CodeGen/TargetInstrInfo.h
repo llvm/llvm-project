@@ -140,7 +140,8 @@ public:
   /// registers so that the instructions result is independent of the place
   /// in the function.
   bool isTriviallyReMaterializable(const MachineInstr &MI) const {
-    return MI.getOpcode() == TargetOpcode::IMPLICIT_DEF ||
+    return (MI.getOpcode() == TargetOpcode::IMPLICIT_DEF &&
+            MI.getNumOperands() == 1) ||
            (MI.getDesc().isRematerializable() &&
             isReallyTriviallyReMaterializable(MI));
   }
