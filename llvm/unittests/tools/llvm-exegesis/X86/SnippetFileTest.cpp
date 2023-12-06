@@ -209,6 +209,16 @@ TEST_F(X86SnippetFileTest, MemoryMappingNoDefinition) {
   consumeError(std::move(Error));
 }
 
+TEST_F(X86SnippetFileTest, SnippetAddress) {
+  auto Snippets = TestCommon(R"(
+    # LLVM-EXEGESIS-SNIPPET-ADDRESS 0x10000
+  )");
+  ASSERT_TRUE(static_cast<bool>(Snippets));
+  EXPECT_THAT(*Snippets, SizeIs(1));
+  const auto &Snippet = (*Snippets)[0];
+  EXPECT_EQ(Snippet.Key.SnippetAddress, 0x10000);
+}
+
 } // namespace
 } // namespace exegesis
 } // namespace llvm
