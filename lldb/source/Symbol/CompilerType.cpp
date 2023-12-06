@@ -302,33 +302,6 @@ bool CompilerType::IsBeingDefined() const {
   return false;
 }
 
-bool CompilerType::IsSmartPtrType() const {
-
-  // libc++ smart pointers
-  static const llvm::Regex k_libcxx_std_unique_ptr_regex(
-      "^std::__[[:alnum:]]+::unique_ptr<.+>(( )?&)?$");
-  static const llvm::Regex k_libcxx_std_shared_ptr_regex(
-      "^std::__[[:alnum:]]+::shared_ptr<.+>(( )?&)?$");
-  static const llvm::Regex k_libcxx_std_weak_ptr_regex(
-      "^std::__[[:alnum:]]+::weak_ptr<.+>(( )?&)?$");
-
-  // libstdc++ smart pointers
-  static const llvm::Regex k_libstdcxx_std_unique_ptr_regex(
-      "^std::unique_ptr<.+>(( )?&)?$");
-  static const llvm::Regex k_libstdcxx_std_shared_ptr_regex(
-      "^std::shared_ptr<.+>(( )?&)?$");
-  static const llvm::Regex k_libstdcxx_std_weak_ptr_regex(
-      "^std::weak_ptr<.+>(( )?&)?$");
-
-  llvm::StringRef name = GetTypeName();
-  return k_libcxx_std_unique_ptr_regex.match(name) ||
-         k_libcxx_std_shared_ptr_regex.match(name) ||
-         k_libcxx_std_weak_ptr_regex.match(name) ||
-         k_libstdcxx_std_unique_ptr_regex.match(name) ||
-         k_libstdcxx_std_shared_ptr_regex.match(name) ||
-         k_libstdcxx_std_weak_ptr_regex.match(name);
-}
-
 bool CompilerType::IsInteger() const {
   bool is_signed = false; // May be reset by the call below.
   return IsIntegerType(is_signed);
@@ -538,14 +511,6 @@ CompilerType CompilerType::GetTemplateArgumentType(uint32_t idx) {
   if (type.IsValid())
     return type;
   return empty_type;
-}
-
-CompilerType CompilerType::GetSmartPtrPointeeType() {
-  if (!IsSmartPtrType())
-    // TODO: Should consider issuing a warning here.
-    return GetPointeeType();
-
-  return GetTemplateArgumentType(0);
 }
 
 // Type Completion

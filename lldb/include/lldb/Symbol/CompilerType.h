@@ -195,10 +195,6 @@ public:
 
   bool IsVoidType() const;
 
-  /// This determines if the type is a shared, unique or weak pointer, either
-  /// from stdlibc++ or libc+++.
-  bool IsSmartPtrType() const;
-
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
 
@@ -253,8 +249,6 @@ public:
   uint32_t GetNumberOfNonEmptyBaseClasses();
 
   CompilerType GetTemplateArgumentType(uint32_t idx);
-
-  CompilerType GetSmartPtrPointeeType();
 
   /// \}
 
