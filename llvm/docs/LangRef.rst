@@ -21791,7 +21791,7 @@ The third argument is the explicit vector length of the operation.
 Semantics:
 """"""""""
 
-This intrinsic population counts first ``evl`` elements actived by ``mask`` in a
+This intrinsic population counts first ``evl`` elements activated by ``mask`` in a
 vector.
 
 .. _int_vp_load:
