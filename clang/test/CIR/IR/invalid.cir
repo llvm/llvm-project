@@ -41,7 +41,7 @@ cir.func @if0() {
 #true = #cir.bool<true> : !cir.bool
 cir.func @yield0() {
   %0 = cir.const(#true) : !cir.bool
-  cir.if %0 { // expected-error {{custom op 'cir.if' expected at least one block with cir.yield or cir.return}}
+  cir.if %0 { // expected-error {{custom op 'cir.if' multi-block region must not omit terminator}}
     cir.br ^a
   ^a:
   }
@@ -90,10 +90,10 @@ cir.func @yieldcontinue() {
 cir.func @s0() {
   %1 = cir.const(#cir.int<2> : !s32i) : !s32i
   cir.switch (%1 : !s32i) [
-    case (equal, 5) {
+    case (equal, 5) { // expected-error {{custom op 'cir.switch' case regions must be explicitly terminated}}
       %2 = cir.const(#cir.int<3> : !s32i) : !s32i
     }
-  ] // expected-error {{blocks are expected to be explicitly terminated}}
+  ]
   cir.return
 }
 
