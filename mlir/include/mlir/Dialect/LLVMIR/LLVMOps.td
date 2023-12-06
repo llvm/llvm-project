@@ -67,8 +67,13 @@ class LLVM_IntArithmeticOpWithFlag<string mnemonic, string instName,
     moduleImport.setIntegerFlagsAttr(inst, op);
     $res = op;
   }];
-  let assemblyFormat = "$lhs `,` $rhs (`flags` ` ` $overflowFlags^)? custom<LLVMOpAttrs>(attr-dict) `:` type($res)";
-  string llvmBuilder = "$res = builder.Create" # instName # "($lhs, $rhs, /*Name=*/\"\", op.hasNoUnsignedWrap(), op.hasNoSignedWrap());";
+  let assemblyFormat = [{
+    $lhs `,` $rhs (`flags` ` ` $overflowFlags^)?
+    custom<LLVMOpAttrs>(attr-dict) `:` type($res)
+  }];
+  string llvmBuilder =
+    "$res = builder.Create" # instName #
+    "($lhs, $rhs, /*Name=*/\"\", op.hasNoUnsignedWrap(), op.hasNoSignedWrap());";
 }
 class LLVM_FloatArithmeticOp<string mnemonic, string instName,
                              list<Trait> traits = []> :
