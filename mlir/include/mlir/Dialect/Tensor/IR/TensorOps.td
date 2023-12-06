@@ -1745,7 +1745,7 @@ def Tensor_SplatOp : Tensor_Op<"splat", [
     Example for a statically shaped tensor:
 
     ```mlir
-    %s = arith.constant 10.1 : f32
+    %s = arith.constant 1.0 : f32
     %t = tensor.splat %s : tensor<8x16xf32>
     ```
 
