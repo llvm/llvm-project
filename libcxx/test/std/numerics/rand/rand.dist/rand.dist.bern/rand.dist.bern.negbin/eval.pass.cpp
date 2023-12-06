@@ -10,7 +10,11 @@
 
 // This test is super slow, in particular with msan or tsan. In order to avoid timeouts and to
 // spend less time waiting for this particular test to complete we compile with optimizations.
-// ADDITIONAL_COMPILE_FLAGS: -O1
+// ADDITIONAL_COMPILE_FLAGS(msan): -O1
+// ADDITIONAL_COMPILE_FLAGS(tsan): -O1
+
+// FIXME: This and other tests fail under GCC with optimizations enabled.
+// More investigation is needed, but it appears that  GCC is performing more constant folding.
 
 // <random>
 

@@ -305,7 +305,6 @@ void Loc::MMI::addFrameIndexExpr(const DIExpression *Expr, int FI) {
 
 static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
                                             bool GenerateTypeUnits,
-                                            bool HasSplitDwarf,
                                             DebuggerKind Tuning,
                                             const Triple &TT) {
   // Honor an explicit request.
@@ -314,8 +313,7 @@ static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
 
   // Generating DWARF5 acceleration table.
   // Currently Split dwarf and non ELF format is not supported.
-  if (GenerateTypeUnits &&
-      (DwarfVersion < 5 || HasSplitDwarf || !TT.isOSBinFormatELF()))
+  if (GenerateTypeUnits && (DwarfVersion < 5 || !TT.isOSBinFormatELF()))
     return AccelTableKind::None;
 
   // Accelerator tables get emitted if targetting DWARF v5 or LLDB.  DWARF v5
@@ -403,9 +401,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
                        A->TM.getTargetTriple().isOSBinFormatWasm()) &&
                       GenerateDwarfTypeUnits;
 
-  TheAccelTableKind =
-      computeAccelTableKind(DwarfVersion, GenerateTypeUnits, HasSplitDwarf,
-                            DebuggerTuning, A->TM.getTargetTriple());
+  TheAccelTableKind = computeAccelTableKind(
+      DwarfVersion, GenerateTypeUnits, DebuggerTuning, A->TM.getTargetTriple());
 
   // Work around a GDB bug. GDB doesn't support the standard opcode;
   // SCE doesn't support GNU's; LLDB prefers the standard opcode, which
@@ -3532,8 +3529,12 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
       InfoHolder.computeSizeAndOffsetsForUnit(TU.first.get());
       InfoHolder.emitUnit(TU.first.get(), useSplitDwarf());
       if (getDwarfVersion() >= 5 &&
-          getAccelTableKind() == AccelTableKind::Dwarf)
-        AccelDebugNames.addTypeUnitSymbol(*TU.first);
+          getAccelTableKind() == AccelTableKind::Dwarf) {
+        if (useSplitDwarf())
+          AccelDebugNames.addTypeUnitSignature(*TU.first);
+        else
+          AccelDebugNames.addTypeUnitSymbol(*TU.first);
+      }
     }
     AccelTypeUnitsDebugNames.convertDieToOffset();
     AccelDebugNames.addTypeEntries(AccelTypeUnitsDebugNames);

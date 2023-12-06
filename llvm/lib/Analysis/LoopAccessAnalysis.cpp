@@ -1916,15 +1916,12 @@ getDependenceDistanceStrideAndSize(
   const SCEV *Src = PSE.getSCEV(APtr);
   const SCEV *Sink = PSE.getSCEV(BPtr);
 
-  // If the induction step is negative we have to invert source and sink of
-  // the dependence.
+  // If the induction step is negative we have to invert source and sink of the
+  // dependence when measuring the distance between them. We should not swap
+  // AIsWrite with BIsWrite, as their uses expect them in program order.
   if (StrideAPtr < 0) {
-    std::swap(APtr, BPtr);
-    std::swap(ATy, BTy);
     std::swap(Src, Sink);
-    std::swap(AIsWrite, BIsWrite);
     std::swap(AInst, BInst);
-    std::swap(StrideAPtr, StrideBPtr);
   }
 
   const SCEV *Dist = SE.getMinusSCEV(Sink, Src);

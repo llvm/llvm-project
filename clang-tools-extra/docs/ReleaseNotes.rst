@@ -186,6 +186,20 @@ New checks
 
   Replace ``enable_if`` with C++20 requires clauses.
 
+- New :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check.
+
+  Checks whether a ``find`` or ``rfind`` result is compared with 0 and suggests
+  replacing with ``starts_with`` when the method exists in the class. Notably,
+  this will work with ``std::string`` and ``std::string_view``.
+
+- New :doc:`modernize-use-std-numbers
+  <clang-tidy/checks/modernize/use-std-numbers>` check.
+
+  Finds constants and function calls to math functions that can be replaced
+  with C++20's mathematical constants from the ``numbers`` header and
+  offers fix-it hints.
+
 - New :doc:`performance-enum-size
   <clang-tidy/checks/performance/enum-size>` check.
 
@@ -398,6 +412,10 @@ Changes in existing checks
 - Improved :doc:`readability-avoid-const-params-in-decls
   <clang-tidy/checks/readability/avoid-const-params-in-decls>` diagnositics to
   highlight the const location
+
+- Improved :doc:`readability-container-contains
+  <clang-tidy/checks/readability/container-contains>` to correctly handle
+  interger literals with suffixes in fix-its.
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check to

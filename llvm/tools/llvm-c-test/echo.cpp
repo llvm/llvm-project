@@ -656,7 +656,9 @@ struct FunCloner {
       case LLVMOr: {
         LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
         LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
+        LLVMBool IsDisjoint = LLVMGetIsDisjoint(Src);
         Dst = LLVMBuildOr(Builder, LHS, RHS, Name);
+        LLVMSetIsDisjoint(Dst, IsDisjoint);
         break;
       }
       case LLVMXor: {

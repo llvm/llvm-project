@@ -179,7 +179,9 @@ public:
                            int64_t &MinOffset, int64_t &MaxOffset);
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                           int64_t Offset1, bool OffsetIsScalable1,
                            ArrayRef<const MachineOperand *> BaseOps2,
+                           int64_t Offset2, bool OffsetIsScalable2,
                            unsigned ClusterSize,
                            unsigned NumBytes) const override;
 
@@ -382,6 +384,13 @@ public:
   // implicit.
   bool isLegalAddressingMode(unsigned NumBytes, int64_t Offset,
                              unsigned Scale) const;
+
+  // Decrement the SP, issuing probes along the way. `TargetReg` is the new top
+  // of the stack. `FrameSetup` is passed as true, if the allocation is a part
+  // of constructing the activation frame of a function.
+  MachineBasicBlock::iterator probedStackAlloc(MachineBasicBlock::iterator MBBI,
+                                               Register TargetReg,
+                                               bool FrameSetup) const;
 
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"

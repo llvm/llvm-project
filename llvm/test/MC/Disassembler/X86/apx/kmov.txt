@@ -1,6 +1,25 @@
 # RUN: llvm-mc -triple x86_64 -disassemble %s | FileCheck %s --check-prefix=ATT
 # RUN: llvm-mc -triple x86_64 -disassemble -output-asm-variant=1 %s | FileCheck %s --check-prefix=INTEL
 
+# ATT:   {evex} kmovb	%k1, %k2
+# INTEL: {evex} kmovb	k2, k1
+0x62,0xf1,0x7d,0x08,0x90,0xd1
+
+# ATT:   {evex} kmovw	%k1, %k2
+# INTEL: {evex} kmovw	k2, k1
+0x62,0xf1,0x7c,0x08,0x90,0xd1
+
+# ATT:   {evex} kmovd	%k1, %k2
+# INTEL: {evex} kmovd	k2, k1
+0x62,0xf1,0xfd,0x08,0x90,0xd1
+
+# ATT:   {evex} kmovq	%k1, %k2
+# INTEL: {evex} kmovq	k2, k1
+0x62,0xf1,0xfc,0x08,0x90,0xd1
+
+# ATT-NOT: {evex}
+# INTEL-NOT: {evex}
+
 # ATT:   kmovb	%r16d, %k1
 # INTEL: kmovb	k1, r16d
 0x62,0xf9,0x7d,0x08,0x92,0xc8
@@ -64,19 +83,3 @@
 # ATT:   kmovq	%k1, (%r16,%r17)
 # INTEL: kmovq	qword ptr [r16 + r17], k1
 0x62,0xf9,0xf8,0x08,0x91,0x0c,0x08
-
-# ATT:   {evex} kmovb	%k1, %k2
-# INTEL: {evex} kmovb	k2, k1
-0x62,0xf1,0x7d,0x08,0x90,0xd1
-
-# ATT:   {evex} kmovw	%k1, %k2
-# INTEL: {evex} kmovw	k2, k1
-0x62,0xf1,0x7c,0x08,0x90,0xd1
-
-# ATT:   {evex} kmovd	%k1, %k2
-# INTEL: {evex} kmovd	k2, k1
-0x62,0xf1,0xfd,0x08,0x90,0xd1
-
-# ATT:   {evex} kmovq	%k1, %k2
-# INTEL: {evex} kmovq	k2, k1
-0x62,0xf1,0xfc,0x08,0x90,0xd1
