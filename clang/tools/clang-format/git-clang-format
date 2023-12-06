@@ -149,15 +149,14 @@ def main():
   del opts.quiet
 
   commits, files = interpret_args(opts.args, dash_dash, opts.commit)
-  if len(commits) > 1:
+  if len(commits) > 2:
+    die('at most two commits allowed; %d given' % len(commits))
+  if len(commits) == 2:
     if opts.staged:
       die('--staged is not allowed when two commits are given')
     if not opts.diff:
       die('--diff is required when two commits are given')
-  else:
-    if len(commits) > 2:
-      die('at most two commits allowed; %d given' % len(commits))
-  if len(commits) < 2 and opts.diff_from_common_commit:
+  elif opts.diff_from_common_commit:
     die('--diff_from_common_commit is only allowed when two commits are given')
   opts.binary=os.path.abspath(opts.binary)
   changed_lines = compute_diff_and_extract_lines(commits,
@@ -333,13 +332,12 @@ def compute_diff(commits, files, staged, diff_common_commit):
   Zero context lines are used in the patch."""
   git_tool = 'diff-index'
   extra_args = []
-  if len(commits) > 1:
+  if len(commits) == 2:
     git_tool = 'diff-tree'
+    if diff_common_commit:
+      commits = [f'{commits[0]}...{commits[1]}']
   elif staged:
     extra_args += ['--cached']
-
-  if len(commits) > 1 and diff_common_commit:
-    commits = [f'{commits[0]}...{commits[1]}']
 
   cmd = ['git', git_tool, '-p', '-U0'] + extra_args + commits + ['--']
   cmd.extend(files)
