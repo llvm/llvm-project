@@ -48,8 +48,7 @@ protected:
 
   // Create diagnostics. These are virtual so that derived classes can change
   // behaviour.
-  virtual void diagnoseCopyFromMethodReturn(const CheckContext &Ctx,
-                                            const VarDecl *ObjectArg);
+  virtual void diagnoseCopyFromMethodReturn(const CheckContext &Ctx);
   virtual void diagnoseCopyFromLocalVar(const CheckContext &Ctx,
                                         const VarDecl &OldVar);
 

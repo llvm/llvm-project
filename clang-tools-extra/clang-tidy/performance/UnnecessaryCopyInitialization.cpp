@@ -318,7 +318,7 @@ void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
       !isInitializingVariableImmutable(*ObjectArg, Ctx.BlockStmt, Ctx.ASTCtx,
                                        ExcludedContainerTypes))
     return;
-  diagnoseCopyFromMethodReturn(Ctx, ObjectArg);
+  diagnoseCopyFromMethodReturn(Ctx);
 }
 
 void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
@@ -331,7 +331,7 @@ void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
 }
 
 void UnnecessaryCopyInitialization::diagnoseCopyFromMethodReturn(
-    const CheckContext &Ctx, const VarDecl *ObjectArg) {
+    const CheckContext &Ctx) {
   auto Diagnostic =
       diag(Ctx.Var.getLocation(),
            "the %select{|const qualified }0variable %1 is "
@@ -342,6 +342,7 @@ void UnnecessaryCopyInitialization::diagnoseCopyFromMethodReturn(
       << Ctx.Var.getType().isConstQualified() << &Ctx.Var << Ctx.IsVarUnused;
   maybeIssueFixes(Ctx, Diagnostic);
 }
+
 void UnnecessaryCopyInitialization::diagnoseCopyFromLocalVar(
     const CheckContext &Ctx, const VarDecl &OldVar) {
   auto Diagnostic =
