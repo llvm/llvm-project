@@ -30,14 +30,26 @@
 int main() {
   __hwasan_enable_allocator_tagging();
 
+  // We test that the compiler instrumentation is able to access shadow memory
+  // for many different addresses. If we only test a small number of addresses,
+  // it might work by chance even if the shadow base does not match between the
+  // compiler instrumentation and compiler-rt.
   void **mmaps[256];
   // 48-bit VMA
   for (int i = 0; i < 256; i++) {
     unsigned long long addr = (i * (1ULL << 40));
 
     void *p = mmap((void *)addr, 4096, PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-    mmaps[i] = p;
+                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    // We don't use MAP_FIXED, to avoid overwriting critical memory.
+    // However, if we don't get allocated the requested address, it
+    // isn't a useful test.
+    if ((unsigned long long)p != addr) {
+      munmap(p, 4096);
+      mmaps[i] = MAP_FAILED;
+    } else {
+      mmaps[i] = p;
+    }
   }
 
   int failures = 0;
@@ -57,6 +69,6 @@ int main() {
   // exact addresses where we tried to map.
   // To avoid test flake, we allow some margin of error.
   printf("Failed: %d\n", failures);
-  assert(failures < 32);
+  assert(failures < 48);
   return 0;
 }
