@@ -494,6 +494,10 @@ public:
 
   void setModule(const Module *Mod) { M = Mod; }
 
+  void setProfileCallTargetMax(size_t N) { ProfileCallTargetMax = N; }
+
+  void setProfileInlineCallsiteMax(size_t N) { ProfileInlineCallsiteMax = N; }
+
 protected:
   /// Map every function to its associated profile.
   ///
@@ -552,6 +556,16 @@ protected:
   /// Whether the profile uses MD5 for Sample Contexts and function names. This
   /// can be one-way overriden by the user to force use MD5.
   bool ProfileIsMD5 = false;
+
+  /// Number of call targets to keep in a sample record. Only those with highest
+  /// count are kept. 0 = unlimited.
+  /// Same as ProfileCallTargetMax option from SampleProfile.cpp.
+  uint32_t ProfileCallTargetMax = 0;
+
+  /// Number of inlined callsites to keep in a line location. Only those with
+  /// highest count are kept. 0 = unlimited.
+  /// Same as ProfileInlineCallsiteMax option from SampleProfile.cpp.
+  uint32_t ProfileInlineCallsiteMax = 0;
 };
 
 class SampleProfileReaderText : public SampleProfileReader {

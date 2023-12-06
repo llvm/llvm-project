@@ -781,6 +781,14 @@ public:
         Num, Weight);
   }
 
+  SampleRecord &getOrCreateBodySample(uint32_t LineOffset,
+                                      uint32_t Discriminator,
+                                      uint64_t Num, uint64_t Weight = 1) {
+    SampleRecord &Sample = BodySamples[LineLocation(LineOffset, Discriminator)];
+    Sample.addSamples(Num, Weight);
+    return Sample;
+  }
+
   sampleprof_error addCalledTargetSamples(uint32_t LineOffset,
                                           uint32_t Discriminator,
                                           FunctionId Func,
@@ -973,6 +981,32 @@ public:
   /// Return all the callsite samples collected in the body of the function.
   const CallsiteSampleMap &getCallsiteSamples() const {
     return CallsiteSamples;
+  }
+
+  /// For each location with inlined function samples, if the number of
+  /// functions exceed ProfileInlineCallsiteMax, keep removing the function with
+  /// fewest total count until the number drops below ProfileInlineCallsiteMax.
+  void trimCallsiteSamples(size_t ProfileInlineCallsiteMax) {
+    for (auto &CallsiteSample : CallsiteSamples) {
+      FunctionSamplesMap &FunctionSamples = CallsiteSample.second;
+      if (ProfileInlineCallsiteMax < FunctionSamples.size()) {
+        auto It = llvm::map_range(FunctionSamples,
+                                  [](FunctionSamplesMap::value_type &V){
+                                    return V.second.getTotalSamples();
+                                  });
+        std::vector<uint64_t> TotalSamples(It.begin(), It.end());
+        std::nth_element(TotalSamples.begin(),
+                         TotalSamples.begin() + ProfileInlineCallsiteMax - 1,
+                         TotalSamples.end(), std::greater<uint64_t>());
+        uint64_t Threshold = TotalSamples[ProfileInlineCallsiteMax - 1];
+        for (auto It = FunctionSamples.begin(); It != FunctionSamples.end();) {
+          if (It->second.getTotalSamples() < Threshold)
+            It = FunctionSamples.erase(It);
+          else
+            ++It;
+        }
+      }
+    }
   }
 
   /// Return the maximum of sample counts in a function body. When SkipCallSite

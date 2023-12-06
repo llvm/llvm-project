@@ -213,6 +213,16 @@ cl::opt<int> ProfileInlineLimitMax(
     cl::desc("The upper bound of size growth limit for "
              "proirity-based sample profile loader inlining."));
 
+static cl::opt<uint32_t> ProfileCallTargetMax(
+    "sample-profile-call-target-max", cl::Hidden, cl::init(3),
+    cl::desc("In a sample record, only keep top N frequent indirect call "
+             "targets at the same location."));
+
+static cl::opt<uint32_t> ProfileInlineCallsiteMax(
+    "sample-profile-inline-callsite-max", cl::Hidden, cl::init(3),
+    cl::desc("In an inlined callsite map, only keep top N frequently inlined "
+             "callsites at the same location."));
+
 cl::opt<int> SampleHotCallSiteThreshold(
     "sample-profile-hot-inline-threshold", cl::Hidden, cl::init(3000),
     cl::desc("Hot callsite threshold for proirity-based sample profile loader "
@@ -2015,6 +2025,8 @@ bool SampleProfileLoader::doInitialization(Module &M,
   // set module before reading the profile so reader may be able to only
   // read the function profiles which are used by the current module.
   Reader->setModule(&M);
+  Reader->setProfileCallTargetMax(ProfileCallTargetMax);
+  Reader->setProfileInlineCallsiteMax(ProfileInlineCallsiteMax);
   if (std::error_code EC = Reader->read()) {
     std::string Msg = "profile reading failed: " + EC.message();
     Ctx.diagnose(DiagnosticInfoSampleProfile(Filename, Msg));

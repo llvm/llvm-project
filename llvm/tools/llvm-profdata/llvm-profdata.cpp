@@ -175,6 +175,14 @@ cl::opt<bool> CompressAllSections(
     cl::sub(MergeSubcommand),
     cl::desc("Compress all sections when writing the profile (only "
              "meaningful for -extbinary)"));
+cl::opt<uint32_t> ProfileCallTargetMax(
+    "sample-profile-call-target-max", cl::Hidden, cl::init(0),
+    cl::desc("While reading a profile, in a sample record, only keep top N "
+             "frequent indirect call targets at the same location."));
+cl::opt<uint32_t> ProfileInlineCallsiteMax(
+    "sample-profile-inline-callsite-max", cl::Hidden, cl::init(0),
+    cl::desc("While reading a profile, in an inlined callsite map, only keep "
+             "top N frequently inlined callsites at the same location."));
 cl::opt<bool> SampleMergeColdContext(
     "sample-merge-cold-context", cl::init(false), cl::Hidden,
     cl::sub(MergeSubcommand),
@@ -1377,6 +1385,8 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
     // merged profile map.
     Readers.push_back(std::move(ReaderOrErr.get()));
     const auto Reader = Readers.back().get();
+    Reader->setProfileCallTargetMax(ProfileCallTargetMax);
+    Reader->setProfileInlineCallsiteMax(ProfileInlineCallsiteMax);
     if (std::error_code EC = Reader->read()) {
       warnOrExitGivenError(FailMode, EC, Input.Filename);
       Readers.pop_back();

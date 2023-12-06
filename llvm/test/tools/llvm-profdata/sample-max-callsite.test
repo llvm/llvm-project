@@ -1,0 +1,124 @@
+# Test options sample-profile-call-target-max and
+# sample-profile-inline-callsite-max in llvm-profdata. Same options are
+# available in clang when compiling using a sample profile.
+
+RUN: llvm-profdata merge -text -sample -sample-profile-call-target-max=3 %p/Inputs/sample-max-callsite.proftext | FileCheck %s --check-prefix=SHOW30
+RUN: llvm-profdata merge -text -sample -sample-profile-call-target-max=2 %p/Inputs/sample-max-callsite.proftext | FileCheck %s --check-prefix=SHOW20
+RUN: llvm-profdata merge -text -sample -sample-profile-inline-callsite-max=2 %p/Inputs/sample-max-callsite.proftext | FileCheck %s --check-prefix=SHOW02
+RUN: llvm-profdata merge -text -sample -sample-profile-inline-callsite-max=1 %p/Inputs/sample-max-callsite.proftext | FileCheck %s --check-prefix=SHOW01
+RUN: llvm-profdata merge -text -sample -sample-profile-call-target-max=1 -sample-profile-inline-callsite-max=1 %p/Inputs/sample-max-callsite.proftext | FileCheck %s --check-prefix=SHOW11
+
+RUN: llvm-profdata merge -text -sample -sample-profile-call-target-max=0 -sample-profile-inline-callsite-max=0 %p/Inputs/sample-max-callsite.proftext | FileCheck %s --check-prefix=SHOW
+RUN: llvm-profdata merge -text -sample -sample-profile-call-target-max=999 -sample-profile-inline-callsite-max=999 %p/Inputs/sample-max-callsite.proftext  | FileCheck %s --check-prefix=SHOW
+
+SHOW30: main:184019:0
+SHOW30-NEXT:  4: 534
+SHOW30-NEXT:  4.2: 534
+SHOW30-NEXT:  5: 1075
+SHOW30-NEXT:  5.1: 1075
+SHOW30-NEXT:  6: 2080
+SHOW30-NEXT:  7: 534 _Z3bazi:1
+SHOW30-NEXT:  9: 2064 _Z3bari:1471 _Z3hooi:999 _Z3fooi:631
+SHOW30-NEXT:  10: inline1:1000
+SHOW30-NEXT:   1: 1000
+SHOW30-NEXT:   2: 1001 func2:30 func3:20 func1:10
+SHOW30-NEXT:  10: inline2:2000
+SHOW30-NEXT:   1: 2000
+SHOW30-NEXT:   3: inlineinline1:3
+SHOW30-NEXT:   3: inlineinline2:2
+SHOW30-NEXT:   3: inlineinline3:1
+SHOW30-NEXT:  10: inline3:45
+SHOW30-NEXT:  10.1: inline4:1
+SHOW30-NEXT: _Z3bari:20301:1437
+SHOW30-NEXT:  1: 1437
+
+SHOW20: main:184019:0
+SHOW20-NEXT:  4: 534
+SHOW20-NEXT:  4.2: 534
+SHOW20-NEXT:  5: 1075
+SHOW20-NEXT:  5.1: 1075
+SHOW20-NEXT:  6: 2080
+SHOW20-NEXT:  7: 534 _Z3bazi:1
+SHOW20-NEXT:  9: 2064 _Z3bari:1471 _Z3hooi:999
+SHOW20-NEXT:  10: inline1:1000
+SHOW20-NEXT:   1: 1000
+SHOW20-NEXT:   2: 1001 func2:30 func3:20
+SHOW20-NEXT:  10: inline2:2000
+SHOW20-NEXT:   1: 2000
+SHOW20-NEXT:   3: inlineinline1:3
+SHOW20-NEXT:   3: inlineinline2:2
+SHOW20-NEXT:   3: inlineinline3:1
+SHOW20-NEXT:  10: inline3:45
+SHOW20-NEXT:  10.1: inline4:1
+SHOW20-NEXT: _Z3bari:20301:1437
+SHOW20-NEXT:  1: 1437
+
+SHOW02: main:184019:0
+SHOW02-NEXT:  4: 534
+SHOW02-NEXT:  4.2: 534
+SHOW02-NEXT:  5: 1075
+SHOW02-NEXT:  5.1: 1075
+SHOW02-NEXT:  6: 2080
+SHOW02-NEXT:  7: 534 _Z3bazi:1
+SHOW02-NEXT:  9: 2064 _Z3bari:1471 _Z3hooi:999 _Z3fooi:631 _Z3gooi:123
+SHOW02-NEXT:  10: inline1:1000
+SHOW02-NEXT:   1: 1000
+SHOW02-NEXT:   2: 1001 func2:30 func3:20 func1:10
+SHOW02-NEXT:  10: inline2:2000
+SHOW02-NEXT:   1: 2000
+SHOW02-NEXT:   3: inlineinline1:3
+SHOW02-NEXT:   3: inlineinline2:2
+SHOW02-NEXT:  10.1: inline4:1
+SHOW02-NEXT: _Z3bari:20301:1437
+SHOW02-NEXT:  1: 1437
+
+SHOW01: main:184019:0
+SHOW01-NEXT:  4: 534
+SHOW01-NEXT:  4.2: 534
+SHOW01-NEXT:  5: 1075
+SHOW01-NEXT:  5.1: 1075
+SHOW01-NEXT:  6: 2080
+SHOW01-NEXT:  7: 534 _Z3bazi:1
+SHOW01-NEXT:  9: 2064 _Z3bari:1471 _Z3hooi:999 _Z3fooi:631 _Z3gooi:123
+SHOW01-NEXT:  10: inline2:2000
+SHOW01-NEXT:   1: 2000
+SHOW01-NEXT:   3: inlineinline1:3
+SHOW01-NEXT:  10.1: inline4:1
+SHOW01-NEXT: _Z3bari:20301:1437
+SHOW01-NEXT:  1: 1437
+
+SHOW11: main:184019:0
+SHOW11-NEXT:  4: 534
+SHOW11-NEXT:  4.2: 534
+SHOW11-NEXT:  5: 1075
+SHOW11-NEXT:  5.1: 1075
+SHOW11-NEXT:  6: 2080
+SHOW11-NEXT:  7: 534 _Z3bazi:1
+SHOW11-NEXT:  9: 2064 _Z3bari:1471
+SHOW11-NEXT:  10: inline2:2000
+SHOW11-NEXT:   1: 2000
+SHOW11-NEXT:   3: inlineinline1:3
+SHOW11-NEXT:  10.1: inline4:1
+SHOW11-NEXT: _Z3bari:20301:1437
+SHOW11-NEXT:  1: 1437
+
+SHOW: main:184019:0
+SHOW-NEXT:  4: 534
+SHOW-NEXT:  4.2: 534
+SHOW-NEXT:  5: 1075
+SHOW-NEXT:  5.1: 1075
+SHOW-NEXT:  6: 2080
+SHOW-NEXT:  7: 534 _Z3bazi:1
+SHOW-NEXT:  9: 2064 _Z3bari:1471 _Z3hooi:999 _Z3fooi:631 _Z3gooi:123
+SHOW-NEXT:  10: inline1:1000
+SHOW-NEXT:   1: 1000
+SHOW-NEXT:   2: 1001 func2:30 func3:20 func1:10
+SHOW-NEXT:  10: inline2:2000
+SHOW-NEXT:   1: 2000
+SHOW-NEXT:   3: inlineinline1:3
+SHOW-NEXT:   3: inlineinline2:2
+SHOW-NEXT:   3: inlineinline3:1
+SHOW-NEXT:  10: inline3:45
+SHOW-NEXT:  10.1: inline4:1
+SHOW-NEXT: _Z3bari:20301:1437
+SHOW-NEXT:  1: 1437

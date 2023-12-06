@@ -325,6 +325,16 @@ std::error_code SampleProfileReaderText::readImpl() {
   // top-level or nested function profile.
   uint32_t DepthMetadata = 0;
 
+  // Pop inline stack until size == Depth, handle ProfileInlineCallsiteMax here
+  // because the current FunctionSamples is done adding inlined callsites.
+  auto popInlineStack = [&](uint32_t Depth) {
+    while (InlineStack.size() > Depth) {
+      if (ProfileInlineCallsiteMax != 0)
+        InlineStack.back()->trimCallsiteSamples(ProfileInlineCallsiteMax);
+      InlineStack.pop_back();
+    }
+  };
+
   ProfileIsFS = ProfileIsFSDisciminator;
   FunctionSamples::ProfileIsFS = ProfileIsFS;
   for (; !LineIt.is_at_eof(); ++LineIt) {
@@ -358,7 +368,7 @@ std::error_code SampleProfileReaderText::readImpl() {
       FunctionSamples &FProfile = Profiles.Create(FContext);
       MergeResult(Result, FProfile.addTotalSamples(NumSamples));
       MergeResult(Result, FProfile.addHeadSamples(NumHeadSamples));
-      InlineStack.clear();
+      popInlineStack(0);
       InlineStack.push_back(&FProfile);
     } else {
       uint64_t NumSamples;
@@ -386,9 +396,7 @@ std::error_code SampleProfileReaderText::readImpl() {
       // Here we handle FS discriminators.
       Discriminator &= getDiscriminatorMask();
 
-      while (InlineStack.size() > Depth) {
-        InlineStack.pop_back();
-      }
+      popInlineStack(Depth);
       switch (LineTy) {
       case LineType::CallSiteProfile: {
         FunctionSamples &FSamples = InlineStack.back()->functionSamplesAt(
@@ -400,15 +408,26 @@ std::error_code SampleProfileReaderText::readImpl() {
         break;
       }
       case LineType::BodyProfile: {
-        while (InlineStack.size() > Depth) {
-          InlineStack.pop_back();
-        }
         FunctionSamples &FProfile = *InlineStack.back();
-        for (const auto &name_count : TargetCountMap) {
-          MergeResult(Result, FProfile.addCalledTargetSamples(
-                                  LineOffset, Discriminator,
-                                  FunctionId(name_count.first),
-                                  name_count.second));
+        if (ProfileCallTargetMax != 0)  {
+          std::multimap<uint64_t, FunctionId> CallTargets;
+          for (const auto &CallTarget : TargetCountMap) {
+            CallTargets.emplace(CallTarget.second, CallTarget.first);
+            if (CallTargets.size() > ProfileCallTargetMax)
+              CallTargets.erase(CallTargets.begin());
+          }
+          for (const auto &CallTarget : CallTargets) {
+            MergeResult(Result, FProfile.addCalledTargetSamples(
+                                    LineOffset, Discriminator,
+                                    CallTarget.second, CallTarget.first));
+          }
+        } else {
+          for (const auto &name_count : TargetCountMap) {
+            MergeResult(Result, FProfile.addCalledTargetSamples(
+                                    LineOffset, Discriminator,
+                                    FunctionId(name_count.first),
+                                    name_count.second));
+          }
         }
         MergeResult(Result, FProfile.addBodySamples(LineOffset, Discriminator,
                                                     NumSamples));
@@ -430,6 +449,7 @@ std::error_code SampleProfileReaderText::readImpl() {
       }
     }
   }
+  popInlineStack(0);
 
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
          "Cannot have both context-sensitive and regular profile");
@@ -604,20 +624,45 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
     // Here we handle FS discriminators:
     uint32_t DiscriminatorVal = (*Discriminator) & getDiscriminatorMask();
 
-    for (uint32_t J = 0; J < *NumCalls; ++J) {
-      auto CalledFunction(readStringFromTable());
-      if (std::error_code EC = CalledFunction.getError())
-        return EC;
+    SampleRecord &Sample =
+        FProfile.getOrCreateBodySample(*LineOffset, DiscriminatorVal,
+                                       *NumSamples);
 
-      auto CalledFunctionSamples = readNumber<uint64_t>();
-      if (std::error_code EC = CalledFunctionSamples.getError())
-        return EC;
+    if (ProfileCallTargetMax != 0) {
+      // ProfileCallTargetMax is only used by SampleProfile.cpp at compilation,
+      // where the top ProfileCallTargetMax mostly called targets are kept and
+      // others are dropped.
+      std::multimap<uint64_t, FunctionId> CallTargets;
+      for (uint32_t J = 0; J < *NumCalls; ++J) {
+        auto CalledFunction(readStringFromTable());
+        if (std::error_code EC = CalledFunction.getError())
+          return EC;
 
-      FProfile.addCalledTargetSamples(*LineOffset, DiscriminatorVal,
-                                      *CalledFunction, *CalledFunctionSamples);
+        auto CalledFunctionSamples = readNumber<uint64_t>();
+        if (std::error_code EC = CalledFunctionSamples.getError())
+          return EC;
+
+        CallTargets.emplace(*CalledFunctionSamples, *CalledFunction);
+        if (CallTargets.size() > ProfileCallTargetMax)
+          CallTargets.erase(CallTargets.begin());
+      }
+
+      for (auto & CallTarget : CallTargets) {
+        Sample.addCalledTarget(CallTarget.second, CallTarget.first);
+      }
+    } else {
+      for (uint32_t J = 0; J < *NumCalls; ++J) {
+        auto CalledFunction(readStringFromTable());
+        if (std::error_code EC = CalledFunction.getError())
+          return EC;
+
+        auto CalledFunctionSamples = readNumber<uint64_t>();
+        if (std::error_code EC = CalledFunctionSamples.getError())
+          return EC;
+
+        Sample.addCalledTarget(*CalledFunction, *CalledFunctionSamples);
+      }
     }
-
-    FProfile.addBodySamples(*LineOffset, DiscriminatorVal, *NumSamples);
   }
 
   // Read all the samples for inlined function calls.
@@ -647,6 +692,9 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
     if (std::error_code EC = readProfile(CalleeProfile))
       return EC;
   }
+
+  if (ProfileInlineCallsiteMax != 0)
+    FProfile.trimCallsiteSamples(ProfileInlineCallsiteMax);
 
   return sampleprof_error::success;
 }
