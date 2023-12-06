@@ -715,12 +715,14 @@ def ScopeOp : CIR_Op<"scope", [
     will be inserted implicitly.
   }];
 
-  let results = (outs Variadic<AnyType>:$results);
+  let results = (outs Optional<AnyType>:$results);
   let regions = (region AnyRegion:$scopeRegion);
 
-  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
   let skipDefaultBuilders = 1;
+  let assemblyFormat = [{
+    custom<OmittedTerminatorRegion>($scopeRegion) (`:` type($results)^)? attr-dict
+  }];
 
   let builders = [
     // Scopes for yielding values.

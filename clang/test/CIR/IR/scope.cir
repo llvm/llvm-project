@@ -1,0 +1,27 @@
+// RUN: cir-opt %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+!u32i = !cir.int<u, 32>
+
+module {
+  // Should properly print/parse scope with implicit empty yield.
+  cir.func @implicit_yield() {
+    cir.scope {
+    }
+    // CHECK: cir.scope {
+    // CHECK: }
+    cir.return
+  }
+
+  // Should properly print/parse scope with explicit yield.
+  cir.func @explicit_yield() {
+    %0 = cir.scope {
+      %1 = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init] {alignment = 4 : i64}
+      cir.yield %1 : !cir.ptr<!u32i>
+    } : !cir.ptr<!u32i>
+    // CHECK: %0 = cir.scope {
+    //          [...]
+    // CHECK:   cir.yield %1 : !cir.ptr<!u32i>
+    // CHECK: } : !cir.ptr<!u32i>
+    cir.return
+  }
+}
