@@ -1736,7 +1736,7 @@ public:
   LogicalResult matchAndRewrite(TensorReshapeOp reshapeOp,
                                 PatternRewriter &rewriter) const override {
     auto splatOp = reshapeOp.getSrc().template getDefiningOp<tensor::SplatOp>();
-    if (!splatOp)
+    if (!splatOp || !splatOp.getAggregate().getType().hasStaticShape())
       return failure();
 
     rewriter.replaceOpWithNewOp<tensor::SplatOp>(
@@ -3481,6 +3481,10 @@ SplatOp::reifyResultShapes(OpBuilder &builder,
 OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
   auto constOperand = adaptor.getInput();
   if (!constOperand.isa_and_nonnull<IntegerAttr, FloatAttr>())
+    return {};
+
+  // Do not fold if the splat is not statically shaped
+  if (!getType().hasStaticShape())
     return {};
 
   // SplatElementsAttr::get treats single value for second arg as being a
