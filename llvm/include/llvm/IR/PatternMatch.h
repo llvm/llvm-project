@@ -1239,7 +1239,7 @@ inline SpecificBinaryOp_match<LHS, RHS> m_BinOp(unsigned Opcode, const LHS &L,
   return SpecificBinaryOp_match<LHS, RHS>(Opcode, L, R);
 }
 
-template <typename LHS, typename RHS>
+template <typename LHS, typename RHS, bool Commutable = false>
 struct DisjointOr_match {
   LHS L;
   RHS R;
@@ -1251,7 +1251,9 @@ struct DisjointOr_match {
       assert(PDI->getOpcode() == Instruction::Or && "Only or can be disjoint");
       if (!PDI->isDisjoint())
         return false;
-      return L.match(PDI->getOperand(0)) && R.match(PDI->getOperand(1));
+      return (L.match(PDI->getOperand(0)) && R.match(PDI->getOperand(1))) ||
+             (Commutable && L.match(PDI->getOperand(1)) &&
+              R.match(PDI->getOperand(0)));
     }
     return false;
   }
@@ -1260,6 +1262,12 @@ struct DisjointOr_match {
 template <typename LHS, typename RHS>
 inline DisjointOr_match<LHS, RHS> m_DisjointOr(const LHS &L, const RHS &R) {
   return DisjointOr_match<LHS, RHS>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline DisjointOr_match<LHS, RHS, true> m_c_DisjointOr(const LHS &L,
+                                                       const RHS &R) {
+  return DisjointOr_match<LHS, RHS, true>(L, R);
 }
 
 //===----------------------------------------------------------------------===//
