@@ -10,10 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RUN: %libarcher-compile -DTYPE=float -DSIMDLEN=4 && %libarcher-run-race | FileCheck --check-prefix=FLOAT %s
-// RUN: %libarcher-compile -DTYPE=float -DSIMDLEN=8 && %libarcher-run-race | FileCheck --check-prefix=FLOAT %s
-// RUN: %libarcher-compile -DTYPE=double -DSIMDLEN=4 && %libarcher-run-race | FileCheck --check-prefix=DOUBLE %s
-// RUN: %libarcher-compile -DTYPE=double -DSIMDLEN=8 && %libarcher-run-race | FileCheck --check-prefix=DOUBLE %s
+// RUN: %libarcher-compile -DTYPE=float -DSIMDLEN=4 && %libarcher-run-race \
+// RUN: | FileCheck --check-prefix=FLOAT %s
+// RUN: %libarcher-compile -DTYPE=float -DSIMDLEN=8 && %libarcher-run-race \
+// RUN: | FileCheck --check-prefix=FLOAT %s
+// RUN: %libarcher-compile -DTYPE=double -DSIMDLEN=4 && %libarcher-run-race \
+// RUN: | FileCheck --check-prefix=DOUBLE %s
+// RUN: %libarcher-compile -DTYPE=double -DSIMDLEN=8 && %libarcher-run-race \
+// RUN: | FileCheck --check-prefix=DOUBLE %s
 // REQUIRES: tsan
 
 #include <stdio.h>

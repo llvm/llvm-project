@@ -10,8 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RUN: %libarcher-compile -DTYPE=float && %libarcher-run-race | FileCheck --check-prefix=FLOAT %s 
-// RUN: %libarcher-compile -DTYPE=double && %libarcher-run-race | FileCheck --check-prefix=DOUBLE %s 
+// RUN: %libarcher-compile -DTYPE=float && %libarcher-run-race \
+// RUN: | FileCheck --check-prefix=FLOAT %s
+// RUN: %libarcher-compile -DTYPE=double && %libarcher-run-race \
+// RUN: | FileCheck --check-prefix=DOUBLE %s
 // REQUIRES: tsan
 
 #include <math.h>
