@@ -16,7 +16,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <atomic>
@@ -171,9 +171,13 @@ class ConstExtruderOpt
     : public fir::impl::ConstExtruderOptBase<ConstExtruderOpt> {
 protected:
   mlir::DominanceInfo *di;
+  mlir::GreedyRewriteConfig config;
 
 public:
-  ConstExtruderOpt() {}
+  ConstExtruderOpt() {
+    config.enableRegionSimplification = false;
+    config.strictMode = mlir::GreedyRewriteStrictness::ExistingOps;
+  }
 
   void runOnOperation() override {
     mlir::ModuleOp mod = getOperation();
@@ -184,25 +188,14 @@ public:
   void runOnFunc(mlir::func::FuncOp &func) {
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    mlir::ConversionTarget target(*context);
 
     // If func is a declaration, skip it.
     if (func.empty())
       return;
 
-    target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
-                           mlir::func::FuncDialect>();
-    target.addDynamicallyLegalOp<fir::CallOp>([&](fir::CallOp op) {
-      for (auto a : op.getArgs()) {
-        if (needsExtrusion(&a))
-          return false;
-      }
-      return true;
-    });
-
     patterns.insert<CallOpRewriter>(context, *di);
-    if (mlir::failed(
-            mlir::applyPartialConversion(func, target, std::move(patterns)))) {
+    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
+            func, std::move(patterns), config))) {
       mlir::emitError(func.getLoc(),
                       "error in constant extrusion optimization\n");
       signalPassFailure();
