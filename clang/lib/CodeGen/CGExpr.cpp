@@ -1093,7 +1093,9 @@ CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
   auto *Zero = llvm::ConstantInt::get(Int32Ty, 0);
   SmallVector<llvm::Value *, 8> Indices{Zero};
   if (const auto *FD = dyn_cast<FieldDecl>(CountedByVD)) {
-    Indices.emplace_back(llvm::ConstantInt::get(Int32Ty, FD->getFieldIndex()));
+    unsigned Idx =
+      CGM.getTypes().getCGRecordLayout(CountedByRD).getLLVMFieldNo(FD);
+    Indices.emplace_back(llvm::ConstantInt::get(Int32Ty, Idx));
   } else if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
     for (NamedDecl *ND : IFD->chain())
       if (auto *FD = dyn_cast<FieldDecl>(ND)) {
@@ -1226,7 +1228,6 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
   EmitCheck(std::make_pair(Check, SanitizerKind::ArrayBounds),
             SanitizerHandler::OutOfBounds, StaticData, Index);
 }
-
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
 EmitComplexPrePostIncDec(const UnaryOperator *E, LValue LV,
