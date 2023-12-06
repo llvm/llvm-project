@@ -1907,7 +1907,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
           }
           // This dbg.declare is for the main function entry point.  It
           // will be deleted in all coro-split functions.
-          coro::salvageDebugInfo(ArgToAllocaMap, DDI, Shape.OptimizeFrame,
+          coro::salvageDebugInfo(ArgToAllocaMap, *DDI, Shape.OptimizeFrame,
                                  false /*UseEntryValue*/);
         };
         for_each(DIs, SalvageOne);
@@ -2845,7 +2845,7 @@ static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
                        Visitor.getMayWriteBeforeCoroBegin());
 }
 
-static std::optional<std::pair<Value *, DIExpression *>>
+static std::optional<std::pair<Value &, DIExpression &>>
 salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
                      bool OptimizeFrame, bool UseEntryValue, Function *F,
                      Value *Storage, DIExpression *Expr,
@@ -2922,30 +2922,30 @@ salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
     Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
   }
 
-  return {{Storage, Expr}};
+  return {{*Storage, *Expr}};
 }
 
 void coro::salvageDebugInfo(
     SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
-    DbgVariableIntrinsic *DVI, bool OptimizeFrame, bool UseEntryValue) {
+    DbgVariableIntrinsic &DVI, bool OptimizeFrame, bool UseEntryValue) {
 
-  Function *F = DVI->getFunction();
+  Function *F = DVI.getFunction();
   // Follow the pointer arithmetic all the way to the incoming
   // function argument and convert into a DIExpression.
   bool SkipOutermostLoad = !isa<DbgValueInst>(DVI);
-  Value *OriginalStorage = DVI->getVariableLocationOp(0);
+  Value *OriginalStorage = DVI.getVariableLocationOp(0);
 
   auto SalvagedInfo = ::salvageDebugInfoImpl(
       ArgToAllocaMap, OptimizeFrame, UseEntryValue, F, OriginalStorage,
-      DVI->getExpression(), SkipOutermostLoad);
+      DVI.getExpression(), SkipOutermostLoad);
   if (!SalvagedInfo)
     return;
 
-  Value *Storage = SalvagedInfo->first;
-  DIExpression *Expr = SalvagedInfo->second;
+  Value *Storage = &SalvagedInfo->first;
+  DIExpression *Expr = &SalvagedInfo->second;
 
-  DVI->replaceVariableLocationOp(OriginalStorage, Storage);
-  DVI->setExpression(Expr);
+  DVI.replaceVariableLocationOp(OriginalStorage, Storage);
+  DVI.setExpression(Expr);
   // We only hoist dbg.declare today since it doesn't make sense to hoist
   // dbg.value since it does not have the same function wide guarantees that
   // dbg.declare does.
@@ -2956,43 +2956,43 @@ void coro::salvageDebugInfo(
     else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt)
-      DVI->moveBefore(*(*InsertPt)->getParent(), *InsertPt);
+      DVI.moveBefore(*(*InsertPt)->getParent(), *InsertPt);
   }
 }
 
 void coro::salvageDebugInfo(
-    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap, DPValue *DPV,
+    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap, DPValue &DPV,
     bool OptimizeFrame, bool UseEntryValue) {
 
-  Function *F = DPV->getFunction();
+  Function *F = DPV.getFunction();
   // Follow the pointer arithmetic all the way to the incoming
   // function argument and convert into a DIExpression.
-  bool SkipOutermostLoad = DPV->getType() == DPValue::LocationType::Declare;
-  Value *OriginalStorage = DPV->getVariableLocationOp(0);
+  bool SkipOutermostLoad = DPV.getType() == DPValue::LocationType::Declare;
+  Value *OriginalStorage = DPV.getVariableLocationOp(0);
 
   auto SalvagedInfo = ::salvageDebugInfoImpl(
       ArgToAllocaMap, OptimizeFrame, UseEntryValue, F, OriginalStorage,
-      DPV->getExpression(), SkipOutermostLoad);
+      DPV.getExpression(), SkipOutermostLoad);
   if (!SalvagedInfo)
     return;
 
-  Value *Storage = SalvagedInfo->first;
-  DIExpression *Expr = SalvagedInfo->second;
+  Value *Storage = &SalvagedInfo->first;
+  DIExpression *Expr = &SalvagedInfo->second;
 
-  DPV->replaceVariableLocationOp(OriginalStorage, Storage);
-  DPV->setExpression(Expr);
+  DPV.replaceVariableLocationOp(OriginalStorage, Storage);
+  DPV.setExpression(Expr);
   // We only hoist dbg.declare today since it doesn't make sense to hoist
   // dbg.value since it does not have the same function wide guarantees that
   // dbg.declare does.
-  if (DPV->getType() == DPValue::LocationType::Declare) {
+  if (DPV.getType() == DPValue::LocationType::Declare) {
     std::optional<BasicBlock::iterator> InsertPt;
     if (auto *I = dyn_cast<Instruction>(Storage))
       InsertPt = I->getInsertionPointAfterDef();
     else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt) {
-      DPV->removeFromParent();
-      (*InsertPt)->getParent()->insertDPValueBefore(DPV, *InsertPt);
+      DPV.removeFromParent();
+      (*InsertPt)->getParent()->insertDPValueBefore(&DPV, *InsertPt);
     }
   }
 }

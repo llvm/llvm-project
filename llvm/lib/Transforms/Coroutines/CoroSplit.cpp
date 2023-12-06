@@ -725,16 +725,17 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
 }
 
 /// Returns all DbgVariableIntrinsic in F.
-static SmallVector<DbgVariableIntrinsic *, 8>
-collectDbgVariableIntrinsics(Function &F, SmallVector<DPValue *> &DPValues) {
+static std::pair<SmallVector<DbgVariableIntrinsic *, 8>, SmallVector<DPValue *>>
+collectDbgVariableIntrinsics(Function &F) {
   SmallVector<DbgVariableIntrinsic *, 8> Intrinsics;
+  SmallVector<DPValue *> DPValues;
   for (auto &I : instructions(F)) {
     for (DPValue &DPV : I.getDbgValueRange())
       DPValues.push_back(&DPV);
     if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
       Intrinsics.push_back(DVI);
   }
-  return Intrinsics;
+  return {Intrinsics, DPValues};
 }
 
 void CoroCloner::replaceSwiftErrorOps() {
@@ -742,19 +743,17 @@ void CoroCloner::replaceSwiftErrorOps() {
 }
 
 void CoroCloner::salvageDebugInfo() {
-  SmallVector<DPValue *> DPValues;
-  SmallVector<DbgVariableIntrinsic *, 8> Worklist =
-      collectDbgVariableIntrinsics(*NewF, DPValues);
+  auto [Worklist, DPValues] = collectDbgVariableIntrinsics(*NewF);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
   // Only 64-bit ABIs have a register we can refer to with the entry value.
   bool UseEntryValue =
       llvm::Triple(OrigF.getParent()->getTargetTriple()).isArch64Bit();
   for (DbgVariableIntrinsic *DVI : Worklist)
-    coro::salvageDebugInfo(ArgToAllocaMap, DVI, Shape.OptimizeFrame,
+    coro::salvageDebugInfo(ArgToAllocaMap, *DVI, Shape.OptimizeFrame,
                            UseEntryValue);
   for (DPValue *DPV : DPValues)
-    coro::salvageDebugInfo(ArgToAllocaMap, DPV, Shape.OptimizeFrame,
+    coro::salvageDebugInfo(ArgToAllocaMap, *DPV, Shape.OptimizeFrame,
                            UseEntryValue);
 
   // Remove all salvaged dbg.declare intrinsics that became
@@ -2048,12 +2047,12 @@ splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   // original function. The Cloner has already salvaged debug info in the new
   // coroutine funclets.
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
-  SmallVector<DPValue *> DPValues;
-  for (auto *DDI : collectDbgVariableIntrinsics(F, DPValues))
-    coro::salvageDebugInfo(ArgToAllocaMap, DDI, Shape.OptimizeFrame,
+  auto [DbgInsts, DPValues] = collectDbgVariableIntrinsics(F);
+  for (auto *DDI : DbgInsts)
+    coro::salvageDebugInfo(ArgToAllocaMap, *DDI, Shape.OptimizeFrame,
                            false /*UseEntryValue*/);
   for (DPValue *DPV : DPValues)
-    coro::salvageDebugInfo(ArgToAllocaMap, DPV, Shape.OptimizeFrame,
+    coro::salvageDebugInfo(ArgToAllocaMap, *DPV, Shape.OptimizeFrame,
                            false /*UseEntryValue*/);
   return Shape;
 }
