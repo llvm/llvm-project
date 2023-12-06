@@ -789,8 +789,10 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
                              sizeof(DeviceMemoryPoolTrackingTy),
                              &ImageDeviceMemoryPoolTracking);
       if (auto Err =
-              GHandler.readGlobalFromDevice(*this, *Image, TrackerGlobal))
-        return Err;
+              GHandler.readGlobalFromDevice(*this, *Image, TrackerGlobal)) {
+        consumeError(std::move(Err));
+        continue;
+      }
       DeviceMemoryPoolTracking.combine(ImageDeviceMemoryPoolTracking);
     }
 
@@ -975,6 +977,12 @@ Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
                          sizeof(DeviceMemoryPoolTrackingTy),
                          &DeviceMemoryPoolTracking);
   GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
+  if (auto Err = GHandler.readGlobalFromImage(*this, Image, TrackerGlobal)) {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Avoid the memory pool: %s.\n", ErrStr.c_str());
+    return Error::success();
+  }
+
   if (auto Err = GHandler.writeGlobalToDevice(*this, Image, TrackerGlobal))
     return Err;
 
