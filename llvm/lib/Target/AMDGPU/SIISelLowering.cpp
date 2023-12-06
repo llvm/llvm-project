@@ -9084,7 +9084,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
 
     MachinePointerInfo StorePtrI = LoadPtrI;
-    LoadPtrI.V = UndefValue::get(
+    LoadPtrI.V = PoisonValue::get(
         PointerType::get(*DAG.getContext(), AMDGPUAS::GLOBAL_ADDRESS));
     LoadPtrI.AddrSpace = AMDGPUAS::GLOBAL_ADDRESS;
     StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
@@ -9164,7 +9164,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
     LoadPtrI.Offset = Op->getConstantOperandVal(5);
     MachinePointerInfo StorePtrI = LoadPtrI;
-    LoadPtrI.V = UndefValue::get(
+    LoadPtrI.V = PoisonValue::get(
         PointerType::get(*DAG.getContext(), AMDGPUAS::GLOBAL_ADDRESS));
     LoadPtrI.AddrSpace = AMDGPUAS::GLOBAL_ADDRESS;
     StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
