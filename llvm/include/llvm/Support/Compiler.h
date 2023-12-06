@@ -159,20 +159,20 @@
 
 // clang-format off
 #if defined(__clang__) || defined(__GNUC__)
-#define LLVM_IGNORE_DEPRECATIONS_OF_DECLARATIONS_BEGIN                         \
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH                             \
   _Pragma("GCC diagnostic push")                                               \
   _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-#define LLVM_IGNORE_DEPRECATIONS_OF_DECLARATIONS_END                           \
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP                              \
   _Pragma("GCC diagnostic pop")
 #elif defined(_MSC_VER)
-#define LLVM_IGNORE_DEPRECATIONS_OF_DECLARATIONS_BEGIN                         \
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH                             \
   _Pragma("warning(push)")                                                     \
   _Pragma("warning(disable : 4996)")
-#define LLVM_IGNORE_DEPRECATIONS_OF_DECLARATIONS_END                           \
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP                              \
   _Pragma("warning(pop)")
 #else
-#define LLVM_IGNORE_DEPRECATIONS_OF_DECLARATIONS_BEGIN
-#define LLVM_IGNORE_DEPRECATIONS_OF_DECLARATIONS_END
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 #endif
 // clang-format on
 
