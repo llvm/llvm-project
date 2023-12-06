@@ -1094,7 +1094,7 @@ CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
   SmallVector<llvm::Value *, 8> Indices{Zero};
   if (const auto *FD = dyn_cast<FieldDecl>(CountedByVD)) {
     unsigned Idx =
-      CGM.getTypes().getCGRecordLayout(CountedByRD).getLLVMFieldNo(FD);
+        CGM.getTypes().getCGRecordLayout(CountedByRD).getLLVMFieldNo(FD);
     Indices.emplace_back(llvm::ConstantInt::get(Int32Ty, Idx));
   } else if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
     for (NamedDecl *ND : IFD->chain())
