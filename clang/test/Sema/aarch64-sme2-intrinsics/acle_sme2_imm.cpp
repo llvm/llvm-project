@@ -77,3 +77,57 @@ void test_svluti4_lane_zt_x4(svuint8_t zn) __arm_streaming __arm_shared_za __arm
   // Test index value range
   svluti4_lane_zt_f32_x4(0, zn, 2);   // expected-error {{argument value 2 is outside the valid range [0, 1]}}
 }
+
+void test_svluti2_lane_zt_x2(svuint8_t zn_u8) __arm_streaming __arm_shared_za __arm_preserves_za {
+  // Test Reg Offset
+  svluti2_lane_zt_u8_x2(1, zn_u8, 2);    // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti2_lane_zt_u8_x2(0, zn_u8, 8);   // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  // Test Reg Offset
+  svluti2_lane_zt_u16_x2(1, zn_u8, 2);  // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti2_lane_zt_u16_x2(0, zn_u8, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  // Test Reg Offset
+  svluti2_lane_zt_u32_x2(1, zn_u8, 2);  // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti2_lane_zt_u32_x2(0, zn_u8, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  // Test Reg Offset
+  svluti2_lane_zt_f16_x2(1, zn_u8, 2);  // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti2_lane_zt_f16_x2(0, zn_u8, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  // Test Reg Offset
+  svluti2_lane_zt_bf16_x2(1, zn_u8, 2);  // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti2_lane_zt_bf16_x2(0, zn_u8, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+ // Test Reg Offset
+  svluti2_lane_zt_f32_x2(1, zn_u8, 2);  // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti2_lane_zt_f32_x2(0, zn_u8, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+}
+
+void test_svluti4_lane_zt_x2(svuint8_t zn_u8) __arm_streaming __arm_shared_za __arm_preserves_za {
+  // Test Reg Offset
+  svluti4_lane_zt_u8_x2(1, zn_u8, 2);   // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti4_lane_zt_u8_x2(0, zn_u8, 4);  // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  // Test Reg Offset
+  svluti4_lane_zt_u16_x2(1, zn_u8, 2); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti4_lane_zt_u16_x2(0, zn_u8, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  // Test Reg Offset
+  svluti4_lane_zt_u32_x2(1, zn_u8, 2); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti4_lane_zt_u32_x2(0, zn_u8, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  // Test Reg Offset
+  svluti4_lane_zt_f16_x2(1, zn_u8, 2); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti4_lane_zt_f16_x2(0, zn_u8, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  // Test Reg Offset
+  svluti4_lane_zt_bf16_x2(1, zn_u8, 2); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti4_lane_zt_bf16_x2(0, zn_u8, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+   // Test Reg Offset
+  svluti4_lane_zt_f32_x2(1, zn_u8, 2); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Test index value range
+  svluti4_lane_zt_f32_x2(0, zn_u8, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+}
