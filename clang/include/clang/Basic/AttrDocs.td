@@ -2552,6 +2552,13 @@ example, the following will emit 4 versions of the function:
     __attribute__((target_clones("arch=atom,avx2","arch=ivybridge","default")))
     void foo() {}
 
+For targets that support the GNU indirect function (IFUNC) feature, dispatch
+is performed by emitting an indirect function that is resolved to the appropriate
+target clone at load time. The indirect function is given the name the
+multiversioned function would have if it had been declared without the attribute.
+For backward compatibility with earlier Clang releases, a function alias with an
+``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
+feature and support for it may be removed in the future.
 }];
 }
 
@@ -7584,7 +7591,7 @@ For example,
   Task<int> foo() { return increment(1); } // Error. foo is not a coroutine.
 
   // Fine for a coroutine wrapper to return a CRT.
-  Task<int> [[clang::coro_wrapper]] foo() { return increment(1); }
+  [[clang::coro_wrapper]] Task<int> foo() { return increment(1); }
 
   void bar() {
     // Invalid. This intantiates a function which returns a CRT but is not marked as

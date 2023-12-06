@@ -37,7 +37,7 @@ void test_impl() {
   // should x87 80bit long double work at all?
   if constexpr (!std::same_as<T, long double>) {
     for (auto i = 0; i < 100; ++i) {
-      const T old = 3.1;
+      const T old = T(3.1);
       MaybeVolatile<std::atomic<T>> a(old);
 
       std::atomic_bool started = false;

@@ -251,14 +251,14 @@ option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
 
 # Generate and install a linker script inplace of libc++.so. The linker script
 # will link libc++ to the correct ABI library. This option is on by default
-# on UNIX platforms other than Apple unless we statically link libc++abi
-# inside libc++.so, we don't build libc++.so at all or we don't have any
-# ABI library.
+# on UNIX platforms other than Apple, and on the Fuchsia platform unless we
+# statically link libc++abi inside libc++.so, we don't build libc++.so at all
+# or we don't have any ABI library.
 if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
     OR NOT LIBCXX_ENABLE_SHARED
     OR LIBCXX_CXX_ABI STREQUAL "none")
   set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
-elseif(UNIX AND NOT APPLE)
+elseif((UNIX OR FUCHSIA) AND NOT APPLE)
   set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
 else()
   set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)

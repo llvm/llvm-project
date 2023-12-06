@@ -44,8 +44,8 @@ void testBasic(MemoryOrder... memory_order) {
   // compare pass
   {
     MaybeVolatile<std::atomic<T>> a(T(1.2));
-    T expected(1.2);
-    const T desired(2.3);
+    T expected(T(1.2));
+    const T desired(T(2.3));
     std::same_as<bool> decltype(auto) r = a.compare_exchange_strong(expected, desired, memory_order...);
 
     assert(r);
@@ -57,7 +57,7 @@ void testBasic(MemoryOrder... memory_order) {
   {
     MaybeVolatile<std::atomic<T>> a(T(1.2));
     T expected(1.5);
-    const T desired(2.3);
+    const T desired(T(2.3));
     std::same_as<bool> decltype(auto) r = a.compare_exchange_strong(expected, desired, memory_order...);
 
     assert(!r);
@@ -168,7 +168,7 @@ void test_impl() {
     auto store = [](MaybeVolatile<std::atomic<T>>& x, T, T new_val) { x.store(new_val, std::memory_order::release); };
     auto load  = [](MaybeVolatile<std::atomic<T>>& x) {
       auto result = x.load(std::memory_order::relaxed);
-      T unexpected(-9999.99);
+      T unexpected(T(-9999.99));
       bool r = x.compare_exchange_strong(unexpected, unexpected, std::memory_order_relaxed, std::memory_order_acquire);
       assert(!r);
       return result;
@@ -177,7 +177,7 @@ void test_impl() {
 
     auto load_one_arg = [](MaybeVolatile<std::atomic<T>>& x) {
       auto result = x.load(std::memory_order::relaxed);
-      T unexpected(-9999.99);
+      T unexpected(T(-9999.99));
       bool r = x.compare_exchange_strong(unexpected, unexpected, std::memory_order_acquire);
       assert(!r);
       return result;
@@ -187,7 +187,7 @@ void test_impl() {
     // acq_rel replaced by acquire
     auto load_one_arg_acq_rel = [](MaybeVolatile<std::atomic<T>>& x) {
       auto result = x.load(std::memory_order::relaxed);
-      T unexpected(-9999.99);
+      T unexpected(T(-9999.99));
       bool r = x.compare_exchange_strong(unexpected, unexpected, std::memory_order_acq_rel);
       assert(!r);
       return result;
@@ -200,7 +200,7 @@ void test_impl() {
     auto store = [](MaybeVolatile<std::atomic<T>>& x, T, T new_val) { x.store(new_val, std::memory_order::seq_cst); };
     auto load  = [](MaybeVolatile<std::atomic<T>>& x) {
       auto result = x.load(std::memory_order::relaxed);
-      T unexpected(-9999.99);
+      T unexpected(T(-9999.99));
       bool r = x.compare_exchange_strong(unexpected, unexpected, std::memory_order_relaxed, std::memory_order::seq_cst);
       assert(!r);
       return result;

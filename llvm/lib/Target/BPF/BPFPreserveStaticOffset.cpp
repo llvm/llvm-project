@@ -632,9 +632,9 @@ static void removePAICalls(Instruction *Marker) {
       continue;
     if (isPreserveArrayIndex(V))
       BPFCoreSharedInfo::removeArrayAccessCall(Call);
-    if (isPreserveStructIndex(V))
+    else if (isPreserveStructIndex(V))
       BPFCoreSharedInfo::removeStructAccessCall(Call);
-    if (isPreserveUnionIndex(V))
+    else if (isPreserveUnionIndex(V))
       BPFCoreSharedInfo::removeUnionAccessCall(Call);
   } while (!WorkList.empty());
 }

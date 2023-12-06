@@ -4178,8 +4178,29 @@ void CodeGenModule::emitMultiVersionFunctions() {
     }
 
     llvm::Constant *ResolverConstant = GetOrCreateMultiVersionResolver(GD);
-    if (auto *IFunc = dyn_cast<llvm::GlobalIFunc>(ResolverConstant))
+    if (auto *IFunc = dyn_cast<llvm::GlobalIFunc>(ResolverConstant)) {
       ResolverConstant = IFunc->getResolver();
+      // In Aarch64, default versions of multiversioned functions are mangled to
+      // their 'normal' assembly name. This deviates from other targets which
+      // append a '.default' string. As a result we need to continue appending
+      // .ifunc in Aarch64.
+      // FIXME: Should Aarch64 mangling for 'default' multiversion function and
+      // in turn ifunc function match that of other targets?
+      if (FD->isTargetClonesMultiVersion() &&
+          !getTarget().getTriple().isAArch64()) {
+        const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
+        llvm::FunctionType *DeclTy = getTypes().GetFunctionType(FI);
+        std::string MangledName = getMangledNameImpl(
+            *this, GD, FD, /*OmitMultiVersionMangling=*/true);
+        // In prior versions of Clang, the mangling for ifuncs incorrectly
+        // included an .ifunc suffix. This alias is generated for backward
+        // compatibility. It is deprecated, and may be removed in the future.
+        auto *Alias = llvm::GlobalAlias::create(
+            DeclTy, 0, getMultiversionLinkage(*this, GD),
+            MangledName + ".ifunc", IFunc, &getModule());
+        SetCommonAttributes(FD, Alias);
+      }
+    }
     llvm::Function *ResolverFunc = cast<llvm::Function>(ResolverConstant);
 
     ResolverFunc->setLinkage(getMultiversionLinkage(*this, GD));
@@ -4346,10 +4367,19 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   // Holds the name of the resolver, in ifunc mode this is the ifunc (which has
   // a separate resolver).
   std::string ResolverName = MangledName;
-  if (getTarget().supportsIFunc())
-    ResolverName += ".ifunc";
-  else if (FD->isTargetMultiVersion())
+  if (getTarget().supportsIFunc()) {
+    // In Aarch64, default versions of multiversioned functions are mangled to
+    // their 'normal' assembly name. This deviates from other targets which
+    // append a '.default' string. As a result we need to continue appending
+    // .ifunc in Aarch64.
+    // FIXME: Should Aarch64 mangling for 'default' multiversion function and
+    // in turn ifunc function match that of other targets?
+    if (!FD->isTargetClonesMultiVersion() ||
+        getTarget().getTriple().isAArch64())
+      ResolverName += ".ifunc";
+  } else if (FD->isTargetMultiVersion()) {
     ResolverName += ".resolver";
+  }
 
   // If the resolver has already been created, just return it.
   if (llvm::GlobalValue *ResolverGV = GetGlobalValue(ResolverName))

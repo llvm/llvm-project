@@ -19,29 +19,24 @@
 #include <cstring>
 #include <list>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <set>
 
 #include "ExclusiveAccess.h"
+#include "OffloadEntry.h"
 #include "omptarget.h"
 #include "rtl.h"
 
 #include "OpenMP/Mapping.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
 // Forward declarations.
-struct RTLInfoTy;
+struct PluginAdaptorTy;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
-
-// enum for OMP_TARGET_OFFLOAD; keep in sync with kmp.h definition
-enum kmp_target_offload_kind {
-  tgt_disabled = 0,
-  tgt_default = 1,
-  tgt_mandatory = 2
-};
-typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
 
 ///
 struct PendingCtorDtorListsTy {
@@ -53,12 +48,10 @@ typedef std::map<__tgt_bin_desc *, PendingCtorDtorListsTy>
 
 struct DeviceTy {
   int32_t DeviceID;
-  RTLInfoTy *RTL;
+  PluginAdaptorTy *RTL;
   int32_t RTLDeviceID;
 
-  bool IsInit;
-  std::once_flag InitFlag;
-  bool HasPendingGlobals;
+  bool HasMappedGlobalData = false;
 
   /// Host data to device map type with a wrapper key indirection that allows
   /// concurrent modification of the entries without invalidating the underlying
@@ -77,12 +70,15 @@ struct DeviceTy {
 
   std::mutex PendingGlobalsMtx;
 
-  DeviceTy(RTLInfoTy *RTL);
+  DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
   DeviceTy &operator=(const DeviceTy &D) = delete;
 
   ~DeviceTy();
+
+  /// Try to initialize the device and return any failure.
+  llvm::Error init();
 
   // Return true if data can be copied to DstDevice directly
   bool isDataExchangable(const DeviceTy &DstDevice);
@@ -150,9 +146,7 @@ struct DeviceTy {
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
 
-  // calls to RTL
-  int32_t initOnce();
-  __tgt_target_table *loadBinary(void *Img);
+  __tgt_target_table *loadBinary(__tgt_device_image *Img);
 
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
@@ -175,11 +169,14 @@ struct DeviceTy {
   // Copy data from host to device
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
-                     HostDataToTargetTy *Entry = nullptr);
+                     HostDataToTargetTy *Entry = nullptr,
+                     DeviceTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                        AsyncInfoTy &AsyncInfo,
-                       HostDataToTargetTy *Entry = nullptr);
+                       HostDataToTargetTy *Entry = nullptr,
+                       DeviceTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+
   // Copy data from current device to destination device directly
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
@@ -194,7 +191,7 @@ struct DeviceTy {
 
   // Launch the kernel identified by \p TgtEntryPtr with the given arguments.
   int32_t launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
-                       ptrdiff_t *TgtOffsets, const KernelArgsTy &KernelArgs,
+                       ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
                        AsyncInfoTy &AsyncInfo);
 
   /// Synchronize device/queue/event based on \p AsyncInfo and return
@@ -207,9 +204,8 @@ struct DeviceTy {
   /// completed and AsyncInfo.isDone() returns true.
   int32_t queryAsync(AsyncInfoTy &AsyncInfo);
 
-  /// Calls the corresponding print in the \p RTLDEVID
-  /// device RTL to obtain the information of the specific device.
-  bool printDeviceInfo(int32_t RTLDevID);
+  /// Calls the corresponding print device info function in the plugin.
+  bool printDeviceInfo();
 
   /// Event related interfaces.
   /// {
@@ -233,73 +229,18 @@ struct DeviceTy {
   int32_t destroyEvent(void *Event);
   /// }
 
-private:
-  // Call to RTL
-  void init(); // To be called only via DeviceTy::initOnce()
+  /// Register \p Entry as an offload entry that is avalable on this device.
+  void addOffloadEntry(OffloadEntryTy &Entry);
 
+  /// Print all offload entries to stderr.
+  void dumpOffloadEntries();
+
+private:
   /// Deinitialize the device (and plugin).
   void deinit();
+
+  /// All offload entries available on this device.
+  llvm::DenseMap<llvm::StringRef, OffloadEntryTy *> DeviceOffloadEntries;
 };
-
-extern bool deviceIsReady(int DeviceNum);
-
-/// Struct for the data required to handle plugins
-struct PluginManager {
-  PluginManager(bool UseEventsForAtomicTransfers)
-      : UseEventsForAtomicTransfers(UseEventsForAtomicTransfers) {}
-
-  /// RTLs identified on the host
-  RTLsTy RTLs;
-
-  /// Executable images and information extracted from the input images passed
-  /// to the runtime.
-  std::list<std::pair<__tgt_device_image, __tgt_image_info>> Images;
-
-  /// Devices associated with RTLs
-  llvm::SmallVector<std::unique_ptr<DeviceTy>> Devices;
-  std::mutex RTLsMtx; ///< For RTLs and Devices
-
-  /// Translation table retreived from the binary
-  HostEntriesBeginToTransTableTy HostEntriesBeginToTransTable;
-  std::mutex TrlTblMtx; ///< For Translation Table
-  /// Host offload entries in order of image registration
-  llvm::SmallVector<__tgt_offload_entry *> HostEntriesBeginRegistrationOrder;
-
-  /// Map from ptrs on the host to an entry in the Translation Table
-  HostPtrToTableMapTy HostPtrToTableMap;
-  std::mutex TblMapMtx; ///< For HostPtrToTableMap
-
-  // Store target policy (disabled, mandatory, default)
-  kmp_target_offload_kind_t TargetOffloadPolicy = tgt_default;
-  std::mutex TargetOffloadMtx; ///< For TargetOffloadPolicy
-
-  /// Flag to indicate if we use events to ensure the atomicity of
-  /// map clauses or not. Can be modified with an environment variable.
-  const bool UseEventsForAtomicTransfers;
-
-  // Work around for plugins that call dlopen on shared libraries that call
-  // tgt_register_lib during their initialisation. Stash the pointers in a
-  // vector until the plugins are all initialised and then register them.
-  bool delayRegisterLib(__tgt_bin_desc *Desc) {
-    if (RTLsLoaded)
-      return false;
-    DelayedBinDesc.push_back(Desc);
-    return true;
-  }
-
-  void registerDelayedLibraries() {
-    // Only called by libomptarget constructor
-    RTLsLoaded = true;
-    for (auto *Desc : DelayedBinDesc)
-      __tgt_register_lib(Desc);
-    DelayedBinDesc.clear();
-  }
-
-private:
-  bool RTLsLoaded = false;
-  llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
-};
-
-extern PluginManager *PM;
 
 #endif

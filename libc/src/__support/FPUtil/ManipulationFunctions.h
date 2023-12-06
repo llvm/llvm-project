@@ -186,8 +186,8 @@ LIBC_INLINE T nextafter(T from, U to) {
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 
-#ifdef SPECIAL_X86_LONG_DOUBLE
+#ifdef LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 #include "x86_64/NextAfterLongDouble.h"
-#endif // SPECIAL_X86_LONG_DOUBLE
+#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H
