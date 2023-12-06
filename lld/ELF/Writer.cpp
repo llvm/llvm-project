@@ -1730,14 +1730,12 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       if (!changed) {
         // scan all R_RISCV_JAL, R_RISCV_CALL/R_RISCV_CALL_PLT for RISCV Zcmt
         // Jump table.
-        if (in.riscvTableJumpSection) {
-          for (InputSectionBase *inputSection : ctx.inputSections) {
-            in.riscvTableJumpSection->scanTableJumpEntries(
-                cast<InputSection>(*inputSection));
-          }
-          in.riscvTableJumpSection->finalizeContents();
-          changed |= target->relaxOnce(pass);
+        for (InputSectionBase *inputSection : ctx.inputSections) {
+          in.riscvTableJumpSection->scanTableJumpEntries(
+              cast<InputSection>(*inputSection));
         }
+        in.riscvTableJumpSection->finalizeContents();
+        changed |= target->relaxOnce(pass);
       }
     }
 
@@ -1769,6 +1767,9 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   }
   if (!config->relocatable && config->emachine == EM_RISCV)
     riscvFinalizeRelax(pass);
+
+  if (config->riscvTbljal && in.riscvTableJumpSection->getSizeReduction() <= 0)
+    warn("Table Jump Relaxation didn't got any reduction for code size.");
 
   if (config->relocatable)
     for (OutputSection *sec : outputSections)
