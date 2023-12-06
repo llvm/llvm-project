@@ -19757,8 +19757,6 @@ RISCVTargetLowering::lowerVPPopcountExperimental(SDValue N,
   SDLoc DL(N);
   MVT XLenVT = Subtarget.getXLenVT();
 
-  bool IsUnMasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
-
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
     ContainerVT = getContainerForFixedLengthVector(VT);
