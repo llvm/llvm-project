@@ -39,7 +39,6 @@ add_clang_library(clangTidyModernizeModule
   UseNullptrCheck.cpp
   UseOverrideCheck.cpp
   UseStartsEndsWithCheck.cpp
-  UseStdNumbersCheck.cpp
   UseStdPrintCheck.cpp
   UseTrailingReturnTypeCheck.cpp
   UseTransparentFunctorsCheck.cpp
