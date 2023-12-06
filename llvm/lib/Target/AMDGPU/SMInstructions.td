@@ -451,8 +451,8 @@ def S_PREFETCH_DATA        : SM_Prefetch_Pseudo <"s_prefetch_data", SReg_64, 1>;
 def S_PREFETCH_DATA_PC_REL : SM_Prefetch_Pseudo <"s_prefetch_data_pc_rel", SReg_64, 0>;
 def S_BUFFER_PREFETCH_DATA : SM_Prefetch_Pseudo <"s_buffer_prefetch_data", SReg_128, 1> {
   let is_buffer = 1;
-} // end let SubtargetPredicate = isGFX12Plus
 }
+} // end let SubtargetPredicate = isGFX12Plus
 
 //===----------------------------------------------------------------------===//
 // Targets
