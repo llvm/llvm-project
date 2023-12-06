@@ -71,6 +71,13 @@ protected:
         << std::string{value->OffsetElement(), value->ElementBytes()};
   }
 
+  void CheckCharEqStr(const char *value, const std::string &expected) const {
+    ASSERT_NE(value, nullptr);
+    EXPECT_EQ(std::strncmp(value, expected.c_str(), expected.size()), 0)
+        << "expected: " << expected << "\n"
+        << "value: " << value;
+  }
+
   template <typename INT_T = std::int64_t>
   void CheckDescriptorEqInt(
       const Descriptor *value, const INT_T expected) const {
@@ -504,7 +511,7 @@ TEST_F(EnvironmentVariables, GetlogGetName) {
   FORTRAN_PROCEDURE_NAME(getlog)
   (reinterpret_cast<std::int8_t *>(input), charLen);
 
-  EXPECT_NE(input, "loginName");
+  CheckCharEqStr(input, "loginName");
 }
 
 TEST_F(EnvironmentVariables, GetlogBufferShort) {
@@ -514,7 +521,7 @@ TEST_F(EnvironmentVariables, GetlogBufferShort) {
   FORTRAN_PROCEDURE_NAME(getlog)
   (reinterpret_cast<std::int8_t *>(input), charLen);
 
-  EXPECT_NE(input, "loginN");
+  CheckCharEqStr(input, "loginN");
 }
 
 TEST_F(EnvironmentVariables, GetlogPadSpace) {
@@ -524,5 +531,5 @@ TEST_F(EnvironmentVariables, GetlogPadSpace) {
   FORTRAN_PROCEDURE_NAME(getlog)
   (reinterpret_cast<std::int8_t *>(input), charLen);
 
-  EXPECT_NE(input, "loginName ");
+  CheckCharEqStr(input, "loginName ");
 }
