@@ -524,7 +524,7 @@ def XCH_F    : FPI<0xD9, MRM1r, (outs), (ins RSTi:$op), "fxch\t$op">;
 }
 
 // Floating point constant loads.
-let SchedRW = [WriteZero], Uses = [FPCW] in {
+let SchedRW = [WriteZero], Uses = [FPCW], isReMaterializable = 1 in {
 def LD_Fp032 : FpIf32<(outs RFP32:$dst), (ins), ZeroArgFP,
                 [(set RFP32:$dst, fpimm0)]>;
 def LD_Fp132 : FpIf32<(outs RFP32:$dst), (ins), ZeroArgFP,
