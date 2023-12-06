@@ -2044,11 +2044,28 @@ defm SVREVD : SInstZPZ<"svrevd", "csilUcUsUiUl", "aarch64_sve_revd">;
 }
 
 let TargetGuard = "sve2p1|sme2" in {
-  def SVPTRUE_COUNT  : SInst<"svptrue_{d}", "}v", "QcQsQiQl", MergeNone, "aarch64_sve_ptrue_{d}", [IsOverloadNone, IsStreaming], []>;
+  //FIXME: Replace IsStreamingCompatible with IsStreamingOrHasSVE2p1 when available
+  def SVPTRUE_COUNT  : SInst<"svptrue_{d}", "}v", "QcQsQiQl", MergeNone, "aarch64_sve_ptrue_{d}", [IsOverloadNone, IsStreamingCompatible], []>;
+
   def SVPFALSE_COUNT_ALIAS : SInst<"svpfalse_c", "}v", "", MergeNone, "", [IsOverloadNone, IsStreamingCompatible]>;
 }
 
-////////////////////////////////////////////////////////////////////////////////
+let TargetGuard = "sve2p1,b16b16" in {
+defm SVMUL_BF  : SInstZPZZ<"svmul",  "b", "aarch64_sve_fmul",   "aarch64_sve_fmul_u">;
+defm SVADD_BF  : SInstZPZZ<"svadd",  "b", "aarch64_sve_fadd",   "aarch64_sve_fadd_u">;
+defm SVSUB_BF  : SInstZPZZ<"svsub",  "b", "aarch64_sve_fsub",   "aarch64_sve_fsub_u">;
+defm SVMAXNM_BF  : SInstZPZZ<"svmaxnm","b", "aarch64_sve_fmaxnm", "aarch64_sve_fmaxnm_u">;
+defm SVMINNM_BF  : SInstZPZZ<"svminnm","b", "aarch64_sve_fminnm", "aarch64_sve_fminnm_u">;
+defm SVMAX_BF    : SInstZPZZ<"svmax",  "b", "aarch64_sve_fmax",   "aarch64_sve_fmax_u">;
+defm SVMIN_BF    : SInstZPZZ<"svmin",  "b", "aarch64_sve_fmin",   "aarch64_sve_fmin_u">;
+defm SVMLA_BF  : SInstZPZZZ<"svmla",  "b", "aarch64_sve_fmla",  "aarch64_sve_fmla_u", []>;
+defm SVMLS_BF  : SInstZPZZZ<"svmls",  "b", "aarch64_sve_fmls",  "aarch64_sve_fmls_u", []>;
+def SVMLA_LANE_BF  : SInst<"svmla_lane[_{d}]",  "ddddi",  "b", MergeNone, "aarch64_sve_fmla_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMLS_LANE_BF  : SInst<"svmls_lane[_{d}]",  "ddddi",  "b", MergeNone, "aarch64_sve_fmls_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMUL_LANE_BF  : SInst<"svmul_lane[_{d}]", "dddi", "b", MergeNone, "aarch64_sve_fmul_lane", [], [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+def SVFCLAMP_BF   : SInst<"svclamp[_{d}]", "dddd", "b", MergeNone, "aarch64_sve_fclamp", [], []>;
+} //sve2p1,b16b16
+
 // SME2
 
 // SME intrinsics which operate only on vectors and do not require ZA should be added here,
