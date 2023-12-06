@@ -770,8 +770,15 @@ private:
       uint64_t LoopTripCount, uint32_t ThreadLimitClause[3]) const override {
     uint32_t NumThreads = BlockSize;
 
-    // If there is an override already, do nothing
-    if (NumThreads != GenericDevice.getDefaultNumThreads() &&
+    // If there is an override already, do nothing. Note the different
+    // default for Xteam Reductions.
+    if (!isXTeamReductionsMode() &&
+        NumThreads != GenericDevice.getDefaultNumThreads() &&
+        NumThreads != ConstWGSize)
+      return std::make_pair(false, NumThreads);
+
+    if (isXTeamReductionsMode() &&
+        NumThreads != llvm::omp::xteam_red::DefaultBlockSize &&
         NumThreads != ConstWGSize)
       return std::make_pair(false, NumThreads);
 
@@ -788,13 +795,21 @@ private:
     if ((ThreadLimitClause[0] > 0) && (ThreadLimitClause[0] != (uint32_t)-1))
       return std::make_pair(false, NumThreads);
 
-    // If generic, generic-SPMD, or Xteam reduction kernel, do nothing.
-    if (isGenericMode() || isGenericSPMDMode() || isXTeamReductionsMode())
+    // If generic or generic-SPMD kernel, do nothing.
+    if (isGenericMode() || isGenericSPMDMode())
       return std::make_pair(false, NumThreads);
 
     // Reduce the blocksize as long as it is above the tunable limit.
     while (NumThreads > GenericDevice.getOMPXSmallBlockSize())
       NumThreads >>= 1;
+
+    if (NumThreads == 0)
+      return std::make_pair(false, BlockSize);
+
+    if (isXTeamReductionsMode())
+      return std::make_pair(true,
+                            llvm::omp::getBlockSizeAsPowerOfTwo(NumThreads));
+
     return std::make_pair(true, NumThreads);
   }
 
