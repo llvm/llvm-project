@@ -240,18 +240,18 @@ public:
   /// dereferenceable).
   /// If the inversion will consume instructions, `DoesConsume` will be set to
   /// true. Otherwise it will be false.
-  static Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
+  Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
                                       BuilderTy *Builder, bool &DoesConsume,
                                       unsigned Depth);
 
-  static Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
+  Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
                                   BuilderTy *Builder, bool &DoesConsume) {
     DoesConsume = false;
     return getFreelyInvertedImpl(V, WillInvertAllUses, Builder, DoesConsume,
                                  /*Depth*/ 0);
   }
 
-  static Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
+  Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
                                   BuilderTy *Builder) {
     bool Unused;
     return getFreelyInverted(V, WillInvertAllUses, Builder, Unused);
@@ -263,13 +263,13 @@ public:
   /// uses of V and only keep uses of ~V.
   ///
   /// See also: canFreelyInvertAllUsersOf()
-  static bool isFreeToInvert(Value *V, bool WillInvertAllUses,
+  bool isFreeToInvert(Value *V, bool WillInvertAllUses,
                              bool &DoesConsume) {
     return getFreelyInverted(V, WillInvertAllUses, /*Builder*/ nullptr,
                              DoesConsume) != nullptr;
   }
 
-  static bool isFreeToInvert(Value *V, bool WillInvertAllUses) {
+  bool isFreeToInvert(Value *V, bool WillInvertAllUses) {
     bool Unused;
     return isFreeToInvert(V, WillInvertAllUses, Unused);
   }
@@ -279,7 +279,7 @@ public:
   /// NOTE: for Instructions only!
   ///
   /// See also: isFreeToInvert()
-  static bool canFreelyInvertAllUsersOf(Instruction *V, Value *IgnoredUser) {
+  bool canFreelyInvertAllUsersOf(Instruction *V, Value *IgnoredUser) {
     // Look at every user of V.
     for (Use &U : V->uses()) {
       if (U.getUser() == IgnoredUser)

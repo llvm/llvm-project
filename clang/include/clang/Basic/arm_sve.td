@@ -2115,6 +2115,21 @@ let TargetGuard = "sme2" in {
 // == ADD (vectors) ==
   def SVADD_SINGLE_X2 : SInst<"svadd[_single_{d}_x2]", "22d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x2", [IsStreaming], []>;
   def SVADD_SINGLE_X4 : SInst<"svadd[_single_{d}_x4]", "44d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x4", [IsStreaming], []>;
+
+  // 2-way and 4-way selects
+  def SVSEL_X2  : SInst<"svsel[_{d}_x2]", "2}22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_sel_x2", [IsStreaming], []>;
+  def SVSEL_X4  : SInst<"svsel[_{d}_x4]", "4}44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_sel_x4", [IsStreaming], []>;
+
+  // SRSHL / URSHL
+  def SVSRSHL_SINGLE_X2 : SInst<"svrshl[_single_{d}_x2]", "22d", "csil",     MergeNone, "aarch64_sve_srshl_single_x2", [IsStreaming], []>;
+  def SVURSHL_SINGLE_X2 : SInst<"svrshl[_single_{d}_x2]", "22d", "UcUsUiUl", MergeNone, "aarch64_sve_urshl_single_x2", [IsStreaming], []>;
+  def SVSRSHL_SINGLE_X4 : SInst<"svrshl[_single_{d}_x4]", "44d", "csil",     MergeNone, "aarch64_sve_srshl_single_x4", [IsStreaming], []>;
+  def SVURSHL_SINGLE_X4 : SInst<"svrshl[_single_{d}_x4]", "44d", "UcUsUiUl", MergeNone, "aarch64_sve_urshl_single_x4", [IsStreaming], []>;
+
+  def SVSRSHL_X2 : SInst<"svrshl[_{d}_x2]", "222", "csil",     MergeNone, "aarch64_sve_srshl_x2", [IsStreaming], []>;
+  def SVURSHL_X2 : SInst<"svrshl[_{d}_x2]", "222", "UcUsUiUl", MergeNone, "aarch64_sve_urshl_x2", [IsStreaming], []>;
+  def SVSRSHL_X4 : SInst<"svrshl[_{d}_x4]", "444", "csil",     MergeNone, "aarch64_sve_srshl_x4", [IsStreaming], []>;
+  def SVURSHL_X4 : SInst<"svrshl[_{d}_x4]", "444", "UcUsUiUl", MergeNone, "aarch64_sve_urshl_x4", [IsStreaming], []>;
 }
 
 let TargetGuard = "sve2p1" in {

@@ -489,6 +489,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                                                 SS->getScopeRep(), &II);
       TypeLocBuilder TLB;
       DependentNameTypeLoc TL = TLB.push<DependentNameTypeLoc>(T);
+      TL.setElaboratedKeywordLoc(SourceLocation());
       TL.setQualifierLoc(SS->getWithLocInContext(Context));
       TL.setNameLoc(NameLoc);
       return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
@@ -16445,9 +16446,6 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
   if (FD && !FD->isDeleted())
     checkTypeSupport(FD->getType(), FD->getLocation(), FD);
-
-  if (FD && FD->isConstexpr() && FD->isTemplated())
-    PerformPendingInstantiationsOfConstexprFunctions(FD);
 
   return dcl;
 }

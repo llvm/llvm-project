@@ -342,7 +342,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
       // field. Virtual bases are more complex and omitted, but avoid an
       // incomplete view for NewStructPathTBAA.
       if (CodeGenOpts.NewStructPathTBAA && CXXRD->getNumVBases() != 0)
-        return BaseTypeMetadataCache[Ty] = nullptr;
+        return nullptr;
       for (const CXXBaseSpecifier &B : CXXRD->bases()) {
         if (B.isVirtual())
           continue;
@@ -354,7 +354,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
                                      ? getBaseTypeInfo(BaseQTy)
                                      : getTypeInfo(BaseQTy);
         if (!TypeNode)
-          return BaseTypeMetadataCache[Ty] = nullptr;
+          return nullptr;
         uint64_t Offset = Layout.getBaseClassOffset(BaseRD).getQuantity();
         uint64_t Size =
             Context.getASTRecordLayout(BaseRD).getDataSize().getQuantity();
@@ -378,7 +378,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
       llvm::MDNode *TypeNode = isValidBaseType(FieldQTy) ?
           getBaseTypeInfo(FieldQTy) : getTypeInfo(FieldQTy);
       if (!TypeNode)
-        return BaseTypeMetadataCache[Ty] = nullptr;
+        return nullptr;
 
       uint64_t BitOffset = Layout.getFieldOffset(Field->getFieldIndex());
       uint64_t Offset = Context.toCharUnitsFromBits(BitOffset).getQuantity();
@@ -418,14 +418,20 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
     return nullptr;
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
-  if (llvm::MDNode *N = BaseTypeMetadataCache[Ty])
-    return N;
 
-  // Note that the following helper call is allowed to add new nodes to the
-  // cache, which invalidates all its previously obtained iterators. So we
-  // first generate the node for the type and then add that node to the cache.
+  // nullptr is a valid value in the cache, so use find rather than []
+  auto I = BaseTypeMetadataCache.find(Ty);
+  if (I != BaseTypeMetadataCache.end())
+    return I->second;
+
+  // First calculate the metadata, before recomputing the insertion point, as
+  // the helper can recursively call us.
   llvm::MDNode *TypeNode = getBaseTypeInfoHelper(Ty);
-  return BaseTypeMetadataCache[Ty] = TypeNode;
+  LLVM_ATTRIBUTE_UNUSED auto inserted =
+      BaseTypeMetadataCache.insert({Ty, TypeNode});
+  assert(inserted.second && "BaseType metadata was already inserted");
+
+  return TypeNode;
 }
 
 llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {

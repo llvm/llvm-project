@@ -1957,12 +1957,14 @@ bool hasGDS(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGDS);
 }
 
-unsigned getNSAMaxSize(const MCSubtargetInfo &STI) {
+unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
   auto Version = getIsaVersion(STI.getCPU());
   if (Version.Major == 10)
     return Version.Minor >= 3 ? 13 : 5;
   if (Version.Major == 11)
     return 5;
+  if (Version.Major >= 12)
+    return HasSampler ? 4 : 5;
   return 0;
 }
 
@@ -2602,6 +2604,9 @@ static bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
 
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset) {
+  if (isGFX12Plus(ST))
+    return isUInt<23>(EncodedOffset);
+
   return hasSMEMByteOffset(ST) ? isUInt<20>(EncodedOffset)
                                : isUInt<8>(EncodedOffset);
 }
@@ -2609,6 +2614,9 @@ bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
 bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
                                     int64_t EncodedOffset,
                                     bool IsBuffer) {
+  if (isGFX12Plus(ST))
+    return isInt<24>(EncodedOffset);
+
   return !IsBuffer &&
          hasSMRDSignedImmOffset(ST) &&
          isInt<21>(EncodedOffset);
@@ -2629,6 +2637,10 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST,
 
 std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
                                             int64_t ByteOffset, bool IsBuffer) {
+  if (isGFX12Plus(ST)) // 24 bit signed offsets
+    return isInt<24>(ByteOffset) ? std::optional<int64_t>(ByteOffset)
+                                 : std::nullopt;
+
   // The signed version is always a byte offset.
   if (!IsBuffer && hasSMRDSignedImmOffset(ST)) {
     assert(hasSMEMByteOffset(ST));
