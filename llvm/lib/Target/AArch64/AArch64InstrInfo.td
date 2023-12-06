@@ -817,7 +817,7 @@ def AArch64saddlp   : PatFrags<(ops node:$src),
 def AArch64faddp     : PatFrags<(ops node:$Rn, node:$Rm),
                                 [(AArch64addp_n node:$Rn, node:$Rm),
                                  (int_aarch64_neon_faddp node:$Rn, node:$Rm)]>;
-def AArch64roundingvlshr : ComplexPattern<vAny, 2, "SelectRoundingVLShr", [AArch64vlshr]>;
+def AArch64roundingvlshr : ComplexPattern<vAny, 2, "SelectRoundingVLShr", [AArch64vlshr, AArch64urshri]>;
 def AArch64rshrn : PatFrags<(ops node:$LHS, node:$RHS),
                             [(trunc (AArch64roundingvlshr node:$LHS, node:$RHS)),
                              (int_aarch64_neon_rshrn node:$LHS, node:$RHS)]>;
