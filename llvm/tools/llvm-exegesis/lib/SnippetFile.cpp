@@ -133,8 +133,15 @@ public:
     }
     if (CommentText.consume_front("SNIPPET-ADDRESS")) {
       // LLVM-EXEGESIS-SNIPPET-ADDRESS <address>
-      Result->Key.SnippetAddress =
-          std::stol(CommentText.trim().str(), nullptr, 16);
+      if (!to_integer<intptr_t>(CommentText.trim(), Result->Key.SnippetAddress,
+                                16)) {
+        errs() << "invalid comment 'LLVM-EXEGESIS-SNIPPET-ADDRESS "
+               << CommentText
+               << "', expected <ADDRESS> to contain a valid integer in "
+                  "hexadecimal format";
+        ++InvalidComments;
+        return;
+      }
       return;
     }
   }
