@@ -79,6 +79,7 @@
 #include "llvm/CodeGen/HardwareLoops.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/TypePromotion.h"
+#include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
