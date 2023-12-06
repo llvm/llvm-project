@@ -3464,6 +3464,16 @@ void LLVMSetNNeg(LLVMValueRef NonNegInst, LLVMBool IsNonNeg) {
   cast<Instruction>(P)->setNonNeg(IsNonNeg);
 }
 
+LLVMBool LLVMGetIsDisjoint(LLVMValueRef Inst) {
+  Value *P = unwrap<Value>(Inst);
+  return cast<PossiblyDisjointInst>(P)->isDisjoint();
+}
+
+void LLVMSetIsDisjoint(LLVMValueRef Inst, LLVMBool IsDisjoint) {
+  Value *P = unwrap<Value>(Inst);
+  cast<PossiblyDisjointInst>(P)->setIsDisjoint(IsDisjoint);
+}
+
 /*--.. Memory ..............................................................--*/
 
 LLVMValueRef LLVMBuildMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,

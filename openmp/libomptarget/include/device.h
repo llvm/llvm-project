@@ -51,8 +51,6 @@ struct DeviceTy {
   PluginAdaptorTy *RTL;
   int32_t RTLDeviceID;
 
-  bool IsInit;
-  std::once_flag InitFlag;
   bool HasMappedGlobalData = false;
 
   /// Host data to device map type with a wrapper key indirection that allows
@@ -72,12 +70,15 @@ struct DeviceTy {
 
   std::mutex PendingGlobalsMtx;
 
-  DeviceTy(PluginAdaptorTy *RTL);
+  DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
   DeviceTy &operator=(const DeviceTy &D) = delete;
 
   ~DeviceTy();
+
+  /// Try to initialize the device and return any failure.
+  llvm::Error init();
 
   // Return true if data can be copied to DstDevice directly
   bool isDataExchangable(const DeviceTy &DstDevice);
@@ -145,8 +146,6 @@ struct DeviceTy {
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
 
-  // calls to RTL
-  int32_t initOnce();
   __tgt_target_table *loadBinary(__tgt_device_image *Img);
 
   // device memory allocation/deallocation routines
@@ -170,11 +169,14 @@ struct DeviceTy {
   // Copy data from host to device
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
-                     HostDataToTargetTy *Entry = nullptr);
+                     HostDataToTargetTy *Entry = nullptr,
+                     DeviceTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                        AsyncInfoTy &AsyncInfo,
-                       HostDataToTargetTy *Entry = nullptr);
+                       HostDataToTargetTy *Entry = nullptr,
+                       DeviceTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+
   // Copy data from current device to destination device directly
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
@@ -234,9 +236,6 @@ struct DeviceTy {
   void dumpOffloadEntries();
 
 private:
-  // Call to RTL
-  void init(); // To be called only via DeviceTy::initOnce()
-
   /// Deinitialize the device (and plugin).
   void deinit();
 

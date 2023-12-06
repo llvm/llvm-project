@@ -603,15 +603,20 @@ public:
     // getSubtargetInfo() cannot be used where this is needed, because we don't
     // have a MachineFunction when we're lowering a GlobalIFunc, and
     // getSubtargetInfo requires one.
-    llvm_unreachable("Mach-O IFunc lowering is not yet supported on this target");
+    llvm_unreachable(
+        "Mach-O IFunc lowering is not yet supported on this target");
   }
 
-  virtual void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) {
-    llvm_unreachable("Mach-O IFunc lowering is not yet supported on this target");
+  virtual void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
+                                      MCSymbol *LazyPointer) {
+    llvm_unreachable(
+        "Mach-O IFunc lowering is not yet supported on this target");
   }
 
-  virtual void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) {
-    llvm_unreachable("Mach-O IFunc lowering is not yet supported on this target");
+  virtual void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI,
+                                            MCSymbol *LazyPointer) {
+    llvm_unreachable(
+        "Mach-O IFunc lowering is not yet supported on this target");
   }
 
   /// Emit N NOP instructions.
