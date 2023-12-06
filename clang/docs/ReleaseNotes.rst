@@ -658,9 +658,6 @@ Bug Fixes in This Version
   Fixes (`#64467 <https://github.com/llvm/llvm-project/issues/64467>`_)
 - Clang's ``-Wchar-subscripts`` no longer warns on chars whose values are known non-negative constants.
   Fixes (`#18763 <https://github.com/llvm/llvm-project/issues/18763>`_)
-- Fixed false positive error emitted when templated alias inside a class
-  used private members of the same class.
-  Fixes (`#41693 <https://github.com/llvm/llvm-project/issues/41693>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

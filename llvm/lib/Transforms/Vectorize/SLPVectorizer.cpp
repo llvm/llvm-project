@@ -5466,7 +5466,8 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
     VFShape Shape = VFShape::get(
-        *CI, ElementCount::getFixed(static_cast<unsigned int>(VL.size())),
+        CI->getFunctionType(),
+        ElementCount::getFixed(static_cast<unsigned int>(VL.size())),
         false /*HasGlobalPred*/);
     Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
 
@@ -6461,8 +6462,8 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
   auto IntrinsicCost =
     TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
 
-  auto Shape = VFShape::get(*CI, ElementCount::getFixed(static_cast<unsigned>(
-                                     VecTy->getNumElements())),
+  auto Shape = VFShape::get(CI->getFunctionType(),
+                            ElementCount::getFixed(VecTy->getNumElements()),
                             false /*HasGlobalPred*/);
   Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
   auto LibCost = IntrinsicCost;
@@ -11643,8 +11644,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Function *CF;
       if (!UseIntrinsic) {
         VFShape Shape =
-            VFShape::get(*CI, ElementCount::getFixed(static_cast<unsigned>(
-                                  VecTy->getNumElements())),
+            VFShape::get(CI->getFunctionType(),
+                         ElementCount::getFixed(
+                             static_cast<unsigned>(VecTy->getNumElements())),
                          false /*HasGlobalPred*/);
         CF = VFDatabase(*CI).getVectorizedFunction(Shape);
       } else {
