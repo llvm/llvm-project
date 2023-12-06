@@ -40,44 +40,44 @@ enum class FPEncoding {
 template <FPType> struct FPBaseProperties {};
 
 template <> struct FPBaseProperties<FPType::IEEE754_Binary16> {
+  using UIntType = uint16_t;
   LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 16;
   LIBC_INLINE_VAR static constexpr int SIG_BITS = 10;
   LIBC_INLINE_VAR static constexpr int EXP_BITS = 5;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
-  using UIntType = uint16_t;
 };
 
 template <> struct FPBaseProperties<FPType::IEEE754_Binary32> {
+  using UIntType = uint32_t;
   LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 32;
   LIBC_INLINE_VAR static constexpr int SIG_BITS = 23;
   LIBC_INLINE_VAR static constexpr int EXP_BITS = 8;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
-  using UIntType = uint32_t;
 };
 
 template <> struct FPBaseProperties<FPType::IEEE754_Binary64> {
+  using UIntType = uint64_t;
   LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 64;
   LIBC_INLINE_VAR static constexpr int SIG_BITS = 52;
   LIBC_INLINE_VAR static constexpr int EXP_BITS = 11;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
-  using UIntType = uint64_t;
 };
 
 template <> struct FPBaseProperties<FPType::IEEE754_Binary128> {
+  using UIntType = UInt128;
   LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 128;
   LIBC_INLINE_VAR static constexpr int SIG_BITS = 112;
   LIBC_INLINE_VAR static constexpr int EXP_BITS = 15;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
-  using UIntType = UInt128;
 };
 
 template <> struct FPBaseProperties<FPType::X86_Binary80> {
   LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 80;
+  using UIntType = UInt128;
   LIBC_INLINE_VAR static constexpr int SIG_BITS = 64;
   LIBC_INLINE_VAR static constexpr int EXP_BITS = 15;
   LIBC_INLINE_VAR static constexpr auto ENCODING =
       FPEncoding::X86_ExtendedPrecision;
-  using UIntType = UInt128;
 };
 
 // Derives more properties from 'FPBaseProperties' above.
