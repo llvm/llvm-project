@@ -28,12 +28,6 @@ TEST_CONSTEXPR_CXX20 void test_string() {
     assert(s == "abc");
     LIBCPP_ASSERT(is_string_asan_correct(s));
   }
-  {
-    std::basic_string<char, std::char_traits<char>, Alloc<char> > s;
-    s = {'a', 'b', 'c'};
-    assert(s == "abc");
-    LIBCPP_ASSERT(is_string_asan_correct(s));
-  }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   {
     std::basic_string<wchar_t, std::char_traits<wchar_t>, Alloc<wchar_t> > s = {L'a', L'b', L'c'};

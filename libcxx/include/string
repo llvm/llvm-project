@@ -937,9 +937,8 @@ public:
       _NOEXCEPT
 #  endif
       // Turning off ASan instrumentation for variable initialization with _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS
-      // is inconsistent and that initialization may be annotated.
-      // Therefore, to copy __str memory, we have to unpoison it first (if object is poisoned and not external buffer,
-      // so only the short string case).
+      // does not work consistently during initialization of __r_, so we instead unpoison __str's memory manually first.
+      // __str's memory needs to be unpoisoned only in the case where it's a short string.
       : __r_( ( (__str.__is_long() ? 0 : (__str.__annotate_delete(), 0)), std::move(__str.__r_)) ) {
     __str.__r_.first() = __rep();
   }

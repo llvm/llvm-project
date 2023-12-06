@@ -34,6 +34,18 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(s == "ab");
     LIBCPP_ASSERT(is_string_asan_correct(s));
   }
+  {
+    std::string s = "Hello world! Hello world! Hello world! Hello world! Hello world!";
+    s             = {"abc", 2};
+    assert(s == "ab");
+    LIBCPP_ASSERT(is_string_asan_correct(s));
+  }
+  {
+    std::string s = "Hello world! Hello world! Hello world! Hello world! Hello world!";
+    s             = {"abc", 0};
+    assert(s == "");
+    LIBCPP_ASSERT(is_string_asan_correct(s));
+  }
 
   return true;
 }

@@ -25,6 +25,14 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   s += {'a', 'b', 'c'};
   assert(s == "123abc");
   LIBCPP_ASSERT(is_string_asan_correct(s));
+
+  s += {'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'};
+  assert(s == "123abcxxxxxxxxxxxxxxxx");
+  LIBCPP_ASSERT(is_string_asan_correct(s));
+
+  s += {'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'};
+  assert(s == "123abcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+  LIBCPP_ASSERT(is_string_asan_correct(s));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {

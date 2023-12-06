@@ -8,6 +8,10 @@
 
 // <string>
 
+// This test validates that ASan annotations are correctly updated after swaps.
+// This test meticulously interchanges objects that store data both within their internal memory (Short
+// String Optimization) and in external buffers (non-SSO).
+
 #include <string>
 #include <cassert>
 

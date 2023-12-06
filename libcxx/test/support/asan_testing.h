@@ -73,20 +73,18 @@ template <typename ChrT, typename TraitsT, typename Alloc>
 TEST_CONSTEXPR bool is_string_asan_correct(const std::basic_string<ChrT, TraitsT, Alloc>& c) {
   if (TEST_IS_CONSTANT_EVALUATED)
     return true;
-  if (c.data() != NULL) {
-    if (!is_string_short(c) || _LIBCPP_SHORT_STRING_ANNOTATIONS_ALLOWED) {
-      if (std::is_same<Alloc, std::allocator<ChrT>>::value)
-        return __sanitizer_verify_contiguous_container(
-                   c.data(), c.data() + c.size() + 1, c.data() + c.capacity() + 1) != 0;
-      else
-        return __sanitizer_verify_contiguous_container(
-                   c.data(), c.data() + c.capacity() + 1, c.data() + c.capacity() + 1) != 0;
-    } else {
-      return __sanitizer_verify_contiguous_container(std::addressof(c), std::addressof(c) + 1, std::addressof(c) + 1) !=
+
+  if (!is_string_short(c) || _LIBCPP_SHORT_STRING_ANNOTATIONS_ALLOWED) {
+    if (std::is_same<Alloc, std::allocator<ChrT>>::value)
+      return __sanitizer_verify_contiguous_container(c.data(), c.data() + c.size() + 1, c.data() + c.capacity() + 1) !=
              0;
-    }
+    else
+      return __sanitizer_verify_contiguous_container(
+                 c.data(), c.data() + c.capacity() + 1, c.data() + c.capacity() + 1) != 0;
+  } else {
+    return __sanitizer_verify_contiguous_container(std::addressof(c), std::addressof(c) + 1, std::addressof(c) + 1) !=
+           0;
   }
-  return true;
 }
 #else
 #  include <string>

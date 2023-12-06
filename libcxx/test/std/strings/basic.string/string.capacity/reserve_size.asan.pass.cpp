@@ -8,6 +8,9 @@
 
 // <string>
 
+// This test verifies that the ASan annotations for basic_string objects remain accurate
+// after invoking basic_string::reserve(size_type __requested_capacity).
+// Different types are used to confirm that ASan works correctly with types of different sizes.
 #include <string>
 #include <cassert>
 
@@ -22,25 +25,19 @@ void test() {
 
   LIBCPP_ASSERT(is_string_asan_correct(short_s1));
   LIBCPP_ASSERT(is_string_asan_correct(long_s1));
-#if TEST_STD_VER >= 11
-  short_s1.shrink_to_fit();
-  long_s1.shrink_to_fit();
 
-  LIBCPP_ASSERT(is_string_asan_correct(short_s1));
-  LIBCPP_ASSERT(is_string_asan_correct(long_s1));
-#endif
   short_s1.clear();
   long_s1.clear();
 
   LIBCPP_ASSERT(is_string_asan_correct(short_s1));
   LIBCPP_ASSERT(is_string_asan_correct(long_s1));
-#if TEST_STD_VER >= 11
-  short_s1.shrink_to_fit();
-  long_s1.shrink_to_fit();
+
+  short_s1.reserve(0x1);
+  long_s1.reserve(0x1);
 
   LIBCPP_ASSERT(is_string_asan_correct(short_s1));
   LIBCPP_ASSERT(is_string_asan_correct(long_s1));
-#endif
+
   S short_s2(3, 'a'), long_s2(100, 'c');
   short_s2.reserve(0x1);
   long_s2.reserve(0x1);
