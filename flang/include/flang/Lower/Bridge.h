@@ -22,6 +22,10 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 
+namespace llvm {
+class DataLayout;
+} // namespace llvm
+
 namespace Fortran {
 namespace common {
 class IntrinsicTypeDefaultKinds;
@@ -59,10 +63,12 @@ public:
          llvm::StringRef triple, fir::KindMapping &kindMap,
          const Fortran::lower::LoweringOptions &loweringOptions,
          const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
-         const Fortran::common::LanguageFeatureControl &languageFeatures) {
+         const Fortran::common::LanguageFeatureControl &languageFeatures,
+         const llvm::DataLayout *dataLayout = nullptr) {
     return LoweringBridge(ctx, semanticsContext, defaultKinds, intrinsics,
                           targetCharacteristics, allCooked, triple, kindMap,
-                          loweringOptions, envDefaults, languageFeatures);
+                          loweringOptions, envDefaults, languageFeatures,
+                          dataLayout);
   }
 
   //===--------------------------------------------------------------------===//
@@ -140,7 +146,8 @@ private:
       fir::KindMapping &kindMap,
       const Fortran::lower::LoweringOptions &loweringOptions,
       const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
-      const Fortran::common::LanguageFeatureControl &languageFeatures);
+      const Fortran::common::LanguageFeatureControl &languageFeatures,
+      const llvm::DataLayout *dataLayout);
   LoweringBridge() = delete;
   LoweringBridge(const LoweringBridge &) = delete;
 

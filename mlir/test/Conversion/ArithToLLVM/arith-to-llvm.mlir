@@ -330,6 +330,7 @@ func.func @fcmp(f32, f32) -> () {
   // CHECK-NEXT: llvm.fcmp "ule" %arg0, %arg1 : f32
   // CHECK-NEXT: llvm.fcmp "une" %arg0, %arg1 : f32
   // CHECK-NEXT: llvm.fcmp "uno" %arg0, %arg1 : f32
+  // CHECK-NEXT: llvm.fcmp "oeq" %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
   // CHECK-NEXT: return
   %1 = arith.cmpf oeq, %arg0, %arg1 : f32
   %2 = arith.cmpf ogt, %arg0, %arg1 : f32
@@ -345,6 +346,8 @@ func.func @fcmp(f32, f32) -> () {
   %12 = arith.cmpf ule, %arg0, %arg1 : f32
   %13 = arith.cmpf une, %arg0, %arg1 : f32
   %14 = arith.cmpf uno, %arg0, %arg1 : f32
+
+  %15 = arith.cmpf oeq, %arg0, %arg1 {fastmath = #arith.fastmath<fast>} : f32
 
   return
 }

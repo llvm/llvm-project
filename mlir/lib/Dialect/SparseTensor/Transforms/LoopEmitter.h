@@ -19,31 +19,9 @@
 namespace mlir {
 namespace sparse_tensor {
 
-//===----------------------------------------------------------------------===//
-/// The position of a loop in the loop-stack, or the position of a
-/// `LoopId` in a topologically-sorted list of `LoopId`s.
-///
-/// Although this type may have the same cardinality as `LoopId`, it must
-/// not be confused with that type.  The `LoopId` type is used by the `Merger`
-/// as a unique identifier for loop-variables, regardless of the ordering
-/// of those loops.  Whereas the `LoopOrd` type is used by the `LoopEmitter`
-/// (and `CodegenEnv`) to refer to the actual order in which loops are
-/// generated.
-///
-/// TODO: further explicate the correspondences between these various
-/// types.  In particular, since the `$dim` argument to `linalg::IndexOp`
-/// is a De Bruijn index, it seems like that should correspond to `LoopOrd`,
-/// and yet the `Merger` has that correspond with `LoopId` instead.
-/// In addition `LoopEmitter::genAffine` has `AffineDimExpr::position`
-/// correspond to `LoopId`, however it is unclear what the providence
-/// of those `AffineDimExpr` is.
-//
-// TODO: use a struct/class rather than a typedef, so that we can actually
-// typecheck this to avoid mixups in the code.
-using LoopOrd = unsigned;
-
 // A compressed <tensor id, level> pair.
 using TensorLevel = unsigned;
+
 //===----------------------------------------------------------------------===//
 // SparseTensorLoopEmiter class, manages sparse tensors and helps to
 // generate loop structure to (co)-iterate sparse tensors.
@@ -108,9 +86,7 @@ public:
   /// to the position of that tensor `Value` in the array).  Setting
   /// `isSparseOut` indicates that the sparse output tensor is empty,
   /// so the loop emitter will generate loops over it according to the
-  /// level-sizes.  The `topSort` array specifies the actual order in
-  /// which loops are generated, thus providing a mapping from `LoopOrd`
-  /// to `LoopId`.
+  /// level-sizes.
   void initialize(ValueRange tensors, StringAttr loopTag = nullptr,
                   bool hasOutput = false, bool isSparseOut = false,
                   unsigned numLoops = 0, DependentLvlGetter getter = nullptr);
@@ -193,21 +169,16 @@ public:
   }
 
   /// Fills the out-parameter with the loop induction variables for all
-  /// loops in the current loop-stack.  The variables are given in the
-  /// same order as the loop-stack, hence `ivs` should be indexed into
-  /// by `LoopOrd` (not `LoopId`).
+  /// loops in the current loop-stack.
   SmallVector<Value> getLoopIVs() const {
     return llvm::to_vector(getLoopIVsRange());
   }
 
-  /// Gets the current depth of the loop-stack.  The result is given
-  /// the type `LoopOrd` for the same reason as one-past-the-end iterators.
-  LoopOrd getCurrentDepth() const {
-    return llvm::range_size(getLoopIVsRange());
-  }
+  /// Gets the current depth of the loop-stack.
+  LoopId getCurrentDepth() const { return llvm::range_size(getLoopIVsRange()); }
 
-  /// Gets loop induction variable for the given `LoopOrd`.
-  Value getLoopIV(LoopOrd n) const {
+  /// Gets loop induction variable for the given loop
+  Value getLoopIV(LoopId n) const {
     if (n >= getCurrentDepth())
       return Value();
     auto it = getLoopIVsRange().begin();
