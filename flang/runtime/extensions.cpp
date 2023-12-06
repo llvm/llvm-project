@@ -40,22 +40,20 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 
 // CALL GETLOG(USRNAME)
 void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *arg, std::int64_t length) {
-  //Get environment variable LOGNAME
+  // get username from environment variable
+#ifdef _WIN32
+  const int charLen = 9;
+  char envName[charLen] = "USERNAME";
+#else
   const int charLen = 8;
   char envName[charLen] = "LOGNAME";
+#endif
   std::size_t n{std::strlen(envName)};
   Descriptor name{*Descriptor::Create(1, n, envName, 0)};
-  std::memcpy(name.OffsetElement(), envName, n);
-
   Descriptor value{*Descriptor::Create(1, length, arg, 0)};
 
   RTNAME(GetEnvVariable)
   (name, &value, nullptr, false, nullptr, __FILE__, __LINE__);
-
-  std::memcpy(reinterpret_cast<char *>(arg), value.OffsetElement(), length);
-
-  // find first \0 in string then pad from there
-  // CopyAndPad(reinterpret_cast<char *>(arg), value.OffsetElement(), length, value.ElementBytes());
 }
 
 } // namespace Fortran::runtime

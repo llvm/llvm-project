@@ -405,7 +405,11 @@ class EnvironmentVariables : public CommandFixture {
 protected:
   EnvironmentVariables() : CommandFixture(0, nullptr) {
     SetEnv("NAME", "VALUE");
+#ifdef _WIN32
+    SetEnv("USERNAME", "loginName");
+#else
     SetEnv("LOGNAME", "loginName");
+#endif
     SetEnv("EMPTY", "");
   }
 
