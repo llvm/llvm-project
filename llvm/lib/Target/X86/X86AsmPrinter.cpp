@@ -532,47 +532,14 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
   O << ']';
 }
 
-void X86AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
-  if (!TM.getTargetTriple().isOSBinFormatMachO())
-    return AsmPrinter::emitGlobalIFunc(M, GI);
+const MCSubtargetInfo &X86AsmPrinter::getMachOSubtargetInfo() const {
+  assert(Subtarget);
+  return *Subtarget;
+}
 
-  auto EmitLinkage = [&](MCSymbol *Sym) {
-    if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
-      OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
-    else if (GI.hasWeakLinkage() || GI.hasLinkOnceLinkage())
-      OutStreamer->emitSymbolAttribute(Sym, MCSA_WeakReference);
-    else
-      assert(GI.hasLocalLinkage() && "Invalid ifunc linkage");
-  };
-
-  MCSymbol *LazyPointer =
-      TM.getObjFileLowering()->getContext().getOrCreateSymbol(
-          "_" + GI.getName() + ".lazy_pointer");
-  MCSymbol *StubHelper =
-      TM.getObjFileLowering()->getContext().getOrCreateSymbol(
-          "_" + GI.getName() + ".stub_helper");
-
-  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getDataSection());
-
-  // _ifunc.lazy_pointer:
-  //  .quad _ifunc.stub_helper
-
-  EmitLinkage(LazyPointer);
-  OutStreamer->emitValueToAlignment(Align(8), /*Value=*/0);
-  OutStreamer->emitLabel(LazyPointer);
-  emitVisibility(LazyPointer, GI.getVisibility());
-  OutStreamer->emitValue(MCSymbolRefExpr::create(StubHelper, OutContext), 8);
-
-  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getTextSection());
-
+void X86AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) {
   // _ifunc:
   //   jmpq *lazy_pointer(%rip)
-
-  MCSymbol *Stub = getSymbol(&GI);
-  EmitLinkage(Stub);
-  OutStreamer->emitCodeAlignment(Align(16), Subtarget);
-  OutStreamer->emitLabel(Stub);
-  emitVisibility(Stub, GI.getVisibility());
 
   OutStreamer->emitInstruction(
       MCInstBuilder(X86::JMP32m)
@@ -583,7 +550,9 @@ void X86AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
               MCSymbolRefExpr::create(LazyPointer, OutContext)))
           .addReg(0),
       *Subtarget);
+}
 
+void X86AsmPrinter::emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI, MCSymbol *LazyPointer) {
   // _ifunc.stub_helper:
   //   push %rax
   //   push %rdi
@@ -602,11 +571,6 @@ void X86AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   //   pop %rdi
   //   pop %rax
   //   jmpq *lazy_pointer(%rip)
-
-  EmitLinkage(StubHelper);
-  OutStreamer->emitCodeAlignment(Align(16), Subtarget);
-  OutStreamer->emitLabel(StubHelper);
-  emitVisibility(StubHelper, GI.getVisibility());
 
   for (int Reg :
        {X86::RAX, X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9})
