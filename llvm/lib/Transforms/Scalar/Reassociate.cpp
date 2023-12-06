@@ -2256,10 +2256,9 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   // with no common bits set, convert it to X+Y.
   if (I->getOpcode() == Instruction::Or &&
       shouldConvertOrWithNoCommonBitsToAdd(I) && !isLoadCombineCandidate(I) &&
-      (I->isDisjoint() ||
-       haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1),
-                           SimplifyQuery(I->getModule()->getDataLayout(),
-                                         /*DT=*/nullptr, /*AC=*/nullptr, I)))) {
+      haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1),
+                          SimplifyQuery(I->getModule()->getDataLayout(),
+                                        /*DT=*/nullptr, /*AC=*/nullptr, I))) {
     Instruction *NI = convertOrWithNoCommonBitsToAdd(I);
     RedoInsts.insert(I);
     MadeChange = true;
