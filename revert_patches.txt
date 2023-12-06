@@ -1,3 +1,7 @@
 Johannes: breakage
   [OpenMP][FIX] Move workaround code to avoid races 
    see smoke-fails, smoke-limbo, smoke, examples
+
+defer to post merge:
+[OpenMP] Ensure `Devices` is accessed exlusively (#74374) 
+
