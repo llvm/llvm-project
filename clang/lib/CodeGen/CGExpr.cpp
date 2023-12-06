@@ -1208,6 +1208,20 @@ const ValueDecl *CodeGenFunction::FindCountedByField(const Expr *Base) {
   return dyn_cast<ValueDecl>(Lookup.front());
 }
 
+void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
+                                      llvm::Value *Index, QualType IndexType,
+                                      bool Accessed) {
+  assert(SanOpts.has(SanitizerKind::ArrayBounds) &&
+         "should not be called unless adding bounds checks");
+  const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+      getLangOpts().getStrictFlexArraysLevel();
+  QualType IndexedType;
+  llvm::Value *Bound =
+      getArrayIndexingBound(*this, Base, IndexedType, StrictFlexArraysLevel);
+
+  EmitBoundsCheck(E, Bound, Index, IndexType, IndexedType, Accessed);
+}
+
 void CodeGenFunction::EmitBoundsCheck(const Expr *E, llvm::Value *Bound,
                                       llvm::Value *Index, QualType IndexType,
                                       QualType IndexedType, bool Accessed) {
@@ -1229,20 +1243,6 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *E, llvm::Value *Bound,
                                 : Builder.CreateICmpULE(IndexVal, BoundVal);
   EmitCheck(std::make_pair(Check, SanitizerKind::ArrayBounds),
             SanitizerHandler::OutOfBounds, StaticData, Index);
-}
-
-void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
-                                      llvm::Value *Index, QualType IndexType,
-                                      bool Accessed) {
-  assert(SanOpts.has(SanitizerKind::ArrayBounds) &&
-         "should not be called unless adding bounds checks");
-  const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-      getLangOpts().getStrictFlexArraysLevel();
-  QualType IndexedType;
-  llvm::Value *Bound =
-      getArrayIndexingBound(*this, Base, IndexedType, StrictFlexArraysLevel);
-
-  EmitBoundsCheck(E, Bound, Index, IndexedType, IndexType, Accessed);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
