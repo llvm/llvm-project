@@ -55,10 +55,12 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
     inputType = RankedTensorType::get(
         revisedInputShape,
         dyn_cast<RankedTensorType>(input.getType()).getElementType());
+    auto revisedInputShapeValue =
+        getTosaConstShape(rewriter, op.getLoc(), revisedInputShape);
     input = rewriter
                 .create<tosa::ReshapeOp>(
                     op.getLoc(), inputType, input,
-                    rewriter.getDenseI64ArrayAttr(revisedInputShape))
+                    revisedInputShapeValue)
                 .getResult();
 
     Type inputETy = inputType.getElementType();
@@ -153,9 +155,10 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
     auto outputShapeType = RankedTensorType::get(
         outputShape,
         dyn_cast<RankedTensorType>(input.getType()).getElementType());
+    auto outputShapeValue = getTosaConstShape(rewriter, op->getLoc(), outputShape);
     Value outputValue = rewriter.create<tosa::ReshapeOp>(
         op.getLoc(), outputShapeType, mulValue,
-        rewriter.getDenseI64ArrayAttr(outputShape));
+        outputShapeValue);
 
     Value bias = op.getBias();
     if (EqualizeRanks(rewriter, op.getLoc(), outputValue, bias).failed()) {
