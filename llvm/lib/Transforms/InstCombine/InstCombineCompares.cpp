@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CaptureTracking.h"
@@ -6113,13 +6114,19 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
   KnownBits Op0Known(BitWidth);
   KnownBits Op1Known(BitWidth);
 
-  if (SimplifyDemandedBits(&I, 0,
-                           getDemandedBitsLHSMask(I, BitWidth),
-                           Op0Known, 0))
-    return &I;
+  {
+    // Don't use dominating conditions when folding icmp using known bits. This
+    // may convert signed into unsigned predicates in ways that other passes
+    // (especially IndVarSimplify) may not be able to reliably undo.
+    SQ.DC = nullptr;
+    auto _ = make_scope_exit([&]() { SQ.DC = &DC; });
+    if (SimplifyDemandedBits(&I, 0, getDemandedBitsLHSMask(I, BitWidth),
+                             Op0Known, 0))
+      return &I;
 
-  if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known, 0))
-    return &I;
+    if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known, 0))
+      return &I;
+  }
 
   // Given the known and unknown bits, compute a range that the LHS could be
   // in.  Compute the Min, Max and RHS values based on the known bits. For the

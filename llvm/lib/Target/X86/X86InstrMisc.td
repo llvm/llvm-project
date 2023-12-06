@@ -1244,26 +1244,6 @@ let Predicates = [HasBMI, HasEGPR], Defs = [EFLAGS] in {
   defm BLSI64 : bmi_bls<"blsi{q}", MRM3r, MRM3m, GR64, i64mem, WriteBLS, "_EVEX">, REX_W, EVEX;
 }
 
-//===----------------------------------------------------------------------===//
-// Pattern fragments to auto generate BMI instructions.
-//===----------------------------------------------------------------------===//
-
-def or_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
-                           (X86or_flag node:$lhs, node:$rhs), [{
-  return hasNoCarryFlagUses(SDValue(N, 1));
-}]>;
-
-def xor_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
-                            (X86xor_flag node:$lhs, node:$rhs), [{
-  return hasNoCarryFlagUses(SDValue(N, 1));
-}]>;
-
-def and_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
-                            (X86and_flag node:$lhs, node:$rhs), [{
-  return hasNoCarryFlagUses(SDValue(N, 1));
-}]>;
-
-
 let Predicates = [HasBMI] in {
   // FIXME(1): patterns for the load versions are not implemented
   // FIXME(2): By only matching `add_su` and `ineg_su` we may emit

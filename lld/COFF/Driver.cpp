@@ -2314,6 +2314,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     config->lldmapFile.clear();
   }
 
+  // If should create PDB, use the hash of PDB content for build id. Otherwise,
+  // generate using the hash of executable content.
+  if (args.hasFlag(OPT_build_id, OPT_build_id_no, false))
+    config->buildIDHash = BuildIDHash::Binary;
+
   if (shouldCreatePDB) {
     // Put the PDB next to the image if no /pdb flag was passed.
     if (config->pdbPath.empty()) {
@@ -2335,6 +2340,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       // Don't do this earlier, so that ctx.OutputFile is ready.
       parsePDBAltPath();
     }
+    config->buildIDHash = BuildIDHash::PDB;
   }
 
   // Set default image base if /base is not given.
