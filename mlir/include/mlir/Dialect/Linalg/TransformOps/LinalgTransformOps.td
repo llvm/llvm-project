@@ -2038,6 +2038,7 @@ def VectorizeChildrenAndApplyPatternsOp :
   let arguments = (ins TransformHandleTypeInterface:$target,
                    UnitAttr:$vectorize_padding,
                    UnitAttr:$vectorize_nd_extract,
+                   UnitAttr:$flatten_1d_depthwise_conv,
                    UnitAttr:$disable_multi_reduction_to_contract_patterns,
                    UnitAttr:$disable_transfer_permutation_map_lowering_patterns);
   let results = (outs TransformHandleTypeInterface:$transformed);
@@ -2049,7 +2050,8 @@ def VectorizeChildrenAndApplyPatternsOp :
   let builders = [
     OpBuilder<(ins "Value":$target,
                CArg<"bool", "false">:$vectorizePadding,
-               CArg<"bool", "false">:$vectorizeNDExtract)>,
+               CArg<"bool", "false">:$vectorizeNDExtract,
+               CArg<"bool", "false">:$flatten1DDepthwise)>
   ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
