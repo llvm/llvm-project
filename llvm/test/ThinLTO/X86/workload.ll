@@ -1,6 +1,4 @@
 ; RUN: mkdir -p %t_baseline
-; RUN: echo '{"m1_f1":["m2_f1", "m2_f1_alias", "interposable_f", "noninterposable_f"], \
-; RUN:  "m2_f1":["m1_f1", "m1_f2"]}' > %t/workload_defs.json
 ; RUN: opt -module-summary %S/Inputs/workload1.ll -o %t_baseline/workload1.bc
 ; RUN: opt -module-summary %S/Inputs/workload2.ll -o %t_baseline/workload2.bc
 ; RUN: opt -module-summary %S/Inputs/workload3.ll -o %t_baseline/workload3.bc
@@ -27,6 +25,11 @@
 ; The run with workload definitions - same other options.
 ;
 ; RUN: mkdir -p %t
+; RUN: opt -module-summary %S/Inputs/workload1.ll -o %t/workload1.bc
+; RUN: opt -module-summary %S/Inputs/workload2.ll -o %t/workload2.bc
+; RUN: opt -module-summary %S/Inputs/workload3.ll -o %t/workload3.bc
+; RUN: echo '{"m1_f1":["m2_f1", "m2_f1_alias", "interposable_f", "noninterposable_f"], \
+; RUN:  "m2_f1":["m1_f1", "m1_f2"]}' > %t/workload_defs.json
 ; RUN: llvm-lto2 run %t/workload1.bc %t/workload2.bc %t/workload3.bc \
 ; RUN:  -thinlto-workload-def=%t/workload_defs.json -o %t/result.o -save-temps \
 ; RUN:  -r %t/workload1.bc,m1_f1,plx \
