@@ -40,14 +40,15 @@ define signext i32 @if_of_and(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    beqz a0, .LBB1_2
-; RV32I-NEXT:  # %bb.1: # %if.then
+; RV32I-NEXT:    beqz a0, .LBB1_3
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    beqz a1, .LBB1_3
+; RV32I-NEXT:  # %bb.2: # %if.then
 ; RV32I-NEXT:    call both@plt
-; RV32I-NEXT:    j .LBB1_3
-; RV32I-NEXT:  .LBB1_2: # %if.else
+; RV32I-NEXT:    j .LBB1_4
+; RV32I-NEXT:  .LBB1_3: # %if.else
 ; RV32I-NEXT:    call neither@plt
-; RV32I-NEXT:  .LBB1_3: # %if.end
+; RV32I-NEXT:  .LBB1_4: # %if.end
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -56,14 +57,15 @@ define signext i32 @if_of_and(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    beqz a0, .LBB1_2
-; RV64I-NEXT:  # %bb.1: # %if.then
+; RV64I-NEXT:    beqz a0, .LBB1_3
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    beqz a1, .LBB1_3
+; RV64I-NEXT:  # %bb.2: # %if.then
 ; RV64I-NEXT:    call both@plt
-; RV64I-NEXT:    j .LBB1_3
-; RV64I-NEXT:  .LBB1_2: # %if.else
+; RV64I-NEXT:    j .LBB1_4
+; RV64I-NEXT:  .LBB1_3: # %if.else
 ; RV64I-NEXT:    call neither@plt
-; RV64I-NEXT:  .LBB1_3: # %if.end
+; RV64I-NEXT:  .LBB1_4: # %if.end
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
