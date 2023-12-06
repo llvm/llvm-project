@@ -898,10 +898,16 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
   const TargetInfo &target = *elf::target;
   const auto emachine = config->emachine;
   const bool isDebug = isDebugSection(*this);
-  const bool isDebugLocOrRanges =
-      isDebug && (name == ".debug_loc" || name == ".debug_ranges");
   const bool isDebugLine = isDebug && name == ".debug_line";
-  std::optional<uint64_t> tombstone;
+  std::optional<uint64_t> tombstone, debugTombstone;
+  if (isDebug) {
+    if (name == ".debug_loc" || name == ".debug_ranges")
+      debugTombstone = 1;
+    else if (name == ".debug_names")
+      debugTombstone = UINT64_MAX; // DWARF Issue 231013.1
+    else
+      debugTombstone = 0;
+  }
   for (const auto &patAndValue : llvm::reverse(config->deadRelocInNonAlloc))
     if (patAndValue.first.match(this->name)) {
       tombstone = patAndValue.second;
@@ -954,8 +960,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       return;
     }
 
-    if (tombstone ||
-        (isDebug && (type == target.symbolicRel || expr == R_DTPREL))) {
+    if (tombstone || (isDebug && (expr == R_ABS || expr == R_DTPREL))) {
       // Resolve relocations in .debug_* referencing (discarded symbols or ICF
       // folded section symbols) to a tombstone value. Resolving to addend is
       // unsatisfactory because the result address range may collide with a
@@ -986,8 +991,13 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // value. Enable -1 in a future release.
       if (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine)) {
         // If -z dead-reloc-in-nonalloc= is specified, respect it.
-        const uint64_t value = tombstone ? SignExtend64<bits>(*tombstone)
-                                         : (isDebugLocOrRanges ? 1 : 0);
+        uint64_t value;
+        if (tombstone)
+          value = SignExtend64<bits>(*tombstone);
+        else if (type == target.symbolicRel)
+          value = *debugTombstone;
+        else // .debug_names uses 32-bit local TU offsets for DWARF32
+          value = static_cast<uint32_t>(*debugTombstone);
         target.relocateNoSym(bufLoc, type, value);
         continue;
       }
