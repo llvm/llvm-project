@@ -69,29 +69,6 @@ static uint32_t getDeclAlignIfRequired(const Decl *D, const ASTContext &Ctx) {
   return D->hasAttr<AlignedAttr>() ? D->getMaxAlignment() : 0;
 }
 
-/// Given a VarDecl corresponding to either the definition or
-/// declaration of a C++ static data member, if it has a constant
-/// initializer and is evaluatable, return the evaluated value.
-/// Returns std::nullopt otherwise.
-static std::optional<APValue>
-evaluateConstantInitializer(const clang::VarDecl *VD,
-                            const clang::ASTContext &Ctx) {
-  assert(VD != nullptr);
-
-  if (!VD->isStaticDataMember())
-    return std::nullopt;
-
-  if (!VD->isUsableInConstantExpressions(Ctx))
-    return std::nullopt;
-
-  auto const *InitExpr = VD->getAnyInitializer();
-  Expr::EvalResult Result;
-  if (!InitExpr->EvaluateAsConstantExpr(Result, Ctx))
-    return std::nullopt;
-
-  return Result.Val;
-}
-
 CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
     : CGM(CGM), DebugKind(CGM.getCodeGenOpts().getDebugInfo()),
       DebugTypeExtRefs(CGM.getCodeGenOpts().DebugTypeExtRefs),
@@ -1724,7 +1701,6 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
   llvm::DIDerivedType *GV = DBuilder.createStaticMemberType(
       RecordTy, VName, VUnit, LineNumber, VTy, Flags, C, Tag, Align);
   StaticDataMemberCache[Var->getCanonicalDecl()].reset(GV);
-  StaticDataMemberDefinitionsToEmit.push_back(Var->getCanonicalDecl());
   return GV;
 }
 
@@ -5628,41 +5604,6 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
       TemplateParameters, Align));
 }
 
-void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
-  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
-  if (VD->hasAttr<NoDebugAttr>())
-    return;
-
-  const auto CacheIt = DeclCache.find(VD);
-  if (CacheIt != DeclCache.end())
-    return;
-
-  const auto InitVal = evaluateConstantInitializer(VD, CGM.getContext());
-  if (!InitVal)
-    return;
-
-  llvm::DIFile *Unit = nullptr;
-  llvm::DIScope *DContext = nullptr;
-  unsigned LineNo;
-  StringRef DeclName, LinkageName;
-  QualType T;
-  llvm::MDTuple *TemplateParameters = nullptr;
-  collectVarDeclProps(VD, Unit, LineNo, T, DeclName, LinkageName,
-                      TemplateParameters, DContext);
-
-  auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
-  llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(VD);
-  llvm::DIExpression *InitExpr = createConstantValueExpression(VD, *InitVal);
-
-  // Omit linkage name for variable definitions that represent constants.
-  // There hasn't been a need from consumers yet to have it attached.
-  DeclCache[VD].reset(DBuilder.createGlobalVariableExpression(
-      TheCU, DeclName, /* LinkageName */ {}, Unit, LineNo,
-      getOrCreateType(T, Unit), true, true, InitExpr,
-      getOrCreateStaticDataMemberDeclarationOrNull(VD), TemplateParameters,
-      Align, Annotations));
-}
-
 void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
                                        const VarDecl *D) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
@@ -5867,20 +5808,6 @@ void CGDebugInfo::setDwoId(uint64_t Signature) {
 }
 
 void CGDebugInfo::finalize() {
-  // We can't use a for-each here because `EmitGlobalVariable`
-  // may push new decls into `StaticDataMemberDefinitionsToEmit`,
-  // which would invalidate any iterator.
-  for (size_t i = 0; i < StaticDataMemberDefinitionsToEmit.size(); ++i) {
-    auto const *VD = StaticDataMemberDefinitionsToEmit[i];
-
-    assert(VD && VD->isStaticDataMember());
-
-    if (DeclCache.contains(VD))
-      continue;
-
-    EmitGlobalVariable(VD);
-  }
-
   // Creating types might create further types - invalidating the current
   // element and the size(), so don't cache/reference them.
   for (size_t i = 0; i != ObjCInterfaceCache.size(); ++i) {
