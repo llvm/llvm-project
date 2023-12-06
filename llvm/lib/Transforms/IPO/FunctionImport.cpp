@@ -37,6 +37,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Internalize.h"
@@ -137,6 +138,9 @@ static cl::opt<std::string>
 static cl::opt<bool>
     ImportAllIndex("import-all-index",
                    cl::desc("Import all external functions in index."));
+
+static cl::opt<std::string> WorkloadDefinitions("thinlto-workload-def",
+                                                cl::Hidden);
 
 // Load lazily a module from \p FileName in \p Context.
 static std::unique_ptr<Module> loadFile(const std::string &FileName,
@@ -369,14 +373,16 @@ public:
   }
 };
 
+static const char *getFailureName(FunctionImporter::ImportFailureReason Reason);
+
 /// Determine the list of imports and exports for each module.
-class ModuleImportsManager final {
+class ModuleImportsManager {
+protected:
   function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
       IsPrevailing;
   const ModuleSummaryIndex &Index;
   DenseMap<StringRef, FunctionImporter::ExportSetTy> *const ExportLists;
 
-public:
   ModuleImportsManager(
       function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
           IsPrevailing,
@@ -384,13 +390,220 @@ public:
       DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists = nullptr)
       : IsPrevailing(IsPrevailing), Index(Index), ExportLists(ExportLists) {}
 
+public:
+  virtual ~ModuleImportsManager() = default;
+
   /// Given the list of globals defined in a module, compute the list of imports
   /// as well as the list of "exports", i.e. the list of symbols referenced from
   /// another module (that may require promotion).
-  void computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
-                              StringRef ModName,
-                              FunctionImporter::ImportMapTy &ImportList);
+  virtual void
+  computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
+                         StringRef ModName,
+                         FunctionImporter::ImportMapTy &ImportList);
+
+  static std::unique_ptr<ModuleImportsManager>
+  create(function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+             IsPrevailing,
+         const ModuleSummaryIndex &Index,
+         DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists =
+             nullptr);
 };
+
+class WorkloadImportsManager : public ModuleImportsManager {
+  // Keep a module name -> defined value infos association. We use it to
+  // determine if a module's import list should be done by the base
+  // ModuleImportsManager or by us.
+  StringMap<DenseSet<ValueInfo>> Workloads;
+
+  void
+  computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
+                         StringRef ModName,
+                         FunctionImporter::ImportMapTy &ImportList) override {
+    auto SetIter = Workloads.find(ModName);
+    if (SetIter == Workloads.end()) {
+      LLVM_DEBUG(dbgs() << "[Workload] " << ModName
+                        << " does not contain the root of any context.\n");
+      return ModuleImportsManager::computeImportForModule(DefinedGVSummaries,
+                                                          ModName, ImportList);
+    }
+    LLVM_DEBUG(dbgs() << "[Workload] " << ModName
+                      << " contains the root(s) of context(s).\n");
+
+    GlobalsImporter GVI(Index, DefinedGVSummaries, IsPrevailing, ImportList,
+                        ExportLists);
+    auto &ValueInfos = SetIter->second;
+    SmallVector<EdgeInfo, 128> GlobWorklist;
+    for (auto &VI : llvm::make_early_inc_range(ValueInfos)) {
+      auto Candidates =
+          qualifyCalleeCandidates(Index, VI.getSummaryList(), ModName);
+
+      const GlobalValueSummary *GVS = nullptr;
+      FunctionImporter::ImportFailureReason LastReason =
+          FunctionImporter::ImportFailureReason::None;
+      for (const auto &Candidate : Candidates) {
+        LastReason = Candidate.first;
+        if (Candidate.first == FunctionImporter::ImportFailureReason::None) {
+          const bool Prevailing = IsPrevailing(VI.getGUID(), Candidate.second);
+          if (Prevailing || !GVS) {
+            if (!GVS && !Prevailing)
+              LLVM_DEBUG(dbgs()
+                         << "[Workload] Considering " << VI.name() << " from "
+                         << Candidate.second->modulePath() << " with linkage "
+                         << Candidate.second->linkage()
+                         << " although it's not prevailing, but it's the "
+                            "first available candidate.\n");
+            GVS = Candidate.second;
+            if (Prevailing) {
+              LLVM_DEBUG(dbgs()
+                         << "[Workload] Considering " << VI.name() << " from "
+                         << GVS->modulePath() << " with linkage "
+                         << GVS->linkage() << " because it's prevailing.\n");
+              break;
+            }
+          } else {
+            LLVM_DEBUG(dbgs() << "[Workload] Skipping " << VI.name() << " from "
+                              << Candidate.second->modulePath()
+                              << " with linkage " << Candidate.second->linkage()
+                              << " because it's not prevailing\n");
+          }
+        }
+      }
+      if (!GVS) {
+        LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
+                          << " because can't select Callee. Guid is: "
+                          << Function::getGUID(VI.name())
+                          << ". The reason was: " << getFailureName(LastReason)
+                          << "\n");
+        continue;
+      }
+      const auto *CFS = cast<FunctionSummary>(GVS->getBaseObject());
+      auto ExportingModule = CFS->modulePath();
+      if (ExportingModule == ModName) {
+        LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
+                          << " because its defining module is the same as the "
+                             "current module\n");
+        continue;
+      }
+      if (!shouldImport(DefinedGVSummaries, VI.getGUID(), CFS)) {
+        LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
+                          << " because we have a local copy.\n");
+        continue;
+      }
+
+      LLVM_DEBUG(dbgs() << "[Workload][Including]" << VI.name() << " from "
+                        << ExportingModule << " : "
+                        << Function::getGUID(VI.name()) << "\n");
+      ImportList[ExportingModule].insert(VI.getGUID());
+      GVI.onImportingSummary(*GVS);
+      if (ExportLists)
+        (*ExportLists)[ExportingModule].insert(VI);
+    }
+    LLVM_DEBUG(dbgs() << "[Workload] Done\n");
+  }
+
+  bool shouldImport(const GVSummaryMapTy &DefinedGVSummaries,
+                    Function::GUID Guid, const GlobalValueSummary *Candidate) {
+    auto DefinedSummary = DefinedGVSummaries.find(Guid);
+    if (DefinedSummary == DefinedGVSummaries.end())
+      return true;
+
+    // See shouldImportGlobal for the justificaton of the isInterposableLinkage.
+    if (!IsPrevailing(Guid, DefinedSummary->second) &&
+        GlobalValue::isInterposableLinkage(DefinedSummary->second->linkage()) &&
+        IsPrevailing(Guid, Candidate)) {
+      LLVM_DEBUG(dbgs() << "[Workload] " << Guid
+                        << ": local non-prevailing in module. Importing from "
+                        << Candidate->modulePath() << "\n");
+      return true;
+    }
+    LLVM_DEBUG(dbgs() << "[Workload] " << Guid
+                      << ": ignored! Target already in destination module.\n");
+    return false;
+  }
+
+public:
+  WorkloadImportsManager(
+      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+          IsPrevailing,
+      const ModuleSummaryIndex &Index,
+      DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists)
+      : ModuleImportsManager(IsPrevailing, Index, ExportLists) {
+    StringMap<ValueInfo> CtxGuidToValueInfo;
+    for (auto &I : Index) {
+      ValueInfo VI(Index.haveGVs(), &I);
+      CtxGuidToValueInfo[VI.name()] = VI;
+    }
+    std::error_code EC;
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(WorkloadDefinitions);
+    if (std::error_code EC = BufferOrErr.getError()) {
+      report_fatal_error("Failed to open context file");
+      return;
+    }
+    auto Buffer = std::move(BufferOrErr.get());
+    std::map<std::string, std::vector<std::string>> WorkloadDefs;
+    json::Path::Root NullRoot;
+    auto Parsed = json::parse(Buffer->getBuffer());
+    if (!Parsed)
+      report_fatal_error(Parsed.takeError());
+    if (!json::fromJSON(*Parsed, WorkloadDefs, NullRoot))
+      report_fatal_error("Invalid thinlto contextual profile format.");
+    for (const auto &Workload : WorkloadDefs) {
+      const auto &Root = Workload.first;
+      LLVM_DEBUG(dbgs() << "[Workload] Root: " << Root << "\n");
+      const auto &AllCallees = Workload.second;
+      auto RootIt = CtxGuidToValueInfo.find(Root);
+      if (RootIt == CtxGuidToValueInfo.end()) {
+        LLVM_DEBUG(dbgs() << "[Workload] Root " << Root
+                          << " not found in this linkage unit.\n");
+        continue;
+      }
+      auto RootVI = RootIt->second;
+      if (RootVI.getSummaryList().size() != 1) {
+        LLVM_DEBUG(dbgs() << "[Workload] Root " << Root
+                          << " should have exactly one summary, but has "
+                          << RootVI.getSummaryList().size() << ". Skipping.\n");
+        continue;
+      }
+      StringRef RootDefiningModule =
+          RootVI.getSummaryList().front()->modulePath();
+      LLVM_DEBUG(dbgs() << "[Workload] Root defining module for " << Root
+                        << " is : " << RootDefiningModule << "\n");
+      auto &Set = Workloads[RootDefiningModule];
+      for (const auto &Callee : AllCallees) {
+        LLVM_DEBUG(dbgs() << "[Workload] " << Callee << "\n");
+        auto ElemIt = CtxGuidToValueInfo.find(Callee);
+        if (ElemIt == CtxGuidToValueInfo.end()) {
+          LLVM_DEBUG(dbgs() << "[Workload] " << Callee << " not found\n");
+          continue;
+        }
+        Set.insert(ElemIt->second);
+      }
+      LLVM_DEBUG(dbgs() << "[Workload] Root: " << Root << " we have "
+                        << Set.size() << " distinct callees.\n");
+      LLVM_DEBUG( //
+          for (const auto &VI
+               : Set) {
+            dbgs() << "[Workload] Root: " << Root
+                   << " Would include: " << VI.getGUID() << "\n";
+          });
+    }
+  }
+};
+
+std::unique_ptr<ModuleImportsManager> ModuleImportsManager::create(
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        IsPrevailing,
+    const ModuleSummaryIndex &Index,
+    DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists) {
+  if (WorkloadDefinitions.empty()) {
+    LLVM_DEBUG(dbgs() << "[Workload] Using the regular imports manager.\n");
+    return std::unique_ptr<ModuleImportsManager>(
+        new ModuleImportsManager(IsPrevailing, Index, ExportLists));
+  }
+  LLVM_DEBUG(dbgs() << "[Workload] Using the contextual imports manager.\n");
+  return std::make_unique<WorkloadImportsManager>(IsPrevailing, Index,
+                                                  ExportLists);
+}
 
 static const char *
 getFailureName(FunctionImporter::ImportFailureReason Reason) {
@@ -732,14 +945,14 @@ void llvm::ComputeCrossModuleImport(
         isPrevailing,
     DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
-  ModuleImportsManager MIS(isPrevailing, Index, &ExportLists);
+  auto MIS = ModuleImportsManager::create(isPrevailing, Index, &ExportLists);
   // For each module that has function defined, compute the import/export lists.
   for (const auto &DefinedGVSummaries : ModuleToDefinedGVSummaries) {
     auto &ImportList = ImportLists[DefinedGVSummaries.first];
     LLVM_DEBUG(dbgs() << "Computing import for Module '"
                       << DefinedGVSummaries.first << "'\n");
-    MIS.computeImportForModule(DefinedGVSummaries.second,
-                               DefinedGVSummaries.first, ImportList);
+    MIS->computeImportForModule(DefinedGVSummaries.second,
+                                DefinedGVSummaries.first, ImportList);
   }
 
   // When computing imports we only added the variables and functions being
@@ -855,8 +1068,8 @@ static void ComputeCrossModuleImportForModuleForTest(
 
   // Compute the import list for this module.
   LLVM_DEBUG(dbgs() << "Computing import for Module '" << ModulePath << "'\n");
-  ModuleImportsManager MIS(isPrevailing, Index);
-  MIS.computeImportForModule(FunctionSummaryMap, ModulePath, ImportList);
+  auto MIS = ModuleImportsManager::create(isPrevailing, Index);
+  MIS->computeImportForModule(FunctionSummaryMap, ModulePath, ImportList);
 
 #ifndef NDEBUG
   dumpImportListForModule(Index, ModulePath, ImportList);
