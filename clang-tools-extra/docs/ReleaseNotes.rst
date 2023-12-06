@@ -193,13 +193,6 @@ New checks
   replacing with ``starts_with`` when the method exists in the class. Notably,
   this will work with ``std::string`` and ``std::string_view``.
 
-- New :doc:`modernize-use-std-numbers
-  <clang-tidy/checks/modernize/use-std-numbers>` check.
-
-  Finds constants and function calls to math functions that can be replaced
-  with C++20's mathematical constants from the ``numbers`` header and
-  offers fix-it hints.
-
 - New :doc:`performance-enum-size
   <clang-tidy/checks/performance/enum-size>` check.
 
