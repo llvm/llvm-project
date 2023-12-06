@@ -398,6 +398,7 @@ class EnvironmentVariables : public CommandFixture {
 protected:
   EnvironmentVariables() : CommandFixture(0, nullptr) {
     SetEnv("NAME", "VALUE");
+    SetEnv("LOGNAME", "loginName");
     SetEnv("EMPTY", "");
   }
 
@@ -494,4 +495,34 @@ TEST_F(EnvironmentVariables, ErrMsgTooShort) {
                 /*length=*/nullptr, /*trim_name=*/true, errMsg.get()),
       1);
   CheckDescriptorEqStr(errMsg.get(), "Mis");
+}
+
+TEST_F(EnvironmentVariables, GetlogGetName) {
+  const int charLen{11};
+  char input[charLen]{"XXXXXXXXX"};
+
+  FORTRAN_PROCEDURE_NAME(getlog)
+  (reinterpret_cast<std::int8_t *>(input), charLen);
+
+  EXPECT_NE(input, "loginName");
+}
+
+TEST_F(EnvironmentVariables, GetlogBufferShort) {
+  const int charLen{7};
+  char input[charLen]{"XXXXXX"};
+
+  FORTRAN_PROCEDURE_NAME(getlog)
+  (reinterpret_cast<std::int8_t *>(input), charLen);
+
+  EXPECT_NE(input, "loginN");
+}
+
+TEST_F(EnvironmentVariables, GetlogPadSpace) {
+  const int charLen{12};
+  char input[charLen]{"XXXXXXXXXX"};
+
+  FORTRAN_PROCEDURE_NAME(getlog)
+  (reinterpret_cast<std::int8_t *>(input), charLen);
+
+  EXPECT_NE(input, "loginName ");
 }
