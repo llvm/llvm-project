@@ -108,7 +108,7 @@ public:
     return loopEmitter.unpackTensorLevelRange(std::forward<ContainerTy>(c));
   }
 
-  unsigned getLoopDepth() const { return loopEmitter.getCurrentDepth(); }
+  unsigned getCurrentDepth() const { return loopEmitter.getCurrentDepth(); }
 
   //
   // Code generation environment verify functions.
