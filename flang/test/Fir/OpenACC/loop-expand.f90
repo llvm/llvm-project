@@ -13,8 +13,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPsingleloop
 ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsingleloopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: acc.loop {
-! CHECK:   %[[LB0:.*]] = fir.convert %c1_i32 : (i32) -> index
-! CHECK:   %[[UB0:.*]] = fir.convert %c10_i32 : (i32) -> index
+! CHECK:   %[[LB0:.*]] = arith.constant 1 : index
+! CHECK:   %[[UB0:.*]] = arith.constant 10 : index
 ! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
 ! CHECK:   %{{.*}} = fir.do_loop %[[ARG1:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] iter_args(%[[ARG2:.*]] = %{{.*}}) -> (index, i32) {
 ! CHECK:     fir.store %[[ARG2]] to %2#1 : !fir.ref<i32>
@@ -43,8 +43,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPsingle_loop_with_nest
 ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsingle_loop_with_nestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: acc.loop {
-! CHECK:   %[[LB0:.*]] = fir.convert %c1_i32 : (i32) -> index
-! CHECK:   %[[UB0:.*]] = fir.convert %c10_i32 : (i32) -> index
+! CHECK:   %[[LB0:.*]] = arith.constant 1 : index
+! CHECK:   %[[UB0:.*]] = arith.constant 10 : index
 ! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
 ! CHECK:   %{{.*}} = fir.do_loop %[[ARG1:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] iter_args(%[[ARG2:.*]] = %{{.*}}) -> (index, i32) {
 ! CHECK:     fir.store %[[ARG2]] to %2#1 : !fir.ref<i32>
@@ -76,13 +76,13 @@ end subroutine
 ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_with_nestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[J:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_with_nestEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: acc.loop {
-! CHECK:   %[[LB0:.*]] = fir.convert %{{.*}} : (i32) -> index
-! CHECK:   %[[UB0:.*]] = fir.convert %{{.*}} : (i32) -> index
+! CHECK:   %[[LB0:.*]] = arith.constant 1 : index
+! CHECK:   %[[UB0:.*]] = arith.constant 10 : index
 ! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
 ! CHECK:   %{{.*}}:2 = fir.do_loop %[[ARG1:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] iter_args(%[[ARG2:.*]] = %{{.*}}) -> (index, i32) {
 ! CHECK:     fir.store %[[ARG2]] to %[[I]]#1 : !fir.ref<i32>
-! CHECK:     %[[LB1:.*]] = fir.convert %{{.*}} : (i32) -> index
-! CHECK:     %[[UB1:.*]] = fir.convert %{{.*}} : (i32) -> index
+! CHECK:     %[[LB1:.*]] = arith.constant 1 : index
+! CHECK:     %[[UB1:.*]] = arith.constant 10 : index
 ! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
 ! CHECK:     %{{.*}}:2 = fir.do_loop %[[ARG3:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] iter_args(%[[ARG4:.*]] = %{{.*}}) -> (index, i32) {
 ! CHECK:       fir.store %[[ARG4]] to %[[J]]#1 : !fir.ref<i32>
@@ -132,8 +132,8 @@ end subroutine
 
 ! CHECK: %[[II:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_iv_8Eii"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK: acc.loop {
-! CHECK: %[[LB0:.*]] = fir.convert %c1_i32 : (i32) -> index
-! CHECK: %[[UB0:.*]] = fir.convert %c10_i32 : (i32) -> index
+! CHECK: %[[LB0:.*]] = arith.constant 1 : index
+! CHECK: %[[UB0:.*]] = arith.constant 10 : index
 ! CHECK: %[[STEP0:.*]] = arith.constant 1 : index
 ! CHECK: %[[ITER_ARG:.*]] = fir.convert %c1_i32 : (i32) -> i64
 ! CHECK:   %{{.*}}:2 = fir.do_loop %[[ARG0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] iter_args(%[[ARG1:.*]] = %[[ITER_ARG]]) -> (index, i64) {
