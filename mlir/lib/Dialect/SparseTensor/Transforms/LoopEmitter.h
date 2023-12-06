@@ -175,9 +175,7 @@ public:
   }
 
   /// Gets the current depth of the loop-stack.
-  LoopId getCurrentDepth() const {
-    return llvm::range_size(getLoopIVsRange());
-  }
+  LoopId getCurrentDepth() const { return llvm::range_size(getLoopIVsRange()); }
 
   /// Gets loop induction variable for the given loop
   Value getLoopIV(LoopId n) const {
