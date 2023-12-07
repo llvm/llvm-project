@@ -27,7 +27,7 @@ LatencyBenchmarkRunner::LatencyBenchmarkRunner(
   assert((Mode == Benchmark::Latency || Mode == Benchmark::InverseThroughput) &&
          "invalid mode");
   ResultAggMode = ResultAgg;
-  BenchmarkRepetitions = BenchmarkRepeatCount;
+  NumMeasurements = BenchmarkRepeatCount;
 }
 
 LatencyBenchmarkRunner::~LatencyBenchmarkRunner() = default;
@@ -75,7 +75,7 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
   const char *CounterName = State.getPfmCounters().CycleCounter;
   // Values count for each run.
   int ValuesCount = 0;
-  for (size_t I = 0; I < BenchmarkRepetitions; ++I) {
+  for (size_t I = 0; I < NumMeasurements; ++I) {
     auto ExpectedCounterValues = Executor.runAndSample(CounterName);
     if (!ExpectedCounterValues)
       return ExpectedCounterValues.takeError();

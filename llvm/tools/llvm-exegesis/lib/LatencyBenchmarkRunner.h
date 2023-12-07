@@ -33,7 +33,7 @@ private:
   runMeasurements(const FunctionExecutor &Executor) const override;
 
   Benchmark::ResultAggregationModeE ResultAggMode;
-  unsigned BenchmarkRepetitions;
+  unsigned NumMeasurements;
 };
 } // namespace exegesis
 } // namespace llvm
