@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLVMContextImpl.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -150,18 +151,21 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
   if (Name[0] == '\1')
     Name = Name.substr(1);
 
-  std::string NewName = std::string(Name);
+  SmallString<64> GlobalName;
   if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
     // For local symbols, prepend the main file name to distinguish them.
     // Do not include the full path in the file name since there's no guarantee
     // that it will stay the same, e.g., if the files are checked out from
     // version control in different locations.
     if (FileName.empty())
-      NewName = NewName.insert(0, "<unknown>;");
+      GlobalName.append("<unknown>");
     else
-      NewName = NewName.insert(0, FileName.str() + ";");
+      GlobalName.append(FileName.str());
+
+    GlobalName.append({kGlobalIdentifierDelimiter});
   }
-  return NewName;
+  GlobalName.append(Name);
+  return GlobalName.str().str();
 }
 
 std::string GlobalValue::getGlobalIdentifier() const {

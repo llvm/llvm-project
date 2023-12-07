@@ -316,12 +316,8 @@ getIRPGONameForGlobalObject(const GlobalObject &GO,
                             GlobalValue::LinkageTypes Linkage,
                             StringRef FileName) {
   SmallString<64> Name;
-  // Keep mangler handling outside of `getGlobalIdentifier` for two reasons.
-  // First of all, passing global object gives other information (e.g. linkage)
-  // besides its name. and these information might affect mangled name.
-  // Secondly, `getGlobalIdentifier` only drops `\1` prefix but mangler might
-  // do more changes. Moving mangler's way of handling `\1` into
-  // `getGlobalIdentifier` might introduce unwanted change for existing callers.
+  // FIXME: Mangler's handling is kept outside of `getGlobalIdentifier` for now.
+  // For more details please check issue #74565.
   Mangler().getNameWithPrefix(Name, &GO, /*CannotUsePrivateLabel=*/true);
   return GlobalValue::getGlobalIdentifier(Name, Linkage, FileName);
 }
