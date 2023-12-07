@@ -7609,6 +7609,11 @@ static bool isEligibleToFoldADDIForLocalExecAccesses(SDNode *N,
 
 // For non-TOC-based local-exec access where an addi is feeding into another
 // addi, fold this sequence into a single addi if possible.
+// Before this optimization, the sequence appears as:
+//    addi rN, r13, sym@le
+//    addi rM, rN, imm
+// After this optimization, we can fold the two addi into a single one:
+//    addi rM, r13, sym@le + imm
 static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
   if (N->getMachineOpcode() != PPC::ADDI8)
     return;

@@ -1528,7 +1528,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         llvm_unreachable("Global must be word-aligned for LD, STD, LWA!");
 
       // A faster non-TOC-based local-exec sequence is represented by
-      // directingly loading or storing off of the thread pointer and with
+      // directly loading or storing off of the thread pointer and with
       // an immediate operand having the MO_TPREL_FLAG.
       // Such instructions do not otherwise arise.
       unsigned Flag = MO.getTargetFlags();
@@ -1654,7 +1654,7 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
   // non-zero offset to the TLS variable address.
   // For when TLS variables are extern, this is safe to do because we can
   // assume that the address of extern TLS variables are zero.
-  if ((FinalAddress < 32768) || IsGlobalADeclaration)
+  if (FinalAddress < 32768)
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(Offset, OutContext), OutContext);
   else {
