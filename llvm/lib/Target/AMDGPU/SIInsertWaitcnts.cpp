@@ -723,7 +723,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
             MemOp->getAddrSpace() != AMDGPUAS::LOCAL_ADDRESS)
           continue;
         // Comparing just AA info does not guarantee memoperands are equal
-        // in general, but this is so for LDS DMA on practice.
+        // in general, but this is so for LDS DMA in practice.
         auto AAI = MemOp->getAAInfo();
         if (!AAI)
           break;
