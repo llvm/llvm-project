@@ -284,7 +284,7 @@ void BlockFrequencyInfo::verifyMatch(BlockFrequencyInfo &Other) const {
 Printable llvm::printBlockFreq(const BlockFrequencyInfo &BFI,
                                BlockFrequency Freq) {
   return Printable([&BFI, Freq](raw_ostream &OS) {
-    printBlockFreqImpl(OS, BFI.getEntryFreq(), Freq);
+    printRelativeBlockFreq(OS, BFI.getEntryFreq(), Freq);
   });
 }
 
