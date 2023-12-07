@@ -663,6 +663,14 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
   return DWARFDIE(); // Not found
 }
 
+llvm::StringRef DWARFUnit::PeekDIEName(dw_offset_t die_offset) {
+  const DWARFDataExtractor &data = GetData();
+  DWARFDebugInfoEntry die;
+  if (!die.Extract(data, this, &die_offset))
+    return llvm::StringRef();
+  return die.GetName(this);
+}
+
 DWARFUnit &DWARFUnit::GetNonSkeletonUnit() {
   ExtractUnitDIEIfNeeded();
   if (m_dwo)
