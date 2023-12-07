@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++20 -fsyntax-only -verify -Wall -Wextra -Wno-error=unreachable-code -Wno-unused
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++20 -fsyntax-only -verify -Wall -Wextra -Wno-error=unreachable-code -Wno-unused -Wno-c++23-lambda-attributes
 
 #include "Inputs/std-coroutine.h"
 
@@ -64,14 +64,8 @@ Co<int> bar_coro(const int &b, int c) {
       : bar_coro(0, 1); // expected-warning {{returning address of local temporary object}}
 }
 
-#define CORO_WRAPPER \
-  _Pragma("clang diagnostic push") \
-  _Pragma("clang diagnostic ignored \"-Wc++23-extensions\"") \
-  [[clang::coro_wrapper]] \
-  _Pragma("clang diagnostic pop")
-
 void lambdas() {
-  auto unsafe_lambda = [] CORO_WRAPPER (int b) {
+  auto unsafe_lambda = [] [[clang::coro_wrapper]] (int b) {
     return foo_coro(b); // expected-warning {{address of stack memory associated with parameter}}
   };
   auto coro_lambda = [] (const int&) -> Co<int> {
