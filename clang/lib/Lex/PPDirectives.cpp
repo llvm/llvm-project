@@ -2466,15 +2466,21 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
         // The drive letter is optional for absolute paths on Windows, but
         // clang currently cannot process absolute paths in #include lines that
         // don't have a drive.
-        // If the first entry in Components is a directory separator,
-        // then the code at the bottom of this loop that keeps the original
-        // directory separator style copies it. If the second entry is
-        // a directory separator (the C:\ case), then that separator already
-        // got copied when the C: was processed and we want to skip that entry.
-        if (!(Component.size() == 1 && IsSep(Component[0])))
+        if (Component.size() == 1 && IsSep(Component[0])) {
+          // Note: Path always contains at least '<' or '"'.
+          if (Path.size() == 1) {
+            // If the first entry in Components is a directory separator,
+            // then the code at the bottom of this loop that keeps the original
+            // directory separator style copies it.
+          } else {
+            // If the second entry is a directory separator (the C:\ case),
+            // then that separator already got copied when the C: was processed
+            // and we want to skip that entry.
+            continue;
+          }
+        } else {
           Path.append(Component);
-        else if (!Path.empty())
-          continue;
+        }
 
         // Append the separator(s) the user used, or the close quote
         if (Path.size() > NameWithoriginalSlashes.size()) {
