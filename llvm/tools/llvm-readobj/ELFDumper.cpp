@@ -3816,10 +3816,12 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
 }
 
 template <class ELFT>
-static void printRelocHeaderFields(formatted_raw_ostream &OS, unsigned SType) {
+static void printRelocHeaderFields(formatted_raw_ostream &OS, unsigned SType,
+                                   const typename ELFT::Ehdr &EHeader) {
   bool IsRela = SType == ELF::SHT_RELA || SType == ELF::SHT_ANDROID_RELA;
-  bool IsRelr = SType == ELF::SHT_RELR || SType == ELF::SHT_ANDROID_RELR ||
-                SType == ELF::SHT_AARCH64_AUTH_RELR;
+  bool IsRelr =
+      SType == ELF::SHT_RELR || SType == ELF::SHT_ANDROID_RELR ||
+      (EHeader.e_machine == EM_AARCH64 && SType == ELF::SHT_AARCH64_AUTH_RELR);
   if (ELFT::Is64Bits)
     OS << "    ";
   else
@@ -3844,16 +3846,18 @@ void GNUELFDumper<ELFT>::printDynamicRelocHeader(unsigned Type, StringRef Name,
   uint64_t Offset = Reg.Addr - this->Obj.base();
   OS << "\n'" << Name.str().c_str() << "' relocation section at offset 0x"
      << utohexstr(Offset, /*LowerCase=*/true) << " contains " << Reg.Size << " bytes:\n";
-  printRelocHeaderFields<ELFT>(OS, Type);
+  printRelocHeaderFields<ELFT>(OS, Type, this->Obj.getHeader());
 }
 
 template <class ELFT>
-static bool isRelocationSec(const typename ELFT::Shdr &Sec) {
+static bool isRelocationSec(const typename ELFT::Shdr &Sec,
+                            const typename ELFT::Ehdr &EHeader) {
   return Sec.sh_type == ELF::SHT_REL || Sec.sh_type == ELF::SHT_RELA ||
          Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_ANDROID_REL ||
          Sec.sh_type == ELF::SHT_ANDROID_RELA ||
          Sec.sh_type == ELF::SHT_ANDROID_RELR ||
-         Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR;
+         (EHeader.e_machine == EM_AARCH64 &&
+          Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR);
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
@@ -3871,7 +3875,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
 
     if (!opts::RawRelr &&
         (Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_ANDROID_RELR ||
-         Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR)) {
+         (this->Obj.getHeader().e_machine == EM_AARCH64 &&
+          Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR))) {
       Expected<Elf_Relr_Range> RelrsOrErr = this->Obj.relrs(Sec);
       if (!RelrsOrErr)
         return RelrsOrErr.takeError();
@@ -3883,7 +3888,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
 
   bool HasRelocSections = false;
   for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
-    if (!isRelocationSec<ELFT>(Sec))
+    if (!isRelocationSec<ELFT>(Sec, this->Obj.getHeader()))
       continue;
     HasRelocSections = true;
 
@@ -3900,7 +3905,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
     OS << "\nRelocation section '" << Name << "' at offset 0x"
        << utohexstr(Offset, /*LowerCase=*/true) << " contains " << EntriesNum
        << " entries:\n";
-    printRelocHeaderFields<ELFT>(OS, Sec.sh_type);
+    printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader());
     this->printRelocationsHelper(Sec);
   }
   if (!HasRelocSections)
@@ -6235,7 +6240,8 @@ void ELFDumper<ELFT>::forEachRelocationDo(
   // sh_link field as an index of a symbol table.
   const Elf_Shdr *SymTab;
   if (Sec.sh_type != ELF::SHT_RELR && Sec.sh_type != ELF::SHT_ANDROID_RELR &&
-      Sec.sh_type != ELF::SHT_AARCH64_AUTH_RELR) {
+      !(Obj.getHeader().e_machine == EM_AARCH64 &&
+        Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR)) {
     Expected<const Elf_Shdr *> SymTabOrErr = Obj.getSection(Sec.sh_link);
     if (!SymTabOrErr) {
       Warn(SymTabOrErr.takeError(), "unable to locate a symbol table for");
@@ -6264,11 +6270,8 @@ void ELFDumper<ELFT>::forEachRelocationDo(
     }
     break;
   case ELF::SHT_AARCH64_AUTH_RELR:
-    if (Obj.getHeader().e_machine != EM_AARCH64) {
-      this->reportUniqueWarning(
-          "SHT_AARCH64_AUTH_RELR section in non-AArch64 ELF found, skipping");
+    if (Obj.getHeader().e_machine != EM_AARCH64)
       break;
-    }
     [[fallthrough]];
   case ELF::SHT_RELR:
   case ELF::SHT_ANDROID_RELR: {
@@ -6966,7 +6969,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printRelocations() {
   ListScope D(W, "Relocations");
 
   for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
-    if (!isRelocationSec<ELFT>(Sec))
+    if (!isRelocationSec<ELFT>(Sec, this->Obj.getHeader()))
       continue;
 
     StringRef Name = this->getPrintableSectionName(Sec);
