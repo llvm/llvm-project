@@ -53,6 +53,14 @@ public:
                         llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
   virtual void GetTypes(const DWARFDeclContext &context,
                         llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+
+  /// Finds all DIEs whose fully qualified name matches `context`. A base
+  /// implementation is provided, and it uses the entire CU to check the DIE
+  /// parent hierarchy. Specializations should override this if they are able
+  /// to provide a faster implementation.
+  virtual void
+  GetFullyQualifiedType(const DWARFDeclContext &context,
+                        llvm::function_ref<bool(DWARFDIE die)> callback);
   virtual void
   GetNamespaces(ConstString name,
                 llvm::function_ref<bool(DWARFDIE die)> callback) = 0;

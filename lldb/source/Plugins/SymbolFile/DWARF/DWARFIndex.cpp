@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
+#include "DWARFDeclContext.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
@@ -111,4 +112,22 @@ void DWARFIndex::ReportInvalidDIERef(DIERef ref, llvm::StringRef name) const {
       "the DWARF debug information has been modified (accelerator table had "
       "bad die {0:x16} for '{1}')\n",
       ref.die_offset(), name.str().c_str());
+}
+
+void DWARFIndex::GetFullyQualifiedType(
+    const DWARFDeclContext &context,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  auto qualified_names = context.GetQualifiedNameAsVector();
+  if (qualified_names.empty())
+    return;
+  auto parent_names = llvm::makeArrayRef(qualified_names).drop_front();
+  GetTypes(context, [&](DWARFDIE die) {
+    auto original_die = die;
+    for (auto parent_name : parent_names) {
+      die = die.GetParent();
+      if (!die || die.GetName() != parent_name)
+        return false;
+    }
+    return callback(original_die);
+  });
 }

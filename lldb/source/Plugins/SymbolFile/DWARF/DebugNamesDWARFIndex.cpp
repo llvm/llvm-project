@@ -218,6 +218,55 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
   m_fallback.GetCompleteObjCClass(class_name, must_be_implementation, callback);
 }
 
+void DebugNamesDWARFIndex::GetFullyQualifiedType(
+    const DWARFDeclContext &context,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  if (!m_debug_names_up->supportsIdxParent())
+    return DWARFIndex::GetFullyQualifiedType(context, callback);
+
+  auto qualified_names = context.GetQualifiedNameAsVector();
+  if (qualified_names.empty())
+    return;
+
+  auto CompareEntryATName = [this](llvm::StringRef expected_name,
+                                   const DebugNames::Entry &entry) {
+    auto maybe_dieoffset = entry.getDIEUnitOffset();
+    if (!maybe_dieoffset)
+      return false;
+    auto die_ref = ToDIERef(entry);
+    if (!die_ref)
+      return false;
+    return expected_name == m_debug_info.PeekDIEName(*die_ref);
+  };
+
+  auto parent_names = llvm::makeArrayRef(qualified_names).drop_front();
+  auto CheckParentChain = [&](DebugNames::Entry entry) {
+    for (auto expected_name : parent_names) {
+      auto maybe_parent_entry = entry.getParentDIEEntry();
+      if (!maybe_parent_entry) {
+        consumeError(maybe_parent_entry.takeError());
+        return false;
+      }
+      entry = *maybe_parent_entry;
+      if (!CompareEntryATName(expected_name, entry))
+        return false;
+    }
+    /// All expected names matched. The remaining entry should have no parent
+    /// for a match to occur.
+    auto maybe_parent_entry = entry.getParentDIEEntry();
+    if (maybe_parent_entry)
+      return false;
+    consumeError(maybe_parent_entry.takeError());
+    return true;
+  };
+
+  auto leaf_matches = m_debug_names_up->equal_range(qualified_names.front());
+  for (const DebugNames::Entry &entry : leaf_matches)
+    if (isType(entry.tag()) && CheckParentChain(entry) &&
+        (!ProcessEntry(entry, callback)))
+      return;
+}
+
 void DebugNamesDWARFIndex::GetTypes(
     ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :

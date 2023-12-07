@@ -42,6 +42,11 @@ public:
   void GetCompleteObjCClass(
       ConstString class_name, bool must_be_implementation,
       llvm::function_ref<bool(DWARFDIE die)> callback) override;
+
+  /// Uses DWARF5's IDX_parent fields, when available, to speed up this query.
+  void GetFullyQualifiedType(
+      const DWARFDeclContext &context,
+      llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetTypes(ConstString name,
                 llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetTypes(const DWARFDeclContext &context,
