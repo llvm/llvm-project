@@ -215,6 +215,22 @@
 
 // RUN: %clang --target=riscv32 %s -emit-llvm -S -o - | FileCheck %s
 
+// Check that "--no-relax" is forwarded to the linker for RISC-V (RISCVToolchain.cpp).
+// RUN: env "PATH=" %clang %s -### 2>&1 -mno-relax \
+// RUN:   --target=riscv32-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
+// RUN:   -march=rv32imac -mabi=lp32\
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-RV32-NORELAX %s
+// CHECK-RV32-NORELAX: "--no-relax"
+
+// Check that "--no-relax" is not forwarded to the linker for RISC-V (RISCVToolchain.cpp).
+// RUN:env "PATH=" %clang %s -### 2>&1 \
+// RUN:   --target=riscv32-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
+// RUN:   -march=rv32imac -mabi=lp32\
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-RV32-RELAX %s
+// CHECK-RV32-RELAX-NOT: "--no-relax"
+
 typedef __builtin_va_list va_list;
 typedef __SIZE_TYPE__ size_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
