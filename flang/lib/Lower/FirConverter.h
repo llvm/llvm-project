@@ -83,15 +83,122 @@ public:
 
   void run(Fortran::lower::pft::Program &pft);
 
-  void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit);
+  /// The core of the conversion: take an evaluation and generate FIR for it.
+  /// The generation for each individual element of PFT is done via a specific
+  /// genFIR function (see below).
+  /// This function will automatically call the genFIR function for the type
+  /// of the PFT construct.
+  void genFIR(Fortran::lower::pft::Evaluation &eval,
+              bool unstructuredContext = true);
 
-  const Fortran::semantics::Scope &
-  getSymbolHostScope(const Fortran::semantics::Symbol &sym);
+private:
+  // All core Fortran constructs:
 
-  void collectHostAssociatedVariables(
-      Fortran::lower::pft::FunctionLikeUnit &funit,
-      llvm::SetVector<const Fortran::semantics::Symbol *> &escapees);
+  void genFIR(const Fortran::parser::AllocateStmt &);
+  void genFIR(const Fortran::parser::ArithmeticIfStmt &);
+  void genFIR(const Fortran::parser::AssignedGotoStmt &);
+  void genFIR(const Fortran::parser::AssignmentStmt &);
+  void genFIR(const Fortran::parser::AssignStmt &);
+  void genFIR(const Fortran::parser::AssociateConstruct &);
+  void genFIR(const Fortran::parser::BackspaceStmt &);
+  void genFIR(const Fortran::parser::BlockConstruct &);
+  void genFIR(const Fortran::parser::CallStmt &);
+  void genFIR(const Fortran::parser::CaseConstruct &);
+  void genFIR(const Fortran::parser::ChangeTeamConstruct &);
+  void genFIR(const Fortran::parser::ChangeTeamStmt &);
+  void genFIR(const Fortran::parser::CloseStmt &);
+  void genFIR(const Fortran::parser::CompilerDirective &);
+  void genFIR(const Fortran::parser::ComputedGotoStmt &);
+  void genFIR(const Fortran::parser::ConcurrentHeader &);
+  void genFIR(const Fortran::parser::CriticalConstruct &);
+  void genFIR(const Fortran::parser::CriticalStmt &);
+  void genFIR(const Fortran::parser::CycleStmt &);
+  void genFIR(const Fortran::parser::DeallocateStmt &);
+  void genFIR(const Fortran::parser::DoConstruct &);
+  void genFIR(const Fortran::parser::ElsewhereStmt &);
+  void genFIR(const Fortran::parser::EndChangeTeamStmt &);
+  void genFIR(const Fortran::parser::EndCriticalStmt &);
+  void genFIR(const Fortran::parser::EndfileStmt &);
+  void genFIR(const Fortran::parser::EndForallStmt &);
+  void genFIR(const Fortran::parser::EndWhereStmt &);
+  void genFIR(const Fortran::parser::EventPostStmt &);
+  void genFIR(const Fortran::parser::EventWaitStmt &);
+  void genFIR(const Fortran::parser::ExitStmt &);
+  void genFIR(const Fortran::parser::FailImageStmt &);
+  void genFIR(const Fortran::parser::FlushStmt &);
+  void genFIR(const Fortran::parser::ForallAssignmentStmt &);
+  void genFIR(const Fortran::parser::ForallConstruct &);
+  void genFIR(const Fortran::parser::ForallConstructStmt &);
+  void genFIR(const Fortran::parser::ForallStmt &);
+  void genFIR(const Fortran::parser::FormatStmt &);
+  void genFIR(const Fortran::parser::FormTeamStmt &);
+  void genFIR(const Fortran::parser::GotoStmt &);
+  void genFIR(const Fortran::parser::IfConstruct &);
+  void genFIR(const Fortran::parser::InquireStmt &);
+  void genFIR(const Fortran::parser::LockStmt &);
+  void genFIR(const Fortran::parser::MaskedElsewhereStmt &);
+  void genFIR(const Fortran::parser::NullifyStmt &);
+  void genFIR(const Fortran::parser::OpenACCConstruct &);
+  void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &);
+  void genFIR(const Fortran::parser::OpenACCRoutineConstruct &);
+  void genFIR(const Fortran::parser::OpenMPConstruct &);
+  void genFIR(const Fortran::parser::OpenMPDeclarativeConstruct &);
+  void genFIR(const Fortran::parser::OpenStmt &);
+  void genFIR(const Fortran::parser::PauseStmt &);
+  void genFIR(const Fortran::parser::PointerAssignmentStmt &);
+  void genFIR(const Fortran::parser::PrintStmt &);
+  void genFIR(const Fortran::parser::ReadStmt &);
+  void genFIR(const Fortran::parser::ReturnStmt &);
+  void genFIR(const Fortran::parser::RewindStmt &);
+  void genFIR(const Fortran::parser::SelectCaseStmt &);
+  void genFIR(const Fortran::parser::SelectRankCaseStmt &);
+  void genFIR(const Fortran::parser::SelectRankConstruct &);
+  void genFIR(const Fortran::parser::SelectRankStmt &);
+  void genFIR(const Fortran::parser::SelectTypeConstruct &);
+  void genFIR(const Fortran::parser::StopStmt &);
+  void genFIR(const Fortran::parser::SyncAllStmt &);
+  void genFIR(const Fortran::parser::SyncImagesStmt &);
+  void genFIR(const Fortran::parser::SyncMemoryStmt &);
+  void genFIR(const Fortran::parser::SyncTeamStmt &);
+  void genFIR(const Fortran::parser::UnlockStmt &);
+  void genFIR(const Fortran::parser::WaitStmt &);
+  void genFIR(const Fortran::parser::WhereBodyConstruct &);
+  void genFIR(const Fortran::parser::WhereConstruct &);
+  void genFIR(const Fortran::parser::WhereConstruct::Elsewhere &);
+  void genFIR(const Fortran::parser::WhereConstruct::MaskedElsewhere &);
+  void genFIR(const Fortran::parser::WhereConstructStmt &);
+  void genFIR(const Fortran::parser::WhereStmt &);
+  void genFIR(const Fortran::parser::WriteStmt &);
 
+  // Nop statements - No code, or code is generated at the construct level.
+  // But note that the genFIR call immediately below that wraps one of these
+  // calls does block management, possibly starting a new block, and possibly
+  // generating a branch to end a block. So these calls may still be required
+  // for that functionality.
+  void genFIR(const Fortran::parser::AssociateStmt &) {}       // nop
+  void genFIR(const Fortran::parser::BlockStmt &) {}           // nop
+  void genFIR(const Fortran::parser::CaseStmt &) {}            // nop
+  void genFIR(const Fortran::parser::ContinueStmt &) {}        // nop
+  void genFIR(const Fortran::parser::ElseIfStmt &) {}          // nop
+  void genFIR(const Fortran::parser::ElseStmt &) {}            // nop
+  void genFIR(const Fortran::parser::EndAssociateStmt &) {}    // nop
+  void genFIR(const Fortran::parser::EndBlockStmt &) {}        // nop
+  void genFIR(const Fortran::parser::EndDoStmt &) {}           // nop
+  void genFIR(const Fortran::parser::EndFunctionStmt &) {}     // nop
+  void genFIR(const Fortran::parser::EndIfStmt &) {}           // nop
+  void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {} // nop
+  void genFIR(const Fortran::parser::EndProgramStmt &) {}      // nop
+  void genFIR(const Fortran::parser::EndSelectStmt &) {}       // nop
+  void genFIR(const Fortran::parser::EndSubroutineStmt &) {}   // nop
+  void genFIR(const Fortran::parser::EntryStmt &) {}           // nop
+  void genFIR(const Fortran::parser::IfStmt &) {}              // nop
+  void genFIR(const Fortran::parser::IfThenStmt &) {}          // nop
+  void genFIR(const Fortran::parser::NonLabelDoStmt &) {}      // nop
+  void genFIR(const Fortran::parser::OmpEndLoopDirective &) {} // nop
+  void genFIR(const Fortran::parser::SelectTypeStmt &) {}      // nop
+  void genFIR(const Fortran::parser::TypeGuardStmt &) {}       // nop
+
+public:
   //===--------------------------------------------------------------------===//
   // AbstractConverter overrides
   //===--------------------------------------------------------------------===//
@@ -400,6 +507,15 @@ private:
     llvm::SmallSetVector<Fortran::semantics::SymbolRef, 32> seen;
   };
 
+  void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit);
+
+  const Fortran::semantics::Scope &
+  getSymbolHostScope(const Fortran::semantics::Symbol &sym);
+
+  void collectHostAssociatedVariables(
+      Fortran::lower::pft::FunctionLikeUnit &funit,
+      llvm::SetVector<const Fortran::semantics::Symbol *> &escapees);
+
   //===--------------------------------------------------------------------===//
   // Helper member functions
   //===--------------------------------------------------------------------===//
@@ -559,28 +675,17 @@ private:
 
   mlir::func::FuncOp getFunc(llvm::StringRef name, mlir::FunctionType ty);
 
-  void genFIR(const Fortran::parser::CallStmt &stmt);
-  void genFIR(const Fortran::parser::ComputedGotoStmt &stmt);
-  void genFIR(const Fortran::parser::ArithmeticIfStmt &stmt);
-  void genFIR(const Fortran::parser::AssignedGotoStmt &stmt);
-
+  void genFIRIncrementLoopBegin(IncrementLoopNestInfo &incrementLoopNestInfo);
+  void genFIRIncrementLoopEnd(IncrementLoopNestInfo &incrementLoopNestInfo);
   IncrementLoopNestInfo getConcurrentControl(
       const Fortran::parser::ConcurrentHeader &header,
       const std::list<Fortran::parser::LocalitySpec> &localityList = {});
 
   void handleLocalitySpecs(const IncrementLoopInfo &info);
 
-  void genFIR(const Fortran::parser::DoConstruct &doConstruct);
-
   mlir::Value genControlValue(const Fortran::lower::SomeExpr *expr,
                               const IncrementLoopInfo &info,
                               bool *isConst = nullptr);
-
-  void genFIRIncrementLoopBegin(IncrementLoopNestInfo &incrementLoopNestInfo);
-  void genFIRIncrementLoopEnd(IncrementLoopNestInfo &incrementLoopNestInfo);
-
-  void genFIR(const Fortran::parser::IfConstruct &);
-  void genFIR(const Fortran::parser::CaseConstruct &);
 
   template <typename A>
   void genNestedStatement(const Fortran::parser::Statement<A> &stmt) {
@@ -590,10 +695,6 @@ private:
 
   void forceControlVariableBinding(const Fortran::semantics::Symbol *sym,
                                    mlir::Value inducVar);
-
-  void genFIR(const Fortran::parser::ConcurrentHeader &header);
-  void genFIR(const Fortran::parser::ForallAssignmentStmt &stmt);
-  void genFIR(const Fortran::parser::EndForallStmt &);
 
   template <typename A> void prepareExplicitSpace(const A &forall) {
     if (!explicitIterSpace.isActive())
@@ -608,47 +709,11 @@ private:
     localSymbols.popScope();
   }
 
-  void genFIR(const Fortran::parser::ForallStmt &stmt);
-  void genFIR(const Fortran::parser::ForallConstruct &forall);
-  void genFIR(const Fortran::parser::ForallConstructStmt &stmt);
-
   void genForallNest(const Fortran::parser::ConcurrentHeader &header);
-
-  void genFIR(const Fortran::parser::CompilerDirective &);
-  void genFIR(const Fortran::parser::OpenACCConstruct &acc);
-  void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl);
-  void genFIR(const Fortran::parser::OpenACCRoutineConstruct &acc);
-  void genFIR(const Fortran::parser::OpenMPConstruct &omp);
-  void genFIR(const Fortran::parser::OpenMPDeclarativeConstruct &ompDecl);
-  void genFIR(const Fortran::parser::SelectCaseStmt &stmt);
 
   fir::ExtendedValue
   genAssociateSelector(const Fortran::lower::SomeExpr &selector,
                        Fortran::lower::StatementContext &stmtCtx);
-
-  void genFIR(const Fortran::parser::AssociateConstruct &);
-  void genFIR(const Fortran::parser::BlockConstruct &blockConstruct);
-  void genFIR(const Fortran::parser::ChangeTeamConstruct &construct);
-  void genFIR(const Fortran::parser::ChangeTeamStmt &stmt);
-  void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt);
-  void genFIR(const Fortran::parser::CriticalConstruct &criticalConstruct);
-  void genFIR(const Fortran::parser::CriticalStmt &);
-  void genFIR(const Fortran::parser::EndCriticalStmt &);
-  void genFIR(const Fortran::parser::SelectRankConstruct &selectRankConstruct);
-  void genFIR(const Fortran::parser::SelectRankStmt &);
-  void genFIR(const Fortran::parser::SelectRankCaseStmt &);
-  void genFIR(const Fortran::parser::SelectTypeConstruct &selectTypeConstruct);
-  void genFIR(const Fortran::parser::BackspaceStmt &stmt);
-  void genFIR(const Fortran::parser::CloseStmt &stmt);
-  void genFIR(const Fortran::parser::EndfileStmt &stmt);
-  void genFIR(const Fortran::parser::FlushStmt &stmt);
-  void genFIR(const Fortran::parser::InquireStmt &stmt);
-  void genFIR(const Fortran::parser::OpenStmt &stmt);
-  void genFIR(const Fortran::parser::PrintStmt &stmt);
-  void genFIR(const Fortran::parser::ReadStmt &stmt);
-  void genFIR(const Fortran::parser::RewindStmt &stmt);
-  void genFIR(const Fortran::parser::WaitStmt &stmt);
-  void genFIR(const Fortran::parser::WriteStmt &stmt);
 
   template <typename A>
   void genIoConditionBranches(Fortran::lower::pft::Evaluation &eval,
@@ -710,14 +775,6 @@ private:
     genMultiwayBranch(selector, valueList, labelList, eval.nonNopSuccessor());
   }
 
-  void genFIR(const Fortran::parser::AllocateStmt &stmt);
-  void genFIR(const Fortran::parser::DeallocateStmt &stmt);
-  void genFIR(const Fortran::parser::NullifyStmt &stmt);
-  void genFIR(const Fortran::parser::EventPostStmt &stmt);
-  void genFIR(const Fortran::parser::EventWaitStmt &stmt);
-  void genFIR(const Fortran::parser::FormTeamStmt &stmt);
-  void genFIR(const Fortran::parser::LockStmt &stmt);
-
   fir::ExtendedValue
   genInitializerExprValue(const Fortran::lower::SomeExpr &expr,
                           Fortran::lower::StatementContext &stmtCtx) {
@@ -755,14 +812,13 @@ private:
   mlir::Value createLboundArray(llvm::ArrayRef<mlir::Value> lbounds,
                                 mlir::Location loc);
 
-  void genPointerAssignment(
-      mlir::Location loc, const Fortran::evaluate::Assignment &assign,
-      const Fortran::evaluate::Assignment::BoundsSpec &lbExprs);
-
   mlir::Value createBoundArray(llvm::ArrayRef<mlir::Value> lbounds,
                                llvm::ArrayRef<mlir::Value> ubounds,
                                mlir::Location loc);
 
+  void genPointerAssignment(
+      mlir::Location loc, const Fortran::evaluate::Assignment &assign,
+      const Fortran::evaluate::Assignment::BoundsSpec &lbExprs);
   void genPointerAssignment(
       mlir::Location loc, const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::Assignment::BoundsRemapping &boundExprs);
@@ -804,65 +860,8 @@ private:
 
   bool isInsideHlfirWhere() const { return isInsideOp<hlfir::WhereOp>(); }
 
-  void genFIR(const Fortran::parser::WhereConstruct &c);
-  void genFIR(const Fortran::parser::WhereBodyConstruct &body);
-
   void lowerWhereMaskToHlfir(mlir::Location loc,
                              const Fortran::semantics::SomeExpr *maskExpr);
-  void genFIR(const Fortran::parser::WhereConstructStmt &stmt);
-  void genFIR(const Fortran::parser::WhereConstruct::MaskedElsewhere &ew);
-  void genFIR(const Fortran::parser::MaskedElsewhereStmt &stmt);
-  void genFIR(const Fortran::parser::WhereConstruct::Elsewhere &ew);
-  void genFIR(const Fortran::parser::ElsewhereStmt &stmt);
-  void genFIR(const Fortran::parser::EndWhereStmt &);
-  void genFIR(const Fortran::parser::WhereStmt &stmt);
-  void genFIR(const Fortran::parser::PointerAssignmentStmt &stmt);
-  void genFIR(const Fortran::parser::AssignmentStmt &stmt);
-  void genFIR(const Fortran::parser::SyncAllStmt &stmt);
-  void genFIR(const Fortran::parser::SyncImagesStmt &stmt);
-  void genFIR(const Fortran::parser::SyncMemoryStmt &stmt);
-  void genFIR(const Fortran::parser::SyncTeamStmt &stmt);
-  void genFIR(const Fortran::parser::UnlockStmt &stmt);
-  void genFIR(const Fortran::parser::AssignStmt &stmt);
-  void genFIR(const Fortran::parser::FormatStmt &);
-  void genFIR(const Fortran::parser::PauseStmt &stmt);
-  void genFIR(const Fortran::parser::FailImageStmt &stmt);
-  void genFIR(const Fortran::parser::StopStmt &stmt);
-  void genFIR(const Fortran::parser::ReturnStmt &stmt);
-  void genFIR(const Fortran::parser::CycleStmt &);
-  void genFIR(const Fortran::parser::ExitStmt &);
-  void genFIR(const Fortran::parser::GotoStmt &);
-
-  // Nop statements - No code, or code is generated at the construct level.
-  // But note that the genFIR call immediately below that wraps one of these
-  // calls does block management, possibly starting a new block, and possibly
-  // generating a branch to end a block. So these calls may still be required
-  // for that functionality.
-  void genFIR(const Fortran::parser::AssociateStmt &) {}       // nop
-  void genFIR(const Fortran::parser::BlockStmt &) {}           // nop
-  void genFIR(const Fortran::parser::CaseStmt &) {}            // nop
-  void genFIR(const Fortran::parser::ContinueStmt &) {}        // nop
-  void genFIR(const Fortran::parser::ElseIfStmt &) {}          // nop
-  void genFIR(const Fortran::parser::ElseStmt &) {}            // nop
-  void genFIR(const Fortran::parser::EndAssociateStmt &) {}    // nop
-  void genFIR(const Fortran::parser::EndBlockStmt &) {}        // nop
-  void genFIR(const Fortran::parser::EndDoStmt &) {}           // nop
-  void genFIR(const Fortran::parser::EndFunctionStmt &) {}     // nop
-  void genFIR(const Fortran::parser::EndIfStmt &) {}           // nop
-  void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {} // nop
-  void genFIR(const Fortran::parser::EndProgramStmt &) {}      // nop
-  void genFIR(const Fortran::parser::EndSelectStmt &) {}       // nop
-  void genFIR(const Fortran::parser::EndSubroutineStmt &) {}   // nop
-  void genFIR(const Fortran::parser::EntryStmt &) {}           // nop
-  void genFIR(const Fortran::parser::IfStmt &) {}              // nop
-  void genFIR(const Fortran::parser::IfThenStmt &) {}          // nop
-  void genFIR(const Fortran::parser::NonLabelDoStmt &) {}      // nop
-  void genFIR(const Fortran::parser::OmpEndLoopDirective &) {} // nop
-  void genFIR(const Fortran::parser::SelectTypeStmt &) {}      // nop
-  void genFIR(const Fortran::parser::TypeGuardStmt &) {}       // nop
-
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
-              bool unstructuredContext = true);
 
   void mapDummiesAndResults(Fortran::lower::pft::FunctionLikeUnit &funit,
                             const Fortran::lower::CalleeInterface &callee);
@@ -956,8 +955,6 @@ private:
   // Analysis on a nested explicit iteration space.
   //===--------------------------------------------------------------------===//
 
-  void analyzeExplicitSpace(const Fortran::parser::ConcurrentHeader &header);
-
   template <bool LHS = false, typename A>
   void analyzeExplicitSpace(const Fortran::evaluate::Expr<A> &e) {
     explicitIterSpace.exprBase(&e, LHS);
@@ -965,30 +962,31 @@ private:
 
   void analyzeExplicitSpace(const Fortran::evaluate::Assignment *assign);
 
-  void analyzeExplicitSpace(const Fortran::parser::ForallAssignmentStmt &stmt) {
-    std::visit([&](const auto &s) { analyzeExplicitSpace(s); }, stmt.u);
-  }
-
   void analyzeExplicitSpace(const Fortran::parser::AssignmentStmt &s) {
     analyzeExplicitSpace(s.typedAssignment->v.operator->());
   }
 
+  void analyzeExplicitSpace(const Fortran::parser::ConcurrentHeader &header);
+  void analyzeExplicitSpace(const Fortran::parser::ForallAssignmentStmt &stmt) {
+    std::visit([&](const auto &s) { analyzeExplicitSpace(s); }, stmt.u);
+  }
+
+  void analyzeExplicitSpace(const Fortran::parser::ForallConstruct &forall);
+  void analyzeExplicitSpace(const Fortran::parser::ForallConstructStmt &forall);
+  void analyzeExplicitSpace(const Fortran::parser::ForallStmt &forall);
+  void analyzeExplicitSpace(const Fortran::parser::MaskedElsewhereStmt &stmt);
   void analyzeExplicitSpace(const Fortran::parser::PointerAssignmentStmt &s) {
     analyzeExplicitSpace(s.typedAssignment->v.operator->());
   }
 
+  void analyzeExplicitSpace(const Fortran::parser::WhereBodyConstruct &body);
   void analyzeExplicitSpace(const Fortran::parser::WhereConstruct &c);
-  void analyzeExplicitSpace(const Fortran::parser::WhereConstructStmt &ws);
+  void analyzeExplicitSpace(
+      const Fortran::parser::WhereConstruct::Elsewhere *ew);
   void analyzeExplicitSpace(
       const Fortran::parser::WhereConstruct::MaskedElsewhere &ew);
-  void analyzeExplicitSpace(const Fortran::parser::WhereBodyConstruct &body);
-  void analyzeExplicitSpace(const Fortran::parser::MaskedElsewhereStmt &stmt);
-  void
-  analyzeExplicitSpace(const Fortran::parser::WhereConstruct::Elsewhere *ew);
+  void analyzeExplicitSpace(const Fortran::parser::WhereConstructStmt &ws);
   void analyzeExplicitSpace(const Fortran::parser::WhereStmt &stmt);
-  void analyzeExplicitSpace(const Fortran::parser::ForallStmt &forall);
-  void analyzeExplicitSpace(const Fortran::parser::ForallConstructStmt &forall);
-  void analyzeExplicitSpace(const Fortran::parser::ForallConstruct &forall);
 
   void analyzeExplicitSpacePop() { explicitIterSpace.popLevel(); }
 
