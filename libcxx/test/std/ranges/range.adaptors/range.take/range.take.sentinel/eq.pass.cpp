@@ -65,7 +65,7 @@ private:
 static_assert(std::ranges::range<NotSimpleView>);
 static_assert(std::ranges::range<const NotSimpleView>);
 
-struct FancyNonSimpleView : std::ranges::view_base {
+struct NonCrossConstComparableView : std::ranges::view_base {
   int* begin();
   sentinel_wrapper<int*> end();
 
@@ -73,8 +73,8 @@ struct FancyNonSimpleView : std::ranges::view_base {
   sentinel_wrapper<long*> end() const;
 };
 
-static_assert(std::ranges::range<FancyNonSimpleView>);
-static_assert(std::ranges::range<const FancyNonSimpleView>);
+static_assert(std::ranges::range<NonCrossConstComparableView>);
+static_assert(std::ranges::range<const NonCrossConstComparableView>);
 
 template <class T, class U>
 concept weakly_equality_comparable_with = requires(const T& t, const U& u) {
@@ -156,7 +156,7 @@ constexpr bool test() {
   }
 
   { // Check invalid comparisons between CI<Const> and sentinel<!Const>
-    using TakeView = std::ranges::take_view<FancyNonSimpleView>;
+    using TakeView = std::ranges::take_view<NonCrossConstComparableView>;
     static_assert(
         !weakly_equality_comparable_with<std::ranges::iterator_t<const TakeView>, std::ranges::sentinel_t<TakeView>>);
     static_assert(
