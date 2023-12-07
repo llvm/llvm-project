@@ -909,7 +909,7 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
         o << "_XD";
       else if (index & ATTR_XS)
         o << "_XS";
-      
+
       if (index & ATTR_EVEX) {
         if (index & ATTR_EVEXKZ)
           o << "_KZ";
