@@ -10567,8 +10567,8 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
                                       DAG.getUNDEF(ContainerVT),
                                       DAG.getConstant(1, DL, XLenVT), EVL1);
     SDValue SplatZeroOp1 = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
-                                  DAG.getUNDEF(ContainerVT),
-                                  DAG.getConstant(0, DL, XLenVT), EVL1);
+                                       DAG.getUNDEF(ContainerVT),
+                                       DAG.getConstant(0, DL, XLenVT), EVL1);
     Op1 = DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, Op1, SplatOneOp1,
                       SplatZeroOp1, EVL1);
 
@@ -10576,8 +10576,8 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
                                       DAG.getUNDEF(ContainerVT),
                                       DAG.getConstant(1, DL, XLenVT), EVL2);
     SDValue SplatZeroOp2 = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
-                                  DAG.getUNDEF(ContainerVT),
-                                  DAG.getConstant(0, DL, XLenVT), EVL2);
+                                       DAG.getUNDEF(ContainerVT),
+                                       DAG.getConstant(0, DL, XLenVT), EVL2);
     Op2 = DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, Op2, SplatOneOp2,
                       SplatZeroOp2, EVL2);
   }
