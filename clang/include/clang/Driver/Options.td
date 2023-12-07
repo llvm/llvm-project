@@ -6354,21 +6354,10 @@ def J : JoinedOrSeparate<["-"], "J">,
   Group<gfortran_Group>,
   Alias<module_dir>;
 
-def J : JoinedOrSeparate<["-"], "J">,
-  Flags<[RenderJoined]>, Visibility<[FlangOption, FC1Option]>,
-  Group<gfortran_Group>,
-  Alias<module_dir>;
-  
-} // let Visibility = [FC1Option, FlangOption]
-//===----------------------------------------------------------------------===//
-// FLang Options
-//===----------------------------------------------------------------------===//
-let Visibility = [FlangOption] in {
 def no_fortran_main : Flag<["-"], "fno-fortran-main">,
   Visibility<[FlangOption]>, Group<f_Group>,
   HelpText<"Don't link in Fortran main">;
-}
-} // let Visibility = [ FlangOption]
+
 //===----------------------------------------------------------------------===//
 // FC1 Options
 //===----------------------------------------------------------------------===//
