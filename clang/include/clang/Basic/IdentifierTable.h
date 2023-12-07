@@ -156,11 +156,6 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned ChangedAfterLoad : 1;
 
-  // True if the identifier's frontend information has changed from the
-  // definition loaded from an AST file.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned FEChangedAfterLoad : 1;
-
   // True if revertTokenIDToIdentifier was called.
   LLVM_PREFERRED_TYPE(bool)
   unsigned RevertedTokenID : 1;
