@@ -332,6 +332,12 @@ __asan_free_impl(ulong aa, ulong pc)
     if (!aa)
         return;
 
+    uptr sa = MEM_TO_SHADOW(aa);
+    s8 sb = *(__global s8*) sa;
+    if (sb != 0 && ((s8)(aa & (SHADOW_GRANULARITY-1)) >= sb)) {
+        REPORT_IMPL(pc, aa, 1, 1, false);
+    }
+
     __global alloc_t *ap = (__global alloc_t *)(aa - ALLOC_HEADER_BYTES);
     if (ap->sp)
         slab_free(ap, pc);
