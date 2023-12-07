@@ -22,35 +22,7 @@
 #include "test_iterators.h"
 
 template <bool Const>
-class StrictIterator {
-  using Base = std::conditional_t<Const, const int*, int*>;
-  Base base_;
-
-public:
-  using value_type      = int;
-  using difference_type = std::ptrdiff_t;
-
-  constexpr explicit StrictIterator(Base base) : base_(base) {}
-
-  StrictIterator(StrictIterator&&)            = default;
-  StrictIterator& operator=(StrictIterator&&) = default;
-
-  constexpr StrictIterator& operator++() {
-    ++base_;
-    return *this;
-  }
-
-  constexpr void operator++(int) { ++*this; }
-  constexpr decltype(auto) operator*() const { return *base_; }
-  constexpr Base base() const { return base_; }
-};
-
-static_assert(std::input_iterator<StrictIterator<false>>);
-static_assert(!std::copyable<StrictIterator<false>>);
-static_assert(!std::forward_iterator<StrictIterator<false>>);
-static_assert(std::input_iterator<StrictIterator<true>>);
-static_assert(!std::copyable<StrictIterator<true>>);
-static_assert(!std::forward_iterator<StrictIterator<true>>);
+using StrictIterator = cpp20_input_iterator<std::conditional_t<Const, const int*, int*>>;
 
 template <bool Const>
 class StrictSentinel {
@@ -62,11 +34,11 @@ public:
   constexpr explicit StrictSentinel(Base base) : base_(base) {}
 
   friend constexpr bool operator==(const StrictIterator<Const>& it, const StrictSentinel& se) {
-    return it.base() == se.base_;
+    return base(it) == se.base_;
   }
 
   friend constexpr bool operator==(const StrictIterator<!Const>& it, const StrictSentinel& se) {
-    return it.base() == se.base_;
+    return base(it) == se.base_;
   }
 };
 
