@@ -47,9 +47,9 @@ static_assert(std::sentinel_for<StrictSentinel<true>, MaybeConstIterator<true>>)
 static_assert(std::sentinel_for<StrictSentinel<false>, MaybeConstIterator<false>>);
 static_assert(std::sentinel_for<StrictSentinel<false>, MaybeConstIterator<true>>);
 
-struct NotSimpleView : std::ranges::view_base {
+struct CrossConstComparableView : std::ranges::view_base {
   template <std::size_t N>
-  constexpr explicit NotSimpleView(int (&arr)[N]) : b_(arr), e_(arr + N) {}
+  constexpr explicit CrossConstComparableView(int (&arr)[N]) : b_(arr), e_(arr + N) {}
 
   constexpr MaybeConstIterator<false> begin() { return MaybeConstIterator<false>{b_}; }
   constexpr StrictSentinel<false> end() { return StrictSentinel<false>{e_}; }
@@ -62,8 +62,8 @@ private:
   int* e_;
 };
 
-static_assert(std::ranges::range<NotSimpleView>);
-static_assert(std::ranges::range<const NotSimpleView>);
+static_assert(std::ranges::range<CrossConstComparableView>);
+static_assert(std::ranges::range<const CrossConstComparableView>);
 
 struct NonCrossConstComparableView : std::ranges::view_base {
   int* begin();
@@ -89,7 +89,7 @@ constexpr bool test() {
 
   {   // Compare CI<Const> with sentinel<Const>
     { // Const == true
-      const std::ranges::take_view<NotSimpleView> tv(NotSimpleView{buffer}, 4);
+      const std::ranges::take_view<CrossConstComparableView> tv(CrossConstComparableView{buffer}, 4);
       std::same_as<bool> decltype(auto) b1 = (tv.end() == std::ranges::next(tv.begin(), 4));
       assert(b1);
       std::same_as<bool> decltype(auto) b2 = (std::ranges::next(tv.begin(), 4) == tv.end());
@@ -105,7 +105,7 @@ constexpr bool test() {
     }
 
     { // Const == false
-      std::ranges::take_view<NotSimpleView> tv(NotSimpleView{buffer}, 4);
+      std::ranges::take_view<CrossConstComparableView> tv(CrossConstComparableView{buffer}, 4);
       std::same_as<bool> decltype(auto) b1 = (tv.end() == std::ranges::next(tv.begin(), 4));
       assert(b1);
       std::same_as<bool> decltype(auto) b2 = (std::ranges::next(tv.begin(), 4) == tv.end());
@@ -123,7 +123,7 @@ constexpr bool test() {
 
   {   // Compare CI<Const> with sentinel<!Const>
     { // Const == true
-      std::ranges::take_view<NotSimpleView> tv(NotSimpleView{buffer}, 4);
+      std::ranges::take_view<CrossConstComparableView> tv(CrossConstComparableView{buffer}, 4);
       std::same_as<bool> decltype(auto) b1 = (tv.end() == std::ranges::next(std::as_const(tv).begin(), 4));
       assert(b1);
       std::same_as<bool> decltype(auto) b2 = (std::ranges::next(std::as_const(tv).begin(), 4) == tv.end());
@@ -139,7 +139,7 @@ constexpr bool test() {
     }
 
     { // Const == false
-      std::ranges::take_view<NotSimpleView> tv(NotSimpleView{buffer}, 4);
+      std::ranges::take_view<CrossConstComparableView> tv(CrossConstComparableView{buffer}, 4);
       std::same_as<bool> decltype(auto) b1 = (std::as_const(tv).end() == std::ranges::next(tv.begin(), 4));
       assert(b1);
       std::same_as<bool> decltype(auto) b2 = (std::ranges::next(tv.begin(), 4) == std::as_const(tv).end());
