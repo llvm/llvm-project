@@ -758,9 +758,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(2, p0)));
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
-      .clampScalar(0, s32, s128)
-      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)))
-      .custom();
+      .legalFor({{s32, p0}, {s64, p0}})
+      .customIf(typeIs(0, s128))
+      .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder(
       {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
