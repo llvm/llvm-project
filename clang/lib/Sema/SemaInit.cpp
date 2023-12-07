@@ -851,8 +851,8 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
       // order to leave them uninitialized, the ILE is expanded and the extra
       // fields are then filled with NoInitExpr.
 
-      // Some checks that required for missing fields warning are bound to how
-      // many elements the initializer list originally was provided, perform
+      // Some checks that are required for missing fields warning are bound to
+      // how many elements the initializer list originally was provided; perform
       // them before the list is expanded.
       bool WarnIfMissingField =
           !SForm->isIdiomaticZeroInitializer(SemaRef.getLangOpts()) &&
@@ -862,7 +862,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
       // match gcc behaviour.
       // FIXME: Should we emulate possible gcc warning bug?
       WarnIfMissingField &=
-          !(!SemaRef.getLangOpts().CPlusPlus && hasAnyDesignatedInits(SForm));
+          SemaRef.getLangOpts().CPlusPlus || !hasAnyDesignatedInits(SForm);
 
       unsigned NumElems = numStructUnionElements(ILE->getType());
       if (!RDecl->isUnion() && RDecl->hasFlexibleArrayMember())
