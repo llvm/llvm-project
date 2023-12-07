@@ -37,8 +37,7 @@ using namespace mlir::vector;
 // Helper to reduce vector type by *all* but one rank at back.
 static VectorType reducedVectorTypeBack(VectorType tp) {
   assert((tp.getRank() > 1) && "unlowerable vector type");
-  return VectorType::get(tp.getShape().take_back(), tp.getElementType(),
-                         tp.getScalableDims().take_back());
+  return VectorType::get(tp.getElementType(), tp.getDims().takeBack());
 }
 
 // Helper that picks the proper sequence for inserting.

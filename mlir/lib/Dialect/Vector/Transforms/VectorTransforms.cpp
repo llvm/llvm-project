@@ -1039,10 +1039,7 @@ public:
         vector::createOrFoldDimOp(rewriter, loc, xferOp.getSource(), lastIndex);
     Value b = rewriter.create<arith::SubIOp>(loc, dim.getType(), dim, off);
     Value mask = rewriter.create<vector::CreateMaskOp>(
-        loc,
-        VectorType::get(vtp.getShape(), rewriter.getI1Type(),
-                        vtp.getScalableDims()),
-        b);
+        loc, VectorType::get(rewriter.getI1Type(), vtp.getDims()), b);
     if (xferOp.getMask()) {
       // Intersect the in-bounds with the mask specified as an op parameter.
       mask = rewriter.create<arith::AndIOp>(loc, mask, xferOp.getMask());

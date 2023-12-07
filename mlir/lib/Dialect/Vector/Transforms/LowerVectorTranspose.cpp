@@ -344,10 +344,8 @@ public:
       // Source with leading unit dim (inverse) is also replaced. Unit dim must
       // be fixed. Non-unit can be scalable.
       if (resType.getRank() == 2 &&
-          ((resType.getShape().front() == 1 &&
-            !resType.getScalableDims().front()) ||
-           (resType.getShape().back() == 1 &&
-            !resType.getScalableDims().back())) &&
+          (resType.getDims().front() == VectorDim::getFixed(1) ||
+           resType.getDims().back() == VectorDim::getFixed(1)) &&
           transp == ArrayRef<int64_t>({1, 0})) {
         rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, resType, input);
         return success();

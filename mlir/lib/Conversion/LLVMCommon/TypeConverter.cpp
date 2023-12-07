@@ -490,12 +490,11 @@ FailureOr<Type> LLVMTypeConverter::convertVectorType(VectorType type) const {
     return {};
   if (type.getShape().empty())
     return VectorType::get({1}, elementType);
-  Type vectorType = VectorType::get(type.getShape().back(), elementType,
-                                    type.getScalableDims().back());
+  Type vectorType = VectorType::get(elementType, type.getDims().takeBack());
   assert(LLVM::isCompatibleVectorType(vectorType) &&
          "expected vector type compatible with the LLVM dialect");
   // Only the trailing dimension can be scalable.
-  if (llvm::is_contained(type.getScalableDims().drop_back(), true))
+  if (type.getDims().dropBack().hasScalableDims())
     return failure();
   auto shape = type.getShape();
   for (int i = shape.size() - 2; i >= 0; --i)

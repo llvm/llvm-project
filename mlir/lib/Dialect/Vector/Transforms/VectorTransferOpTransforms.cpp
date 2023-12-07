@@ -316,15 +316,11 @@ static int getReducedRank(ArrayRef<int64_t> shape) {
 /// Trims non-scalable one dimensions from `oldType` and returns the result
 /// type.
 static VectorType trimNonScalableUnitDims(VectorType oldType) {
-  SmallVector<int64_t> newShape;
-  SmallVector<bool> newScalableDims;
-  for (auto [dimIdx, dimSize] : llvm::enumerate(oldType.getShape())) {
-    if (dimSize == 1 && !oldType.getScalableDims()[dimIdx])
-      continue;
-    newShape.push_back(dimSize);
-    newScalableDims.push_back(oldType.getScalableDims()[dimIdx]);
-  }
-  return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
+  auto newDims = llvm::to_vector(
+      llvm::make_filter_range(oldType.getDims(), [](VectorDim dim) {
+        return dim != VectorDim::getFixed(1);
+      }));
+  return VectorType::get(oldType.getElementType(), newDims);
 }
 
 // Rewrites vector.create_mask 'op' to drop non-scalable one dimensions.
@@ -337,9 +333,9 @@ createMaskDropNonScalableUnitDims(PatternRewriter &rewriter, Location loc,
     return failure();
 
   SmallVector<Value> reducedOperands;
-  for (auto [dim, dimIsScalable, operand] : llvm::zip_equal(
-           type.getShape(), type.getScalableDims(), op.getOperands())) {
-    if (dim == 1 && !dimIsScalable) {
+  for (auto [dim, operand] :
+       llvm::zip_equal(type.getDims(), op.getOperands())) {
+    if (dim == VectorDim::getFixed(1)) {
       // If the mask for the unit dim is not a constant of 1, do nothing.
       auto constant = operand.getDefiningOp<arith::ConstantIndexOp>();
       if (!constant || (constant.value() != 1))

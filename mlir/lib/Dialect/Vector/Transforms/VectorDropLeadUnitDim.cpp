@@ -25,24 +25,15 @@ using namespace mlir::vector;
 // Trims leading one dimensions from `oldType` and returns the result type.
 // Returns `vector<1xT>` if `oldType` only has one element.
 static VectorType trimLeadingOneDims(VectorType oldType) {
-  ArrayRef<int64_t> oldShape = oldType.getShape();
-  ArrayRef<int64_t> newShape = oldShape;
-
-  ArrayRef<bool> oldScalableDims = oldType.getScalableDims();
-  ArrayRef<bool> newScalableDims = oldScalableDims;
-
-  while (!newShape.empty() && newShape.front() == 1 &&
-         !newScalableDims.front()) {
-    newShape = newShape.drop_front(1);
-    newScalableDims = newScalableDims.drop_front(1);
-  }
+  VectorDims oldDims = oldType.getDims();
+  VectorDims newDims = oldDims.dropWhile(
+      [](VectorDim dim) { return dim == VectorDim::getFixed(1); });
 
   // Make sure we have at least 1 dimension per vector type requirements.
-  if (newShape.empty()) {
-    newShape = oldShape.take_back();
-    newScalableDims = oldType.getScalableDims().take_back();
-  }
-  return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
+  if (newDims.empty())
+    newDims = oldDims.takeBack(1);
+
+  return VectorType::get(oldType.getElementType(), newDims);
 }
 
 /// Return a smallVector of size `rank` containing all zeros.

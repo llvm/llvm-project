@@ -319,12 +319,13 @@ static FailureOr<MemRefType> unpackOneDim(MemRefType type) {
   auto vectorType = dyn_cast<VectorType>(type.getElementType());
   // Vectors with leading scalable dims are not supported.
   // It may be possible to support these in future by using dynamic memref dims.
-  if (vectorType.getScalableDims().front())
+  VectorDim leadingDim = vectorType.getDims().front();
+  if (leadingDim.isScalable())
     return failure();
   auto memrefShape = type.getShape();
   SmallVector<int64_t, 8> newMemrefShape;
   newMemrefShape.append(memrefShape.begin(), memrefShape.end());
-  newMemrefShape.push_back(vectorType.getDimSize(0));
+  newMemrefShape.push_back(leadingDim.getFixedSize());
   return MemRefType::get(newMemrefShape,
                          VectorType::Builder(vectorType).dropDim(0));
 }
@@ -1091,18 +1092,17 @@ struct UnrollTransferReadConversion
     auto vecType = dyn_cast<VectorType>(vec.getType());
     auto xferVecType = xferOp.getVectorType();
 
-    if (xferVecType.getScalableDims()[0]) {
+    VectorDim dim = xferVecType.getDim(0);
+    if (dim.isScalable()) {
       // Cannot unroll a scalable dimension at compile time.
       return failure();
     }
 
     VectorType newXferVecType = VectorType::Builder(xferVecType).dropDim(0);
 
-    int64_t dimSize = xferVecType.getShape()[0];
-
     // Generate fully unrolled loop of transfer ops.
     Location loc = xferOp.getLoc();
-    for (int64_t i = 0; i < dimSize; ++i) {
+    for (int64_t i = 0; i < dim.getFixedSize(); ++i) {
       Value iv = rewriter.create<arith::ConstantIndexOp>(loc, i);
 
       vec = generateInBoundsCheck(

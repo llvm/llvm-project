@@ -422,23 +422,21 @@ MultiDimReductionOp::getShapeForUnroll() {
 }
 
 LogicalResult MultiDimReductionOp::verify() {
-  SmallVector<int64_t> targetShape;
-  SmallVector<bool> scalableDims;
+  SmallVector<VectorDim> targetDims;
   Type inferredReturnType;
-  auto sourceScalableDims = getSourceVectorType().getScalableDims();
-  for (auto it : llvm::enumerate(getSourceVectorType().getShape()))
-    if (!llvm::any_of(getReductionDims().getValue(), [&](Attribute attr) {
-          return llvm::cast<IntegerAttr>(attr).getValue() == it.index();
-        })) {
-      targetShape.push_back(it.value());
-      scalableDims.push_back(sourceScalableDims[it.index()]);
+  for (auto [idx, dim] : llvm::enumerate(getSourceVectorType().getDims()))
+    if (!llvm::any_of(getReductionDims().getValue(),
+                      [idx = idx](Attribute attr) {
+                        return llvm::cast<IntegerAttr>(attr).getValue() == idx;
+                      })) {
+      targetDims.push_back(dim);
     }
   // TODO: update to also allow 0-d vectors when available.
-  if (targetShape.empty())
+  if (targetDims.empty())
     inferredReturnType = getSourceVectorType().getElementType();
   else
-    inferredReturnType = VectorType::get(
-        targetShape, getSourceVectorType().getElementType(), scalableDims);
+    inferredReturnType =
+        VectorType::get(getSourceVectorType().getElementType(), targetDims);
   if (getType() != inferredReturnType)
     return emitOpError() << "destination type " << getType()
                          << " is incompatible with source type "
@@ -450,9 +448,8 @@ LogicalResult MultiDimReductionOp::verify() {
 /// Returns the mask type expected by this operation.
 Type MultiDimReductionOp::getExpectedMaskType() {
   auto vecType = getSourceVectorType();
-  return VectorType::get(vecType.getShape(),
-                         IntegerType::get(vecType.getContext(), /*width=*/1),
-                         vecType.getScalableDims());
+  return VectorType::get(IntegerType::get(vecType.getContext(), /*width=*/1),
+                         vecType.getDims());
 }
 
 namespace {
@@ -491,8 +488,7 @@ struct ElideUnitDimsInMultiDimReduction
     if (auto dstVecType = dyn_cast<VectorType>(reductionOp.getDestType())) {
       if (mask) {
         VectorType newMaskType =
-            VectorType::get(dstVecType.getShape(), rewriter.getI1Type(),
-                            dstVecType.getScalableDims());
+            VectorType::get(rewriter.getI1Type(), dstVecType.getDims());
         mask = rewriter.create<vector::ShapeCastOp>(loc, newMaskType, mask);
       }
       cast = rewriter.create<vector::ShapeCastOp>(
@@ -559,9 +555,8 @@ LogicalResult ReductionOp::verify() {
 /// Returns the mask type expected by this operation.
 Type ReductionOp::getExpectedMaskType() {
   auto vecType = getSourceVectorType();
-  return VectorType::get(vecType.getShape(),
-                         IntegerType::get(vecType.getContext(), /*width=*/1),
-                         vecType.getScalableDims());
+  return VectorType::get(IntegerType::get(vecType.getContext(), /*width=*/1),
+                         vecType.getDims());
 }
 
 Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
@@ -1252,8 +1247,7 @@ ExtractOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
     auto n = std::min<size_t>(adaptor.getStaticPosition().size(),
                               vectorType.getRank());
     inferredReturnTypes.push_back(VectorType::get(
-        vectorType.getShape().drop_front(n), vectorType.getElementType(),
-        vectorType.getScalableDims().drop_front(n)));
+        vectorType.getElementType(), vectorType.getDims().dropFront(n)));
   }
   return success();
 }
@@ -3040,15 +3034,11 @@ ParseResult OuterProductOp::parse(OpAsmParser &parser, OperationState &result) {
 
   VectorType resType;
   if (vRHS) {
-    SmallVector<bool> scalableDimsRes{vLHS.getScalableDims()[0],
-                                      vRHS.getScalableDims()[0]};
-    resType = VectorType::get({vLHS.getDimSize(0), vRHS.getDimSize(0)},
-                              vLHS.getElementType(), scalableDimsRes);
+    resType = VectorType::get(vLHS.getElementType(),
+                              {vLHS.getDim(0), vRHS.getDim(0)});
   } else {
     // Scalar RHS operand
-    SmallVector<bool> scalableDimsRes{vLHS.getScalableDims()[0]};
-    resType = VectorType::get({vLHS.getDimSize(0)}, vLHS.getElementType(),
-                              scalableDimsRes);
+    resType = VectorType::get(vLHS.getElementType(), {vLHS.getDim(0)});
   }
 
   if (!result.attributes.get(OuterProductOp::getKindAttrName(result.name))) {
@@ -3115,9 +3105,8 @@ LogicalResult OuterProductOp::verify() {
 /// verification purposes. It requires the operation to be vectorized."
 Type OuterProductOp::getExpectedMaskType() {
   auto vecType = this->getResultVectorType();
-  return VectorType::get(vecType.getShape(),
-                         IntegerType::get(vecType.getContext(), /*width=*/1),
-                         vecType.getScalableDims());
+  return VectorType::get(IntegerType::get(vecType.getContext(), /*width=*/1),
+                         vecType.getDims());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5064,25 +5053,13 @@ public:
 ///   vector<4x1x1xi1> --> vector<4x1>
 ///
 static VectorType trimTrailingOneDims(VectorType oldType) {
-  ArrayRef<int64_t> oldShape = oldType.getShape();
-  ArrayRef<int64_t> newShape = oldShape;
-
-  ArrayRef<bool> oldScalableDims = oldType.getScalableDims();
-  ArrayRef<bool> newScalableDims = oldScalableDims;
-
-  while (!newShape.empty() && newShape.back() == 1 && !newScalableDims.back()) {
-    newShape = newShape.drop_back(1);
-    newScalableDims = newScalableDims.drop_back(1);
-  }
-
-  // Make sure we have at least 1 dimension.
+  // Note: This will always keep at least one dim (even if it's a unit dim).
   // TODO: Add support for 0-D vectors.
-  if (newShape.empty()) {
-    newShape = oldShape.take_back();
-    newScalableDims = oldScalableDims.take_back();
-  }
+  VectorDims newDims = oldType.getDims();
+  while (newDims.size() > 1 && newDims.back() == VectorDim::getFixed(1))
+    newDims = newDims.dropBack();
 
-  return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
+  return VectorType::get(oldType.getElementType(), newDims);
 }
 
 /// Folds qualifying shape_cast(create_mask) into a new create_mask

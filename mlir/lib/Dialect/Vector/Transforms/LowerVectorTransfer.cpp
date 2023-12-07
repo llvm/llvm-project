@@ -113,13 +113,11 @@ struct TransferReadPermutationLowering
     permutationMap = inversePermutation(permutationMap);
     AffineMap newMap = permutationMap.compose(map);
     // Apply the reverse transpose to deduce the type of the transfer_read.
-    ArrayRef<int64_t> originalShape = op.getVectorType().getShape();
-    SmallVector<int64_t> newVectorShape(originalShape.size());
-    ArrayRef<bool> originalScalableDims = op.getVectorType().getScalableDims();
-    SmallVector<bool> newScalableDims(originalShape.size());
+    auto originalDims = op.getVectorType().getDims();
+    SmallVector<VectorDim> newVectorDims(op.getVectorType().getRank(),
+                                         VectorDim::getFixed(0));
     for (const auto &pos : llvm::enumerate(permutation)) {
-      newVectorShape[pos.value()] = originalShape[pos.index()];
-      newScalableDims[pos.value()] = originalScalableDims[pos.index()];
+      newVectorDims[pos.value()] = originalDims[pos.index()];
     }
 
     // Transpose in_bounds attribute.
@@ -129,8 +127,8 @@ struct TransferReadPermutationLowering
                          : ArrayAttr();
 
     // Generate new transfer_read operation.
-    VectorType newReadType = VectorType::get(
-        newVectorShape, op.getVectorType().getElementType(), newScalableDims);
+    VectorType newReadType =
+        VectorType::get(op.getVectorType().getElementType(), newVectorDims);
     Value newRead = rewriter.create<vector::TransferReadOp>(
         op.getLoc(), newReadType, op.getSource(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
