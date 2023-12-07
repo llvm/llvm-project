@@ -126,6 +126,10 @@ constexpr bool test() {
       assert(b3);
       std::same_as<bool> decltype(auto) b4 = (tv.begin() != tv.end());
       assert(b4);
+      std::same_as<bool> decltype(auto) b5 = (std::ranges::next(tv.begin(), 1) == tv.end());
+      assert(!b5);
+      std::same_as<bool> decltype(auto) b6 = (std::ranges::next(tv.begin(), 4) != tv.end());
+      assert(!b6);
     }
 
     { // Const == false
@@ -138,6 +142,10 @@ constexpr bool test() {
       assert(b3);
       std::same_as<bool> decltype(auto) b4 = (tv.begin() != tv.end());
       assert(b4);
+      std::same_as<bool> decltype(auto) b5 = (std::ranges::next(tv.begin(), 2) == tv.end());
+      assert(!b5);
+      std::same_as<bool> decltype(auto) b6 = (std::ranges::next(tv.begin(), 4) != tv.end());
+      assert(!b6);
     }
   }
 
@@ -152,6 +160,10 @@ constexpr bool test() {
       assert(b3);
       std::same_as<bool> decltype(auto) b4 = (std::as_const(tv).begin() != tv.end());
       assert(b4);
+      std::same_as<bool> decltype(auto) b5 = (std::ranges::next(std::as_const(tv).begin(), 1) == tv.end());
+      assert(!b5);
+      std::same_as<bool> decltype(auto) b6 = (std::ranges::next(std::as_const(tv).begin(), 4) != tv.end());
+      assert(!b6);
     }
 
     { // Const == false
@@ -164,6 +176,10 @@ constexpr bool test() {
       assert(b3);
       std::same_as<bool> decltype(auto) b4 = (tv.begin() != std::as_const(tv).end());
       assert(b4);
+      std::same_as<bool> decltype(auto) b5 = (std::ranges::next(tv.begin(), 2) == std::as_const(tv).end());
+      assert(!b5);
+      std::same_as<bool> decltype(auto) b6 = (std::ranges::next(tv.begin(), 4) != std::as_const(tv).end());
+      assert(!b6);
     }
   }
 
