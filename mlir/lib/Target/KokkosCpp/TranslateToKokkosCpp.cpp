@@ -959,6 +959,28 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
 }
 
 static LogicalResult printOperation(KokkosCppEmitter &emitter,
+                                    arith::IndexCastOp indexCastOp) {
+  if(failed(emitter.emitType(indexCastOp.getLoc(), indexCastOp.getOut().getType())))
+    return failure();
+  emitter << ' ' << emitter.getOrCreateName(indexCastOp.getOut()) << " = ";
+  if(failed(emitter.emitValue(indexCastOp.getIn())))
+    return failure();
+  emitter << ";\n";
+  return success();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter,
+                                    arith::SIToFPOp sIToFPOp) {
+  if(failed(emitter.emitType(sIToFPOp.getLoc(), sIToFPOp.getOut().getType())))
+    return failure();
+  emitter << ' ' << emitter.getOrCreateName(sIToFPOp.getOut()) << " = ";
+  if(failed(emitter.emitValue(sIToFPOp.getIn())))
+    return failure();
+  emitter << ";\n";
+  return success();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter,
                                     arith::FPToUIOp op) {
   //In C, float->unsigned conversion when input is negative is implementation defined, but MLIR says it should convert to the nearest value (0)
   if(failed(emitter.emitType(op.getLoc(), op.getOut().getType())))
@@ -3154,7 +3176,7 @@ LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemico
           .Case<scf::ForOp, scf::WhileOp, scf::IfOp, scf::YieldOp, scf::ConditionOp, scf::ParallelOp, scf::ReduceOp>(
               [&](auto op) { return printOperation(*this, op, kokkosParallelEnv); })
           // Arithmetic ops: general
-          .Case<arith::FPToUIOp, arith::NegFOp, arith::CmpFOp, arith::CmpIOp, arith::SelectOp>(
+          .Case<arith::FPToUIOp, arith::NegFOp, arith::CmpFOp, arith::CmpIOp, arith::SelectOp, arith::IndexCastOp, arith::SIToFPOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Arithmetic ops: standard binary infix operators. All have the same syntax "result = lhs <operator> rhs;".
           // ArithBinaryInfixOperator<Op>::get() will provide the <operator>.
