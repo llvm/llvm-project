@@ -22,7 +22,7 @@
 #include "test_iterators.h"
 
 template <bool Const>
-using StrictIterator = cpp20_input_iterator<std::conditional_t<Const, const int*, int*>>;
+using MaybeConstIterator = cpp20_input_iterator<std::conditional_t<Const, const int*, int*>>;
 
 template <bool Const>
 class StrictSentinel {
@@ -33,28 +33,28 @@ public:
   StrictSentinel() = default;
   constexpr explicit StrictSentinel(Base base) : base_(base) {}
 
-  friend constexpr bool operator==(const StrictIterator<Const>& it, const StrictSentinel& se) {
+  friend constexpr bool operator==(const MaybeConstIterator<Const>& it, const StrictSentinel& se) {
     return base(it) == se.base_;
   }
 
-  friend constexpr bool operator==(const StrictIterator<!Const>& it, const StrictSentinel& se) {
+  friend constexpr bool operator==(const MaybeConstIterator<!Const>& it, const StrictSentinel& se) {
     return base(it) == se.base_;
   }
 };
 
-static_assert(std::sentinel_for<StrictSentinel<true>, StrictIterator<false>>);
-static_assert(std::sentinel_for<StrictSentinel<true>, StrictIterator<true>>);
-static_assert(std::sentinel_for<StrictSentinel<false>, StrictIterator<false>>);
-static_assert(std::sentinel_for<StrictSentinel<false>, StrictIterator<true>>);
+static_assert(std::sentinel_for<StrictSentinel<true>, MaybeConstIterator<false>>);
+static_assert(std::sentinel_for<StrictSentinel<true>, MaybeConstIterator<true>>);
+static_assert(std::sentinel_for<StrictSentinel<false>, MaybeConstIterator<false>>);
+static_assert(std::sentinel_for<StrictSentinel<false>, MaybeConstIterator<true>>);
 
 struct NotSimpleView : std::ranges::view_base {
   template <std::size_t N>
   constexpr explicit NotSimpleView(int (&arr)[N]) : b_(arr), e_(arr + N) {}
 
-  constexpr StrictIterator<false> begin() { return StrictIterator<false>{b_}; }
+  constexpr MaybeConstIterator<false> begin() { return MaybeConstIterator<false>{b_}; }
   constexpr StrictSentinel<false> end() { return StrictSentinel<false>{e_}; }
 
-  constexpr StrictIterator<true> begin() const { return StrictIterator<true>{b_}; }
+  constexpr MaybeConstIterator<true> begin() const { return MaybeConstIterator<true>{b_}; }
   constexpr StrictSentinel<true> end() const { return StrictSentinel<true>{e_}; }
 
 private:
