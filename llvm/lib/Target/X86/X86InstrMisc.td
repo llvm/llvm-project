@@ -1502,16 +1502,14 @@ def MOVDIRI64 : RI<0xF9, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
                    "movdiri\t{$src, $dst|$dst, $src}",
                    [(int_x86_directstore64 addr:$dst, GR64:$src)]>,
                   T8PS, Requires<[In64BitMode, HasMOVDIRI, NoEGPR]>;
-let CD8_Scale = 0 in {
 def MOVDIRI32_EVEX : I<0xF9, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
                        "movdiri\t{$src, $dst|$dst, $src}",
                        [(int_x86_directstore32 addr:$dst, GR32:$src)]>,
-                     EVEX, T_MAP4PS, Requires<[HasMOVDIRI, HasEGPR]>;
+                     EVEX_NoCD8, T_MAP4PS, Requires<[HasMOVDIRI, HasEGPR]>;
 def MOVDIRI64_EVEX : RI<0xF9, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
                         "movdiri\t{$src, $dst|$dst, $src}",
                         [(int_x86_directstore64 addr:$dst, GR64:$src)]>,
-                     EVEX, T_MAP4PS, Requires<[In64BitMode, HasMOVDIRI, HasEGPR]>;
-}
+                     EVEX_NoCD8, T_MAP4PS, Requires<[In64BitMode, HasMOVDIRI, HasEGPR]>;
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
