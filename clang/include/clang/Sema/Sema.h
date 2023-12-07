@@ -8601,6 +8601,10 @@ public:
                                      TemplateParameterList *Params,
                                      TemplateArgumentLoc &Arg);
 
+  void NoteTemplateLocation(const NamedDecl &Decl,
+                            std::optional<SourceRange> ParamRange = {});
+  void NoteTemplateParameterLocation(const NamedDecl &Decl);
+
   ExprResult
   BuildExpressionFromDeclTemplateArgument(const TemplateArgument &Arg,
                                           QualType ParamType,
