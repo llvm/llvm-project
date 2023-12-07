@@ -1700,7 +1700,6 @@ private:
                      const OperandInfoTy &Width);
 
   SMLoc getFlatOffsetLoc(const OperandVector &Operands) const;
-  SMLoc getOffsetLoc(const OperandVector &Operands) const;
   SMLoc getSMEMOffsetLoc(const OperandVector &Operands) const;
   SMLoc getBLGPLoc(const OperandVector &Operands) const;
 
@@ -4241,15 +4240,6 @@ SMLoc AMDGPUAsmParser::getFlatOffsetLoc(const OperandVector &Operands) const {
   for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
     if (Op.isFlatOffset())
-      return Op.getStartLoc();
-  }
-  return getLoc();
-}
-
-SMLoc AMDGPUAsmParser::getOffsetLoc(const OperandVector &Operands) const {
-  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
-    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
-    if (Op.isOffset())
       return Op.getStartLoc();
   }
   return getLoc();
