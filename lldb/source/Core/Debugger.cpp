@@ -930,7 +930,7 @@ void Debugger::Clear() {
     for (TargetSP target_sp : m_target_list.Targets()) {
       if (target_sp) {
         if (ProcessSP process_sp = target_sp->GetProcessSP())
-          process_sp->Finalize();
+          process_sp->Finalize(false /* not destructing */);
         target_sp->Destroy();
       }
     }
