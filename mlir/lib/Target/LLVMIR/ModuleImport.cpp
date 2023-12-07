@@ -619,8 +619,8 @@ void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
   }
 }
 
-void ModuleImport::setIntegerFlagsAttr(llvm::Instruction *inst,
-                                       Operation *op) const {
+void ModuleImport::setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
+                                               Operation *op) const {
   auto iface = cast<IntegerOverflowFlagsInterface>(op);
 
   IntegerOverflowFlags value = {};

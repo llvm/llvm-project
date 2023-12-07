@@ -175,7 +175,8 @@ public:
   /// Sets the integer overflow flags (nsw/nuw) attribute for the imported
   /// operation `op` given the original instruction `inst`. Asserts if the
   /// operation does not implement the integer overflow flag interface.
-  void setIntegerFlagsAttr(llvm::Instruction *inst, Operation *op) const;
+  void setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
+                                   Operation *op) const;
 
   /// Sets the fastmath flags attribute for the imported operation `op` given
   /// the original instruction `inst`. Asserts if the operation does not

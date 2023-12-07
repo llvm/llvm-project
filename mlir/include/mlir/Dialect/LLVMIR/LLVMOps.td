@@ -55,7 +55,7 @@ class LLVM_IntArithmeticOp<string mnemonic, string instName,
     $res = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
   }];
 }
-class LLVM_IntArithmeticOpWithFlag<string mnemonic, string instName,
+class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
                                    list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<AnyInteger, mnemonic, instName,
     !listconcat([DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)> {
@@ -64,7 +64,7 @@ class LLVM_IntArithmeticOpWithFlag<string mnemonic, string instName,
   let arguments = !con(commonArgs, iofArg);
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
-    moduleImport.setIntegerFlagsAttr(inst, op);
+    moduleImport.setIntegerOverflowFlagsAttr(inst, op);
     $res = op;
   }];
   let assemblyFormat = [{
@@ -110,9 +110,11 @@ class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
 }
 
 // Integer binary operations.
-def LLVM_AddOp : LLVM_IntArithmeticOpWithFlag<"add", "Add", [Commutative]>;
-def LLVM_SubOp : LLVM_IntArithmeticOpWithFlag<"sub", "Sub", []>;
-def LLVM_MulOp : LLVM_IntArithmeticOpWithFlag<"mul", "Mul", [Commutative]>;
+def LLVM_AddOp : LLVM_IntArithmeticOpWithOverflowFlag<"add", "Add",
+    [Commutative]>;
+def LLVM_SubOp : LLVM_IntArithmeticOpWithOverflowFlag<"sub", "Sub", []>;
+def LLVM_MulOp : LLVM_IntArithmeticOpWithOverflowFlag<"mul", "Mul",
+    [Commutative]>;
 def LLVM_UDivOp : LLVM_IntArithmeticOp<"udiv", "UDiv">;
 def LLVM_SDivOp : LLVM_IntArithmeticOp<"sdiv", "SDiv">;
 def LLVM_URemOp : LLVM_IntArithmeticOp<"urem", "URem">;
@@ -122,7 +124,7 @@ def LLVM_OrOp : LLVM_IntArithmeticOp<"or", "Or"> {
   let hasFolder = 1;
 }
 def LLVM_XOrOp : LLVM_IntArithmeticOp<"xor", "Xor">;
-def LLVM_ShlOp : LLVM_IntArithmeticOpWithFlag<"shl", "Shl", []> {
+def LLVM_ShlOp : LLVM_IntArithmeticOpWithOverflowFlag<"shl", "Shl", []> {
   let hasFolder = 1;
 }
 def LLVM_LShrOp : LLVM_IntArithmeticOp<"lshr", "LShr">;

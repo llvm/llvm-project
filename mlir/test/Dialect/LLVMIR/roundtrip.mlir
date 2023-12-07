@@ -34,7 +34,7 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %vptrcmp = llvm.icmp "ne" %arg5, %arg5 : !llvm.vec<2 x ptr>
   %typecheck_vptrcmp = llvm.add %vptrcmp, %vptrcmp : vector<2 x i1>
 
-// Integer arithmetic flags
+// Integer overflow flags
 // CHECK: {{.*}} = llvm.add %[[I32]], %[[I32]] overflow<nsw> : i32
 // CHECK: {{.*}} = llvm.sub %[[I32]], %[[I32]] overflow<nuw> : i32
 // CHECK: {{.*}} = llvm.mul %[[I32]], %[[I32]] overflow<nsw, nuw> : i32
