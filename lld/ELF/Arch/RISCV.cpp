@@ -662,8 +662,7 @@ static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
     // and compressed instructions are enabled.
     // Try to compress the lui to a c.lui.
     const unsigned bits = config->wordsize * 8;
-    uint32_t rd =
-      extractBits(read32le(sec.content().data() + r.offset), 11, 7);
+    uint32_t rd = extractBits(read32le(sec.content().data() + r.offset), 11, 7);
     uint32_t newInsn = 0x6001 | (rd << 7); // c.lui
     int64_t imm = SignExtend64(r.sym->getVA(r.addend) + 0x800, bits) >> 12;
 

@@ -9,15 +9,15 @@
 # RUN: llvm-objdump -td -M no-aliases rv32 | FileCheck %s
 # RUN: llvm-objdump -td -M no-aliases rv64 | FileCheck %s
 
-# CHECK: 00002000 l       .data  {{0+}} foo
-# CHECK: 00002000 l       .data  {{0+}} $d.2
+# CHECK: 00002004 l       .data  {{0+}} foo
+# CHECK: 00020004 l       .far   {{0+}} bar
 # CHECK: 00001800 g       .sdata {{0+}} __global_pointer$
 
 # CHECK: <_start>:
 # CHECK: 09 65         c.lui   a0, 2
-# CHECK: 13 05 05 00   addi    a0, a0, 0
+# CHECK: 13 05 45 00   addi    a0, a0, 4
 # CHECK: 37 05 02 00   lui   a0, 32
-# CHECK: 13 05 05 00   addi    a0, a0, 0
+# CHECK: 13 05 45 00   addi    a0, a0, 4
 
 
 #--- a.s
@@ -41,6 +41,6 @@ bar:
 SECTIONS {
   .text : {*(.text) }
   .sdata 0x1000 : { }
-  .data 0x2000 : { }
-  .far 0x20000 : { }
+  .data 0x2004 : { }
+  .far 0x20004 : { }
 }
