@@ -1344,10 +1344,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
       assert(!HasConstantCond ||
              (ConstantCondValue.getBitWidth() == CondWidth &&
               ConstantCondValue.isSigned() == CondIsSigned));
-#if NEEDS_PATCH_FOR_SWITCH
-//[clang][Sema] Add -Wswitch-default warning option (#73077)
       Diag(SwitchLoc, diag::warn_switch_default);
-#endif
     }
     bool ShouldCheckConstantCond = HasConstantCond;
 
