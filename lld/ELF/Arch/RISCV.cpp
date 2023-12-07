@@ -650,8 +650,37 @@ static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
   if (!gp)
     return;
 
+  bool noRelaxation = false;
   if (!isInt<12>(r.sym->getVA(r.addend) - gp->getVA()))
+    noRelaxation = true;
+
+  if (noRelaxation) {
+    if (r.type != R_RISCV_HI20 || !(config->eflags & EF_RISCV_RVC) ||
+        !isInt<18>(r.sym->getVA(r.addend)))
+      return;
+    // We have a HI20 reloc that fits in 18 bits but not in 12 bits
+    // and compressed instructions are enabled.
+    // Try to compress the lui to a c.lui.
+    const unsigned bits = config->wordsize * 8;
+    uint32_t rd =
+      extractBits(read32le(sec.content().data() + r.offset), 11, 7);
+    uint32_t newInsn = 0x6001 | (rd << 7); // c.lui
+    int64_t imm = SignExtend64(r.sym->getVA(r.addend) + 0x800, bits) >> 12;
+
+    // The high immediate may be outside the range if the low needs to be
+    // negative. So the isInt<18> check above is not sufficient. Also,
+    // rd != 2 for c.lui.
+    if (rd == 2 || !isInt<6>(imm))
+      return;
+    if (imm == 0)
+      newInsn &= 0xDFFF;
+    uint16_t imm17 = extractBits(imm, 17, 17) << 12;
+    uint16_t imm16_12 = extractBits(imm, 16, 12) << 2;
+    remove = 2;
+    sec.relaxAux->relocTypes[i] = R_RISCV_RVC_LUI;
+    sec.relaxAux->writes.push_back(newInsn | imm17 | imm16_12);
     return;
+  }
 
   switch (r.type) {
   case R_RISCV_HI20:
@@ -830,6 +859,7 @@ void elf::riscvFinalizeRelax(int passes) {
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.
             break;
+          case R_RISCV_RVC_LUI:
           case R_RISCV_RVC_JUMP:
             skip = 2;
             write16le(p, aux.writes[writesIdx++]);
