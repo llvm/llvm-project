@@ -26,15 +26,12 @@
 #include <cstring>
 #include <mutex>
 
-EXTERN int ompx_get_team_procs(int device_num) {
-  if (!deviceIsReady(device_num)) {
-    DP("Device %d did not initialize\n", device_num);
-    return 0;
-  }
+EXTERN int ompx_get_team_procs(int DeviceNum) {
   TIMESCOPE();
-  PM->RTLsMtx.lock();
-  int TeamProcs = PM->Devices[device_num]->getTeamProcs();
-  PM->RTLsMtx.unlock();
+  auto DeviceOrErr = PM->getDevice(DeviceNum);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
+  int TeamProcs = DeviceOrErr->getTeamProcs();
   DP("Call to ompx_get_team_procs returning %d\n", TeamProcs);
   return TeamProcs;
 }
@@ -48,11 +45,11 @@ EXTERN int omp_get_num_devices(void) {
   return NumDevices;
 }
 
-EXTERN int omp_get_device_num(void) {
+EXTERN int omp_get_DeviceNum(void) {
   TIMESCOPE();
   int HostDevice = omp_get_initial_device();
 
-  DP("Call to omp_get_device_num returning %d\n", HostDevice);
+  DP("Call to omp_get_DeviceNum returning %d\n", HostDevice);
 
   return HostDevice;
 }
@@ -81,20 +78,20 @@ EXTERN void *llvm_omp_target_alloc_shared(size_t Size, int DeviceNum) {
 }
 
 EXTERN void *llvm_omp_target_alloc_multi_devices(size_t size, int num_devices,
-                                                 int device_nums[]) {
+                                                 int DeviceNums[]) {
   if (num_devices < 1)
     return nullptr;
 
-  DeviceTy &Device = *PM->Devices[device_nums[0]];
+  DeviceTy &Device = *PM->getDevice(DeviceNums[0]);
   if (!Device.RTL->is_system_supporting_managed_memory())
     return nullptr;
 
   // disregard device ids for now and allocate shared memory that can be
   // accessed by any device and host under xnack+ mode
   void *ptr =
-      targetAllocExplicit(size, device_nums[0], TARGET_ALLOC_DEFAULT, __func__);
+      targetAllocExplicit(size, DeviceNums[0], TARGET_ALLOC_DEFAULT, __func__);
   if (Device.RTL->enable_access_to_all_agents)
-    Device.RTL->enable_access_to_all_agents(ptr, device_nums[0]);
+    Device.RTL->enable_access_to_all_agents(ptr, DeviceNums[0]);
   return ptr;
 }
 
@@ -141,21 +138,18 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
     return true;
   }
 
-  size_t NumDevices = PM->getNumDevices();
-  if (NumDevices <= (size_t)DeviceNum) {
-    DP("Call to omp_target_is_present with invalid device ID, returning "
-       "false\n");
-    return false;
-  }
+  auto DeviceOrErr = PM->getDevice(DeviceNum);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  DeviceTy &Device = *PM->Devices[DeviceNum];
   // omp_target_is_present tests whether a host pointer refers to storage that
   // is mapped to a given device. However, due to the lack of the storage size,
   // only check 1 byte. Cannot set size 0 which checks whether the pointer (zero
   // lengh array) is mapped instead of the referred storage.
-  TargetPointerResultTy TPR = Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1,
-                                                    /*UpdateRefCount=*/false,
-                                                    /*UseHoldRefCount=*/false);
+  TargetPointerResultTy TPR =
+      DeviceOrErr->getTgtPtrBegin(const_cast<void *>(Ptr), 1,
+                                  /*UpdateRefCount=*/false,
+                                  /*UseHoldRefCount=*/false);
   int Rc = TPR.isPresent();
   DP("Call to omp_target_is_present returns %d\n", Rc);
   return Rc;
@@ -181,16 +175,6 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
     return OFFLOAD_FAIL;
   }
 
-  if (SrcDevice != omp_get_initial_device() && !deviceIsReady(SrcDevice)) {
-    REPORT("omp_target_memcpy returns OFFLOAD_FAIL\n");
-    return OFFLOAD_FAIL;
-  }
-
-  if (DstDevice != omp_get_initial_device() && !deviceIsReady(DstDevice)) {
-    REPORT("omp_target_memcpy returns OFFLOAD_FAIL\n");
-    return OFFLOAD_FAIL;
-  }
-
   int Rc = OFFLOAD_SUCCESS;
   void *SrcAddr = (char *)const_cast<void *>(Src) + SrcOffset;
   void *DstAddr = (char *)Dst + DstOffset;
@@ -203,35 +187,49 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
       Rc = OFFLOAD_FAIL;
   } else if (SrcDevice == omp_get_initial_device()) {
     DP("copy from host to device\n");
-    DeviceTy &DstDev = *PM->Devices[DstDevice];
-    AsyncInfoTy AsyncInfo(DstDev);
-    Rc = DstDev.submitData(DstAddr, SrcAddr, Length, AsyncInfo);
+    auto DstDeviceOrErr = PM->getDevice(DstDevice);
+    if (!DstDeviceOrErr)
+      FATAL_MESSAGE(DstDevice, "%s",
+                    toString(DstDeviceOrErr.takeError()).c_str());
+    AsyncInfoTy AsyncInfo(*DstDeviceOrErr);
+    Rc = DstDeviceOrErr->submitData(DstAddr, SrcAddr, Length, AsyncInfo);
   } else if (DstDevice == omp_get_initial_device()) {
     DP("copy from device to host\n");
-    DeviceTy &SrcDev = *PM->Devices[SrcDevice];
-    AsyncInfoTy AsyncInfo(SrcDev);
-    Rc = SrcDev.retrieveData(DstAddr, SrcAddr, Length, AsyncInfo);
+    auto SrcDeviceOrErr = PM->getDevice(SrcDevice);
+    if (!SrcDeviceOrErr)
+      FATAL_MESSAGE(SrcDevice, "%s",
+                    toString(SrcDeviceOrErr.takeError()).c_str());
+    AsyncInfoTy AsyncInfo(*SrcDeviceOrErr);
+    Rc = SrcDeviceOrErr->retrieveData(DstAddr, SrcAddr, Length, AsyncInfo);
   } else {
     DP("copy from device to device\n");
-    DeviceTy &SrcDev = *PM->Devices[SrcDevice];
-    DeviceTy &DstDev = *PM->Devices[DstDevice];
+    auto SrcDeviceOrErr = PM->getDevice(SrcDevice);
+    if (!SrcDeviceOrErr)
+      FATAL_MESSAGE(SrcDevice, "%s",
+                    toString(SrcDeviceOrErr.takeError()).c_str());
+    AsyncInfoTy AsyncInfo(*SrcDeviceOrErr);
+    auto DstDeviceOrErr = PM->getDevice(DstDevice);
+    if (!DstDeviceOrErr)
+      FATAL_MESSAGE(DstDevice, "%s",
+                    toString(DstDeviceOrErr.takeError()).c_str());
     // First try to use D2D memcpy which is more efficient. If fails, fall back
     // to unefficient way.
-    if (SrcDev.isDataExchangable(DstDev)) {
-      AsyncInfoTy AsyncInfo(SrcDev);
-      Rc = SrcDev.dataExchange(SrcAddr, DstDev, DstAddr, Length, AsyncInfo);
+    if (SrcDeviceOrErr->isDataExchangable(*DstDeviceOrErr)) {
+      AsyncInfoTy AsyncInfo(*SrcDeviceOrErr);
+      Rc = SrcDeviceOrErr->dataExchange(SrcAddr, *DstDeviceOrErr, DstAddr,
+                                        Length, AsyncInfo);
       if (Rc == OFFLOAD_SUCCESS)
         return OFFLOAD_SUCCESS;
     }
 
     void *Buffer = malloc(Length);
     {
-      AsyncInfoTy AsyncInfo(SrcDev);
-      Rc = SrcDev.retrieveData(Buffer, SrcAddr, Length, AsyncInfo);
+      AsyncInfoTy AsyncInfo(*SrcDeviceOrErr);
+      Rc = SrcDeviceOrErr->retrieveData(Buffer, SrcAddr, Length, AsyncInfo);
     }
     if (Rc == OFFLOAD_SUCCESS) {
-      AsyncInfoTy AsyncInfo(DstDev);
-      Rc = DstDev.submitData(DstAddr, Buffer, Length, AsyncInfo);
+      AsyncInfoTy AsyncInfo(*DstDeviceOrErr);
+      Rc = DstDeviceOrErr->submitData(DstAddr, Buffer, Length, AsyncInfo);
     }
     free(Buffer);
   }
@@ -525,7 +523,7 @@ EXTERN int omp_target_associate_ptr(const void *HostPtr, const void *DevicePtr,
                                     int DeviceNum) {
   TIMESCOPE();
   DP("Call to omp_target_associate_ptr with host_ptr " DPxMOD ", "
-     "device_ptr " DPxMOD ", size %zu, device_offset %zu, device_num %d\n",
+     "device_ptr " DPxMOD ", size %zu, device_offset %zu, DeviceNum %d\n",
      DPxPTR(HostPtr), DPxPTR(DevicePtr), Size, DeviceOffset, DeviceNum);
 
   if (!HostPtr || !DevicePtr || Size <= 0) {
@@ -538,15 +536,13 @@ EXTERN int omp_target_associate_ptr(const void *HostPtr, const void *DevicePtr,
     return OFFLOAD_FAIL;
   }
 
-  if (!deviceIsReady(DeviceNum)) {
-    REPORT("omp_target_associate_ptr returns OFFLOAD_FAIL\n");
-    return OFFLOAD_FAIL;
-  }
+  auto DeviceOrErr = PM->getDevice(DeviceNum);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  DeviceTy &Device = *PM->Devices[DeviceNum];
   void *DeviceAddr = (void *)((uint64_t)DevicePtr + (uint64_t)DeviceOffset);
-  int Rc = Device.associatePtr(const_cast<void *>(HostPtr),
-                               const_cast<void *>(DeviceAddr), Size);
+  int Rc = DeviceOrErr->associatePtr(const_cast<void *>(HostPtr),
+                                     const_cast<void *>(DeviceAddr), Size);
   DP("omp_target_associate_ptr returns %d\n", Rc);
   return Rc;
 }
@@ -554,7 +550,7 @@ EXTERN int omp_target_associate_ptr(const void *HostPtr, const void *DevicePtr,
 EXTERN int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum) {
   TIMESCOPE();
   DP("Call to omp_target_disassociate_ptr with host_ptr " DPxMOD ", "
-     "device_num %d\n",
+     "DeviceNum %d\n",
      DPxPTR(HostPtr), DeviceNum);
 
   if (!HostPtr) {
@@ -568,19 +564,17 @@ EXTERN int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum) {
     return OFFLOAD_FAIL;
   }
 
-  if (!deviceIsReady(DeviceNum)) {
-    REPORT("omp_target_disassociate_ptr returns OFFLOAD_FAIL\n");
-    return OFFLOAD_FAIL;
-  }
+  auto DeviceOrErr = PM->getDevice(DeviceNum);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  DeviceTy &Device = *PM->Devices[DeviceNum];
-  int Rc = Device.disassociatePtr(const_cast<void *>(HostPtr));
+  int Rc = DeviceOrErr->disassociatePtr(const_cast<void *>(HostPtr));
   DP("omp_target_disassociate_ptr returns %d\n", Rc);
   return Rc;
 }
 
 EXTERN int omp_is_coarse_grain_mem_region(void *ptr, size_t size) {
-  DeviceTy &Device = *PM->Devices[omp_get_default_device()];
+  DeviceTy &Device = *PM->getDevice(omp_get_default_device());
   if (!Device.RTL->query_coarse_grain_mem_region)
     return 0;
   return Device.RTL->query_coarse_grain_mem_region(Device.DeviceID, ptr, size);
@@ -588,7 +582,7 @@ EXTERN int omp_is_coarse_grain_mem_region(void *ptr, size_t size) {
 
 EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
   TIMESCOPE();
-  DP("Call to omp_get_mapped_ptr with ptr " DPxMOD ", device_num %d.\n",
+  DP("Call to omp_get_mapped_ptr with ptr " DPxMOD ", DeviceNum %d.\n",
      DPxPTR(Ptr), DeviceNum);
 
   if (!Ptr) {
@@ -608,15 +602,14 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
     return nullptr;
   }
 
-  if (!deviceIsReady(DeviceNum)) {
-    REPORT("Device %d is not ready, returning nullptr.\n", DeviceNum);
-    return nullptr;
-  }
+  auto DeviceOrErr = PM->getDevice(DeviceNum);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  auto &Device = *PM->Devices[DeviceNum];
-  TargetPointerResultTy TPR = Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1,
-                                                    /*UpdateRefCount=*/false,
-                                                    /*UseHoldRefCount=*/false);
+  TargetPointerResultTy TPR =
+      DeviceOrErr->getTgtPtrBegin(const_cast<void *>(Ptr), 1,
+                                  /*UpdateRefCount=*/false,
+                                  /*UseHoldRefCount=*/false);
   if (!TPR.isPresent()) {
     DP("Ptr " DPxMOD "is not present on device %d, returning nullptr.\n",
        DPxPTR(Ptr), DeviceNum);

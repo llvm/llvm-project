@@ -3,6 +3,5 @@ Johannes: breakage
    see smoke-fails, smoke-limbo, smoke, examples
 
 defer to post merge:
-[OpenMP] Ensure `Devices` is accessed exlusively (#74374) 
 [OpenMP] Reorganize the initialization of `PluginAdaptorTy` 
 
