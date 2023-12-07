@@ -1759,7 +1759,7 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
                                                       const VarDecl &D,
                                                       Address Loc) {
   auto trivialAutoVarInit = getContext().getLangOpts().getTrivialAutoVarInit();
-  auto trivialAutoVarInitSizeBound = 
+  auto trivialAutoVarInitSizeBound =
       getContext().getLangOpts().TrivialAutoVarInitSizeBound;
   CharUnits Size = getContext().getTypeSizeInChars(type);
   bool isVolatile = type.isVolatileQualified();
