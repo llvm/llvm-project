@@ -17,8 +17,8 @@ using namespace __tsan;
 #ifdef __AVX512F__
 extern "C" void __tsan_scatter_vector8(__m512i vaddr, int size, uint8_t mask) {
   void *addr[8] = {};
-  __m256i v256_1 = _mm512_extracti64x4_epi64(vaddr, 0);
-  __m256i v256_2 = _mm512_extracti64x4_epi64(vaddr, 4);
+  __m256i v256_1 = _mm512_castsi512_si256(vaddr);
+  __m256i v256_2 = _mm512_extracti64x4_epi64(vaddr, 1);
   _mm256_store_si256((__m256i *)addr, v256_1);
   _mm256_store_si256((__m256i *)&(addr[4]), v256_2);
   uptr pc = CALLERPC;
@@ -30,8 +30,8 @@ extern "C" void __tsan_scatter_vector8(__m512i vaddr, int size, uint8_t mask) {
 
 extern "C" void __tsan_gather_vector8(__m512i vaddr, int size, uint8_t mask) {
   void *addr[8] = {};
-  __m256i v256_1 = _mm512_extracti64x4_epi64(vaddr, 0);
-  __m256i v256_2 = _mm512_extracti64x4_epi64(vaddr, 4);
+  __m256i v256_1 = _mm512_castsi512_si256(vaddr);
+  __m256i v256_2 = _mm512_extracti64x4_epi64(vaddr, 1);
   _mm256_store_si256((__m256i *)addr, v256_1);
   _mm256_store_si256((__m256i *)(&addr[4]), v256_2);
   uptr pc = CALLERPC;
