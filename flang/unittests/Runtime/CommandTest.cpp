@@ -10,6 +10,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/extensions.h"
 #include "flang/Runtime/main.h"
 #include <cstdlib>
 
@@ -207,6 +208,42 @@ protected:
   NoArgv() : CommandFixture(0, nullptr) {}
 };
 
+TEST_F(NoArgv, FdateGetDate) {
+  const int charLen{24};
+  char input[charLen]{"24LengthCharIsJustRight"};
+
+  FORTRAN_PROCEDURE_NAME(fdate)
+  (reinterpret_cast<std::int8_t *>(input), charLen);
+
+  for (int i{0}; i < charLen; i++) {
+    EXPECT_NE(input[i], '\n');
+  }
+}
+
+TEST_F(NoArgv, FdateGetDateTooShort) {
+  const int charLen{23};
+  char input[charLen]{"TooShortAllPadSpace"};
+
+  FORTRAN_PROCEDURE_NAME(fdate)
+  (reinterpret_cast<std::int8_t *>(input), charLen);
+
+  for (int i{0}; i < charLen; i++) {
+    EXPECT_EQ(input[i], ' ');
+  }
+}
+
+TEST_F(NoArgv, FdateGetDatePadSpace) {
+  const int charLen{29};
+  char input[charLen]{"All char after 23 pad spaces"};
+
+  FORTRAN_PROCEDURE_NAME(fdate)
+  (reinterpret_cast<std::int8_t *>(input), charLen);
+
+  for (int i{24}; i < charLen; i++) {
+    EXPECT_EQ(input[i], ' ');
+  }
+}
+
 // TODO: Test other intrinsics with this fixture.
 
 TEST_F(NoArgv, GetCommand) { CheckMissingCommandValue(); }
@@ -225,12 +262,6 @@ TEST_F(ZeroArguments, GetCommandArgument) {
   CheckMissingArgumentValue(1);
 }
 
-TEST_F(ZeroArguments, FDate) {
-  CheckMissingArgumentValue(-1);
-  CheckArgumentValue(commandOnlyArgv[0], 0);
-  CheckMissingArgumentValue(1);
-}
-
 TEST_F(ZeroArguments, GetCommand) { CheckCommandValue(commandOnlyArgv, 1); }
 
 static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};
@@ -242,13 +273,6 @@ protected:
 TEST_F(OneArgument, ArgumentCount) { EXPECT_EQ(1, RTNAME(ArgumentCount)()); }
 
 TEST_F(OneArgument, GetCommandArgument) {
-  CheckMissingArgumentValue(-1);
-  CheckArgumentValue(oneArgArgv[0], 0);
-  CheckArgumentValue(oneArgArgv[1], 1);
-  CheckMissingArgumentValue(2);
-}
-
-TEST_F(OneArgument, FDate) {
   CheckMissingArgumentValue(-1);
   CheckArgumentValue(oneArgArgv[0], 0);
   CheckArgumentValue(oneArgArgv[1], 1);

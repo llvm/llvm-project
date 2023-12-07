@@ -51,9 +51,7 @@ void FORTRAN_PROCEDURE_NAME(flush)(const int &unit) {
 }
 } // namespace io
 
-// RESULT = IARGC()
-std::int32_t FORTRAN_PROCEDURE_NAME(iargc)() { return RTNAME(ArgumentCount)(); }
-
+// CALL FDATE(DATE)
 void FORTRAN_PROCEDURE_NAME(fdate)(std::int8_t *arg, std::int64_t length) {
   // If the length is too short to fit completely, blank return.
   if (length < 24) {
@@ -71,6 +69,9 @@ void FORTRAN_PROCEDURE_NAME(fdate)(std::int8_t *arg, std::int64_t length) {
   ctime_alloc(str.data(), str.size(), current_time, terminator);
   copyBufferAndPad(reinterpret_cast<char *>(arg), length, str.data(), 24);
 }
+
+// RESULT = IARGC()
+std::int32_t FORTRAN_PROCEDURE_NAME(iargc)() { return RTNAME(ArgumentCount)(); }
 
 // CALL GETARG(N, ARG)
 void FORTRAN_PROCEDURE_NAME(getarg)(
