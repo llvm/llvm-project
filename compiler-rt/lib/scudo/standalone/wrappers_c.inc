@@ -28,10 +28,12 @@ static void reportDeallocation(void *ptr) {
       __scudo_deallocate_hook(ptr);
 }
 static void reportReallocAllocation(void *old_ptr, void *new_ptr, size_t size) {
+  DCHECK_NE(new_ptr, nullptr);
+
   if (SCUDO_ENABLE_HOOKS) {
     if (__scudo_realloc_allocate_hook)
       __scudo_realloc_allocate_hook(old_ptr, new_ptr, size);
-    else
+    else if (__scudo_allocate_hook)
       __scudo_allocate_hook(new_ptr, size);
   }
 }
@@ -39,7 +41,7 @@ static void reportReallocDeallocation(void *old_ptr) {
   if (SCUDO_ENABLE_HOOKS) {
     if (__scudo_realloc_deallocate_hook)
       __scudo_realloc_deallocate_hook(old_ptr);
-    else
+    else if (__scudo_deallocate_hook)
       __scudo_deallocate_hook(old_ptr);
   }
 }
