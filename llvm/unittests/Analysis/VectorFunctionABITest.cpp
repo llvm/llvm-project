@@ -22,10 +22,8 @@ namespace {
 ///    given by the string FunctionType.
 /// 3. The number of vector parameters and their types match the values
 ///    specified in the test.
-///    On masked functions, when the VFISAKind is SVE or AdvancedSIMD (NEON) it
-///    also checks that the last parameter is a mask (ie, GlobalPredicate).
-///    TODO: Other VFISAKinds must add such checks according to their ABI
-///    specification.
+///    On masked functions it also checks that the last parameter is a mask (ie,
+///    GlobalPredicate).
 /// 4. The function is correctly found to have a mask.
 ///
 class VFABIParserTest : public ::testing::Test {
