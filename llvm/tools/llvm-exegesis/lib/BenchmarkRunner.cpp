@@ -44,7 +44,14 @@
 #define GLIBC_INITS_RSEQ
 #endif
 #endif
+
+// Before kernel 4.17, Linux did not support MAP_FIXED_NOREPLACE, so if it is
+// not available, simplfy define it as MAP_FIXED which performs the same
+// function but does not guarantee existing mappings won't get clobbered.
+#ifndef MAP_FIXED_NOREPLACE
+#define MAP_FIXED_NOREPLACE MAP_FIXED
 #endif
+#endif // __linux__
 
 namespace llvm {
 namespace exegesis {
