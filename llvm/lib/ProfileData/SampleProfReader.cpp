@@ -409,7 +409,7 @@ std::error_code SampleProfileReaderText::readImpl() {
       }
       case LineType::BodyProfile: {
         FunctionSamples &FProfile = *InlineStack.back();
-        if (ProfileCallTargetMax != 0)  {
+        if (ProfileCallTargetMax != 0) {
           std::multimap<uint64_t, FunctionId> CallTargets;
           for (const auto &CallTarget : TargetCountMap) {
             CallTargets.emplace(CallTarget.second, CallTarget.first);
@@ -423,10 +423,10 @@ std::error_code SampleProfileReaderText::readImpl() {
           }
         } else {
           for (const auto &name_count : TargetCountMap) {
-            MergeResult(Result, FProfile.addCalledTargetSamples(
-                                    LineOffset, Discriminator,
-                                    FunctionId(name_count.first),
-                                    name_count.second));
+            MergeResult(Result,
+                        FProfile.addCalledTargetSamples(
+                            LineOffset, Discriminator,
+                            FunctionId(name_count.first), name_count.second));
           }
         }
         MergeResult(Result, FProfile.addBodySamples(LineOffset, Discriminator,
@@ -624,9 +624,8 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
     // Here we handle FS discriminators:
     uint32_t DiscriminatorVal = (*Discriminator) & getDiscriminatorMask();
 
-    SampleRecord &Sample =
-        FProfile.getOrCreateBodySample(*LineOffset, DiscriminatorVal,
-                                       *NumSamples);
+    SampleRecord &Sample = FProfile.getOrCreateBodySample(
+        *LineOffset, DiscriminatorVal, *NumSamples);
 
     if (ProfileCallTargetMax != 0) {
       // ProfileCallTargetMax is only used by SampleProfile.cpp at compilation,
@@ -647,7 +646,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
           CallTargets.erase(CallTargets.begin());
       }
 
-      for (auto & CallTarget : CallTargets) {
+      for (auto &CallTarget : CallTargets) {
         Sample.addCalledTarget(CallTarget.second, CallTarget.first);
       }
     } else {

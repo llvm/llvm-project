@@ -782,8 +782,8 @@ public:
   }
 
   SampleRecord &getOrCreateBodySample(uint32_t LineOffset,
-                                      uint32_t Discriminator,
-                                      uint64_t Num, uint64_t Weight = 1) {
+                                      uint32_t Discriminator, uint64_t Num,
+                                      uint64_t Weight = 1) {
     SampleRecord &Sample = BodySamples[LineLocation(LineOffset, Discriminator)];
     Sample.addSamples(Num, Weight);
     return Sample;
@@ -991,7 +991,7 @@ public:
       FunctionSamplesMap &FunctionSamples = CallsiteSample.second;
       if (ProfileInlineCallsiteMax < FunctionSamples.size()) {
         auto It = llvm::map_range(FunctionSamples,
-                                  [](FunctionSamplesMap::value_type &V){
+                                  [](FunctionSamplesMap::value_type &V) {
                                     return V.second.getTotalSamples();
                                   });
         std::vector<uint64_t> TotalSamples(It.begin(), It.end());
