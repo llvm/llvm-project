@@ -641,24 +641,24 @@ public:
 class raw_socket_stream;
 class ListeningSocket {
   int FD;
-  StringRef SocketPath;
+  std::string SocketPath;
   ListeningSocket(int SocketFD, StringRef SocketPath);
-  // ...
+
 public:
   static Expected<ListeningSocket> createUnix(StringRef SocketPath);
-  Expected<raw_socket_stream> accept();
+  Expected<std::unique_ptr<raw_socket_stream>> accept();
   ListeningSocket(ListeningSocket &&LS);
   ~ListeningSocket();
 };
 class raw_socket_stream : public raw_fd_stream {
   uint64_t current_pos() const override { return 0; }
+
 public:
   raw_socket_stream(int SocketFD);
-  raw_socket_stream(raw_socket_stream &&socket_stream);
-
   /// Create a \p raw_socket_stream connected to the Unix domain socket at \p
   /// SocketPath.
-  static Expected<raw_socket_stream> createConnectedUnix(StringRef SocketPath);
+  static Expected<std::unique_ptr<raw_socket_stream>>
+  createConnectedUnix(StringRef SocketPath);
   ~raw_socket_stream();
 };
 
