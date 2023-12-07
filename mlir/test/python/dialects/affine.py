@@ -159,9 +159,7 @@ def testAffineForOpErrors():
         )
 
     try:
-        two_indices = affine.AffineDelinearizeIndexOp(
-            [T.index(), T.index()], c1, [c1, c1]
-        )
+        two_indices = affine.AffineDelinearizeIndexOp(c1, [c1, c1])
         affine.AffineForOp(
             two_indices,
             c2,
