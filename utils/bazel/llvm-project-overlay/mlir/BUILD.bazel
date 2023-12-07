@@ -3994,7 +3994,6 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithUtils",
-        ":BufferizationDialect",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
         ":DestinationStyleOpInterface",
@@ -5568,6 +5567,7 @@ cc_library(
         ":NVVMDialect",
         ":Pass",
         ":Transforms",
+        ":VectorToLLVM",
         "//llvm:Support",
     ],
 )

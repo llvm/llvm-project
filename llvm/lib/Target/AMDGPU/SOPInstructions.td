@@ -578,6 +578,20 @@ def S_MAX_U32 : SOP2_32 <"s_max_u32",
 } // End isCommutable = 1
 } // End Defs = [SCC]
 
+let SubtargetPredicate = isGFX12Plus in {
+  def S_ADD_U64 : SOP2_64<"s_add_u64">{
+    let isCommutable = 1;
+  }
+
+  def S_SUB_U64 : SOP2_64<"s_sub_u64">;
+
+  def S_MUL_U64 : SOP2_64 <"s_mul_u64",
+    [(set i64:$sdst, (UniformBinFrag<mul> i64:$src0, i64:$src1))]> {
+    let isCommutable = 1;
+  }
+
+} // End SubtargetPredicate = isGFX12Plus
+
 def SelectPat : PatFrag <
   (ops node:$src1, node:$src2),
   (select SCC, $src1, $src2),
@@ -1086,10 +1100,14 @@ let SubtargetPredicate = isGFX10Plus in {
       "$simm16"> {
     let has_sdst = 0;
   }
+} // End SubtargetPredicate = isGFX10Plus
 
+let SubtargetPredicate = isGFX10GFX11 in {
   def S_SUBVECTOR_LOOP_BEGIN : SOPK_32_BR<"s_subvector_loop_begin">;
   def S_SUBVECTOR_LOOP_END   : SOPK_32_BR<"s_subvector_loop_end">;
+} // End SubtargetPredicate = isGFX10GFX11
 
+let SubtargetPredicate = isGFX10Plus in {
   def S_WAITCNT_VSCNT   : SOPK_WAITCNT<"s_waitcnt_vscnt">;
   def S_WAITCNT_VMCNT   : SOPK_WAITCNT<"s_waitcnt_vmcnt">;
   def S_WAITCNT_EXPCNT  : SOPK_WAITCNT<"s_waitcnt_expcnt">;
@@ -2072,6 +2090,9 @@ defm S_MUL_HI_I32      : SOP2_Real_gfx11_gfx12<0x02e>;
 defm S_CSELECT_B32     : SOP2_Real_gfx11_gfx12<0x030>;
 defm S_CSELECT_B64     : SOP2_Real_gfx11_gfx12<0x031>;
 defm S_PACK_HL_B32_B16 : SOP2_Real_gfx11_gfx12<0x035>;
+defm S_ADD_NC_U64      : SOP2_Real_Renamed_gfx12<0x053, S_ADD_U64, "s_add_nc_u64">;
+defm S_SUB_NC_U64      : SOP2_Real_Renamed_gfx12<0x054, S_SUB_U64, "s_sub_nc_u64">;
+defm S_MUL_U64         : SOP2_Real_gfx12<0x055>;
 
 //===----------------------------------------------------------------------===//
 // SOP2 - GFX1150, GFX12
