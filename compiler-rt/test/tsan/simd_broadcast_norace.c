@@ -1,7 +1,7 @@
-// RUN: %clang_tsan -DSIMDLEN=4 -DTYPE=float -O3 -march=native -fopenmp-simd %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clang_tsan -DSIMDLEN=4 -DTYPE=double -O3 -march=native -fopenmp-simd %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clang_tsan -DSIMDLEN=8 -DTYPE=float -O3 -march=native -fopenmp-simd %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clang_tsan -DSIMDLEN=8 -DTYPE=double -O3 -march=native -fopenmp-simd %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clang_tsan -DSIMDLEN=4 -DTYPE=float -O3 %avx2 -fopenmp-simd %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clang_tsan -DSIMDLEN=4 -DTYPE=double -O3 %avx2 -fopenmp-simd %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clang_tsan -DSIMDLEN=8 -DTYPE=float -O3 %avx512f -fopenmp-simd %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clang_tsan -DSIMDLEN=8 -DTYPE=double -O3 %avx512f -fopenmp-simd %s -o %t && %run %t 2>&1 | FileCheck %s
 #include "test.h"
 
 #ifndef SIMDLEN
