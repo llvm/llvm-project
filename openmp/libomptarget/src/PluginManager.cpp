@@ -24,13 +24,7 @@ using namespace llvm::sys;
 PluginManager *PM;
 
 // List of all plugins that can support offloading.
-static const char *RTLNames[] = {
-    /* AMDGPU target        */ "libomptarget.rtl.amdgpu",
-    /* CUDA target          */ "libomptarget.rtl.cuda",
-    /* x86_64 target        */ "libomptarget.rtl.x86_64",
-    /* AArch64 target       */ "libomptarget.rtl.aarch64",
-    /* PowerPC target       */ "libomptarget.rtl.ppc64",
-};
+static const char *RTLNames[] = {ENABLED_OFFLOAD_PLUGINS};
 
 PluginAdaptorTy::PluginAdaptorTy(const std::string &Name) : Name(Name) {
   DP("Attempting to load library '%s'...\n", Name.c_str());
@@ -52,6 +46,10 @@ PluginAdaptorTy::PluginAdaptorTy(const std::string &Name) : Name(Name) {
       LibraryHandler->getAddressOfSymbol(GETNAME(__tgt_rtl_##NAME)));          \
   if (MANDATORY && !NAME) {                                                    \
     DP("Invalid plugin as necessary interface is not found.\n");               \
+    createStringError(inconvertibleErrorCode(),                                \
+                             "Invalid plugin as necessary interface function " \
+                             "(%s) was not found.\n",                          \
+                             std::string(#NAME).c_str());                      \
     return;                                                                    \
   }
 

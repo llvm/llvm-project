@@ -1126,6 +1126,8 @@ def FutureAttrs : DiagGroup<"future-attribute-extensions", [CXX14Attrs,
                                                             CXX17Attrs,
                                                             CXX20Attrs]>;
 
+def CXX23AttrsOnLambda : DiagGroup<"c++23-lambda-attributes">;
+
 // A warning group for warnings about using C++11 features as extensions in
 // earlier C++ versions.
 def CXX11 : DiagGroup<"c++11-extensions", [CXX11ExtraSemi, CXX11InlineNamespace,
@@ -1145,7 +1147,7 @@ def CXX20 : DiagGroup<"c++20-extensions", [CXX20Designator, CXX20Attrs]>;
 
 // A warning group for warnings about using C++23 features as extensions in
 // earlier C++ versions.
-def CXX23 : DiagGroup<"c++23-extensions">;
+def CXX23 : DiagGroup<"c++23-extensions", [CXX23AttrsOnLambda]>;
 
 // A warning group for warnings about using C++26 features as extensions in
 // earlier C++ versions.
