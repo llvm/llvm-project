@@ -194,6 +194,11 @@ macro(test_targets)
     endif()
   endif()
 
+  set(COMPILER_RT_ENABLE_TARGET_AMDGCN OFF CACHE BOOL "Option to enable AMDGCN in Compiler RT")
+  if (COMPILER_RT_ENABLE_TARGET_AMDGCN)
+    add_default_target_arch("amdgcn")
+  endif()
+
   # Generate the COMPILER_RT_SUPPORTED_ARCH list.
   if(ANDROID)
     # Examine compiler output to determine target architecture.

@@ -41,6 +41,7 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -940,33 +941,120 @@ CodeGenAction::~CodeGenAction() {
     delete VMContext;
 }
 
+bool CodeGenAction::addArchiveToLinkModules(
+    llvm::object::Archive *Archive, const CodeGenOptions::BitcodeFileToLink &F,
+    CompilerInstance &CI) {
+  Error Err = Error::success();
+
+  for (auto &Child : Archive->children(Err)) {
+    Expected<llvm::MemoryBufferRef> ChildBufOrErr = Child.getMemoryBufferRef();
+    if (!ChildBufOrErr) {
+      handleAllErrors(ChildBufOrErr.takeError(),
+                      [&](const llvm::ErrorInfoBase &EIB) {
+                        CI.getDiagnostics().Report(diag::err_cannot_open_file)
+                            << F.Filename << EIB.message();
+                      });
+      LinkModules.clear();
+      return true;
+    }
+    auto ChildBuffer = llvm::MemoryBuffer::getMemBufferCopy(
+        ChildBufOrErr->getBuffer(), ChildBufOrErr->getBufferIdentifier());
+
+    if (!ChildBuffer) {
+      handleAllErrors(ChildBufOrErr.takeError(),
+                      [&](const llvm::ErrorInfoBase &EIB) {
+                        CI.getDiagnostics().Report(diag::err_cannot_open_file)
+                            << F.Filename << EIB.message();
+                      });
+      LinkModules.clear();
+      return true;
+    }
+
+    Expected<std::unique_ptr<llvm::Module>> ChildModuleOrErr =
+        getOwningLazyBitcodeModule(std::move(ChildBuffer), *VMContext);
+    if (!ChildModuleOrErr) {
+      handleAllErrors(ChildModuleOrErr.takeError(),
+                      [&](const llvm::ErrorInfoBase &EIB) {
+                        CI.getDiagnostics().Report(diag::err_cannot_open_file)
+                            << F.Filename << EIB.message();
+                      });
+      LinkModules.clear();
+      return true;
+    }
+
+    LinkModules.push_back({std::move(ChildModuleOrErr.get()), F.PropagateAttrs,
+                           F.Internalize, F.LinkFlags});
+  }
+  if (Err) {
+    CI.getDiagnostics().Report(diag::err_cannot_open_file)
+        << F.Filename << toString(std::move(Err));
+    LinkModules.clear();
+    return true;
+  }
+  return false;
+}
+
 bool CodeGenAction::loadLinkModules(CompilerInstance &CI) {
   if (!LinkModules.empty())
     return false;
 
   for (const CodeGenOptions::BitcodeFileToLink &F :
        CI.getCodeGenOpts().LinkBitcodeFiles) {
-    auto BCBuf = CI.getFileManager().getBufferForFile(F.Filename);
-    if (!BCBuf) {
+
+    auto BCBufOrErr = CI.getFileManager().getBufferForFile(F.Filename);
+    if (!BCBufOrErr) {
       CI.getDiagnostics().Report(diag::err_cannot_open_file)
-          << F.Filename << BCBuf.getError().message();
+          << F.Filename << BCBufOrErr.getError().message();
       LinkModules.clear();
       return true;
     }
 
+    auto &BCBuf = *BCBufOrErr;
+
     Expected<std::unique_ptr<llvm::Module>> ModuleOrErr =
-        getOwningLazyBitcodeModule(std::move(*BCBuf), *VMContext);
-    if (!ModuleOrErr) {
-      handleAllErrors(ModuleOrErr.takeError(), [&](ErrorInfoBase &EIB) {
-        CI.getDiagnostics().Report(diag::err_cannot_open_file)
-            << F.Filename << EIB.message();
-      });
+        getOwningLazyBitcodeModule(std::move(BCBuf), *VMContext);
+
+    if (ModuleOrErr) {
+      LinkModules.push_back({std::move(ModuleOrErr.get()), F.PropagateAttrs,
+                             F.Internalize, F.LinkFlags});
+      continue;
+    }
+
+    // If parsing as bitcode failed, clear the error and try to parse as an
+    // archive.
+    handleAllErrors(ModuleOrErr.takeError(),
+                    [&](const llvm::ErrorInfoBase &EIB) {});
+
+    Expected<std::unique_ptr<llvm::object::Binary>> BinOrErr =
+        llvm::object::createBinary(BCBuf->getMemBufferRef(), VMContext);
+
+    if (!BinOrErr) {
+      handleAllErrors(BinOrErr.takeError(),
+                      [&](const llvm::ErrorInfoBase &EIB) {
+                        CI.getDiagnostics().Report(diag::err_cannot_open_file)
+                            << F.Filename << EIB.message();
+                      });
       LinkModules.clear();
       return true;
     }
-    LinkModules.push_back({std::move(ModuleOrErr.get()), F.PropagateAttrs,
-                           F.Internalize, F.LinkFlags});
+
+    std::unique_ptr<llvm::object::Binary> &Bin = *BinOrErr;
+
+    if (Bin->isArchive()) {
+      llvm::object::Archive *Archive =
+          llvm::cast<llvm::object::Archive>(Bin.get());
+      if (addArchiveToLinkModules(Archive, F, CI))
+        return true;
+    } else {
+      // It's not an archive, and we failed to parse it as bitcode, so report
+      // an error.
+      CI.getDiagnostics().Report(diag::err_cannot_open_file)
+          << F.Filename << "Unrecognized file format";
+      LinkModules.clear();
+      return true;
+    }
   }
+
   return false;
 }
 

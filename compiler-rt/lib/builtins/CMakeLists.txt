@@ -560,6 +560,13 @@ set(aarch64_SOURCES
   aarch64/fp_mode.c
 )
 
+set(amdgcn_SOURCES
+  divti3.c
+  udivmodti4.c
+  truncdfbf2.c
+  truncsfbf2.c
+)
+
 if(COMPILER_RT_HAS_ASM_SME AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
   list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c)
   message(STATUS "AArch64 SME ABI routines enabled")
@@ -844,6 +851,15 @@ else ()
       # Release mode already sets it via -O2/3, Debug mode doesn't.
       if (${arch} STREQUAL "armhf")
         list(APPEND BUILTIN_CFLAGS_${arch} -fomit-frame-pointer -DCOMPILER_RT_ARMHF_TARGET)
+      endif()
+
+      if (${arch} STREQUAL "amdgcn")
+        list(APPEND BUILTIN_CFLAGS_${arch}
+             --target=amdgcn-amd-amdhsa
+             -emit-llvm
+             -nogpuinc
+             -nogpulib
+             -Xclang -mcode-object-version=none )
       endif()
 
       # For RISCV32, we must force enable int128 for compiling long

@@ -26,6 +26,8 @@
 #else
 #define COMPILER_RT_ABI __attribute__((__pcs__("aapcs")))
 #endif
+#elif __AMDGPU__
+#define COMPILER_RT_ABI __attribute__((amdgpu_lib_fun, weak))
 #else
 #define COMPILER_RT_ABI
 #endif

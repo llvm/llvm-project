@@ -21,6 +21,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/TargetParser.h"
 
 using namespace clang::driver;
@@ -402,6 +403,10 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
       } else
         BCLibs.emplace_back(AsanRTL, /*ShouldInternalize=*/false);
     }
+
+    auto BuiltinCRT = getCompilerRT(DriverArgs, "builtins");
+    if (getVFS().exists(BuiltinCRT))
+      BCLibs.emplace_back(BuiltinCRT, /*ShouldInternalize=*/false);
 
     // Add the HIP specific bitcode library.
     BCLibs.push_back(RocmInstallation->getHIPPath());
