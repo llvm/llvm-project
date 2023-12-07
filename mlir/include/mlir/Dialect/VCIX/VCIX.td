@@ -302,4 +302,218 @@ def VCIX_WideTernaryOp : VCIX_Op<"wide.ternary", []> {
 
   let hasVerifier = 1;
 }
+
+def VCIX_UnaryIntrinROOp : VCIX_IntrinOp<"unary.ro"> {
+  let arguments = (ins AnyTypeOf<[I<64>, I<32>, I<5>]>: $op,
+                       RVLIntrinType: $rvl,
+                       OpcodeIntrinIntAttr: $opcode,
+                       VCIX_SewLmulAttr: $sew_lmul,
+                       RIntrinAttr: $rs2,
+                       RIntrinAttr: $rd);
+
+  string llvmBuilder = [{
+      const unsigned xlenWidth = getXlenFromOpcode($opcode);
+      llvm::Type *xlen =
+          llvm::Type::getIntNTy(moduleTranslation.getLLVMContext(), xlenWidth);
+      llvm::Value *opcodeConst = getLLVMConstant(
+          xlen, $opcode, $_location, moduleTranslation);
+
+      llvm::Value *rs2Const = getLLVMConstant(
+          xlen, $rs2, $_location, moduleTranslation);
+
+      llvm::Value *rdConst = getLLVMConstant(
+          xlen, $rd, $_location, moduleTranslation);
+
+      auto intId = getUnaryROIntrinsicId($sew_lmul, op.getOp().getType());
+      createIntrinsicCall(builder, intId,
+                          {opcodeConst, rs2Const, rdConst, $op, $rvl},
+                          {xlen, xlen, xlen});
+  }];
+}
+
+def VCIX_UnaryIntrinOp : VCIX_IntrinOp<"unary"> {
+  let arguments = (ins AnyTypeOf<[I<64>, I<32>, I<5>]>: $op,
+                       Optional<RVLIntrinType>: $rvl,
+                       OpcodeIntrinIntAttr: $opcode,
+                       RIntrinAttr: $rs2);
+
+  let results = (outs VectorOfRank1: $result);
+
+  string llvmBuilder = [{
+      const unsigned xlenWidth = getXlenFromOpcode($opcode);
+      llvm::Type *xlen =
+          llvm::Type::getIntNTy(moduleTranslation.getLLVMContext(), xlenWidth);
+      llvm::Value *opcodeConst = getLLVMConstant(
+          xlen, $opcode, $_location, moduleTranslation);
+
+      llvm::Value *rs2Const = getLLVMConstant(
+          xlen, $rs2, $_location, moduleTranslation);
+
+      VectorType vt = op.getResult().getType().cast<VectorType>();
+      auto intId = getUnaryIntrinsicId(op.getOp().getType(), vt);
+      llvm::Value *rvl =
+          convertRvl(builder, $rvl, vt, xlen, $_location, moduleTranslation);
+
+      $result = createIntrinsicCall(
+          builder, intId, {opcodeConst, rs2Const, $op, rvl},
+          {$_resultType, xlen, xlen, xlen});
+  }];
+}
+
+def VCIX_BinaryIntrinROOp : VCIX_IntrinOp<"binary.ro"> {
+  let arguments = (ins VectorOfRank1OrScalarIntrin: $op1,
+                       VectorOfRank1: $op2,
+                       Optional<RVLIntrinType>: $rvl,
+                       OpcodeIntrinIntAttr: $opcode,
+                       RIntrinAttr: $rd);
+
+  string llvmBuilder = [{
+      const unsigned xlenWidth = getXlenFromOpcode($opcode);
+      llvm::Type *xlen =
+          llvm::Type::getIntNTy(moduleTranslation.getLLVMContext(), xlenWidth);
+      llvm::Value *opcodeConst = getLLVMConstant(
+          xlen, $opcode, $_location, moduleTranslation);
+
+      llvm::Value *rdConst = getLLVMConstant(
+          xlen, $rd, $_location, moduleTranslation);
+
+      auto intId = getBinaryROIntrinsicId(op.getOp1().getType());
+      VectorType vt = op.getOp2().getType().cast<VectorType>();
+      llvm::Value *rvl =
+          convertRvl(builder, $rvl, vt, xlen, $_location, moduleTranslation);
+
+      createIntrinsicCall(builder, intId,
+                          {opcodeConst, rdConst, $op2, $op1, rvl},
+                          {xlen, $op2->getType(), $op1->getType(), xlen});
+  }];
+}
+
+def VCIX_BinaryIntrinOp : VCIX_IntrinOp<"binary"> {
+  let arguments = (ins VectorOfRank1OrScalarIntrin: $op1,
+                       VectorOfRank1: $op2,
+                       Optional<RVLIntrinType>: $rvl,
+                       OpcodeIntrinIntAttr: $opcode);
+
+  let results = (outs VectorOfRank1: $result);
+
+  string llvmBuilder = [{
+      const unsigned xlenWidth = getXlenFromOpcode($opcode);
+      llvm::Type *xlen = llvm::Type::getIntNTy(
+          moduleTranslation.getLLVMContext(), xlenWidth);
+      llvm::Value *opcodeConst = getLLVMConstant(
+          xlen, $opcode, $_location, moduleTranslation);
+
+      auto intId = getBinaryIntrinsicId(op.getOp1().getType());
+      VectorType vt = op.getResult().getType().cast<VectorType>();
+      llvm::Value *rvl =
+          convertRvl(builder, $rvl, vt, xlen, $_location, moduleTranslation);
+
+      $result = createIntrinsicCall(
+          builder, intId, {opcodeConst, $op2, $op1, rvl},
+          {$_resultType, xlen, $op2->getType(), $op1->getType(), xlen});
+  }];
+}
+
+def VCIX_TernaryIntrinROOp : VCIX_IntrinOp<"ternary.ro"> {
+  let arguments = (ins VectorOfRank1OrScalarIntrin: $op1,
+                       VectorOfRank1: $op2,
+                       VectorOfRank1: $op3,
+                       Optional<RVLIntrinType>: $rvl,
+                       OpcodeIntrinIntAttr: $opcode);
+
+  string llvmBuilder = [{
+      const unsigned xlenWidth = getXlenFromOpcode($opcode);
+      llvm::Type *xlen = llvm::Type::getIntNTy(
+          moduleTranslation.getLLVMContext(), xlenWidth);
+      llvm::Value *opcodeConst = getLLVMConstant(
+          xlen, $opcode, $_location, moduleTranslation);
+
+      auto intId = getTernaryROIntrinsicId(op.getOp1().getType());
+      VectorType vt = op.getOp3().getType().cast<VectorType>();
+      llvm::Value *rvl =
+          convertRvl(builder, $rvl, vt, xlen, $_location, moduleTranslation);
+
+      createIntrinsicCall(
+          builder, intId, {opcodeConst, $op3, $op2, $op1, rvl},
+          {xlen, $op3->getType(), $op2->getType(), $op1->getType(), xlen});
+  }];
+}
+
+def VCIX_TernaryIntrinOp : VCIX_IntrinOp<"ternary"> {
+  let arguments = (ins VectorOfRank1OrScalarIntrin: $op1,
+                       VectorOfRank1: $op2,
+                       VectorOfRank1: $op3,
+                       Optional<RVLIntrinType>: $rvl,
+                       OpcodeIntrinIntAttr: $opcode);
+  let results = (outs VectorOfRank1: $result);
+
+  string llvmBuilder = [{
+      const unsigned xlenWidth = getXlenFromOpcode($opcode);
+      llvm::Type *xlen = llvm::Type::getIntNTy(
+          moduleTranslation.getLLVMContext(), xlenWidth);
+      llvm::Value *opcodeConst = getLLVMConstant(
+          xlen, $opcode, $_location, moduleTranslation);
+
+      auto intId = getTernaryIntrinsicId(op.getOp1().getType());
+      VectorType vt = op.getResult().getType().cast<VectorType>();
+      llvm::Value *rvl =
+          convertRvl(builder, $rvl, vt, xlen, $_location, moduleTranslation);
+
+      $result = createIntrinsicCall(
+          builder, intId, {opcodeConst, $op3, $op2, $op1, rvl},
+          {$_resultType, xlen, $op3->getType(), $op2->getType(), $op1->getType(), xlen});
+  }];
+}
+
+def VCIX_WideTernaryIntrinROOp : VCIX_IntrinOp<"wide.ternary.ro"> {
+  let arguments = (ins VectorOfRank1OrScalarIntrin: $op1,
+                       VectorOfRank1: $op2,
+                       VectorOfRank1: $op3,
+                       Optional<RVLIntrinType>: $rvl,
+                       OpcodeIntrinIntAttr: $opcode);
+
+  string llvmBuilder = [{
+      const unsigned xlenWidth = getXlenFromOpcode($opcode);
+      llvm::Type *xlen = llvm::Type::getIntNTy(
+          moduleTranslation.getLLVMContext(), xlenWidth);
+      llvm::Value *opcodeConst = getLLVMConstant(
+          xlen, $opcode, $_location, moduleTranslation);
+
+      auto intId = getWideTernaryROIntrinsicId(op.getOp1().getType());
+      VectorType vt = op.getOp3().getType().cast<VectorType>();
+      llvm::Value *rvl =
+          convertRvl(builder, $rvl, vt, xlen, $_location, moduleTranslation);
+
+      createIntrinsicCall(
+          builder, intId, {opcodeConst, $op3, $op2, $op1, rvl},
+          {xlen, $op3->getType(), $op2->getType(), $op1->getType(), xlen});
+  }];
+}
+
+def VCIX_WideTernaryIntrinOp : VCIX_IntrinOp<"wide.ternary", []> {
+  let arguments = (ins VectorOfRank1OrScalarIntrin: $op1,
+                       VectorOfRank1: $op2,
+                       VectorOfRank1: $op3,
+                       Optional<RVLIntrinType>: $rvl,
+                       OpcodeIntrinIntAttr: $opcode);
+
+  let results = (outs VectorOfRank1: $result);
+
+  string llvmBuilder = [{
+      const unsigned xlenWidth = getXlenFromOpcode($opcode);
+      llvm::Type *xlen = llvm::Type::getIntNTy(
+          moduleTranslation.getLLVMContext(), xlenWidth);
+      llvm::Value *opcodeConst = getLLVMConstant(
+          xlen, $opcode, $_location, moduleTranslation);
+
+      auto intId = getWideTernaryIntrinsicId(op.getOp1().getType());
+      VectorType vt = op.getResult().getType().cast<VectorType>();
+      llvm::Value *rvl =
+          convertRvl(builder, $rvl, vt, xlen, $_location, moduleTranslation);
+
+      $result = createIntrinsicCall(
+          builder, intId, {opcodeConst, $op3, $op2, $op1, rvl},
+          {$_resultType, xlen, $op3->getType(), $op2->getType(), $op1->getType(), xlen});
+  }];
+}
 #endif // VCIX

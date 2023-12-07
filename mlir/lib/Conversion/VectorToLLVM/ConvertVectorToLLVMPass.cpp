@@ -19,6 +19,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/VCIX/Transforms.h"
+#include "mlir/Dialect/VCIX/VCIXDialect.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
@@ -53,6 +55,8 @@ struct LowerVectorToLLVMPass
       registry.insert<amx::AMXDialect>();
     if (x86Vector)
       registry.insert<x86vector::X86VectorDialect>();
+    if (vcix)
+      registry.insert<vcix::VCIXDialect>();
   }
   void runOnOperation() override;
 };
@@ -109,6 +113,10 @@ void LowerVectorToLLVMPass::runOnOperation() {
   if (x86Vector) {
     configureX86VectorLegalizeForExportTarget(target);
     populateX86VectorLegalizeForLLVMExportPatterns(converter, patterns);
+  }
+  if (vcix) {
+    configureVCIXLegalizeForExportTarget(target);
+    populateVCIXLegalizeForLLVMExportPatterns(converter, patterns);
   }
 
   if (failed(

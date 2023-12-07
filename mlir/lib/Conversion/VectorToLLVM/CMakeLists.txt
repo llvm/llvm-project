@@ -19,6 +19,8 @@ add_mlir_conversion_library(MLIRVectorToLLVM
   MLIRMemRefDialect
   MLIRTargetLLVMIRExport
   MLIRTransforms
+  MLIRVCIXDialect
+  MLIRVCIXTransforms
   MLIRVectorDialect
   MLIRVectorTransforms
   )
