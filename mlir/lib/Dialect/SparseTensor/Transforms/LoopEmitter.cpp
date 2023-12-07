@@ -1916,12 +1916,12 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
     pHi = genIndexLoad(builder, loc, positionsBuffers[tid][lvl],
                        ADDI(posits[tid][lvl - 1], c1));
   }
-  // Fills out pIdxBuffer[tid][lvl][0] with  [0, pLo, pHi]
+  // Fills out pIdxBuffer[tid][lvl][0] with [0, pLo, pHi]
   updateSlicePosPtr(builder, loc, sPtrBuf, c0);
   updateSlicePos(builder, loc, sPtrBuf, pLo, c0, SlicePosKind::kLo);
   updateSlicePos(builder, loc, sPtrBuf, pHi, c0, SlicePosKind::kHi);
   // Slice over a resolved parent, we only need one pair of pos hi and lo to
-  // specified the current slice.
+  // specify the current slice.
   Value tupleNum = c1;
   // This is an non empty tensor if pLo < pHi.
   Value isNonEmpty = CMPI(ult, pLo, pHi);
