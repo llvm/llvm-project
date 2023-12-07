@@ -110,12 +110,12 @@ template <size_t Bits> struct DyadicFloat {
       exp_hi = FloatProperties<T>::EXPONENT_BIAS;
     }
 
-    int exp_lo = exp_hi - PRECISION - 1;
+    int exp_lo = exp_hi - static_cast<int>(PRECISION) - 1;
 
     MantissaType m_hi(mantissa >> shift);
 
     T d_hi = FPBits<T>::create_value(sign, exp_hi,
-                                     output_bits_t(m_hi) &
+                                     static_cast<output_bits_t>(m_hi) &
                                          FloatProperties<T>::MANTISSA_MASK)
                  .get_val();
 
