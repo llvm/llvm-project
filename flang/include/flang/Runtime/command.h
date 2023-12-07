@@ -57,7 +57,7 @@ std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
     const char *sourceFile = nullptr, int line = 0);
 
 // Calls std::system()
-void RTNAME(System)(const Descriptor *command = nullptr,
+void RTNAME(System)(const Descriptor &command,
     const Descriptor *exitstat = nullptr, const char *sourceFile = nullptr,
     int line = 0);
 }

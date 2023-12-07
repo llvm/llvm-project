@@ -242,7 +242,7 @@ TEST_F(ZeroArguments, SystemValidCommandExitStat) {
   OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
   OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
 
-  RTNAME(System)(command.get(), exitStat.get());
+  RTNAME(System)(*command.get(), exitStat.get());
   CheckDescriptorEqInt(exitStat.get(), 0);
 }
 
@@ -250,7 +250,7 @@ TEST_F(ZeroArguments, SystemInvalidCommandExitStat) {
   OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
   OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
 
-  RTNAME(System)(command.get(), exitStat.get());
+  RTNAME(System)(*command.get(), exitStat.get());
 #ifdef _WIN32
   CheckDescriptorEqInt(exitStat.get(), 1);
 #else
@@ -260,12 +260,12 @@ TEST_F(ZeroArguments, SystemInvalidCommandExitStat) {
 
 TEST_F(ZeroArguments, SystemValidCommandOptionalExitStat) {
   OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
-  EXPECT_NO_FATAL_FAILURE(RTNAME(System)(command.get(), nullptr));
+  EXPECT_NO_FATAL_FAILURE(RTNAME(System)(*command.get(), nullptr));
 }
 
 TEST_F(ZeroArguments, SystemInvalidCommandOptionalExitStat) {
   OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
-  EXPECT_NO_FATAL_FAILURE(RTNAME(System)(command.get(), nullptr));
+  EXPECT_NO_FATAL_FAILURE(RTNAME(System)(*command.get(), nullptr));
 }
 
 static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};
