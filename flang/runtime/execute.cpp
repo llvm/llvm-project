@@ -100,8 +100,8 @@ template <int KIND> struct FitsInIntegerKind {
 
 // If a condition occurs that would assign a nonzero value to CMDSTAT but
 // the CMDSTAT variable is not present, error termination is initiated.
-int TerminationCheck(int status, const Descriptor *cmdstat, const Descriptor *cmdmsg,
-    Terminator &terminator) {
+int TerminationCheck(int status, const Descriptor *cmdstat,
+    const Descriptor *cmdmsg, Terminator &terminator) {
   if (status == -1) {
     if (!cmdstat) {
       terminator.Crash("Execution error with system status code: %d", status);
@@ -191,8 +191,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
   if (wait) {
     // either wait is not specified or wait is true: synchronous mode
     int status{std::system(newCmd)};
-    int exitStatusVal{
-        TerminationCheck(status, cmdstat, cmdmsg, terminator)};
+    int exitStatusVal{TerminationCheck(status, cmdstat, cmdmsg, terminator)};
     CheckAndStoreIntToDescriptor(exitstat, exitStatusVal, terminator);
   } else {
 // Asynchronous mode
@@ -204,26 +203,27 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     ZeroMemory(&pi, sizeof(pi));
 
     // append "cmd.exe /c " to the beginning of command
-    const char *cmd{command->OffsetElement()};
     const char *prefix{"cmd.exe /c "};
-    char *newCmd{(char *)malloc(std::strlen(prefix) + std::strlen(cmd) + 1)};
+    char *newCmdWin{
+        (char *)malloc(std::strlen(prefix) + std::strlen(newCmd) + 1)};
     if (newCmd != NULL) {
-      std::strcpy(newCmd, prefix);
-      std::strcat(newCmd, cmd);
+      std::strcpy(newCmdWin, prefix);
+      std::strcat(newCmdWin, newCmd);
     } else {
       terminator.Crash("Memory allocation failed for newCmd");
     }
 
     // Convert the char to wide char
-    const size_t sizeNeeded{mbstowcs(NULL, newCmd, 0) + 1};
+    const size_t sizeNeeded{mbstowcs(NULL, newCmdWin, 0) + 1};
     wchar_t *wcmd{new wchar_t[sizeNeeded]};
-    if (std::mbstowcs(wcmd, newCmd, sizeNeeded) == static_cast<size_t>(-1)) {
+    if (std::mbstowcs(wcmd, newCmdWin, sizeNeeded) == static_cast<size_t>(-1)) {
       terminator.Crash("Char to wide char failed for newCmd");
     }
-    free(newCmd);
+    free(newCmdWin);
 
     if (CreateProcess(nullptr, wcmd, nullptr, nullptr, FALSE, 0, nullptr,
             nullptr, &si, &pi)) {
+      // Close handles so it will be removed when terminated
       CloseHandle(pi.hProcess);
       CloseHandle(pi.hThread);
     } else {
