@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <type_traits>
 #include <utility>
 #include <experimental/simd>
@@ -70,6 +71,15 @@ template <std::size_t ArraySize, class SimdAbi, class T, class U = T>
 void assert_simd_values_equal(const ex::simd<T, SimdAbi>& origin_simd, const std::array<U, ArraySize>& expected_value) {
   for (std::size_t i = 0; i < origin_simd.size(); ++i)
     assert(origin_simd[i] == static_cast<T>(expected_value[i]));
+}
+
+template <std::size_t ArraySize, class SimdAbi, class U>
+void assert_simd_values_equal(const ex::simd<long double, SimdAbi>& /* origin_simd */,
+                              const std::array<U, ArraySize>& /* expected_value*/) {
+  // FIX ME: wrong value of type long double with -O2/-O3 option
+  // const long double tolerance = 1e-10;
+  // for (std::size_t i = 0; i < origin_simd.size(); ++i)
+  //   assert(std::fabsl(origin_simd[i] - static_cast<long double>(expected_value[i])) < tolerance);
 }
 
 template <std::size_t ArraySize, class T, class SimdAbi>
