@@ -69,7 +69,13 @@ static ParseResult parseLLVMOpAttrs(OpAsmParser &parser,
 
 static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
                              DictionaryAttr attrs) {
-  printer.printOptionalAttrDict(processFMFAttr(attrs.getValue()));
+  auto filteredAttrs = processFMFAttr(attrs.getValue());
+  if (auto iface = dyn_cast<IntegerOverflowFlagsInterface>(op))
+    printer.printOptionalAttrDict(
+        filteredAttrs,
+        /*elidedAttrs=*/{iface.getIntegerOverflowAttrName()});
+  else
+    printer.printOptionalAttrDict(filteredAttrs);
 }
 
 /// Verifies `symbol`'s use in `op` to ensure the symbol is a valid and
