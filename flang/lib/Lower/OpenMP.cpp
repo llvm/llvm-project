@@ -3233,7 +3233,6 @@ static void
 genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPSectionConstruct &sectionConstruct) {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
   const Fortran::parser::OpenMPConstruct *parentOmpConstruct =
       eval.parentConstruct->getIf<Fortran::parser::OpenMPConstruct>();
@@ -3251,10 +3250,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
               .t);
   // Currently only private/firstprivate clause is handled, and
   // all privatization is done within `omp.section` operations.
-  mlir::omp::SectionOp sectionOp =
-      firOpBuilder.create<mlir::omp::SectionOp>(currentLocation);
-  createBodyOfOp<mlir::omp::SectionOp>(sectionOp, converter, currentLocation,
-                                       eval, &sectionsClauseList);
+  genOpWithBody<mlir::omp::SectionOp>(converter, eval, currentLocation,
+                                      /*outerCombined=*/false,
+                                      &sectionsClauseList);
 }
 
 static void
