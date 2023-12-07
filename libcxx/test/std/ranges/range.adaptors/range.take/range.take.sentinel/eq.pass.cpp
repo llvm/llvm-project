@@ -25,37 +25,37 @@ template <bool Const>
 using MaybeConstIterator = cpp20_input_iterator<std::conditional_t<Const, const int*, int*>>;
 
 template <bool Const>
-class StrictSentinel {
+class CrossConstComparableSentinel {
   using Base = std::conditional_t<Const, const int*, int*>;
   Base base_;
 
 public:
-  StrictSentinel() = default;
-  constexpr explicit StrictSentinel(Base base) : base_(base) {}
+  CrossConstComparableSentinel() = default;
+  constexpr explicit CrossConstComparableSentinel(Base base) : base_(base) {}
 
-  friend constexpr bool operator==(const MaybeConstIterator<Const>& it, const StrictSentinel& se) {
+  friend constexpr bool operator==(const MaybeConstIterator<Const>& it, const CrossConstComparableSentinel& se) {
     return base(it) == se.base_;
   }
 
-  friend constexpr bool operator==(const MaybeConstIterator<!Const>& it, const StrictSentinel& se) {
+  friend constexpr bool operator==(const MaybeConstIterator<!Const>& it, const CrossConstComparableSentinel& se) {
     return base(it) == se.base_;
   }
 };
 
-static_assert(std::sentinel_for<StrictSentinel<true>, MaybeConstIterator<false>>);
-static_assert(std::sentinel_for<StrictSentinel<true>, MaybeConstIterator<true>>);
-static_assert(std::sentinel_for<StrictSentinel<false>, MaybeConstIterator<false>>);
-static_assert(std::sentinel_for<StrictSentinel<false>, MaybeConstIterator<true>>);
+static_assert(std::sentinel_for<CrossConstComparableSentinel<true>, MaybeConstIterator<false>>);
+static_assert(std::sentinel_for<CrossConstComparableSentinel<true>, MaybeConstIterator<true>>);
+static_assert(std::sentinel_for<CrossConstComparableSentinel<false>, MaybeConstIterator<false>>);
+static_assert(std::sentinel_for<CrossConstComparableSentinel<false>, MaybeConstIterator<true>>);
 
 struct CrossConstComparableView : std::ranges::view_base {
   template <std::size_t N>
   constexpr explicit CrossConstComparableView(int (&arr)[N]) : b_(arr), e_(arr + N) {}
 
   constexpr MaybeConstIterator<false> begin() { return MaybeConstIterator<false>{b_}; }
-  constexpr StrictSentinel<false> end() { return StrictSentinel<false>{e_}; }
+  constexpr CrossConstComparableSentinel<false> end() { return CrossConstComparableSentinel<false>{e_}; }
 
   constexpr MaybeConstIterator<true> begin() const { return MaybeConstIterator<true>{b_}; }
-  constexpr StrictSentinel<true> end() const { return StrictSentinel<true>{e_}; }
+  constexpr CrossConstComparableSentinel<true> end() const { return CrossConstComparableSentinel<true>{e_}; }
 
 private:
   int* b_;
