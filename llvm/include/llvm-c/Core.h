@@ -3058,15 +3058,6 @@ const char *LLVMGetOperandBundleTag(LLVMOperandBundleRef Bundle, size_t *Len);
 unsigned LLVMGetNumOperandBundleArgs(LLVMOperandBundleRef Bundle);
 
 /**
- * Obtain the operands for an operand bundle.
- *
- * @param Bundle Operand bundle to obtain operands of.
- * @param Dest Memory address of an array to be filled with operands.
- * @see OperandBundleDef::inputs()
- */
-void LLVMGetOperandBundleArgs(LLVMOperandBundleRef Bundle, LLVMValueRef *Dest);
-
-/**
  * Obtain the operand for an operand bundle at the given index.
  *
  * @param Bundle Operand bundle to obtain operand of.
@@ -3537,19 +3528,6 @@ LLVMValueRef LLVMGetCalledValue(LLVMValueRef Instr);
  * @see llvm::InvokeInst::getNumOperandBundles()
  */
 unsigned LLVMGetNumOperandBundles(LLVMValueRef C);
-
-/**
- * Obtain the operand bundles attached to this instruction. Use
- * LLVMDisposeOperandBundle to free the operand bundles.
- *
- * The Dest parameter should point to a pre-allocated array of
- * LLVMOperandBundleRef at least LLVMGetNumOperandBundles() large. On return,
- * the first LLVMGetNumOperandBundles() entries in the array will be populated
- * with LLVMOperandBundleRef instances.
- *
- * This only works on llvm::CallInst and llvm::InvokeInst instructions.
- */
-void LLVMGetOperandBundles(LLVMValueRef C, LLVMOperandBundleRef *Dest);
 
 /**
  * Obtain the operand bundle attached to this instruction at the given index.

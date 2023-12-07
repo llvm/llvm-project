@@ -2592,12 +2592,6 @@ unsigned LLVMGetNumOperandBundleArgs(LLVMOperandBundleRef Bundle) {
   return unwrap(Bundle)->inputs().size();
 }
 
-void LLVMGetOperandBundleArgs(LLVMOperandBundleRef Bundle, LLVMValueRef *Dest) {
-  OperandBundleDef *OB = unwrap(Bundle);
-  for (Value *V : OB->inputs())
-    *Dest++ = wrap(V);
-}
-
 LLVMValueRef LLVMGetOperandBundleArgAtIndex(LLVMOperandBundleRef Bundle,
                                             unsigned Index) {
   return wrap(unwrap(Bundle)->inputs()[Index]);
@@ -2896,12 +2890,6 @@ LLVMTypeRef LLVMGetCalledFunctionType(LLVMValueRef Instr) {
 
 unsigned LLVMGetNumOperandBundles(LLVMValueRef C) {
   return unwrap<CallBase>(C)->getNumOperandBundles();
-}
-
-void LLVMGetOperandBundles(LLVMValueRef C, LLVMOperandBundleRef *Dest) {
-  auto *Call = unwrap<CallBase>(C);
-  for (unsigned i = 0, e = Call->getNumOperandBundles(); i != e; ++i)
-    *Dest++ = wrap(new OperandBundleDef(Call->getOperandBundleAt(i)));
 }
 
 LLVMOperandBundleRef LLVMGetOperandBundleAtIndex(LLVMValueRef C,
