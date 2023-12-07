@@ -23,7 +23,7 @@
 #include <cstdlib>
 #include <memory>
 
-constexpr char pattern = 0xDE;
+constexpr char pattern = static_cast<char>(0xDE);
 
 void* operator new(std::size_t count) {
   void* ptr = std::malloc(count);
