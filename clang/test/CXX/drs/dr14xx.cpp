@@ -484,11 +484,11 @@ namespace dr1467 {  // dr1467: 3.7 c++11
 #endif
 } // dr1467
 
-namespace dr1479 { // dr1479: yes
+namespace dr1479 { // dr1479: 3.1
   int operator"" _a(const char*, std::size_t = 0); // expected-error {{literal operator cannot have a default argument}}
 }
 
-namespace dr1482 { // dr1482: yes
+namespace dr1482 { // dr1482: 3.0
                    // NB: sup 2516, test reused there
 #if __cplusplus >= 201103L
 template <typename T> struct S {

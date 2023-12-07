@@ -68,7 +68,7 @@ namespace dr1631 {  // dr1631: 3.7
 #endif
 }
 
-namespace dr1638 { // dr1638: yes
+namespace dr1638 { // dr1638: 3.1
 #if __cplusplus >= 201103L
   template<typename T> struct A {
     enum class E; // expected-note {{previous}}

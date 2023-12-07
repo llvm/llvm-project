@@ -233,7 +233,7 @@ namespace std_example {
 #endif                      // __cplusplus >= 201103L
 }
 
-namespace dr1550 { // dr1550: yes
+namespace dr1550 { // dr1550: 3.4
   int f(bool b, int n) {
     return (b ? (throw 0) : n) + (b ? n : (throw 0));
   }
