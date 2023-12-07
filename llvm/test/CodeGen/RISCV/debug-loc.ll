@@ -21,9 +21,10 @@ define void @foo() #0 !dbg !3 {
 ; CHECK-NEXT: .Ltmp0:
 ; CHECK-NEXT: 	.loc	1 6 4 prologue_end              # test.c:6:4
 ; CHECK-NEXT: 	sw	zero, 0(zero)
+; CHECK-NEXT: 	.loc	1 7 1                           # test.c:7:1
 ; CHECK-NEXT: 	ld	ra, 8(sp)                       # 8-byte Folded Reload
 ; CHECK-NEXT: 	ld	s0, 0(sp)                       # 8-byte Folded Reload
-; CHECK-NEXT: 	.loc	1 7 1 epilogue_begin # test.c:7:1
+; CHECK-NEXT: 	.loc	1 7 1 epilogue_begin is_stmt 0  # test.c:7:1
 ; CHECK-NEXT: 	addi	sp, sp, 16
 ; CHECK-NEXT: 	ret
 entry:
