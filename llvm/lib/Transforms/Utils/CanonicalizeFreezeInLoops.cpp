@@ -151,11 +151,18 @@ bool CanonicalizeFreezeInLoopsImpl::run() {
       }
     }
 
+    bool Exist = false;
     auto Visit = [&](User *U) {
       if (auto *FI = dyn_cast<FreezeInst>(U)) {
+        for (const auto &Candidate : Candidates) {
+          auto *FI_cand = Candidate.FI;
+          Exist = (FI_cand == FI) ? true : Exist;
+        }
+        if (!Exist) {
         LLVM_DEBUG(dbgs() << "canonfr: found: " << *FI << "\n");
         Info.FI = FI;
         Candidates.push_back(Info);
+        }
       }
     };
     for_each(PHI.users(), Visit);
