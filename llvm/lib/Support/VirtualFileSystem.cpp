@@ -2334,7 +2334,6 @@ static Status getRedirectedFileStatus(const Twine &OriginalPath,
     S = Status::copyWithNewName(S, OriginalPath);
   else
     S.ExposesExternalVFSPath = true;
-  S.IsVFSMapped = true;
   return S;
 }
 
