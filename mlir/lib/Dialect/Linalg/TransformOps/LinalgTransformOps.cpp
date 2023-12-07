@@ -1171,7 +1171,6 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
   }
 
   SmallVector<Operation *> res;
-  bool incorrectNumOperandTypes = false;
   auto matchFun = [&](Operation *op) {
     if (getOps().has_value() && !strs.contains(op->getName().getStringRef()))
       return;
@@ -1211,47 +1210,12 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
         return;
     }
 
-    if (getFilterOperandTypes().has_value()) {
-      mlir::ArrayAttr types = getFilterOperandTypes().value();
-      auto operandTypes = op->getOperandTypes();
-
-      if (types.size() == 1) {
-        // All the operands must must be equal to the specified type
-        auto typeattr =
-            dyn_cast<mlir::TypeAttr>(getFilterOperandTypes().value()[0]);
-        Type t = typeattr.getValue().cast<::mlir::Type>();
-        if (!llvm::all_of(op->getOperandTypes(),
-                          [&](Type operandType) { return operandType == t; }))
-          return;
-      } else {
-        // The operand types must match all the types in the list (in the same
-        // order in with they are specified)
-        if (types.size() != operandTypes.size()) {
-          incorrectNumOperandTypes = true;
-          return;
-        }
-
-        for (auto [attr, operandType] :
-             llvm::zip_equal(getFilterOperandTypes().value(), operandTypes)) {
-          auto typeattr = cast<mlir::TypeAttr>(attr);
-          Type type = typeattr.getValue().cast<::mlir::Type>();
-
-          if (type != operandType)
-            return;
-        }
-      }
-    }
-
     // All constraints are satisfied.
     res.push_back(op);
     return;
   };
 
   (*payloadOps.begin())->walk(matchFun);
-  if (incorrectNumOperandTypes)
-    return emitDefiniteFailure("If filter_operand_types contains more than a "
-                               "type, then it must contain as much types as "
-                               "the number of operands in the target ops");
   results.set(cast<OpResult>(getResult()), res);
   return DiagnosedSilenceableFailure::success();
 }
