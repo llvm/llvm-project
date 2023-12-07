@@ -62,8 +62,9 @@ struct DeallocContext {
   void *Ptr;
 };
 struct ReallocContext {
-  void *Begin;
-  void *End;
+  void *AllocPtr;
+  void *DeallocPtr;
+  size_t Size;
 };
 static AllocContext AC;
 static DeallocContext DC;
@@ -79,12 +80,26 @@ __attribute__((visibility("default"))) void __scudo_deallocate_hook(void *Ptr) {
   DC.Ptr = Ptr;
 }
 __attribute__((visibility("default"))) void
-__scudo_realloc_begin_hook(void *Ptr) {
-  RC.Begin = Ptr;
+__scudo_realloc_allocate_hook(void *OldPtr, void *NewPtr, size_t Size) {
+  // Verify that __scudo_realloc_deallocate_hook is called first and set the
+  // right pointer.
+  EXPECT_EQ(OldPtr, RC.DeallocPtr);
+  RC.AllocPtr = NewPtr;
+  RC.Size = Size;
+
+  // Note that this is only used for testing. In general, only one pair of hooks
+  // will be invoked in `realloc`. if __scudo_realloc_*_hook are not defined,
+  // it'll call the general hooks only. To make the test easier, we call the
+  // general one here so that either case (wether __scudo_realloc_*_hook are
+  // defined) will be verified without separating them into different tests.
+  __scudo_allocate_hook(NewPtr, Size);
 }
 __attribute__((visibility("default"))) void
-__scudo_realloc_end_hook(void *Ptr) {
-  RC.End = Ptr;
+__scudo_realloc_deallocate_hook(void *Ptr) {
+  RC.DeallocPtr = Ptr;
+
+  // See the comment in the __scudo_realloc_allocate_hook above.
+  __scudo_deallocate_hook(Ptr);
 }
 #endif // (SCUDO_ENABLE_HOOKS_TESTS == 1)
 }
@@ -101,7 +116,7 @@ protected:
       void *InvalidPtr = reinterpret_cast<void *>(0xdeadbeef);
       AC.Ptr = InvalidPtr;
       DC.Ptr = InvalidPtr;
-      RC.Begin = RC.End = InvalidPtr;
+      RC.AllocPtr = RC.DeallocPtr = InvalidPtr;
     }
   }
   void verifyAllocHookPtr(UNUSED void *Ptr) {
@@ -116,10 +131,11 @@ protected:
     if (SCUDO_ENABLE_HOOKS_TESTS)
       EXPECT_EQ(Ptr, DC.Ptr);
   }
-  void verifyReallocHooksScope(UNUSED void *Ptr) {
+  void verifyReallocHookPtrs(UNUSED void *OldPtr, void *NewPtr, size_t Size) {
     if (SCUDO_ENABLE_HOOKS_TESTS) {
-      EXPECT_EQ(Ptr, RC.Begin);
-      EXPECT_EQ(Ptr, RC.End);
+      EXPECT_EQ(OldPtr, RC.DeallocPtr);
+      EXPECT_EQ(NewPtr, RC.AllocPtr);
+      EXPECT_EQ(Size, RC.Size);
     }
   }
 };
@@ -317,7 +333,7 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
     verifyAllocHookSize(Size * 2U);
     verifyDeallocHookPtr(OldP);
   }
-  verifyReallocHooksScope(OldP);
+  verifyReallocHookPtrs(OldP, P, Size * 2U);
 
   invalidateHookPtrs();
   OldP = P;
@@ -333,7 +349,7 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
     verifyAllocHookPtr(P);
     verifyAllocHookSize(Size / 2U);
   }
-  verifyReallocHooksScope(OldP);
+  verifyReallocHookPtrs(OldP, P, Size / 2U);
   free(P);
 
   EXPECT_DEATH(P = realloc(P, Size), "");

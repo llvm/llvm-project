@@ -20,12 +20,19 @@ __attribute__((weak)) const char *__scudo_default_options(void);
 __attribute__((weak)) void __scudo_allocate_hook(void *ptr, size_t size);
 __attribute__((weak)) void __scudo_deallocate_hook(void *ptr);
 
-// These hooks are used to mark the scope of doing realloc(). Note that the
-// allocation/deallocation are still reported through the hooks above, this is
-// only used when a hook user wants to know that the allocation/deallocation
-// operations are a single realloc operation.
-__attribute__((weak)) void __scudo_realloc_begin_hook(void *old_ptr);
-__attribute__((weak)) void __scudo_realloc_end_hook(void *old_ptr);
+// `realloc` involves both deallocation and allocation but they are not reported
+// atomically. In one specific case which may keep taking a snapshot right in
+// the middle of `realloc` reporting the deallocation and allocation, it may
+// confuse the user by the missing memory from `realloc`. To alleviate that
+// case, define the two `realloc` hooks to get the knowledge of the bundled hook
+// calls. This hooks are optional and only used when you are pretty likely to
+// hit that specific case. Otherwise, the two general hooks above are pretty
+// sufficient for the most cases.
+//
+// See more details in the comment of `realloc` in wrapper_c.inc.
+__attribute__((weak)) void
+__scudo_realloc_allocate_hook(void *old_ptr, void *new_ptr, size_t size);
+__attribute__((weak)) void __scudo_realloc_deallocate_hook(void *old_ptr);
 
 void __scudo_print_stats(void);
 
