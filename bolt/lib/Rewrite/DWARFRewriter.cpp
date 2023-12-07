@@ -21,7 +21,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
-#include "llvm/DWARFLinker/DWARFStreamer.h"
+#include "llvm/DWARFLinker/Apple/DWARFStreamer.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
@@ -181,7 +181,7 @@ translateInputToOutputLocationList(const BinaryFunction &BF,
 namespace llvm {
 namespace bolt {
 /// Emits debug information into .debug_info or .debug_types section.
-class DIEStreamer : public DwarfStreamer {
+class DIEStreamer : public dwarflinker::DwarfStreamer {
   DIEBuilder *DIEBldr;
   DWARFRewriter &Rewriter;
 
@@ -271,17 +271,12 @@ private:
       emitCompileUnitHeader(Unit, UnitDIE, Unit.getVersion());
   }
 
-  void emitDIE(DIE &Die) override {
-    AsmPrinter &Asm = getAsmPrinter();
-    Asm.emitDwarfDIE(Die);
-  }
-
 public:
   DIEStreamer(DIEBuilder *DIEBldr, DWARFRewriter &Rewriter,
-              DWARFLinker::OutputFileType OutFileType,
+              dwarflinker::DWARFLinkerBase::OutputFileType OutFileType,
               raw_pwrite_stream &OutFile,
               std::function<StringRef(StringRef Input)> Translator,
-              DWARFLinker::messageHandler Warning)
+              dwarflinker::DWARFLinker::MessageHandlerTy Warning)
       : DwarfStreamer(OutFileType, OutFile, Translator, Warning),
         DIEBldr(DIEBldr), Rewriter(Rewriter){};
 
@@ -457,7 +452,7 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
                   DWARFRewriter &Rewriter) {
 
   std::unique_ptr<DIEStreamer> Streamer = std::make_unique<DIEStreamer>(
-      &DIEBldr, Rewriter, llvm::DWARFLinker::OutputFileType::Object, OutFile,
+      &DIEBldr, Rewriter, llvm::dwarflinker::DWARFLinker::OutputFileType::Object, OutFile,
       [](StringRef Input) -> StringRef { return Input; },
       [&](const Twine &Warning, StringRef Context, const DWARFDie *) {});
   Error Err = Streamer->init(TheTriple, Swift5ReflectionSegmentName);
