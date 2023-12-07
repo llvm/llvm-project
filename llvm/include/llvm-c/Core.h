@@ -3524,8 +3524,7 @@ LLVMValueRef LLVMGetCalledValue(LLVMValueRef Instr);
  *
  * This only works on llvm::CallInst and llvm::InvokeInst instructions.
  *
- * @see llvm::CallInst::getNumOperandBundles()
- * @see llvm::InvokeInst::getNumOperandBundles()
+ * @see llvm::CallBase::getNumOperandBundles()
  */
 unsigned LLVMGetNumOperandBundles(LLVMValueRef C);
 
