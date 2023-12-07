@@ -2215,15 +2215,13 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   // If we have a valid relocation, try to print the
                   // corresponding symbol name. Multiple relocations on the
                   // same instruction are not handled.
-                  if (Error E = getRelocationValueString(*RelCur, false,
-                                                         Val)) {
+                  if (Error E = getRelocationValueString(*RelCur, false, Val)) {
                     // If -r was used, this error will be printed later.
                     // Otherwise, we ignore the error and print what
                     // would have been printed without using relocations.
                     consumeError(std::move(E));
                     *TargetOS << TargetName;
-                  }
-                  else
+                  } else
                     *TargetOS << Val;
                   if (Disp)
                     *TargetOS << "+0x" << Twine::utohexstr(Disp);
