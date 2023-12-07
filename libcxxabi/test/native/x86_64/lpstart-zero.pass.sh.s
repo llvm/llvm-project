@@ -1,24 +1,26 @@
 # RUN: %{cxx} %{flags} %s %{link_flags} -no-pie -o %t.exe
 # RUN: %t.exe
+
+# REQUIRES: linux && target={{x86_64-.+}}
 # UNSUPPORTED: no-exceptions
 
-# PURPOSE: Check that libc++abi works correctly when LPStart address is
-# explicitly set to zero.
+## Check that libc++abi works correctly when LPStart address is explicitly set
+## to zero.
 
-# This file is generated from the following C++ source code.
-#
-# ```
-# int main() {
-#   try {
-#     throw 42;
-#   } catch (...) {
-#     return 0;
-#   }
-#   return 1;
-# }
-# ```
-# The exception table is modified to use udata4 encoding for LPStart and
-# sdata4 encoding for call sites.
+## This file is generated from the following C++ source code.
+##
+## ```
+## int main() {
+##   try {
+##     throw 42;
+##   } catch (...) {
+##     return 0;
+##   }
+##   return 1;
+## }
+## ```
+## The exception table is modified to use udata4 encoding for LPStart and
+## sdata4 encoding for call sites.
 
 	.text
 	.globl	main                            # -- Begin function main
