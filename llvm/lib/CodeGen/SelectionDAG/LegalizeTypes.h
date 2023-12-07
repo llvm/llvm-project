@@ -410,6 +410,7 @@ private:
   SDValue PromoteIntOp_STACKMAP(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_PATCHPOINT(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VP_STRIDED(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_VP_SPLICE(SDNode *N, unsigned OpNo);
 
   void PromoteSetCCOperands(SDValue &LHS,SDValue &RHS, ISD::CondCode Code);
 
