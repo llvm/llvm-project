@@ -1991,12 +1991,7 @@ void Driver::HandleAutocompletions(StringRef PassedFlags) const {
   std::vector<std::string> SuggestedCompletions;
   std::vector<std::string> Flags;
 
-  llvm::opt::Visibility VisibilityMask(options::ClangOption);
-
-  // Make sure that Flang-only options don't pollute the Clang output
-  // TODO: Make sure that Clang-only options don't pollute Flang output
-  if (IsFlangMode())
-    VisibilityMask = llvm::opt::Visibility(options::FlangOption);
+  llvm::opt::Visibility VisibilityMask =  getOptionVisibilityMask();
 
   // Distinguish "--autocomplete=-someflag" and "--autocomplete=-someflag,"
   // because the latter indicates that the user put space before pushing tab
