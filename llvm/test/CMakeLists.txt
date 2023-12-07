@@ -128,6 +128,7 @@ set(LLVM_TEST_DEPENDS
           llvm-stress
           llvm-strings
           llvm-strip
+          llvm-fromelf
           llvm-symbolizer
           llvm-tblgen
           llvm-readtapi

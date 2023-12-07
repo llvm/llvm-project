@@ -41,3 +41,13 @@
 # RUN: %t/bitcode_strip.exe --help | FileCheck --check-prefix=BITCODE-STRIP %s
 
 # BITCODE-STRIP: OVERVIEW: llvm-bitcode-strip tool
+
+## This driver emulates fromelf from ARM.
+# RUN: ln -s llvm-fromelf %t/llvm-fromelf-10
+# RUN: ln -s llvm-fromelf %t/fromelf.exe
+
+# RUN: llvm-fromelf --help | FileCheck --check-prefix=FROM-ELF %s
+# RUN: %t/llvm-fromelf-10 --help | FileCheck --check-prefix=FROM-ELF %s
+# RUN: %t/fromelf.exe --help | FileCheck --check-prefix=FROM-ELF %s
+
+# FROM-ELF: OVERVIEW: llvm-fromelf tool

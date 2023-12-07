@@ -24,6 +24,10 @@ set(LLVM_TARGET_DEFINITIONS StripOpts.td)
 tablegen(LLVM StripOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(StripOptsTableGen)
 
+set(LLVM_TARGET_DEFINITIONS FromElfOpts.td)
+tablegen(LLVM FromElfOpts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(FromElfOptsTableGen)
+
 add_llvm_tool(llvm-objcopy
   ObjcopyOptions.cpp
   llvm-objcopy.cpp
@@ -31,16 +35,19 @@ add_llvm_tool(llvm-objcopy
   ObjcopyOptsTableGen
   InstallNameToolOptsTableGen
   StripOptsTableGen
+  FromElfOptsTableGen
   GENERATE_DRIVER
-  )
+)
 
 add_llvm_tool_symlink(llvm-install-name-tool llvm-objcopy)
 add_llvm_tool_symlink(llvm-bitcode-strip llvm-objcopy)
 add_llvm_tool_symlink(llvm-strip llvm-objcopy)
+add_llvm_tool_symlink(llvm-fromelf llvm-objcopy)
 
 if(LLVM_INSTALL_BINUTILS_SYMLINKS)
   add_llvm_tool_symlink(objcopy llvm-objcopy)
   add_llvm_tool_symlink(strip llvm-objcopy)
+  add_llvm_tool_symlink(fromelf llvm-objcopy)
 endif()
 
 if(LLVM_INSTALL_CCTOOLS_SYMLINKS)

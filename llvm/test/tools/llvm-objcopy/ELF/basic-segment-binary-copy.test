@@ -1,0 +1,43 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy -I elf -O sbin %t %t2
+# RUN: llvm-fromelf -O sbin %t %t3
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .foo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000001000
+    Size:            8
+  - Name:            .bar
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000001000
+    Size:            8
+  - Name:            .main
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000001000
+    Size:            64
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .foo
+    LastSec:  .foo
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr: 0x2000000
+    PAddr: 0x2000000
+    FirstSec: .bar
+    LastSec:  .bar
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .main
+    LastSec:  .main
+    VAddr: 0x2000008
+    PAddr: 0x2000008

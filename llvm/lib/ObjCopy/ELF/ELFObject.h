@@ -87,6 +87,13 @@ public:
   virtual Error visit(const DecompressedSection &Sec) = 0;
 };
 
+class SegmentVisitor {
+public:
+  virtual ~SegmentVisitor() = default;
+
+  virtual Error visit(const Segment &Seg) = 0;
+};
+
 class MutableSectionVisitor {
 public:
   virtual ~MutableSectionVisitor() = default;
@@ -124,6 +131,18 @@ public:
   Error visit(const DecompressedSection &Sec) override = 0;
 
   explicit SectionWriter(WritableMemoryBuffer &Buf) : Out(Buf) {}
+};
+
+class SegmentWriter : public SegmentVisitor {
+protected:
+  WritableMemoryBuffer &Out;
+
+public:
+  virtual ~SegmentWriter() = default;
+
+  Error visit(const Segment &Seg) override = 0;
+
+  explicit SegmentWriter(WritableMemoryBuffer &Buf) : Out(Buf) {}
 };
 
 template <class ELFT> class ELFSectionWriter : public SectionWriter {
@@ -189,6 +208,16 @@ public:
 
   explicit BinarySectionWriter(WritableMemoryBuffer &Buf)
       : SectionWriter(Buf) {}
+};
+
+class BinarySegmentWriter : public SegmentWriter {
+public:
+  virtual ~BinarySegmentWriter() {}
+
+  Error visit(const Segment &Seg) override;
+
+  explicit BinarySegmentWriter(WritableMemoryBuffer &Buf)
+      : SegmentWriter(Buf) {}
 };
 
 using IHexLineData = SmallVector<char, 64>;
@@ -387,6 +416,19 @@ public:
   IHexWriter(Object &Obj, raw_ostream &Out) : Writer(Obj, Out) {}
 };
 
+class SegBinWriter : public Writer {
+private:
+  std::unique_ptr<BinarySegmentWriter> SegmentWriter;
+  uint32_t SegmentIndex = 0;
+
+public:
+  ~SegBinWriter() {}
+  Error finalize() override;
+  Error write() override;
+  SegBinWriter(Object &Obj, raw_ostream &Out, uint32_t SegmentIndex)
+      : Writer(Obj, Out), SegmentIndex(SegmentIndex) {}
+};
+
 class SectionBase {
 public:
   std::string Name;
@@ -476,7 +518,7 @@ public:
 
   void removeSection(const SectionBase *Sec) { Sections.erase(Sec); }
   void addSection(const SectionBase *Sec) { Sections.insert(Sec); }
-
+  Error accept(SegmentVisitor &Visitor) const { return Visitor.visit(*this); }
   ArrayRef<uint8_t> getContents() const { return Contents; }
 };
 
@@ -1036,6 +1078,9 @@ private:
   static bool sectionIsAlloc(const SectionBase &Sec) {
     return Sec.Flags & ELF::SHF_ALLOC;
   };
+  static bool segmentIsLoadable(const Segment &Seg) {
+    return Seg.Type & ELF::PT_LOAD;
+  };
 
 public:
   template <class T>
@@ -1086,6 +1131,17 @@ public:
     return SecIt == Sections.end() ? nullptr : SecIt->get();
   }
   SectionTableRef removedSections() { return SectionTableRef(RemovedSections); }
+
+  iterator_range<
+      filter_iterator<pointee_iterator<std::vector<SegPtr>::const_iterator>,
+                      decltype(&segmentIsLoadable)>>
+  loadableSegments() const {
+    return make_filter_range(make_pointee_range(Segments), segmentIsLoadable);
+  }
+
+  const Segment &getSegmentForIndex(uint32_t Index) const {
+    return *(Segments[Index]);
+  }
 
   ConstRange<Segment> segments() const { return make_pointee_range(Segments); }
 

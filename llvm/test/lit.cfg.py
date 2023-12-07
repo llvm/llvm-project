@@ -166,6 +166,7 @@ tools = [
     ToolSubst("%llvm-strip", FindTool("llvm-strip")),
     ToolSubst("%llvm-install-name-tool", FindTool("llvm-install-name-tool")),
     ToolSubst("%llvm-bitcode-strip", FindTool("llvm-bitcode-strip")),
+    ToolSubst("%llvm-fromelf", FindTool("llvm-fromelf")),
     ToolSubst("%split-file", FindTool("split-file")),
 ]
 
@@ -180,6 +181,7 @@ tools.extend(
         "llvm-addr2line",
         "llvm-bcanalyzer",
         "llvm-bitcode-strip",
+        "llvm-fromelf",
         "llvm-config",
         "llvm-cov",
         "llvm-cxxdump",

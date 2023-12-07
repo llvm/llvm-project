@@ -28,11 +28,13 @@ symlinks = [
   "llvm-bitcode-strip",
   "llvm-install-name-tool",
   "llvm-strip",
+  "llvm-fromelf",
 ]
 if (llvm_install_binutils_symlinks) {
   symlinks += [
     "objcopy",
     "strip",
+    "fromelf",
   ]
 }
 if (llvm_install_cctools_symlinks) {
