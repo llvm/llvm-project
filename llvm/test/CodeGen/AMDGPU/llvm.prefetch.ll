@@ -43,43 +43,6 @@ entry:
   ret void
 }
 
-define amdgpu_ps void @prefetch_data_pc_rel() {
-; GFX12-SDAG-LABEL: prefetch_data_pc_rel:
-; GFX12-SDAG:       ; %bb.0: ; %entry
-; GFX12-SDAG-NEXT:    s_prefetch_data_pc_rel 0x0, null, 0
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX11-LABEL: prefetch_data_pc_rel:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: prefetch_data_pc_rel:
-; GFX12-GISEL:       ; %bb.0: ; %entry
-; GFX12-GISEL-NEXT:    s_endpgm
-entry:
-  tail call void @llvm.prefetch.p4(ptr addrspace(4) null, i32 0, i32 0, i32 1)
-  ret void
-}
-
-define amdgpu_ps void @prefetch_data_pc_rel_offset() {
-; GFX12-SDAG-LABEL: prefetch_data_pc_rel_offset:
-; GFX12-SDAG:       ; %bb.0: ; %entry
-; GFX12-SDAG-NEXT:    s_prefetch_data_pc_rel 0x200, null, 0
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX11-LABEL: prefetch_data_pc_rel_offset:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: prefetch_data_pc_rel_offset:
-; GFX12-GISEL:       ; %bb.0: ; %entry
-; GFX12-GISEL-NEXT:    s_endpgm
-entry:
-  %gep = getelementptr float, ptr addrspace(4) null, i32 128
-  tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 1)
-  ret void
-}
-
 ; Check large offsets
 
 define amdgpu_ps void @prefetch_data_sgpr_max_offset(ptr addrspace(4) inreg %ptr) {
@@ -137,44 +100,6 @@ define amdgpu_ps void @prefetch_data_sgpr_too_large_offset(ptr addrspace(4) inre
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i8, ptr addrspace(4) %ptr, i32 8388608
-  tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 1)
-  ret void
-}
-
-define amdgpu_ps void @prefetch_data_pc_rel_max_offset() {
-; GFX12-SDAG-LABEL: prefetch_data_pc_rel_max_offset:
-; GFX12-SDAG:       ; %bb.0: ; %entry
-; GFX12-SDAG-NEXT:    s_prefetch_data_pc_rel 0x7fffff, null, 0
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX11-LABEL: prefetch_data_pc_rel_max_offset:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: prefetch_data_pc_rel_max_offset:
-; GFX12-GISEL:       ; %bb.0: ; %entry
-; GFX12-GISEL-NEXT:    s_endpgm
-entry:
-  %gep = getelementptr i8, ptr addrspace(4) null, i32 8388607
-  tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 1)
-  ret void
-}
-
-define amdgpu_ps void @prefetch_data_pc_rel_min_offset() {
-; GFX12-SDAG-LABEL: prefetch_data_pc_rel_min_offset:
-; GFX12-SDAG:       ; %bb.0: ; %entry
-; GFX12-SDAG-NEXT:    s_prefetch_data_pc_rel -0x800000, null, 0
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX11-LABEL: prefetch_data_pc_rel_min_offset:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: prefetch_data_pc_rel_min_offset:
-; GFX12-GISEL:       ; %bb.0: ; %entry
-; GFX12-GISEL-NEXT:    s_endpgm
-entry:
-  %gep = getelementptr i8, ptr addrspace(4) null, i32 -8388608
   tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 1)
   ret void
 }
@@ -329,43 +254,6 @@ entry:
   ret void
 }
 
-define amdgpu_ps void @prefetch_inst_pc_rel() {
-; GFX12-SDAG-LABEL: prefetch_inst_pc_rel:
-; GFX12-SDAG:       ; %bb.0: ; %entry
-; GFX12-SDAG-NEXT:    s_prefetch_inst_pc_rel 0x0, null, 0
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX11-LABEL: prefetch_inst_pc_rel:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: prefetch_inst_pc_rel:
-; GFX12-GISEL:       ; %bb.0: ; %entry
-; GFX12-GISEL-NEXT:    s_endpgm
-entry:
-  tail call void @llvm.prefetch.p4(ptr addrspace(4) null, i32 0, i32 0, i32 0)
-  ret void
-}
-
-define amdgpu_ps void @prefetch_inst_pc_rel_offset() {
-; GFX12-SDAG-LABEL: prefetch_inst_pc_rel_offset:
-; GFX12-SDAG:       ; %bb.0: ; %entry
-; GFX12-SDAG-NEXT:    s_prefetch_inst_pc_rel 0x80, null, 0
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX11-LABEL: prefetch_inst_pc_rel_offset:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: prefetch_inst_pc_rel_offset:
-; GFX12-GISEL:       ; %bb.0: ; %entry
-; GFX12-GISEL-NEXT:    s_endpgm
-entry:
-  %gep = getelementptr i8, ptr addrspace(4) null, i32 128
-  tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 0)
-  ret void
-}
-
 ; Check large offsets
 
 define amdgpu_ps void @prefetch_inst_sgpr_max_offset(ptr addrspace(4) inreg %ptr) {
@@ -423,44 +311,6 @@ define amdgpu_ps void @prefetch_inst_sgpr_too_large_offset(ptr addrspace(4) inre
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i8, ptr addrspace(4) %ptr, i32 8388608
-  tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 0)
-  ret void
-}
-
-define amdgpu_ps void @prefetch_inst_pc_rel_max_offset() {
-; GFX12-SDAG-LABEL: prefetch_inst_pc_rel_max_offset:
-; GFX12-SDAG:       ; %bb.0: ; %entry
-; GFX12-SDAG-NEXT:    s_prefetch_inst_pc_rel 0x7fffff, null, 0
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX11-LABEL: prefetch_inst_pc_rel_max_offset:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: prefetch_inst_pc_rel_max_offset:
-; GFX12-GISEL:       ; %bb.0: ; %entry
-; GFX12-GISEL-NEXT:    s_endpgm
-entry:
-  %gep = getelementptr i8, ptr addrspace(4) null, i32 8388607
-  tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 0)
-  ret void
-}
-
-define amdgpu_ps void @prefetch_inst_pc_rel_min_offset() {
-; GFX12-SDAG-LABEL: prefetch_inst_pc_rel_min_offset:
-; GFX12-SDAG:       ; %bb.0: ; %entry
-; GFX12-SDAG-NEXT:    s_prefetch_inst_pc_rel -0x800000, null, 0
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX11-LABEL: prefetch_inst_pc_rel_min_offset:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: prefetch_inst_pc_rel_min_offset:
-; GFX12-GISEL:       ; %bb.0: ; %entry
-; GFX12-GISEL-NEXT:    s_endpgm
-entry:
-  %gep = getelementptr i8, ptr addrspace(4) null, i32 -8388608
   tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 0)
   ret void
 }
