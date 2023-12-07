@@ -105,7 +105,7 @@ void HeaderSearch::PrintStats() {
 
 void HeaderSearch::SetSearchPaths(
     std::vector<DirectoryLookup> dirs, unsigned int angledDirIdx,
-    unsigned int systemDirIdx, bool noCurDirSearch,
+    unsigned int systemDirIdx,
     llvm::DenseMap<unsigned int, unsigned int> searchDirToHSEntry) {
   assert(angledDirIdx <= systemDirIdx && systemDirIdx <= dirs.size() &&
          "Directory indices are unordered");
@@ -113,7 +113,6 @@ void HeaderSearch::SetSearchPaths(
   SearchDirsUsage.assign(SearchDirs.size(), false);
   AngledDirIdx = angledDirIdx;
   SystemDirIdx = systemDirIdx;
-  NoCurDirSearch = noCurDirSearch;
   SearchDirToHSEntry = std::move(searchDirToHSEntry);
   //LookupFileCache.clear();
   indexInitialHeaderMaps();
@@ -904,12 +903,12 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
   ModuleMap::KnownHeader MSSuggestedModule;
   OptionalFileEntryRef MSFE;
 
-  // Unless disabled, check to see if the file is in the #includer's
-  // directory.  This cannot be based on CurDir, because each includer could be
-  // a #include of a subdirectory (#include "foo/bar.h") and a subsequent
-  // include of "baz.h" should resolve to "whatever/foo/baz.h".
-  // This search is not done for <> headers.
-  if (!Includers.empty() && !isAngled && !NoCurDirSearch) {
+  // Check to see if the file is in the #includer's directory. This cannot be
+  // based on CurDir, because each includer could be a #include of a
+  // subdirectory (#include "foo/bar.h") and a subsequent include of "baz.h"
+  // should resolve to "whatever/foo/baz.h". This search is not done for <>
+  // headers.
+  if (!Includers.empty() && !isAngled) {
     SmallString<1024> TmpDir;
     bool First = true;
     for (const auto &IncluderAndDir : Includers) {
