@@ -9,9 +9,10 @@
 #include "DebugInfoLinker.h"
 #include "Error.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/DWARFLinker/DWARFLinker.h"
-#include "llvm/DWARFLinker/DWARFStreamer.h"
-#include "llvm/DWARFLinkerParallel/DWARFLinker.h"
+#include "llvm/DWARFLinker/AddressesMap.h"
+#include "llvm/DWARFLinker/Apple/DWARFLinker.h"
+#include "llvm/DWARFLinker/Apple/DWARFStreamer.h"
+#include "llvm/DWARFLinker/LLVM/DWARFLinker.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
@@ -37,8 +38,7 @@ namespace dwarfutil {
 // exec: [LowPC, HighPC] is not inside address ranges of .text sections
 //
 // universal: maxpc and bfd
-template <typename AddressMapBase>
-class ObjFileAddressMap : public AddressMapBase {
+class ObjFileAddressMap : public dwarflinker::AddressesMap {
 public:
   ObjFileAddressMap(DWARFContext &Context, const Options &Options,
                     object::ObjectFile &ObjFile)
@@ -298,7 +298,7 @@ static std::string getMessageForDeletedAcceleratorTables(
   return Message;
 }
 
-template <typename Linker, typename OutDwarfFile, typename AddressMapBase>
+template <typename Linker>
 Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
                         raw_pwrite_stream &OutStream) {
   std::mutex ErrorHandlerMutex;
@@ -335,9 +335,25 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
       Linker::createLinker(ReportErr, ReportWarn);
 
   Triple TargetTriple = File.makeTriple();
-  if (Error Err = DebugInfoLinker->createEmitter(
-          TargetTriple, Linker::OutputFileType::Object, OutStream))
-    return Err;
+
+  Expected<dwarflinker::DwarfStreamer *> Streamer =
+      dwarflinker::DwarfStreamer::createStreamer(
+          TargetTriple, Linker::OutputFileType::Object, OutStream, nullptr,
+          ReportWarn);
+  if (!Streamer)
+    return Streamer.takeError();
+
+  if constexpr (std::is_same<Linker, dwarflinker::DWARFLinker>::value)
+    DebugInfoLinker->setOutputDWARFStreamer(Streamer.get());
+  else
+    DebugInfoLinker->setOutputDWARFHandler(
+        TargetTriple,
+        [&](std::shared_ptr<
+            dwarflinker::dwarflinker_parallel::SectionDescriptorBase>
+                Section) {
+          (*Streamer)->emitSectionContents(Section->getContent(),
+                                           Section->getName());
+        });
 
   DebugInfoLinker->setEstimatedObjfilesAmount(1);
   DebugInfoLinker->setNumThreads(Options.NumThreads);
@@ -345,7 +361,7 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
   DebugInfoLinker->setVerbosity(Options.Verbose);
   DebugInfoLinker->setUpdateIndexTablesOnly(!Options.DoGarbageCollection);
 
-  std::vector<std::unique_ptr<OutDwarfFile>> ObjectsForLinking(1);
+  std::vector<std::unique_ptr<dwarflinker::DWARFFile>> ObjectsForLinking(1);
 
   // Add object files to the DWARFLinker.
   std::unique_ptr<DWARFContext> Context = DWARFContext::create(
@@ -360,11 +376,10 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
           ReportWarn(Info.message(), "", nullptr);
         });
       });
-  std::unique_ptr<ObjFileAddressMap<AddressMapBase>> AddressesMap(
-      std::make_unique<ObjFileAddressMap<AddressMapBase>>(*Context, Options,
-                                                          File));
+  std::unique_ptr<dwarflinker::AddressesMap> AddressesMap(
+      std::make_unique<ObjFileAddressMap>(*Context, Options, File));
 
-  ObjectsForLinking[0] = std::make_unique<OutDwarfFile>(
+  ObjectsForLinking[0] = std::make_unique<dwarflinker::DWARFFile>(
       File.getFileName(), std::move(Context), std::move(AddressesMap));
 
   uint16_t MaxDWARFVersion = 0;
@@ -400,7 +415,7 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
   for (typename Linker::AccelTableKind Table : AccelTables)
     DebugInfoLinker->addAccelTableKind(Table);
 
-  for (std::unique_ptr<OutDwarfFile> &CurFile : ObjectsForLinking) {
+  for (std::unique_ptr<dwarflinker::DWARFFile> &CurFile : ObjectsForLinking) {
     SmallVector<StringRef> AccelTableNamesToReplace;
     SmallVector<StringRef> AccelTableNamesToDelete;
 
@@ -445,20 +460,18 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
   if (Error Err = DebugInfoLinker->link())
     return Err;
 
-  DebugInfoLinker->getEmitter()->finish();
+  (*Streamer)->finish();
   return Error::success();
 }
 
 Error linkDebugInfo(object::ObjectFile &File, const Options &Options,
                     raw_pwrite_stream &OutStream) {
   if (Options.UseLLVMDWARFLinker)
-    return linkDebugInfoImpl<dwarflinker_parallel::DWARFLinker,
-                             dwarflinker_parallel::DWARFFile,
-                             dwarflinker_parallel::AddressesMap>(File, Options,
-                                                                 OutStream);
-  else
-    return linkDebugInfoImpl<DWARFLinker, DWARFFile, AddressesMap>(
+    return linkDebugInfoImpl<dwarflinker::dwarflinker_parallel::DWARFLinker>(
         File, Options, OutStream);
+  else
+    return linkDebugInfoImpl<dwarflinker::DWARFLinker>(File, Options,
+                                                       OutStream);
 }
 
 } // end of namespace dwarfutil

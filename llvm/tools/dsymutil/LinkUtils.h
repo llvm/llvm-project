@@ -16,8 +16,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 
-#include "llvm/DWARFLinker/DWARFLinker.h"
-#include "llvm/DWARFLinker/DWARFStreamer.h"
+#include "llvm/DWARFLinker/LLVM/DWARFLinker.h"
 #include <string>
 
 namespace llvm {
@@ -72,7 +71,8 @@ struct LinkOptions {
   unsigned Threads = 1;
 
   // Output file type.
-  DWARFLinker::OutputFileType FileType = DWARFLinker::OutputFileType::Object;
+  dwarflinker::DWARFLinkerBase::OutputFileType FileType =
+      dwarflinker::DWARFLinkerBase::OutputFileType::Object;
 
   /// The accelerator table kind
   DsymutilAccelTableKind TheAccelTableKind;

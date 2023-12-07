@@ -1,8 +1,5 @@
-add_llvm_component_library(LLVMDWARFLinker
-  DWARFLinkerCompileUnit.cpp
-  DWARFLinkerDeclContext.cpp
-  DWARFLinker.cpp
-  DWARFStreamer.cpp
+add_llvm_component_library(LLVMDWARFLinkerBase
+  Utils.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/DWARFLinker
@@ -11,13 +8,7 @@ add_llvm_component_library(LLVMDWARFLinker
   intrinsics_gen
 
   LINK_COMPONENTS
-  AsmPrinter
-  BinaryFormat
-  CodeGen
-  CodeGenTypes
-  DebugInfoDWARF
-  MC
-  Object
-  Support
-  TargetParser
   )
+
+add_subdirectory(Apple)
+add_subdirectory(LLVM)

@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
@@ -27,6 +28,7 @@
 
 using namespace llvm;
 using namespace dwarf;
+using namespace dwarflinker;
 
 using FileLineInfoKind = DILineInfoSpecifier::FileLineInfoKind;
 
@@ -1397,14 +1399,6 @@ DWARFDebugLine::LineTable::getSourceByIndex(uint64_t FileIndex,
   if (auto E = dwarf::toString(Entry.Source))
     return StringRef(*E);
   return std::nullopt;
-}
-
-static bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {
-  // Debug info can contain paths from any OS, not necessarily
-  // an OS we're currently running on. Moreover different compilation units can
-  // be compiled on different operating systems and linked together later.
-  return sys::path::is_absolute(Path, sys::path::Style::posix) ||
-         sys::path::is_absolute(Path, sys::path::Style::windows);
 }
 
 bool DWARFDebugLine::Prologue::getFileNameByIndex(

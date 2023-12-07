@@ -18,11 +18,14 @@
 namespace llvm {
 
 class raw_ostream;
+
+namespace dwarflinker {
 class DwarfStreamer;
+}
 
 class DWARFDebugMacro {
-  friend DwarfStreamer;
-  friend dwarflinker_parallel::CompileUnit;
+  friend dwarflinker::DwarfStreamer;
+  friend dwarflinker::dwarflinker_parallel::CompileUnit;
 
   /// DWARFv5 section 6.3.1 Macro Information Header.
   enum HeaderFlagMask {
