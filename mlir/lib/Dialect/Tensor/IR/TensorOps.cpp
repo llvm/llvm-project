@@ -176,7 +176,8 @@ foldDynamicToStaticDimSizes(RankedTensorType type, ValueRange dynamicSizes,
                             SmallVector<Value> &foldedDynamicSizes) {
   SmallVector<int64_t> staticShape(type.getShape().begin(),
                                    type.getShape().end());
-  assert(type.getNumDynamicDims() == dynamicSizes.size() &&
+  assert(type.getNumDynamicDims() ==
+             static_cast<int64_t>(dynamicSizes.size()) &&
          "incorrect number of dynamic sizes");
 
   // Compute new static and dynamic sizes.
