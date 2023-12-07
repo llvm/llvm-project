@@ -2883,6 +2883,10 @@ private:
       assert(!BundleMember && "Bundle and VL out of sync");
     } else {
       MustGather.insert(VL.begin(), VL.end());
+      // Build a map for gathered scalars to the nodes where they are used.
+      for (Value *V : VL)
+        if (!isConstant(V))
+          ValueToGatherNodes.try_emplace(V).first->getSecond().insert(Last);
     }
 
     if (UserTreeIdx.UserTE)
@@ -5597,6 +5601,18 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   InstructionsState S = getSameOpcode(VL, *TLI);
 
+  // Don't vectorize ephemeral values.
+  if (!EphValues.empty()) {
+    for (Value *V : VL) {
+      if (EphValues.count(V)) {
+        LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
+                          << ") is ephemeral.\n");
+        newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
+        return;
+      }
+    }
+  }
+
   // Gather if we hit the RecursionMaxDepth, unless this is a load (or z/sext of
   // a load), in which case peek through to include it in the tree, without
   // ballooning over-budget.
@@ -5734,18 +5750,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   // We now know that this is a vector of instructions of the same type from
   // the same block.
-
-  // Don't vectorize ephemeral values.
-  if (!EphValues.empty()) {
-    for (Value *V : VL) {
-      if (EphValues.count(V)) {
-        LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
-                          << ") is ephemeral.\n");
-        newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
-        return;
-      }
-    }
-  }
 
   // Check if this is a duplicate of another entry.
   if (TreeEntry *E = getTreeEntry(S.OpValue)) {
@@ -8865,16 +8869,6 @@ static T *performExtractsShuffleAction(
 }
 
 InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
-  // Build a map for gathered scalars to the nodes where they are used.
-  ValueToGatherNodes.clear();
-  for (const std::unique_ptr<TreeEntry> &EntryPtr : VectorizableTree) {
-    if (EntryPtr->State != TreeEntry::NeedToGather)
-      continue;
-    for (Value *V : EntryPtr->Scalars)
-      if (!isConstant(V))
-        ValueToGatherNodes.try_emplace(V).first->getSecond().insert(
-            EntryPtr.get());
-  }
   InstructionCost Cost = 0;
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
                     << VectorizableTree.size() << ".\n");
