@@ -11,10 +11,10 @@
 
 #include "flang/Runtime/extensions.h"
 #include "terminator.h"
+#include "flang/Runtime/character.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
-#include "flang/Runtime/time-intrinsic.h" // copyBufferAndPad
 #include <ctime>
 
 #ifdef _WIN32
@@ -53,13 +53,13 @@ void FORTRAN_PROCEDURE_NAME(flush)(const int &unit) {
 
 // CALL FDATE(DATE)
 void FORTRAN_PROCEDURE_NAME(fdate)(std::int8_t *arg, std::int64_t length) {
+  std::array<char, 26> str;
   // If the length is too short to fit completely, blank return.
   if (length < 24) {
-    copyBufferAndPad(reinterpret_cast<char *>(arg), length, nullptr, 0);
+    std::memset(reinterpret_cast<char *>(arg), ' ', length);
     return;
   }
 
-  std::array<char, 26> str;
   Terminator terminator{__FILE__, __LINE__};
   std::time_t current_time;
   std::time(&current_time);
@@ -67,7 +67,7 @@ void FORTRAN_PROCEDURE_NAME(fdate)(std::int8_t *arg, std::int64_t length) {
   // Tue May 26 21:51:03 2015\n\0
 
   ctime_alloc(str.data(), str.size(), current_time, terminator);
-  copyBufferAndPad(reinterpret_cast<char *>(arg), length, str.data(), 24);
+  CopyAndPad(reinterpret_cast<char *>(arg), str.data(), length, 24);
 }
 
 // RESULT = IARGC()
