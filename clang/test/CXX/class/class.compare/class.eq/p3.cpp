@@ -6,11 +6,11 @@ struct A {
 };
 
 static_assert(A{1, 2, 3, 4, 5} == A{1, 2, 3, 4, 5});
-static_assert(A{1, 2, 3, 4, 5} == A{0, 2, 3, 4, 5}); // expected-error {{failed}}
-static_assert(A{1, 2, 3, 4, 5} == A{1, 0, 3, 4, 5}); // expected-error {{failed}}
-static_assert(A{1, 2, 3, 4, 5} == A{1, 2, 0, 4, 5}); // expected-error {{failed}}
-static_assert(A{1, 2, 3, 4, 5} == A{1, 2, 3, 0, 5}); // expected-error {{failed}}
-static_assert(A{1, 2, 3, 4, 5} == A{1, 2, 3, 4, 0}); // expected-error {{failed}}
+static_assert(A{1, 2, 3, 4, 5} == A{0, 2, 3, 4, 5}); // expected-error {{failed}} expected-note {{evaluates to}}
+static_assert(A{1, 2, 3, 4, 5} == A{1, 0, 3, 4, 5}); // expected-error {{failed}} expected-note {{evaluates to}}
+static_assert(A{1, 2, 3, 4, 5} == A{1, 2, 0, 4, 5}); // expected-error {{failed}} expected-note {{evaluates to}}
+static_assert(A{1, 2, 3, 4, 5} == A{1, 2, 3, 0, 5}); // expected-error {{failed}} expected-note {{evaluates to}}
+static_assert(A{1, 2, 3, 4, 5} == A{1, 2, 3, 4, 0}); // expected-error {{failed}} expected-note {{evaluates to}}
 
 struct B {
   int a, b[3], c;
@@ -18,8 +18,8 @@ struct B {
 };
 
 static_assert(B{1, 2, 3, 4, 5} == B{1, 2, 3, 4, 5});
-static_assert(B{1, 2, 3, 4, 5} == B{0, 2, 3, 4, 5}); // expected-error {{failed}}
-static_assert(B{1, 2, 3, 4, 5} == B{1, 0, 3, 4, 5}); // expected-error {{failed}}
-static_assert(B{1, 2, 3, 4, 5} == B{1, 2, 0, 4, 5}); // expected-error {{failed}}
-static_assert(B{1, 2, 3, 4, 5} == B{1, 2, 3, 0, 5}); // expected-error {{failed}}
-static_assert(B{1, 2, 3, 4, 5} == B{1, 2, 3, 4, 0}); // expected-error {{failed}}
+static_assert(B{1, 2, 3, 4, 5} == B{0, 2, 3, 4, 5}); // expected-error {{failed}} expected-note {{evaluates to}}
+static_assert(B{1, 2, 3, 4, 5} == B{1, 0, 3, 4, 5}); // expected-error {{failed}} expected-note {{evaluates to}}
+static_assert(B{1, 2, 3, 4, 5} == B{1, 2, 0, 4, 5}); // expected-error {{failed}} expected-note {{evaluates to}}
+static_assert(B{1, 2, 3, 4, 5} == B{1, 2, 3, 0, 5}); // expected-error {{failed}} expected-note {{evaluates to}}
+static_assert(B{1, 2, 3, 4, 5} == B{1, 2, 3, 4, 0}); // expected-error {{failed}} expected-note {{evaluates to}}
