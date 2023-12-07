@@ -356,6 +356,7 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1,
 
   IC.replaceOperand(*Cast, 0, BinOp2->getOperand(0));
   IC.replaceOperand(*BinOp1, 1, FoldedC);
+  BinOp1->dropPoisonGeneratingFlags();
   Cast->dropPoisonGeneratingFlags();
   return true;
 }
