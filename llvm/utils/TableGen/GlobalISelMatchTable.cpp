@@ -243,7 +243,8 @@ void MatchTable::emitDeclaration(raw_ostream &OS) const {
     if (I->Flags & MatchTableRecord::MTRF_Outdent)
       Indentation -= 2;
   }
-  OS << "}; // Size: " << (CurrentSize * 8) << " bytes\n";;
+  OS << "}; // Size: " << (CurrentSize * 8) << " bytes\n";
+  ;
 }
 
 MatchTable MatchTable::buildTable(ArrayRef<Matcher *> Rules, bool WithCoverage,
