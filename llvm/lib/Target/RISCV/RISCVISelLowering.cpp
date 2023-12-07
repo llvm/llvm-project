@@ -14783,14 +14783,12 @@ static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
 
   SDValue Addend = N->getOperand(0);
   SDValue MulOp = N->getOperand(1);
-  SDValue AddMergeOp = [](SDNode *N, SelectionDAG &DAG) {
-    if (N->getOpcode() == ISD::ADD)
-      return DAG.getUNDEF(N->getValueType(0));
-    return N->getOperand(2);
-  }(N, DAG);
 
-  if (!AddMergeOp.isUndef())
-    return SDValue();
+  if (N->getOpcode() == RISCVISD::ADD_VL) {
+    SDValue AddMergeOp = N->getOperand(2);
+    if (!AddMergeOp.isUndef())
+      return SDValue();
+  }
 
   auto IsVWMulOpc = [](unsigned Opc) {
     switch (Opc) {
