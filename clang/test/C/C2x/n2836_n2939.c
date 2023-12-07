@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -x c -std=c2x -fsyntax-only -verify %s
 // RUN: %clang_cc1 -x c -std=c2x -E -DPP_ONLY=1 %s | FileCheck %s --strict-whitespace
 
-/* WG14 N2863: Clang 15
+/* WG14 N2836: Clang 15
  *   Identifier Syntax using Unicode Standard Annex 31
  */
 
