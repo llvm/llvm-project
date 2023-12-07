@@ -14,6 +14,9 @@ if(LLVM_BUILD_LLVM_DYLIB)
   if(MSVC)
     message(FATAL_ERROR "Generating libLLVM is not supported on MSVC")
   endif()
+  if(ZOS)
+    message(FATAL_ERROR "Generating libLLVM is not supported on z/OS")
+  endif()
 
   llvm_map_components_to_libnames(LIB_NAMES ${LLVM_DYLIB_COMPONENTS})
 
