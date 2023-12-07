@@ -3,7 +3,7 @@
 // one GPU device, remove the device 1 if statement.
 
 // RUN: %libomptarget-compile-generic -fopenmp-offload-mandatory
-// RUN: env OMP_NUM_TEAMS_DEV_0=5 OMP_NUM_TEAMS_DEV_1=-1 \
+// RUN: env OMP_NUM_TEAMS_DEV_0=5 OMP_NUM_TEAMS_DEV_1=3 LIBOMPTARGET_INFO=16\
 // RUN: %libomptarget-run-generic
 
 // UNSUPPORTED: x86_64-pc-linux-gnu
@@ -15,7 +15,7 @@
 #include <stdio.h>
 
 const int EXPECTED_NTEAMS_DEV_0 = 5;
-const int EXPECTED_NTEAMS_DEV_1 = 0;
+const int EXPECTED_NTEAMS_DEV_1 = 3;
 
 int omp_get_max_teams(void);
 

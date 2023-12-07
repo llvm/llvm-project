@@ -82,6 +82,16 @@ template <typename DstTy, typename SrcTy> inline DstTy convertViaPun(SrcTy V) {
   return *((DstTy *)(&V));
 }
 
+/// Return minimum value out of 2 value arguments provided
+template <typename Ty> const Ty& min(const Ty& a, const Ty& b) {
+  return (b < a) ? b : a;
+}
+
+/// Return maxmimum value out of 2 value arguments provided
+template <typename Ty> const Ty& max(const Ty& a, const Ty& b) {
+  return (b > a) ? b : a;
+}
+
 /// A  pointer variable that has by design an `undef` value. Use with care.
 [[clang::loader_uninitialized]] static void *const UndefPtr;
 

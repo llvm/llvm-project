@@ -135,7 +135,7 @@ int omp_get_team_num();
 
 int omp_get_max_teams(void);
 
-void omp_set_num_teams(int V);
+void omp_set_num_teams(uint32_t V);
 
 int omp_get_initial_device(void);
 

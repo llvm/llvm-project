@@ -25,17 +25,18 @@ int test_set_over_max(void) {
 
 #pragma omp target device(0) map(tofrom : curr_nteams, errors)
   {
+    // Setting over specified OMP_NUM_TEAMS_DEV_0 value is not allowed
     omp_set_num_teams(EXPECTED_NTEAMS + 1);
     curr_nteams = omp_get_max_teams();
     errors = errors + (curr_nteams != EXPECTED_NTEAMS);
 
-    omp_set_num_teams(-1);
-    curr_nteams = omp_get_max_teams();
-    errors = errors + (curr_nteams != 0);
-
     omp_set_num_teams(3);
     curr_nteams = omp_get_max_teams();
     errors = errors + (curr_nteams != EXPECTED_NTEAMS);
+
+    omp_set_num_teams(2);
+    curr_nteams = omp_get_max_teams();
+    errors = errors + (curr_nteams != 2);
   }
   return errors;
 }
