@@ -48,16 +48,6 @@ def PLEA64r   : PseudoI<(outs GR64:$dst), (ins anymem:$src), []>;
 //  Fixed-Register Multiplication and Division Instructions.
 //
 
-// SchedModel info for instruction that loads one value and gets the second
-// (and possibly third) value from a register.
-// This is used for instructions that put the memory operands before other
-// uses.
-class SchedLoadReg<X86FoldableSchedWrite Sched> : Sched<[Sched.Folded,
-  // Memory operand.
-  ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
-  // Register reads (implicit or explicit).
-  Sched.ReadAfterFold, Sched.ReadAfterFold]>;
-
 // BinOpRR - Binary instructions with inputs "reg, reg".
 class BinOpRR<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
               dag outlist, X86FoldableSchedWrite sched, list<dag> pattern>
@@ -505,17 +495,6 @@ class IMulOpRMI<bits<8> opcode, string mnemonic, X86TypeInfo info,
     Sched<[sched.Folded]>{
   let ImmT = info.ImmEncoding;
 }
-
-def X86add_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
-                               (X86add_flag node:$lhs, node:$rhs), [{
-  return hasNoCarryFlagUses(SDValue(N, 1));
-}]>;
-
-def X86sub_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
-                               (X86sub_flag node:$lhs, node:$rhs), [{
-  // Only use DEC if the result is used.
-  return !SDValue(N, 0).use_empty() && hasNoCarryFlagUses(SDValue(N, 1));
-}]>;
 
 let Defs = [EFLAGS] in {
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
@@ -1221,9 +1200,6 @@ def : Pat<(store (X86adc_flag i64relocImmSExt32_su:$src, (load addr:$dst), EFLAG
 // generate a result.  From an encoding perspective, they are very different:
 // they don't have all the usual imm8 and REV forms, and are encoded into a
 // different space.
-def X86testpat : PatFrag<(ops node:$lhs, node:$rhs),
-                         (X86cmp (and_su node:$lhs, node:$rhs), 0)>;
-
 let isCompare = 1 in {
   let Defs = [EFLAGS] in {
     let isCommutable = 1 in {

@@ -1331,6 +1331,28 @@ void Fortran::lower::defineCommonBlocks(
     finalizeCommonBlockDefinition(loc, converter, global, cmnBlkMems);
 }
 
+mlir::Value Fortran::lower::genCommonBlockMember(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, mlir::Value commonValue) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  std::size_t byteOffset = sym.GetUltimate().offset();
+  mlir::IntegerType i8Ty = builder.getIntegerType(8);
+  mlir::Type i8Ptr = builder.getRefType(i8Ty);
+  mlir::Type seqTy = builder.getRefType(builder.getVarLenSeqTy(i8Ty));
+  mlir::Value base = builder.createConvert(loc, seqTy, commonValue);
+
+  mlir::Value offs =
+      builder.createIntegerConstant(loc, builder.getIndexType(), byteOffset);
+  mlir::Value varAddr = builder.create<fir::CoordinateOp>(
+      loc, i8Ptr, base, mlir::ValueRange{offs});
+  mlir::Type symType = converter.genType(sym);
+
+  return Fortran::semantics::FindEquivalenceSet(sym) != nullptr
+             ? castAliasToPointer(builder, loc, symType, varAddr)
+             : builder.createConvert(loc, builder.getRefType(symType), varAddr);
+}
+
 /// The COMMON block is a global structure. `var` will be at some offset
 /// within the COMMON block. Adds the address of `var` (COMMON + offset) to
 /// the symbol map.
@@ -1353,21 +1375,8 @@ static void instantiateCommon(Fortran::lower::AbstractConverter &converter,
 
     symMap.addSymbol(common, commonAddr);
   }
-  std::size_t byteOffset = varSym.GetUltimate().offset();
-  mlir::IntegerType i8Ty = builder.getIntegerType(8);
-  mlir::Type i8Ptr = builder.getRefType(i8Ty);
-  mlir::Type seqTy = builder.getRefType(builder.getVarLenSeqTy(i8Ty));
-  mlir::Value base = builder.createConvert(loc, seqTy, commonAddr);
-  mlir::Value offs =
-      builder.createIntegerConstant(loc, builder.getIndexType(), byteOffset);
-  auto varAddr = builder.create<fir::CoordinateOp>(loc, i8Ptr, base,
-                                                   mlir::ValueRange{offs});
-  mlir::Type symType = converter.genType(var.getSymbol());
-  mlir::Value local;
-  if (Fortran::semantics::FindEquivalenceSet(var.getSymbol()) != nullptr)
-    local = castAliasToPointer(builder, loc, symType, varAddr);
-  else
-    local = builder.createConvert(loc, builder.getRefType(symType), varAddr);
+
+  mlir::Value local = genCommonBlockMember(converter, loc, varSym, commonAddr);
   Fortran::lower::StatementContext stmtCtx;
   mapSymbolAttributes(converter, var, symMap, stmtCtx, local);
 }

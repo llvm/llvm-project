@@ -1454,28 +1454,19 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
 void LoopEmitter::forwardsReducedSliceLevelTreeIt(OpBuilder &builder,
                                                   Location loc, TensorId tid,
                                                   Level rootLvl, Value fcnt) {
+
   auto stt = getSparseTensorType(tensors[tid]);
 
   // Finds a [Lvl, leafLvl) range, and all level in between are fully reduced
-  // level (but not resolved). Since we forward an iterator at higher level of
-  // the tree, the subtree need to be pruned.
+  // sparse levels (but not resolved). Since we forward an iterator at higher
+  // level of the tree, the subtree need to be pruned.
   Level leafLvl = rootLvl + 1;
-  while (leafLvl < stt.getLvlRank() && !dependentLvlMap[tid][leafLvl].empty() &&
-         depFullyReduced(tid, leafLvl)) {
+  while (leafLvl < stt.getLvlRank() && depFullyReduced(tid, leafLvl) &&
+         !stt.isDenseLvl(leafLvl)) {
     leafLvl++;
   }
 
   Level curLvl = rootLvl + 1;
-  // Prunes all denses subtree.
-  while (curLvl < leafLvl && isDenseLT(lvlTypes[tid][curLvl])) {
-    // One step forward in parent level results in forwarding `slice.size` step
-    // in child dense level.
-    auto [size, stride] = sliceMeta[tid][curLvl].back();
-    assert(stride == 1 && "Not yet implemented");
-    fcnt = MULI(size, fcnt);
-    curLvl++;
-  }
-
   Value nxPosPtr = nullptr;
   if (curLvl < leafLvl) {
     assert(!isDenseLT(lvlTypes[tid][curLvl]));

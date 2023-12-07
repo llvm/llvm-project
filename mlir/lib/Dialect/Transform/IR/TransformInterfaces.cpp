@@ -31,6 +31,23 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
+// Helper functions
+//===----------------------------------------------------------------------===//
+
+/// Return true if `a` happens before `b`, i.e., `a` or one of its ancestors
+/// properly dominates `b` and `b` is not inside `a`.
+static bool happensBefore(Operation *a, Operation *b) {
+  do {
+    if (a->isProperAncestor(b))
+      return false;
+    if (Operation *bAncestor = a->getBlock()->findAncestorOpInBlock(*b)) {
+      return a->isBeforeInBlock(bAncestor);
+    }
+  } while ((a = a->getParentOp()));
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
 // TransformState
 //===----------------------------------------------------------------------===//
 
@@ -44,14 +61,10 @@ transform::TransformState::TransformState(
   topLevelMappedValues.reserve(extraMappings.size());
   for (ArrayRef<MappedValue> mapping : extraMappings)
     topLevelMappedValues.push_back(mapping);
-
-  auto result =
-      mappings.insert(std::make_pair(region, std::make_unique<Mappings>()));
-  assert(result.second && "the region scope is already present");
-  (void)result;
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  regionStack.push_back(region);
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+  if (region) {
+    RegionScope *scope = new RegionScope(*this, *region);
+    topLevelRegionScope.reset(scope);
+  }
 }
 
 Operation *transform::TransformState::getTopLevel() const { return topLevel; }
@@ -811,6 +824,11 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     LLVM_DEBUG(DBGS() << "Failing Top-level payload:\n"; getTopLevel()->print(
         llvm::dbgs(), mlir::OpPrintingFlags().printGenericOpForm()););
   });
+
+  // Set current transform op.
+  regionStack.back()->currentTransform = transform;
+
+  // Expensive checks to detect invalid transform IR.
   if (options.getExpensiveChecksEnabled()) {
     FULL_LDBG("ExpensiveChecksEnabled\n");
     if (failed(checkAndRecordHandleInvalidation(transform)))
@@ -899,7 +917,24 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   }
 
   // Prepare rewriter and listener.
-  transform::ErrorCheckingTrackingListener trackingListener(*this, transform);
+  TrackingListener::SkipHandleFn skipHandleFn = [&](Value handle) {
+    // Skip handle if it is dead.
+    auto scopeIt =
+        llvm::find_if(llvm::reverse(regionStack), [&](RegionScope *scope) {
+          return handle.getParentRegion() == scope->region;
+        });
+    assert(scopeIt != regionStack.rend() &&
+           "could not find region scope for handle");
+    RegionScope *scope = *scopeIt;
+    for (Operation *user : handle.getUsers()) {
+      if (user != scope->currentTransform &&
+          !happensBefore(user, scope->currentTransform))
+        return false;
+    }
+    return true;
+  };
+  transform::ErrorCheckingTrackingListener trackingListener(*this, transform,
+                                                            skipHandleFn);
   transform::TransformRewriter rewriter(transform->getContext(),
                                         &trackingListener);
 
@@ -1040,10 +1075,7 @@ transform::TransformState::RegionScope::~RegionScope() {
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 
   state.mappings.erase(region);
-
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   state.regionStack.pop_back();
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 }
 
 //===----------------------------------------------------------------------===//
@@ -1150,8 +1182,10 @@ bool transform::TransformResults::isSet(unsigned resultNumber) const {
 //===----------------------------------------------------------------------===//
 
 transform::TrackingListener::TrackingListener(TransformState &state,
-                                              TransformOpInterface op)
-    : TransformState::Extension(state), transformOp(op) {
+                                              TransformOpInterface op,
+                                              SkipHandleFn skipHandleFn)
+    : TransformState::Extension(state), transformOp(op),
+      skipHandleFn(skipHandleFn) {
   if (op) {
     for (OpOperand *opOperand : transformOp.getConsumedHandleOpOperands()) {
       consumedHandles.insert(opOperand->get());
@@ -1251,19 +1285,6 @@ void transform::TrackingListener::notifyOperationRemoved(Operation *op) {
   });
 }
 
-/// Return true if `a` happens before `b`, i.e., `a` or one of its ancestors
-/// properly dominates `b` and `b` is not inside `a`.
-static bool happensBefore(Operation *a, Operation *b) {
-  do {
-    if (a->isProperAncestor(b))
-      return false;
-    if (Operation *bAncestor = a->getBlock()->findAncestorOpInBlock(*b)) {
-      return a->isBeforeInBlock(bAncestor);
-    }
-  } while ((a = a->getParentOp()));
-  return false;
-}
-
 void transform::TrackingListener::notifyOperationReplaced(
     Operation *op, ValueRange newValues) {
   assert(op->getNumResults() == newValues.size() &&
@@ -1295,18 +1316,17 @@ void transform::TrackingListener::notifyOperationReplaced(
                         [&](Value h) { return consumedHandles.contains(h); });
   };
 
-  // Helper function to check if the handle is alive.
-  auto firstAliveUser = [&]() -> std::optional<OpOperand *> {
-    for (Value v : opHandles) {
-      for (OpOperand &use : v.getUses())
-        if (use.getOwner() != transformOp &&
-            !happensBefore(use.getOwner(), transformOp))
-          return &use;
-    }
-    return std::nullopt;
-  }();
-
-  if (!firstAliveUser.has_value() || handleWasConsumed()) {
+  // Check if there are any handles that must be updated.
+  Value aliveHandle;
+  if (skipHandleFn) {
+    auto it =
+        llvm::find_if(opHandles, [&](Value v) { return !skipHandleFn(v); });
+    if (it != opHandles.end())
+      aliveHandle = *it;
+  } else if (!opHandles.empty()) {
+    aliveHandle = opHandles.front();
+  }
+  if (!aliveHandle || handleWasConsumed()) {
     // The op is tracked but the corresponding handles are dead or were
     // consumed. Drop the op form the mapping.
     (void)replacePayloadOp(op, nullptr);
@@ -1319,10 +1339,8 @@ void transform::TrackingListener::notifyOperationReplaced(
   // If the op is tracked but no replacement op was found, send a
   // notification.
   if (!diag.succeeded()) {
-    diag.attachNote((*firstAliveUser)->getOwner()->getLoc())
-        << "replacement is required because alive handle(s) exist "
-        << "(first use in this op as operand number "
-        << (*firstAliveUser)->getOperandNumber() << ")";
+    diag.attachNote(aliveHandle.getLoc())
+        << "replacement is required because this handle must be updated";
     notifyPayloadReplacementNotFound(op, newValues, std::move(diag));
     (void)replacePayloadOp(op, nullptr);
     return;

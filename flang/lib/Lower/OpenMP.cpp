@@ -1959,31 +1959,6 @@ static mlir::Operation *getCompareFromReductionOp(mlir::Operation *reductionOp,
   return nullptr;
 }
 
-/// The COMMON block is a global structure. \p commonValue is the base address
-/// of the COMMON block. As the offset from the symbol \p sym, generate the
-/// COMMON block member value (commonValue + offset) for the symbol.
-/// FIXME: Share the code with `instantiateCommon` in ConvertVariable.cpp.
-static mlir::Value
-genCommonBlockMember(Fortran::lower::AbstractConverter &converter,
-                     const Fortran::semantics::Symbol &sym,
-                     mlir::Value commonValue) {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  mlir::Location currentLocation = converter.getCurrentLocation();
-  mlir::IntegerType i8Ty = firOpBuilder.getIntegerType(8);
-  mlir::Type i8Ptr = firOpBuilder.getRefType(i8Ty);
-  mlir::Type seqTy = firOpBuilder.getRefType(firOpBuilder.getVarLenSeqTy(i8Ty));
-  mlir::Value base =
-      firOpBuilder.createConvert(currentLocation, seqTy, commonValue);
-  std::size_t byteOffset = sym.GetUltimate().offset();
-  mlir::Value offs = firOpBuilder.createIntegerConstant(
-      currentLocation, firOpBuilder.getIndexType(), byteOffset);
-  mlir::Value varAddr = firOpBuilder.create<fir::CoordinateOp>(
-      currentLocation, i8Ptr, base, mlir::ValueRange{offs});
-  mlir::Type symType = converter.genType(sym);
-  return firOpBuilder.createConvert(currentLocation,
-                                    firOpBuilder.getRefType(symType), varAddr);
-}
-
 // Get the extended value for \p val by extracting additional variable
 // information from \p base.
 static fir::ExtendedValue getExtendedValue(fir::ExtendedValue base,
@@ -2049,8 +2024,8 @@ static void threadPrivatizeVars(Fortran::lower::AbstractConverter &converter,
         converter.bindSymbol(*common, commonThreadprivateValue);
         commonSyms.insert(common);
       }
-      symThreadprivateValue =
-          genCommonBlockMember(converter, *sym, commonThreadprivateValue);
+      symThreadprivateValue = Fortran::lower::genCommonBlockMember(
+          converter, currentLocation, *sym, commonThreadprivateValue);
     } else {
       symThreadprivateValue = genThreadprivateOp(*sym);
     }
@@ -2175,13 +2150,7 @@ static void createBodyOfOp(
         firOpBuilder, eval.getNestedEvaluations());
 
   // Insert the terminator.
-  if constexpr (std::is_same_v<Op, mlir::omp::WsLoopOp> ||
-                std::is_same_v<Op, mlir::omp::SimdLoopOp>) {
-    mlir::ValueRange results;
-    firOpBuilder.create<mlir::omp::YieldOp>(loc, results);
-  } else {
-    firOpBuilder.create<mlir::omp::TerminatorOp>(loc);
-  }
+  Fortran::lower::genOpenMPTerminator(firOpBuilder, op.getOperation(), loc);
   // Reset the insert point to before the terminator.
   resetBeforeTerminator(firOpBuilder, storeOp, block);
 
@@ -3258,7 +3227,6 @@ static void
 genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPSectionConstruct &sectionConstruct) {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
   const Fortran::parser::OpenMPConstruct *parentOmpConstruct =
       eval.parentConstruct->getIf<Fortran::parser::OpenMPConstruct>();
@@ -3276,10 +3244,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
               .t);
   // Currently only private/firstprivate clause is handled, and
   // all privatization is done within `omp.section` operations.
-  mlir::omp::SectionOp sectionOp =
-      firOpBuilder.create<mlir::omp::SectionOp>(currentLocation);
-  createBodyOfOp<mlir::omp::SectionOp>(sectionOp, converter, currentLocation,
-                                       eval, &sectionsClauseList);
+  genOpWithBody<mlir::omp::SectionOp>(converter, eval, currentLocation,
+                                      /*outerCombined=*/false,
+                                      &sectionsClauseList);
 }
 
 static void
@@ -3554,8 +3521,8 @@ void Fortran::lower::genThreadprivateOp(
             currentLocation, commonValue.getType(), commonValue);
     converter.bindSymbol(*common, commonThreadprivateValue);
     // Generate the threadprivate value for the common block member.
-    symThreadprivateValue =
-        genCommonBlockMember(converter, sym, commonThreadprivateValue);
+    symThreadprivateValue = genCommonBlockMember(converter, currentLocation,
+                                                 sym, commonThreadprivateValue);
   } else if (!var.isGlobal()) {
     // Non-global variable which can be in threadprivate directive must be one
     // variable in main program, and it has implicit SAVE attribute. Take it as
