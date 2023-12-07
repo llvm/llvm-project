@@ -574,11 +574,6 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
       - attribute: the matched op must have all specified attributes (with their
         specified values).
       - filter_result_type: the matched op must return exactly this one type.
-      - filter_operand_types: all the operands of the matched op must must be of
-        this type. If more than a type is specified, then the length of the list
-        must be equal to the number of operands in the matched op, and the match
-        will succeed only if the operand types match all the types in the list
-        in the order in which they are specified.
 
     Note: Only ops that satisfy all specified constraints are matched.
 
@@ -600,8 +595,7 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
                        OptionalAttr<StrArrayAttr>:$ops,
                        OptionalAttr<MatchInterfaceEnum>:$interface,
                        OptionalAttr<DictionaryAttr>:$op_attrs,
-                       OptionalAttr<TypeAttr>:$filter_result_type,
-                       OptionalAttr<TypeArrayAttr>:$filter_operand_types);
+                       OptionalAttr<TypeAttr>:$filter_result_type);
   // TODO: variadic results when needed.
   let results = (outs TransformHandleTypeInterface:$results);
 
@@ -615,7 +609,6 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
     (`interface` `{` $interface^ `}`)?
     (`attributes` $op_attrs^)?
     (`filter_result_type` `=` $filter_result_type^)?
-    (`filter_operand_types` `=` $filter_operand_types^)?
     `in` $target attr-dict
     `:` functional-type($target, results)
   }];
