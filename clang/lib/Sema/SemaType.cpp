@@ -8360,7 +8360,8 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
   // not to need a separate attribute)
   if (!(S.Context.getTargetInfo().hasFeature("neon") ||
         S.Context.getTargetInfo().hasFeature("mve") ||
-        IsTargetCUDAAndHostARM)) {
+        IsTargetCUDAAndHostARM) &&
+      VecKind != VectorKind::Neon) {
     S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
         << Attr << "'neon' or 'mve'";
     Attr.setInvalid();

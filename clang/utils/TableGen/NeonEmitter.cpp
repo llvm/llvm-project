@@ -2359,6 +2359,19 @@ void NeonEmitter::run(raw_ostream &OS) {
 
   OS << "#include <arm_vector_types.h>\n";
 
+  // For now, signedness of polynomial types depends on target
+  OS << "#ifdef __aarch64__\n";
+  OS << "typedef uint8_t poly8_t;\n";
+  OS << "typedef uint16_t poly16_t;\n";
+  OS << "typedef uint64_t poly64_t;\n";
+  OS << "typedef __uint128_t poly128_t;\n";
+  OS << "#else\n";
+  OS << "typedef int8_t poly8_t;\n";
+  OS << "typedef int16_t poly16_t;\n";
+  OS << "typedef int64_t poly64_t;\n";
+  OS << "#endif\n";
+  emitNeonTypeDefs("PcQPcPsQPsPlQPl", OS);
+
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
         "__nodebug__))\n\n";
 
@@ -2539,6 +2552,10 @@ void NeonEmitter::runVectorType(raw_ostream &OS) {
         " *===-----------------------------------------------------------------"
         "------===\n"
         " */\n\n";
+  OS << "#if !defined(__ARM_NEON_H) && !defined(__ARM_SVE_H)\n";
+  OS << "#error \"This file should not be used standalone. Please include"
+        " arm_neon.h or arm_sve.h instead\"\n\n";
+  OS << "#endif\n";
   OS << "#ifndef __ARM_NEON_TYPES_H\n";
   OS << "#define __ARM_NEON_TYPES_H\n";
   OS << "typedef float float32_t;\n";
@@ -2547,20 +2564,8 @@ void NeonEmitter::runVectorType(raw_ostream &OS) {
   OS << "#ifdef __aarch64__\n";
   OS << "typedef double float64_t;\n";
   OS << "#endif\n\n";
-  // For now, signedness of polynomial types depends on target
-  OS << "#ifdef __aarch64__\n";
-  OS << "typedef uint8_t poly8_t;\n";
-  OS << "typedef uint16_t poly16_t;\n";
-  OS << "typedef uint64_t poly64_t;\n";
-  OS << "typedef __uint128_t poly128_t;\n";
-  OS << "#else\n";
-  OS << "typedef int8_t poly8_t;\n";
-  OS << "typedef int16_t poly16_t;\n";
-  OS << "typedef int64_t poly64_t;\n";
-  OS << "#endif\n";
 
-  emitNeonTypeDefs("cQcsQsiQilQlUcQUcUsQUsUiQUiUlQUlhQhfQfdQdPcQPcPsQPsPlQPl",
-                   OS);
+  emitNeonTypeDefs("cQcsQsiQilQlUcQUcUsQUsUiQUiUlQUlhQhfQfdQd", OS);
 
   emitNeonTypeDefs("bQb", OS);
   OS << "#endif // __ARM_NEON_TYPES_H\n";
