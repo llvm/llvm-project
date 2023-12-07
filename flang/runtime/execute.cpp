@@ -100,13 +100,11 @@ template <int KIND> struct FitsInIntegerKind {
 
 // If a condition occurs that would assign a nonzero value to CMDSTAT but
 // the CMDSTAT variable is not present, error termination is initiated.
-int TerminationCheck(int status, const Descriptor *command,
-    const Descriptor *cmdstat, const Descriptor *cmdmsg,
+int TerminationCheck(int status, const Descriptor *cmdstat, const Descriptor *cmdmsg,
     Terminator &terminator) {
   if (status == -1) {
     if (!cmdstat) {
-      terminator.Crash("Execution error with system status code: %d",
-          command->OffsetElement(), status);
+      terminator.Crash("Execution error with system status code: %d", status);
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
       CopyToDescriptor(*cmdmsg, "Execution error", 15);
@@ -151,14 +149,29 @@ int TerminationCheck(int status, const Descriptor *command,
   return exitStatusVal;
 }
 
-void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
+const char *ensureNullTerminated(
+    const char *str, size_t length, Terminator &terminator) {
+  if (length < strlen(str)) {
+    char *newCmd{(char *)malloc(length + 1)};
+    if (newCmd == NULL) {
+      terminator.Crash("Command not null-terminated, memory allocation failed "
+                       "for null-terminated newCmd.");
+    }
+
+    strncpy(newCmd, str, length);
+    newCmd[length] = '\0';
+    return newCmd;
+  } else {
+    return str;
+  }
+}
+
+void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     const Descriptor *exitstat, const Descriptor *cmdstat,
     const Descriptor *cmdmsg, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
-
-  if (command) {
-    RUNTIME_CHECK(terminator, IsValidCharDescriptor(command));
-  }
+  const char *newCmd{ensureNullTerminated(
+      command.OffsetElement(), command.ElementBytes(), terminator)};
 
   if (exitstat) {
     RUNTIME_CHECK(terminator, IsValidIntDescriptor(exitstat));
@@ -177,9 +190,9 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
 
   if (wait) {
     // either wait is not specified or wait is true: synchronous mode
-    int status{std::system(command->OffsetElement())};
+    int status{std::system(newCmd)};
     int exitStatusVal{
-        TerminationCheck(status, command, cmdstat, cmdmsg, terminator)};
+        TerminationCheck(status, cmdstat, cmdmsg, terminator)};
     CheckAndStoreIntToDescriptor(exitstat, exitStatusVal, terminator);
   } else {
 // Asynchronous mode
@@ -235,8 +248,8 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
         CheckAndCopyToDescriptor(cmdmsg, "Fork failed", 11);
       }
     } else if (pid == 0) {
-      int status{std::system(command->OffsetElement())};
-      TerminationCheck(status, command, cmdstat, cmdmsg, terminator);
+      int status{std::system(newCmd)};
+      TerminationCheck(status, cmdstat, cmdmsg, terminator);
       exit(status);
     }
 #endif

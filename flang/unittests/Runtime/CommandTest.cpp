@@ -247,7 +247,7 @@ TEST_F(ZeroArguments, ECLValidCommandAndPadSync) {
   OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
 
   RTNAME(ExecuteCommandLine)
-  (command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 
   std::string spaces(cmdMsg->ElementBytes(), ' ');
   CheckDescriptorEqInt(exitStat.get(), 0);
@@ -263,7 +263,7 @@ TEST_F(ZeroArguments, ECLValidCommandStatusSetSync) {
   OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
 
   RTNAME(ExecuteCommandLine)
-  (command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 
   CheckDescriptorEqInt(exitStat.get(), 0);
   CheckDescriptorEqInt(cmdStat.get(), 0);
@@ -278,7 +278,7 @@ TEST_F(ZeroArguments, ECLInvalidCommandErrorSync) {
   OwningPtr<Descriptor> cmdMsg{CharDescriptor("Message ChangedXXXXXXXXX")};
 
   RTNAME(ExecuteCommandLine)
-  (command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 #ifdef _WIN32
   CheckDescriptorEqInt(exitStat.get(), 1);
 #else
@@ -296,11 +296,11 @@ TEST_F(ZeroArguments, ECLInvalidCommandTerminatedSync) {
 
 #ifdef _WIN32
   EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
-                   command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
+                   *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
       "Invalid command quit with exit status code: 1");
 #else
   EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
-                   command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
+                   *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
       "Invalid command quit with exit status code: 127");
 #endif
   CheckDescriptorEqInt(exitStat.get(), 404);
@@ -315,7 +315,7 @@ TEST_F(ZeroArguments, ECLValidCommandAndExitStatNoChangeAndCMDStatusSetAsync) {
   OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
 
   RTNAME(ExecuteCommandLine)
-  (command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 
   CheckDescriptorEqInt(exitStat.get(), 404);
   CheckDescriptorEqInt(cmdStat.get(), 0);
@@ -329,7 +329,7 @@ TEST_F(ZeroArguments, ECLInvalidCommandParentNotTerminatedAsync) {
   OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
 
   EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
-      command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()));
+      *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()));
 
   CheckDescriptorEqInt(exitStat.get(), 404);
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
