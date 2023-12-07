@@ -2414,7 +2414,8 @@ define i32 @cmp_to_ands1(i32 %num) {
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    and w8, w0, #0xff
 ; GISEL-NEXT:    cmp w8, #1
-; GISEL-NEXT:    csel w0, w8, wzr, hi
+; GISEL-NEXT:    cset w9, hi
+; GISEL-NEXT:    and w0, w9, w8
 ; GISEL-NEXT:    ret
   %and = and i32 %num, 255
   %cmp = icmp ugt i32 %and, 1
@@ -2434,7 +2435,8 @@ define i32 @cmp_to_ands2(i32 %num) {
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    and w8, w0, #0xfe
 ; GISEL-NEXT:    cmp w8, #63
-; GISEL-NEXT:    csel w0, w8, wzr, hi
+; GISEL-NEXT:    cset w9, hi
+; GISEL-NEXT:    and w0, w9, w8
 ; GISEL-NEXT:    ret
   %and = and i32 %num, 254
   %cmp = icmp ugt i32 %and, 63
@@ -2451,10 +2453,11 @@ define i32 @cmp_to_ands3(i32 %num, i32 %a) {
 ;
 ; GISEL-LABEL: cmp_to_ands3:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #23
+; GISEL-NEXT:    mov w8, #23 // =0x17
 ; GISEL-NEXT:    and w8, w0, w8
 ; GISEL-NEXT:    cmp w8, #7
-; GISEL-NEXT:    csel w0, w1, wzr, hi
+; GISEL-NEXT:    cset w8, hi
+; GISEL-NEXT:    and w0, w8, w1
 ; GISEL-NEXT:    ret
   %and = and i32 %num, 23
   %cmp = icmp ugt i32 %and, 7
@@ -2514,7 +2517,8 @@ define i32 @cmp_to_ands6(i32 %num) {
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    and w8, w0, #0xfe
 ; GISEL-NEXT:    cmp w8, #16
-; GISEL-NEXT:    csel w0, w8, wzr, hs
+; GISEL-NEXT:    cset w9, hs
+; GISEL-NEXT:    and w0, w9, w8
 ; GISEL-NEXT:    ret
   %and = and i32 %num, 254
   %cmp = icmp uge i32 %and, 16

@@ -27,7 +27,7 @@ body:             |
     ; CHECK-LABEL: name: test_combine_select_undef_res0_res1
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
@@ -253,9 +253,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: %t:_(s1) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-NEXT: %one:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s1) = G_XOR %c, %one
-    ; CHECK-NEXT: %sel:_(s1) = G_OR [[XOR]], %t
+    ; CHECK-NEXT: %sel:_(s1) = G_OR %c, %t
     ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s1)
     ; CHECK-NEXT: $w0 = COPY %ext(s32)
     %0:_(s64) = COPY $x0
@@ -295,6 +293,265 @@ body:             |
     %f:_(s1) = G_TRUNC %2
     %zero:_(s1) = G_CONSTANT i1 0
     %sel:_(s1) = G_SELECT %c, %zero, %f
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+---
+# select 0+1, T, F --> T
+name:            bool_add_0_1_true_false_known_bits
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: bool_add_0_1_true_false_known_bits
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: %t:_(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %t(s1)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %c:_(s1) = G_TRUNC %0
+    %t:_(s1) = G_TRUNC %1
+    %f:_(s1) = G_TRUNC %2
+    %zero:_(s1) = G_CONSTANT i1 0
+    %one:_(s1) = G_CONSTANT i1 1
+    %add:_(s1) = G_ADD %zero, %one
+    %sel:_(s1) = G_SELECT %add, %t, %f
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+---
+# select cond, 1, 0 --> zext(Cond)
+name:            select_cond_1_0_to_zext_cond
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_cond_1_0_to_zext_cond
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %c(s1)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %c:_(s1) = G_TRUNC %0
+    %t:_(s1) = G_TRUNC %1
+    %f:_(s1) = G_TRUNC %2
+    %zero:_(s1) = G_CONSTANT i1 0
+    %one:_(s1) = G_CONSTANT i1 1
+    %sel:_(s1) = G_SELECT %c, %one, %zero
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+---
+# select cond, 0, 1 --> zext(!Cond)
+name:            select_cond_0_1_to_sext_not_cond
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_cond_0_1_to_sext_not_cond
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %one:_(s1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s1) = G_XOR %c, %one
+    ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT [[XOR]](s1)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %c:_(s1) = G_TRUNC %0
+    %t:_(s1) = G_TRUNC %1
+    %f:_(s1) = G_TRUNC %2
+    %zero:_(s1) = G_CONSTANT i1 0
+    %one:_(s1) = G_CONSTANT i1 1
+    %sel:_(s1) = G_SELECT %c, %zero, %one
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+---
+# select cond, 2, 1 --> and (zext Cond), false
+name:            select_cond_2_1_to_and_zext_cond_false
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_cond_2_1_to_and_zext_cond_false
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %one:_(s8) = G_CONSTANT i8 101
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT %c(s1)
+    ; CHECK-NEXT: %sel:_(s8) = G_ADD [[ZEXT]], %one
+    ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s8)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %c:_(s1) = G_TRUNC %0
+    %t:_(s1) = G_TRUNC %1
+    %f:_(s1) = G_TRUNC %2
+    %two:_(s8) = G_CONSTANT i8 102
+    %one:_(s8) = G_CONSTANT i8 101
+    %sel:_(s8) = G_SELECT %c, %two, %one
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+---
+# select cond, 1, 2 --> and (ext Cond), false
+name:            select_cond_1_2_to_and_sext_cond_false
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_cond_1_2_to_and_sext_cond_false
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %one:_(s8) = G_CONSTANT i8 102
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s8) = G_SEXT %c(s1)
+    ; CHECK-NEXT: %sel:_(s8) = G_ADD [[SEXT]], %one
+    ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s8)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %c:_(s1) = G_TRUNC %0
+    %t:_(s1) = G_TRUNC %1
+    %f:_(s1) = G_TRUNC %2
+    %two:_(s8) = G_CONSTANT i8 101
+    %one:_(s8) = G_CONSTANT i8 102
+    %sel:_(s8) = G_SELECT %c, %two, %one
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+---
+# select cond, 64, 0 --> (zext Cond) << log2(Pow2)
+name:            select_cond_64_0_to_shift
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_cond_64_0_to_shift
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT %c(s1)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 6
+    ; CHECK-NEXT: %sel:_(s8) = G_SHL [[ZEXT]], [[C]](s8)
+    ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s8)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %c:_(s1) = G_TRUNC %0
+    %t:_(s1) = G_TRUNC %1
+    %f:_(s1) = G_TRUNC %2
+    %two:_(s8) = G_CONSTANT i8 64
+    %one:_(s8) = G_CONSTANT i8 0
+    %sel:_(s8) = G_SELECT %c, %two, %one
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+---
+# select cond, -1, 0 --> sext Cond
+name:            select_cond_minus_1_0_to_sext_cond
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_cond_minus_1_0_to_sext_cond
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %ext:_(s32) = G_SEXT %c(s1)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %c:_(s1) = G_TRUNC %0
+    %t:_(s1) = G_TRUNC %1
+    %f:_(s1) = G_TRUNC %2
+    %two:_(s8) = G_CONSTANT i8 255
+    %one:_(s8) = G_CONSTANT i8 0
+    %sel:_(s8) = G_SELECT %c, %two, %one
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+---
+# select cond, 0, -1 --> sext (!Cond)
+name:            select_cond_0_minus_1_to_sext_not_cond
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_cond_0_minus_1_to_sext_not_cond
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s1) = G_XOR %c, [[C]]
+    ; CHECK-NEXT: %ext:_(s32) = G_SEXT [[XOR]](s1)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %c:_(s1) = G_TRUNC %0
+    %t:_(s1) = G_TRUNC %1
+    %f:_(s1) = G_TRUNC %2
+    %two:_(s8) = G_CONSTANT i8 0
+    %one:_(s8) = G_CONSTANT i8 255
+    %sel:_(s8) = G_SELECT %c, %two, %one
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+---
+# select cond, -1, 101 --> or (sext Cond), 101
+name:            select_cond_minus_1_101_to_or_sext_cond_101
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_cond_minus_1_101_to_or_sext_cond_101
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %one:_(s8) = G_CONSTANT i8 101
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s8) = G_SEXT %c(s1)
+    ; CHECK-NEXT: %sel:_(s8) = G_OR [[SEXT]], %one
+    ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s8)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %c:_(s1) = G_TRUNC %0
+    %t:_(s1) = G_TRUNC %1
+    %f:_(s1) = G_TRUNC %2
+    %two:_(s8) = G_CONSTANT i8 255
+    %one:_(s8) = G_CONSTANT i8 101
+    %sel:_(s8) = G_SELECT %c, %two, %one
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+# select cond, 101, -1 --> or (sext (not Cond), 101
+name:            select_cond_101_minus_1_to_or_sext_not_cond_101
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %c:_(s1) = G_TRUNC %0
+    %t:_(s1) = G_TRUNC %1
+    %f:_(s1) = G_TRUNC %2
+    %two:_(s8) = G_CONSTANT i8 101
+    %one:_(s8) = G_CONSTANT i8 255
+    %sel:_(s8) = G_SELECT %c, %two, %one
     %ext:_(s32) = G_ANYEXT %sel
     $w0 = COPY %ext(s32)
 ...

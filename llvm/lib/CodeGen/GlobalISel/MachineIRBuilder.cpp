@@ -1341,3 +1341,12 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
     MIB->setFlags(*Flags);
   return MIB;
 }
+
+MachineInstrBuilder MachineIRBuilder::buildNot(const DstOp &Dst,
+                                               const SrcOp &Src0) {
+  assert(!Dst.getLLTTy(*getMRI()).isScalableVector() &&
+         "unexpected scalable vector in buildNot");
+
+  auto NegOne = buildConstant(Dst.getLLTTy(*getMRI()), -1);
+  return buildXor(Dst, Src0, NegOne);
+}
