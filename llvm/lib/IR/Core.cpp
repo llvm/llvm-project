@@ -2571,7 +2571,7 @@ void LLVMRemoveGlobalIFunc(LLVMValueRef IFunc) {
 
 /*--.. Operations on operand bundles........................................--*/
 
-LLVMOperandBundleRef LLVMCreateOperandBundle(const char *Tag, unsigned TagLen,
+LLVMOperandBundleRef LLVMCreateOperandBundle(const char *Tag, size_t TagLen,
                                              LLVMValueRef *Args,
                                              unsigned NumArgs) {
   return wrap(new OperandBundleDef(std::string(Tag, TagLen),

@@ -3026,7 +3026,7 @@ LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count);
  * @param Args Memory address of an array of bundle operands
  * @param NumArgs Length of Args
  */
-LLVMOperandBundleRef LLVMCreateOperandBundle(const char *Tag, unsigned TagLen,
+LLVMOperandBundleRef LLVMCreateOperandBundle(const char *Tag, size_t TagLen,
                                              LLVMValueRef *Args,
                                              unsigned NumArgs);
 
