@@ -2295,7 +2295,7 @@ removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
       DebugAggregate Aggr =
           getAggregate(FnVarLocs.getVariable(RIt->VariableID));
       uint64_t SizeInBits = Aggr.first->getSizeInBits().value_or(0);
-      uint64_t SizeInBytes = SizeInBits + 7 / 8;
+      uint64_t SizeInBytes = divideCeil(SizeInBits, 8);
 
       // Cutoff for large variables to prevent expensive bitvector operations.
       const uint64_t MaxSizeBytes = 2048;
@@ -2322,8 +2322,8 @@ removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
           RIt->Expr->getFragmentInfo().value_or(
               DIExpression::FragmentInfo(SizeInBits, 0));
       bool InvalidFragment = Fragment.endInBits() > SizeInBits;
-      uint64_t StartInBytes = Fragment.startInBits() + 7 / 8;
-      uint64_t EndInBytes = Fragment.endInBits() + 7 / 8;
+      uint64_t StartInBytes = Fragment.startInBits() / 8;
+      uint64_t EndInBytes = divideCeil(Fragment.endInBits(), 8);
 
       // If this defines any previously undefined bytes, keep it.
       if (FirstDefinition || InvalidFragment ||
