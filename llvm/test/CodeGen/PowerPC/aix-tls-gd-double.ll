@@ -156,7 +156,7 @@ define void @storesTIInit(double %Val) #0 {
 ; SMALL32:       # %bb.0: # %entry
 ; SMALL32-NEXT:    mflr 0
 ; SMALL32-NEXT:    stwu 1, -32(1)
-; SMALL32-NEXT:    lwz 3, L..C4(2) # target-flags(ppc-tlsld) @"_$TLSML"
+; SMALL32-NEXT:    lwz 3, L..C4(2) # target-flags(ppc-tlsldm) @"_$TLSML"
 ; SMALL32-NEXT:    stw 0, 40(1)
 ; SMALL32-NEXT:    bla .__tls_get_mod[PR]
 ; SMALL32-NEXT:    lwz 4, L..C5(2) # target-flags(ppc-tlsld) @TIInit
@@ -186,7 +186,7 @@ define void @storesTIInit(double %Val) #0 {
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    mflr 0
 ; SMALL64-NEXT:    stdu 1, -48(1)
-; SMALL64-NEXT:    ld 3, L..C4(2) # target-flags(ppc-tlsld) @"_$TLSML"
+; SMALL64-NEXT:    ld 3, L..C4(2) # target-flags(ppc-tlsldm) @"_$TLSML"
 ; SMALL64-NEXT:    std 0, 64(1)
 ; SMALL64-NEXT:    bla .__tls_get_mod[PR]
 ; SMALL64-NEXT:    ld 4, L..C5(2) # target-flags(ppc-tlsld) @TIInit
@@ -452,7 +452,7 @@ define double @loadsTIInit() #1 {
 ; SMALL32:       # %bb.0: # %entry
 ; SMALL32-NEXT:    mflr 0
 ; SMALL32-NEXT:    stwu 1, -32(1)
-; SMALL32-NEXT:    lwz 3, L..C4(2) # target-flags(ppc-tlsld) @"_$TLSML"
+; SMALL32-NEXT:    lwz 3, L..C4(2) # target-flags(ppc-tlsldm) @"_$TLSML"
 ; SMALL32-NEXT:    stw 0, 40(1)
 ; SMALL32-NEXT:    bla .__tls_get_mod[PR]
 ; SMALL32-NEXT:    lwz 4, L..C5(2) # target-flags(ppc-tlsld) @TIInit
@@ -489,7 +489,7 @@ define double @loadsTIInit() #1 {
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    mflr 0
 ; SMALL64-NEXT:    stdu 1, -48(1)
-; SMALL64-NEXT:    ld 3, L..C4(2) # target-flags(ppc-tlsld) @"_$TLSML"
+; SMALL64-NEXT:    ld 3, L..C4(2) # target-flags(ppc-tlsldm) @"_$TLSML"
 ; SMALL64-NEXT:    std 0, 64(1)
 ; SMALL64-NEXT:    bla .__tls_get_mod[PR]
 ; SMALL64-NEXT:    ld 4, L..C5(2) # target-flags(ppc-tlsld) @TIInit

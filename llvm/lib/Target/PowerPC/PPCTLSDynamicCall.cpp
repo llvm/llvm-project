@@ -162,11 +162,11 @@ protected:
         if (IsAIX) {
           if (IsTLSLDAIXMI) {
             // The relative order between the LoadOffset@toc node, and the
-            // ._tls_get_mod node is being tuned here. It is better to put the
+            // .__tls_get_mod node is being tuned here. It is better to put the
             // LoadOffset@toc node after the call, since the LoadOffset@toc node
             // can use clobbers r4/r5. Search for the pattern of two Load@toc
             // nodes, and then move the LoadOffset@toc node right before the
-            // node that uses the OutReg of the ._tls_get_mod node.
+            // node that uses the OutReg of the .__tls_get_mod node.
             unsigned LDTocOp =
                 Is64Bit ? (IsLargeModel ? PPC::LDtocL : PPC::LDtoc)
                         : (IsLargeModel ? PPC::LWZtocL : PPC::LWZtoc);
@@ -203,7 +203,7 @@ protected:
 
                 // Check the two Load@toc: one should be _$TLSML, and the other
                 // will be moved before the node that uses the OutReg of the
-                // ._tls_get_mod node.
+                // .__tls_get_mod node.
                 if (LoadFromTocs.size() == 2) {
                   MachineBasicBlock::iterator TLSMLIter = MBB.end();
                   MachineBasicBlock::iterator OffsetIter = MBB.end();
@@ -211,9 +211,9 @@ protected:
                                                    IE = MBB.end();
                        I != IE; ++I)
                     if (LoadFromTocs.count(&*I)) {
-                      if (I->getOperand(1).isGlobal() &&
-                          I->getOperand(1).getGlobal()->hasName() &&
-                          I->getOperand(1).getGlobal()->getName() == "_$TLSML")
+                      MachineOperand MO = I->getOperand(1);
+                      if (MO.isGlobal() && MO.getGlobal()->hasName() &&
+                          MO.getGlobal()->getName() == "_$TLSML")
                         TLSMLIter = I;
                       else
                         OffsetIter = I;
