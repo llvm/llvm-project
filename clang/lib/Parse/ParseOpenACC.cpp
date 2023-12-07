@@ -83,6 +83,24 @@ OpenACCAtomicKind getOpenACCAtomicKind(Token Tok) {
       .Default(OpenACCAtomicKind::Invalid);
 }
 
+enum class OpenACCSpecialTokenKind {
+  DevNum,
+  Queues,
+};
+
+bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
+  if (!Tok.is(tok::identifier))
+    return false;
+
+  switch (Kind) {
+  case OpenACCSpecialTokenKind::DevNum:
+    return Tok.getIdentifierInfo()->isStr("devnum");
+  case OpenACCSpecialTokenKind::Queues:
+    return Tok.getIdentifierInfo()->isStr("queues");
+  }
+  llvm_unreachable("Unknown 'Kind' Passed");
+}
+
 bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, Token Tok) {
   if (!Tok.is(tok::identifier))
     return false;
@@ -260,8 +278,8 @@ void ParseOpenACCClauseList(Parser &P) {
 /// [ devnum : int-expr : ] [ queues : ] async-argument-list
 bool Parser::ParseOpenACCWaitArgument() {
   // [devnum : int-expr : ]
-  if (Tok.is(tok::identifier) && NextToken().is(tok::colon) &&
-      Tok.getIdentifierInfo()->isStr("devnum")) {
+  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::DevNum, Tok) &&
+      NextToken().is(tok::colon)) {
     // Consume devnum.
     ConsumeToken();
     // Consume colon.
@@ -277,8 +295,8 @@ bool Parser::ParseOpenACCWaitArgument() {
   }
 
   // [ queues : ]
-  if (Tok.is(tok::identifier) && NextToken().is(tok::colon) &&
-      Tok.getIdentifierInfo()->isStr("queues")) {
+  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Queues, Tok) &&
+      NextToken().is(tok::colon)) {
     // Consume queues.
     ConsumeToken();
     // Consume colon.
