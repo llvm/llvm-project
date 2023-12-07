@@ -4480,8 +4480,8 @@ LogicalResult AffineDelinearizeIndexOp::inferReturnTypes(
     RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   AffineDelinearizeIndexOpAdaptor adaptor(operands, attributes, properties,
                                           regions);
-  inferredReturnTypes =
-      SmallVector<Type>(adaptor.getBasis().size(), IndexType::get(context));
+  inferredReturnTypes.assign(adaptor.getBasis().size(),
+                             IndexType::get(context));
   return success();
 }
 
