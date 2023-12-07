@@ -226,6 +226,7 @@ Clang-Tidy Checks
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
    :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,
+   :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`,
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
    :doc:`hicpp-no-assembler <hicpp/no-assembler>`,
    :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
