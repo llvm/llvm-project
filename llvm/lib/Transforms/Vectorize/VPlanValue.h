@@ -303,6 +303,12 @@ public:
            "Op must be an operand of the recipe");
     return false;
   }
+
+  virtual bool onlyFirstPartUsed(const VPValue *Op) const {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return false;
+  }
 };
 
 /// This class augments a recipe with a set of VPValues defined by the recipe.
