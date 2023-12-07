@@ -34,7 +34,6 @@
 
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/ExecutionEngine/Float16bits.h"
-#include "mlir/ExecutionEngine/SparseTensor/Attributes.h"
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
 #include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
 #include "mlir/ExecutionEngine/SparseTensor/Storage.h"

@@ -53,6 +53,22 @@ struct SparseCompilerOptions
               "any-storage-any-loop",
               "Enable sparse parallelization for any storage and loop."))};
 
+  PassOptions::Option<mlir::GPUDataTransferStrategy> gpuDataTransfer{
+      *this, "gpu-data-transfer-strategy",
+      ::llvm::cl::desc(
+          "Set the data transfer strategy between the host and the GPUs"),
+      ::llvm::cl::init(mlir::GPUDataTransferStrategy::kRegularDMA),
+      llvm::cl::values(
+          clEnumValN(mlir::GPUDataTransferStrategy::kRegularDMA, "regular-dma",
+                     "Default option: malloc on host without additional "
+                     "options or care and then use DMA to copy the data"),
+          clEnumValN(mlir::GPUDataTransferStrategy::kPinnedDMA, "pinned-dma",
+                     "Based on the default option, pin the host memory to "
+                     "accelerate the data transfer"),
+          clEnumValN(mlir::GPUDataTransferStrategy::kZeroCopy, "zero-copy",
+                     "Use zero-copy to perform the data transfer from the host "
+                     "to the GPU"))};
+
   PassOptions::Option<bool> enableIndexReduction{
       *this, "enable-index-reduction",
       desc("Enable dependent index reduction based algorithm to handle "
@@ -138,8 +154,9 @@ struct SparseCompilerOptions
 
   /// Projects out the options for `createSparsificationPass`.
   SparsificationOptions sparsificationOptions() const {
-    return SparsificationOptions(parallelization, enableIndexReduction,
-                                 enableGPULibgen, enableRuntimeLibrary);
+    return SparsificationOptions(parallelization, gpuDataTransfer,
+                                 enableIndexReduction, enableGPULibgen,
+                                 enableRuntimeLibrary);
   }
 
   /// Projects out the options for `createSparseTensorConversionPass`.
