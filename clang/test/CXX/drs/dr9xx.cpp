@@ -43,7 +43,7 @@ namespace dr948 { // dr948: 3.7
 #endif
 }
 
-namespace dr952 { // dr952: yes
+namespace dr952 { // dr952: 2.8
 namespace example1 {
 struct A {
   typedef int I; // #dr952-typedef-decl
