@@ -262,6 +262,12 @@ static cl::opt<BenchmarkRunner::ExecutionModeE> ExecutionMode(
                           "allows for the use of memory annotations")),
     cl::init(BenchmarkRunner::ExecutionModeE::InProcess));
 
+static cl::opt<unsigned> BenchmarkRepeatCount(
+    "benchmark-repeat-count",
+    cl::desc("The number of times to repeat measurements on the benchmark k "
+             "before aggregating the results"),
+    cl::cat(BenchmarkOptions), cl::init(30));
+
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
@@ -485,7 +491,7 @@ void benchmarkMain() {
   const std::unique_ptr<BenchmarkRunner> Runner =
       ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
           BenchmarkMode, State, BenchmarkPhaseSelector, ExecutionMode,
-          ResultAggMode));
+          BenchmarkRepeatCount, ResultAggMode));
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }
