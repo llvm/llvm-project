@@ -443,6 +443,9 @@ static bool isNopCopy(const MachineInstr &PreviousCopy, MCRegister Src,
     return true;
   if (!TRI->isSubRegister(PreviousSrc, Src))
     return false;
+  // When the source of PreviousCopy is undef, we cannot replace sub register.
+  if (CopyOperands->Source->isUndef())
+    return false;
   unsigned SubIdx = TRI->getSubRegIndex(PreviousSrc, Src);
   return SubIdx == TRI->getSubRegIndex(PreviousDef, Def);
 }
