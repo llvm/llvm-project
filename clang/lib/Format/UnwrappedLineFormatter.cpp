@@ -411,9 +411,16 @@ private:
       }
     }
 
+    const auto *LastNonComment = TheLine->getLastNonComment();
+    assert(LastNonComment);
+    // FIXME: There are probably cases where we should use LastNonComment
+    // instead of TheLine->Last.
+
     // Try to merge a function block with left brace unwrapped.
-    if (TheLine->Last->is(TT_FunctionLBrace) && TheLine->First != TheLine->Last)
+    if (LastNonComment->is(TT_FunctionLBrace) &&
+        TheLine->First != LastNonComment) {
       return MergeShortFunctions ? tryMergeSimpleBlock(I, E, Limit) : 0;
+    }
     // Try to merge a control statement block with left brace unwrapped.
     if (TheLine->Last->is(tok::l_brace) && FirstNonComment != TheLine->Last &&
         FirstNonComment->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
@@ -789,7 +796,8 @@ private:
       }
     }
 
-    if (Line.Last->is(tok::l_brace)) {
+    if (const auto *LastNonComment = Line.getLastNonComment();
+        LastNonComment && LastNonComment->is(tok::l_brace)) {
       if (IsSplitBlock && Line.First == Line.Last &&
           I > AnnotatedLines.begin() &&
           (I[-1]->endsWith(tok::kw_else) || IsCtrlStmt(*I[-1]))) {
@@ -805,7 +813,8 @@ private:
 
       if (ShouldMerge()) {
         // We merge empty blocks even if the line exceeds the column limit.
-        Tok->SpacesRequiredBefore = Style.SpaceInEmptyBlock ? 1 : 0;
+        Tok->SpacesRequiredBefore =
+            (Style.SpaceInEmptyBlock || Line.Last->is(tok::comment)) ? 1 : 0;
         Tok->CanBreakBefore = true;
         return 1;
       } else if (Limit != 0 && !Line.startsWithNamespace() &&
