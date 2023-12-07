@@ -85,23 +85,23 @@ _Complex float mul(_Complex float a, _Complex float b) {
 
   // LMTD: fmul float
   // LMTD-NEXT: fmul float
+  // LMTD-NEXT: fmul float
+  // LMTD-NEXT: fmul float
   // LMTD-NEXT: fsub float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fmul float
   // LMTD-NEXT: fadd float
 
   // FRTRN: fmul {{.*}}float
   // FRTRN-NEXT: fmul {{.*}}float
+  // FRTRN-NEXT: fmul {{.*}}float
+  // FRTRN-NEXT: fmul {{.*}}float
   // FRTRN-NEXT: fsub {{.*}}float
-  // FRTRN-NEXT: fmul {{.*}}float
-  // FRTRN-NEXT: fmul {{.*}}float
   // FRTRN-NEXT: fadd {{.*}}float
 
   // LMTD-FAST: fmul {{.*}} float
   // LMTD-FAST-NEXT: fmul {{.*}} float
+  // LMTD-FAST-NEXT: fmul {{.*}} float
+  // LMTD-FAST-NEXT: fmul {{.*}} float
   // LMTD-FAST-NEXT: fsub {{.*}} float
-  // LMTD-FAST-NEXT: fmul {{.*}} float
-  // LMTD-FAST-NEXT: fmul {{.*}} float
   // LMTD-FAST-NEXT: fadd {{.*}} float
 
   return a * b;

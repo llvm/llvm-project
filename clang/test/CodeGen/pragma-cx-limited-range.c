@@ -18,23 +18,23 @@ _Complex float pragma_on_mul(_Complex float a, _Complex float b) {
   // LABEL: define {{.*}} @pragma_on_mul(
   // FULL: fmul float
   // FULL-NEXT: fmul float
+  // FULL-NEXT: fmul float
+  // FULL-NEXT: fmul float
   // FULL-NEXT: fsub float
-  // FULL-NEXT: fmul float
-  // FULL-NEXT: fmul float
   // FULL-NEXT: fadd float
 
   // LMTD: fmul float
   // LMTD-NEXT: fmul float
+  // LMTD-NEXT: fmul float
+  // LMTD-NEXT: fmul float
   // LMTD-NEXT: fsub float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fmul float
   // LMTD-NEXT: fadd float
 
   // FRTRN: fmul float
   // FRTRN-NEXT: fmul float
+  // FRTRN-NEXT: fmul float
+  // FRTRN-NEXT: fmul float
   // FRTRN-NEXT: fsub float
-  // FRTRN-NEXT: fmul float
-  // FRTRN-NEXT: fmul float
   // FRTRN-NEXT: fadd float
 
   return a * b;

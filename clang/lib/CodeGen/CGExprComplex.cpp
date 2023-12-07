@@ -765,21 +765,6 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
 
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
     if (Op.LHS.second && Op.RHS.second) {
-      if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited ||
-          Op.FPFeatures.getComplexRange() == LangOptions::CX_Fortran) {
-        // (a+ib)*(c+id) = (ac-bd)+i(bc+ad)
-        llvm::Value *LHSr = Op.LHS.first, *LHSi = Op.LHS.second;
-        llvm::Value *RHSr = Op.RHS.first, *RHSi = Op.RHS.second;
-
-        llvm::Value *AC = Builder.CreateFMul(LHSr, RHSr); // ac
-        llvm::Value *BD = Builder.CreateFMul(LHSi, RHSi); // bd
-        llvm::Value *DSTr = Builder.CreateFSub(AC, BD);   // ac-bd
-
-        llvm::Value *BC = Builder.CreateFMul(LHSi, RHSr); // bc
-        llvm::Value *AD = Builder.CreateFMul(LHSr, RHSi); // ad
-        llvm::Value *DSTi = Builder.CreateFAdd(BC, AD);   // bc+ad
-        return ComplexPairTy(DSTr, DSTi);
-      }
       // If both operands are complex, emit the core math directly, and then
       // test for NaNs. If we find NaNs in the result, we delegate to a libcall
       // to carefully re-compute the correct infinity representation if
@@ -799,6 +784,10 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
       // the sum of the second.
       ResR = Builder.CreateFSub(AC, BD, "mul_r");
       ResI = Builder.CreateFAdd(AD, BC, "mul_i");
+
+      if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited ||
+          Op.FPFeatures.getComplexRange() == LangOptions::CX_Fortran)
+        return ComplexPairTy(ResR, ResI);
 
       // Emit the test for the real part becoming NaN and create a branch to
       // handle it. We test for NaN by comparing the number to itself.
@@ -982,7 +971,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
       DSTi = Builder.CreateFDiv(LHSi, RHSr);
       return ComplexPairTy(DSTr, DSTi);
     }
-    llvm::Value *TmpLHSi = LHSi;
+    llvm::Value *OrigLHSi = LHSi;
     if (!LHSi)
       LHSi = llvm::Constant::getNullValue(RHSi->getType());
     if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Fortran)
@@ -990,7 +979,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited)
       return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);
     else if (!CGF.getLangOpts().FastMath) {
-      LHSi = TmpLHSi;
+      LHSi = OrigLHSi;
       // If we have a complex operand on the RHS and FastMath is not allowed, we
       // delegate to a libcall to handle all of the complexities and minimize
       // underflow/overflow cases. When FastMath is allowed we construct the
