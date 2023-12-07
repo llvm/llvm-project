@@ -4,7 +4,7 @@
 
 struct DataTy {
   float a;
-  float b[2];
+  float b[3];
 };
 
 int main(int argc, char **argv) {
