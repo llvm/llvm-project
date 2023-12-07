@@ -10,8 +10,8 @@
 #ifndef CHARACTER_H
 #define CHARACTER_H
 
-#include <cstddef>
 #include <algorithm>
+#include <cstddef>
 #include <cstring>
 
 template <typename TO, typename FROM>
@@ -28,7 +28,7 @@ void CopyAndPad(
   } else if (toChars <= fromChars) {
     std::memcpy(to, from, toChars * sizeof(TO));
   } else {
-    std::memcpy(to, from, std::min(toChars,fromChars) * sizeof(TO));
+    std::memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
     for (std::size_t j{fromChars}; j < toChars; ++j) {
       to[j] = static_cast<TO>(' ');
     }
