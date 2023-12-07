@@ -10152,6 +10152,8 @@ def warn_missing_case : Warning<"%plural{"
   ":%0 enumeration values not handled in switch: %1, %2, %3...}0">,
   InGroup<Switch>;
 def note_fill_in_missing_cases : Note<"add missing switch cases">;
+def warn_switch_default : Warning<"'switch' missing 'default' label">,
+  InGroup<SwitchDefault>, DefaultIgnore;
 
 def warn_unannotated_fallthrough : Warning<
   "unannotated fall-through between switch labels">,
