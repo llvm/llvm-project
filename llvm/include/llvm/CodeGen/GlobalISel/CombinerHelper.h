@@ -421,15 +421,8 @@ public:
   /// Return true if a G_STORE instruction \p MI is storing an undef value.
   bool matchUndefStore(MachineInstr &MI);
 
-  /// Return true if a G_SELECT instruction \p MI has an undef comparison.
-  bool matchUndefSelectCmp(MachineInstr &MI);
-
   /// Return true if a G_{EXTRACT,INSERT}_VECTOR_ELT has an out of range index.
   bool matchInsertExtractVecEltOutOfBounds(MachineInstr &MI);
-
-  /// Return true if a G_SELECT instruction \p MI has a constant comparison. If
-  /// true, \p OpIdx will store the operand index of the known selected value.
-  bool matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx);
 
   /// Replace an instruction with a G_FCONSTANT with value \p C.
   void replaceInstWithFConstant(MachineInstr &MI, double C);
@@ -769,9 +762,6 @@ public:
   bool matchCombineFSubFpExtFNegFMulToFMadOrFMA(MachineInstr &MI,
                                                 BuildFnTy &MatchInfo);
 
-  /// Fold boolean selects to logical operations.
-  bool matchSelectToLogical(MachineInstr &MI, BuildFnTy &MatchInfo);
-
   bool matchCombineFMinMaxNaN(MachineInstr &MI, unsigned &Info);
 
   /// Transform G_ADD(x, G_SUB(y, x)) to y.
@@ -813,6 +803,9 @@ public:
 
   // Given a binop \p MI, commute operands 1 and 2.
   void applyCommuteBinOpOperands(MachineInstr &MI);
+
+  // Combine selects.
+  bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -904,6 +897,21 @@ private:
   /// select (fcmp uge x, 1.0) 1.0, x -> fminnm x, 1.0
   bool matchFPSelectToMinMax(Register Dst, Register Cond, Register TrueVal,
                              Register FalseVal, BuildFnTy &MatchInfo);
+
+  bool isOneOrOneSplat(Register Src, bool AllowUndefs);
+  bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);
+  bool isConstantSplatVector(Register Src, int64_t SplatValue,
+                             bool AllowUndefs);
+  std::optional<APInt> getConstantOrConstantSplatVector(Register Src);
+
+  /// Try to combine selects with constant conditions.
+  bool tryCombineSelectConstantCondition(GSelect *Select, BuildFnTy &MatchInfo);
+
+  /// Try to combine selects with boolean conditions to logical operators.
+  bool tryFoldBoolSelectToLogic(GSelect *Select, BuildFnTy &MatchInfo);
+
+  /// Try to combine selects where the true and false values are constant.
+  bool tryFoldSelectOfConstants(GSelect *Select, BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 

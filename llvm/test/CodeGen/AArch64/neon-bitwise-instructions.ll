@@ -1100,9 +1100,7 @@ define <8 x i8> @vselect_constant_cond_zero_v8i8(<8 x i8> %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI83_0
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI83_0]
-; CHECK-GI-NEXT:    shl v1.8b, v1.8b, #7
-; CHECK-GI-NEXT:    sshr v1.8b, v1.8b, #7
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
   %b = select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x i8> %a, <8 x i8> zeroinitializer
   ret <8 x i8> %b
@@ -1119,9 +1117,7 @@ define <4 x i16> @vselect_constant_cond_zero_v4i16(<4 x i16> %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI84_0
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI84_0]
-; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
-; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #15
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
   %b = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i16> %a, <4 x i16> zeroinitializer
   ret <4 x i16> %b
@@ -1139,12 +1135,12 @@ define <4 x i32> @vselect_constant_cond_zero_v4i32(<4 x i32> %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI85_1
 ; CHECK-GI-NEXT:    adrp x9, .LCPI85_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI85_1]
-; CHECK-GI-NEXT:    ldr d2, [x9, :lo12:.LCPI85_0]
-; CHECK-GI-NEXT:    mov v1.d[1], v2.d[0]
-; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    movi v1.4s, #1
+; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI85_1]
+; CHECK-GI-NEXT:    ldr d3, [x9, :lo12:.LCPI85_0]
+; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
   %b = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> %a, <4 x i32> zeroinitializer
   ret <4 x i32> %b

@@ -1706,11 +1706,11 @@ public:
 
   /// Build and insert a bitwise not,
   /// \p NegOne = G_CONSTANT -1
-  /// \p Res = G_OR \p Op0, NegOne
-  MachineInstrBuilder buildNot(const DstOp &Dst, const SrcOp &Src0) {
-    auto NegOne = buildConstant(Dst.getLLTTy(*getMRI()), -1);
-    return buildInstr(TargetOpcode::G_XOR, {Dst}, {Src0, NegOne});
-  }
+  /// \p Res = G_XOR \p Op0, NegOne
+  /// Or
+  /// \p NegOne = G_BUILD_VECTOR -1, -1, -1, ...
+  /// \p Res = G_XOR \p Op0, NegOne
+  MachineInstrBuilder buildNot(const DstOp &Dst, const SrcOp &Src0);
 
   /// Build and insert integer negation
   /// \p Zero = G_CONSTANT 0
