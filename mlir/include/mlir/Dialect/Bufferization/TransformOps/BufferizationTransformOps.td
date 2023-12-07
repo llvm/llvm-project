@@ -20,6 +20,29 @@ def Transform_EmptyOp : Transform_ConcreteOpType<"tensor.empty">;
 def Transform_AllocTensorOp : Transform_ConcreteOpType<"bufferization.alloc_tensor">;
 
 //===----------------------------------------------------------------------===//
+// BufferDeallocationOp
+//===----------------------------------------------------------------------===//
+
+def BufferDeallocationOp
+    : Op<Transform_Dialect, "bufferization.buffer_deallocation",
+        [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+         DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{
+    Introduce all required deallocation operations for all buffers within the
+    targeted op.
+
+    #### Return modes
+
+    This operation consumes the `target` handle and produces the `transformed`
+    handle.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
 // BufferLoopHoistingOp
 //===----------------------------------------------------------------------===//
 

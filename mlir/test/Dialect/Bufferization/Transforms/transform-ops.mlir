@@ -238,3 +238,22 @@ func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
   %0 = bufferization.alloc_tensor() : tensor<2x2xf32>
   return %0 : tensor<2x2xf32>
 }
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.bufferization.buffer_deallocation %0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func @buffer_deallocation(
+//       CHECK:   memref.alloc
+//       CHECK:   memref.dealloc
+//       CHECK:   return
+func.func @buffer_deallocation(%arg0: memref<4xf32>) {
+  %0 = memref.alloc() : memref<4xf32>
+  return
+}

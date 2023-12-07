@@ -24,6 +24,26 @@ using namespace mlir::bufferization;
 using namespace mlir::transform;
 
 //===----------------------------------------------------------------------===//
+// BufferDeallocationOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::BufferDeallocationOp::apply(transform::TransformRewriter &rewriter,
+                                       TransformResults &transformResults,
+                                       TransformState &state) {
+  auto payloadOps = state.getPayloadOps(getTarget());
+  for (Operation *target : payloadOps) {
+    if (!isa<FunctionOpInterface>(target))
+      return emitSilenceableError() << "expected function target";
+    if (failed(bufferization::deallocateBuffers(target)))
+      return emitSilenceableError() << "buffer deallocation failed";
+  }
+
+  transformResults.set(cast<OpResult>(getTransformed()), payloadOps);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // BufferLoopHoistingOp
 //===----------------------------------------------------------------------===//
 
