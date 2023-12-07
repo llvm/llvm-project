@@ -2418,7 +2418,8 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForExternalReference(
   SmallString<128> Name;
   getNameWithPrefix(Name, GO, TM);
 
-  // AIX TLS local-dynamic requires the setting for the specific symbol name.
+  // AIX TLS local-dynamic does not need the external reference for the
+  // "_$TLSML" symbol.
   if (GO->hasName() && GO->getName() == "_$TLSML") {
     return getContext().getXCOFFSection(
         Name, SectionKind::getData(),

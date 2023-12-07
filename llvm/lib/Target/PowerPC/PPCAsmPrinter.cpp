@@ -857,19 +857,10 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM;
     if (Flag == PPCII::MO_TLSGD_FLAG || Flag == PPCII::MO_GOT_TLSGD_PCREL_FLAG)
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD;
-    if (MO.getTargetFlags() & PPCII::MO_TLSLD_FLAG) {
-      if (IsAIX && MO.isGlobal() && MO.getGlobal()->hasName() &&
-          MO.getGlobal()->getName() == "_$TLSML")
-        // FIXME: Due to the size limit of MachineOperand::SubReg_TargetFlags,
-        // hacked this flag which should have been named MO_TLSLDM_FLAG: on AIX
-        // the ML relocation type is only valid for a reference to a TOC symbol
-        // from the symbol itself, and right now its only user is the symbol
-        // "_$TLSML". The symbol name is used to decide that R_TLSML is
-        // expected.
-        return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML;
-      if (IsAIX)
-        return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD;
-    }
+    if (Flag == PPCII::MO_TLSLD_FLAG && IsAIX)
+      return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD;
+    if (Flag == PPCII::MO_TLSLDM_FLAG && IsAIX)
+      return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML;
     return MCSymbolRefExpr::VariantKind::VK_None;
   };
 
@@ -1384,7 +1375,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::GETtlsMOD64AIX:
     // Transform: %r3 = GETtlsMODNNAIX %r3 (for NN == 32/64).
     // Into: BLA .__tls_get_mod()
-    // Input parameter is a module handle (__TLSML[TC]@ml) for all variables.
+    // Input parameter is a module handle (_$TLSML[TC]@ml) for all variables.
   case PPC::GETtlsADDR:
     // Transform: %x3 = GETtlsADDR %x3, @sym
     // Into: BL8_NOP_TLS __tls_get_addr(sym at tlsgd)

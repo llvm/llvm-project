@@ -3430,7 +3430,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
             StringRef("_$TLSML"), PointerType::getUnqual(*DAG.getContext())));
     assert(TLSGV && "Not able to create GV for _$TLSML.");
     SDValue ModuleHandleTGA =
-        DAG.getTargetGlobalAddress(TLSGV, dl, PtrVT, 0, PPCII::MO_TLSLD_FLAG);
+        DAG.getTargetGlobalAddress(TLSGV, dl, PtrVT, 0, PPCII::MO_TLSLDM_FLAG);
     SDValue ModuleHandleTOC = getTOCEntry(DAG, dl, ModuleHandleTGA);
     SDValue ModuleHandle =
         DAG.getNode(PPCISD::TLSLD_AIX, dl, PtrVT, ModuleHandleTOC);

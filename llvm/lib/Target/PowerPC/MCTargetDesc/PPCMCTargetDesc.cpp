@@ -234,7 +234,7 @@ public:
       // On AIX, we have TLS variable offsets (symbol@({gd|ie|le|ld}) depending
       // on the TLS access method (or model). For the general-dynamic access
       // method, we also have region handle (symbol@m) for each variable. For
-      // local-dynamic, there is a module handle (__TLSML[TC]@ml) for all
+      // local-dynamic, there is a module handle (_$TLSML[TC]@ml) for all
       // variables. Finally for local-exec and initial-exec, we have a thread
       // pointer, in r13 for 64-bit mode and returned by .__get_tpointer for
       // 32-bit mode.
