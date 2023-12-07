@@ -172,7 +172,14 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
       dumped_something = true;
       if (symbol->GetType() == eSymbolTypeTrampoline)
         s->PutCString("symbol stub for: ");
-      s->PutCStringColorHighlighted(symbol->GetName().GetStringRef(), pattern);
+      llvm::StringRef ansi_prefix;
+      llvm::StringRef ansi_suffix;
+      if (target_sp) {
+        ansi_prefix = target_sp->GetDebugger().GetRegexMatchAnsiPrefix();
+        ansi_suffix = target_sp->GetDebugger().GetRegexMatchAnsiSuffix();
+      }
+      s->PutCStringColorHighlighted(symbol->GetName().GetStringRef(), pattern,
+                                    ansi_prefix, ansi_suffix);
     }
 
     if (addr.IsValid() && symbol->ValueIsAddress()) {
