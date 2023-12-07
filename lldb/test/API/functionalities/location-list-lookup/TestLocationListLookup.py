@@ -23,8 +23,8 @@ class LocationListLookupTestCase(TestBase):
         self.assertTrue(process.is_stopped)
 
         # Find `bar` on the stack, then
-        # find `this` local variable, then
-        # check that we can read out the pointer value
+        # make sure we can read out the local
+        # variables (with both `frame var` and `expr`)
         for f in process.GetSelectedThread().frames:
             if f.GetDisplayFunctionName().startswith("Foo::bar"):
                 argv = f.GetValueForVariablePath("argv").GetChildAtIndex(0)
