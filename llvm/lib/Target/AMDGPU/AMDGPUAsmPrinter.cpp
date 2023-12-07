@@ -454,6 +454,10 @@ amdhsa::kernel_descriptor_t AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(
 }
 
 bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
+  if (MF.getFunction().hasFnAttribute("amdgpu-lib-fun") &&
+      !MF.getFunction().hasFnAttribute("amdgpu-backend-used"))
+    return false;
+
   // Init target streamer lazily on the first function so that previous passes
   // can set metadata.
   if (!IsTargetStreamerInitialized)

@@ -14,6 +14,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 
 #define DEBUG_TYPE "si-fold-operands"
@@ -2133,8 +2134,22 @@ bool SIFoldOperands::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
 }
 
 bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
+  auto &F = MF.getFunction();
+  if (skipFunction(F))
     return false;
+  // We cannot delete unused library function, but we can make it empty to
+  // save the time optimizing it.
+  if (F.hasFnAttribute("amdgpu-lib-fun") &&
+      !F.hasFnAttribute("amdgpu-backend-used") && F.use_empty()) {
+    while (!MF.empty()) {
+      MachineBasicBlock &MBB = MF.front();
+      MBB.clear();
+      MF.erase(&MBB);
+    }
+    // We need at least one BB to make the machine function valid.
+    MF.push_back(MF.CreateMachineBasicBlock());
+    return true;
+  }
 
   MRI = &MF.getRegInfo();
   ST = &MF.getSubtarget<GCNSubtarget>();
