@@ -5568,6 +5568,7 @@ cc_library(
         ":NVVMDialect",
         ":Pass",
         ":Transforms",
+        ":VectorToLLVM",
         "//llvm:Support",
     ],
 )

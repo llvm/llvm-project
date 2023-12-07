@@ -3120,7 +3120,8 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
         template_params = dwarf_ast->GetDIEClassTemplateParams(die);
     }
 
-    m_index->GetTypes(GetDWARFDeclContext(die), [&](DWARFDIE type_die) {
+    const DWARFDeclContext die_dwarf_decl_ctx = GetDWARFDeclContext(die);
+    m_index->GetTypes(die_dwarf_decl_ctx, [&](DWARFDIE type_die) {
       // Make sure type_die's language matches the type system we are
       // looking for. We don't want to find a "Foo" type from Java if we
       // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
@@ -3184,7 +3185,7 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
       }
 
       // Make sure the decl contexts match all the way up
-      if (GetDWARFDeclContext(die) != type_dwarf_decl_ctx)
+      if (die_dwarf_decl_ctx != type_dwarf_decl_ctx)
         return true;
 
       Type *resolved_type = ResolveType(type_die, false);

@@ -315,6 +315,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (DemandedMask.isSubsetOf(RHSKnown.Zero | LHSKnown.Zero)) {
       Instruction *Or =
           BinaryOperator::CreateOr(I->getOperand(0), I->getOperand(1));
+      if (DemandedMask.isAllOnes())
+        cast<PossiblyDisjointInst>(Or)->setIsDisjoint(true);
       Or->takeName(I);
       return InsertNewInstWith(Or, I->getIterator());
     }

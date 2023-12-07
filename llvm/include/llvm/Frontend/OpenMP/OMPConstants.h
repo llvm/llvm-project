@@ -293,6 +293,16 @@ constexpr int16_t MaxBlockSize = 1024;
 
 } // end namespace xteam_red
 
+/// A type of worksharing loop construct
+enum class WorksharingLoopType {
+  // Worksharing `for`-loop
+  ForStaticLoop,
+  // Worksharing `distrbute`-loop
+  DistributeStaticLoop,
+  // Worksharing `distrbute parallel for`-loop
+  DistributeForStaticLoop
+};
+
 } // end namespace omp
 
 } // end namespace llvm
