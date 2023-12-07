@@ -177,8 +177,8 @@ constexpr bool test() {
     // Those should be valid
     static_assert(
         weakly_equality_comparable_with<std::ranges::iterator_t<TakeView>, std::ranges::sentinel_t<TakeView>>);
-    static_assert(
-        weakly_equality_comparable_with<std::ranges::iterator_t<TakeView>, std::ranges::sentinel_t<TakeView>>);
+    static_assert(weakly_equality_comparable_with<std::ranges::iterator_t<const TakeView>,
+                                                  std::ranges::sentinel_t<const TakeView>>);
   }
 
   return true;
