@@ -1184,6 +1184,65 @@ multiclass PatShiftXrUimm<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LASX256:$xj, uimm6:$imm)>;
 }
 
+multiclass PatCCXrSimm5<CondCode CC, string Inst> {
+  def : Pat<(v32i8 (setcc (v32i8 LASX256:$xj),
+                          (v32i8 (SplatPat_simm5 simm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_B") LASX256:$xj, simm5:$imm)>;
+  def : Pat<(v16i16 (setcc (v16i16 LASX256:$xj),
+                           (v16i16 (SplatPat_simm5 simm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_H") LASX256:$xj, simm5:$imm)>;
+  def : Pat<(v8i32 (setcc (v8i32 LASX256:$xj),
+                          (v8i32 (SplatPat_simm5 simm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_W") LASX256:$xj, simm5:$imm)>;
+  def : Pat<(v4i64 (setcc (v4i64 LASX256:$xj),
+                          (v4i64 (SplatPat_simm5 simm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_D") LASX256:$xj, simm5:$imm)>;
+}
+
+multiclass PatCCXrUimm5<CondCode CC, string Inst> {
+  def : Pat<(v32i8 (setcc (v32i8 LASX256:$xj),
+                          (v32i8 (SplatPat_uimm5 uimm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_BU") LASX256:$xj, uimm5:$imm)>;
+  def : Pat<(v16i16 (setcc (v16i16 LASX256:$xj),
+                           (v16i16 (SplatPat_uimm5 uimm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_HU") LASX256:$xj, uimm5:$imm)>;
+  def : Pat<(v8i32 (setcc (v8i32 LASX256:$xj),
+                          (v8i32 (SplatPat_uimm5 uimm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_WU") LASX256:$xj, uimm5:$imm)>;
+  def : Pat<(v4i64 (setcc (v4i64 LASX256:$xj),
+                          (v4i64 (SplatPat_uimm5 uimm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_DU") LASX256:$xj, uimm5:$imm)>;
+}
+
+multiclass PatCCXrXr<CondCode CC, string Inst> {
+  def : Pat<(v32i8 (setcc (v32i8 LASX256:$xj), (v32i8 LASX256:$xk), CC)),
+            (!cast<LAInst>(Inst#"_B") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(v16i16 (setcc (v16i16 LASX256:$xj), (v16i16 LASX256:$xk), CC)),
+            (!cast<LAInst>(Inst#"_H") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(v8i32 (setcc (v8i32 LASX256:$xj), (v8i32 LASX256:$xk), CC)),
+            (!cast<LAInst>(Inst#"_W") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(v4i64 (setcc (v4i64 LASX256:$xj), (v4i64 LASX256:$xk), CC)),
+            (!cast<LAInst>(Inst#"_D") LASX256:$xj, LASX256:$xk)>;
+}
+
+multiclass PatCCXrXrU<CondCode CC, string Inst> {
+  def : Pat<(v32i8 (setcc (v32i8 LASX256:$xj), (v32i8 LASX256:$xk), CC)),
+            (!cast<LAInst>(Inst#"_BU") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(v16i16 (setcc (v16i16 LASX256:$xj), (v16i16 LASX256:$xk), CC)),
+            (!cast<LAInst>(Inst#"_HU") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(v8i32 (setcc (v8i32 LASX256:$xj), (v8i32 LASX256:$xk), CC)),
+            (!cast<LAInst>(Inst#"_WU") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(v4i64 (setcc (v4i64 LASX256:$xj), (v4i64 LASX256:$xk), CC)),
+            (!cast<LAInst>(Inst#"_DU") LASX256:$xj, LASX256:$xk)>;
+}
+
+multiclass PatCCXrXrF<CondCode CC, string Inst> {
+  def : Pat<(v8i32 (setcc (v8f32 LASX256:$xj), (v8f32 LASX256:$xk), CC)),
+            (!cast<LAInst>(Inst#"_S") LASX256:$xj, LASX256:$xk)>;
+  def : Pat<(v4i64 (setcc (v4f64 LASX256:$xj), (v4f64 LASX256:$xk), CC)),
+            (!cast<LAInst>(Inst#"_D") LASX256:$xj, LASX256:$xk)>;
+}
+
 let Predicates = [HasExtLASX] in {
 
 // XVADD_{B/H/W/D}
@@ -1388,6 +1447,42 @@ def : Pat<(fma v8f32:$xj, v8f32:$xk, v8f32:$xa),
           (XVFMADD_S v8f32:$xj, v8f32:$xk, v8f32:$xa)>;
 def : Pat<(fma v4f64:$xj, v4f64:$xk, v4f64:$xa),
           (XVFMADD_D v4f64:$xj, v4f64:$xk, v4f64:$xa)>;
+
+// XVSEQ[I]_{B/H/W/D}
+defm : PatCCXrSimm5<SETEQ, "XVSEQI">;
+defm : PatCCXrXr<SETEQ, "XVSEQ">;
+
+// XVSLE[I]_{B/H/W/D}[U]
+defm : PatCCXrSimm5<SETLE, "XVSLEI">;
+defm : PatCCXrUimm5<SETULE, "XVSLEI">;
+defm : PatCCXrXr<SETLE, "XVSLE">;
+defm : PatCCXrXrU<SETULE, "XVSLE">;
+
+// XVSLT[I]_{B/H/W/D}[U]
+defm : PatCCXrSimm5<SETLT, "XVSLTI">;
+defm : PatCCXrUimm5<SETULT, "XVSLTI">;
+defm : PatCCXrXr<SETLT, "XVSLT">;
+defm : PatCCXrXrU<SETULT, "XVSLT">;
+
+// XVFCMP.cond.{S/D}
+defm : PatCCXrXrF<SETEQ, "XVFCMP_CEQ">;
+defm : PatCCXrXrF<SETOEQ, "XVFCMP_CEQ">;
+defm : PatCCXrXrF<SETUEQ, "XVFCMP_CUEQ">;
+
+defm : PatCCXrXrF<SETLE, "XVFCMP_CLE">;
+defm : PatCCXrXrF<SETOLE, "XVFCMP_CLE">;
+defm : PatCCXrXrF<SETULE, "XVFCMP_CULE">;
+
+defm : PatCCXrXrF<SETLT, "XVFCMP_CLT">;
+defm : PatCCXrXrF<SETOLT, "XVFCMP_CLT">;
+defm : PatCCXrXrF<SETULT, "XVFCMP_CULT">;
+
+defm : PatCCXrXrF<SETNE, "XVFCMP_CNE">;
+defm : PatCCXrXrF<SETONE, "XVFCMP_CNE">;
+defm : PatCCXrXrF<SETUNE, "XVFCMP_CUNE">;
+
+defm : PatCCXrXrF<SETO, "XVFCMP_COR">;
+defm : PatCCXrXrF<SETUO, "XVFCMP_CUN">;
 
 // PseudoXVINSGR2VR_{B/H}
 def : Pat<(vector_insert v32i8:$xd, GRLenVT:$rj, uimm5:$imm),

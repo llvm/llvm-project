@@ -81,7 +81,7 @@ void g() {
 #endif
 
 #if __cplusplus >= 201103L
-namespace dr1227 { // dr1227: yes
+namespace dr1227 { // dr1227: 3.0
 template <class T> struct A { using X = typename T::X; }; // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
 template <class T> typename T::X f(typename A<T>::X);
 template <class T> void f(...) { }

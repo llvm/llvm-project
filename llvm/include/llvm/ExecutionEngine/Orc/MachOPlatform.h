@@ -118,6 +118,9 @@ public:
   standardRuntimeUtilityAliases();
 
 private:
+  using SymbolTableVector = SmallVector<
+      std::tuple<ExecutorAddr, ExecutorAddr, MachOExecutorSymbolFlags>>;
+
   // Data needed for bootstrap only.
   struct BootstrapInfo {
     std::mutex Mutex;
@@ -125,6 +128,7 @@ private:
     size_t ActiveGraphs = 0;
     shared::AllocActions DeferredAAs;
     ExecutorAddr MachOHeaderAddr;
+    SymbolTableVector SymTab;
   };
 
   // The MachOPlatformPlugin scans/modifies LinkGraphs to support MachO
