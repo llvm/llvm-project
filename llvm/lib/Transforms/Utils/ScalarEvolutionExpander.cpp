@@ -1546,9 +1546,7 @@ Value *SCEVExpander::expand(const SCEV *S) {
         }
       if (auto *NNI = dyn_cast<PossiblyNonNegInst>(I)) {
         auto *Src = NNI->getOperand(0);
-        if (SE.isKnownNonNegative(SE.getSCEV(Src)) ||
-            isKnownNonNegative(Src, DL, 0, &SE.AC, I, &SE.DT) ||
-            isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
+        if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
                                     Constant::getNullValue(Src->getType()), I,
                                     DL).value_or(false))
           NNI->setNonNeg(true);
