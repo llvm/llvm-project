@@ -375,7 +375,7 @@ define i32 @test4(i32 %inp) {
   ; AIX64-NEXT:   B %bb.2
   ; AIX64-NEXT: {{  $}}
   ; AIX64-NEXT: bb.2.return:
-  ; AIX64-NEXT:   [[LDtoc:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-lo) @tls_var, $x2 :: (load (s64) from got)
+  ; AIX64-NEXT:   [[LDtoc:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-tlsgdm) @tls_var, $x2 :: (load (s64) from got)
   ; AIX64-NEXT:   [[LDtoc1:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-tlsgd) @tls_var, $x2 :: (load (s64) from got)
   ; AIX64-NEXT:   [[TLSGDAIX8_:%[0-9]+]]:g8rc = TLSGDAIX8 killed [[LDtoc1]], killed [[LDtoc]]
   ; AIX64-NEXT:   [[COPY2:%[0-9]+]]:gprc = COPY [[TLSGDAIX8_]].sub_32
@@ -405,7 +405,7 @@ define i32 @test4(i32 %inp) {
   ; AIX32-NEXT:   B %bb.2
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT: bb.2.return:
-  ; AIX32-NEXT:   [[LWZtoc:%[0-9]+]]:gprc = LWZtoc target-flags(ppc-lo) @tls_var, $r2 :: (load (s32) from got)
+  ; AIX32-NEXT:   [[LWZtoc:%[0-9]+]]:gprc = LWZtoc target-flags(ppc-tlsgdm) @tls_var, $r2 :: (load (s32) from got)
   ; AIX32-NEXT:   [[LWZtoc1:%[0-9]+]]:gprc = LWZtoc target-flags(ppc-tlsgd) @tls_var, $r2 :: (load (s32) from got)
   ; AIX32-NEXT:   [[TLSGDAIX:%[0-9]+]]:gprc = TLSGDAIX killed [[LWZtoc1]], killed [[LWZtoc]]
   ; AIX32-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 killed [[TLSGDAIX]], [[ISEL]]
