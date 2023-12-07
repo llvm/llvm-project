@@ -2231,12 +2231,6 @@ void NeonEmitter::runHeader(raw_ostream &OS) {
 static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
   std::string TypedefTypes(types);
   std::vector<TypeSpec> TDTypeVec = TypeSpec::fromTypeSpecs(TypedefTypes);
-  // arm_sve.h followed by arm_neon.h does not emmit these types
-  // because only arm_sve.h defines __ARM_NEON_TYPES_H
-  // arm_neon.h followed by arm_sve.h emmit these types
-  // because __ARM_NEON_TYPES_H is not defined
-  // Avoids to redeclare the types in arm_neon.h
-  OS << "#ifndef __ARM_NEON_TYPES_H\n";
 
   // Emit vector typedefs.
   bool InIfdef = false;
@@ -2268,7 +2262,6 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
   if (InIfdef)
     OS << "#endif\n";
   OS << "\n";
-  OS << "#endif // __ARM_NEON_TYPES_H\n";
 
   // Emit struct typedefs.
   InIfdef = false;
@@ -2558,7 +2551,6 @@ void NeonEmitter::runVectorTypes(raw_ostream &OS) {
         " *===-----------------------------------------------------------------"
         "------===\n"
         " */\n\n";
-  
   OS << "#if !defined(__ARM_NEON_H) && !defined(__ARM_SVE_H)\n";
   OS << "#error \"This file should not be used standalone. Please include"
         " arm_neon.h or arm_sve.h instead\"\n\n";
