@@ -316,10 +316,14 @@ def note_constexpr_memcpy_unsupported : Note<
   "size to copy (%4) is not a multiple of size of element type %3 (%5)|"
   "source is not a contiguous array of at least %4 elements of type %3|"
   "destination is not a contiguous array of at least %4 elements of type %3}2">;
+def note_constexpr_bit_cast_bad_bits : Note<
+  "bit_cast source expression (type %5) does not produce a constant value for "
+  "%select{bit|byte}0 [%1] (of {%2%plural{0:|:..0}2}) which are required by "
+  "target type %4 %select{|(subobject %3)}6">;
 def note_constexpr_bit_cast_unsupported_type : Note<
   "constexpr bit cast involving type %0 is not yet supported">;
-def note_constexpr_bit_cast_unsupported_bitfield : Note<
-  "constexpr bit_cast involving bit-field is not yet supported">;
+def note_constexpr_bit_cast_invalid_decl : Note<
+  "bit_cast here %select{from|to}0 invalid declaration %0">;
 def note_constexpr_bit_cast_invalid_type : Note<
   "bit_cast %select{from|to}0 a %select{|type with a }1"
   "%select{union|pointer|member pointer|volatile|reference}2 "

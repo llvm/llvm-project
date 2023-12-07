@@ -38,7 +38,6 @@
 #include "Interp/State.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
@@ -49,19 +48,33 @@
 #include "clang/AST/OptionalDiagnostic.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <functional>
+#include <iomanip>
+#include <iterator>
 #include <optional>
 
 #define DEBUG_TYPE "exprconstant"
@@ -6901,51 +6914,113 @@ bool HandleOperatorDeleteCall(EvalInfo &Info, const CallExpr *E) {
 //===----------------------------------------------------------------------===//
 namespace {
 
-class BitCastBuffer {
-  // FIXME: We're going to need bit-level granularity when we support
-  // bit-fields.
+struct BitCastBuffer {
   // FIXME: Its possible under the C++ standard for 'char' to not be 8 bits, but
   // we don't support a host or target where that is the case. Still, we should
   // use a more generic type in case we ever do.
-  SmallVector<std::optional<unsigned char>, 32> Bytes;
-
-  static_assert(std::numeric_limits<unsigned char>::digits >= 8,
+  using byte_t = unsigned char;
+  static_assert(std::numeric_limits<byte_t>::digits >= 8,
                 "Need at least 8 bit unsigned char");
+
+  SmallVector<byte_t, 32> Bytes;
+  SmallVector<byte_t, 32> Valid;
 
   bool TargetIsLittleEndian;
 
-public:
+  static SmallVector<byte_t> MaskAllSet(size_t Width) {
+    SmallVector<byte_t> M;
+    M.resize(Width);
+    std::fill(M.begin(), M.end(), ~0);
+    return M;
+  }
+
   BitCastBuffer(CharUnits Width, bool TargetIsLittleEndian)
-      : Bytes(Width.getQuantity()),
+      : Bytes(Width.getQuantity()), Valid(Width.getQuantity()),
         TargetIsLittleEndian(TargetIsLittleEndian) {}
 
   [[nodiscard]] bool readObject(CharUnits Offset, CharUnits Width,
-                                SmallVectorImpl<unsigned char> &Output) const {
-    for (CharUnits I = Offset, E = Offset + Width; I != E; ++I) {
-      // If a byte of an integer is uninitialized, then the whole integer is
-      // uninitialized.
-      if (!Bytes[I.getQuantity()])
+                                SmallVectorImpl<byte_t> &Output,
+                                SmallVectorImpl<byte_t> const &Mask) const {
+    assert(Mask.size() >= static_cast<unsigned>(Width.getQuantity()));
+    assert(Output.size() >= static_cast<unsigned>(Width.getQuantity()));
+    assert(Bytes.size() >=
+           static_cast<unsigned>((Offset + Width).getQuantity()));
+
+    SmallVector<byte_t, 8> RevMask;
+    const SmallVectorImpl<byte_t> &M =
+        (llvm::sys::IsLittleEndianHost != TargetIsLittleEndian)
+        ? [&]() -> const SmallVectorImpl<byte_t> & {
+      auto W = Width.getQuantity();
+      RevMask.resize_for_overwrite(W);
+      std::reverse_copy(Mask.begin(), Mask.begin() + W, RevMask.begin());
+      return RevMask;
+    }()
+        : Mask;
+
+    size_t Index = 0;
+    for (CharUnits I = Offset, E = Offset + Width; I != E; ++I, ++Index) {
+      const auto BufIdx = I.getQuantity();
+      const auto mask = M[Index];
+      // are there any bits in Mask[Index] that are not set in
+      // Valid[BufIdx]? (NB: more bits can be set, that's just
+      // fine)
+      if ((Valid[BufIdx] & M[Index]) != M[Index])
+        // If any bit of an integer is uninitialized, then the
+        // whole integer is uninitialized.
         return false;
-      Output.push_back(*Bytes[I.getQuantity()]);
+
+      Output[Index] = (Output[Index] & ~mask) | (Bytes[BufIdx] & mask);
     }
+
     if (llvm::sys::IsLittleEndianHost != TargetIsLittleEndian)
       std::reverse(Output.begin(), Output.end());
     return true;
   }
 
-  void writeObject(CharUnits Offset, SmallVectorImpl<unsigned char> &Input) {
-    if (llvm::sys::IsLittleEndianHost != TargetIsLittleEndian)
+  void writeObject(CharUnits Offset, SmallVectorImpl<byte_t> &Input,
+                   SmallVectorImpl<byte_t> &Mask) {
+    assert(Mask.size() >= Input.size());
+    assert(Bytes.size() >=
+           static_cast<unsigned>(Offset.getQuantity()) + Input.size());
+
+    // we could promise Input and Mask were `const`, except for this
+    if (llvm::sys::IsLittleEndianHost != TargetIsLittleEndian) {
       std::reverse(Input.begin(), Input.end());
+      // we might (will) have more mask bits than input bits
+      std::reverse(Mask.begin(), Mask.begin() + Input.size());
+    }
 
     size_t Index = 0;
-    for (unsigned char Byte : Input) {
-      assert(!Bytes[Offset.getQuantity() + Index] && "overwriting a byte?");
-      Bytes[Offset.getQuantity() + Index] = Byte;
+    size_t BufIdx = Offset.getQuantity();
+    for (byte_t &Byte : Input) {
+      assert((Valid[BufIdx] & Mask[Index]) == 0 && "overwriting data?");
+      Bytes[BufIdx] |= Byte & Mask[Index];
+      Valid[BufIdx] |= Mask[Index];
+      ++BufIdx;
       ++Index;
     }
   }
 
   size_t size() { return Bytes.size(); }
+
+  LLVM_DUMP_METHOD void dump() {
+    auto pp = [](std::stringstream &SS, llvm::SmallVectorImpl<byte_t> &V) {
+      bool first = true;
+      for (byte_t v : V) {
+        if (first)
+          first = false;
+        else
+          SS << " ";
+        SS << "0x" << std::hex << std::setw(2) << std::setfill('0')
+           << static_cast<unsigned>(v);
+      }
+    };
+    std::stringstream SS[2];
+    pp(SS[0], Bytes);
+    pp(SS[1], Valid);
+    llvm::dbgs() << "BitCastBuffer{Bytes: [" << SS[0].str() << "], Valid: ["
+                 << SS[1].str() << "]}\n";
+  }
 };
 
 /// Traverse an APValue to produce an BitCastBuffer, emulating how the current
@@ -6973,7 +7048,7 @@ class APValueToBufferConverter {
     if (Ty->isNullPtrType())
       return true;
 
-    // Dig through Src to find the byte at SrcOffset.
+    // Dig through Val to find the byte at Offset.
     switch (Val.getKind()) {
     case APValue::Indeterminate:
     case APValue::None:
@@ -7012,6 +7087,9 @@ class APValueToBufferConverter {
 
   bool visitRecord(const APValue &Val, QualType Ty, CharUnits Offset) {
     const RecordDecl *RD = Ty->getAsRecordDecl();
+    if (RD->isInvalidDecl()) {
+      return invalidDecl(Ty);
+    }
     const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
 
     // Visit the base classes.
@@ -7028,12 +7106,11 @@ class APValueToBufferConverter {
 
     // Visit the fields.
     unsigned FieldIdx = 0;
-    for (FieldDecl *FD : RD->fields()) {
-      if (FD->isBitField()) {
-        Info.FFDiag(BCE->getBeginLoc(),
-                    diag::note_constexpr_bit_cast_unsupported_bitfield);
-        return false;
-      }
+    for (auto I = RD->field_begin(), E = RD->field_end(); I != E;
+         I++, FieldIdx++) {
+      FieldDecl *FD = *I;
+      if (FD->isBitField())
+        continue; // see below
 
       uint64_t FieldOffsetBits = Layout.getFieldOffset(FieldIdx);
 
@@ -7044,7 +7121,72 @@ class APValueToBufferConverter {
       QualType FieldTy = FD->getType();
       if (!visit(Val.getStructField(FieldIdx), FieldTy, FieldOffset))
         return false;
-      ++FieldIdx;
+    }
+
+    // Handle bit-fields
+    FieldIdx = 0;
+    for (auto I = RD->field_begin(), E = RD->field_end(); I != E;
+         I++, FieldIdx++) {
+      FieldDecl *FD = *I;
+      if (!FD->isBitField())
+        continue;
+
+      // unnamed bit fields are purely padding
+      if (FD->isUnnamedBitfield())
+        continue;
+
+      auto FieldVal = Val.getStructField(FieldIdx);
+      if (!FieldVal.hasValue())
+        continue;
+
+      uint64_t FieldOffsetBits = Layout.getFieldOffset(FieldIdx);
+      CharUnits BufOffset = Offset;
+      uint64_t BitOffset = FieldOffsetBits;
+
+      unsigned int BitWidth = FD->getBitWidthValue(Info.Ctx);
+
+      CharUnits TypeWidth = Info.Ctx.getTypeSizeInChars(FD->getType());
+      uint64_t TypeWidthBits = Info.Ctx.toBits(TypeWidth);
+      if (BitWidth > TypeWidthBits) {
+        // e.g. `unsigned uint8_t c : 12`
+        // we truncate to CHAR_BIT * sizeof(T)
+        // (the extra bits are padding)
+        BitWidth = TypeWidthBits;
+      }
+      if (FieldOffsetBits >= TypeWidthBits) {
+        // e.g. `uint32_t : 33; uint32_t i : 12`
+        // or `uint16_t : 16; unsigned uint16_t i : 12`
+        BufOffset =
+            BufOffset + CharUnits::fromQuantity(BitOffset / TypeWidthBits) *
+                            TypeWidth.getQuantity();
+        BitOffset %= TypeWidthBits;
+      }
+
+      if (Info.Ctx.getTargetInfo().isBigEndian()) {
+        // big endian bits count from MSB to LSB
+        // so a bit-field of width 16 and size 12 will occupy bits [0-11] on a
+        // little endian machine, but [3-15] on a big endian machine
+        BitOffset = TypeWidthBits - (BitOffset + BitWidth);
+      }
+
+      assert(TypeWidth >= Info.Ctx.toCharUnitsFromBits(BitWidth));
+
+      llvm::SmallBitVector MaskBits(Info.Ctx.toBits(TypeWidth));
+      MaskBits.set(BitOffset, BitOffset + BitWidth);
+      uintptr_t Store;
+      ArrayRef<uintptr_t> Ref = MaskBits.getData(Store);
+      SmallVector<uint8_t, 8> Mask(Ref.size() * sizeof(uintptr_t));
+      std::memcpy(Mask.data(), Ref.data(), Mask.size());
+      Mask.truncate(TypeWidth.getQuantity());
+
+      SmallVector<uint8_t, 8> Bytes(TypeWidth.getQuantity());
+
+      APSInt Val = FieldVal.getInt() << BitOffset;
+      assert(Val.getBitWidth() >= BitOffset + BitWidth &&
+             "lost data in APInt -> byte buffer conversion");
+
+      llvm::StoreIntToMemory(Val, &*Bytes.begin(), TypeWidth.getQuantity());
+      Buffer.writeObject(BufOffset, Bytes, Mask);
     }
 
     return true;
@@ -7129,8 +7271,9 @@ class APValueToBufferConverter {
       }
 
       SmallVector<uint8_t, 8> Bytes(NElts / 8);
+      auto Mask = BitCastBuffer::MaskAllSet(Bytes.size());
       llvm::StoreIntToMemory(Res, &*Bytes.begin(), NElts / 8);
-      Buffer.writeObject(Offset, Bytes);
+      Buffer.writeObject(Offset, Bytes, Mask);
     } else {
       // Iterate over each of the elements and write them out to the buffer at
       // the appropriate offset.
@@ -7153,14 +7296,21 @@ class APValueToBufferConverter {
     }
 
     SmallVector<uint8_t, 8> Bytes(Width / 8);
+    auto Mask = BitCastBuffer::MaskAllSet(Bytes.size());
     llvm::StoreIntToMemory(AdjustedVal, &*Bytes.begin(), Width / 8);
-    Buffer.writeObject(Offset, Bytes);
+    Buffer.writeObject(Offset, Bytes, Mask);
     return true;
   }
 
   bool visitFloat(const APFloat &Val, QualType Ty, CharUnits Offset) {
     APSInt AsInt(Val.bitcastToAPInt());
     return visitInt(AsInt, Ty, Offset);
+  }
+
+  bool invalidDecl(QualType Ty) {
+    Info.FFDiag(BCE->getBeginLoc(), diag::note_constexpr_bit_cast_invalid_decl)
+        << /* checking dest */ false << Ty;
+    return false;
   }
 
 public:
@@ -7194,10 +7344,85 @@ class BufferToAPValueConverter {
     return std::nullopt;
   }
 
+  std::nullopt_t invalidDecl(QualType Ty) {
+    Info.FFDiag(BCE->getBeginLoc(), diag::note_constexpr_bit_cast_invalid_decl)
+        << /* checking dest */ true << Ty;
+    return std::nullopt;
+  }
+
   std::nullopt_t unrepresentableValue(QualType Ty, const APSInt &Val) {
     Info.FFDiag(BCE->getBeginLoc(),
                 diag::note_constexpr_bit_cast_unrepresentable_value)
         << Ty << toString(Val, /*Radix=*/10);
+    return std::nullopt;
+  }
+
+  std::nullopt_t badBits(QualType Ty, CharUnits Offset,
+                         SmallVectorImpl<BitCastBuffer::byte_t> &M) {
+    Info.FFDiag(BCE->getExprLoc(), diag::note_constexpr_bit_cast_indet_dest, 1)
+        << Ty << Info.Ctx.getLangOpts().CharIsSigned;
+    uint64_t BitWidth = Info.Ctx.getTypeSize(BCE->getType());
+    uint64_t ByteWidth = Info.Ctx.toCharUnitsFromBits(BitWidth).getQuantity();
+    assert(ByteWidth == Buffer.Valid.size_in_bytes());
+
+    APInt Valid(BitWidth, 0);
+    llvm::LoadIntFromMemory(Valid, Buffer.Valid.begin(), ByteWidth);
+    APInt Mask(BitWidth, 0);
+    llvm::LoadIntFromMemory(Mask, M.begin(), M.size_in_bytes());
+
+    Mask = Mask.zext(Valid.getBitWidth());
+    Mask <<= Info.Ctx.toBits(Offset);
+
+    auto ByteAligned = true;
+
+    APInt Missing = (~Valid & Mask);
+    assert(!Missing.isZero() && "bad bits called with no bad bits?");
+    llvm::SmallVector<std::pair<size_t, size_t>> MissingBitRanges;
+    int NextBit = 0;
+    while (!Missing.isZero()) {
+      APInt Last(Missing);
+      int N = Missing.countr_zero();
+
+      Missing.lshrInPlace(N);
+      auto M = Missing.countr_one();
+
+      MissingBitRanges.push_back({NextBit + N, NextBit + N + M});
+
+      Missing.lshrInPlace(M);
+      NextBit += N;
+      NextBit += M;
+      ByteAligned &= N % Info.Ctx.getCharWidth() == 0;
+      ByteAligned &= M % Info.Ctx.getCharWidth() == 0;
+    }
+
+    llvm::SmallString<32> RangesStr;
+    llvm::raw_svector_ostream OS(RangesStr);
+    bool First = true;
+    for (auto [Start, End] : MissingBitRanges) {
+      if (!First)
+        OS << " ";
+      else
+        First = false;
+      if (ByteAligned) {
+        Start /= Info.Ctx.getCharWidth();
+        End /= Info.Ctx.getCharWidth();
+      }
+      size_t Len = End - Start;
+      if (Len > 1) {
+        OS << Start << "-" << End - 1;
+      } else {
+        OS << Start;
+      }
+    }
+
+    assert(RangesStr.size() > 0);
+    auto LastIdx = (ByteAligned ? ByteWidth : BitWidth) - 1;
+    bool IsForSubobject =
+        BCE->getType().getCanonicalType() != Ty.getCanonicalType();
+    Info.Note(BCE->getSubExpr()->getExprLoc(),
+              diag::note_constexpr_bit_cast_bad_bits)
+        << ByteAligned << RangesStr << LastIdx << Ty << BCE->getType()
+        << BCE->getSubExpr()->getType() << IsForSubobject;
     return std::nullopt;
   }
 
@@ -7225,8 +7450,10 @@ class BufferToAPValueConverter {
         SizeOf = NumBytes;
     }
 
-    SmallVector<uint8_t, 8> Bytes;
-    if (!Buffer.readObject(Offset, SizeOf, Bytes)) {
+    SmallVector<uint8_t, 8> Bytes,
+        Mask = BitCastBuffer::MaskAllSet(SizeOf.getQuantity());
+    Bytes.resize_for_overwrite(SizeOf.getQuantity());
+    if (!Buffer.readObject(Offset, SizeOf, Bytes, Mask)) {
       // If this is std::byte or unsigned char, then its okay to store an
       // indeterminate value.
       bool IsStdByte = EnumSugar && EnumSugar->isStdByteType();
@@ -7235,10 +7462,7 @@ class BufferToAPValueConverter {
                          T->isSpecificBuiltinType(BuiltinType::Char_U));
       if (!IsStdByte && !IsUChar) {
         QualType DisplayType(EnumSugar ? (const Type *)EnumSugar : T, 0);
-        Info.FFDiag(BCE->getExprLoc(),
-                    diag::note_constexpr_bit_cast_indet_dest)
-            << DisplayType << Info.Ctx.getLangOpts().CharIsSigned;
-        return std::nullopt;
+        return badBits(DisplayType, Offset, Mask);
       }
 
       return APValue::IndeterminateValue();
@@ -7272,6 +7496,9 @@ class BufferToAPValueConverter {
 
   std::optional<APValue> visit(const RecordType *RTy, CharUnits Offset) {
     const RecordDecl *RD = RTy->getAsRecordDecl();
+    if (RD->isInvalidDecl()) {
+      return invalidDecl(QualType(RD->getTypeForDecl(), 0));
+    }
     const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
 
     unsigned NumBases = 0;
@@ -7300,14 +7527,11 @@ class BufferToAPValueConverter {
 
     // Visit the fields.
     unsigned FieldIdx = 0;
-    for (FieldDecl *FD : RD->fields()) {
-      // FIXME: We don't currently support bit-fields. A lot of the logic for
-      // this is in CodeGen, so we need to factor it around.
-      if (FD->isBitField()) {
-        Info.FFDiag(BCE->getBeginLoc(),
-                    diag::note_constexpr_bit_cast_unsupported_bitfield);
-        return std::nullopt;
-      }
+    for (auto I = RD->field_begin(), E = RD->field_end(); I != E;
+         I++, FieldIdx++) {
+      FieldDecl *FD = *I;
+      if (FD->isBitField())
+        continue; // see below
 
       uint64_t FieldOffsetBits = Layout.getFieldOffset(FieldIdx);
       assert(FieldOffsetBits % Info.Ctx.getCharWidth() == 0);
@@ -7320,7 +7544,86 @@ class BufferToAPValueConverter {
       if (!SubObj)
         return std::nullopt;
       ResultVal.getStructField(FieldIdx) = *SubObj;
-      ++FieldIdx;
+    }
+
+    // Handle bit-fields
+    FieldIdx = 0;
+    for (auto I = RD->field_begin(), E = RD->field_end(); I != E;
+         I++, FieldIdx++) {
+      FieldDecl *FD = *I;
+      if (!FD->isBitField())
+        continue;
+
+      // unnamed bit fields are purely padding
+      if (FD->isUnnamedBitfield())
+        continue;
+
+      uint64_t FieldOffsetBits = Layout.getFieldOffset(FieldIdx);
+      CharUnits BufOffset = Offset;
+      uint64_t BitOffset = FieldOffsetBits;
+
+      unsigned int BitWidth = FD->getBitWidthValue(Info.Ctx);
+
+      CharUnits TypeWidth = Info.Ctx.getTypeSizeInChars(FD->getType());
+      uint64_t TypeWidthBits = Info.Ctx.toBits(TypeWidth);
+      if (BitWidth > TypeWidthBits) {
+        // e.g. `unsigned uint8_t c : 12`
+        // we truncate to CHAR_BIT * sizeof(T)
+        // (the extra bits are padding)
+        BitWidth = TypeWidthBits;
+      }
+      if (FieldOffsetBits >= TypeWidthBits) {
+        // e.g. `uint32_t : 33; uint32_t i : 12`
+        // or `uint16_t : 16; unsigned uint16_t i : 12`
+        BufOffset =
+            BufOffset + CharUnits::fromQuantity(BitOffset / TypeWidthBits) *
+                            TypeWidth.getQuantity();
+        BitOffset %= TypeWidthBits;
+      }
+
+      if (Info.Ctx.getTargetInfo().isBigEndian()) {
+        // big endian bits count from MSB to LSB
+        // so a bit-field of width 16 and size 12 will occupy bits [0-11] on a
+        // little endian machine, but [3-15] on a big endian machine
+        BitOffset = TypeWidthBits - (BitOffset + BitWidth);
+      }
+
+      assert(TypeWidth >= Info.Ctx.toCharUnitsFromBits(BitWidth));
+
+      llvm::SmallBitVector MaskBits(Info.Ctx.toBits(TypeWidth));
+      MaskBits.set(BitOffset, BitOffset + BitWidth);
+      uintptr_t Store;
+      ArrayRef<uintptr_t> BitRef = MaskBits.getData(Store);
+      SmallVector<uint8_t, 8> Mask(BitRef.size() * sizeof(uintptr_t));
+      std::memcpy(Mask.data(), BitRef.data(), Mask.size());
+      Mask.truncate(TypeWidth.getQuantity());
+
+      SmallVector<uint8_t, 8> Bytes(TypeWidth.getQuantity());
+      if (!Buffer.readObject(BufOffset, TypeWidth, Bytes, Mask)) {
+        const Type *T = FD->getType().getCanonicalType().getTypePtr();
+        const EnumType *EnumSugar = dyn_cast<EnumType>(T);
+        // If this is std::byte or unsigned char, then its okay to store an
+        // indeterminate value.
+        bool IsStdByte = EnumSugar && EnumSugar->isStdByteType();
+        bool IsUChar =
+            !EnumSugar && (T->isSpecificBuiltinType(BuiltinType::UChar) ||
+                           T->isSpecificBuiltinType(BuiltinType::Char_U));
+        if (!IsStdByte && !IsUChar) {
+          QualType DisplayType(EnumSugar ? (const Type *)EnumSugar : T, 0);
+          return badBits(DisplayType, BufOffset, Mask);
+        }
+        ResultVal.getStructField(FieldIdx) = APValue::IndeterminateValue();
+      } else {
+        APSInt Val(Info.Ctx.toBits(TypeWidth), true);
+        llvm::LoadIntFromMemory(Val, &*Bytes.begin(), TypeWidth.getQuantity());
+
+        Val >>= BitOffset;
+        Val = Val.trunc(BitWidth);
+        Val.setIsSigned(FD->getType()->isSignedIntegerOrEnumerationType());
+        Val = Val.extend(Info.Ctx.toBits(TypeWidth));
+
+        ResultVal.getStructField(FieldIdx) = APValue(Val);
+      }
     }
 
     return ResultVal;
@@ -7394,9 +7697,11 @@ class BufferToAPValueConverter {
       // actually need to be accessed.
       bool BigEndian = Info.Ctx.getTargetInfo().isBigEndian();
 
-      SmallVector<uint8_t, 8> Bytes;
-      Bytes.reserve(NElts / 8);
-      if (!Buffer.readObject(Offset, CharUnits::fromQuantity(NElts / 8), Bytes))
+      size_t Width = NElts / 8;
+      SmallVector<uint8_t, 8> Bytes, Mask = BitCastBuffer::MaskAllSet(Width);
+      Bytes.resize_for_overwrite(Width);
+      if (!Buffer.readObject(Offset, CharUnits::fromQuantity(Width), Bytes,
+                             Mask))
         return std::nullopt;
 
       APSInt SValInt(NElts, true);
