@@ -1947,8 +1947,9 @@ def SVPSEL_COUNT_ALIAS_D : SInst<"svpsel_lane_c64", "}}Pm", "Pl", MergeNone, "",
 }
 
 let TargetGuard = "sve2p1|sme2" in {
-def SVPEXT_SINGLE : SInst<"svpext_lane_{d}", "P}i", "QcQsQiQl", MergeNone, "aarch64_sve_pext", [IsStreamingOrSVE2p1], [ImmCheck<1, ImmCheck0_3>]>;
-def SVPEXT_X2     : SInst<"svpext_lane_{d}_x2", "2.P}i", "QcQsQiQl", MergeNone, "aarch64_sve_pext_x2", [IsStreamingOrSVE2p1], [ImmCheck<1, ImmCheck0_1>]>;
+//FIXME: Replace IsStreamingCompatible with IsStreamingOrHasSVE2p1 when available
+def SVPEXT_SINGLE : SInst<"svpext_lane_{d}", "P}i", "QcQsQiQl", MergeNone, "aarch64_sve_pext", [IsStreamingCompatible], [ImmCheck<1, ImmCheck0_3>]>;
+def SVPEXT_X2     : SInst<"svpext_lane_{d}_x2", "2.P}i", "QcQsQiQl", MergeNone, "aarch64_sve_pext_x2", [IsStreamingCompatible], [ImmCheck<1, ImmCheck0_1>]>;
 }
 
 let TargetGuard = "sve2p1" in {
