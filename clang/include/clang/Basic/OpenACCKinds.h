@@ -34,7 +34,7 @@ enum class OpenACCDirectiveKind {
 
   // Misc.
   Loop,
-  // FIXME: 'cache'
+  Cache,
 
   // Combined Constructs.
   ParallelLoop,
@@ -55,7 +55,8 @@ enum class OpenACCDirectiveKind {
   Update,
   // FIXME: wait construct.
 
-  // FIXME: routine construct.
+  // Procedure Calls in Compute Regions.
+  Routine,
 
   // Invalid.
   Invalid,

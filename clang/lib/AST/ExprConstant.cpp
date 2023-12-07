@@ -4623,11 +4623,13 @@ struct IncDecSubobjectHandler {
     if (Old) *Old = APValue(Value);
 
     APFloat One(Value.getSemantics(), 1);
+    llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
+    APFloat::opStatus St;
     if (AccessKind == AK_Increment)
-      Value.add(One, APFloat::rmNearestTiesToEven);
+      St = Value.add(One, RM);
     else
-      Value.subtract(One, APFloat::rmNearestTiesToEven);
-    return true;
+      St = Value.subtract(One, RM);
+    return checkFloatingPointResult(Info, E, St);
   }
   bool foundPointer(APValue &Subobj, QualType SubobjType) {
     if (!checkConst(SubobjType))
@@ -8616,7 +8618,7 @@ bool LValueExprEvaluator::VisitMaterializeTemporaryExpr(
     Result.set(E);
   } else {
     Value = &Info.CurrentCall->createTemporary(
-        E, E->getType(),
+        E, Inner->getType(),
         E->getStorageDuration() == SD_FullExpression ? ScopeKind::FullExpression
                                                      : ScopeKind::Block,
         Result);
@@ -11615,16 +11617,18 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
     return EvaluateBuiltinClassifyType(
         CanTy->castAs<AtomicType>()->getValueType(), LangOpts);
 
-  case Type::BlockPointer:
   case Type::Vector:
   case Type::ExtVector:
+    return GCCTypeClass::Vector;
+
+  case Type::BlockPointer:
   case Type::ConstantMatrix:
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
   case Type::Pipe:
-    // GCC classifies vectors as None. We follow its lead and classify all
-    // other types that don't fit into the regular classification the same way.
+    // Classify all other types that don't fit into the regular
+    // classification the same way.
     return GCCTypeClass::None;
 
   case Type::BitInt:

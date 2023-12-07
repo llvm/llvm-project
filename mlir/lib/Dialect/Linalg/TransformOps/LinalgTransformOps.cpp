@@ -2658,26 +2658,23 @@ SmallVector<OpFoldResult> transform::TileUsingForOp::getMixedSizes() {
 // `array` prefix to be consistent in the IR with `parseDynamicIndexList`.
 ParseResult parseOptionalInterchange(OpAsmParser &parser,
                                      OperationState &result) {
-  if (succeeded(parser.parseOptionalLBrace())) {
-    if (failed(parser.parseKeyword("interchange")))
-      return parser.emitError(parser.getNameLoc()) << "expect `interchange`";
-    if (failed(parser.parseEqual()))
-      return parser.emitError(parser.getNameLoc()) << "expect `=`";
-    result.addAttribute("interchange",
-                        DenseI64ArrayAttr::parse(parser, Type{}));
-    if (failed(parser.parseRBrace()))
-      return parser.emitError(parser.getNameLoc()) << "expect `}`";
-  }
+  if (failed(parser.parseOptionalKeyword("interchange")))
+    return success();
+  if (failed(parser.parseEqual()))
+    return failure();
+  result.addAttribute(
+      transform::TileUsingForOp::getInterchangeAttrName(result.name),
+      DenseI64ArrayAttr::parse(parser, Type{}));
   return success();
 }
 
 void printOptionalInterchange(OpAsmPrinter &p,
                               ArrayRef<int64_t> interchangeVals) {
   if (!interchangeVals.empty()) {
-    p << " {interchange = [";
+    p << " interchange = [";
     llvm::interleaveComma(interchangeVals, p,
                           [&](int64_t integer) { p << integer; });
-    p << "]}";
+    p << "]";
   }
 }
 
@@ -2693,6 +2690,7 @@ ParseResult transform::TileUsingForOp::parse(OpAsmParser &parser,
   if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc) ||
       parseDynamicIndexList(parser, dynamicSizes, staticSizes, scalableVals) ||
       parseOptionalInterchange(parser, result) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(functionalType))
     return ParseResult::failure();
 
@@ -2727,6 +2725,11 @@ void TileUsingForOp::print(OpAsmPrinter &p) {
                         /*valueTypes=*/{}, getScalableSizesAttr(),
                         OpAsmParser::Delimiter::Square);
   printOptionalInterchange(p, getInterchange());
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      /*elidedAttrs=*/{getInterchangeAttrName(getOperation()->getName()),
+                       getScalableSizesAttrName(getOperation()->getName()),
+                       getStaticSizesAttrName(getOperation()->getName())});
   p << " : ";
   p.printFunctionalType(getOperands().getTypes(), getResults().getTypes());
 }
@@ -2943,7 +2946,7 @@ LogicalResult TileUsingForallOp::verify() {
 
 void transform::VectorizeChildrenAndApplyPatternsOp::build(
     OpBuilder &builder, OperationState &result, Value target,
-    bool vectorizePadding, bool vectorizeExtract) {
+    bool vectorizePadding, bool vectorizeExtract, bool flatten1DDepthwiseConv) {
   result.addOperands(target);
   if (vectorizePadding) {
     result.addAttribute(
@@ -2957,6 +2960,12 @@ void transform::VectorizeChildrenAndApplyPatternsOp::build(
             result.name),
         builder.getUnitAttr());
   }
+  if (flatten1DDepthwiseConv) {
+    result.addAttribute(
+        VectorizeChildrenAndApplyPatternsOp::getFlatten_1dDepthwiseConvAttrName(
+            result.name),
+        builder.getUnitAttr());
+  }
   result.addTypes(transform::AnyOpType::get(builder.getContext()));
 }
 
@@ -2965,22 +2974,29 @@ namespace {
 /// VectorizeChildrenAndApplyPatternsOp::applyToOne.
 struct VectorizationPattern : public RewritePattern {
   explicit VectorizationPattern(MLIRContext *context,
-                                bool vectorizeExtract = false)
+                                bool vectorizeExtract = false,
+                                bool flattenConv = false)
       : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context),
-        vectorizeNDExtract(vectorizeExtract) {}
+        vectorizeNDExtract(vectorizeExtract),
+        flatten1DDepthwiseConv(flattenConv) {}
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
     if (!linalgOp)
       return rewriter.notifyMatchFailure(op, "expected Linalg Op");
     return vectorize(rewriter, linalgOp, /*inputVectorSizes=*/{},
-                     /*scalableVecDims=*/{}, vectorizeNDExtract);
+                     /*scalableVecDims=*/{}, vectorizeNDExtract,
+                     flatten1DDepthwiseConv);
   }
 
 private:
   /// Controls whether to vectorize `tensor.extract` when the input tensor is
   /// rank >= 2.
   bool vectorizeNDExtract = false;
+  /// Controls whether to "flatten" the channel dimension when vectorising 1D
+  /// depthwise convolutions. This should lead to bette vectorization for
+  /// tensors with a low number of channel dimensions.
+  bool flatten1DDepthwiseConv = false;
 };
 } // namespace
 
@@ -2997,7 +3013,8 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 
   MLIRContext *ctx = getContext();
   RewritePatternSet patterns(ctx);
-  patterns.add<VectorizationPattern>(ctx, getVectorizeNdExtract());
+  patterns.add<VectorizationPattern>(ctx, getVectorizeNdExtract(),
+                                     getFlatten_1dDepthwiseConv());
 
   if (!getDisableTransferPermutationMapLoweringPatterns())
     vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
@@ -3166,6 +3183,33 @@ DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
   results.push_back(maybeTransformed->first);
   // Handle to the operation that replaces the original convolution.
   results.push_back(maybeTransformed->second);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// TransposeConv2DOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::TransposeConv2DOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  auto maybeTransformed =
+      TypeSwitch<Operation *, FailureOr<Operation *>>(target)
+          .Case([&](linalg::Conv2DNhwcFhwcOp op) {
+            return transposeConv2D(rewriter, op);
+          })
+          .Case([&](linalg::Conv2DNhwcFhwcQOp op) {
+            return transposeConv2D(rewriter, op);
+          })
+          .Default([&](Operation *op) {
+            return rewriter.notifyMatchFailure(op, "not supported");
+          });
+  if (failed(maybeTransformed))
+    return emitDefaultSilenceableFailure(target);
+  // Handle to the new Conv2D operation with transposed filters
+  results.push_back(*maybeTransformed);
   return DiagnosedSilenceableFailure::success();
 }
 

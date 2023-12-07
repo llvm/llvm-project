@@ -56,7 +56,7 @@ __next_permutation(_BidirectionalIterator __first, _Sentinel __last, _Compare&& 
 }
 
 template <class _BidirectionalIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 bool
 next_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last, _Compare __comp)
 {
@@ -65,11 +65,11 @@ next_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last, 
 }
 
 template <class _BidirectionalIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 bool
 next_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last)
 {
-    return _VSTD::next_permutation(__first, __last, __less<>());
+    return std::next_permutation(__first, __last, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD

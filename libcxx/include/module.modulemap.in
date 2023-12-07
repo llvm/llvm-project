@@ -265,6 +265,10 @@ module std_strstream [system] {
   header "strstream"
   export *
 }
+module std_syncstream [system] {
+  header "syncstream"
+  export *
+}
 module std_system_error [system] {
   header "system_error"
   export *
@@ -513,73 +517,40 @@ module std_wctype_h [system] {
 
 // Experimental C++ standard library interfaces
 module std_experimental [system] {
-  module deque {
-    header "experimental/deque"
-    export *
-  }
-  module forward_list {
-    header "experimental/forward_list"
-    export *
-  }
   module iterator {
     header "experimental/iterator"
-    export *
-  }
-  module list {
-    header "experimental/list"
-    export *
-  }
-  module map {
-    header "experimental/map"
     export *
   }
   module memory {
     header "experimental/memory"
     export *
   }
-  module memory_resource {
-    header "experimental/memory_resource"
-    export *
-  }
   module propagate_const {
     header "experimental/propagate_const"
     export *
   }
-  module regex {
-    @requires_LIBCXX_ENABLE_LOCALIZATION@
-    header "experimental/regex"
-    export *
-  }
   module simd {
+    module abi_tag              { private header "experimental/__simd/abi_tag.h" }
+    module aligned_tag          { private header "experimental/__simd/aligned_tag.h" }
+    module declaration          { private header "experimental/__simd/declaration.h" }
+    module internal_declaration { private header "experimental/__simd/internal_declaration.h" }
+    module reference            { private header "experimental/__simd/reference.h" }
+    module scalar               { private header "experimental/__simd/scalar.h" }
+    module simd                 { private header "experimental/__simd/simd.h" }
+    module simd_mask            { private header "experimental/__simd/simd_mask.h" }
+    module traits               { private header "experimental/__simd/traits.h" }
+    module utility              { private header "experimental/__simd/utility.h" }
+    module vec_ext              { private header "experimental/__simd/vec_ext.h" }
+
     header "experimental/simd"
-    export *
-  }
-  module set {
-    header "experimental/set"
-    export *
-  }
-  module string {
-    header "experimental/string"
     export *
   }
   module type_traits {
     header "experimental/type_traits"
     export *
   }
-  module unordered_map {
-    header "experimental/unordered_map"
-    export *
-  }
-  module unordered_set {
-    header "experimental/unordered_set"
-    export *
-  }
   module utility {
     header "experimental/utility"
-    export *
-  }
-  module vector {
-    header "experimental/vector"
     export *
   }
   module __config {
@@ -613,6 +584,9 @@ module std_private_availability      [system] {
 module std_private_bit_reference     [system] {
   header "__bit_reference"
   export *
+}
+module std_private_fwd_bit_reference [system] {
+  header "__fwd/bit_reference.h"
 }
 module std_private_config            [system] {
   textual header "__config"
@@ -774,6 +748,7 @@ module std_private_algorithm_pstl_backends_cpu_backends_transform        [system
 module std_private_algorithm_pstl_backends_cpu_backends_transform_reduce [system] { header "__algorithm/pstl_backends/cpu_backends/transform_reduce.h" }
 module std_private_algorithm_pstl_copy                                   [system] { header "__algorithm/pstl_copy.h" }
 module std_private_algorithm_pstl_count                                  [system] { header "__algorithm/pstl_count.h" }
+module std_private_algorithm_pstl_equal                                  [system] { header "__algorithm/pstl_equal.h" }
 module std_private_algorithm_pstl_fill                                   [system] { header "__algorithm/pstl_fill.h" }
 module std_private_algorithm_pstl_find                                   [system] {
   header "__algorithm/pstl_find.h"
@@ -790,7 +765,9 @@ module std_private_algorithm_pstl_frontend_dispatch                      [system
 module std_private_algorithm_pstl_generate                               [system] { header "__algorithm/pstl_generate.h" }
 module std_private_algorithm_pstl_is_partitioned                         [system] { header "__algorithm/pstl_is_partitioned.h" }
 module std_private_algorithm_pstl_merge                                  [system] { header "__algorithm/pstl_merge.h" }
+module std_private_algorithm_pstl_move                                   [system] { header "__algorithm/pstl_move.h" }
 module std_private_algorithm_pstl_replace                                [system] { header "__algorithm/pstl_replace.h" }
+module std_private_algorithm_pstl_rotate_copy                            [system] { header "__algorithm/pstl_rotate_copy.h" }
 module std_private_algorithm_pstl_sort                                   [system] { header "__algorithm/pstl_sort.h" }
 module std_private_algorithm_pstl_stable_sort                            [system] {
   header "__algorithm/pstl_stable_sort.h"
@@ -827,6 +804,7 @@ module std_private_algorithm_ranges_copy_n                               [system
 }
 module std_private_algorithm_ranges_count                                [system] { header "__algorithm/ranges_count.h" }
 module std_private_algorithm_ranges_count_if                             [system] { header "__algorithm/ranges_count_if.h" }
+module std_private_algorithm_ranges_ends_with                            [system] { header "__algorithm/ranges_ends_with.h" }
 module std_private_algorithm_ranges_equal                                [system] { header "__algorithm/ranges_equal.h" }
 module std_private_algorithm_ranges_equal_range                          [system] {
   header "__algorithm/ranges_equal_range.h"
@@ -1136,6 +1114,7 @@ module std_private_bit_countl         [system] { header "__bit/countl.h" }
 module std_private_bit_countr         [system] { header "__bit/countr.h" }
 module std_private_bit_endian         [system] { header "__bit/endian.h" }
 module std_private_bit_has_single_bit [system] { header "__bit/has_single_bit.h" }
+module std_private_bit_invert_if      [system] { header "__bit/invert_if.h" }
 module std_private_bit_popcount       [system] { header "__bit/popcount.h" }
 module std_private_bit_rotate         [system] { header "__bit/rotate.h" }
 
@@ -1665,7 +1644,7 @@ module std_private_ranges_all                        [system] {
   export std_private_ranges_owning_view
 }
 module std_private_ranges_as_rvalue_view             [system] { header "__ranges/as_rvalue_view.h" }
-module std_private_ranges_chunk_by_view              [system] { header "__ranages/chunk_by_view.h" }
+module std_private_ranges_chunk_by_view              [system] { header "__ranges/chunk_by_view.h" }
 module std_private_ranges_common_view                [system] { header "__ranges/common_view.h" }
 module std_private_ranges_concepts                   [system] {
   header "__ranges/concepts.h"
@@ -2013,7 +1992,6 @@ module std_private_type_traits_nat                                       [system
 module std_private_type_traits_negation                                  [system] { header "__type_traits/negation.h" }
 module std_private_type_traits_noexcept_move_assign_container            [system] { header "__type_traits/noexcept_move_assign_container.h" }
 module std_private_type_traits_operation_traits                          [system] { header "__type_traits/operation_traits.h" }
-module std_private_type_traits_predicate_traits                          [system] { header "__type_traits/predicate_traits.h" }
 module std_private_type_traits_promote                                   [system] { header "__type_traits/promote.h" }
 module std_private_type_traits_rank                                      [system] { header "__type_traits/rank.h" }
 module std_private_type_traits_remove_all_extents                        [system] { header "__type_traits/remove_all_extents.h" }
@@ -2065,6 +2043,7 @@ module std_private_utility_move                   [system] {
   export std_private_type_traits_is_nothrow_move_constructible
   export std_private_type_traits_remove_reference
 }
+module std_private_utility_no_destroy             [system] { header "__utility/no_destroy.h" }
 module std_private_utility_pair                   [system] {
   header "__utility/pair.h"
   export std_private_ranges_subrange_fwd

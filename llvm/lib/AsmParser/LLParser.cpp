@@ -1286,6 +1286,11 @@ bool LLParser::parseGlobal(const std::string &Name, LocTy NameLoc,
         return true;
       if (Alignment)
         GV->setAlignment(*Alignment);
+    } else if (Lex.getKind() == lltok::kw_code_model) {
+      CodeModel::Model CodeModel;
+      if (parseOptionalCodeModel(CodeModel))
+        return true;
+      GV->setCodeModel(CodeModel);
     } else if (Lex.getKind() == lltok::MetadataVar) {
       if (parseGlobalObjectMetadataAttachment(*GV))
         return true;
@@ -2165,6 +2170,30 @@ bool LLParser::parseOptionalAlignment(MaybeAlign &Alignment, bool AllowParens) {
   if (Value > Value::MaximumAlignment)
     return error(AlignLoc, "huge alignments are not supported yet");
   Alignment = Align(Value);
+  return false;
+}
+
+/// parseOptionalCodeModel
+///   ::= /* empty */
+///   ::= 'code_model' "large"
+bool LLParser::parseOptionalCodeModel(CodeModel::Model &model) {
+  Lex.Lex();
+  auto StrVal = Lex.getStrVal();
+  auto ErrMsg = "expected global code model string";
+  if (StrVal == "tiny")
+    model = CodeModel::Tiny;
+  else if (StrVal == "small")
+    model = CodeModel::Small;
+  else if (StrVal == "kernel")
+    model = CodeModel::Kernel;
+  else if (StrVal == "medium")
+    model = CodeModel::Medium;
+  else if (StrVal == "large")
+    model = CodeModel::Large;
+  else
+    return tokError(ErrMsg);
+  if (parseToken(lltok::StringConstant, ErrMsg))
+    return true;
   return false;
 }
 
@@ -6370,8 +6399,15 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_srem:
     return parseArithmetic(Inst, PFS, KeywordVal,
                            /*IsFP*/ false);
+  case lltok::kw_or: {
+    bool Disjoint = EatIfPresent(lltok::kw_disjoint);
+    if (parseLogical(Inst, PFS, KeywordVal))
+      return true;
+    if (Disjoint)
+      cast<PossiblyDisjointInst>(Inst)->setIsDisjoint(true);
+    return false;
+  }
   case lltok::kw_and:
-  case lltok::kw_or:
   case lltok::kw_xor:
     return parseLogical(Inst, PFS, KeywordVal);
   case lltok::kw_icmp:
@@ -9060,7 +9096,8 @@ bool LLParser::parseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
 /// OptionalCalls
 ///   := 'calls' ':' '(' Call [',' Call]* ')'
 /// Call ::= '(' 'callee' ':' GVReference
-///            [( ',' 'hotness' ':' Hotness | ',' 'relbf' ':' UInt32 )]? ')'
+///            [( ',' 'hotness' ':' Hotness | ',' 'relbf' ':' UInt32 )]?
+///            [ ',' 'tail' ]? ')'
 bool LLParser::parseOptionalCalls(std::vector<FunctionSummary::EdgeTy> &Calls) {
   assert(Lex.getKind() == lltok::kw_calls);
   Lex.Lex();
@@ -9085,23 +9122,39 @@ bool LLParser::parseOptionalCalls(std::vector<FunctionSummary::EdgeTy> &Calls) {
 
     CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
     unsigned RelBF = 0;
-    if (EatIfPresent(lltok::comma)) {
-      // Expect either hotness or relbf
-      if (EatIfPresent(lltok::kw_hotness)) {
+    unsigned HasTailCall = false;
+
+    // parse optional fields
+    while (EatIfPresent(lltok::comma)) {
+      switch (Lex.getKind()) {
+      case lltok::kw_hotness:
+        Lex.Lex();
         if (parseToken(lltok::colon, "expected ':'") || parseHotness(Hotness))
           return true;
-      } else {
-        if (parseToken(lltok::kw_relbf, "expected relbf") ||
-            parseToken(lltok::colon, "expected ':'") || parseUInt32(RelBF))
+        break;
+      case lltok::kw_relbf:
+        Lex.Lex();
+        if (parseToken(lltok::colon, "expected ':'") || parseUInt32(RelBF))
           return true;
+        break;
+      case lltok::kw_tail:
+        Lex.Lex();
+        if (parseToken(lltok::colon, "expected ':'") || parseFlag(HasTailCall))
+          return true;
+        break;
+      default:
+        return error(Lex.getLoc(), "expected hotness, relbf, or tail");
       }
     }
+    if (Hotness != CalleeInfo::HotnessType::Unknown && RelBF > 0)
+      return tokError("Expected only one of hotness or relbf");
     // Keep track of the Call array index needing a forward reference.
     // We will save the location of the ValueInfo needing an update, but
     // can only do so once the std::vector is finalized.
     if (VI.getRef() == FwdVIRef)
       IdToIndexMap[GVId].push_back(std::make_pair(Calls.size(), Loc));
-    Calls.push_back(FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, RelBF)});
+    Calls.push_back(
+        FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, HasTailCall, RelBF)});
 
     if (parseToken(lltok::rparen, "expected ')' in call"))
       return true;
@@ -9775,7 +9828,7 @@ bool LLParser::parseGVReference(ValueInfo &VI, unsigned &GVId) {
 
   GVId = Lex.getUIntVal();
   // Check if we already have a VI for this GV
-  if (GVId < NumberedValueInfos.size()) {
+  if (GVId < NumberedValueInfos.size() && NumberedValueInfos[GVId]) {
     assert(NumberedValueInfos[GVId].getRef() != FwdVIRef);
     VI = NumberedValueInfos[GVId];
   } else

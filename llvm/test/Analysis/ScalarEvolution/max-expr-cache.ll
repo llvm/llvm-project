@@ -92,7 +92,7 @@ define void @smax(i32 %tmp3) {
 ; CHECK-NEXT:  Loop %bb53: symbolic max backedge-taken count is (-1 + (zext i32 (0 smax %tmp49) to i64) + (-1 * undef))
 ; CHECK-NEXT:  Loop %bb53: Predicated backedge-taken count is (-1 + (zext i32 (0 smax %tmp49) to i64) + (-1 * undef))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb53: Trip multiple is 1
+; CHECK-NEXT:  Loop %bb53: Trip multiple is 1
 ; CHECK-NEXT:  Loop %bb4: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %bb4: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %bb4: Unpredictable symbolic max backedge-taken count.
@@ -254,7 +254,7 @@ define void @umax(i32 %tmp3) {
 ; CHECK-NEXT:  Loop %bb53: symbolic max backedge-taken count is (-1 + (zext i32 %tmp49 to i64) + (-1 * undef))
 ; CHECK-NEXT:  Loop %bb53: Predicated backedge-taken count is (-1 + (zext i32 %tmp49 to i64) + (-1 * undef))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb53: Trip multiple is 1
+; CHECK-NEXT:  Loop %bb53: Trip multiple is 1
 ; CHECK-NEXT:  Loop %bb4: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %bb4: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %bb4: Unpredictable symbolic max backedge-taken count.

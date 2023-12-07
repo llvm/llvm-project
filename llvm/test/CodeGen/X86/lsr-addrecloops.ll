@@ -68,25 +68,25 @@ vector.body807:                                   ; preds = %vector.body807, %ve
   %niter = phi i64 [ 0, %vector.body807.preheader.new ], [ %niter.next.7, %vector.body807 ]
   %uglygep1197 = getelementptr i8, ptr %lsr.iv1135, i64 %lsr.iv1194
   store <8 x float> zeroinitializer, ptr %uglygep1197, align 4
-  %lsr.iv.next1195 = or i64 %lsr.iv1194, 1
+  %lsr.iv.next1195 = or disjoint i64 %lsr.iv1194, 1
   %uglygep1197.1 = getelementptr i8, ptr %lsr.iv1135, i64 %lsr.iv.next1195
   store <8 x float> zeroinitializer, ptr %uglygep1197.1, align 4
-  %lsr.iv.next1195.1 = or i64 %lsr.iv1194, 2
+  %lsr.iv.next1195.1 = or disjoint i64 %lsr.iv1194, 2
   %uglygep1197.2 = getelementptr i8, ptr %lsr.iv1135, i64 %lsr.iv.next1195.1
   store <8 x float> zeroinitializer, ptr %uglygep1197.2, align 4
-  %lsr.iv.next1195.2 = or i64 %lsr.iv1194, 3
+  %lsr.iv.next1195.2 = or disjoint i64 %lsr.iv1194, 3
   %uglygep1197.3 = getelementptr i8, ptr %lsr.iv1135, i64 %lsr.iv.next1195.2
   store <8 x float> zeroinitializer, ptr %uglygep1197.3, align 4
-  %lsr.iv.next1195.3 = or i64 %lsr.iv1194, 4
+  %lsr.iv.next1195.3 = or disjoint i64 %lsr.iv1194, 4
   %uglygep1197.4 = getelementptr i8, ptr %lsr.iv1135, i64 %lsr.iv.next1195.3
   store <8 x float> zeroinitializer, ptr %uglygep1197.4, align 4
-  %lsr.iv.next1195.4 = or i64 %lsr.iv1194, 5
+  %lsr.iv.next1195.4 = or disjoint i64 %lsr.iv1194, 5
   %uglygep1197.5 = getelementptr i8, ptr %lsr.iv1135, i64 %lsr.iv.next1195.4
   store <8 x float> zeroinitializer, ptr %uglygep1197.5, align 4
-  %lsr.iv.next1195.5 = or i64 %lsr.iv1194, 6
+  %lsr.iv.next1195.5 = or disjoint i64 %lsr.iv1194, 6
   %uglygep1197.6 = getelementptr i8, ptr %lsr.iv1135, i64 %lsr.iv.next1195.5
   store <8 x float> zeroinitializer, ptr %uglygep1197.6, align 4
-  %lsr.iv.next1195.6 = or i64 %lsr.iv1194, 7
+  %lsr.iv.next1195.6 = or disjoint i64 %lsr.iv1194, 7
   %uglygep1197.7 = getelementptr i8, ptr %lsr.iv1135, i64 %lsr.iv.next1195.6
   store <8 x float> zeroinitializer, ptr %uglygep1197.7, align 4
   %lsr.iv.next1195.7 = add i64 %lsr.iv1194, 8
@@ -136,25 +136,25 @@ vector.body847:                                   ; preds = %vector.body847, %ve
   %niter16 = phi i64 [ 0, %vector.body847.preheader.new ], [ %niter16.next.7, %vector.body847 ]
   %uglygep1156 = getelementptr i8, ptr %uglygep11551, i64 %lsr.iv1152
   store <8 x float> zeroinitializer, ptr %uglygep1156, align 4
-  %lsr.iv.next1153 = or i64 %lsr.iv1152, 1
+  %lsr.iv.next1153 = or disjoint i64 %lsr.iv1152, 1
   %uglygep1156.1 = getelementptr i8, ptr %uglygep11551, i64 %lsr.iv.next1153
   store <8 x float> zeroinitializer, ptr %uglygep1156.1, align 4
-  %lsr.iv.next1153.1 = or i64 %lsr.iv1152, 2
+  %lsr.iv.next1153.1 = or disjoint i64 %lsr.iv1152, 2
   %uglygep1156.2 = getelementptr i8, ptr %uglygep11551, i64 %lsr.iv.next1153.1
   store <8 x float> zeroinitializer, ptr %uglygep1156.2, align 4
-  %lsr.iv.next1153.2 = or i64 %lsr.iv1152, 3
+  %lsr.iv.next1153.2 = or disjoint i64 %lsr.iv1152, 3
   %uglygep1156.3 = getelementptr i8, ptr %uglygep11551, i64 %lsr.iv.next1153.2
   store <8 x float> zeroinitializer, ptr %uglygep1156.3, align 4
-  %lsr.iv.next1153.3 = or i64 %lsr.iv1152, 4
+  %lsr.iv.next1153.3 = or disjoint i64 %lsr.iv1152, 4
   %uglygep1156.4 = getelementptr i8, ptr %uglygep11551, i64 %lsr.iv.next1153.3
   store <8 x float> zeroinitializer, ptr %uglygep1156.4, align 4
-  %lsr.iv.next1153.4 = or i64 %lsr.iv1152, 5
+  %lsr.iv.next1153.4 = or disjoint i64 %lsr.iv1152, 5
   %uglygep1156.5 = getelementptr i8, ptr %uglygep11551, i64 %lsr.iv.next1153.4
   store <8 x float> zeroinitializer, ptr %uglygep1156.5, align 4
-  %lsr.iv.next1153.5 = or i64 %lsr.iv1152, 6
+  %lsr.iv.next1153.5 = or disjoint i64 %lsr.iv1152, 6
   %uglygep1156.6 = getelementptr i8, ptr %uglygep11551, i64 %lsr.iv.next1153.5
   store <8 x float> zeroinitializer, ptr %uglygep1156.6, align 4
-  %lsr.iv.next1153.6 = or i64 %lsr.iv1152, 7
+  %lsr.iv.next1153.6 = or disjoint i64 %lsr.iv1152, 7
   %uglygep1156.7 = getelementptr i8, ptr %uglygep11551, i64 %lsr.iv.next1153.6
   store <8 x float> zeroinitializer, ptr %uglygep1156.7, align 4
   %lsr.iv.next1153.7 = add i64 %lsr.iv1152, 8

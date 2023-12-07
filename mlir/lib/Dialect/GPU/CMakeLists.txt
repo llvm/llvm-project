@@ -135,11 +135,15 @@ if(MLIR_ENABLE_CUDA_RUNNER)
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
   )
 
+  # Add link path for the cuda driver library.
   find_library(CUDA_DRIVER_LIBRARY cuda HINTS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES} REQUIRED)
+  get_filename_component(CUDA_DRIVER_LIBRARY_PATH "${CUDA_DRIVER_LIBRARY}" DIRECTORY)
+  target_link_directories(MLIRGPUTransforms PRIVATE ${CUDA_DRIVER_LIBRARY_PATH})
+
   target_link_libraries(MLIRGPUTransforms
     PRIVATE
     MLIRNVVMToLLVMIRTranslation
-    ${CUDA_DRIVER_LIBRARY}
+    cuda
   )
 
 endif()

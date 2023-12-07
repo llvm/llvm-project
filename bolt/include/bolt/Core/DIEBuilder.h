@@ -273,7 +273,8 @@ public:
   void buildCompileUnits(const std::vector<DWARFUnit *> &CUs);
   /// Preventing implicit conversions.
   template <class T> void buildCompileUnits(T) = delete;
-  void buildBoth();
+  /// Builds DWO Unit. For DWARF5 this includes the type units.
+  void buildDWOUnit(DWARFUnit &U);
 
   /// Returns DWARFUnitInfo for DWARFUnit
   DWARFUnitInfo &getUnitInfoByDwarfUnit(const DWARFUnit &DwarfUnit) {

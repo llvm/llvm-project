@@ -136,4 +136,9 @@ program openacc_parallel_loop_validity
     reduction_l = d(i) .neqv. e(i)
   end do
 
+  !$acc parallel loop
+  do i = 1, N
+    if(i == 10) cycle
+  end do
+
 end program openacc_parallel_loop_validity

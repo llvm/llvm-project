@@ -130,6 +130,7 @@ Changes to the RISC-V Backend
 
 * The Zfa extension version was upgraded to 1.0 and is no longer experimental.
 * Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
+* Intrinsics were added for Zk*, Zbb, and Zbc. See https://github.com/riscv-non-isa/riscv-c-api-doc/blob/master/riscv-c-api.md#scalar-bit-manipulation-extension-intrinsics
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -155,6 +156,7 @@ Changes to the X86 Backend
 * Support ISA of ``USER_MSR``.
 * Support ISA of ``AVX10.1-256`` and ``AVX10.1-512``.
 * ``-mcpu=pantherlake`` and ``-mcpu=clearwaterforest`` are now supported.
+* ``-mapxf`` is supported.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -197,6 +199,10 @@ Changes to the C API
   an opaque option structure, as an alternative to ``LLVMCreateTargetMachine``.
   The option structure exposes an additional setting (i.e., the target ABI) and
   provides default values for unspecified settings.
+
+* Added ``LLVMGetNNeg`` and ``LLVMSetNNeg`` for getting/setting the new nneg flag
+  on zext instructions, and ``LLVMGetIsDisjoint`` and ``LLVMSetIsDisjoint``
+  for getting/setting the new disjoint flag on or instructions.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -257,6 +263,13 @@ Changes to LLDB
   (SME) and Scalable Matrix Extension 2 (SME2) for both live processes and core
   files. For details refer to the
   `AArch64 Linux documentation <https://lldb.llvm.org/use/aarch64-linux.html>`_.
+* LLDB now supports symbol and binary acquisition automatically using the
+  DEBUFINFOD protocol. The standard mechanism of specifying DEBUFINOD servers in
+  the ``DEBUGINFOD_URLS`` environment variable is used by default. In addition,
+  users can specify servers to request symbols from using the LLDB setting
+  ``plugin.symbol-locator.debuginfod.server_urls``, override or adding to the
+  environment variable.
+
 
 * When running on AArch64 Linux, ``lldb-server`` now provides register
   field information for the following registers: ``cpsr``, ``fpcr``,

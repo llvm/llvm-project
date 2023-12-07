@@ -24,7 +24,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <16 x i64> [[TMP10]], [[VEC_IND3]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [10 x i32], <16 x ptr> [[TMP11]], <16 x i64> [[TMP12]], i64 0
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>, <16 x ptr> [[TMP13]], i32 16, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-; CHECK-NEXT:    [[TMP14:%.*]] = or <16 x i64> [[VEC_IND3]], <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
+; CHECK-NEXT:    [[TMP14:%.*]] = or disjoint <16 x i64> [[VEC_IND3]], <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
 ; CHECK-NEXT:    [[TMP15:%.*]] = add nsw <16 x i64> [[TMP10]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [10 x i32], <16 x ptr> [[TMP11]], <16 x i64> [[TMP15]], i64 0
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>, <16 x ptr> [[TMP16]], i32 8, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
@@ -64,7 +64,7 @@ for.body.us:                                      ; preds = %for.body.us.prehead
 
 for.body5.us.us48.preheader:                      ; preds = %for.body.us
   store i32 8, ptr %arraydecay.us.us.us, align 16
-  %indvars.iv.next66 = or i64 %indvars.iv70, 1
+  %indvars.iv.next66 = or disjoint i64 %indvars.iv70, 1
   %6 = add nsw i64 %4, %indvars.iv.next66
   %arraydecay.us.us55.1 = getelementptr inbounds [10 x i32], ptr %add.ptr.us, i64 %6, i64 0
   store i32 8, ptr %arraydecay.us.us55.1, align 8
@@ -72,7 +72,7 @@ for.body5.us.us48.preheader:                      ; preds = %for.body.us
 
 for.body5.us.us.us.preheader:                     ; preds = %for.body.us
   store i32 7, ptr %arraydecay.us.us.us, align 16
-  %indvars.iv.next73 = or i64 %indvars.iv70, 1
+  %indvars.iv.next73 = or disjoint i64 %indvars.iv70, 1
   %7 = add nsw i64 %4, %indvars.iv.next73
   %arraydecay.us.us.us.1 = getelementptr inbounds [10 x i32], ptr %add.ptr.us, i64 %7, i64 0
   store i32 7, ptr %arraydecay.us.us.us.1, align 8
@@ -101,7 +101,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %9 = add nsw i64 %8, %indvars.iv87
   %arraydecay.us31 = getelementptr inbounds [10 x i32], ptr %add.ptr, i64 %9, i64 0
   store i32 8, ptr %arraydecay.us31, align 16
-  %indvars.iv.next90 = or i64 %indvars.iv87, 1
+  %indvars.iv.next90 = or disjoint i64 %indvars.iv87, 1
   %10 = add nsw i64 %8, %indvars.iv.next90
   %arraydecay.us31.1 = getelementptr inbounds [10 x i32], ptr %add.ptr, i64 %10, i64 0
   store i32 8, ptr %arraydecay.us31.1, align 8

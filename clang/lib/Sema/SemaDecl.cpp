@@ -442,7 +442,6 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   UsingShadowDecl *FoundUsingShadow = nullptr;
   switch (Result.getResultKind()) {
   case LookupResult::NotFound:
-  case LookupResult::NotFoundInCurrentInstantiation:
     if (CorrectedII) {
       TypeNameValidatorCCC CCC(/*AllowInvalid=*/true, isClassName,
                                AllowDeducedTemplate);
@@ -482,7 +481,19 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
         }
       }
     }
-    // If typo correction failed or was not performed, fall through
+    Result.suppressDiagnostics();
+    return nullptr;
+  case LookupResult::NotFoundInCurrentInstantiation:
+    if (AllowImplicitTypename == ImplicitTypenameContext::Yes) {
+      QualType T = Context.getDependentNameType(ElaboratedTypeKeyword::None,
+                                                SS->getScopeRep(), &II);
+      TypeLocBuilder TLB;
+      DependentNameTypeLoc TL = TLB.push<DependentNameTypeLoc>(T);
+      TL.setElaboratedKeywordLoc(SourceLocation());
+      TL.setQualifierLoc(SS->getWithLocInContext(Context));
+      TL.setNameLoc(NameLoc);
+      return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
+    }
     [[fallthrough]];
   case LookupResult::FoundOverloaded:
   case LookupResult::FoundUnresolvedValue:
@@ -3373,6 +3384,26 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
            diag::note_carries_dependency_missing_first_decl) << 1/*Param*/;
   }
 
+  // HLSL parameter declarations for inout and out must match between
+  // declarations. In HLSL inout and out are ambiguous at the call site, but
+  // have different calling behavior, so you cannot overload a method based on a
+  // difference between inout and out annotations.
+  if (S.getLangOpts().HLSL) {
+    const auto *NDAttr = newDecl->getAttr<HLSLParamModifierAttr>();
+    const auto *ODAttr = oldDecl->getAttr<HLSLParamModifierAttr>();
+    // We don't need to cover the case where one declaration doesn't have an
+    // attribute. The only possible case there is if one declaration has an `in`
+    // attribute and the other declaration has no attribute. This case is
+    // allowed since parameters are `in` by default.
+    if (NDAttr && ODAttr &&
+        NDAttr->getSpellingListIndex() != ODAttr->getSpellingListIndex()) {
+      S.Diag(newDecl->getLocation(), diag::err_hlsl_param_qualifier_mismatch)
+          << NDAttr << newDecl;
+      S.Diag(oldDecl->getLocation(), diag::note_previous_declaration_as)
+          << ODAttr;
+    }
+  }
+
   if (!oldDecl->hasAttrs())
     return;
 
@@ -5940,7 +5971,7 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
            diag::err_deduction_guide_name_not_class_template)
         << (int)getTemplateNameKindForDiagnostics(TN) << TN;
       if (Template)
-        Diag(Template->getLocation(), diag::note_template_decl_here);
+        NoteTemplateLocation(*Template);
       return DeclarationNameInfo();
     }
 

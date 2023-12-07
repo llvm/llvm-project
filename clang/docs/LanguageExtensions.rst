@@ -2821,7 +2821,7 @@ Example output:
 
 The ``__builtin_dump_struct`` function is used to print the fields of a simple
 structure and their values for debugging purposes. The first argument of the
-builtin should be a pointer to the struct to dump. The second argument ``f``
+builtin should be a pointer to a complete record type to dump. The second argument ``f``
 should be some callable expression, and can be a function object or an overload
 set. The builtin calls ``f``, passing any further arguments ``args...``
 followed by a ``printf``-compatible format string and the corresponding
@@ -4629,6 +4629,22 @@ The pragma can take two values: ``on`` and ``off``.
     float v = t + z;
   }
 
+``#pragma clang fp reciprocal`` allows control over using reciprocal
+approximations in floating point expressions. When enabled, this
+pragma allows the expression ``x / y`` to be approximated as ``x *
+(1.0 / y)``.  This pragma can be used to disable reciprocal
+approximation when it is otherwise enabled for the translation unit
+with the ``-freciprocal-math`` flag or other fast-math options. The
+pragma can take two values: ``on`` and ``off``.
+
+.. code-block:: c++
+
+  float f(float x, float y)
+  {
+    // Enable floating point reciprocal approximation
+    #pragma clang fp reciprocal(on)
+    return x / y;
+  }
 
 ``#pragma clang fp contract`` specifies whether the compiler should
 contract a multiply and an addition (or subtraction) into a fused FMA

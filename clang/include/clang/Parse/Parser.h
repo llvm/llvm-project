@@ -3532,8 +3532,18 @@ public:
   /// Placeholder for now, should just ignore the directives after emitting a
   /// diagnostic. Eventually will be split into a few functions to parse
   /// different situations.
+public:
   DeclGroupPtrTy ParseOpenACCDirectiveDecl();
   StmtResult ParseOpenACCDirectiveStmt();
+
+private:
+  void ParseOpenACCDirective();
+  /// Helper that parses an ID Expression based on the language options.
+  ExprResult ParseOpenACCIDExpression();
+  /// Parses the variable list for the `cache` construct.
+  void ParseOpenACCCacheVarList();
+  /// Parses a single variable in a variable list for the 'cache' construct.
+  bool ParseOpenACCCacheVar();
 
 private:
   //===--------------------------------------------------------------------===//

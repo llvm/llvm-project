@@ -2411,7 +2411,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
     // it's use count.
     Instruction *InsertPt = nullptr;
     if (auto *BitPosI = dyn_cast<Instruction>(BitPos))
-      InsertPt = BitPosI->getInsertionPointAfterDef();
+      InsertPt = &**BitPosI->getInsertionPointAfterDef();
     else
       InsertPt = &*DT->getRoot()->getFirstNonPHIOrDbgOrAlloca();
     if (!InsertPt)

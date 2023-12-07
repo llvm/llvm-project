@@ -143,7 +143,13 @@ bool Document::readFromBlob(
     // On to next element (or key if doing a map key next).
     // Read the value.
     Object Obj;
-    if (!MPReader.read(Obj)) {
+    Expected<bool> ReadObj = MPReader.read(Obj);
+    if (!ReadObj) {
+      // FIXME: Propagate the Error to the caller.
+      consumeError(ReadObj.takeError());
+      return false;
+    }
+    if (!ReadObj.get()) {
       if (Multi && Stack.size() == 1) {
         // OK to finish here as we've just done a top-level element with Multi
         break;

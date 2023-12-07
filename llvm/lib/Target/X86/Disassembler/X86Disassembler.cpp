@@ -150,6 +150,9 @@ static InstrUID decode(OpcodeType type, InstructionContext insnContext,
     dec =
         &THREEDNOW_MAP_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
     break;
+  case MAP4:
+    dec = &MAP4_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
+    break;
   case MAP5:
     dec = &MAP5_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
     break;
@@ -929,6 +932,9 @@ static bool readOpcode(struct InternalInstruction *insn) {
     case VEX_LOB_0F3A:
       insn->opcodeType = THREEBYTE_3A;
       return consume(insn, insn->opcode);
+    case VEX_LOB_MAP4:
+      insn->opcodeType = MAP4;
+      return consume(insn, insn->opcode);
     case VEX_LOB_MAP5:
       insn->opcodeType = MAP5;
       return consume(insn, insn->opcode);
@@ -1099,6 +1105,9 @@ static int getInstructionIDWithAttrMask(uint16_t *instructionID,
     break;
   case THREEDNOW_MAP:
     decision = &THREEDNOW_MAP_SYM;
+    break;
+  case MAP4:
+    decision = &MAP4_SYM;
     break;
   case MAP5:
     decision = &MAP5_SYM;
