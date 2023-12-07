@@ -46,7 +46,7 @@ struct MLIRToLLVMPassPipelineConfig {
   llvm::codegenoptions::DebugInfoKind DebugInfo =
       llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
   llvm::FramePointerKind FramePointerKind = 
-      llvm::FramePointerKind::None;
+      llvm::FramePointerKind::None; ///< Add frame pointer to functions.
   unsigned VScaleMin = 0; ///< SVE vector range minimum.
   unsigned VScaleMax = 0; ///< SVE vector range maximum.
 };

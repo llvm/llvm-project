@@ -87,8 +87,7 @@ fir::createFunctionAttrPass(fir::FunctionAttrTypes &functionAttr) {
         mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
     break;
   case llvm::FramePointerKind::All:
-    opts.framePointerKind =
-        mlir::LLVM::framePointerKind::FramePointerKind::All;
+    opts.framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
     break;
   }
 
