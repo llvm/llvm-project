@@ -112,6 +112,7 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_64BIT_ADSIZE:
     return (noPrefix && inheritsFrom(child, IC_64BIT_OPSIZE_ADSIZE, noPrefix));
   case IC_64BIT_OPSIZE_ADSIZE:
+  case IC_EVEX_OPSIZE_ADSIZE:
     return false;
   case IC_XD:
     return inheritsFrom(child, IC_64BIT_XD);
@@ -885,7 +886,10 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
   for (unsigned index = 0; index < ATTR_max; ++index) {
     o.indent(i * 2);
 
-    if ((index & ATTR_EVEX) || (index & ATTR_VEX) || (index & ATTR_VEXL)) {
+    if ((index & ATTR_EVEX) && (index & ATTR_64BIT) &&
+        (index & ATTR_OPSIZE) && (index & ATTR_ADSIZE))
+      o << "IC_EVEX_OPSIZE_ADSIZE";
+    else if ((index & ATTR_EVEX) || (index & ATTR_VEX) || (index & ATTR_VEXL)) {
       if (index & ATTR_EVEX)
         o << "IC_EVEX";
       else
@@ -905,8 +909,8 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
         o << "_XD";
       else if (index & ATTR_XS)
         o << "_XS";
-
-      if ((index & ATTR_EVEX)) {
+      
+      if (index & ATTR_EVEX) {
         if (index & ATTR_EVEXKZ)
           o << "_KZ";
         else if (index & ATTR_EVEXK)

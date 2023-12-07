@@ -1175,6 +1175,8 @@ static int getInstructionID(struct InternalInstruction *insn,
         attrMask |= ATTR_VEXL;
       if (l2FromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXL2;
+      if (insn->hasAdSize)
+        attrMask |= ATTR_ADSIZE;
     } else if (insn->vectorExtensionType == TYPE_VEX_3B) {
       switch (ppFromVEX3of3(insn->vectorExtensionPrefix[2])) {
       case VEX_PREFIX_66:

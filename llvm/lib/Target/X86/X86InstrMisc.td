@@ -1524,15 +1524,15 @@ def MOVDIR64B16 : I<0xF8, MRMSrcMem, (outs), (ins GR16:$dst, i512mem_GR16:$src),
 def MOVDIR64B32 : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
                     "movdir64b\t{$src, $dst|$dst, $src}",
                     [(int_x86_movdir64b GR32:$dst, addr:$src)]>,
-                   T8PD, AdSize32, Requires<[HasMOVDIR64B]>;
+                   T8PD, AdSize32, Requires<[HasMOVDIR64B, NoEGPR]>;
 def MOVDIR64B64 : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
                     "movdir64b\t{$src, $dst|$dst, $src}",
                     [(int_x86_movdir64b GR64:$dst, addr:$src)]>,
-                   T8PD, AdSize64, Requires<[HasMOVDIR64B, In64BitMode]>;
+                   T8PD, AdSize64, Requires<[HasMOVDIR64B, NoEGPR, In64BitMode]>;
 def MOVDIR64B32_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
                          "movdir64b\t{$src, $dst|$dst, $src}",
                          [(int_x86_movdir64b GR32:$dst, addr:$src)]>,
-                       EVEX_NoCD8, T_MAP4PD, AdSize32, Requires<[HasMOVDIR64B, NoEGPR]>;
+                       EVEX_NoCD8, T_MAP4PD, AdSize32, Requires<[HasMOVDIR64B, HasEGPR, In64BitMode]>;
 def MOVDIR64B64_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
                          "movdir64b\t{$src, $dst|$dst, $src}",
                          [(int_x86_movdir64b GR64:$dst, addr:$src)]>,

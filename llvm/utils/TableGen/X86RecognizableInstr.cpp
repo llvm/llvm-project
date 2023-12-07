@@ -267,7 +267,7 @@ InstructionContext RecognizableInstr::insnContext() const {
     // No L, no W
     else if (OpPrefix == X86Local::PD) {
       if(AdSize == X86Local::AdSize32)
-        insnContext = IC_64BIT_OPSIZE_ADSIZE;
+        insnContext = IC_EVEX_OPSIZE_ADSIZE;
       else
         insnContext = EVEX_KB(IC_EVEX_OPSIZE);
     }
