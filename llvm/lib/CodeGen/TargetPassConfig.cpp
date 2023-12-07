@@ -52,6 +52,7 @@
 #include "llvm/Transforms/Yk/ControlPoint.h"
 #include "llvm/Transforms/Yk/Linkage.h"
 #include "llvm/Transforms/Yk/ShadowStack.h"
+#include "llvm/Transforms/Yk/SplitBlocksAfterCalls.h"
 #include "llvm/Transforms/Yk/Stackmaps.h"
 #include "llvm/Transforms/Yk/NoCallsInEntryBlocks.h"
 #include <cassert>
@@ -286,6 +287,10 @@ static cl::opt<bool>
 static cl::opt<bool>
     YkNoCallsInEntryBlocks("yk-no-calls-in-entryblocks", cl::init(false), cl::NotHidden,
                       cl::desc("Ensure there are no calls in the entryblock."));
+
+static cl::opt<bool>
+    YkSplitBlocksAfterCalls("yk-split-blocks-after-calls", cl::init(false), cl::NotHidden,
+                      cl::desc("Split blocks after function calls."));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -1160,6 +1165,16 @@ bool TargetPassConfig::addISelPasses() {
 
   if (YkLinkage) {
     addPass(createYkLinkagePass());
+  }
+
+  if (YkSplitBlocksAfterCalls) {
+    if (!YkNoCallsInEntryBlocks) {
+      // YKFIXME: Merge the two passes together. Then modify the control point
+      // pass to make sure we split the block right after the control point, as
+      // we can no longer rely on this pass to do so.
+      report_fatal_error("--yk-split-blocks-after-calls requires --yk-no-calls-in-entryblocks.");
+    }
+    addPass(createYkSplitBlocksAfterCallsPass());
   }
 
   if (YkInsertStackMaps) {

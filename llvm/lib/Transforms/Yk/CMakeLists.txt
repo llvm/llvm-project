@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMYkPasses
   StackMaps.cpp
   ShadowStack.cpp
   NoCallsInEntryBlocks.cpp
+  SplitBlocksAfterCalls.cpp
 
   DEPENDS
   intrinsics_gen
