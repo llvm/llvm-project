@@ -690,7 +690,9 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     return getOpTypeArray(Ty->getArrayNumElements(), El, MIRBuilder, EmitIR);
   }
   if (auto SType = dyn_cast<StructType>(Ty)) {
-    return getOpTypeOpaque(SType, MIRBuilder);
+    if (SType->isOpaque())
+      return getOpTypeOpaque(SType, MIRBuilder);
+    return getOpTypeStruct(SType, MIRBuilder, EmitIR);
   }
   if (auto FType = dyn_cast<FunctionType>(Ty)) {
     SPIRVType *RetTy = findSPIRVType(FType->getReturnType(), MIRBuilder);
