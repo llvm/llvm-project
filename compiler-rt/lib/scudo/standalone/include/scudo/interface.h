@@ -23,11 +23,10 @@ __attribute__((weak)) void __scudo_deallocate_hook(void *ptr);
 // `realloc` involves both deallocation and allocation but they are not reported
 // atomically. In one specific case which may keep taking a snapshot right in
 // the middle of `realloc` reporting the deallocation and allocation, it may
-// confuse the user by the missing memory from `realloc`. To alleviate that
-// case, define the two `realloc` hooks to get the knowledge of the bundled hook
-// calls. This hooks are optional and only used when you are pretty likely to
-// hit that specific case. Otherwise, the two general hooks above are pretty
-// sufficient for the most cases.
+// confuse the user by missing memory from `realloc`. To alleviate that case,
+// define the two `realloc` hooks to get the knowledge of the bundled hook
+// calls. These hooks are optional and should only be used when a hooks user
+// wants to track reallocs more closely.
 //
 // See more details in the comment of `realloc` in wrapper_c.inc.
 __attribute__((weak)) void
