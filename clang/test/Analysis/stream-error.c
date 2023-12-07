@@ -299,12 +299,12 @@ void error_fseek_0(void) {
   fclose(F);
 }
 
-void error_fflush(void) {
+void error_fflush_0(void) {
   FILE *F = tmpfile();
   int Ret;
   fflush(NULL);                      // no-warning
   if (!F) {
-    if ((Ret = fflush(F)) != EOF)    // no-warning
+    if ((Ret = fflush(F)) != EOF)
       clang_analyzer_eval(Ret == 0); // expected-warning {{TRUE}}
     return;
   }
@@ -312,6 +312,45 @@ void error_fflush(void) {
     clang_analyzer_eval(Ret == EOF); // expected-warning {{TRUE}}
   fclose(F);
   fflush(F);                         // expected-warning {{Stream might be already closed}}
+}
+
+void error_fflush_1(void) {
+  FILE *F0 = tmpfile(), *F1 = tmpfile(), *F2 = tmpfile(), *F3 = tmpfile();
+  // `fflush` clears a non-EOF stream's error state.
+  if (F0) {
+    StreamTesterChecker_make_ferror_stream(F0);
+    if (fflush(F0) == 0) {             // no-warning
+      clang_analyzer_eval(ferror(F0)); // expected-warning {{FALSE}}
+      clang_analyzer_eval(feof(F0));   // expected-warning {{FALSE}}
+    }
+    fclose(F0);
+  }
+  // `fflush` clears an EOF stream's error state.
+  if (F1) {
+    StreamTesterChecker_make_ferror_stream(F1);
+    StreamTesterChecker_make_feof_stream(F1);
+    if (fflush(F1) == 0) {             // no-warning
+      clang_analyzer_eval(ferror(F1)); // expected-warning {{FALSE}}
+      clang_analyzer_eval(feof(F1));   // expected-warning {{TRUE}}
+    }
+    fclose(F1);
+  }
+  // `fflush` clears all stream's error states, while retains their EOF states.
+  if (F2 && F3) {
+    StreamTesterChecker_make_ferror_stream(F2);
+    StreamTesterChecker_make_ferror_stream(F3);
+    StreamTesterChecker_make_feof_stream(F3);
+    if (fflush(NULL) == 0) {           // no-warning
+      clang_analyzer_eval(ferror(F2)); // expected-warning {{FALSE}}
+      clang_analyzer_eval(feof(F2));   // expected-warning {{FALSE}}
+      clang_analyzer_eval(ferror(F3)); // expected-warning {{FALSE}}
+      clang_analyzer_eval(feof(F3));   // expected-warning {{TRUE}}
+    }
+  }
+  if (F2)
+    fclose(F2);
+  if (F3)
+    fclose(F3);
 }
 
 void error_indeterminate(void) {

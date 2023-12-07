@@ -1204,42 +1204,77 @@ void StreamChecker::preFflush(const FnDescription *Desc, const CallEvent &Call,
   ProgramStateRef State = C.getState();
   SVal StreamVal = getStreamArg(Desc, Call);
   std::optional<DefinedSVal> Stream = StreamVal.getAs<DefinedSVal>();
-  if (!Stream)
+  SymbolRef StreamSym = StreamVal.getAsSymbol();
+  if (!Stream || !StreamSym)
     return;
 
-  ConstraintManager::ProgramStatePair SP =
+  ProgramStateRef StateNotNull, StateNull;
+  std::tie(StateNotNull, StateNull) =
       C.getConstraintManager().assumeDual(State, *Stream);
-  if (State = SP.first)
-    if (State = ensureStreamOpened(StreamVal, C, State))
-      C.addTransition(State);
+  if (StateNotNull) {
+    if (StateNotNull = ensureStreamOpened(StreamVal, C, StateNotNull))
+      C.addTransition(StateNotNull);
+  } else if (StateNull) {
+    const StreamState *SS = StateNull->get<StreamMap>(StreamSym);
+    if (!SS || !SS->isOpenFailed()) {
+      StateNull = StateNull->set<StreamMap>(StreamSym,
+                                            StreamState::getOpenFailed(Desc));
+      if (StateNull)
+        C.addTransition(StateNull);
+    }
+  }
 }
 
 void StreamChecker::evalFflush(const FnDescription *Desc, const CallEvent &Call,
                                CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-
-  // We will check the result even if the input is `NULL`,
-  // but do nothing if the input state is unknown.
   SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
+  const StreamState *SS = nullptr;
+
+  // Skip if the input stream's state is unknown.
+  // FIXME: We should skip non-NULL constant, such as `(FILE *) 0x1234`.
   if (StreamSym) {
-    const StreamState *OldSS = State->get<StreamMap>(StreamSym);
-    if (!OldSS)
+    if (!(SS = State->get<StreamMap>(StreamSym)))
       return;
-    assertStreamStateOpened(OldSS);
+    assert((SS->isOpened() || SS->isOpenFailed()) &&
+           "Stream is expected to opened or open-failed");
   }
 
   const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
   if (!CE)
     return;
 
-  // `fflush` returns 0 on success, otherwise returns EOF.
-  ProgramStateRef StateNotFailed = bindInt(0, State, C, CE);
+  // `fflush` returns EOF on failure, otherwise returns 0.
   ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
-
-  // This function does not affect the stream state.
-  // Still we add success and failure state with the appropriate return value.
-  C.addTransition(StateNotFailed);
   C.addTransition(StateFailed);
+
+  // Clear error states if `fflush` returns 0, but retain their EOF flags.
+  ProgramStateRef StateNotFailed = bindInt(0, State, C, CE);
+  auto ClearError = [&StateNotFailed, Desc](SymbolRef Sym,
+                                            const StreamState *SS) {
+    if (SS->ErrorState & ErrorFError) {
+      StreamErrorState NewES =
+          (SS->ErrorState & ErrorFEof) ? ErrorFEof : ErrorNone;
+      StreamState NewSS = StreamState::getOpened(Desc, NewES, false);
+      StateNotFailed = StateNotFailed->set<StreamMap>(Sym, NewSS);
+    }
+  };
+
+  if (SS && SS->isOpened()) {
+    // We only clear current stream's error state.
+    ClearError(StreamSym, SS);
+    C.addTransition(StateNotFailed);
+  } else {
+    // We clear error states for all streams.
+    const StreamMapTy &Map = StateNotFailed->get<StreamMap>();
+    for (const auto &I : Map) {
+      SymbolRef Sym = I.first;
+      const StreamState &SS = I.second;
+      if (SS.isOpened())
+        ClearError(Sym, &SS);
+    }
+    C.addTransition(StateNotFailed);
+  }
 }
 
 ProgramStateRef
