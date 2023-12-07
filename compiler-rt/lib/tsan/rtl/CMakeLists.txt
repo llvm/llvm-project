@@ -245,7 +245,6 @@ else()
         ARCHS ${arch}
         SOURCES tsan_interface_avx2.cpp
         ADDITIONAL_HEADERS tsan_interface_avx2.h 
-        #CFLAGS ${TSAN_RTL_CFLAGS} $<IF:"$COMPILER_RT_HAS_MAVX2_FLAG","-mavx2","">)
         CFLAGS ${TSAN_RTL_CFLAGS} $<IF:$<BOOL:${COMPILER_RT_HAS_MAVX2_FLAG}>,-mavx2,"">)
     add_compiler_rt_object_libraries(RTTSanAVX512
         ARCHS ${arch}
