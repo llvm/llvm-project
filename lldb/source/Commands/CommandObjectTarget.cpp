@@ -1706,16 +1706,16 @@ static size_t LookupTypeInModule(Target *target,
                                  CommandInterpreter &interpreter, Stream &strm,
                                  Module *module, const char *name_cstr,
                                  bool name_is_regex) {
-  TypeList type_list;
   if (module && name_cstr && name_cstr[0]) {
-    const uint32_t max_num_matches = UINT32_MAX;
-    bool name_is_fully_qualified = false;
+    TypeQuery query(name_cstr);
+    TypeResults results;
+    module->FindTypes(query, results);
 
-    ConstString name(name_cstr);
-    llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-    module->FindTypes(name, name_is_fully_qualified, max_num_matches,
-                      searched_symbol_files, type_list);
-
+    TypeList type_list;
+    SymbolContext sc;
+    if (module)
+      sc.module_sp = module->shared_from_this();
+    sc.SortTypeList(results.GetTypeMap(), type_list);
     if (type_list.Empty())
       return 0;
 
@@ -1748,22 +1748,21 @@ static size_t LookupTypeInModule(Target *target,
       }
       strm.EOL();
     }
+    return type_list.GetSize();
   }
-  return type_list.GetSize();
+  return 0;
 }
 
 static size_t LookupTypeHere(Target *target, CommandInterpreter &interpreter,
                              Stream &strm, Module &module,
                              const char *name_cstr, bool name_is_regex) {
+  TypeQuery query(name_cstr);
+  TypeResults results;
+  module.FindTypes(query, results);
   TypeList type_list;
-  const uint32_t max_num_matches = UINT32_MAX;
-  bool name_is_fully_qualified = false;
-
-  ConstString name(name_cstr);
-  llvm::DenseSet<SymbolFile *> searched_symbol_files;
-  module.FindTypes(name, name_is_fully_qualified, max_num_matches,
-                   searched_symbol_files, type_list);
-
+  SymbolContext sc;
+  sc.module_sp = module.shared_from_this();
+  sc.SortTypeList(results.GetTypeMap(), type_list);
   if (type_list.Empty())
     return 0;
 

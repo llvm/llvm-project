@@ -12,32 +12,31 @@ class UniqueTypesTestCase4(TestBase):
     def do_test(self, debug_flags):
         """Test that we display the correct template instantiation."""
         self.build(dictionary=debug_flags)
+        exe = self.getBuildArtifact("a.out")
+        print(exe)
         lldbutil.run_to_source_breakpoint(
             self, "// Set breakpoint here", lldb.SBFileSpec("main.cpp")
         )
         # FIXME: these should successfully print the values
         self.expect(
-            "expression ns::Foo<double>::value", substrs=["no member named"], error=True
+            "print ns::Foo<double>::value", substrs=["no template named 'Foo' in namespace 'ns'"], error=True
         )
         self.expect(
-            "expression ns::Foo<int>::value", substrs=["no member named"], error=True
+            "print ns::Foo<int>::value", substrs=["no template named 'Foo' in namespace 'ns'"], error=True
         )
         self.expect(
-            "expression ns::Bar<double>::value", substrs=["no member named"], error=True
+            "print ns::Bar<double>::value", substrs=["no template named 'Bar' in namespace 'ns'"], error=True
         )
         self.expect(
-            "expression ns::Bar<int>::value", substrs=["no member named"], error=True
+            "print ns::Bar<int>::value", substrs=["no template named 'Bar' in namespace 'ns'"], error=True
         )
         self.expect(
-            "expression ns::FooDouble::value",
-            substrs=["Couldn't look up symbols"],
-            error=True,
+            "print ns::FooDouble::value", substrs=["(double) 0"]
         )
         self.expect(
-            "expression ns::FooInt::value",
-            substrs=["Couldn't look up symbols"],
-            error=True,
+            "print ns::FooInt::value", substrs=["(int) 0"]
         )
+
 
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "15.0"])
