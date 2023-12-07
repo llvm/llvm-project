@@ -181,6 +181,8 @@ private:
   std::unique_ptr<BinaryAttrs> BA{nullptr};
 };
 
+using Records = llvm::SmallVector<std::shared_ptr<RecordsSlice>, 4>;
+
 } // namespace MachO
 } // namespace llvm
 #endif // LLVM_TEXTAPI_RECORDSLICE_H
