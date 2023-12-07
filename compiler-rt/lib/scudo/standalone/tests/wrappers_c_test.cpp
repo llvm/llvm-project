@@ -90,7 +90,7 @@ __scudo_realloc_allocate_hook(void *OldPtr, void *NewPtr, size_t Size) {
   // Note that this is only used for testing. In general, only one pair of hooks
   // will be invoked in `realloc`. if __scudo_realloc_*_hook are not defined,
   // it'll call the general hooks only. To make the test easier, we call the
-  // general one here so that either case (wether __scudo_realloc_*_hook are
+  // general one here so that either case (whether __scudo_realloc_*_hook are
   // defined) will be verified without separating them into different tests.
   __scudo_allocate_hook(NewPtr, Size);
 }
