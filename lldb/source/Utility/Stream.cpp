@@ -79,7 +79,7 @@ void Stream::PutCStringColorHighlighted(llvm::StringRef text,
   // Only apply color formatting when a pattern is present and both prefix and
   // suffix are specified. In the absence of these conditions, output the text
   // without color formatting.
-  if (pattern.empty() || prefix.empty() || suffix.empty()) {
+  if (pattern.empty() || (prefix.empty() && suffix.empty())) {
     PutCString(text);
     return;
   }

@@ -38,3 +38,17 @@
 # RUN: %lldb %t -b -o 'settings set use-color true' -o 'settings set show-regex-match-ansi-prefix ${ansi.fg.green}' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK8
 # CHECK8:         Name: {{.+}}32mma{{.+}}0min.c
 
+# Checking for functionality when there's prefix but no suffix
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'settings set show-regex-match-ansi-prefix ${ansi.fg.red}' -o 'settings set show-regex-match-ansi-suffix ""' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK9
+# CHECK9:         Name: {{.+}}31mmain.c
+
+# Checking for functionality when there's suffix but no prefix
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'settings set show-regex-match-ansi-prefix ""' -o 'settings set show-regex-match-ansi-suffix ${ansi.fg.red}' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK10
+# CHECK10:         Name: ma{{.+}}31min.c
+
+# Checking for no colorization when there's neither suffix nor prefix
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'settings set show-regex-match-ansi-prefix ""' -o 'settings set show-regex-match-ansi-suffix ""' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK11
+# CHECK11:         Name: main.c
