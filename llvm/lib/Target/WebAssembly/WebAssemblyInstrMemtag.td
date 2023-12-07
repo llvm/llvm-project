@@ -14,7 +14,7 @@
 defm MEMORY_RANDOMTAG: I<(outs I64:$dst), (ins I64:$src),
                     (outs), (ins),
                     [(set I64:$dst,
-		    	(int_wasm_memory_randomtag (WebAssemblyWrapper I64:$src)))],
+		    	(int_wasm_memory_randomtag I64:$src))],
                     "memory.randomtag\t$dst, $src",
                     "memory.randomtag\t",
                     0xfc12, true>;

@@ -77,10 +77,6 @@ def int_wasm_table_fill_funcref :
                         [llvm_table_ty, llvm_i32_ty, llvm_funcref_ty,
                          llvm_i32_ty], []>;
 
-def int_wasm_memory_randomtag :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty],
-                        [llvm_ptr_ty], []>;
-
 //===----------------------------------------------------------------------===//
 // Trapping float-to-int conversions
 //===----------------------------------------------------------------------===//
@@ -344,5 +340,12 @@ def int_wasm_tls_base :
   DefaultAttrsIntrinsic<[llvm_ptr_ty],
                         [],
                         [IntrReadMem]>;
+
+//===----------------------------------------------------------------------===//
+// Memory Tagging intrinsics
+//===----------------------------------------------------------------------===//
+
+def int_wasm_memory_randomtag :
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty], [], "llvm.wasm.memory.randomtag">;
 
 } // TargetPrefix = "wasm"
