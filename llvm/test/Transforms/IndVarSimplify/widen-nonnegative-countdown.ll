@@ -409,10 +409,8 @@ define void @zext_preinc_offset_constant_one(ptr %A, i32 %start) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[ADD_US:%.*]] = add i32 [[TMP1]], 1
-; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext i32 [[ADD_US]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV]], 6
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
@@ -559,7 +557,7 @@ define void @sext_preinc_offset_constant_one(ptr %A, i32 %start) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[ADD_US:%.*]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    [[ADD_US:%.*]] = add nuw i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[ADD_US]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
@@ -662,15 +660,17 @@ define void @zext_postinc_offset_constant_minus_one(ptr %A, i32 %start) {
 ; CHECK-NEXT:    [[NONPOS:%.*]] = icmp slt i32 [[START:%.*]], 2
 ; CHECK-NEXT:    br i1 [[NONPOS]], label [[EXIT:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[J_016_US:%.*]] = phi i32 [ [[INC_US:%.*]], [[FOR_BODY]] ], [ [[START]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ADD_US:%.*]] = add i32 [[J_016_US]], -1
-; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext i32 [[ADD_US]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INC_US]] = add nsw i32 [[J_016_US]], -1
 ; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i32 [[INC_US]], 6
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -706,12 +706,9 @@ define void @zext_preinc_offset_constant_minus_one(ptr %A, i32 %start) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[J_016_US:%.*]] = phi i32 [ [[INC_US:%.*]], [[FOR_BODY]] ], [ [[START]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ADD_US:%.*]] = add i32 [[J_016_US]], -1
-; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext i32 [[ADD_US]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
-; CHECK-NEXT:    [[INC_US]] = add nsw i32 [[J_016_US]], -1
 ; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV]], 6
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT:%.*]]

@@ -1233,18 +1233,6 @@ value llvm_const_shl(value LHS, value RHS) {
   return to_val(Value);
 }
 
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_lshr(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstLShr(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_ashr(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstAShr(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
 /* lltype -> llvalue -> llvalue array -> llvalue */
 value llvm_const_gep(value Ty, value ConstantVal, value Indices) {
   mlsize_t Length = Wosize_val(Indices);
@@ -1268,42 +1256,6 @@ value llvm_const_in_bounds_gep(value Ty, value ConstantVal, value Indices) {
 /* llvalue -> lltype -> llvalue */
 value llvm_const_trunc(value CV, value T) {
   LLVMValueRef Value = LLVMConstTrunc(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fptrunc(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPTrunc(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fpext(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPExt(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_uitofp(value CV, value T) {
-  LLVMValueRef Value = LLVMConstUIToFP(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_sitofp(value CV, value T) {
-  LLVMValueRef Value = LLVMConstSIToFP(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fptoui(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPToUI(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fptosi(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPToSI(Value_val(CV), Type_val(T));
   return to_val(Value);
 }
 
@@ -1334,12 +1286,6 @@ value llvm_const_trunc_or_bitcast(value CV, value T) {
 /* llvalue -> lltype -> llvalue */
 value llvm_const_pointercast(value CV, value T) {
   LLVMValueRef Value = LLVMConstPointerCast(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_fpcast(value CV, value T) {
-  LLVMValueRef Value = LLVMConstFPCast(Value_val(CV), Type_val(T));
   return to_val(Value);
 }
 

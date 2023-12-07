@@ -67,3 +67,26 @@ void foo()
     }
   }
 }
+
+// CHECK-LABEL:@"?bar@@YAHXZ"()
+// CHECK: invoke.cont:
+// CHECK: invoke void @llvm.seh.try.begin()
+// CHECK: invoke.cont1:
+// CHECK: store volatile i32 1, ptr %cleanup.dest.slot
+// CHECK: invoke void @llvm.seh.try.end()
+// CHECK: invoke.cont2:
+// CHECK: call void @"?fin$0@0@bar@@"
+// CHECK: %cleanup.dest3 = load i32, ptr %cleanup.dest.slot
+// CHECK: return:
+// CHECK: ret i32 11
+int bar()
+{
+  int x;
+  __try {
+    return 11;
+  } __finally {
+    if (_abnormal_termination()) {
+      x = 9;
+    }
+  }
+}

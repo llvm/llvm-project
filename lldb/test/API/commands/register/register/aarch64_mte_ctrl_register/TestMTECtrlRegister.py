@@ -34,17 +34,28 @@ class MTECtrlRegisterTestCase(TestBase):
             substrs=["stop reason = breakpoint 1."],
         )
 
-        # Bit 0 = tagged addressing enabled
-        # Bit 1 = synchronous faults
-        # Bit 2 = asynchronous faults
-        # We start enabled with synchronous faults.
-        self.expect("register read mte_ctrl", substrs=["0x0000000000000003"])
+        def check_mte_ctrl(async_err, sync_err):
+            # Bit 0 = tagged addressing enabled
+            # Bit 1 = synchronous faults
+            # Bit 2 = asynchronous faults
+            value = "0x{:016x}".format((async_err << 2) | (sync_err << 1) | 1)
+            expected = [value]
 
+            if self.hasXMLSupport():
+                expected.append(
+                    "(TAGS = 0, TCF_ASYNC = {}, TCF_SYNC = {}, TAGGED_ADDR_ENABLE = 1)".format(
+                        async_err, sync_err
+                    )
+                )
+
+            self.expect("register read mte_ctrl", substrs=expected)
+
+        # We start enabled with synchronous faults.
+        check_mte_ctrl(0, 1)
         # Change to asynchronous faults.
         self.runCmd("register write mte_ctrl 5")
-        self.expect("register read mte_ctrl", substrs=["0x0000000000000005"])
-
+        check_mte_ctrl(1, 0)
         # This would return to synchronous faults if we did not restore the
         # previous value.
         self.expect("expression setup_mte()", substrs=["= 0"])
-        self.expect("register read mte_ctrl", substrs=["0x0000000000000005"])
+        check_mte_ctrl(1, 0)

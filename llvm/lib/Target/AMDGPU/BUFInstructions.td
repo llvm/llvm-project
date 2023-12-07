@@ -637,7 +637,8 @@ class getMUBUFAtomicInsDA<RegisterClass vdataClass, bit vdata_in,
   dag VData = !if(vdata_in, (ins vdata_op:$vdata_in), (ins vdata_op:$vdata));
   dag Data = !if(!empty(vaddrList), VData, !con(VData, (ins vaddrClass:$vaddr)));
   dag MainInputs = (ins SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset);
-  dag CPol = !if(vdata_in, (ins CPol_GLC1:$cpol), (ins CPol_0:$cpol));
+  dag CPol = !if(vdata_in, (ins CPol_GLC_WithDefault:$cpol),
+                           (ins CPol_NonGLC_WithDefault:$cpol));
 
   dag ret = !con(Data, MainInputs, CPol);
 }
@@ -800,7 +801,7 @@ defm BUFFER_STORE_FORMAT_XYZW : MUBUF_Pseudo_Stores <
   "buffer_store_format_xyzw", v4f32
 >;
 
-let SubtargetPredicate = HasUnpackedD16VMem, D16Buf = 1 in {
+let OtherPredicates = [HasUnpackedD16VMem], D16Buf = 1 in {
 let TiedSourceNotRead = 1 in {
   defm BUFFER_LOAD_FORMAT_D16_X_gfx80 : MUBUF_Pseudo_Loads <
     "buffer_load_format_d16_x", i32
@@ -827,9 +828,9 @@ let TiedSourceNotRead = 1 in {
   defm BUFFER_STORE_FORMAT_D16_XYZW_gfx80 : MUBUF_Pseudo_Stores <
     "buffer_store_format_d16_xyzw", v4i32
   >;
-} // End HasUnpackedD16VMem.
+} // End OtherPredicates = [HasUnpackedD16VMem], D16Buf = 1.
 
-let SubtargetPredicate = HasPackedD16VMem, D16Buf = 1 in {
+let OtherPredicates = [HasPackedD16VMem], D16Buf = 1 in {
 let TiedSourceNotRead = 1 in {
   defm BUFFER_LOAD_FORMAT_D16_X : MUBUF_Pseudo_Loads <
     "buffer_load_format_d16_x", f16
@@ -856,7 +857,7 @@ let TiedSourceNotRead = 1 in {
   defm BUFFER_STORE_FORMAT_D16_XYZW : MUBUF_Pseudo_Stores <
     "buffer_store_format_d16_xyzw", v4f16
   >;
-} // End HasPackedD16VMem.
+} // End OtherPredicates = [HasPackedD16VMem], D16Buf = 1.
 
 defm BUFFER_LOAD_UBYTE : MUBUF_Pseudo_Loads_Lds <
   "buffer_load_ubyte", i32
@@ -1046,7 +1047,7 @@ defm BUFFER_ATOMIC_DEC_X2 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_dec_x2", VReg_64, i64
 >;
 
-let SubtargetPredicate = HasGFX10_BEncoding in {
+let OtherPredicates = [HasGFX10_BEncoding] in {
   defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics <
     "buffer_atomic_csub", VGPR_32, i32, int_amdgcn_global_atomic_csub
   >;
@@ -1237,10 +1238,8 @@ def BUFFER_INV : MUBUF_Invalidate<"buffer_inv"> {
   let AsmOperands = "$cpol";
 }
 
-let SubtargetPredicate = isGFX10Plus in {
-  def BUFFER_GL0_INV : MUBUF_Invalidate<"buffer_gl0_inv">;
-  def BUFFER_GL1_INV : MUBUF_Invalidate<"buffer_gl1_inv">;
-} // End SubtargetPredicate = isGFX10Plus
+def BUFFER_GL0_INV : MUBUF_Invalidate<"buffer_gl0_inv">;
+def BUFFER_GL1_INV : MUBUF_Invalidate<"buffer_gl1_inv">;
 
 //===----------------------------------------------------------------------===//
 // MUBUF Patterns
@@ -2089,6 +2088,7 @@ class MUBUF_Real_gfx11<bits<8> op, MUBUF_Pseudo ps,
   let Inst{53}    = ps.tfe;
   let Inst{54}    = ps.offen;
   let Inst{55}    = ps.idxen;
+  let SubtargetPredicate = isGFX11Only;
 }
 
 class Base_MUBUF_Real_Atomic_gfx11<bits<8> op, MUBUF_Pseudo ps,
@@ -2112,11 +2112,13 @@ class MUBUF_Real_gfx10<bits<8> op, MUBUF_Pseudo ps> :
     Base_MUBUF_Real_gfx6_gfx7_gfx10<op{6-0}, ps, SIEncodingFamily.GFX10> {
   let Inst{15} = !if(ps.has_dlc, cpol{CPolBit.DLC}, ps.dlc_value);
   let Inst{25} = op{7};
+  let SubtargetPredicate = isGFX10Only;
 }
 
 class MUBUF_Real_gfx6_gfx7<bits<8> op, MUBUF_Pseudo ps> :
     Base_MUBUF_Real_gfx6_gfx7_gfx10<op{6-0}, ps, SIEncodingFamily.SI> {
   let Inst{15} = ps.addr64;
+  let SubtargetPredicate = isGFX6GFX7;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2135,7 +2137,7 @@ class Pre_gfx11_MUBUF_Name <string mnemonic, string real_name> :
 
 class MUBUF_Real_gfx11_impl<bits<8> op, string ps_name, string real_name> :
   MUBUF_Real_gfx11<op, !cast<MUBUF_Pseudo>(ps_name), real_name>;
-let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in
+let DecoderNamespace = "GFX11" in
 multiclass MUBUF_Real_AllAddr_gfx11_Renamed_Impl2<bits<8> op, string real_name> {
   def _BOTHEN_gfx11 : MUBUF_Real_gfx11_impl<op, NAME # "_BOTHEN", real_name>;
   def _IDXEN_gfx11 : MUBUF_Real_gfx11_impl<op, NAME # "_IDXEN", real_name>;
@@ -2162,7 +2164,7 @@ multiclass MUBUF_Real_AllAddr_gfx11_Renamed<bits<8> op, string real_name> :
 class MUBUF_Real_Atomic_gfx11_impl<bits<8> op, string ps_name,
                                    string real_name> :
   Base_MUBUF_Real_Atomic_gfx11<op, !cast<MUBUF_Pseudo>(ps_name), real_name>;
-let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in
+let DecoderNamespace = "GFX11" in
 multiclass MUBUF_Real_Atomic_gfx11_Renamed_impl<bits<8> op, bit is_return,
                                                 string real_name> {
   defvar Rtn = !if(!eq(is_return, 1), "_RTN", "");
@@ -2191,7 +2193,7 @@ multiclass MUBUF_Real_Atomic_gfx11_Renamed<bits<8> op, string real_name> :
   def : Pre_gfx11_MUBUF_Name<get_MUBUF_ps<NAME>.Mnemonic, real_name>;
 }
 
-let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
+let DecoderNamespace = "GFX11" in {
 def BUFFER_GL0_INV_gfx11          : MUBUF_Real_gfx11<0x02B, BUFFER_GL0_INV>;
 def BUFFER_GL1_INV_gfx11          : MUBUF_Real_gfx11<0x02C, BUFFER_GL1_INV>;
 }
@@ -2279,7 +2281,7 @@ defm BUFFER_ATOMIC_XOR_X2         : MUBUF_Real_Atomic_gfx11_Renamed<0x04B, "buff
 // MUBUF - GFX10.
 //===----------------------------------------------------------------------===//
 
-let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
+let DecoderNamespace = "GFX10" in {
   multiclass MUBUF_Real_AllAddr_Helper_gfx10<bits<8> op> {
     def _BOTHEN_gfx10 :
       MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN")>;
@@ -2336,7 +2338,7 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
       MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_OFFSET")>,
       AtomicNoRet<NAME # "_OFFSET_gfx10", 0>;
   }
-} // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10"
+} // End DecoderNamespace = "GFX10"
 
 defm BUFFER_STORE_BYTE_D16_HI     : MUBUF_Real_AllAddr_gfx10<0x019>;
 defm BUFFER_STORE_SHORT_D16_HI    : MUBUF_Real_AllAddr_gfx10<0x01b>;

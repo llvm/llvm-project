@@ -909,8 +909,9 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
     if (replaceIVUserWithLoopInvariant(UseInst))
       continue;
 
-    // Go further for the bitcast ''prtoint ptr to i64'
-    if (isa<PtrToIntInst>(UseInst))
+    // Go further for the bitcast 'prtoint ptr to i64' or if the cast is done
+    // by truncation
+    if ((isa<PtrToIntInst>(UseInst)) || (isa<TruncInst>(UseInst)))
       for (Use &U : UseInst->uses()) {
         Instruction *User = cast<Instruction>(U.getUser());
         if (replaceIVUserWithLoopInvariant(User))
@@ -1510,10 +1511,6 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
   assert(CastWidth <= IVWidth && "Unexpected width while widening compare.");
 
   // Widen the compare instruction.
-  auto *InsertPt = getInsertPointForUses(DU.NarrowUse, DU.NarrowDef, DT, LI);
-  if (!InsertPt)
-    return false;
-  IRBuilder<> Builder(InsertPt);
   DU.NarrowUse->replaceUsesOfWith(DU.NarrowDef, DU.WideDef);
 
   // Widen the other operand of the compare, if necessary.
@@ -1805,65 +1802,70 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
     return nullptr;
   }
 
-  // Does this user itself evaluate to a recurrence after widening?
-  WidenedRecTy WideAddRec = getExtendedOperandRecurrence(DU);
-  if (!WideAddRec.first)
-    WideAddRec = getWideRecurrence(DU);
-
-  assert((WideAddRec.first == nullptr) ==
-         (WideAddRec.second == ExtendKind::Unknown));
-  if (!WideAddRec.first) {
-    // If use is a loop condition, try to promote the condition instead of
-    // truncating the IV first.
-    if (widenLoopCompare(DU))
+  auto tryAddRecExpansion = [&]() -> Instruction* {
+    // Does this user itself evaluate to a recurrence after widening?
+    WidenedRecTy WideAddRec = getExtendedOperandRecurrence(DU);
+    if (!WideAddRec.first)
+      WideAddRec = getWideRecurrence(DU);
+    assert((WideAddRec.first == nullptr) ==
+           (WideAddRec.second == ExtendKind::Unknown));
+    if (!WideAddRec.first)
       return nullptr;
 
-    // We are here about to generate a truncate instruction that may hurt
-    // performance because the scalar evolution expression computed earlier
-    // in WideAddRec.first does not indicate a polynomial induction expression.
-    // In that case, look at the operands of the use instruction to determine
-    // if we can still widen the use instead of truncating its operand.
-    if (widenWithVariantUse(DU))
+    // Reuse the IV increment that SCEVExpander created as long as it dominates
+    // NarrowUse.
+    Instruction *WideUse = nullptr;
+    if (WideAddRec.first == WideIncExpr &&
+        Rewriter.hoistIVInc(WideInc, DU.NarrowUse))
+      WideUse = WideInc;
+    else {
+      WideUse = cloneIVUser(DU, WideAddRec.first);
+      if (!WideUse)
+        return nullptr;
+    }
+    // Evaluation of WideAddRec ensured that the narrow expression could be
+    // extended outside the loop without overflow. This suggests that the wide use
+    // evaluates to the same expression as the extended narrow use, but doesn't
+    // absolutely guarantee it. Hence the following failsafe check. In rare cases
+    // where it fails, we simply throw away the newly created wide use.
+    if (WideAddRec.first != SE->getSCEV(WideUse)) {
+      LLVM_DEBUG(dbgs() << "Wide use expression mismatch: " << *WideUse << ": "
+                 << *SE->getSCEV(WideUse) << " != " << *WideAddRec.first
+                 << "\n");
+      DeadInsts.emplace_back(WideUse);
       return nullptr;
+    };
 
-    // This user does not evaluate to a recurrence after widening, so don't
-    // follow it. Instead insert a Trunc to kill off the original use,
-    // eventually isolating the original narrow IV so it can be removed.
-    truncateIVUse(DU, DT, LI);
+    // if we reached this point then we are going to replace
+    // DU.NarrowUse with WideUse. Reattach DbgValue then.
+    replaceAllDbgUsesWith(*DU.NarrowUse, *WideUse, *WideUse, *DT);
+
+    ExtendKindMap[DU.NarrowUse] = WideAddRec.second;
+    // Returning WideUse pushes it on the worklist.
+    return WideUse;
+  };
+
+  if (auto *I = tryAddRecExpansion())
+    return I;
+
+  // If use is a loop condition, try to promote the condition instead of
+  // truncating the IV first.
+  if (widenLoopCompare(DU))
     return nullptr;
-  }
 
-  // Reuse the IV increment that SCEVExpander created as long as it dominates
-  // NarrowUse.
-  Instruction *WideUse = nullptr;
-  if (WideAddRec.first == WideIncExpr &&
-      Rewriter.hoistIVInc(WideInc, DU.NarrowUse))
-    WideUse = WideInc;
-  else {
-    WideUse = cloneIVUser(DU, WideAddRec.first);
-    if (!WideUse)
-      return nullptr;
-  }
-  // Evaluation of WideAddRec ensured that the narrow expression could be
-  // extended outside the loop without overflow. This suggests that the wide use
-  // evaluates to the same expression as the extended narrow use, but doesn't
-  // absolutely guarantee it. Hence the following failsafe check. In rare cases
-  // where it fails, we simply throw away the newly created wide use.
-  if (WideAddRec.first != SE->getSCEV(WideUse)) {
-    LLVM_DEBUG(dbgs() << "Wide use expression mismatch: " << *WideUse << ": "
-                      << *SE->getSCEV(WideUse) << " != " << *WideAddRec.first
-                      << "\n");
-    DeadInsts.emplace_back(WideUse);
+  // We are here about to generate a truncate instruction that may hurt
+  // performance because the scalar evolution expression computed earlier
+  // in WideAddRec.first does not indicate a polynomial induction expression.
+  // In that case, look at the operands of the use instruction to determine
+  // if we can still widen the use instead of truncating its operand.
+  if (widenWithVariantUse(DU))
     return nullptr;
-  }
 
-  // if we reached this point then we are going to replace
-  // DU.NarrowUse with WideUse. Reattach DbgValue then.
-  replaceAllDbgUsesWith(*DU.NarrowUse, *WideUse, *WideUse, *DT);
-
-  ExtendKindMap[DU.NarrowUse] = WideAddRec.second;
-  // Returning WideUse pushes it on the worklist.
-  return WideUse;
+  // This user does not evaluate to a recurrence after widening, so don't
+  // follow it. Instead insert a Trunc to kill off the original use,
+  // eventually isolating the original narrow IV so it can be removed.
+  truncateIVUse(DU, DT, LI);
+  return nullptr;
 }
 
 /// Add eligible users of NarrowDef to NarrowIVUsers.

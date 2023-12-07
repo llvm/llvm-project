@@ -177,6 +177,7 @@ public:
                 IsRegularKeywordAttribute);
   }
   const IdentifierInfo *getAttrName() const { return AttrName; }
+  void setAttrName(const IdentifierInfo *AttrNameII) { AttrName = AttrNameII; }
   SourceLocation getLoc() const { return AttrRange.getBegin(); }
   SourceRange getRange() const { return AttrRange; }
   void setRange(SourceRange R) { AttrRange = R; }
@@ -199,6 +200,15 @@ public:
   bool isCXX11Attribute() const { return SyntaxUsed == AS_CXX11 || IsAlignas; }
 
   bool isC23Attribute() const { return SyntaxUsed == AS_C23; }
+
+  bool isAlignas() const {
+    // FIXME: In the current state, the IsAlignas member variable is only true
+    // with the C++  `alignas` keyword but not `_Alignas`. The following
+    // expression works around the otherwise lost information so it will return
+    // true for `alignas` or `_Alignas` while still returning false for things
+    // like  `__attribute__((aligned))`.
+    return (getParsedKind() == AT_Aligned && isKeywordAttribute());
+  }
 
   /// The attribute is spelled [[]] in either C or C++ mode, including standard
   /// attributes spelled with a keyword, like alignas.

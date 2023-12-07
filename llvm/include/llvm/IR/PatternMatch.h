@@ -1239,6 +1239,37 @@ inline SpecificBinaryOp_match<LHS, RHS> m_BinOp(unsigned Opcode, const LHS &L,
   return SpecificBinaryOp_match<LHS, RHS>(Opcode, L, R);
 }
 
+template <typename LHS, typename RHS, bool Commutable = false>
+struct DisjointOr_match {
+  LHS L;
+  RHS R;
+
+  DisjointOr_match(const LHS &L, const RHS &R) : L(L), R(R) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *PDI = dyn_cast<PossiblyDisjointInst>(V)) {
+      assert(PDI->getOpcode() == Instruction::Or && "Only or can be disjoint");
+      if (!PDI->isDisjoint())
+        return false;
+      return (L.match(PDI->getOperand(0)) && R.match(PDI->getOperand(1))) ||
+             (Commutable && L.match(PDI->getOperand(1)) &&
+              R.match(PDI->getOperand(0)));
+    }
+    return false;
+  }
+};
+
+template <typename LHS, typename RHS>
+inline DisjointOr_match<LHS, RHS> m_DisjointOr(const LHS &L, const RHS &R) {
+  return DisjointOr_match<LHS, RHS>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline DisjointOr_match<LHS, RHS, true> m_c_DisjointOr(const LHS &L,
+                                                       const RHS &R) {
+  return DisjointOr_match<LHS, RHS, true>(L, R);
+}
+
 //===----------------------------------------------------------------------===//
 // Class that matches a group of binary opcodes.
 //
@@ -1697,34 +1728,34 @@ m_ZExtOrSExtOrSelf(const OpTy &Op) {
 }
 
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::UIToFP> m_UIToFP(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::UIToFP>(Op);
+inline CastInst_match<OpTy, Instruction::UIToFP> m_UIToFP(const OpTy &Op) {
+  return CastInst_match<OpTy, Instruction::UIToFP>(Op);
 }
 
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::SIToFP> m_SIToFP(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::SIToFP>(Op);
+inline CastInst_match<OpTy, Instruction::SIToFP> m_SIToFP(const OpTy &Op) {
+  return CastInst_match<OpTy, Instruction::SIToFP>(Op);
 }
 
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::FPToUI> m_FPToUI(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::FPToUI>(Op);
+inline CastInst_match<OpTy, Instruction::FPToUI> m_FPToUI(const OpTy &Op) {
+  return CastInst_match<OpTy, Instruction::FPToUI>(Op);
 }
 
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::FPToSI> m_FPToSI(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::FPToSI>(Op);
+inline CastInst_match<OpTy, Instruction::FPToSI> m_FPToSI(const OpTy &Op) {
+  return CastInst_match<OpTy, Instruction::FPToSI>(Op);
 }
 
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::FPTrunc>
+inline CastInst_match<OpTy, Instruction::FPTrunc>
 m_FPTrunc(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::FPTrunc>(Op);
+  return CastInst_match<OpTy, Instruction::FPTrunc>(Op);
 }
 
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::FPExt> m_FPExt(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::FPExt>(Op);
+inline CastInst_match<OpTy, Instruction::FPExt> m_FPExt(const OpTy &Op) {
+  return CastInst_match<OpTy, Instruction::FPExt>(Op);
 }
 
 //===----------------------------------------------------------------------===//

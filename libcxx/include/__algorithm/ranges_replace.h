@@ -36,7 +36,7 @@ struct __fn {
              indirect_binary_predicate<ranges::equal_to, projected<_Iter, _Proj>, const _Type1*>
   _LIBCPP_HIDE_FROM_ABI constexpr _Iter operator()(
       _Iter __first, _Sent __last, const _Type1& __old_value, const _Type2& __new_value, _Proj __proj = {}) const {
-    auto __pred = [&](const auto& __val) { return __val == __old_value; };
+    auto __pred = [&](const auto& __val) -> bool { return __val == __old_value; };
     return ranges::__replace_if_impl(std::move(__first), std::move(__last), __pred, __new_value, __proj);
   }
 
@@ -45,7 +45,7 @@ struct __fn {
              indirect_binary_predicate<ranges::equal_to, projected<iterator_t<_Range>, _Proj>, const _Type1*>
   _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Range>
   operator()(_Range&& __range, const _Type1& __old_value, const _Type2& __new_value, _Proj __proj = {}) const {
-    auto __pred = [&](auto&& __val) { return __val == __old_value; };
+    auto __pred = [&](auto&& __val) -> bool { return __val == __old_value; };
     return ranges::__replace_if_impl(ranges::begin(__range), ranges::end(__range), __pred, __new_value, __proj);
   }
 };

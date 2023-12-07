@@ -9,12 +9,10 @@ extern int func(char *c);
 // CHECK-NEXT:    [[BUF:%.*]] = alloca [1024 x i8], align 16
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BUF]], i64 0, i64 44
 // CHECK-NEXT:    [[ALIGNED_RESULT:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARRAYIDX]], i64 -16)
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ALIGNED_RESULT]], i64 16) ]
 // CHECK-NEXT:    [[CALL:%.*]] = call i32 @func(ptr noundef [[ALIGNED_RESULT]])
 // CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BUF]], i64 0, i64 22
 // CHECK-NEXT:    [[OVER_BOUNDARY:%.*]] = getelementptr inbounds i8, ptr [[ARRAYIDX1]], i64 31
 // CHECK-NEXT:    [[ALIGNED_RESULT2:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[OVER_BOUNDARY]], i64 -32)
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ALIGNED_RESULT2]], i64 32) ]
 // CHECK-NEXT:    [[CALL3:%.*]] = call i32 @func(ptr noundef [[ALIGNED_RESULT2]])
 // CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BUF]], i64 0, i64 16
 // CHECK-NEXT:    [[SRC_ADDR:%.*]] = ptrtoint ptr [[ARRAYIDX4]] to i64
@@ -35,12 +33,10 @@ int test_array(void) {
 // CHECK-NEXT:    [[BUF:%.*]] = alloca [1024 x i8], align 32
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BUF]], i64 0, i64 64
 // CHECK-NEXT:    [[ALIGNED_RESULT:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARRAYIDX]], i64 -16)
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ALIGNED_RESULT]], i64 16) ]
 // CHECK-NEXT:    [[CALL:%.*]] = call i32 @func(ptr noundef [[ALIGNED_RESULT]])
 // CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BUF]], i64 0, i64 32
 // CHECK-NEXT:    [[OVER_BOUNDARY:%.*]] = getelementptr inbounds i8, ptr [[ARRAYIDX1]], i64 31
 // CHECK-NEXT:    [[ALIGNED_RESULT2:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[OVER_BOUNDARY]], i64 -32)
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ALIGNED_RESULT2]], i64 32) ]
 // CHECK-NEXT:    [[CALL3:%.*]] = call i32 @func(ptr noundef [[ALIGNED_RESULT2]])
 // CHECK-NEXT:    ret i32 1
 //

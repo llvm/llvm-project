@@ -36,9 +36,6 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned IncludeSystemHeaders : 1; ///< Include system header dependencies.
   LLVM_PREFERRED_TYPE(bool)
-  unsigned
-      CanonicalSystemHeaders : 1; ///< canonicalize system header dependencies.
-  LLVM_PREFERRED_TYPE(bool)
   unsigned ShowHeaderIncludes : 1;   ///< Show header inclusions (-H).
   LLVM_PREFERRED_TYPE(bool)
   unsigned UsePhonyTargets : 1;      ///< Include phony targets for each
@@ -91,11 +88,10 @@ public:
 
 public:
   DependencyOutputOptions()
-      : IncludeSystemHeaders(0), CanonicalSystemHeaders(0),
-        ShowHeaderIncludes(0), UsePhonyTargets(0), AddMissingHeaderDeps(0),
-        IncludeModuleFiles(0), ShowSkippedHeaderIncludes(0),
-        HeaderIncludeFormat(HIFMT_Textual), HeaderIncludeFiltering(HIFIL_None) {
-  }
+      : IncludeSystemHeaders(0), ShowHeaderIncludes(0), UsePhonyTargets(0),
+        AddMissingHeaderDeps(0), IncludeModuleFiles(0),
+        ShowSkippedHeaderIncludes(0), HeaderIncludeFormat(HIFMT_Textual),
+        HeaderIncludeFiltering(HIFIL_None) {}
 };
 
 }  // end namespace clang

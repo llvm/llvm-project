@@ -215,11 +215,12 @@ enum NodeType : unsigned {
   UNPACK_LOW,
   UNPACKL_LOW,
 
-  // Shift each element of vector operand 0 by the number of bits specified
-  // by scalar operand 1.
+  // Shift/rotate each element of vector operand 0 by the number of bits
+  // specified by scalar operand 1.
   VSHL_BY_SCALAR,
   VSRL_BY_SCALAR,
   VSRA_BY_SCALAR,
+  VROTL_BY_SCALAR,
 
   // For each element of the output type, sum across all sub-elements of
   // operand 0 belonging to the corresponding element, and add in the

@@ -1910,16 +1910,20 @@ def TileUsingForallOp :
     #### Example using `num_threads`
 
     ```
-    %0 = pdl_match @match_matmul in %arg1
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+       : (!transform.any_op) -> !transform.any_op
     %3:2 = transform.structured.tile_using_forall %0 num_threads [10, 20]
+       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     ```
 
     #### Example using `tile_sizes`
 
     ```
-    %0 = pdl_match @match_matmul in %arg1
-    %sz = pdl_match @match_size_op in %arg1
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+       : (!transform.any_op) -> !transform.any_op
+    %sz = transform.structured.match ...
     %3:2 = transform.structured.tile_using_forall %0 tile_sizes [0, %sz, 20]
+       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     ```
   }];
 
@@ -2034,6 +2038,7 @@ def VectorizeChildrenAndApplyPatternsOp :
   let arguments = (ins TransformHandleTypeInterface:$target,
                    UnitAttr:$vectorize_padding,
                    UnitAttr:$vectorize_nd_extract,
+                   UnitAttr:$flatten_1d_depthwise_conv,
                    UnitAttr:$disable_multi_reduction_to_contract_patterns,
                    UnitAttr:$disable_transfer_permutation_map_lowering_patterns);
   let results = (outs TransformHandleTypeInterface:$transformed);
@@ -2045,7 +2050,8 @@ def VectorizeChildrenAndApplyPatternsOp :
   let builders = [
     OpBuilder<(ins "Value":$target,
                CArg<"bool", "false">:$vectorizePadding,
-               CArg<"bool", "false">:$vectorizeNDExtract)>,
+               CArg<"bool", "false">:$vectorizeNDExtract,
+               CArg<"bool", "false">:$flatten1DDepthwise)>
   ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -2232,6 +2238,55 @@ def ConvertConv2DToImg2ColOp : Op<Transform_Dialect,
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$img2col_tensor,
                       TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat =
+    "$target attr-dict `:` functional-type($target, results)";
+
+  let builders = [
+    OpBuilder<(ins "Value":$target)>
+  ];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::linalg::LinalgOp target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Transpose Conv2D
+//===----------------------------------------------------------------------===//
+
+def TransposeConv2DOp : Op<Transform_Dialect,
+    "structured.transpose_conv2d",
+    [FunctionalStyleTransformOpTrait,
+     MemoryEffectsOpInterface,
+     TransformOpInterface,
+     TransformEachOpTrait,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Convert linalg.conv_2d_nhwc_fhwc into linalg.conv_2d_nhwc_hwcf by introducing
+    a linalg.transpose on the filter tensor/memref.
+
+    Whilst the fhwc filter channel ordering can be desirable for certain targets
+    and is a more direct mapping to higher level dialects such as TOSA (which only
+    supports this ordering) hwcf is better suited for transformations such as
+    img2col which can make use of optimized BLAS routines such as GEMM.
+
+    Returns one handle:
+    - The final operation of the sequence that replaces the original
+      convolution.
+
+    #### Return modes:
+
+    Returns a definite failure if target is not isolated from above.
+    Returns a silenceable failure if the pattern application failed.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type($target, results)";

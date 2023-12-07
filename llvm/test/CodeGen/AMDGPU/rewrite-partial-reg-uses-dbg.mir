@@ -7,7 +7,6 @@
     unreachable, !dbg !11
   }
 
-  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
   declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
   attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
@@ -36,21 +35,21 @@ name:            test_vreg_96_w64
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_96_w64
-    ; CHECK: undef %3.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec, debug-location !11
-    ; CHECK-NEXT: DBG_VALUE %3.sub0, $noreg, !9, !DIExpression(), debug-location !11
-    ; CHECK-NEXT: %3.sub1:vreg_64 = V_MOV_B32_e32 1, implicit $exec, debug-location !DILocation(line: 2, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %3.sub1, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 2, column: 1, scope: !5)
-    ; CHECK-NEXT: S_NOP 0, implicit %3, debug-location !DILocation(line: 3, column: 1, scope: !5)
-    ; CHECK-NEXT: undef %4.sub0:vreg_64 = V_MOV_B32_e32 11, implicit $exec, debug-location !DILocation(line: 4, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %4.sub0, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 4, column: 1, scope: !5)
-    ; CHECK-NEXT: %4.sub1:vreg_64 = V_MOV_B32_e32 12, implicit $exec, debug-location !DILocation(line: 5, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %4.sub1, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 5, column: 1, scope: !5)
-    ; CHECK-NEXT: S_NOP 0, implicit %4, debug-location !DILocation(line: 6, column: 1, scope: !5)
-    ; CHECK-NEXT: undef %5.sub0:vreg_64 = V_MOV_B32_e32 11, implicit $exec, debug-location !DILocation(line: 4, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %5, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 4, column: 1, scope: !5)
-    ; CHECK-NEXT: %5.sub1:vreg_64 = V_MOV_B32_e32 12, implicit $exec, debug-location !DILocation(line: 5, column: 1, scope: !5)
-    ; CHECK-NEXT: DBG_VALUE %5, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 5, column: 1, scope: !5)
-    ; CHECK-NEXT: S_NOP 0, implicit %5, debug-location !DILocation(line: 6, column: 1, scope: !5)
+    ; CHECK: undef [[V_MOV_B32_e32_:%[0-9]+]].sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec, debug-location !11
+    ; CHECK-NEXT: DBG_VALUE [[V_MOV_B32_e32_]].sub0, $noreg, !9, !DIExpression(), debug-location !11
+    ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]].sub1:vreg_64 = V_MOV_B32_e32 1, implicit $exec, debug-location !DILocation(line: 2, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE [[V_MOV_B32_e32_]].sub1, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 2, column: 1, scope: !5)
+    ; CHECK-NEXT: S_NOP 0, implicit [[V_MOV_B32_e32_]], debug-location !DILocation(line: 3, column: 1, scope: !5)
+    ; CHECK-NEXT: undef [[V_MOV_B32_e32_1:%[0-9]+]].sub0:vreg_64 = V_MOV_B32_e32 11, implicit $exec, debug-location !DILocation(line: 4, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE [[V_MOV_B32_e32_1]].sub0, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 4, column: 1, scope: !5)
+    ; CHECK-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]].sub1:vreg_64 = V_MOV_B32_e32 12, implicit $exec, debug-location !DILocation(line: 5, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE [[V_MOV_B32_e32_1]].sub1, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 5, column: 1, scope: !5)
+    ; CHECK-NEXT: S_NOP 0, implicit [[V_MOV_B32_e32_1]], debug-location !DILocation(line: 6, column: 1, scope: !5)
+    ; CHECK-NEXT: undef [[V_MOV_B32_e32_2:%[0-9]+]].sub0:vreg_64 = V_MOV_B32_e32 11, implicit $exec, debug-location !DILocation(line: 4, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE [[V_MOV_B32_e32_2]], $noreg, !9, !DIExpression(), debug-location !DILocation(line: 4, column: 1, scope: !5)
+    ; CHECK-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]].sub1:vreg_64 = V_MOV_B32_e32 12, implicit $exec, debug-location !DILocation(line: 5, column: 1, scope: !5)
+    ; CHECK-NEXT: DBG_VALUE [[V_MOV_B32_e32_2]], $noreg, !9, !DIExpression(), debug-location !DILocation(line: 5, column: 1, scope: !5)
+    ; CHECK-NEXT: S_NOP 0, implicit [[V_MOV_B32_e32_2]], debug-location !DILocation(line: 6, column: 1, scope: !5)
     undef %0.sub0:vreg_96 = V_MOV_B32_e32 0, implicit $exec, debug-location !11
     DBG_VALUE %0.sub0, $noreg, !9, !DIExpression(), debug-location !11
     %0.sub1:vreg_96 = V_MOV_B32_e32 1, implicit $exec, debug-location !DILocation(line: 2, column: 1, scope: !5)

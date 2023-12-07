@@ -38,11 +38,9 @@ ArchitectureAArch64::Create(const ArchSpec &arch) {
   return std::unique_ptr<Architecture>(new ArchitectureAArch64());
 }
 
-static void UpdateARM64SVERegistersInfos(
-    llvm::iterator_range<
-        lldb_private::DynamicRegisterInfo::reg_collection::iterator>
-        regs,
-    uint64_t vg) {
+static void
+UpdateARM64SVERegistersInfos(DynamicRegisterInfo::reg_collection_range regs,
+                             uint64_t vg) {
   // SVE Z register size is vg x 8 bytes.
   uint32_t z_reg_byte_size = vg * 8;
 
@@ -62,11 +60,9 @@ static void UpdateARM64SVERegistersInfos(
   }
 }
 
-static void UpdateARM64SMERegistersInfos(
-    llvm::iterator_range<
-        lldb_private::DynamicRegisterInfo::reg_collection::iterator>
-        regs,
-    uint64_t svg) {
+static void
+UpdateARM64SMERegistersInfos(DynamicRegisterInfo::reg_collection_range regs,
+                             uint64_t svg) {
   for (auto &reg : regs) {
     if (strcmp(reg.name, "za") == 0) {
       // ZA is a register with size (svg*8) * (svg*8). A square essentially.
@@ -108,10 +104,11 @@ bool ArchitectureAArch64::ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
   if (!vg_reg_value && !svg_reg_value)
     return false;
 
+  auto regs = reg_info.registers<DynamicRegisterInfo::reg_collection_range>();
   if (vg_reg_value)
-    UpdateARM64SVERegistersInfos(reg_info.registers_mutable(), *vg_reg_value);
+    UpdateARM64SVERegistersInfos(regs, *vg_reg_value);
   if (svg_reg_value)
-    UpdateARM64SMERegistersInfos(reg_info.registers_mutable(), *svg_reg_value);
+    UpdateARM64SMERegistersInfos(regs, *svg_reg_value);
 
   // At this point if we have updated any registers, their offsets will all be
   // invalid. If we did, we need to update them all.

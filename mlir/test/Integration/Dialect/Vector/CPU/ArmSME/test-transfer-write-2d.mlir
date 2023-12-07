@@ -1,13 +1,13 @@
 // DEFINE: %{entry_point} = entry
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -enable-arm-streaming="mode=locally enable-za" \
-// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// DEFINE:   -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize \
-// DEFINE:   -allocate-arm-sme-tiles -test-lower-to-llvm
+// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
+// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
+// DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
+// DEFINE:   -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
-// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
+// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
@@ -28,6 +28,25 @@ func.func @transfer_write_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: i
   %mask = vector.create_mask %c2, %c3 : vector<[4]x[4]xi1>
   %zero = vector.splat %c0 : vector<[4]x[4]xf32>
   vector.transfer_write %zero, %A[%base1, %base2], %mask {in_bounds=[true, true]} :
+    vector<[4]x[4]xf32>, memref<?x?xf32>
+  return
+}
+
+// Vector transpose + store.
+func.func @transfer_write_2d_transposed(%A : memref<?x?xf32>, %base1: index, %base2: index) {
+  %0 = vector.load %A[%base1, %base2] : memref<?x?xf32>, vector<[4]x[4]xf32>
+  vector.transfer_write %0, %A[%base1, %base2] {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds=[true, true]} :
+    vector<[4]x[4]xf32>, memref<?x?xf32>
+  return
+}
+
+// Vector transpose + masked store.
+func.func @transfer_write_2d_mask_transposed(%A : memref<?x?xf32>, %base1: index, %base2: index) {
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %mask = vector.create_mask %c4, %c2 : vector<[4]x[4]xi1>
+  %0 = vector.load %A[%base1, %base2] : memref<?x?xf32>, vector<[4]x[4]xf32>
+  vector.transfer_write %0, %A[%base1, %base2], %mask {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds=[true, true]} :
     vector<[4]x[4]xf32>, memref<?x?xf32>
   return
 }
@@ -77,7 +96,13 @@ func.func @initialize_memory(%d0 : index, %d1 : index) -> memref<?x?xf32> {
   return %A : memref<?x?xf32>
 }
 
-func.func @entry() {
+// This will be made a streaming function by enable-arm-streaming so return SVL.
+func.func @get_svl() -> index {
+  %vscale = vector.vscale
+  return %vscale : index
+}
+
+func.func @entry() attributes { enable_arm_streaming_ignore } {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %c4 = arith.constant 4 : index
@@ -86,8 +111,8 @@ func.func @entry() {
   //
   // Allocate enough memory to load a 32-bit tile plus a tiny bit more to test
   // non-zero offsets while remaining inbounds.
-  %vscale = vector.vscale
-  %svl_s = arith.muli %c4, %vscale : index
+  %svl = call @get_svl() : () -> index
+  %svl_s = arith.muli %c4, %svl : index
   %svl_s_plus_two = arith.addi %svl_s, %c2 : index
   %A = call @initialize_memory(%svl_s_plus_two, %svl_s_plus_two) : (index, index) -> memref<?x?xf32>
 
@@ -114,6 +139,26 @@ func.func @entry() {
   // CHECK-NEXT: ( 20, 21, 0, 0
   // CHECK-NEXT: ( 30, 31, 0, 0
   call @transfer_write_2d_mask(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
+  call @load_and_print(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
+
+  // 4. Reload 3. + transpose + store.
+  // CHECK-LABEL: TILE BEGIN:
+  // CHECK-NEXT: ( 0, 0, 20, 30
+  // CHECK-NEXT: ( 0, 0, 21, 31
+  // CHECK-NEXT: ( 0, 0, 0, 0
+  // CHECK-NEXT: ( 3, 13, 0, 0
+  call @transfer_write_2d_transposed(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
+  call @load_and_print(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
+
+  // 5. Reload 4. + transpose + masked store (nrows=4, ncols=2).
+  // The mask applies after permutation. Columns 2 and 3 (from 4.) are
+  // preserved.
+  // CHECK-LABEL: TILE BEGIN:
+  // CHECK-NEXT: ( 0, 0, 20, 30
+  // CHECK-NEXT: ( 0, 0, 21, 31
+  // CHECK-NEXT: ( 20, 21, 0, 0
+  // CHECK-NEXT: ( 30, 31, 0, 0
+  call @transfer_write_2d_mask_transposed(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
   call @load_and_print(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
 
   memref.dealloc %A : memref<?x?xf32>

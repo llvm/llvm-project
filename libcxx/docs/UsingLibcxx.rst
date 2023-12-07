@@ -223,14 +223,8 @@ safety annotations.
   ``std::mutex`` and ``std::lock_guard``. By default, these annotations are
   disabled and must be manually enabled by the user.
 
-**_LIBCPP_ENABLE_HARDENED_MODE**:
-  This macro is used to enable the :ref:`hardened mode <using-hardening-modes>`.
-
-**_LIBCPP_ENABLE_SAFE_MODE**:
-  This macro is used to enable the :ref:`safe mode <using-hardening-modes>`.
-
-**_LIBCPP_ENABLE_DEBUG_MODE**:
-  This macro is used to enable the :ref:`debug mode <using-hardening-modes>`.
+**_LIBCPP_HARDENING_MODE**:
+  This macro is used to choose the :ref:`hardening mode <using-hardening-modes>`.
 
 **_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
   This macro is used to disable all visibility annotations inside libc++.
@@ -334,6 +328,16 @@ C++20 Specific Configuration Macros
   This macro is used to re-enable `is_literal_type`, `is_literal_type_v`,
   `result_of` and `result_of_t`.
 
+
+C++26 Specific Configuration Macros
+-----------------------------------
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT**:
+  This macro is used to re-enable all named declarations in ``<codecvt>``.
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE**
+  This macro is used to re-enable the function
+  ``std::basic_string<...>::reserve()``.
 
 Libc++ Extensions
 =================

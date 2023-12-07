@@ -2443,7 +2443,7 @@ static bool isRequiredDecl(const Decl *D, ASTContext &Context,
   // Named modules have different semantics than header modules. Every named
   // module units owns a translation unit. So the importer of named modules
   // doesn't need to deserilize everything ahead of time.
-  if (WritingModule && WritingModule->isModulePurview()) {
+  if (WritingModule && WritingModule->isNamedModule()) {
     // The PragmaCommentDecl and PragmaDetectMismatchDecl are MSVC's extension.
     // And the behavior of MSVC for such cases will leak this to the module
     // users. Given pragma is not a standard thing, the compiler has the space

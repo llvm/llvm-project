@@ -49,7 +49,7 @@ namespace llvm {
     Function *LabelFn;       ///< llvm.dbg.label
     Function *AssignFn;      ///< llvm.dbg.assign
 
-    SmallVector<TrackingMDNodeRef, 4> EnumTypes;
+    SmallVector<TrackingMDNodeRef, 4> AllEnumTypes;
     /// Track the RetainTypes, since they can be updated later on.
     SmallVector<TrackingMDNodeRef, 4> AllRetainTypes;
     SmallVector<DISubprogram *, 4> AllSubprograms;
@@ -64,8 +64,8 @@ namespace llvm {
     SmallVector<TrackingMDNodeRef, 4> UnresolvedNodes;
     bool AllowUnresolvedNodes;
 
-    /// Each subprogram's preserved local variables, labels, imported entities,
-    /// and types.
+    /// Each subprogram's preserved local variables, labels and imported
+    /// entities.
     ///
     /// Do not use a std::vector.  Some versions of libc++ apparently copy
     /// instead of move on grow operations, and TrackingMDRef is expensive to
@@ -376,11 +376,12 @@ namespace llvm {
     /// \param Ty         Type of the static member.
     /// \param Flags      Flags to encode member attribute, e.g. private.
     /// \param Val        Const initializer of the member.
+    /// \param Tag        DWARF tag of the static member.
     /// \param AlignInBits  Member alignment.
     DIDerivedType *createStaticMemberType(DIScope *Scope, StringRef Name,
                                           DIFile *File, unsigned LineNo,
                                           DIType *Ty, DINode::DIFlags Flags,
-                                          Constant *Val,
+                                          Constant *Val, unsigned Tag,
                                           uint32_t AlignInBits = 0);
 
     /// Create debugging information entry for Objective-C
@@ -424,6 +425,7 @@ namespace llvm {
     /// \param OffsetInBits Member offset.
     /// \param Flags        Flags to encode member attribute, e.g. private
     /// \param Elements     class members.
+    /// \param RunTimeLang  Optional parameter, Objective-C runtime version.
     /// \param VTableHolder Debug info of the base class that contains vtable
     ///                     for this type. This is used in
     ///                     DW_AT_containing_type. See DWARF documentation
@@ -434,8 +436,8 @@ namespace llvm {
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
         DINode::DIFlags Flags, DIType *DerivedFrom, DINodeArray Elements,
-        DIType *VTableHolder = nullptr, MDNode *TemplateParms = nullptr,
-        StringRef UniqueIdentifier = "");
+        unsigned RunTimeLang = 0, DIType *VTableHolder = nullptr,
+        MDNode *TemplateParms = nullptr, StringRef UniqueIdentifier = "");
 
     /// Create debugging information entry for a struct.
     /// \param Scope        Scope in which this struct is defined.
@@ -578,13 +580,15 @@ namespace llvm {
     /// \param AlignInBits    Member alignment.
     /// \param Elements       Enumeration elements.
     /// \param UnderlyingType Underlying type of a C++11/ObjC fixed enum.
+    /// \param RunTimeLang  Optional parameter, Objective-C runtime version.
     /// \param UniqueIdentifier A unique identifier for the enum.
-    /// \param IsScoped Boolean flag indicate if this is C++11/ObjC 'enum class'.
+    /// \param IsScoped Boolean flag indicate if this is C++11/ObjC 'enum
+    /// class'.
     DICompositeType *createEnumerationType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         uint64_t SizeInBits, uint32_t AlignInBits, DINodeArray Elements,
-        DIType *UnderlyingType, StringRef UniqueIdentifier = "", bool IsScoped = false);
-
+        DIType *UnderlyingType, unsigned RunTimeLang = 0,
+        StringRef UniqueIdentifier = "", bool IsScoped = false);
     /// Create debugging information entry for a set.
     /// \param Scope          Scope in which this set is defined.
     /// \param Name           Set name.

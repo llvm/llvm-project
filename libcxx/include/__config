@@ -33,8 +33,8 @@
 // Warn if a compiler version is used that is not supported anymore
 // LLVM RELEASE Update the minimum compiler versions
 #  if defined(_LIBCPP_CLANG_VER)
-#    if _LIBCPP_CLANG_VER < 1500
-#      warning "Libc++ only supports Clang 15 and later"
+#    if _LIBCPP_CLANG_VER < 1600
+#      warning "Libc++ only supports Clang 16 and later"
 #    endif
 #  elif defined(_LIBCPP_APPLE_CLANG_VER)
 #    if _LIBCPP_APPLE_CLANG_VER < 1500
@@ -217,33 +217,37 @@
 
 // TODO(hardening): deprecate this in LLVM 19.
 // This is for backward compatibility -- make enabling `_LIBCPP_ENABLE_ASSERTIONS` (which predates hardening modes)
-// equivalent to setting the safe mode.
+// equivalent to setting the extensive mode.
 #  ifdef _LIBCPP_ENABLE_ASSERTIONS
 #    if _LIBCPP_ENABLE_ASSERTIONS != 0 && _LIBCPP_ENABLE_ASSERTIONS != 1
 #      error "_LIBCPP_ENABLE_ASSERTIONS must be set to 0 or 1"
 #    endif
 #    if _LIBCPP_ENABLE_ASSERTIONS
-#      define _LIBCPP_ENABLE_SAFE_MODE 1
+#      define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_EXTENSIVE
 #    endif
 #  endif
 
-// Enables the hardened mode which consists of all checks intended to be used in production. Hardened mode prioritizes
-// security-critical checks that can be done with relatively little overhead in constant time. Mutually exclusive with
-// `_LIBCPP_ENABLE_SAFE_MODE` and `_LIBCPP_ENABLE_DEBUG_MODE`.
+// The library provides the macro `_LIBCPP_HARDENING_MODE` which can be set to one of the following values:
 //
-// #define _LIBCPP_ENABLE_HARDENED_MODE 1
-
-// Enables the safe mode which extends the hardened mode with checks that are relatively cheap and prevent common types
-// of errors but are not security-critical. Mutually exclusive with `_LIBCPP_ENABLE_HARDENED_MODE` and
-// `_LIBCPP_ENABLE_DEBUG_MODE`.
+// - `_LIBCPP_HARDENING_MODE_NONE`;
+// - `_LIBCPP_HARDENING_MODE_FAST`;
+// - `_LIBCPP_HARDENING_MODE_EXTENSIVE`;
+// - `_LIBCPP_HARDENING_MODE_DEBUG`.
 //
-// #define _LIBCPP_ENABLE_SAFE_MODE 1
-
-// Enables the debug mode which contains all the checks from the hardened mode and additionally more expensive checks
-// that may affect the complexity of algorithms. The debug mode is intended to be used for testing, not in production.
-// Mutually exclusive with `_LIBCPP_ENABLE_HARDENED_MODE` and `_LIBCPP_ENABLE_SAFE_MODE`.
+// These values have the following effects:
 //
-// #define _LIBCPP_ENABLE_DEBUG_MODE 1
+// - `_LIBCPP_HARDENING_MODE_NONE` -- sets the hardening mode to "none" which disables all runtime hardening checks;
+//
+// - `_LIBCPP_HARDENING_MODE_FAST` -- sets that hardening mode to "fast". The fast mode enables security-critical checks
+//   that can be done with relatively little runtime overhead in constant time;
+//
+// - `_LIBCPP_HARDENING_MODE_EXTENSIVE` -- sets the hardening mode to "extensive". The extensive mode is a superset of
+//   the fast mode that additionally enables checks that are relatively cheap and prevent common types of logic errors
+//   but are not necessarily security-critical;
+//
+// - `_LIBCPP_HARDENING_MODE_DEBUG` -- sets the hardening mode to "debug". The debug mode is a superset of the extensive
+//   mode and enables all checks available in the library, including internal assertions. Checks that are part of the
+//   debug mode can be very expensive and thus the debug mode is intended to be used for testing, not in production.
 
 // Inside the library, assertions are categorized so they can be cherry-picked based on the chosen hardening mode. These
 // macros are only for internal use -- users should only pick one of the high-level hardening modes described above.
@@ -258,6 +262,11 @@
 //   a non-existent element. For iterator checks to work, bounded iterators must be enabled in the ABI. Types like
 //   `optional` and `function` are considered one-element containers for the purposes of this check.
 //
+// - `_LIBCPP_ASSERT_NON_NULL` -- checks that the pointer being dereferenced is not null. On most modern platforms zero
+//   address does not refer to an actual location in memory, so a null pointer dereference would not compromize the
+//   memory security of a program (however, it is still undefined behavior that can result in strange errors due to
+//   compiler optimizations).
+//
 // - `_LIBCPP_ASSERT_NON_OVERLAPPING_RANGES` -- for functions that take several ranges as arguments, checks that the
 //   given ranges do not overlap.
 //
@@ -269,43 +278,39 @@
 //
 // - `_LIBCPP_ASSERT_UNCATEGORIZED` -- for assertions that haven't been properly classified yet.
 
-#  ifndef _LIBCPP_ENABLE_HARDENED_MODE
-#    define _LIBCPP_ENABLE_HARDENED_MODE _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT
-#  endif
-#  if _LIBCPP_ENABLE_HARDENED_MODE != 0 && _LIBCPP_ENABLE_HARDENED_MODE != 1
-#    error "_LIBCPP_ENABLE_HARDENED_MODE must be set to 0 or 1."
+// clang-format off
+#  define _LIBCPP_HARDENING_MODE_NONE      (1 << 1)
+#  define _LIBCPP_HARDENING_MODE_FAST      (1 << 2)
+#  define _LIBCPP_HARDENING_MODE_EXTENSIVE (1 << 4) // Deliberately not ordered.
+#  define _LIBCPP_HARDENING_MODE_DEBUG     (1 << 3)
+// clang-format on
+
+#  ifndef _LIBCPP_HARDENING_MODE
+#    define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_DEFAULT
 #  endif
 
-#  ifndef _LIBCPP_ENABLE_SAFE_MODE
-#    define _LIBCPP_ENABLE_SAFE_MODE _LIBCPP_ENABLE_SAFE_MODE_DEFAULT
-#  endif
-#  if _LIBCPP_ENABLE_SAFE_MODE != 0 && _LIBCPP_ENABLE_SAFE_MODE != 1
-#    error "_LIBCPP_ENABLE_SAFE_MODE must be set to 0 or 1."
-#  endif
-
-#  ifndef _LIBCPP_ENABLE_DEBUG_MODE
-#    define _LIBCPP_ENABLE_DEBUG_MODE _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT
-#  endif
-#  if _LIBCPP_ENABLE_DEBUG_MODE != 0 && _LIBCPP_ENABLE_DEBUG_MODE != 1
-#    error "_LIBCPP_ENABLE_DEBUG_MODE must be set to 0 or 1."
-#  endif
-
-#  if (_LIBCPP_ENABLE_HARDENED_MODE && _LIBCPP_ENABLE_SAFE_MODE) ||                                                    \
-      (_LIBCPP_ENABLE_HARDENED_MODE && _LIBCPP_ENABLE_DEBUG_MODE) ||                                                   \
-      (_LIBCPP_ENABLE_SAFE_MODE && _LIBCPP_ENABLE_DEBUG_MODE)
-#    error                                                                                                             \
-        "Only one of _LIBCPP_ENABLE_HARDENED_MODE, _LIBCPP_ENABLE_SAFE_MODE and _LIBCPP_ENABLE_DEBUG_MODE can be enabled."
+#  if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_NONE &&                                                         \
+      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_FAST &&                                                         \
+      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_EXTENSIVE &&                                                    \
+      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
+#    error _LIBCPP_HARDENING_MODE must be set to one of the following values: \
+_LIBCPP_HARDENING_MODE_NONE, \
+_LIBCPP_HARDENING_MODE_FAST, \
+_LIBCPP_HARDENING_MODE_EXTENSIVE, \
+_LIBCPP_HARDENING_MODE_DEBUG
 #  endif
 
 // clang-format off
-// Hardened mode checks.
+// Fast hardening mode checks.
 
-#  if _LIBCPP_ENABLE_HARDENED_MODE
+#  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
 
 // Enabled checks.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
 // Disabled checks.
+// On most modern platforms, dereferencing a null pointer does not lead to an actual memory access.
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                 _LIBCPP_ASSUME(expression)
 // Overlapping ranges will make algorithms produce incorrect results but don't directly lead to a security
 // vulnerability.
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSUME(expression)
@@ -313,26 +318,28 @@
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSUME(expression)
 
-// Safe mode checks.
+// Extensive hardening mode checks.
 
-#  elif _LIBCPP_ENABLE_SAFE_MODE
+#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE
 
 // Enabled checks.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                 _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSERT(expression, message)
 // Disabled checks.
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 
-// Debug mode checks.
+// Debug hardening mode checks.
 
-#  elif _LIBCPP_ENABLE_DEBUG_MODE
+#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 
 // All checks enabled.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)         _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSERT(expression, message)
@@ -345,12 +352,13 @@
 // All checks disabled.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)         _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSUME(expression)
 
-#  endif // _LIBCPP_ENABLE_HARDENED_MODE
+#  endif // _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
 // clang-format on
 
 // } HARDENING
@@ -442,6 +450,7 @@
 #    define _LIBCPP_HAS_NO_INCOMPLETE_PSTL
 #    define _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
 #    define _LIBCPP_HAS_NO_INCOMPLETE_TZDB
+#    define _LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM
 #  endif
 
 // Need to detect which libc we're using if we're on Linux.
@@ -543,12 +552,6 @@
 #    define _LIBCPP_USING_DEV_RANDOM
 #  endif
 
-#  if __has_attribute(__no_sanitize__) && !defined(_LIBCPP_COMPILER_GCC)
-#    define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))
-#  else
-#    define _LIBCPP_NO_CFI
-#  endif
-
 #  ifndef _LIBCPP_CXX03_LANG
 
 #    define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
@@ -618,11 +621,6 @@ typedef __char32_t char32_t;
 
 #    if !__has_feature(address_sanitizer)
 #      define _LIBCPP_HAS_NO_ASAN
-#    endif
-
-// Allow for build-time disabling of unsigned integer sanitization
-#    if __has_attribute(no_sanitize)
-#      define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #    endif
 
 #    define _LIBCPP_ALWAYS_INLINE __attribute__((__always_inline__))
@@ -730,14 +728,14 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION _LIBCPP_ALWAYS_INLINE
 #  endif
 
-#  if _LIBCPP_ENABLE_HARDENED_MODE
-#    define _LIBCPP_HARDENING_SIG h
-#  elif _LIBCPP_ENABLE_SAFE_MODE
+#  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
+#    define _LIBCPP_HARDENING_SIG f
+#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE
 #    define _LIBCPP_HARDENING_SIG s
-#  elif _LIBCPP_ENABLE_DEBUG_MODE
+#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_HARDENING_SIG d
 #  else
-#    define _LIBCPP_HARDENING_SIG u // for unchecked
+#    define _LIBCPP_HARDENING_SIG n // "none"
 #  endif
 
 #  ifdef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -817,30 +815,22 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #  endif
 
-// Just so we can migrate to the new macros gradually.
+// TODO(LLVM-19): Remove _LIBCPP_INLINE_VISIBILITY and _VSTD, which we're keeping around
+//                only to ease the renaming for downstreams.
 #  define _LIBCPP_INLINE_VISIBILITY _LIBCPP_HIDE_FROM_ABI
+#  define _VSTD std
 
 // Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
 // clang-format off
 #  define _LIBCPP_BEGIN_NAMESPACE_STD namespace _LIBCPP_TYPE_VISIBILITY_DEFAULT std {                                  \
                                inline namespace _LIBCPP_ABI_NAMESPACE {
 #  define _LIBCPP_END_NAMESPACE_STD }}
-#  define _VSTD std
 
-_LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
-
-#  if _LIBCPP_STD_VER >= 17
-#    define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM                                                                         \
-       _LIBCPP_BEGIN_NAMESPACE_STD inline namespace __fs { namespace filesystem {
-#  else
-#    define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM                                                                         \
-      _LIBCPP_BEGIN_NAMESPACE_STD namespace __fs { namespace filesystem {
-#  endif
+#  define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM _LIBCPP_BEGIN_NAMESPACE_STD                                               \
+                                             inline namespace __fs { namespace filesystem {
 
 #  define _LIBCPP_END_NAMESPACE_FILESYSTEM _LIBCPP_END_NAMESPACE_STD }}
 // clang-format on
-
-#  define _VSTD_FS std::__fs::filesystem
 
 #  if __has_attribute(__enable_if__)
 #    define _LIBCPP_PREFERRED_OVERLOAD __attribute__((__enable_if__(true, "")))
@@ -850,18 +840,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_HAS_NO_INT128
 #  endif
 
-#  if __has_attribute(__malloc__)
-#    define _LIBCPP_NOALIAS __attribute__((__malloc__))
-#  else
-#    define _LIBCPP_NOALIAS
-#  endif
-
-#  if __has_attribute(__using_if_exists__)
-#    define _LIBCPP_USING_IF_EXISTS __attribute__((__using_if_exists__))
-#  else
-#    define _LIBCPP_USING_IF_EXISTS
-#  endif
-
 #  ifdef _LIBCPP_CXX03_LANG
 #    define _LIBCPP_DECLARE_STRONG_ENUM(x)                                                                             \
       struct _LIBCPP_EXPORTED_FROM_ABI x {                                                                             \
@@ -869,9 +847,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 // clang-format off
 #    define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)                                                                      \
       __lx __v_;                                                                                                       \
-      _LIBCPP_INLINE_VISIBILITY x(__lx __v) : __v_(__v) {}                                                             \
-      _LIBCPP_INLINE_VISIBILITY explicit x(int __v) : __v_(static_cast<__lx>(__v)) {}                                  \
-      _LIBCPP_INLINE_VISIBILITY operator int() const { return __v_; }                                                  \
+      _LIBCPP_HIDE_FROM_ABI x(__lx __v) : __v_(__v) {}                                                                 \
+      _LIBCPP_HIDE_FROM_ABI explicit x(int __v) : __v_(static_cast<__lx>(__v)) {}                                      \
+      _LIBCPP_HIDE_FROM_ABI operator int() const { return __v_; }                                                      \
       };
 // clang-format on
 
@@ -1031,44 +1009,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_CONSTEXPR_SINCE_CXX23
 #  endif
 
-#  if __has_cpp_attribute(nodiscard)
-#    define _LIBCPP_NODISCARD [[__nodiscard__]]
-#  else
-// We can't use GCC's [[gnu::warn_unused_result]] and
-// __attribute__((warn_unused_result)), because GCC does not silence them via
-// (void) cast.
-#    define _LIBCPP_NODISCARD
-#  endif
-
-// _LIBCPP_NODISCARD_EXT may be used to apply [[nodiscard]] to entities not
-// specified as such as an extension.
-#  if !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
-#    define _LIBCPP_NODISCARD_EXT _LIBCPP_NODISCARD
-#  else
-#    define _LIBCPP_NODISCARD_EXT
-#  endif
-
-#  if _LIBCPP_STD_VER >= 20 || !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
-#    define _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_NODISCARD
-#  else
-#    define _LIBCPP_NODISCARD_AFTER_CXX17
-#  endif
-
-#  if __has_attribute(__no_destroy__)
-#    define _LIBCPP_NO_DESTROY __attribute__((__no_destroy__))
-#  else
-#    define _LIBCPP_NO_DESTROY
-#  endif
-
 #  ifndef _LIBCPP_HAS_NO_ASAN
     extern "C" _LIBCPP_EXPORTED_FROM_ABI void
     __sanitizer_annotate_contiguous_container(const void*, const void*, const void*, const void*);
-#    if _LIBCPP_CLANG_VER >= 1600
 extern "C" _LIBCPP_EXPORTED_FROM_ABI void __sanitizer_annotate_double_ended_contiguous_container(
     const void*, const void*, const void*, const void*, const void*, const void*);
 extern "C" _LIBCPP_EXPORTED_FROM_ABI int
 __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, const void*, const void*);
-#    endif
 #  endif
 
 // Try to find out if RTTI is disabled.
@@ -1197,10 +1144,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    endif
 #  endif
 
-#  ifndef _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
-#    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
-#  endif
-
 #  if defined(__FreeBSD__) && defined(__clang__) && __has_attribute(__no_thread_safety_analysis__)
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS __attribute__((__no_thread_safety_analysis__))
 #  else
@@ -1233,49 +1176,10 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_CONSTINIT
 #  endif
 
-#  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
-#    define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((__diagnose_if__(__VA_ARGS__, "warning")))
+#  if __has_attribute(__noinline__)
+#    define _LIBCPP_NOINLINE __attribute__((__noinline__))
 #  else
-#    define _LIBCPP_DIAGNOSE_WARNING(...)
-#  endif
-
-// Use a function like macro to imply that it must be followed by a semicolon
-#  if __has_cpp_attribute(fallthrough)
-#    define _LIBCPP_FALLTHROUGH() [[fallthrough]]
-#  elif __has_attribute(__fallthrough__)
-#    define _LIBCPP_FALLTHROUGH() __attribute__((__fallthrough__))
-#  else
-#    define _LIBCPP_FALLTHROUGH() ((void)0)
-#  endif
-
-#  if __has_cpp_attribute(_Clang::__lifetimebound__)
-#    define _LIBCPP_LIFETIMEBOUND [[_Clang::__lifetimebound__]]
-#  else
-#    define _LIBCPP_LIFETIMEBOUND
-#  endif
-
-#  if __has_attribute(__nodebug__)
-#    define _LIBCPP_NODEBUG __attribute__((__nodebug__))
-#  else
-#    define _LIBCPP_NODEBUG
-#  endif
-
-#  if __has_attribute(__standalone_debug__)
-#    define _LIBCPP_STANDALONE_DEBUG __attribute__((__standalone_debug__))
-#  else
-#    define _LIBCPP_STANDALONE_DEBUG
-#  endif
-
-#  if __has_attribute(__preferred_name__)
-#    define _LIBCPP_PREFERRED_NAME(x) __attribute__((__preferred_name__(x)))
-#  else
-#    define _LIBCPP_PREFERRED_NAME(x)
-#  endif
-
-#  if __has_attribute(__no_sanitize__)
-#    define _LIBCPP_NO_SANITIZE(...) __attribute__((__no_sanitize__(__VA_ARGS__)))
-#  else
-#    define _LIBCPP_NO_SANITIZE(...)
+#    define _LIBCPP_NOINLINE
 #  endif
 
 // We often repeat things just for handling wide characters in the library.
@@ -1286,12 +1190,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_IF_WIDE_CHARACTERS(...)
 #  else
 #    define _LIBCPP_IF_WIDE_CHARACTERS(...) __VA_ARGS__
-#  endif
-
-#  if defined(_LIBCPP_ABI_MICROSOFT) && __has_declspec_attribute(empty_bases)
-#    define _LIBCPP_DECLSPEC_EMPTY_BASES __declspec(empty_bases)
-#  else
-#    define _LIBCPP_DECLSPEC_EMPTY_BASES
 #  endif
 
 #  if defined(_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES)
@@ -1337,28 +1235,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_FOPEN_CLOEXEC_MODE
 #  endif
 
-// Support for _FILE_OFFSET_BITS=64 landed gradually in Android, so the full set
-// of functions used in cstdio may not be available for low API levels when
-// using 64-bit file offsets on LP32.
-#  if defined(__BIONIC__) && defined(__USE_FILE_OFFSET64) && __ANDROID_API__ < 24
-#    define _LIBCPP_HAS_NO_FGETPOS_FSETPOS
-#  endif
-
-#  if __has_attribute(__init_priority__)
-#    define _LIBCPP_INIT_PRIORITY_MAX __attribute__((__init_priority__(100)))
-#  else
-#    define _LIBCPP_INIT_PRIORITY_MAX
-#  endif
-
-#  if __has_attribute(__format__)
-// The attribute uses 1-based indices for ordinary and static member functions.
-// The attribute uses 2-based indices for non-static member functions.
-#    define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index)                           \
-      __attribute__((__format__(archetype, format_string_index, first_format_arg_index)))
-#  else
-#    define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index) /* nothing */
-#  endif
-
 #  if __has_cpp_attribute(msvc::no_unique_address)
 // MSVC implements [[no_unique_address]] as a silent no-op currently.
 // (If/when MSVC breaks its C++ ABI, it will be changed to work as intended.)
@@ -1396,20 +1272,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_DIAGNOSTIC_POP
 #    define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED(str)
 #    define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str)
-#  endif
-
-#  if defined(_AIX) && !defined(_LIBCPP_COMPILER_GCC)
-#    define _LIBCPP_PACKED_BYTE_FOR_AIX _Pragma("pack(1)")
-#    define _LIBCPP_PACKED_BYTE_FOR_AIX_END _Pragma("pack(pop)")
-#  else
-#    define _LIBCPP_PACKED_BYTE_FOR_AIX     /* empty */
-#    define _LIBCPP_PACKED_BYTE_FOR_AIX_END /* empty */
-#  endif
-
-#  if __has_attribute(__packed__)
-#    define _LIBCPP_PACKED __attribute__((__packed__))
-#  else
-#    define _LIBCPP_PACKED
 #  endif
 
 // c8rtomb() and mbrtoc8() were added in C++20 and C23. Support for these
@@ -1499,6 +1361,134 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #  endif // (defined(_OPENMP) && _OPENMP >= 201307)
 
 #  define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
+
+// Optional attributes - these are useful for a better QoI, but not required to be available
+
+#  if __has_attribute(__no_sanitize__) && !defined(_LIBCPP_COMPILER_GCC)
+#    define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))
+#  else
+#    define _LIBCPP_NO_CFI
+#  endif
+
+#  if __has_attribute(__malloc__)
+#    define _LIBCPP_NOALIAS __attribute__((__malloc__))
+#  else
+#    define _LIBCPP_NOALIAS
+#  endif
+
+#  if __has_attribute(__using_if_exists__)
+#    define _LIBCPP_USING_IF_EXISTS __attribute__((__using_if_exists__))
+#  else
+#    define _LIBCPP_USING_IF_EXISTS
+#  endif
+
+#  if __has_cpp_attribute(nodiscard)
+#    define _LIBCPP_NODISCARD [[__nodiscard__]]
+#  else
+// We can't use GCC's [[gnu::warn_unused_result]] and
+// __attribute__((warn_unused_result)), because GCC does not silence them via
+// (void) cast.
+#    define _LIBCPP_NODISCARD
+#  endif
+
+// _LIBCPP_NODISCARD_EXT may be used to apply [[nodiscard]] to entities not
+// specified as such as an extension.
+#  if !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
+#    define _LIBCPP_NODISCARD_EXT _LIBCPP_NODISCARD
+#  else
+#    define _LIBCPP_NODISCARD_EXT
+#  endif
+
+#  if _LIBCPP_STD_VER >= 20 || !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
+#    define _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_NODISCARD
+#  else
+#    define _LIBCPP_NODISCARD_AFTER_CXX17
+#  endif
+
+#  if __has_attribute(__no_destroy__)
+#    define _LIBCPP_NO_DESTROY __attribute__((__no_destroy__))
+#  else
+#    define _LIBCPP_NO_DESTROY
+#  endif
+
+#  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
+#    define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((__diagnose_if__(__VA_ARGS__, "warning")))
+#  else
+#    define _LIBCPP_DIAGNOSE_WARNING(...)
+#  endif
+
+// Use a function like macro to imply that it must be followed by a semicolon
+#  if __has_cpp_attribute(fallthrough)
+#    define _LIBCPP_FALLTHROUGH() [[fallthrough]]
+#  elif __has_attribute(__fallthrough__)
+#    define _LIBCPP_FALLTHROUGH() __attribute__((__fallthrough__))
+#  else
+#    define _LIBCPP_FALLTHROUGH() ((void)0)
+#  endif
+
+#  if __has_cpp_attribute(_Clang::__lifetimebound__)
+#    define _LIBCPP_LIFETIMEBOUND [[_Clang::__lifetimebound__]]
+#  else
+#    define _LIBCPP_LIFETIMEBOUND
+#  endif
+
+#  if __has_attribute(__nodebug__)
+#    define _LIBCPP_NODEBUG __attribute__((__nodebug__))
+#  else
+#    define _LIBCPP_NODEBUG
+#  endif
+
+#  if __has_attribute(__standalone_debug__)
+#    define _LIBCPP_STANDALONE_DEBUG __attribute__((__standalone_debug__))
+#  else
+#    define _LIBCPP_STANDALONE_DEBUG
+#  endif
+
+#  if __has_attribute(__preferred_name__)
+#    define _LIBCPP_PREFERRED_NAME(x) __attribute__((__preferred_name__(x)))
+#  else
+#    define _LIBCPP_PREFERRED_NAME(x)
+#  endif
+
+#  if __has_attribute(__no_sanitize__)
+#    define _LIBCPP_NO_SANITIZE(...) __attribute__((__no_sanitize__(__VA_ARGS__)))
+#  else
+#    define _LIBCPP_NO_SANITIZE(...)
+#  endif
+
+#  if __has_attribute(__init_priority__)
+#    define _LIBCPP_INIT_PRIORITY_MAX __attribute__((__init_priority__(100)))
+#  else
+#    define _LIBCPP_INIT_PRIORITY_MAX
+#  endif
+
+#  if __has_attribute(__format__)
+// The attribute uses 1-based indices for ordinary and static member functions.
+// The attribute uses 2-based indices for non-static member functions.
+#    define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index)                           \
+      __attribute__((__format__(archetype, format_string_index, first_format_arg_index)))
+#  else
+#    define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index) /* nothing */
+#  endif
+
+#  if __has_attribute(__packed__)
+#    define _LIBCPP_PACKED __attribute__((__packed__))
+#  else
+#    define _LIBCPP_PACKED
+#  endif
+
+#  if defined(_LIBCPP_ABI_MICROSOFT) && __has_declspec_attribute(empty_bases)
+#    define _LIBCPP_DECLSPEC_EMPTY_BASES __declspec(empty_bases)
+#  else
+#    define _LIBCPP_DECLSPEC_EMPTY_BASES
+#  endif
+
+// Allow for build-time disabling of unsigned integer sanitization
+#  if __has_attribute(no_sanitize) && !defined(_LIBCPP_COMPILER_GCC)
+#    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
+#  else
+#    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+#  endif
 
 #endif // __cplusplus
 

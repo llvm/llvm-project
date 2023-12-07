@@ -3,13 +3,13 @@
 
 pthread_mutex_t mtx;
 
-void Func1() {
+__attribute__((noinline)) void Func1() {
   pthread_mutex_lock(&mtx);
   __tsan_check_no_mutexes_held();
   pthread_mutex_unlock(&mtx);
 }
 
-void Func2() {
+__attribute__((noinline)) void Func2() {
   pthread_mutex_lock(&mtx);
   pthread_mutex_unlock(&mtx);
   __tsan_check_no_mutexes_held();
@@ -23,12 +23,12 @@ int main() {
 }
 
 // CHECK: WARNING: ThreadSanitizer: mutex held in the wrong context
-// CHECK:     #0 __tsan_check_no_mutexes_held
-// CHECK:     #1 Func1
-// CHECK:     #2 main
+// CHECK:     {{.*}}__tsan_check_no_mutexes_held{{.*}}
+// CHECK:     {{.*}}Func1{{.*}}
+// CHECK:     {{.*}}main{{.*}}
 // CHECK:   Mutex {{.*}} created at:
-// CHECK:     #0 pthread_mutex_init
-// CHECK:     #1 main
+// CHECK:     {{.*}}pthread_mutex_init{{.*}}
+// CHECK:     {{.*}}main{{.*}}
 // CHECK: SUMMARY: ThreadSanitizer: mutex held in the wrong context {{.*}}mutex_held_wrong_context.cpp{{.*}}Func1
 
 // CHECK-NOT: SUMMARY: ThreadSanitizer: mutex held in the wrong context {{.*}}mutex_held_wrong_context.cpp{{.*}}Func2

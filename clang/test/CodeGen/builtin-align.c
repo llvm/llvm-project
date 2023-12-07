@@ -119,7 +119,6 @@ _Bool is_aligned(TYPE ptr, unsigned align) {
 // CHECK-VOID_PTR-NEXT:    [[OVER_BOUNDARY:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[MASK]]
 // CHECK-VOID_PTR-NEXT:    [[INVERTED_MASK:%.*]] = xor i64 [[MASK]], -1
 // CHECK-VOID_PTR-NEXT:    [[ALIGNED_RESULT:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[OVER_BOUNDARY]], i64 [[INVERTED_MASK]])
-// CHECK-VOID_PTR-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ALIGNED_RESULT]], i64 [[ALIGNMENT]]) ]
 // CHECK-VOID_PTR-NEXT:    ret ptr [[ALIGNED_RESULT]]
 //
 // CHECK-FLOAT_PTR-LABEL: define {{[^@]+}}@align_up
@@ -130,7 +129,6 @@ _Bool is_aligned(TYPE ptr, unsigned align) {
 // CHECK-FLOAT_PTR-NEXT:    [[OVER_BOUNDARY:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[MASK]]
 // CHECK-FLOAT_PTR-NEXT:    [[INVERTED_MASK:%.*]] = xor i64 [[MASK]], -1
 // CHECK-FLOAT_PTR-NEXT:    [[ALIGNED_RESULT:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[OVER_BOUNDARY]], i64 [[INVERTED_MASK]])
-// CHECK-FLOAT_PTR-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ALIGNED_RESULT]], i64 [[ALIGNMENT]]) ]
 // CHECK-FLOAT_PTR-NEXT:    ret ptr [[ALIGNED_RESULT]]
 //
 // CHECK-LONG-LABEL: define {{[^@]+}}@align_up
@@ -165,7 +163,6 @@ TYPE align_up(TYPE ptr, unsigned align) {
 // CHECK-VOID_PTR-NEXT:    [[MASK:%.*]] = sub i64 [[ALIGNMENT]], 1
 // CHECK-VOID_PTR-NEXT:    [[INVERTED_MASK:%.*]] = xor i64 [[MASK]], -1
 // CHECK-VOID_PTR-NEXT:    [[ALIGNED_RESULT:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 [[INVERTED_MASK]])
-// CHECK-VOID_PTR-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ALIGNED_RESULT]], i64 [[ALIGNMENT]]) ]
 // CHECK-VOID_PTR-NEXT:    ret ptr [[ALIGNED_RESULT]]
 //
 // CHECK-FLOAT_PTR-LABEL: define {{[^@]+}}@align_down
@@ -175,7 +172,6 @@ TYPE align_up(TYPE ptr, unsigned align) {
 // CHECK-FLOAT_PTR-NEXT:    [[MASK:%.*]] = sub i64 [[ALIGNMENT]], 1
 // CHECK-FLOAT_PTR-NEXT:    [[INVERTED_MASK:%.*]] = xor i64 [[MASK]], -1
 // CHECK-FLOAT_PTR-NEXT:    [[ALIGNED_RESULT:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 [[INVERTED_MASK]])
-// CHECK-FLOAT_PTR-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ALIGNED_RESULT]], i64 [[ALIGNMENT]]) ]
 // CHECK-FLOAT_PTR-NEXT:    ret ptr [[ALIGNED_RESULT]]
 //
 // CHECK-LONG-LABEL: define {{[^@]+}}@align_down

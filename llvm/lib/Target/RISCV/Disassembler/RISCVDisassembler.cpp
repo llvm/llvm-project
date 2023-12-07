@@ -353,6 +353,9 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, unsigned Imm,
                                     uint64_t Address, const void *Decoder);
 
+static DecodeStatus decodeRegReg(MCInst &Inst, uint32_t Insn, uint64_t Address,
+                                 const MCDisassembler *Decoder);
+
 static DecodeStatus decodeZcmpSpimm(MCInst &Inst, unsigned Imm,
                                     uint64_t Address, const void *Decoder);
 
@@ -447,6 +450,15 @@ static DecodeStatus decodeZcmpRlist(MCInst &Inst, unsigned Imm,
   if (Imm <= 3)
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeRegReg(MCInst &Inst, uint32_t Insn, uint64_t Address,
+                                 const MCDisassembler *Decoder) {
+  uint32_t Rs1 = fieldFromInstruction(Insn, 0, 5);
+  uint32_t Rs2 = fieldFromInstruction(Insn, 5, 5);
+  DecodeGPRRegisterClass(Inst, Rs1, Address, Decoder);
+  DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder);
   return MCDisassembler::Success;
 }
 
@@ -561,8 +573,12 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbitmanip,
                           DecoderTableXCVbitmanip32,
                           "CORE-V Bit Manipulation custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVelw, DecoderTableXCVelw32,
+                          "CORE-V Event load custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVmac, DecoderTableXCVmac32,
                           "CORE-V MAC custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVmem, DecoderTableXCVmem32,
+                          "CORE-V MEM custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCValu, DecoderTableXCValu32,
                           "CORE-V ALU custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVsimd, DecoderTableXCVsimd32,

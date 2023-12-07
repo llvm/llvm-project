@@ -155,6 +155,11 @@
   !ERROR: If PAD appears, FMT or NML must also appear
   read(10, pad='no', round='nearest') jj
 
+  !PORTABILITY: If NML appears, SIZE should not appear
+  read(10, nml=nnn, size=kk)
+  !PORTABILITY: If FMT=* appears, SIZE should not appear
+  read(10, *, size=kk) jj
+
   !ERROR: ID kind (2) is smaller than default INTEGER kind (4)
   read(10, id=id2, asynchronous='yes') jj
 

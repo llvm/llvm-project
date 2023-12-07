@@ -19,6 +19,7 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -221,6 +222,9 @@ std::string getIRName(Any IR) {
 
   if (const auto **L = llvm::any_cast<const Loop *>(&IR))
     return (*L)->getName().str();
+
+  if (const auto **MF = llvm::any_cast<const MachineFunction *>(&IR))
+    return (*MF)->getName().str();
 
   llvm_unreachable("Unknown wrapped IR type");
 }
@@ -1401,7 +1405,9 @@ void VerifyInstrumentation::registerCallbacks(
             dbgs() << "Verifying function " << F->getName() << "\n";
 
           if (verifyFunction(*F, &errs()))
-            report_fatal_error("Broken function found, compilation aborted!");
+            report_fatal_error(formatv("Broken function found after pass "
+                                       "\"{0}\", compilation aborted!",
+                                       P));
         } else {
           const Module **MPtr = llvm::any_cast<const Module *>(&IR);
           const Module *M = MPtr ? *MPtr : nullptr;
@@ -1416,7 +1422,9 @@ void VerifyInstrumentation::registerCallbacks(
               dbgs() << "Verifying module " << M->getName() << "\n";
 
             if (verifyModule(*M, &errs()))
-              report_fatal_error("Broken module found, compilation aborted!");
+              report_fatal_error(formatv("Broken module found after pass "
+                                         "\"{0}\", compilation aborted!",
+                                         P));
           }
         }
       });

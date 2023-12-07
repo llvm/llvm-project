@@ -1,6 +1,6 @@
 ! This test checks a few bug fixes in the PRIVATE clause lowering
 
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: multiple_private_fix
 ! CHECK:         %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFmultiple_private_fixEi"}

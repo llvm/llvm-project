@@ -8,12 +8,11 @@ define void @test_fptosi(i32 %n, ptr %g, ptr %d) {
 ; CHECK-FP-NEXT:  entry:
 ; CHECK-FP-NEXT:    [[N_OFF:%.*]] = add i32 [[N]], -1
 ; CHECK-FP-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[N_OFF]], 500
-; CHECK-FP-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
 ; CHECK-FP-NEXT:    br i1 [[TMP0]], label [[WHILE_BODY_LR_PH:%.*]], label [[CLEANUP:%.*]]
 ; CHECK-FP:       while.body.lr.ph:
 ; CHECK-FP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D]], align 4
 ; CHECK-FP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[G]], align 4
-; CHECK-FP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[UMAX]])
+; CHECK-FP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[N]])
 ; CHECK-FP-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-FP:       while.body:
 ; CHECK-FP-NEXT:    [[I_012:%.*]] = phi i32 [ 0, [[WHILE_BODY_LR_PH]] ], [ [[INC:%.*]], [[IF_END4:%.*]] ]
@@ -111,12 +110,11 @@ define void @test_fptoui(i32 %n, ptr %g, ptr %d) {
 ; CHECK-FP-NEXT:  entry:
 ; CHECK-FP-NEXT:    [[N_OFF:%.*]] = add i32 [[N]], -1
 ; CHECK-FP-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[N_OFF]], 500
-; CHECK-FP-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
 ; CHECK-FP-NEXT:    br i1 [[TMP0]], label [[WHILE_BODY_LR_PH:%.*]], label [[CLEANUP:%.*]]
 ; CHECK-FP:       while.body.lr.ph:
 ; CHECK-FP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D]], align 4
 ; CHECK-FP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[G]], align 4
-; CHECK-FP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[UMAX]])
+; CHECK-FP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[N]])
 ; CHECK-FP-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-FP:       while.body:
 ; CHECK-FP-NEXT:    [[I_012:%.*]] = phi i32 [ 0, [[WHILE_BODY_LR_PH]] ], [ [[INC:%.*]], [[IF_END4:%.*]] ]
@@ -214,12 +212,11 @@ define void @load_store_float(i32 %n, ptr %d, ptr %g) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N_OFF:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[N_OFF]], 500
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[WHILE_BODY_LR_PH:%.*]], label [[CLEANUP:%.*]]
 ; CHECK:       while.body.lr.ph:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[G]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[UMAX]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[N]])
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[I_012:%.*]] = phi i32 [ 0, [[WHILE_BODY_LR_PH]] ], [ [[INC:%.*]], [[IF_END4:%.*]] ]
@@ -284,12 +281,11 @@ define void @fp_add(i32 %n, ptr %d, ptr %g) {
 ; CHECK-FP-NEXT:  entry:
 ; CHECK-FP-NEXT:    [[N_OFF:%.*]] = add i32 [[N]], -1
 ; CHECK-FP-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[N_OFF]], 500
-; CHECK-FP-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
 ; CHECK-FP-NEXT:    br i1 [[TMP0]], label [[WHILE_BODY_LR_PH:%.*]], label [[CLEANUP:%.*]]
 ; CHECK-FP:       while.body.lr.ph:
 ; CHECK-FP-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D]], align 4
 ; CHECK-FP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[G]], align 4
-; CHECK-FP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[UMAX]])
+; CHECK-FP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.start.loop.iterations.i32(i32 [[N]])
 ; CHECK-FP-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-FP:       while.body:
 ; CHECK-FP-NEXT:    [[I_012:%.*]] = phi i32 [ 0, [[WHILE_BODY_LR_PH]] ], [ [[INC:%.*]], [[IF_END4:%.*]] ]

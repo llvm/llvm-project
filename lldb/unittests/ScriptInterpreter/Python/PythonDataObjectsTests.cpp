@@ -504,6 +504,9 @@ TEST_F(PythonDataObjectsTest, TestPythonDictionaryManipulation) {
     dict.SetItemForKey(keys[i], values[i]);
 
   EXPECT_EQ(dict_entries, dict.GetSize());
+  EXPECT_FALSE(dict.HasKey("not_in_dict"));
+  EXPECT_TRUE(dict.HasKey(key_0));
+  EXPECT_TRUE(dict.HasKey(key_1));
 
   // Verify that the keys and values match
   PythonObject chk_value1 = dict.GetItemForKey(keys[0]);

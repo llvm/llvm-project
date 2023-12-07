@@ -28,6 +28,7 @@ add_clang_unittest(FormatTests
   MacroCallReconstructorTest.cpp
   MacroExpanderTest.cpp
   NamespaceEndCommentsFixerTest.cpp
+  ObjCPropertyAttributeOrderFixerTest.cpp
   QualifierFixerTest.cpp
   SortImportsTestJS.cpp
   SortImportsTestJava.cpp

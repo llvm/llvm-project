@@ -34,13 +34,8 @@ define <2 x i32> @lrint_v2i32f32(ptr %a) {
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 8
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <2 x i32> undef, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <2 x i32> [[VECINS]], i32 [[TMP2]], i32 1
-; CHECK-NEXT:    ret <2 x i32> [[VECINS_1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.lrint.v2i32.v2f32(<2 x float> [[TMP0]])
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
 ;
 entry:
   %0 = load <2 x float>, ptr %a
@@ -58,19 +53,8 @@ define <4 x i32> @lrint_v4i32f32(ptr %a) {
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x i32> undef, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x i32> [[VECINS]], i32 [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x i32> [[VECINS_1]], i32 [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x i32> [[VECINS_2]], i32 [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x i32> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.lrint.v4i32.v4f32(<4 x float> [[TMP0]])
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a
@@ -94,31 +78,8 @@ define <8 x i32> @lrint_v8i32f32(ptr %a) {
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[A]], align 32
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <8 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <8 x i32> undef, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <8 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <8 x i32> [[VECINS]], i32 [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <8 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <8 x i32> [[VECINS_1]], i32 [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <8 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <8 x i32> [[VECINS_2]], i32 [[TMP4]], i32 3
-; CHECK-NEXT:    [[VECEXT_4:%.*]] = extractelement <8 x float> [[TMP0]], i32 4
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT_4]])
-; CHECK-NEXT:    [[VECINS_4:%.*]] = insertelement <8 x i32> [[VECINS_3]], i32 [[TMP5]], i32 4
-; CHECK-NEXT:    [[VECEXT_5:%.*]] = extractelement <8 x float> [[TMP0]], i32 5
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT_5]])
-; CHECK-NEXT:    [[VECINS_5:%.*]] = insertelement <8 x i32> [[VECINS_4]], i32 [[TMP6]], i32 5
-; CHECK-NEXT:    [[VECEXT_6:%.*]] = extractelement <8 x float> [[TMP0]], i32 6
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT_6]])
-; CHECK-NEXT:    [[VECINS_6:%.*]] = insertelement <8 x i32> [[VECINS_5]], i32 [[TMP7]], i32 6
-; CHECK-NEXT:    [[VECEXT_7:%.*]] = extractelement <8 x float> [[TMP0]], i32 7
-; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.lrint.i32.f32(float [[VECEXT_7]])
-; CHECK-NEXT:    [[VECINS_7:%.*]] = insertelement <8 x i32> [[VECINS_6]], i32 [[TMP8]], i32 7
-; CHECK-NEXT:    ret <8 x i32> [[VECINS_7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.lrint.v8i32.v8f32(<8 x float> [[TMP0]])
+; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
 ;
 entry:
   %0 = load <8 x float>, ptr %a
@@ -154,13 +115,8 @@ define <2 x i64> @lrint_v2i64f32(ptr %a) {
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 8
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x float> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <2 x i64> undef, i64 [[TMP1]], i64 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <2 x float> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <2 x i64> [[VECINS]], i64 [[TMP2]], i64 1
-; CHECK-NEXT:    ret <2 x i64> [[VECINS_1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.lrint.v2i64.v2f32(<2 x float> [[TMP0]])
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
 entry:
   %0 = load <2 x float>, ptr %a
@@ -178,19 +134,8 @@ define <4 x i64> @lrint_v4i64f32(ptr %a) {
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x i64> undef, i64 [[TMP1]], i64 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x i64> [[VECINS]], i64 [[TMP2]], i64 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x i64> [[VECINS_1]], i64 [[TMP3]], i64 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x i64> [[VECINS_2]], i64 [[TMP4]], i64 3
-; CHECK-NEXT:    ret <4 x i64> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.lrint.v4i64.v4f32(<4 x float> [[TMP0]])
+; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a
@@ -214,31 +159,14 @@ define <8 x i64> @lrint_v8i64f32(ptr %a) {
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[A]], align 32
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <8 x float> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <8 x i64> undef, i64 [[TMP1]], i64 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <8 x float> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <8 x i64> [[VECINS]], i64 [[TMP2]], i64 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <8 x float> [[TMP0]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <8 x i64> [[VECINS_1]], i64 [[TMP3]], i64 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <8 x float> [[TMP0]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <8 x i64> [[VECINS_2]], i64 [[TMP4]], i64 3
-; CHECK-NEXT:    [[VECEXT_4:%.*]] = extractelement <8 x float> [[TMP0]], i64 4
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT_4]])
-; CHECK-NEXT:    [[VECINS_4:%.*]] = insertelement <8 x i64> [[VECINS_3]], i64 [[TMP5]], i64 4
-; CHECK-NEXT:    [[VECEXT_5:%.*]] = extractelement <8 x float> [[TMP0]], i64 5
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT_5]])
-; CHECK-NEXT:    [[VECINS_5:%.*]] = insertelement <8 x i64> [[VECINS_4]], i64 [[TMP6]], i64 5
-; CHECK-NEXT:    [[VECEXT_6:%.*]] = extractelement <8 x float> [[TMP0]], i64 6
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT_6]])
-; CHECK-NEXT:    [[VECINS_6:%.*]] = insertelement <8 x i64> [[VECINS_5]], i64 [[TMP7]], i64 6
-; CHECK-NEXT:    [[VECEXT_7:%.*]] = extractelement <8 x float> [[TMP0]], i64 7
-; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.lrint.i64.f32(float [[VECEXT_7]])
-; CHECK-NEXT:    [[VECINS_7:%.*]] = insertelement <8 x i64> [[VECINS_6]], i64 [[TMP8]], i64 7
-; CHECK-NEXT:    ret <8 x i64> [[VECINS_7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.lrint.v4i64.v4f32(<4 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.lrint.v4i64.v4f32(<4 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_71:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    ret <8 x i64> [[VECINS_71]]
 ;
 entry:
   %0 = load <8 x float>, ptr %a
@@ -274,13 +202,8 @@ define <2 x i64> @llrint_v2i64f32(ptr %a) {
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 8
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x float> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <2 x i64> undef, i64 [[TMP1]], i64 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <2 x float> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <2 x i64> [[VECINS]], i64 [[TMP2]], i64 1
-; CHECK-NEXT:    ret <2 x i64> [[VECINS_1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float> [[TMP0]])
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
 entry:
   %0 = load <2 x float>, ptr %a
@@ -298,19 +221,8 @@ define <4 x i64> @llrint_v4i64f32(ptr %a) {
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x i64> undef, i64 [[TMP1]], i64 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x i64> [[VECINS]], i64 [[TMP2]], i64 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x i64> [[VECINS_1]], i64 [[TMP3]], i64 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x i64> [[VECINS_2]], i64 [[TMP4]], i64 3
-; CHECK-NEXT:    ret <4 x i64> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> [[TMP0]])
+; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a
@@ -334,31 +246,14 @@ define <8 x i64> @llrint_v8i64f32(ptr %a) {
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[A]], align 32
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <8 x float> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <8 x i64> undef, i64 [[TMP1]], i64 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <8 x float> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <8 x i64> [[VECINS]], i64 [[TMP2]], i64 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <8 x float> [[TMP0]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <8 x i64> [[VECINS_1]], i64 [[TMP3]], i64 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <8 x float> [[TMP0]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <8 x i64> [[VECINS_2]], i64 [[TMP4]], i64 3
-; CHECK-NEXT:    [[VECEXT_4:%.*]] = extractelement <8 x float> [[TMP0]], i64 4
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT_4]])
-; CHECK-NEXT:    [[VECINS_4:%.*]] = insertelement <8 x i64> [[VECINS_3]], i64 [[TMP5]], i64 4
-; CHECK-NEXT:    [[VECEXT_5:%.*]] = extractelement <8 x float> [[TMP0]], i64 5
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT_5]])
-; CHECK-NEXT:    [[VECINS_5:%.*]] = insertelement <8 x i64> [[VECINS_4]], i64 [[TMP6]], i64 5
-; CHECK-NEXT:    [[VECEXT_6:%.*]] = extractelement <8 x float> [[TMP0]], i64 6
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT_6]])
-; CHECK-NEXT:    [[VECINS_6:%.*]] = insertelement <8 x i64> [[VECINS_5]], i64 [[TMP7]], i64 6
-; CHECK-NEXT:    [[VECEXT_7:%.*]] = extractelement <8 x float> [[TMP0]], i64 7
-; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.llrint.i64.f32(float [[VECEXT_7]])
-; CHECK-NEXT:    [[VECINS_7:%.*]] = insertelement <8 x i64> [[VECINS_6]], i64 [[TMP8]], i64 7
-; CHECK-NEXT:    ret <8 x i64> [[VECINS_7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_71:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    ret <8 x i64> [[VECINS_71]]
 ;
 entry:
   %0 = load <8 x float>, ptr %a

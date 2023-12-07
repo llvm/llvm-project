@@ -11,6 +11,16 @@ func.func @fold_wait_op_test1() {
 }
 // CHECK-NOT: gpu.wait
 
+// Erase duplicate barriers.
+// CHECK-LABEL: func @erase_barriers
+//       CHECK-NEXT: gpu.barrier
+//       CHECK-NEXT: return
+func.func @erase_barriers() {
+  gpu.barrier
+  gpu.barrier
+  return
+}
+
 // Replace uses of gpu.wait op with its async dependency.
 // CHECK-LABEL: func @fold_wait_op_test2
 func.func @fold_wait_op_test2(%arg0: i1) -> (memref<5xf16>, memref<5xf16>) {

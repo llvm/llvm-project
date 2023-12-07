@@ -88,6 +88,16 @@ void PyGlobals::registerTypeCaster(MlirTypeID mlirTypeID,
   found = std::move(typeCaster);
 }
 
+void PyGlobals::registerValueCaster(MlirTypeID mlirTypeID,
+                                    pybind11::function valueCaster,
+                                    bool replace) {
+  pybind11::object &found = valueCasterMap[mlirTypeID];
+  if (found && !replace)
+    throw std::runtime_error("Value caster is already registered: " +
+                             py::repr(found).cast<std::string>());
+  found = std::move(valueCaster);
+}
+
 void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
                                     py::object pyClass) {
   py::object &found = dialectClassMap[dialectNamespace];
@@ -122,13 +132,23 @@ PyGlobals::lookupAttributeBuilder(const std::string &attributeKind) {
 
 std::optional<py::function> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
                                                         MlirDialect dialect) {
-  // Make sure dialect module is loaded.
-  if (!loadDialectModule(unwrap(mlirDialectGetNamespace(dialect))))
-    return std::nullopt;
-
+  // Try to load dialect module.
+  (void)loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
   const auto foundIt = typeCasterMap.find(mlirTypeID);
   if (foundIt != typeCasterMap.end()) {
     assert(foundIt->second && "type caster is defined");
+    return foundIt->second;
+  }
+  return std::nullopt;
+}
+
+std::optional<py::function> PyGlobals::lookupValueCaster(MlirTypeID mlirTypeID,
+                                                         MlirDialect dialect) {
+  // Try to load dialect module.
+  (void)loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
+  const auto foundIt = valueCasterMap.find(mlirTypeID);
+  if (foundIt != valueCasterMap.end()) {
+    assert(foundIt->second && "value caster is defined");
     return foundIt->second;
   }
   return std::nullopt;

@@ -66,6 +66,13 @@ public:
   void registerTypeCaster(MlirTypeID mlirTypeID, pybind11::function typeCaster,
                           bool replace = false);
 
+  /// Adds a user-friendly value caster. Raises an exception if the mapping
+  /// already exists and replace == false. This is intended to be called by
+  /// implementation code.
+  void registerValueCaster(MlirTypeID mlirTypeID,
+                           pybind11::function valueCaster,
+                           bool replace = false);
+
   /// Adds a concrete implementation dialect class.
   /// Raises an exception if the mapping already exists.
   /// This is intended to be called by implementation code.
@@ -85,6 +92,10 @@ public:
   /// Returns the custom type caster for MlirTypeID mlirTypeID.
   std::optional<pybind11::function> lookupTypeCaster(MlirTypeID mlirTypeID,
                                                      MlirDialect dialect);
+
+  /// Returns the custom value caster for MlirTypeID mlirTypeID.
+  std::optional<pybind11::function> lookupValueCaster(MlirTypeID mlirTypeID,
+                                                      MlirDialect dialect);
 
   /// Looks up a registered dialect class by namespace. Note that this may
   /// trigger loading of the defining module and can arbitrarily re-enter.
@@ -109,7 +120,8 @@ private:
   llvm::StringMap<pybind11::object> attributeBuilderMap;
   /// Map of MlirTypeID to custom type caster.
   llvm::DenseMap<MlirTypeID, pybind11::object> typeCasterMap;
-
+  /// Map of MlirTypeID to custom value caster.
+  llvm::DenseMap<MlirTypeID, pybind11::object> valueCasterMap;
   /// Set of dialect namespaces that we have attempted to import implementation
   /// modules for.
   llvm::StringSet<> loadedDialectModules;

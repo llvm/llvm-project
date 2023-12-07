@@ -11,6 +11,7 @@
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -240,6 +241,14 @@ public:
     // type-checking purposes.
     if (D->isThisDeclarationADefinition() && D->getIntegerTypeSourceInfo())
       report(D->getLocation(), D);
+    return true;
+  }
+
+  bool VisitFriendDecl(FriendDecl *D) {
+    // We already visit the TypeLoc properly, but need to special case the decl
+    // case.
+    if (auto *FD = D->getFriendDecl())
+      report(D->getLocation(), FD);
     return true;
   }
 

@@ -87,8 +87,8 @@
       },
       "location": {
         "position": {
-          "character": 12,
-          "line": 4
+          "character": 11,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -150,6 +150,10 @@
         {
           "kind": "identifier",
           "spelling": "obj1"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -162,8 +166,8 @@
       },
       "location": {
         "position": {
-          "character": 43,
-          "line": 5
+          "character": 42,
+          "line": 4
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -218,6 +222,10 @@
         {
           "kind": "identifier",
           "spelling": "obj2"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -230,8 +238,8 @@
       },
       "location": {
         "position": {
-          "character": 38,
-          "line": 6
+          "character": 37,
+          "line": 5
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -281,8 +289,8 @@
       },
       "location": {
         "position": {
-          "character": 11,
-          "line": 1
+          "character": 10,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },

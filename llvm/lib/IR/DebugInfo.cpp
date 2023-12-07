@@ -25,6 +25,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GVMaterializer.h"
 #include "llvm/IR/Instruction.h"
@@ -65,7 +66,8 @@ TinyPtrVector<DbgDeclareInst *> llvm::FindDbgDeclareUses(Value *V) {
 }
 
 template <typename IntrinsicT>
-static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V) {
+static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result,
+                              Value *V, SmallVectorImpl<DPValue *> *DPValues) {
   // This function is hot. Check whether the value has any metadata to avoid a
   // DenseMap lookup.
   if (!V->isUsedByMetadata())
@@ -78,31 +80,51 @@ static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V) {
   // V will also appear twice in a dbg.assign if its used in the both the value
   // and address components.
   SmallPtrSet<IntrinsicT *, 4> EncounteredIntrinsics;
+  SmallPtrSet<DPValue *, 4> EncounteredDPValues;
 
   /// Append IntrinsicT users of MetadataAsValue(MD).
-  auto AppendUsers = [&Ctx, &EncounteredIntrinsics, &Result](Metadata *MD) {
+  auto AppendUsers = [&Ctx, &EncounteredIntrinsics, &Result,
+                      DPValues](Metadata *MD) {
     if (auto *MDV = MetadataAsValue::getIfExists(Ctx, MD)) {
       for (User *U : MDV->users())
         if (IntrinsicT *DVI = dyn_cast<IntrinsicT>(U))
           if (EncounteredIntrinsics.insert(DVI).second)
             Result.push_back(DVI);
     }
+    if (!DPValues)
+      return;
+    // Get DPValues that use this as a single value.
+    if (LocalAsMetadata *L = dyn_cast<LocalAsMetadata>(MD)) {
+      for (DPValue *DPV : L->getAllDPValueUsers()) {
+        if (DPV->getType() == DPValue::LocationType::Value)
+          DPValues->push_back(DPV);
+      }
+    }
   };
 
   if (auto *L = LocalAsMetadata::getIfExists(V)) {
     AppendUsers(L);
-    for (Metadata *AL : L->getAllArgListUsers())
+    for (Metadata *AL : L->getAllArgListUsers()) {
       AppendUsers(AL);
+      if (!DPValues)
+        continue;
+      DIArgList *DI = cast<DIArgList>(AL);
+      for (DPValue *DPV : DI->getAllDPValueUsers())
+        if (DPV->getType() == DPValue::LocationType::Value)
+          if (EncounteredDPValues.insert(DPV).second)
+            DPValues->push_back(DPV);
+    }
   }
 }
 
-void llvm::findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V) {
-  findDbgIntrinsics<DbgValueInst>(DbgValues, V);
+void llvm::findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues,
+                         Value *V, SmallVectorImpl<DPValue *> *DPValues) {
+  findDbgIntrinsics<DbgValueInst>(DbgValues, V, DPValues);
 }
 
 void llvm::findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers,
-                        Value *V) {
-  findDbgIntrinsics<DbgVariableIntrinsic>(DbgUsers, V);
+                        Value *V, SmallVectorImpl<DPValue *> *DPValues) {
+  findDbgIntrinsics<DbgVariableIntrinsic>(DbgUsers, V, DPValues);
 }
 
 DISubprogram *llvm::getDISubprogram(const MDNode *Scope) {
@@ -183,10 +205,13 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
 void DebugInfoFinder::processInstruction(const Module &M,
                                          const Instruction &I) {
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-    processVariable(M, *DVI);
+    processVariable(M, DVI->getVariable());
 
   if (auto DbgLoc = I.getDebugLoc())
     processLocation(M, DbgLoc.get());
+
+  for (const DPValue &DPV : I.getDbgValueRange())
+    processDPValue(M, DPV);
 }
 
 void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
@@ -194,6 +219,11 @@ void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
     return;
   processScope(Loc->getScope());
   processLocation(M, Loc->getInlinedAt());
+}
+
+void DebugInfoFinder::processDPValue(const Module &M, const DPValue &DPV) {
+  processVariable(M, DPV.getVariable());
+  processLocation(M, DPV.getDebugLoc().get());
 }
 
 void DebugInfoFinder::processType(DIType *DT) {
@@ -267,27 +297,10 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
       processType(TVal->getType());
     }
   }
-
-  for (auto *N : SP->getRetainedNodes()) {
-    if (auto *Var = dyn_cast<DILocalVariable>(N)) {
-      processLocalVariable(Var);
-    }
-  }
 }
 
 void DebugInfoFinder::processVariable(const Module &M,
-                                      const DbgVariableIntrinsic &DVI) {
-  auto *N = dyn_cast<MDNode>(DVI.getVariable());
-  if (!N)
-    return;
-
-  processLocalVariable(dyn_cast<DILocalVariable>(N));
-}
-
-void DebugInfoFinder::processLocalVariable(DILocalVariable *DV) {
-  if (!DV)
-    return;
-
+                                      const DILocalVariable *DV) {
   if (!NodesSeen.insert(DV).second)
     return;
   processScope(DV->getScope());
@@ -534,6 +547,7 @@ bool llvm::stripDebugInfo(Function &F) {
         // DIAssignID are debug info metadata primitives.
         I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
       }
+      I.dropDbgValues();
     }
   }
   return Changed;
@@ -1324,17 +1338,15 @@ LLVMDIBuilderCreateUnspecifiedType(LLVMDIBuilderRef Builder, const char *Name,
   return wrap(unwrap(Builder)->createUnspecifiedType({Name, NameLen}));
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateStaticMemberType(
+LLVMMetadataRef LLVMDIBuilderCreateStaticMemberType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
     LLVMMetadataRef Type, LLVMDIFlags Flags, LLVMValueRef ConstantVal,
     uint32_t AlignInBits) {
   return wrap(unwrap(Builder)->createStaticMemberType(
-                  unwrapDI<DIScope>(Scope), {Name, NameLen},
-                  unwrapDI<DIFile>(File), LineNumber, unwrapDI<DIType>(Type),
-                  map_from_llvmDIFlags(Flags), unwrap<Constant>(ConstantVal),
-                  AlignInBits));
+      unwrapDI<DIScope>(Scope), {Name, NameLen}, unwrapDI<DIFile>(File),
+      LineNumber, unwrapDI<DIType>(Type), map_from_llvmDIFlags(Flags),
+      unwrap<Constant>(ConstantVal), DW_TAG_member, AlignInBits));
 }
 
 LLVMMetadataRef
@@ -1476,13 +1488,12 @@ LLVMMetadataRef LLVMDIBuilderCreateClassType(LLVMDIBuilderRef Builder,
   auto Elts = unwrap(Builder)->getOrCreateArray({unwrap(Elements),
                                                  NumElements});
   return wrap(unwrap(Builder)->createClassType(
-                  unwrapDI<DIScope>(Scope), {Name, NameLen},
-                  unwrapDI<DIFile>(File), LineNumber,
-                  SizeInBits, AlignInBits, OffsetInBits,
-                  map_from_llvmDIFlags(Flags), unwrapDI<DIType>(DerivedFrom),
-                  Elts, unwrapDI<DIType>(VTableHolder),
-                  unwrapDI<MDNode>(TemplateParamsNode),
-                  {UniqueIdentifier, UniqueIdentifierLen}));
+      unwrapDI<DIScope>(Scope), {Name, NameLen}, unwrapDI<DIFile>(File),
+      LineNumber, SizeInBits, AlignInBits, OffsetInBits,
+      map_from_llvmDIFlags(Flags), unwrapDI<DIType>(DerivedFrom), Elts,
+      /*RunTimeLang=*/0, unwrapDI<DIType>(VTableHolder),
+      unwrapDI<MDNode>(TemplateParamsNode),
+      {UniqueIdentifier, UniqueIdentifierLen}));
 }
 
 LLVMMetadataRef
@@ -1956,7 +1967,7 @@ std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
     // We can't use a non-const size, bail.
     return std::nullopt;
   uint64_t SizeInBits = 8 * ConstLengthInBytes->getZExtValue();
-  return getAssignmentInfoImpl(DL, StoreDest, TypeSize::Fixed(SizeInBits));
+  return getAssignmentInfoImpl(DL, StoreDest, TypeSize::getFixed(SizeInBits));
 }
 
 std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,

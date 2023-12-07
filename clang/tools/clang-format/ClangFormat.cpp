@@ -330,8 +330,7 @@ static void outputReplacementXML(StringRef Text) {
 
 static void outputReplacementsXML(const Replacements &Replaces) {
   for (const auto &R : Replaces) {
-    outs() << "<replacement "
-           << "offset='" << R.getOffset() << "' "
+    outs() << "<replacement " << "offset='" << R.getOffset() << "' "
            << "length='" << R.getLength() << "'>";
     outputReplacementXML(R.getReplacementText());
     outs() << "</replacement>\n";
