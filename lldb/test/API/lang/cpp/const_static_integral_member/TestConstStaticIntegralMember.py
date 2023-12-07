@@ -120,9 +120,6 @@ class TestCase(TestBase):
         self.assertEqual(varobj.type.name, expect_type)
         self.assertEqual(varobj.value, expect_val)
 
-    # clang doesn't emit static data members without locations into the Names
-    # table, preventing LLDB from finding them.
-    @expectedFailureAll()
     def test_inline_static_members(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -170,7 +167,6 @@ class TestCase(TestBase):
             "ClassWithEnumAlias::enum_alias_alias", result_value="scoped_enum_case1"
         )
 
-    @expectedFailureAll()
     def test_shadowed_static_inline_members(self):
         """Tests that the expression evaluator and SBAPI can both
         correctly determine the requested inline static variable
