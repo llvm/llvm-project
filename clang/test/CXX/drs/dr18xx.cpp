@@ -62,7 +62,7 @@ namespace dr1815 { // dr1815: no
 #endif
 }
 
-namespace dr1821 { // dr1821: yes
+namespace dr1821 { // dr1821: 2.9
 struct A {
   template <typename> struct B {
     void f();

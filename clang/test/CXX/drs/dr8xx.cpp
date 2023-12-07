@@ -8,7 +8,7 @@
 
 // expected-no-diagnostics
 
-namespace dr873 { // dr873: yes
+namespace dr873 { // dr873: 3.0
 #if __cplusplus >= 201103L
 template <typename T> void f(T &&);
 template <> void f(int &) {}  // #1
