@@ -39,7 +39,7 @@ struct AddressSanitizerOptions {
 class AddressSanitizerPass : public PassInfoMixin<AddressSanitizerPass> {
 public:
   AddressSanitizerPass(const AddressSanitizerOptions &Options,
-                       bool UseGlobalGC = true, bool UseOdrIndicator = false,
+                       bool UseGlobalGC = true, bool UseOdrIndicator = true,
                        AsanDtorKind DestructorKind = AsanDtorKind::Global,
                        AsanCtorKind ConstructorKind = AsanCtorKind::Global);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
