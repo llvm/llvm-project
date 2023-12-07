@@ -6376,26 +6376,13 @@ aliases a memory access with an access tag ``(BaseTy2, AccessTy2,
 Offset2)`` if either ``(BaseTy1, Offset1)`` is reachable from ``(Base2,
 Offset2)`` via the ``Parent`` relation or vice versa.
 
-In C an enum will be compatible with an underlying integer type that is large
-enough to hold all enumerated values. In most cases this will be an ``int``,
-which is the default when no type is specified. However, if an ``int`` is not
-large enough to contain all enumerated values the compiler is free to choose
-any suitably larger compatible integer type. In addition, C23 allows you to
-explicitly specify the type, i.e. ``enum Foo : uint16_t { ... }``).
-
 As a concrete example, the type descriptor graph for the following program
 
 .. code-block:: c
 
-    enum Foo {
-      ENUM_1 = 1,
-      ENUM_2 = 2
-    };
-
     struct Inner {
-      int i;      // offset 0
-      float f;    // offset 4
-      enum Foo e; // offset 8
+      int i;    // offset 0
+      float f;  // offset 4
     };
 
     struct Outer {
@@ -6405,11 +6392,10 @@ As a concrete example, the type descriptor graph for the following program
     };
 
     void f(struct Outer* outer, struct Inner* inner, float* f, int* i, char* c) {
-      outer->f = 0;               // tag0: (OuterStructTy, FloatScalarTy, 0)
-      outer->inner_a.i = 0;       // tag1: (OuterStructTy, IntScalarTy, 12)
-      outer->inner_a.f = 0.0;     // tag2: (OuterStructTy, FloatScalarTy, 16)
-      outer->inner_a.e = ENUM_1;  // tag3: (OuterStructTy, IntScalarTy, 20)
-      *f = 0.0;                   // tag4: (FloatScalarTy, FloatScalarTy, 0)
+      outer->f = 0;            // tag0: (OuterStructTy, FloatScalarTy, 0)
+      outer->inner_a.i = 0;    // tag1: (OuterStructTy, IntScalarTy, 12)
+      outer->inner_a.f = 0.0;  // tag2: (OuterStructTy, FloatScalarTy, 16)
+      *f = 0.0;                // tag3: (FloatScalarTy, FloatScalarTy, 0)
     }
 
 is (note that in C and C++, ``char`` can be used to access any arbitrary
@@ -6422,7 +6408,7 @@ type):
     FloatScalarTy = ("float", CharScalarTy, 0)
     DoubleScalarTy = ("double", CharScalarTy, 0)
     IntScalarTy = ("int", CharScalarTy, 0)
-    InnerStructTy = {"Inner" (IntScalarTy, 0), (FloatScalarTy, 4), (IntScalarTy, 12)}
+    InnerStructTy = {"Inner" (IntScalarTy, 0), (FloatScalarTy, 4)}
     OuterStructTy = {"Outer", (FloatScalarTy, 0), (DoubleScalarTy, 4),
                      (InnerStructTy, 12)}
 
