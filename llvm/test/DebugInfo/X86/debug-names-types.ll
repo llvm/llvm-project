@@ -73,7 +73,7 @@
 ; CHECK-NEXT:         Abbrev: [[ABBREV]]
 ; CHECK-NEXT:         Tag: DW_TAG_base_type
 ; CHECK-NEXT:         DW_IDX_die_offset: 0x0000003e
-; CHECK-NEXT:         DW_IDX_parent: true
+; CHECK-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
@@ -86,13 +86,13 @@
 ; CHECK-NEXT:           Tag: DW_TAG_structure_type
 ; CHECK-NEXT:           DW_IDX_type_unit: 0x00
 ; CHECK-NEXT:           DW_IDX_die_offset: 0x00000023
-; CHECK-NEXT:           DW_IDX_parent: true
+; CHECK-NEXT:           DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:       Entry @ {{.+}} {
 ; CHECK-NEXT:         Abbrev: [[ABBREV1]]
 ; CHECK-NEXT:         Tag: DW_TAG_structure_type
 ; CHECK-NEXT:         DW_IDX_die_offset: 0x00000042
-; CHECK-NEXT:         DW_IDX_parent: true
+; CHECK-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
@@ -104,7 +104,7 @@
 ; CHECK-NEXT:         Abbrev: [[ABBREV2]]
 ; CHECK-NEXT:         Tag: DW_TAG_subprogram
 ; CHECK-NEXT:         DW_IDX_die_offset: 0x00000023
-; CHECK-NEXT:         DW_IDX_parent: true
+; CHECK-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
@@ -117,7 +117,7 @@
 ; CHECK-NEXT:           Tag: DW_TAG_base_type
 ; CHECK-NEXT:           DW_IDX_type_unit: 0x00
 ; CHECK-NEXT:           DW_IDX_die_offset: 0x00000038
-; CHECK-NEXT:           DW_IDX_parent: true
+; CHECK-NEXT:           DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
@@ -176,7 +176,7 @@
 ; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV2]]
 ; CHECK-SPLIT-NEXT:         Tag: DW_TAG_base_type
 ; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000035
-; CHECK-SPLIT-NEXT:         DW_IDX_parent: true
+; CHECK-SPLIT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-SPLIT-NEXT:       }
 ; CHECK-SPLIT-NEXT:     }
 ; CHECK-SPLIT-NEXT:   ]
@@ -189,13 +189,13 @@
 ; CHECK-SPLIT-NEXT:         Tag: DW_TAG_structure_type
 ; CHECK-SPLIT-NEXT:         DW_IDX_type_unit: 0x00
 ; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000021
-; CHECK-SPLIT-NEXT:         DW_IDX_parent: true
+; CHECK-SPLIT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-SPLIT-NEXT:       }
 ; CHECK-SPLIT-NEXT:       Entry @ {{.*}} {
 ; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV]]
 ; CHECK-SPLIT-NEXT:         Tag: DW_TAG_structure_type
 ; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000039
-; CHECK-SPLIT-NEXT:         DW_IDX_parent: true
+; CHECK-SPLIT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-SPLIT-NEXT:       }
 ; CHECK-SPLIT-NEXT:     }
 ; CHECK-SPLIT-NEXT:   ]
@@ -207,7 +207,7 @@
 ; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV3]]
 ; CHECK-SPLIT-NEXT:         Tag: DW_TAG_subprogram
 ; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x0000001a
-; CHECK-SPLIT-NEXT:         DW_IDX_parent: true
+; CHECK-SPLIT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-SPLIT-NEXT:       }
 ; CHECK-SPLIT-NEXT:     }
 ; CHECK-SPLIT-NEXT:   ]
@@ -220,7 +220,7 @@
 ; CHECK-SPLIT-NEXT:         Tag: DW_TAG_base_type
 ; CHECK-SPLIT-NEXT:         DW_IDX_type_unit: 0x00
 ; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000036
-; CHECK-SPLIT-NEXT:         DW_IDX_parent: true
+; CHECK-SPLIT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-SPLIT-NEXT:       }
 ; CHECK-SPLIT-NEXT:     }
 ; CHECK-SPLIT-NEXT:   ]
