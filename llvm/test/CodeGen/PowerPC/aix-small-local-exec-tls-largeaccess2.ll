@@ -33,7 +33,7 @@ define i64 @StoreLargeAccess1() {
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    std r0, 64(r1)
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    std r3, mySmallLocalExecTLS6[UL]@le+424(r13)
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    std r4, mySmallLocalExecTLS2[TL]@le+1200(r13)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-lo) @MyTLSGDVar
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsgdm) @MyTLSGDVar
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r4, L..C1(r2) # target-flags(ppc-tlsgd) @MyTLSGDVar
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r4, 44
