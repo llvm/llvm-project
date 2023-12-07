@@ -180,6 +180,7 @@ private:
   IsHomomorphismOpFn isHomomorphismOp;
   IsSourceAlgebraicOpFn isSourceAlgebraicOp;
   CreateTargetAlgebraicOpFn createTargetAlgebraicOpFn;
+  // Mutable fields for memory reuse to avoid excessive memory allocation.
   mutable SmallVector<OpOperand *> algebraicOpOperands;
   mutable IRMapping irMapping;
 };

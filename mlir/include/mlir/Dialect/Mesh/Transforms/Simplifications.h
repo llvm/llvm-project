@@ -21,6 +21,13 @@
 namespace mlir {
 namespace mesh {
 
+// If we have an algebraic op like "+" and a summing all-reduce,
+// `all_reduce_sum(x) + all_reduce_sum(y)` will be transformed to
+// `all_reduce_sum(x + y)`.
+//
+// Another example with `min`.
+// `min(all_reduce_min(x), all_reduce_min(y))` will be transformed to
+// `all_reduce_min(min(x, y))`.
 template <typename AlgebraicOp>
 void populateAllReduceEndomorphismSimplificationPatterns(
     RewritePatternSet &patterns, Partial reduction) {
