@@ -781,7 +781,7 @@ Sections:
         FailedWithMessage(ErrMsg));
   };
 
-  // Check that we can detect unsupported versions that are too old
+  // Check that we can detect unsupported versions that are too old.
   SmallString<128> UnsupportedLowVersionYamlString(CommonYamlString);
   UnsupportedLowVersionYamlString += R"(
         Version: 1
@@ -866,7 +866,7 @@ Sections:
                          "malformed uleb128, extends past end");
 }
 
-// Test for the ELFObjectFile::readBBAddrMap API with PGOAnalysisMap
+// Test for the ELFObjectFile::readBBAddrMap API with PGOAnalysisMap.
 TEST(ELFObjectFileTest, ReadPGOAnalysisMap) {
   if (IsHostWindows())
     GTEST_SKIP();

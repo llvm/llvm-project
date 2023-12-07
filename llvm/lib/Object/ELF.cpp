@@ -716,8 +716,10 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
                            Twine(static_cast<int>(Version)));
       Feature = Data.getU8(Cur); // Feature byte
+      if (!Cur)
+        break;
       auto FeatEnableOrErr = PGOAnalysisMap::Features::decode(Feature);
-      if (!FeatEnableOrErr && Cur)
+      if (!FeatEnableOrErr)
         return FeatEnableOrErr.takeError();
       FeatEnable =
           FeatEnableOrErr ? *FeatEnableOrErr : PGOAnalysisMap::Features{};
