@@ -672,7 +672,6 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_GROUP);
   ECase(SHT_SYMTAB_SHNDX);
   ECase(SHT_RELR);
-  ECase(SHT_AARCH64_AUTH_RELR);
   ECase(SHT_ANDROID_REL);
   ECase(SHT_ANDROID_RELA);
   ECase(SHT_ANDROID_RELR);
@@ -720,6 +719,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
     ECase(SHT_MSP430_ATTRIBUTES);
     break;
   case ELF::EM_AARCH64:
+    ECase(SHT_AARCH64_AUTH_RELR);
     ECase(SHT_AARCH64_MEMTAG_GLOBALS_STATIC);
     ECase(SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC);
     break;

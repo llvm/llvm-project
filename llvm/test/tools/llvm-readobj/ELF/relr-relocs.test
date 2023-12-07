@@ -186,23 +186,18 @@ Sections:
 # RUN: llvm-readelf --relocations %t2.broken.android 2>&1 | \
 # RUN:   FileCheck -DFILE=%t2.broken.android --check-prefix=BROKEN-GNU %s -DSECNAME=SHT_ANDROID_RELR
 
-## Case C: check the case when relocations can't be read from an SHT_AARCH64_AUTH_RELR section.
+## Case C: check the case when we have an SHT_AARCH64_AUTH_RELR section in non-AArch64 ELF.
 ##         SHT_AARCH64_AUTH_RELR = 0x70000004.
 # RUN: yaml2obj --docnum=2 -DENTSIZE=1 -DSHTYPE=0x70000004 %s -o %t2.broken.aarch64auth
 # RUN: llvm-readobj --relocations %t2.broken.aarch64auth 2>&1 | \
-# RUN:   FileCheck -DFILE=%t2.broken.aarch64auth --check-prefix=BROKEN-LLVM-AARCH64-AUTH %s -DSECNAME=SHT_AARCH64_AUTH_RELR
+# RUN:   FileCheck -DFILE=%t2.broken.aarch64auth --check-prefix=WRONGARCH-LLVM-AARCH64-AUTH %s -DSECNAME=SHT_AARCH64_AUTH_RELR
 # RUN: llvm-readelf --relocations %t2.broken.aarch64auth 2>&1 | \
-# RUN:   FileCheck -DFILE=%t2.broken.aarch64auth --check-prefix=BROKEN-GNU-AARCH64-AUTH %s -DSECNAME=SHT_AARCH64_AUTH_RELR
+# RUN:   FileCheck -DFILE=%t2.broken.aarch64auth --check-prefix=WRONGARCH-GNU-AARCH64-AUTH %s -DSECNAME=SHT_AARCH64_AUTH_RELR
 
-# BROKEN-LLVM-AARCH64-AUTH:      Relocations [
-# BROKEN-LLVM-AARCH64-AUTH-NEXT:   Section (1) .relr.dyn {
-# BROKEN-LLVM-AARCH64-AUTH-NEXT: warning: '[[FILE]]': SHT_AARCH64_AUTH_RELR section in non-AArch64 ELF found, skipping
-# BROKEN-LLVM-AARCH64-AUTH-NEXT:   }
-# BROKEN-LLVM-AARCH64-AUTH-NEXT: ]
+# WRONGARCH-LLVM-AARCH64-AUTH:      Relocations [
+# WRONGARCH-LLVM-AARCH64-AUTH-NEXT: ]
 
-# BROKEN-GNU-AARCH64-AUTH:      Relocation section '.relr.dyn' at offset 0x34 contains <?> entries:
-# BROKEN-GNU-AARCH64-AUTH-NEXT:  Offset     Info    Type                Sym. Value  Symbol's Name
-# BROKEN-GNU-AARCH64-AUTH-NEXT: warning: '[[FILE]]': SHT_AARCH64_AUTH_RELR section in non-AArch64 ELF found, skipping
+# WRONGARCH-GNU-AARCH64-AUTH-NOT:  Relocation section
 
 ## Check the behavior when the sh_link field of the SHT_RELR/SHT_ANDROID_RELR/SHT_AARCH64_AUTH_RELR section
 ## is set to an arbitrary value. Normally, it is set to 0, because such sections contains
