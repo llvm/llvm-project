@@ -90,7 +90,7 @@
 // CUDA-NEXT:   %4 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 3
 // CUDA-NEXT:   %flags = load i32, ptr %4, align 4
 // CUDA-NEXT:   %5 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 4
-// CUDA-NEXT:   %textype = load i32, ptr %4, align 4
+// CUDA-NEXT:   %textype = load i32, ptr %5, align 4
 // CUDA-NEXT:   %type = and i32 %flags, 7
 // CUDA-NEXT:   %6 = and i32 %flags, 8
 // CUDA-NEXT:   %extern = lshr i32 %6, 3
@@ -189,7 +189,7 @@
 // HIP-NEXT:   %4 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 3
 // HIP-NEXT:   %flags = load i32, ptr %4, align 4
 // HIP-NEXT:   %5 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 4
-// HIP-NEXT:   %textype = load i32, ptr %4, align 4
+// HIP-NEXT:   %textype = load i32, ptr %5, align 4
 // HIP-NEXT:   %type = and i32 %flags, 7
 // HIP-NEXT:   %6 = and i32 %flags, 8
 // HIP-NEXT:   %extern = lshr i32 %6, 3
