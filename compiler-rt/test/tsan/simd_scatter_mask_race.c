@@ -1,3 +1,4 @@
+// REQUIRES: mavx512f
 // RUN: %clang_tsan -march=native -DSIMDLEN=4 -DTYPE=float %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
 // RUN: %clang_tsan -march=native -DSIMDLEN=4 -DTYPE=double %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
 // RUN: %clang_tsan -march=native -DSIMDLEN=8 -DTYPE=float %s -o %t && %deflake %run %t 2>&1 | FileCheck %s

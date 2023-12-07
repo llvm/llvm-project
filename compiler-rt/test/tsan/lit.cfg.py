@@ -77,7 +77,11 @@ if config.has_libcxx and config.host_os != "Darwin":
 else:
     config.substitutions.append(("%link_libcxx_tsan", ""))
 
+if config.target_has_mavx2:
+    config.available_features.add("mavx2")
 config.substitutions.append(("%avx2", "-mavx2" if config.target_has_mavx2 else ""))
+if config.target_has_mavx512f:
+    config.available_features.add("mavx512f")
 config.substitutions.append(
     ("%avx512f", "-mavx512f" if config.target_has_mavx512f else "")
 )
