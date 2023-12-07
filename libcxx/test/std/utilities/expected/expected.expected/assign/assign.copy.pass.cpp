@@ -47,6 +47,22 @@ struct NotCopyAssignable {
   NotCopyAssignable& operator=(const NotCopyAssignable&) = delete;
 };
 
+struct NotTriviallyCopyConstructible {
+  NotTriviallyCopyConstructible(const NotTriviallyCopyConstructible&);
+  NotTriviallyCopyConstructible(NotTriviallyCopyConstructible&&) = default;
+
+  NotTriviallyCopyConstructible& operator=(const NotTriviallyCopyConstructible&) = default;
+  NotTriviallyCopyConstructible& operator=(NotTriviallyCopyConstructible&&)      = default;
+};
+
+struct NotTriviallyCopyAssignable {
+  NotTriviallyCopyAssignable(const NotTriviallyCopyAssignable&) = default;
+  NotTriviallyCopyAssignable(NotTriviallyCopyAssignable&&)      = default;
+
+  NotTriviallyCopyAssignable& operator=(const NotTriviallyCopyAssignable&);
+  NotTriviallyCopyAssignable& operator=(NotTriviallyCopyAssignable&&) = default;
+};
+
 struct MoveMayThrow {
   MoveMayThrow(MoveMayThrow const&)            = default;
   MoveMayThrow& operator=(const MoveMayThrow&) = default;
@@ -55,7 +71,7 @@ struct MoveMayThrow {
 };
 
 // Test constraints
-static_assert(std::is_copy_assignable_v<std::expected<int, int>>);
+static_assert(std::is_trivially_copy_assignable_v<std::expected<int, int>>);
 
 // !is_copy_assignable_v<T>
 static_assert(!std::is_copy_assignable_v<std::expected<NotCopyAssignable, int>>);
@@ -77,6 +93,25 @@ static_assert(std::is_copy_assignable_v<std::expected<int, MoveMayThrow>>);
 
 // !is_nothrow_move_constructible_v<T> && !is_nothrow_move_constructible_v<E>
 static_assert(!std::is_copy_assignable_v<std::expected<MoveMayThrow, MoveMayThrow>>);
+
+// !is_trivially_copy_constructible
+static_assert(std::is_copy_assignable_v<std::expected<NotTriviallyCopyConstructible, int>>);
+static_assert(!std::is_trivially_copy_assignable_v<std::expected<NotTriviallyCopyConstructible, int>>);
+static_assert(!std::is_trivially_copy_assignable_v<std::expected<int, NotTriviallyCopyConstructible>>);
+static_assert(
+    !std::is_trivially_copy_assignable_v<std::expected<NotTriviallyCopyConstructible, NotTriviallyCopyConstructible>>);
+
+// !is_trivially_copy_assignable
+static_assert(std::is_copy_assignable_v<std::expected<NotTriviallyCopyAssignable, int>>);
+static_assert(!std::is_trivially_copy_assignable_v<std::expected<NotTriviallyCopyAssignable, int>>);
+static_assert(!std::is_trivially_copy_assignable_v<std::expected<int, NotTriviallyCopyAssignable>>);
+static_assert(
+    !std::is_trivially_copy_assignable_v<std::expected<NotTriviallyCopyAssignable, NotTriviallyCopyAssignable>>);
+
+static_assert(
+    !std::is_trivially_copy_assignable_v<std::expected<NotTriviallyCopyConstructible, NotTriviallyCopyAssignable>>);
+static_assert(
+    !std::is_trivially_copy_assignable_v<std::expected<NotTriviallyCopyAssignable, NotTriviallyCopyConstructible>>);
 
 constexpr bool test() {
   // If this->has_value() && rhs.has_value() is true, equivalent to val = *rhs.

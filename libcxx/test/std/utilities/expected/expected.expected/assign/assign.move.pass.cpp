@@ -50,13 +50,29 @@ struct NotMoveAssignable {
   NotMoveAssignable& operator=(NotMoveAssignable&&) = delete;
 };
 
+struct NotTriviallyMoveConstructible {
+  NotTriviallyMoveConstructible(const NotTriviallyMoveConstructible&) = default;
+  NotTriviallyMoveConstructible(NotTriviallyMoveConstructible&&);
+
+  NotTriviallyMoveConstructible& operator=(const NotTriviallyMoveConstructible&) = default;
+  NotTriviallyMoveConstructible& operator=(NotTriviallyMoveConstructible&&)      = default;
+};
+
+struct NotTriviallyMoveAssignable {
+  NotTriviallyMoveAssignable(const NotTriviallyMoveAssignable&) = default;
+  NotTriviallyMoveAssignable(NotTriviallyMoveAssignable&&)      = default;
+
+  NotTriviallyMoveAssignable& operator=(const NotTriviallyMoveAssignable&) = default;
+  NotTriviallyMoveAssignable& operator=(NotTriviallyMoveAssignable&&);
+};
+
 struct MoveCtorMayThrow {
   MoveCtorMayThrow(MoveCtorMayThrow&&) noexcept(false) {}
   MoveCtorMayThrow& operator=(MoveCtorMayThrow&&) noexcept = default;
 };
 
 // Test constraints
-static_assert(std::is_move_assignable_v<std::expected<int, int>>);
+static_assert(std::is_trivially_move_assignable_v<std::expected<int, int>>);
 
 // !is_move_assignable_v<T>
 static_assert(!std::is_move_assignable_v<std::expected<NotMoveAssignable, int>>);
@@ -98,6 +114,21 @@ static_assert(!std::is_nothrow_move_assignable_v<std::expected<int, MoveAssignMa
 
 // !is_nothrow_move_constructible_v<E>
 static_assert(!std::is_nothrow_move_assignable_v<std::expected<int, MoveCtorMayThrow>>);
+
+// !is_trivially_move_constructible
+static_assert(std::is_move_assignable_v<std::expected<NotTriviallyMoveConstructible, int>>);
+static_assert(!std::is_trivially_move_assignable_v<std::expected<NotTriviallyMoveConstructible, int>>);
+static_assert(!std::is_trivially_move_assignable_v<std::expected<int, NotTriviallyMoveConstructible>>);
+
+// !is_trivially_move_assignable
+static_assert(std::is_move_assignable_v<std::expected<NotTriviallyMoveAssignable, int>>);
+static_assert(!std::is_trivially_move_assignable_v<std::expected<NotTriviallyMoveAssignable, int>>);
+static_assert(!std::is_trivially_move_assignable_v<std::expected<int, NotTriviallyMoveAssignable>>);
+
+static_assert(
+    !std::is_trivially_move_assignable_v<std::expected<NotTriviallyMoveConstructible, NotTriviallyMoveAssignable>>);
+static_assert(
+    !std::is_trivially_move_assignable_v<std::expected<NotTriviallyMoveAssignable, NotTriviallyMoveConstructible>>);
 
 constexpr bool test() {
   // If this->has_value() && rhs.has_value() is true, equivalent to val = std::move(*rhs).

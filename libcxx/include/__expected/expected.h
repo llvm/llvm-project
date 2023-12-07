@@ -38,8 +38,10 @@
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
+#include <__type_traits/is_trivially_copy_assignable.h>
 #include <__type_traits/is_trivially_copy_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
+#include <__type_traits/is_trivially_move_assignable.h>
 #include <__type_traits/is_trivially_move_constructible.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/lazy.h>
@@ -282,9 +284,26 @@ private:
     }
   }
 
+  static constexpr bool __is_trivially_move_assignable =
+      is_trivially_move_constructible_v<_Tp> &&
+      is_trivially_move_assignable_v<_Tp> &&
+      is_trivially_move_constructible_v<_Err> &&
+      is_trivially_move_assignable_v<_Err>;
+
+  static constexpr bool __is_trivially_copy_assignable =
+      __is_trivially_move_assignable &&
+      is_trivially_copy_constructible_v<_Tp> &&
+      is_trivially_copy_assignable_v<_Tp> &&
+      is_trivially_copy_constructible_v<_Err> &&
+      is_trivially_copy_assignable_v<_Err>;
+
 public:
   // [expected.object.assign], assignment
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(const expected&) = delete;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(const expected& __rhs)
+    requires __is_trivially_copy_assignable
+  = default;
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(const expected& __rhs)
     noexcept(is_nothrow_copy_assignable_v<_Tp> &&
@@ -295,6 +314,7 @@ public:
              is_copy_constructible_v<_Tp> &&
              is_copy_assignable_v<_Err> &&
              is_copy_constructible_v<_Err> &&
+             !__is_trivially_copy_assignable &&
              (is_nothrow_move_constructible_v<_Tp> ||
               is_nothrow_move_constructible_v<_Err>))
   {
@@ -313,6 +333,10 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(expected&& __rhs)
+    requires __is_trivially_move_assignable
+  = default;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(expected&& __rhs)
     noexcept(is_nothrow_move_assignable_v<_Tp> &&
              is_nothrow_move_constructible_v<_Tp> &&
              is_nothrow_move_assignable_v<_Err> &&
@@ -321,6 +345,7 @@ public:
              is_move_assignable_v<_Tp> &&
              is_move_constructible_v<_Err> &&
              is_move_assignable_v<_Err> &&
+             !__is_trivially_move_assignable &&
              (is_nothrow_move_constructible_v<_Tp> ||
               is_nothrow_move_constructible_v<_Err>))
   {
