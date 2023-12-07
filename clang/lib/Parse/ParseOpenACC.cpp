@@ -56,6 +56,7 @@ OpenACCDirectiveKindEx getOpenACCDirectiveKind(Token Tok) {
           .Case("shutdown", OpenACCDirectiveKind::Shutdown)
           .Case("set", OpenACCDirectiveKind::Shutdown)
           .Case("update", OpenACCDirectiveKind::Update)
+          .Case("wait", OpenACCDirectiveKind::Wait)
           .Default(OpenACCDirectiveKind::Invalid);
 
   if (DirKind != OpenACCDirectiveKind::Invalid)
@@ -123,6 +124,8 @@ bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, Token Tok) {
     return Tok.getIdentifierInfo()->isStr("set");
   case OpenACCDirectiveKind::Update:
     return Tok.getIdentifierInfo()->isStr("update");
+  case OpenACCDirectiveKind::Wait:
+    return Tok.getIdentifierInfo()->isStr("wait");
   case OpenACCDirectiveKind::Invalid:
     return false;
   }
@@ -250,6 +253,67 @@ void ParseOpenACCClauseList(Parser &P) {
 }
 
 } // namespace
+
+/// OpenACC 3.3, section 2.16:
+/// In this section and throughout the specification, the term wait-argument
+/// means:
+/// [ devnum : int-expr : ] [ queues : ] async-argument-list
+bool Parser::ParseOpenACCWaitArgument() {
+  // [devnum : int-expr : ]
+  if (Tok.is(tok::identifier) && NextToken().is(tok::colon) &&
+      Tok.getIdentifierInfo()->isStr("devnum")) {
+    // Consume devnum.
+    ConsumeToken();
+    // Consume colon.
+    ConsumeToken();
+
+    ExprResult IntExpr =
+        getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+    if (IntExpr.isInvalid())
+      return true;
+
+    if (ExpectAndConsume(tok::colon))
+      return true;
+  }
+
+  // [ queues : ]
+  if (Tok.is(tok::identifier) && NextToken().is(tok::colon) &&
+      Tok.getIdentifierInfo()->isStr("queues")) {
+    // Consume queues.
+    ConsumeToken();
+    // Consume colon.
+    ConsumeToken();
+  }
+
+  // OpenACC 3.3, section 2.16:
+  // the term 'async-argument' means a nonnegative scalar integer expression, or
+  // one of the special values 'acc_async_noval' or 'acc_async_sync', as defined
+  // in the C header file and the Fortran opacc module.
+  //
+  // We are parsing this simply as list of assignment expressions (to avoid
+  // comma being troublesome), and will ensure it is an integral type.  The
+  // 'special' types are defined as macros, so we can't really check those
+  // (other than perhaps as values at one point?), but the standard does say it
+  // is implementation-defined to use any other negative value.
+  //
+  //
+  bool FirstArg = true;
+  while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
+    if (!FirstArg) {
+      if (ExpectAndConsume(tok::comma))
+        return true;
+    }
+    FirstArg = false;
+
+    ExprResult CurArg =
+        getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+
+    if (CurArg.isInvalid())
+      return true;
+  }
+
+  return false;
+}
 
 ExprResult Parser::ParseOpenACCIDExpression() {
   ExprResult Res;
@@ -398,6 +462,13 @@ void Parser::ParseOpenACCDirective() {
       // The ParseOpenACCCacheVarList function manages to recover from failures,
       // so we can always consume the close.
       T.consumeClose();
+      break;
+    case OpenACCDirectiveKind::Wait:
+      // OpenACC has an optional paren-wrapped 'wait-argument'.
+      if (ParseOpenACCWaitArgument())
+        T.skipToEnd();
+      else
+        T.consumeClose();
       break;
     }
   } else if (DirKind == OpenACCDirectiveKind::Cache) {
