@@ -690,9 +690,7 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     return getOpTypeArray(Ty->getArrayNumElements(), El, MIRBuilder, EmitIR);
   }
   if (auto SType = dyn_cast<StructType>(Ty)) {
-    if (SType->isOpaque())
-      return getOpTypeOpaque(SType, MIRBuilder);
-    return getOpTypeStruct(SType, MIRBuilder, EmitIR);
+    return getOpTypeOpaque(SType, MIRBuilder);
   }
   if (auto FType = dyn_cast<FunctionType>(Ty)) {
     SPIRVType *RetTy = findSPIRVType(FType->getReturnType(), MIRBuilder);
@@ -707,12 +705,7 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     // At the moment, all opaque pointers correspond to i8 element type.
     // TODO: change the implementation once opaque pointers are supported
     // in the SPIR-V specification.
-    if (PType->isOpaque())
-      SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
-    else
-      SpvElementType =
-          findSPIRVType(PType->getNonOpaquePointerElementType(), MIRBuilder,
-                        SPIRV::AccessQualifier::ReadWrite, EmitIR);
+    SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
     auto SC = addressSpaceToStorageClass(PType->getAddressSpace());
     // Null pointer means we have a loop in type definitions, make and
     // return corresponding OpTypeForwardPointer.
