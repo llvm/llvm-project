@@ -121,18 +121,14 @@ public:
 
   /// Remove a single \p User from the list of users.
   void removeUser(VPUser &User) {
-    bool Found = false;
     // The same user can be added multiple times, e.g. because the same VPValue
     // is used twice by the same VPUser. Remove a single one.
-    erase_if(Users, [&User, &Found](VPUser *Other) {
-      if (Found)
-        return false;
-      if (Other == &User) {
-        Found = true;
-        return true;
+    for (const auto &U : Users) {
+      if (U == &User) {
+        Users.erase(&U);
+        return;
       }
-      return false;
-    });
+    }
   }
 
   typedef SmallVectorImpl<VPUser *>::iterator user_iterator;
