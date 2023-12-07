@@ -1505,7 +1505,7 @@ def MOVDIRI64 : RI<0xF9, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
 def MOVDIRI32_EVEX : I<0xF9, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
                        "movdiri\t{$src, $dst|$dst, $src}",
                        [(int_x86_directstore32 addr:$dst, GR32:$src)]>,
-                     EVEX_NoCD8, T_MAP4PS, Requires<[HasMOVDIRI, HasEGPR]>;
+                     EVEX_NoCD8, T_MAP4PS, Requires<[In64BitMode, HasMOVDIRI, HasEGPR]>;
 def MOVDIRI64_EVEX : RI<0xF9, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
                         "movdiri\t{$src, $dst|$dst, $src}",
                         [(int_x86_directstore64 addr:$dst, GR64:$src)]>,
