@@ -140,7 +140,7 @@ void LoopExpand::runOnOperation() {
 
     bool isStructured = accLoopOp.getLoopRegions().front()->hasOneBlock();
     bool finalCountValue = isStructured;
-    unsigned nbLoop = accLoopOp.getBody().getNumArguments();
+    unsigned nbLoop = accLoopOp.getLowerbound().size();
 
     // Gather original (non-privatized) induction variables.
     llvm::SmallVector<mlir::Value> ivs = getOriginalInductionVars(accLoopOp);
@@ -160,6 +160,10 @@ void LoopExpand::runOnOperation() {
 
     llvm::SmallVector<mlir::Value> lbs, ubs, steps, iterArgs;
     llvm::SmallVector<fir::DoLoopOp> loops;
+    auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(accLoopOp.getLoc());
+    assert(fusedLoc && "expect fusedloc on acc.loop operation");
+    assert(fusedLoc.getLocations().size() == (nbLoop + 1) &&
+           "expect n + 1 locations on acc.loop");
 
     // Create the loop nest, move the acc.loop body inside and move the loop
     // nest inside the acc.loop again.
@@ -176,8 +180,8 @@ void LoopExpand::runOnOperation() {
           builder.createConvert(loc, fir::unwrapRefType(ivs[i].getType()),
                                 accLoopOp.getLowerbound()[i]));
       fir::DoLoopOp doLoopOp = builder.create<fir::DoLoopOp>(
-          loc, lbs[i], ubs[i], steps[i], /*unordered=*/false, finalCountValue,
-          mlir::ValueRange{iterArgs[i]});
+          fusedLoc.getLocations()[i + 1], lbs[i], ubs[i], steps[i],
+          /*unordered=*/false, finalCountValue, mlir::ValueRange{iterArgs[i]});
       loops.push_back(doLoopOp);
 
       if (isInnerLoop) {

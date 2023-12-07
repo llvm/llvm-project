@@ -1,4 +1,4 @@
-! RUN: bbc -fopenacc -emit-hlfir %s -o - | fir-opt --split-input-file --acc-loop-expand | FileCheck %s
+! RUN: bbc -fopenacc -emit-hlfir --mlir-print-debuginfo %s -o - | fir-opt --split-input-file --acc-loop-expand --mlir-print-debuginfo --mlir-print-local-scope | FileCheck %s
 
 subroutine singleloop(a)
    real :: a(:)
@@ -92,13 +92,13 @@ end subroutine
 ! CHECK:       %[[CONV_STEP1:.*]] = fir.convert %[[STEP1]] : (index) -> i32
 ! CHECK:       %[[INCR2:.*]] = arith.addi %[[LOAD_J]], %[[CONV_STEP1]] : i32
 ! CHECK:       fir.result %[[INCR1]], %[[INCR2]] : index, i32
-! CHECK:     }
+! CHECK:     } loc("{{.*}}loop-expand.f90":69:5)
 ! CHECK:     %[[INCR1:.*]] = arith.addi %[[ARG1]], %[[STEP0]] : index
 ! CHECK:     %[[LOAD_I:.*]] = fir.load %[[I]]#1 : !fir.ref<i32>
 ! CHECK:     %[[CONV_STEP0:.*]] = fir.convert %[[STEP0]] : (index) -> i32
 ! CHECK:     %[[INCR2:.*]] = arith.addi %[[LOAD_I]], %[[CONV_STEP0]] : i32
 ! CHECK:     fir.result %[[INCR1]], %[[INCR2]] : index, i32
-! CHECK:   }
+! CHECK:   } loc("{{.*}}loop-expand.f90":68:3)
 ! CHECK:   acc.yield
 ! CHECK: }
 
@@ -144,7 +144,7 @@ end subroutine
 ! CHECK:     %[[CONV_STEP0:.*]] = fir.convert %[[STEP0]] : (index) -> i64
 ! CHECK:     %[[INCR2:.*]] = arith.addi %[[LOAD_II]], %[[CONV_STEP0]] : i64
 ! CHECK:     fir.result %[[INCR1]], %[[INCR2]] : index, i64
-! CHECK:   }
+! CHECK:   } loc("{{.*}}loop-expand.f90":126:3)
 ! CHECK:   acc.yield
 ! CHECK: }
 
@@ -166,5 +166,6 @@ end subroutine
 ! CHECK: %[[UBOUND:.*]] = fir.convert %{{.*}} : (i32) -> index
 ! CHECK: %[[STEP:.*]] = arith.constant 1 : index
 ! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %[[LBOUND]] to %[[UBOUND]] step %[[STEP]] iter_args(%{{.*}} = %{{.*}}) -> (index, i32) {
+! CHECKL } loc("{{.*}}loop-expand.f90":156:3)
 ! CHECK: acc.yield
 ! CHECK: acc.yield
