@@ -127,7 +127,7 @@ ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(
   return valobj;
 }
 
-lldb::ValueObjectSP
+std::optional<ValueObjectSP>
 ValueObjectRegisterSet::GetChildMemberWithName(llvm::StringRef name,
                                                bool can_create) {
   ValueObject *valobj = nullptr;
@@ -139,7 +139,7 @@ ValueObjectRegisterSet::GetChildMemberWithName(llvm::StringRef name,
   if (valobj)
     return valobj->GetSP();
   else
-    return ValueObjectSP();
+    return {};
 }
 
 size_t ValueObjectRegisterSet::GetIndexOfChildWithName(llvm::StringRef name) {

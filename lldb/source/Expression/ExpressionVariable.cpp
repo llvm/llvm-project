@@ -20,14 +20,18 @@ char ExpressionVariable::ID;
 ExpressionVariable::ExpressionVariable() : m_flags(0) {}
 
 uint8_t *ExpressionVariable::GetValueBytes() {
-  std::optional<uint64_t> byte_size = m_frozen_sp->GetByteSize();
+  if (!m_frozen_sp)
+    return nullptr;
+
+  std::optional<uint64_t> byte_size = m_frozen_sp.value()->GetByteSize();
   if (byte_size && *byte_size) {
-    if (m_frozen_sp->GetDataExtractor().GetByteSize() < *byte_size) {
-      m_frozen_sp->GetValue().ResizeData(*byte_size);
-      m_frozen_sp->GetValue().GetData(m_frozen_sp->GetDataExtractor());
+    if (m_frozen_sp.value()->GetDataExtractor().GetByteSize() < *byte_size) {
+      m_frozen_sp.value()->GetValue().ResizeData(*byte_size);
+      m_frozen_sp.value()->GetValue().GetData(
+          m_frozen_sp.value()->GetDataExtractor());
     }
     return const_cast<uint8_t *>(
-        m_frozen_sp->GetDataExtractor().GetDataStart());
+        m_frozen_sp.value()->GetDataExtractor().GetDataStart());
   }
   return nullptr;
 }

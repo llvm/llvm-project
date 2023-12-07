@@ -1239,7 +1239,7 @@ public:
   // the execution context.
   lldb::ExpressionResults EvaluateExpression(
       llvm::StringRef expression, ExecutionContextScope *exe_scope,
-      lldb::ValueObjectSP &result_valobj_sp,
+      std::optional<lldb::ValueObjectSP> &result_valobj_sp,
       const EvaluateExpressionOptions &options = EvaluateExpressionOptions(),
       std::string *fixed_expression = nullptr, ValueObject *ctx_obj = nullptr);
 

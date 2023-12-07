@@ -149,9 +149,9 @@ public:
   static lldb::BreakpointPreconditionSP
   GetExceptionPrecondition(lldb::LanguageType language, bool throw_bp);
 
-  virtual lldb::ValueObjectSP GetExceptionObjectForThread(
-      lldb::ThreadSP thread_sp) {
-    return lldb::ValueObjectSP();
+  virtual std::optional<lldb::ValueObjectSP>
+  GetExceptionObjectForThread(lldb::ThreadSP thread_sp) {
+    return {};
   }
 
   virtual lldb::ThreadSP GetBacktraceThreadFromException(

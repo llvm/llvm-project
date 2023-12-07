@@ -226,7 +226,7 @@ public:
 
   size_t CalculateNumChildren() override { return m_num_children; }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  std::optional<ValueObjectSP> GetChildAtIndex(size_t idx) override {
     if (idx >= CalculateNumChildren())
       return {};
     std::optional<uint64_t> size = m_child_type.GetByteSize(nullptr);
@@ -235,12 +235,12 @@ public:
     auto offset = idx * *size;
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-    ValueObjectSP child_sp(m_backend.GetSyntheticChildAtOffset(
+    std::optional<ValueObjectSP> child_sp(m_backend.GetSyntheticChildAtOffset(
         offset, m_child_type, true, ConstString(idx_name.GetString())));
     if (!child_sp)
-      return child_sp;
+      return {};
 
-    child_sp->SetFormat(m_item_format);
+    child_sp.value()->SetFormat(m_item_format);
 
     return child_sp;
   }
@@ -299,10 +299,10 @@ bool lldb_private::formatters::VectorTypeSummaryProvider(
     auto child_sp = synthetic_children->GetChildAtIndex(idx);
     if (!child_sp)
       continue;
-    child_sp = child_sp->GetQualifiedRepresentationIfAvailable(
+    child_sp = child_sp.value()->GetQualifiedRepresentationIfAvailable(
         lldb::eDynamicDontRunTarget, true);
 
-    const char *child_value = child_sp->GetValueAsCString();
+    const char *child_value = child_sp.value()->GetValueAsCString();
     if (child_value && *child_value) {
       if (first) {
         s.Printf("%s", child_value);
@@ -321,7 +321,5 @@ bool lldb_private::formatters::VectorTypeSummaryProvider(
 lldb_private::SyntheticChildrenFrontEnd *
 lldb_private::formatters::VectorTypeSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  if (!valobj_sp)
-    return nullptr;
   return new VectorTypeSyntheticFrontEnd(valobj_sp);
 }

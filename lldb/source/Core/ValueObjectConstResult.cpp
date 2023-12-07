@@ -244,19 +244,21 @@ bool ValueObjectConstResult::IsInScope() {
   return true;
 }
 
-lldb::ValueObjectSP ValueObjectConstResult::Dereference(Status &error) {
-  return m_impl.Dereference(error);
+lldb::ValueObjectSP ValueObjectConstResult::Dereference() {
+  return m_impl.Dereference();
 }
 
-lldb::ValueObjectSP ValueObjectConstResult::GetSyntheticChildAtOffset(
-    uint32_t offset, const CompilerType &type, bool can_create,
-    ConstString name_const_str) {
+std::optional<lldb::ValueObjectSP>
+ValueObjectConstResult::GetSyntheticChildAtOffset(uint32_t offset,
+                                                  const CompilerType &type,
+                                                  bool can_create,
+                                                  ConstString name_const_str) {
   return m_impl.GetSyntheticChildAtOffset(offset, type, can_create,
                                           name_const_str);
 }
 
-lldb::ValueObjectSP ValueObjectConstResult::AddressOf(Status &error) {
-  return m_impl.AddressOf(error);
+lldb::ValueObjectSP ValueObjectConstResult::AddressOf() {
+  return m_impl.AddressOf();
 }
 
 lldb::addr_t ValueObjectConstResult::GetAddressOf(bool scalar_is_load_address,
@@ -276,7 +278,7 @@ size_t ValueObjectConstResult::GetPointeeData(DataExtractor &data,
   return m_impl.GetPointeeData(data, item_idx, item_count);
 }
 
-lldb::ValueObjectSP
+std::optional<ValueObjectSP>
 ValueObjectConstResult::GetDynamicValue(lldb::DynamicValueType use_dynamic) {
   // Always recalculate dynamic values for const results as the memory that
   // they might point to might have changed at any time.
@@ -290,7 +292,7 @@ ValueObjectConstResult::GetDynamicValue(lldb::DynamicValueType use_dynamic) {
     if (m_dynamic_value && m_dynamic_value->GetError().Success())
       return m_dynamic_value->GetSP();
   }
-  return ValueObjectSP();
+  return {};
 }
 
 lldb::ValueObjectSP

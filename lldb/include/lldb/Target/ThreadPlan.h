@@ -450,8 +450,8 @@ public:
   // (currently only ThreadPlanStepOut does this.) If so, the ReturnValueObject
   // can be retrieved from here.
 
-  virtual lldb::ValueObjectSP GetReturnValueObject() {
-    return lldb::ValueObjectSP();
+  virtual std::optional<lldb::ValueObjectSP> GetReturnValueObject() {
+    return {};
   }
 
   // If the thread plan managing the evaluation of a user expression lives

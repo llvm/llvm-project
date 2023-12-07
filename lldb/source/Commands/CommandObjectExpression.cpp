@@ -421,7 +421,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   Target *exe_target = exe_ctx.GetTargetPtr();
   Target &target = exe_target ? *exe_target : GetDummyTarget();
 
-  lldb::ValueObjectSP result_valobj_sp;
+  std::optional<lldb::ValueObjectSP> result_valobj_sp;
   StackFrame *frame = exe_ctx.GetFramePtr();
 
   if (m_command_options.top_level && !m_command_options.allow_jit) {
@@ -449,13 +449,14 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   if (result_valobj_sp) {
     Format format = m_format_options.GetFormat();
 
-    if (result_valobj_sp->GetError().Success()) {
+    if (result_valobj_sp.value()->GetError().Success()) {
       if (format != eFormatVoid) {
         if (format != eFormatDefault)
-          result_valobj_sp->SetFormat(format);
+          result_valobj_sp.value()->SetFormat(format);
 
         if (m_varobj_options.elem_count > 0) {
-          Status error(CanBeUsedForElementCountPrinting(*result_valobj_sp));
+          Status error(
+              CanBeUsedForElementCountPrinting(*result_valobj_sp.value()));
           if (error.Fail()) {
             result.AppendErrorWithFormat(
                 "expression cannot be used with --element-count %s\n",
@@ -471,14 +472,15 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
             m_command_options.m_verbosity, format));
         options.SetHideRootName(suppress_result);
         options.SetVariableFormatDisplayLanguage(
-            result_valobj_sp->GetPreferredDisplayLanguage());
+            result_valobj_sp.value()->GetPreferredDisplayLanguage());
 
-        result_valobj_sp->Dump(output_stream, options);
+        result_valobj_sp.value()->Dump(output_stream, options);
 
         if (suppress_result)
-          if (auto result_var_sp =
-                  target.GetPersistentVariable(result_valobj_sp->GetName())) {
-            auto language = result_valobj_sp->GetPreferredDisplayLanguage();
+          if (auto result_var_sp = target.GetPersistentVariable(
+                  result_valobj_sp.value()->GetName())) {
+            auto language =
+                result_valobj_sp.value()->GetPreferredDisplayLanguage();
             if (auto *persistent_state =
                     target.GetPersistentExpressionStateForLanguage(language))
               persistent_state->RemovePersistentVariable(result_var_sp);
@@ -486,7 +488,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         result.SetStatus(eReturnStatusSuccessFinishResult);
       }
     } else {
-      if (result_valobj_sp->GetError().GetError() ==
+      if (result_valobj_sp.value()->GetError().GetError() ==
           UserExpression::kNoResult) {
         if (format != eFormatVoid && GetDebugger().GetNotifyVoid()) {
           error_stream.PutCString("(void)\n");
@@ -494,7 +496,8 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
 
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        const char *error_cstr = result_valobj_sp->GetError().AsCString();
+        const char *error_cstr =
+            result_valobj_sp.value()->GetError().AsCString();
         if (error_cstr && error_cstr[0]) {
           const size_t error_cstr_len = strlen(error_cstr);
           const bool ends_with_newline = error_cstr[error_cstr_len - 1] == '\n';

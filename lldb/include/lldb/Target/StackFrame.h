@@ -307,7 +307,7 @@ public:
   ///
   /// \return
   ///     A shared pointer to the ValueObject described by var_expr.
-  lldb::ValueObjectSP GetValueForVariableExpressionPath(
+  std::optional<lldb::ValueObjectSP> GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
       uint32_t options, lldb::VariableSP &var_sp, Status &error);
 
@@ -439,7 +439,7 @@ public:
   ///
   /// \return
   ///     A ValueObject for this variable.
-  lldb::ValueObjectSP
+  std::optional<lldb::ValueObjectSP>
   GetValueObjectForFrameVariable(const lldb::VariableSP &variable_sp,
                                  lldb::DynamicValueType use_dynamic);
 
@@ -463,7 +463,7 @@ public:
   ///
   /// \return
   ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
-  lldb::ValueObjectSP GuessValueForAddress(lldb::addr_t addr);
+  std::optional<lldb::ValueObjectSP> GuessValueForAddress(lldb::addr_t addr);
 
   /// Attempt to reconstruct the ValueObject for the address contained in a
   /// given register plus an offset.  The ExpressionPath should indicate how
@@ -477,8 +477,8 @@ public:
   ///
   /// \return
   ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
-  lldb::ValueObjectSP GuessValueForRegisterAndOffset(ConstString reg,
-                                                     int64_t offset);
+  std::optional<lldb::ValueObjectSP>
+  GuessValueForRegisterAndOffset(ConstString reg, int64_t offset);
 
   /// Attempt to reconstruct the ValueObject for a variable with a given \a name
   /// from within the current StackFrame, within the current block. The search
@@ -491,7 +491,7 @@ public:
   ///
   /// \return
   ///   The ValueObject if found.
-  lldb::ValueObjectSP FindVariable(ConstString name);
+  std::optional<lldb::ValueObjectSP> FindVariable(ConstString name);
 
   // lldb::ExecutionContextScope pure virtual functions
   lldb::TargetSP CalculateTarget() override;

@@ -219,8 +219,8 @@ private:
   uint32_t m_ignore_count;      // Number of times to ignore this watchpoint
   std::string m_decl_str;       // Declaration information, if any.
   std::string m_watch_spec_str; // Spec for the watchpoint.
-  lldb::ValueObjectSP m_old_value_sp;
-  lldb::ValueObjectSP m_new_value_sp;
+  std::optional<lldb::ValueObjectSP> m_old_value_sp;
+  std::optional<lldb::ValueObjectSP> m_new_value_sp;
   CompilerType m_type;
   Status m_error; // An error object describing errors associated with this
                   // watchpoint.

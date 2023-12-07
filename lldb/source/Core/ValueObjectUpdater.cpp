@@ -11,18 +11,16 @@
 using namespace lldb_private;
 
 ValueObjectUpdater::ValueObjectUpdater(lldb::ValueObjectSP in_valobj_sp) {
-  if (!in_valobj_sp)
-    return;
   // If the user passes in a value object that is dynamic or synthetic, then
   // water it down to the static type.
   m_root_valobj_sp = in_valobj_sp->GetQualifiedRepresentationIfAvailable(
       lldb::eNoDynamicValues, false);
 }
 
-lldb::ValueObjectSP ValueObjectUpdater::GetSP() {
+std::optional<lldb::ValueObjectSP> ValueObjectUpdater::GetSP() {
   lldb::ProcessSP process_sp = GetProcessSP();
   if (!process_sp)
-    return lldb::ValueObjectSP();
+    return {};
 
   const uint32_t current_stop_id = process_sp->GetLastNaturalStopID();
   if (current_stop_id == m_stop_id)
@@ -31,18 +29,20 @@ lldb::ValueObjectSP ValueObjectUpdater::GetSP() {
   m_stop_id = current_stop_id;
 
   if (!m_root_valobj_sp) {
-    m_user_valobj_sp.reset();
+    if (m_user_valobj_sp)
+      m_user_valobj_sp.value().reset();
     return m_root_valobj_sp;
   }
 
   m_user_valobj_sp = m_root_valobj_sp;
 
-  lldb::ValueObjectSP dynamic_sp =
-      m_user_valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
+  std::optional<lldb::ValueObjectSP> dynamic_sp =
+      m_user_valobj_sp.value()->GetDynamicValue(lldb::eDynamicDontRunTarget);
   if (dynamic_sp)
     m_user_valobj_sp = dynamic_sp;
 
-  lldb::ValueObjectSP synthetic_sp = m_user_valobj_sp->GetSyntheticValue();
+  std::optional<lldb::ValueObjectSP> synthetic_sp =
+      m_user_valobj_sp.value()->GetSyntheticValue();
   if (synthetic_sp)
     m_user_valobj_sp = synthetic_sp;
 
@@ -51,6 +51,6 @@ lldb::ValueObjectSP ValueObjectUpdater::GetSP() {
 
 lldb::ProcessSP ValueObjectUpdater::GetProcessSP() const {
   if (m_root_valobj_sp)
-    return m_root_valobj_sp->GetProcessSP();
+    return m_root_valobj_sp.value()->GetProcessSP();
   return lldb::ProcessSP();
 }

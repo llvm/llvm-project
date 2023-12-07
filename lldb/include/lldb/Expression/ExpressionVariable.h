@@ -33,32 +33,52 @@ public:
 
   virtual ~ExpressionVariable() = default;
 
-  std::optional<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
+  std::optional<uint64_t> GetByteSize() {
+    if (m_frozen_sp)
+      return m_frozen_sp.value()->GetByteSize();
+    else
+      return {};
+  }
 
-  ConstString GetName() { return m_frozen_sp->GetName(); }
+  ConstString GetName() {
+    return m_frozen_sp ? m_frozen_sp.value()->GetName() : ConstString("");
+  }
 
-  lldb::ValueObjectSP GetValueObject() { return m_frozen_sp; }
+  std::optional<lldb::ValueObjectSP> GetValueObject() { return m_frozen_sp; }
 
   uint8_t *GetValueBytes();
 
-  void ValueUpdated() { m_frozen_sp->ValueUpdated(); }
+  void ValueUpdated() {
+    if (m_frozen_sp)
+      m_frozen_sp.value()->ValueUpdated();
+  }
 
   RegisterInfo *GetRegisterInfo() {
-    return m_frozen_sp->GetValue().GetRegisterInfo();
+    if (m_frozen_sp)
+      return m_frozen_sp.value()->GetValue().GetRegisterInfo();
+    return nullptr;
   }
 
   void SetRegisterInfo(const RegisterInfo *reg_info) {
-    return m_frozen_sp->GetValue().SetContext(
-        Value::ContextType::RegisterInfo, const_cast<RegisterInfo *>(reg_info));
+    if (m_frozen_sp)
+      return m_frozen_sp.value()->GetValue().SetContext(
+          Value::ContextType::RegisterInfo,
+          const_cast<RegisterInfo *>(reg_info));
   }
 
-  CompilerType GetCompilerType() { return m_frozen_sp->GetCompilerType(); }
+  CompilerType GetCompilerType() {
+    return m_frozen_sp.value()->GetCompilerType();
+  }
 
   void SetCompilerType(const CompilerType &compiler_type) {
-    m_frozen_sp->GetValue().SetCompilerType(compiler_type);
+    if (m_frozen_sp)
+      m_frozen_sp.value()->GetValue().SetCompilerType(compiler_type);
   }
 
-  void SetName(ConstString name) { m_frozen_sp->SetName(name); }
+  void SetName(ConstString name) {
+    if (m_frozen_sp)
+      m_frozen_sp.value()->SetName(name);
+  }
 
   // this function is used to copy the address-of m_live_sp into m_frozen_sp
   // this is necessary because the results of certain cast and pointer-
@@ -68,14 +88,15 @@ public:
   // Transferring the address-of the live object solves these issues and
   // provides the expected user-level behavior
   void TransferAddress(bool force = false) {
-    if (m_live_sp.get() == nullptr)
+    if (!m_live_sp)
       return;
 
-    if (m_frozen_sp.get() == nullptr)
+    if (!m_frozen_sp)
       return;
 
-    if (force || (m_frozen_sp->GetLiveAddress() == LLDB_INVALID_ADDRESS))
-      m_frozen_sp->SetLiveAddress(m_live_sp->GetLiveAddress());
+    if (force ||
+        (m_frozen_sp.value()->GetLiveAddress() == LLDB_INVALID_ADDRESS))
+      m_frozen_sp.value()->SetLiveAddress(m_live_sp.value()->GetLiveAddress());
   }
 
   enum Flags {
@@ -108,8 +129,8 @@ public:
   FlagType m_flags; // takes elements of Flags
 
   // these should be private
-  lldb::ValueObjectSP m_frozen_sp;
-  lldb::ValueObjectSP m_live_sp;
+  std::optional<lldb::ValueObjectSP> m_frozen_sp;
+  std::optional<lldb::ValueObjectSP> m_live_sp;
 };
 
 /// \class ExpressionVariableList ExpressionVariable.h

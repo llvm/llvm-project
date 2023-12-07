@@ -210,8 +210,8 @@ bool Watchpoint::CaptureWatchedValue(const ExecutionContext &exe_ctx) {
   m_new_value_sp = ValueObjectMemory::Create(
       exe_ctx.GetBestExecutionContextScope(), g_watch_name.GetStringRef(),
       watch_address, m_type);
-  m_new_value_sp = m_new_value_sp->CreateConstantValue(g_watch_name);
-  return (m_new_value_sp && m_new_value_sp->GetError().Success());
+  m_new_value_sp = m_new_value_sp.value()->CreateConstantValue(g_watch_name);
+  return (m_new_value_sp && m_new_value_sp.value()->GetError().Success());
 }
 
 bool Watchpoint::WatchedValueReportable(const ExecutionContext &exe_ctx) {
@@ -234,7 +234,9 @@ bool Watchpoint::WatchedValueReportable(const ExecutionContext &exe_ctx) {
   newest_valueobj_sp->GetData(new_data, error);
   if (error.Fail())
     return true;
-  m_new_value_sp->GetData(old_data, error);
+  if (!m_new_value_sp)
+    return true;
+  m_new_value_sp.value()->GetData(old_data, error);
   if (error.Fail())
     return true;
 
@@ -283,10 +285,11 @@ bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
     values_ss.Indent(prefix);
 
   if (m_old_value_sp) {
-    if (auto *old_value_cstr = m_old_value_sp->GetValueAsCString()) {
+    if (auto *old_value_cstr = m_old_value_sp.value()->GetValueAsCString()) {
       values_ss.Printf("old value: %s", old_value_cstr);
     } else {
-      if (auto *old_summary_cstr = m_old_value_sp->GetSummaryAsCString())
+      if (auto *old_summary_cstr =
+              m_old_value_sp.value()->GetSummaryAsCString())
         values_ss.Printf("old value: %s", old_summary_cstr);
       else {
         StreamString strm;
@@ -295,7 +298,7 @@ bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
             .SetHideRootType(true)
             .SetHideRootName(true)
             .SetHideName(true);
-        m_old_value_sp->Dump(strm, options);
+        m_old_value_sp.value()->Dump(strm, options);
         if (strm.GetData())
           values_ss.Printf("old value: %s", strm.GetData());
       }
@@ -306,10 +309,11 @@ bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
     if (values_ss.GetSize())
       values_ss.Printf("\n");
 
-    if (auto *new_value_cstr = m_new_value_sp->GetValueAsCString())
+    if (auto *new_value_cstr = m_new_value_sp.value()->GetValueAsCString())
       values_ss.Printf("new value: %s", new_value_cstr);
     else {
-      if (auto *new_summary_cstr = m_new_value_sp->GetSummaryAsCString())
+      if (auto *new_summary_cstr =
+              m_new_value_sp.value()->GetSummaryAsCString())
         values_ss.Printf("new value: %s", new_summary_cstr);
       else {
         StreamString strm;
@@ -318,7 +322,7 @@ bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
             .SetHideRootType(true)
             .SetHideRootName(true)
             .SetHideName(true);
-        m_new_value_sp->Dump(strm, options);
+        m_new_value_sp.value()->Dump(strm, options);
         if (strm.GetData())
           values_ss.Printf("new value: %s", strm.GetData());
       }

@@ -28,31 +28,34 @@ public:
 
   void Append(const ValueObjectList &valobj_list);
 
-  lldb::ValueObjectSP FindValueObjectByPointer(ValueObject *valobj);
+  std::optional<lldb::ValueObjectSP>
+  FindValueObjectByPointer(ValueObject *valobj);
 
   size_t GetSize() const;
 
   void Resize(size_t size);
 
-  lldb::ValueObjectSP GetValueObjectAtIndex(size_t idx);
+  std::optional<lldb::ValueObjectSP> GetValueObjectAtIndex(size_t idx);
 
-  lldb::ValueObjectSP RemoveValueObjectAtIndex(size_t idx);
+  std::optional<lldb::ValueObjectSP> RemoveValueObjectAtIndex(size_t idx);
 
   void SetValueObjectAtIndex(size_t idx, const lldb::ValueObjectSP &valobj_sp);
 
-  lldb::ValueObjectSP FindValueObjectByValueName(const char *name);
+  std::optional<lldb::ValueObjectSP>
+  FindValueObjectByValueName(const char *name);
 
-  lldb::ValueObjectSP FindValueObjectByUID(lldb::user_id_t uid);
+  std::optional<lldb::ValueObjectSP> FindValueObjectByUID(lldb::user_id_t uid);
 
   void Swap(ValueObjectList &value_object_list);
 
   void Clear() { m_value_objects.clear(); }
 
-  const std::vector<lldb::ValueObjectSP> &GetObjects() const {
+  const std::vector<std::optional<lldb::ValueObjectSP>> &GetObjects() const {
     return m_value_objects;
   }
+
 protected:
-  typedef std::vector<lldb::ValueObjectSP> collection;
+  typedef std::vector<std::optional<lldb::ValueObjectSP>> collection;
   // Classes that inherit from ValueObjectList can see and modify these
   collection m_value_objects;
 };

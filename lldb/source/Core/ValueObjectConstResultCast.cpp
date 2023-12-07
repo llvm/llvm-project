@@ -29,19 +29,20 @@ ValueObjectConstResultCast::ValueObjectConstResultCast(
 
 ValueObjectConstResultCast::~ValueObjectConstResultCast() = default;
 
-lldb::ValueObjectSP ValueObjectConstResultCast::Dereference(Status &error) {
-  return m_impl.Dereference(error);
+lldb::ValueObjectSP ValueObjectConstResultCast::Dereference() {
+  return m_impl.Dereference();
 }
 
-lldb::ValueObjectSP ValueObjectConstResultCast::GetSyntheticChildAtOffset(
+std::optional<lldb::ValueObjectSP>
+ValueObjectConstResultCast::GetSyntheticChildAtOffset(
     uint32_t offset, const CompilerType &type, bool can_create,
     ConstString name_const_str) {
   return m_impl.GetSyntheticChildAtOffset(offset, type, can_create,
                                           name_const_str);
 }
 
-lldb::ValueObjectSP ValueObjectConstResultCast::AddressOf(Status &error) {
-  return m_impl.AddressOf(error);
+lldb::ValueObjectSP ValueObjectConstResultCast::AddressOf() {
+  return m_impl.AddressOf();
 }
 
 ValueObject *ValueObjectConstResultCast::CreateChildAtIndex(

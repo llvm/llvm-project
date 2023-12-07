@@ -1422,10 +1422,8 @@ public:
     }
 
     Stream &strm = result.GetOutputStream();
-    ValueObjectSP exception_object_sp = thread_sp->GetCurrentException();
-    if (exception_object_sp) {
-      exception_object_sp->Dump(strm);
-    }
+    if (auto exception_object_sp = thread_sp->GetCurrentException())
+      exception_object_sp.value()->Dump(strm);
 
     ThreadSP exception_thread_sp = thread_sp->GetCurrentExceptionBacktrace();
     if (exception_thread_sp && exception_thread_sp->IsValid()) {
@@ -1476,10 +1474,7 @@ public:
       return false;
     }
     ValueObjectSP exception_object_sp = thread_sp->GetSiginfoValue();
-    if (exception_object_sp)
-      exception_object_sp->Dump(strm);
-    else
-      strm.Printf("(no siginfo)\n");
+    exception_object_sp->Dump(strm);
     strm.PutChar('\n');
 
     return true;
@@ -1601,7 +1596,7 @@ protected:
       return;
     }
 
-    ValueObjectSP return_valobj_sp;
+    std::optional<ValueObjectSP> return_valobj_sp;
 
     StackFrameSP frame_sp = m_exe_ctx.GetFrameSP();
     uint32_t frame_idx = frame_sp->GetFrameIndex();
@@ -1625,7 +1620,7 @@ protected:
         if (return_valobj_sp)
           result.AppendErrorWithFormat(
               "Error evaluating result expression: %s",
-              return_valobj_sp->GetError().AsCString());
+              return_valobj_sp.value()->GetError().AsCString());
         else
           result.AppendErrorWithFormat(
               "Unknown error evaluating result expression.");

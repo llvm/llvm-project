@@ -877,7 +877,7 @@ protected:
     size_t size = 0;
 
     VariableSP var_sp;
-    ValueObjectSP valobj_sp;
+    std::optional<ValueObjectSP> valobj_sp;
     Stream &output_stream = result.GetOutputStream();
 
     // A simple watch variable gesture allows only one argument.
@@ -914,15 +914,15 @@ protected:
 
     if (valobj_sp) {
       AddressType addr_type;
-      addr = valobj_sp->GetAddressOf(false, &addr_type);
+      addr = valobj_sp.value()->GetAddressOf(false, &addr_type);
       if (addr_type == eAddressTypeLoad) {
         // We're in business.
         // Find out the size of this variable.
         size = m_option_watchpoint.watch_size.GetCurrentValue() == 0
-                   ? valobj_sp->GetByteSize().value_or(0)
+                   ? valobj_sp.value()->GetByteSize().value_or(0)
                    : m_option_watchpoint.watch_size.GetCurrentValue();
       }
-      compiler_type = valobj_sp->GetCompilerType();
+      compiler_type = valobj_sp.value()->GetCompilerType();
     } else {
       const char *error_cstr = error.AsCString(nullptr);
       if (error_cstr)
@@ -1083,7 +1083,7 @@ protected:
     lldb::addr_t addr = 0;
     size_t size = 0;
 
-    ValueObjectSP valobj_sp;
+    std::optional<ValueObjectSP> valobj_sp;
 
     // Use expression evaluation to arrive at the address to watch.
     EvaluateExpressionOptions options;
@@ -1100,14 +1100,14 @@ protected:
     if (expr_result != eExpressionCompleted) {
       result.AppendError("expression evaluation of address to watch failed");
       result.AppendErrorWithFormat("expression evaluated: \n%s", expr.data());
-      if (valobj_sp && !valobj_sp->GetError().Success())
-        result.AppendError(valobj_sp->GetError().AsCString());
+      if (valobj_sp && valobj_sp.value()->GetError().Fail())
+        result.AppendError(valobj_sp.value()->GetError().AsCString());
       return;
     }
 
     // Get the address to watch.
     bool success = false;
-    addr = valobj_sp->GetValueAsUnsigned(0, &success);
+    addr = valobj_sp.value()->GetValueAsUnsigned(0, &success);
     if (!success) {
       result.AppendError("expression did not evaluate to an address");
       return;
@@ -1140,7 +1140,7 @@ protected:
     // Fetch the type from the value object, the type of the watched object is
     // the pointee type
     /// of the expression, so convert to that if we  found a valid type.
-    CompilerType compiler_type(valobj_sp->GetCompilerType());
+    CompilerType compiler_type(valobj_sp.value()->GetCompilerType());
 
     Status error;
     WatchpointSP watch_sp =

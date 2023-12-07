@@ -283,10 +283,9 @@ void FormatManager::GetPossibleMatches(
     // if all else fails, go to static type
     if (valobj.IsDynamic()) {
       lldb::ValueObjectSP static_value_sp(valobj.GetStaticValue());
-      if (static_value_sp)
-        GetPossibleMatches(*static_value_sp.get(),
-                           static_value_sp->GetCompilerType(), use_dynamic,
-                           entries, current_flags, true);
+      GetPossibleMatches(*static_value_sp.get(),
+                         static_value_sp->GetCompilerType(), use_dynamic,
+                         entries, current_flags, true);
     }
   }
 }
@@ -476,15 +475,16 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
 
   for (size_t idx = 0; idx < valobj.GetNumChildren(); idx++) {
     bool is_synth_val = false;
-    ValueObjectSP child_sp(valobj.GetChildAtIndex(idx));
+    std::optional<ValueObjectSP> child_sp(valobj.GetChildAtIndex(idx));
     // something is wrong here - bail out
     if (!child_sp)
       return false;
 
     // also ask the child's type if it has any opinion
-    CompilerType child_compiler_type(child_sp->GetCompilerType());
+    CompilerType child_compiler_type(child_sp.value()->GetCompilerType());
     if (child_compiler_type.IsValid()) {
-      switch (child_compiler_type.ShouldPrintAsOneLiner(child_sp.get())) {
+      switch (
+          child_compiler_type.ShouldPrintAsOneLiner(child_sp.value().get())) {
       case eLazyBoolYes:
       // an opinion of yes is only binding for the child, so keep going
       case eLazyBoolCalculate:
@@ -497,20 +497,21 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
 
     // if we decided to define synthetic children for a type, we probably care
     // enough to show them, but avoid nesting children in children
-    if (child_sp->GetSyntheticChildren().get() != nullptr) {
-      ValueObjectSP synth_sp(child_sp->GetSyntheticValue());
+    if (child_sp.value()->GetSyntheticChildren().get() != nullptr) {
+      std::optional<ValueObjectSP> synth_sp(
+          child_sp.value()->GetSyntheticValue());
       // wait.. wat? just get out of here..
       if (!synth_sp)
         return false;
       // but if we only have them to provide a value, keep going
-      if (!synth_sp->MightHaveChildren() &&
-          synth_sp->DoesProvideSyntheticValue())
+      if (!synth_sp.value()->MightHaveChildren() &&
+          synth_sp.value()->DoesProvideSyntheticValue())
         is_synth_val = true;
       else
         return false;
     }
 
-    total_children_name_len += child_sp->GetName().GetLength();
+    total_children_name_len += child_sp.value()->GetName().GetLength();
 
     // 50 itself is a "randomly" chosen number - the idea is that
     // overly long structs should not get this treatment
@@ -519,20 +520,22 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
       return false;
 
     // if a summary is there..
-    if (child_sp->GetSummaryFormat()) {
+    if (child_sp.value()->GetSummaryFormat()) {
       // and it wants children, then bail out
-      if (child_sp->GetSummaryFormat()->DoesPrintChildren(child_sp.get()))
+      if (child_sp.value()->GetSummaryFormat()->DoesPrintChildren(
+              child_sp->get()))
         return false;
     }
 
     // if this child has children..
-    if (child_sp->GetNumChildren()) {
+    if (child_sp.value()->GetNumChildren()) {
       // ...and no summary...
       // (if it had a summary and the summary wanted children, we would have
       // bailed out anyway
       //  so this only makes us bail out if this has no summary and we would
       //  then print children)
-      if (!child_sp->GetSummaryFormat() && !is_synth_val) // but again only do
+      if (!child_sp.value()->GetSummaryFormat() &&
+          !is_synth_val)                                  // but again only do
                                                           // that if not a
                                                           // synthetic valued
                                                           // child
@@ -546,7 +549,7 @@ ConstString FormatManager::GetTypeForCache(ValueObject &valobj,
                                            lldb::DynamicValueType use_dynamic) {
   ValueObjectSP valobj_sp = valobj.GetQualifiedRepresentationIfAvailable(
       use_dynamic, valobj.IsSynthetic());
-  if (valobj_sp && valobj_sp->GetCompilerType().IsValid()) {
+  if (valobj_sp->GetCompilerType().IsValid()) {
     if (!valobj_sp->GetCompilerType().IsMeaninglessWithoutDynamicResolution())
       return valobj_sp->GetQualifiedTypeName();
   }

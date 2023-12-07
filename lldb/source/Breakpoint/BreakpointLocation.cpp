@@ -285,8 +285,6 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
   // We need to make sure the user sees any parse errors in their condition, so
   // we'll hook the constructor errors up to the debugger's Async I/O.
 
-  ValueObjectSP result_value_sp;
-
   EvaluateExpressionOptions options;
   options.SetUnwindOnError(true);
   options.SetIgnoreBreakpoints(true);
@@ -311,10 +309,10 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
       return false;
     }
 
-    result_value_sp = result_variable_sp->GetValueObject();
+    auto result_value_sp = result_variable_sp->GetValueObject();
 
     if (result_value_sp) {
-      ret = result_value_sp->IsLogicalTrue(error);
+      ret = result_value_sp.value()->IsLogicalTrue(error);
       if (log) {
         if (error.Success()) {
           LLDB_LOGF(log, "Condition successfully evaluated, result is %s.\n",

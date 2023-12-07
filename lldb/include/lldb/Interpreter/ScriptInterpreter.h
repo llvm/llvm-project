@@ -425,9 +425,9 @@ public:
     return 0;
   }
 
-  virtual lldb::ValueObjectSP
+  virtual std::optional<lldb::ValueObjectSP>
   GetChildAtIndex(const StructuredData::ObjectSP &implementor, uint32_t idx) {
-    return lldb::ValueObjectSP();
+    return {};
   }
 
   virtual int
@@ -446,9 +446,9 @@ public:
     return true;
   }
 
-  virtual lldb::ValueObjectSP
+  virtual std::optional<lldb::ValueObjectSP>
   GetSyntheticValue(const StructuredData::ObjectSP &implementor) {
-    return nullptr;
+    return {};
   }
 
   virtual ConstString

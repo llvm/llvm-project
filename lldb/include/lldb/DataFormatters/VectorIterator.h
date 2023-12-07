@@ -26,7 +26,7 @@ public:
 
   size_t CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  std::optional<lldb::ValueObjectSP> GetChildAtIndex(size_t idx) override;
 
   bool Update() override;
 

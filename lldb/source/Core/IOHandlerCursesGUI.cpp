@@ -4496,8 +4496,7 @@ struct Row {
   std::vector<Row> children;
 
   Row(const ValueObjectSP &v, Row *p)
-      : value(v), parent(p),
-        might_have_children(v ? v->MightHaveChildren() : false) {}
+      : value(v), parent(p), might_have_children(v->MightHaveChildren()) {}
 
   size_t GetDepth() const {
     if (parent)
@@ -4517,11 +4516,12 @@ struct Row {
     if (!calculated_children) {
       children.clear();
       calculated_children = true;
-      ValueObjectSP valobj = value.GetSP();
+      std::optional<ValueObjectSP> valobj = value.GetSP();
       if (valobj) {
-        const size_t num_children = valobj->GetNumChildren();
+        const size_t num_children = valobj.value()->GetNumChildren();
         for (size_t i = 0; i < num_children; ++i) {
-          children.push_back(Row(valobj->GetChildAtIndex(i), this));
+          if (auto child = valobj.value()->GetChildAtIndex(i))
+            children.push_back(Row(child.value(), this));
         }
       }
     }
@@ -5549,7 +5549,7 @@ public:
     m_num_rows = 0;
     m_rows.clear();
     for (auto &valobj_sp : valobj_list.GetObjects())
-      m_rows.push_back(Row(valobj_sp, nullptr));
+      m_rows.push_back(Row(valobj_sp.value(), nullptr));
   }
 
   bool WindowDelegateDraw(Window &window, bool force) override {
@@ -5640,7 +5640,7 @@ public:
       if (m_selected_row) {
         auto valobj_sp = m_selected_row->value.GetSP();
         if (valobj_sp)
-          valobj_sp->SetFormat(FormatForChar(c));
+          valobj_sp.value()->SetFormat(FormatForChar(c));
       }
       return eKeyHandled;
 
@@ -5765,10 +5765,12 @@ protected:
 
   bool DisplayRowObject(Window &window, Row &row, DisplayOptions &options,
                         bool highlight, bool last_child) {
-    ValueObject *valobj = row.value.GetSP().get();
+    std::optional<ValueObjectSP> valobj_opt = row.value.GetSP();
 
-    if (valobj == nullptr)
+    if (!valobj_opt)
       return false;
+
+    ValueObject *valobj = row.value.GetSP()->get();
 
     const char *type_name =
         options.show_types ? valobj->GetTypeName().GetCString() : nullptr;
@@ -5933,14 +5935,15 @@ public:
         if (locals) {
           const DynamicValueType use_dynamic = eDynamicDontRunTarget;
           for (const VariableSP &local_sp : *locals) {
-            ValueObjectSP value_sp =
+            std::optional<ValueObjectSP> value_sp =
                 frame->GetValueObjectForFrameVariable(local_sp, use_dynamic);
             if (value_sp) {
-              ValueObjectSP synthetic_value_sp = value_sp->GetSyntheticValue();
+              std::optional<ValueObjectSP> synthetic_value_sp =
+                  value_sp.value()->GetSyntheticValue();
               if (synthetic_value_sp)
-                local_values.Append(synthetic_value_sp);
+                local_values.Append(synthetic_value_sp.value());
               else
-                local_values.Append(value_sp);
+                local_values.Append(value_sp.value());
             }
           }
           // Update the values

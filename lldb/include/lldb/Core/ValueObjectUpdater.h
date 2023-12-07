@@ -20,9 +20,9 @@ namespace lldb_private {
 /// process' stop ID and will update the user type when needed.
 class ValueObjectUpdater {
   /// The root value object is the static typed variable object.
-  lldb::ValueObjectSP m_root_valobj_sp;
+  std::optional<lldb::ValueObjectSP> m_root_valobj_sp;
   /// The user value object is the value object the user wants to see.
-  lldb::ValueObjectSP m_user_valobj_sp;
+  std::optional<lldb::ValueObjectSP> m_user_valobj_sp;
   /// The stop ID that m_user_valobj_sp is valid for.
   uint32_t m_stop_id = UINT32_MAX;
 
@@ -33,7 +33,7 @@ public:
   /// stop ID. If dynamic values are enabled, or if synthetic children are
   /// enabled, the value object that the user wants to see might change while
   /// debugging.
-  lldb::ValueObjectSP GetSP();
+  std::optional<lldb::ValueObjectSP> GetSP();
 
   lldb::ProcessSP GetProcessSP() const;
 };
