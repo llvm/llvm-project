@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Lower/Bridge.h"
 #include "FirConverter.h"
 #include "flang/Lower/Allocatable.h"
-#include "flang/Lower/Bridge.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
 #include "flang/Lower/ConvertCall.h"
