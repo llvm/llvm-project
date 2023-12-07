@@ -983,6 +983,13 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath) {
 
   int MaxBacklog = 3;
 #ifdef _WIN32
+  WSADATA WsaData = {0};
+  if (WSAStartup(MAKEWORD(2, 2), &WsaData) != 0) {
+    llvm::Error E = llvm::make_error<StringError>(getLastSocketErrorCode(),
+                                                  "WSAStartup failed");
+    WSACleanup();
+    return E;
+  }
   SOCKET MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
   if (MaybeWinsocket == INVALID_SOCKET) {
 #else
@@ -1038,11 +1045,22 @@ ListeningSocket::~ListeningSocket() {
     return;
   ::close(FD);
   unlink(SocketPath.c_str());
+#ifdef _WIN32
+  WSACleanup();
+#endif // _WIN32
 }
 
 // Expected?
 Expected<int> GetSocketFD(StringRef SocketPath) {
 #ifdef _WIN32
+  WSADATA WsaData = {0};
+  if (WSAStartup(MAKEWORD(2, 2), &WsaData) != 0) {
+    llvm::Error E = llvm::make_error<StringError>(getLastSocketErrorCode(),
+                                                  "WSAStartup failed");
+    WSACleanup();
+    return E;
+  }
+
   SOCKET MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
   if (MaybeWinsocket == INVALID_SOCKET) {
 #else
@@ -1082,146 +1100,6 @@ raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
 }
 
 raw_socket_stream::~raw_socket_stream() {}
-
-/*
-int raw_socket_stream::MakeServerSocket(StringRef SocketPath,
-                                        unsigned int MaxBacklog,
-                                        std::error_code &EC) {
-
-#ifdef _WIN32
-  SOCKET MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
-#else
-  int MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
-#endif // defined(_WIN32)
-
-#ifdef _WIN32
-  if (MaybeWinsocket == INVALID_SOCKET) {
-#else
-  if (MaybeWinsocket == -1) {
-#endif // _WIN32
-    EC = std::make_error_code(std::errc::connection_aborted);
-    return -1;
-  }
-
-  struct sockaddr_un Addr;
-  memset(&Addr, 0, sizeof(Addr));
-#ifndef _WIN32
-  Addr.sun_family = AF_UNIX;
-#endif // _WIN32
-  strncpy(Addr.sun_path, SocketPath.str().c_str(), sizeof(Addr.sun_path) - 1);
-
-  if (bind(MaybeWinsocket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
-    if (errno == EADDRINUSE) {
-      ::close(MaybeWinsocket);
-      EC = std::make_error_code(std::errc::address_in_use);
-    } else {
-      EC = std::make_error_code(std::errc::inappropriate_io_control_operation);
-    }
-    return -1;
-  }
-
-  if (listen(MaybeWinsocket, MaxBacklog) == -1) {
-    EC = std::make_error_code(std::errc::address_not_available);
-    return -1;
-  }
-#ifdef _WIN32
-  return _open_osfhandle(MaybeWinsocket, 0);
-#else
-  return MaybeWinsocket;
-#endif // _WIN32
-}
-
-int GetSocketFD(StringRef SocketPath, std::error_code &EC) {
-#ifdef _WIN32
-  SOCKET MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (MaybeWinsocket == INVALID_SOCKET) {
-#else
-  int MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (MaybeWinsocket == -1) {
-#endif // _WIN32
-    EC = std::make_error_code(std::errc::connection_aborted);
-    return -1;
-  }
-
-  struct sockaddr_un Addr;
-  memset(&Addr, 0, sizeof(Addr));
-  Addr.sun_family = AF_UNIX;
-  strncpy(Addr.sun_path, SocketPath.str().c_str(), sizeof(Addr.sun_path) - 1);
-
-  int status = connect(MaybeWinsocket, (struct sockaddr *)&Addr, sizeof(Addr));
-  if (status == -1) {
-    EC = std::make_error_code(std::errc::connection_aborted);
-    return -1;
-  }
-#ifdef _WIN32
-  return _open_osfhandle(MaybeWinsocket, 0);
-#else
-  return MaybeWinsocket;
-#endif // _WIN32
-}
-
-static int ServerAccept(int FD) {
-  int AcceptFD;
-#ifdef _WIN32
-  SOCKET WinServerSock = _get_osfhandle(FD);
-  SOCKET WinAcceptSock = ::accept(WinServerSock, NULL, NULL);
-  AcceptFD = _open_osfhandle(WinAcceptSock, 0);
-#else
-  AcceptFD = ::accept(FD, NULL, NULL);
-#endif //_WIN32
-  return AcceptFD;
-}
-
-// Server
-// Call raw_fd_ostream with ShouldClose=false
-raw_socket_stream::raw_socket_stream(int SocketFD, StringRef SockPath,
-                                     std::error_code &EC)
-    : raw_fd_ostream(ServerAccept(SocketFD), true) {
-  SocketPath = SockPath;
-  ShouldUnlink = true;
-}
-
-// Client
-raw_socket_stream::raw_socket_stream(StringRef SockPath, std::error_code &EC)
-    : raw_fd_ostream(GetSocketFD(SockPath, EC), true, true,
-                     OStreamKind::OK_OStream) {
-  SocketPath = SockPath;
-  ShouldUnlink = false;
-}
-
-raw_socket_stream::~raw_socket_stream() {
-  if (ShouldUnlink) {
-    unlink(SocketPath.str().c_str());
-  }
-}
-
-Expected<std::string> raw_socket_stream::read_impl() {
-  const size_t BUFFER_SIZE = 4096;
-  std::vector<char> Buffer(BUFFER_SIZE);
-
-  int Socket = get_socket();
-  assert(Socket >= 0 && "Socket not found.");
-
-  ssize_t n;
-#ifdef _WIN32
-  SOCKET MaybeWinsocket = _get_osfhandle(Socket);
-#else
-  int MaybeWinsocket = Socket;
-#endif // _WIN32
-  n = ::read(MaybeWinsocket, Buffer.data(), Buffer.size());
-
-  if (n < 0) {
-    std::string Msg = "Buffer read error: " + std::string(strerror(errno));
-    return llvm::make_error<StringError>(Msg, inconvertibleErrorCode());
-  }
-
-  if (n == 0) {
-    return llvm::make_error<StringError>("EOF", inconvertibleErrorCode());
-  }
-  return std::string(Buffer.data());
-}
-
-*/
 
 //===----------------------------------------------------------------------===//
 //  raw_string_ostream
