@@ -71,8 +71,6 @@
 using namespace llvm;
 using namespace dwarf;
 
-extern bool YkAllocLLVMBCSection;
-
 static cl::opt<bool> JumpTableInFunctionSection(
     "jumptable-in-function-section", cl::Hidden, cl::init(false),
     cl::desc("Putting Jump Table in function section"));
@@ -810,12 +808,6 @@ static MCSection *selectExplicitSectionGlobal(
       Retain, ForceUnique);
 
   const MCSymbolELF *LinkedToSym = getLinkedToSymbol(GO, TM);
-
-  // The Yk JIT expects to load the IR from its address space. This tells the
-  // loader to load the section.
-  if (YkAllocLLVMBCSection && (SectionName == ".llvmbc"))
-    Flags |= llvm::ELF::SHF_ALLOC;
-
   MCSectionELF *Section = Ctx.getELFSection(
       SectionName, getELFSectionType(SectionName, Kind), Flags, EntrySize,
       Group, IsComdat, UniqueID, LinkedToSym);

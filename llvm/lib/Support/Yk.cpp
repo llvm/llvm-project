@@ -4,35 +4,6 @@
 
 using namespace llvm;
 
-bool YkAllocLLVMBCSection;
-namespace {
-struct CreateYkAllocLLVMBCSectionParser {
-  static void *call() {
-    return new cl::opt<bool, true>(
-        "yk-alloc-llvmbc-section",
-        cl::desc("Make the `.llvmbc` section loadable"), cl::NotHidden,
-        cl::location(YkAllocLLVMBCSection));
-  }
-};
-} // namespace
-static ManagedStatic<cl::opt<bool, true>, CreateYkAllocLLVMBCSectionParser>
-    YkAllocLLVMBCSectionParser;
-
-bool YkAllocLLVMBBAddrMapSection;
-namespace {
-struct CreateYkAllocLLVMBBAddrMapSectionParser {
-  static void *call() {
-    return new cl::opt<bool, true>(
-        "yk-alloc-llvmbbaddrmap-section",
-        cl::desc("Make the `.llvmbbaddrmap` section loadable"), cl::NotHidden,
-        cl::location(YkAllocLLVMBBAddrMapSection));
-  }
-};
-} // namespace
-static ManagedStatic<cl::opt<bool, true>,
-                     CreateYkAllocLLVMBBAddrMapSectionParser>
-    YkAllocLLVMBBAddrMapSectionParser;
-
 bool YkExtendedLLVMBBAddrMapSection;
 namespace {
 struct CreateYkExtendedLLVMBBAddrMapSectionParser {
@@ -126,8 +97,6 @@ struct CreateYkEmbedIRParser {
 static ManagedStatic<cl::opt<bool, true>, CreateYkEmbedIRParser> YkEmbedIRParser;
 
 void llvm::initYkOptions() {
-  *YkAllocLLVMBCSectionParser;
-  *YkAllocLLVMBBAddrMapSectionParser;
   *YkExtendedLLVMBBAddrMapSectionParser;
   *YkStackMapOffsetFixParser;
   *YkStackMapAdditionalLocsParser;
