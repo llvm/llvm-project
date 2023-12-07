@@ -1759,19 +1759,28 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
                                                       const VarDecl &D,
                                                       Address Loc) {
   auto trivialAutoVarInit = getContext().getLangOpts().getTrivialAutoVarInit();
+  auto trivialAutoVarInitSizeBound = 
+      getContext().getLangOpts().TrivialAutoVarInitSizeBound;
   CharUnits Size = getContext().getTypeSizeInChars(type);
   bool isVolatile = type.isVolatileQualified();
   if (!Size.isZero()) {
+    auto allocSize = CGM.getDataLayout().getTypeAllocSize(Loc.getElementType());
     switch (trivialAutoVarInit) {
     case LangOptions::TrivialAutoVarInitKind::Uninitialized:
       llvm_unreachable("Uninitialized handled by caller");
     case LangOptions::TrivialAutoVarInitKind::Zero:
       if (CGM.stopAutoInit())
         return;
+      if (trivialAutoVarInitSizeBound > 0 &&
+          allocSize >= trivialAutoVarInitSizeBound)
+        return;
       emitStoresForZeroInit(CGM, D, Loc, isVolatile, Builder);
       break;
     case LangOptions::TrivialAutoVarInitKind::Pattern:
       if (CGM.stopAutoInit())
+        return;
+      if (trivialAutoVarInitSizeBound > 0 &&
+          allocSize >= trivialAutoVarInitSizeBound)
         return;
       emitStoresForPatternInit(CGM, D, Loc, isVolatile, Builder);
       break;

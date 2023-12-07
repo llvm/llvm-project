@@ -585,6 +585,19 @@
 // CHECK-TRIVIAL-PATTERN-STOP-AFTER-INVALID-VALUE: only accepts positive integers
 // CHECK-TRIVIAL-ZERO-STOP-AFTER-INVALID-VALUE: only accepts positive integers
 
+// RUN: %clang -### -S -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-size-bound=1024 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN-SIZE-BOUND %s
+// RUN: %clang -### -S -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-size-bound=1024 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-SIZE-BOUND %s
+// RUN: not %clang -### -S -ftrivial-auto-var-init-size-bound=1024 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-SIZE-BOUND-MISSING-DEPENDENCY %s
+// RUN: not %clang -### -S -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-size-bound=0 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN-SIZE-BOUND-INVALID-VALUE %s
+// RUN: not %clang -### -S -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-size-bound=0 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-SIZE-BOUND-INVALID-VALUE %s
+// CHECK-TRIVIAL-PATTERN-SIZE-BOUND-NOT: is used without '-ftrivial-auto-var-init'
+// CHECK-TRIVIAL-PATTERN-SIZE-BOUND-NOT: only accepts positive integers (in bytes)
+// CHECK-TRIVIAL-ZERO-SIZE-BOUND-NOT: is used without '-ftrivial-auto-var-init'
+// CHECK-TRIVIAL-ZERO-SIZE-BOUND-NOT: only accepts positive integers (in bytes)
+// CHECK-TRIVIAL-SIZE-BOUND-MISSING-DEPENDENCY: used without '-ftrivial-auto-var-init=zero' or
+// CHECK-TRIVIAL-PATTERN-SIZE-BOUND-INVALID-VALUE: only accepts positive integers (in bytes)
+// CHECK-TRIVIAL-ZERO-SIZE-BOUND-INVALID-VALUE: only accepts positive integers (in bytes)
+
 // RUN: %clang -### -S -fno-temp-file %s 2>&1 | FileCheck -check-prefix=CHECK-NO-TEMP-FILE %s
 // CHECK-NO-TEMP-FILE: "-fno-temp-file"
 
