@@ -30,7 +30,6 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
-#include <dlfcn.h>
 
 #include "omp-tools.h"
 
@@ -661,8 +660,8 @@ static void ompt_tsan_thread_begin(ompt_thread_t thread_type,
   TsanNewMemory(DependencyDataPool::ThreadDataPool,
                 sizeof(DependencyDataPool::ThreadDataPool));
   if (archer_flags->tasking) {
-      TsanGetCurrentFiber();
-   }
+    TsanGetCurrentFiber();
+  }
 
   thread_data->value = my_next_id();
 }
@@ -1272,9 +1271,9 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
   findTsanFunction(__tsan_func_entry, (void (*)(const void *)));
   findTsanFunction(__tsan_func_exit, (void (*)(void)));
   findTsanFunction(__tsan_create_fiber, (void *(*)(unsigned int)));
-  findTsanFunction(__tsan_destroy_fiber, (void (*)(void*)));
+  findTsanFunction(__tsan_destroy_fiber, (void (*)(void *)));
   findTsanFunction(__tsan_get_current_fiber, (void *(*)()));
-  findTsanFunction(__tsan_switch_to_fiber, (void (*)(void*, unsigned int)));
+  findTsanFunction(__tsan_switch_to_fiber, (void (*)(void *, unsigned int)));
 
   SET_CALLBACK(thread_begin);
   SET_CALLBACK(thread_end);

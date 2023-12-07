@@ -482,7 +482,6 @@ int __ompt_get_task_memory_internal(void **addr, size_t *size, int blocknum) {
   *addr = taskdata;
   *size = taskdata->td_size_alloc;
   return 0;
-
 }
 
 //----------------------------------------------------------

@@ -13,9 +13,9 @@
 // RUN: %libarcher-compile && env ARCHER_OPTIONS=tasking=1 %libarcher-run-race | FileCheck %s
 // RUN: %libarcher-compile && env ARCHER_OPTIONS=tasking=1:ignore_serial=1 %libarcher-run-race | FileCheck %s
 // REQUIRES: tsan
+#include "ompt/ompt-signal.h"
 #include <omp.h>
 #include <stdio.h>
-#include "ompt/ompt-signal.h"
 
 void foo() {
   int a = 0, sem = 0;

@@ -13,53 +13,53 @@
 // RUN: %libarcher-compile && env ARCHER_OPTIONS=tasking=1 %libarcher-run-race | FileCheck %s
 // RUN: %libarcher-compile && env ARCHER_OPTIONS=tasking=1:ignore_serial=1 %libarcher-run-race | FileCheck %s
 // REQUIRES: tsan
-#include <stdio.h>
-#include <omp.h>
 #include "ompt/ompt-signal.h"
+#include <omp.h>
+#include <stdio.h>
 
-int main(){
+int main() {
   int a, b, c, d, sem = 0;
 
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
-  #pragma omp masked
-  {
-    #pragma omp task depend(out: c)
+#pragma omp masked
     {
-      OMPT_SIGNAL(sem);
-      c = 1;
+#pragma omp task depend(out : c)
+      {
+        OMPT_SIGNAL(sem);
+        c = 1;
+      }
+#pragma omp task depend(out : a)
+      {
+        OMPT_SIGNAL(sem);
+        a = 2;
+      }
+#pragma omp task depend(out : b)
+      {
+        OMPT_SIGNAL(sem);
+        b = 3;
+      }
+#pragma omp task depend(in : a)
+      {
+        OMPT_SIGNAL(sem);
+        c += a;
+      }
+#pragma omp task depend(in : b)
+      {
+        OMPT_SIGNAL(sem);
+        c += b;
+      }
+#pragma omp task depend(in : c)
+      {
+        OMPT_SIGNAL(sem);
+        d = c;
+      }
+#pragma omp taskwait {}
     }
-    #pragma omp task depend(out: a)
-    {
-      OMPT_SIGNAL(sem);
-      a = 2;
-    }
-    #pragma omp task depend(out: b)
-    {
-      OMPT_SIGNAL(sem);
-      b = 3;
-    }
-    #pragma omp task depend(in: a)
-    {
-      OMPT_SIGNAL(sem);
-      c += a;
-    }
-    #pragma omp task depend(in: b)
-    {
-      OMPT_SIGNAL(sem);
-      c += b;
-    }
-    #pragma omp task depend(in: c)
-    {
-      OMPT_SIGNAL(sem);
-      d = c;
-    }
-    #pragma omp taskwait
-  }
-  OMPT_WAIT(sem, 6);
+    OMPT_WAIT(sem, 6);
   }
 
-  printf("%d\n",d);
+  printf("%d\n", d);
   return 0;
 }
 
