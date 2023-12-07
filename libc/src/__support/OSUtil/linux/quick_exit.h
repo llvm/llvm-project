@@ -17,9 +17,14 @@
 
 namespace LIBC_NAMESPACE {
 
-// mark as no_stack_protector since TLS can be torn down before calling
-// quick_exit
-__attribute__((no_stack_protector)) LIBC_INLINE void quick_exit(int status) {
+// mark as no_stack_protector for x86 since TLS can be torn down before calling
+// quick_exit so that the stack protector canary cannot be loaded.
+#if defined(__i386) || defined(__i386__) || defined(__x86_64__) ||             \
+    defined(__x86_64)
+__attribute__((no_stack_protector))
+#endif
+LIBC_INLINE void
+quick_exit(int status) {
   for (;;) {
     LIBC_NAMESPACE::syscall_impl<long>(SYS_exit_group, status);
     LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, status);
