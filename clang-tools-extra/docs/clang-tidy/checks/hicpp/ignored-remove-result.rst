@@ -13,5 +13,9 @@ operating over. On completion, they return an iterator to the last valid
 element. In the majority of cases the correct behavior is to use this result as
 the first operand in a call to ``std::erase``.
 
-Suppressing issues by casting to ``void`` is enabled by default and can be
-disabled by setting `AllowCastToVoid` option to ``false``.
+Options
+-------
+
+.. option:: AllowCastToVoid
+
+   Controls whether casting return values to ``void`` is permitted. Default: `true`.

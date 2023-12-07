@@ -136,7 +136,17 @@ UnusedReturnValueCheck::UnusedReturnValueCheck(llvm::StringRef Name,
 UnusedReturnValueCheck::UnusedReturnValueCheck(llvm::StringRef Name,
                                                ClangTidyContext *Context,
                                                std::string CheckedFunctions)
-    : ClangTidyCheck(Name, Context), CheckedFunctions(CheckedFunctions) {}
+    : UnusedReturnValueCheck(Name, Context, std::move(CheckedFunctions), {},
+                             false) {}
+
+UnusedReturnValueCheck::UnusedReturnValueCheck(
+    llvm::StringRef Name, ClangTidyContext *Context,
+    std::string CheckedFunctions, std::vector<StringRef> CheckedReturnTypes,
+    bool AllowCastToVoid)
+    : ClangTidyCheck(Name, Context),
+      CheckedFunctions(std::move(CheckedFunctions)),
+      CheckedReturnTypes(std::move(CheckedReturnTypes)),
+      AllowCastToVoid(AllowCastToVoid) {}
 
 void UnusedReturnValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckedFunctions", CheckedFunctions);

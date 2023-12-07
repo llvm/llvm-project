@@ -15,7 +15,7 @@ IgnoredRemoveResultCheck::IgnoredRemoveResultCheck(llvm::StringRef Name,
     : UnusedReturnValueCheck(Name, Context,
                              "::std::remove;"
                              "::std::remove_if;"
-                             "::std::unique;") {
+                             "::std::unique") {
   // The constructor for ClangTidyCheck needs to have been called
   // before we can access options via Options.get().
   AllowCastToVoid = Options.get("AllowCastToVoid", true);

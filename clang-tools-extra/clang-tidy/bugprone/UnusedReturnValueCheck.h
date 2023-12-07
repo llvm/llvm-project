@@ -28,11 +28,17 @@ public:
     return TK_IgnoreUnlessSpelledInSource;
   }
 
+private:
+  std::string CheckedFunctions;
+  const std::vector<StringRef> CheckedReturnTypes;
+
 protected:
   UnusedReturnValueCheck(StringRef Name, ClangTidyContext *Context,
                          std::string CheckedFunctions);
-  std::string CheckedFunctions;
-  const std::vector<StringRef> CheckedReturnTypes;
+  UnusedReturnValueCheck(StringRef Name, ClangTidyContext *Context,
+                         std::string CheckedFunctions,
+                         std::vector<StringRef> CheckedReturnTypes,
+                         bool AllowCastToVoid);
   bool AllowCastToVoid;
 };
 
