@@ -34,9 +34,7 @@ public:
   virtual lldb::ValueObjectListSP GetRecognizedArguments() {
     return m_arguments;
   }
-  virtual lldb::ValueObjectSP GetExceptionObject() {
-    return lldb::ValueObjectSP();
-  }
+  virtual std::optional<lldb::ValueObjectSP> GetExceptionObject() { return {}; }
   virtual lldb::StackFrameSP GetMostRelevantFrame() { return nullptr; };
   virtual ~RecognizedStackFrame() = default;
 

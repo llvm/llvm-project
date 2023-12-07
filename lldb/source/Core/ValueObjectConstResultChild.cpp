@@ -36,19 +36,20 @@ ValueObjectConstResultChild::ValueObjectConstResultChild(
 
 ValueObjectConstResultChild::~ValueObjectConstResultChild() = default;
 
-lldb::ValueObjectSP ValueObjectConstResultChild::Dereference(Status &error) {
-  return m_impl.Dereference(error);
+lldb::ValueObjectSP ValueObjectConstResultChild::Dereference() {
+  return m_impl.Dereference();
 }
 
-lldb::ValueObjectSP ValueObjectConstResultChild::GetSyntheticChildAtOffset(
+std::optional<lldb::ValueObjectSP>
+ValueObjectConstResultChild::GetSyntheticChildAtOffset(
     uint32_t offset, const CompilerType &type, bool can_create,
     ConstString name_const_str) {
   return m_impl.GetSyntheticChildAtOffset(offset, type, can_create,
                                           name_const_str);
 }
 
-lldb::ValueObjectSP ValueObjectConstResultChild::AddressOf(Status &error) {
-  return m_impl.AddressOf(error);
+lldb::ValueObjectSP ValueObjectConstResultChild::AddressOf() {
+  return m_impl.AddressOf();
 }
 
 lldb::addr_t ValueObjectConstResultChild::GetAddressOf(

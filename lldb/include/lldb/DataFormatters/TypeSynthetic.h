@@ -45,7 +45,7 @@ public:
     return count <= max ? count : max;
   }
 
-  virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx) = 0;
+  virtual std::optional<lldb::ValueObjectSP> GetChildAtIndex(size_t idx) = 0;
 
   virtual size_t GetIndexOfChildWithName(ConstString name) = 0;
 
@@ -68,7 +68,7 @@ public:
   // if this function returns a non-null ValueObject, then the returned
   // ValueObject will stand for this ValueObject whenever a "value" request is
   // made to this ValueObject
-  virtual lldb::ValueObjectSP GetSyntheticValue() { return nullptr; }
+  virtual std::optional<lldb::ValueObjectSP> GetSyntheticValue() { return {}; }
 
   // if this function returns a non-empty ConstString, then clients are
   // expected to use the return as the name of the type of this ValueObject for
@@ -79,12 +79,12 @@ public:
   typedef std::unique_ptr<SyntheticChildrenFrontEnd> AutoPointer;
 
 protected:
-  lldb::ValueObjectSP
+  std::optional<lldb::ValueObjectSP>
   CreateValueObjectFromExpression(llvm::StringRef name,
                                   llvm::StringRef expression,
                                   const ExecutionContext &exe_ctx);
 
-  lldb::ValueObjectSP
+  std::optional<lldb::ValueObjectSP>
   CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
                                const ExecutionContext &exe_ctx,
                                CompilerType type);
@@ -110,7 +110,9 @@ public:
 
   size_t CalculateNumChildren() override { return 0; }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override { return nullptr; }
+  std::optional<lldb::ValueObjectSP> GetChildAtIndex(size_t idx) override {
+    return {};
+  }
 
   size_t GetIndexOfChildWithName(ConstString name) override {
     return UINT32_MAX;
@@ -120,7 +122,7 @@ public:
 
   bool MightHaveChildren() override { return false; }
 
-  lldb::ValueObjectSP GetSyntheticValue() override = 0;
+  std::optional<lldb::ValueObjectSP> GetSyntheticValue() override = 0;
 
 private:
   SyntheticValueProviderFrontEnd(const SyntheticValueProviderFrontEnd &) =
@@ -321,9 +323,9 @@ public:
 
     size_t CalculateNumChildren() override { return filter->GetCount(); }
 
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+    std::optional<lldb::ValueObjectSP> GetChildAtIndex(size_t idx) override {
       if (idx >= filter->GetCount())
-        return lldb::ValueObjectSP();
+        return {};
       return m_backend.GetSyntheticExpressionPathChild(
           filter->GetExpressionPathAtIndex(idx), true);
     }
@@ -425,7 +427,7 @@ public:
 
     size_t CalculateNumChildren(uint32_t max) override;
 
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+    std::optional<lldb::ValueObjectSP> GetChildAtIndex(size_t idx) override;
 
     bool Update() override;
 
@@ -433,7 +435,7 @@ public:
 
     size_t GetIndexOfChildWithName(ConstString name) override;
 
-    lldb::ValueObjectSP GetSyntheticValue() override;
+    std::optional<lldb::ValueObjectSP> GetSyntheticValue() override;
 
     ConstString GetSyntheticTypeName() override;
 

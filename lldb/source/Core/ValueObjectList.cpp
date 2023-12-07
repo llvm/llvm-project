@@ -36,19 +36,21 @@ size_t ValueObjectList::GetSize() const { return m_value_objects.size(); }
 
 void ValueObjectList::Resize(size_t size) { m_value_objects.resize(size); }
 
-lldb::ValueObjectSP ValueObjectList::GetValueObjectAtIndex(size_t idx) {
-  lldb::ValueObjectSP valobj_sp;
-  if (idx < m_value_objects.size())
-    valobj_sp = m_value_objects[idx];
-  return valobj_sp;
+std::optional<ValueObjectSP>
+ValueObjectList::GetValueObjectAtIndex(size_t idx) {
+  if (idx >= m_value_objects.size())
+    return {};
+
+  return m_value_objects[idx];
 }
 
-lldb::ValueObjectSP ValueObjectList::RemoveValueObjectAtIndex(size_t idx) {
-  lldb::ValueObjectSP valobj_sp;
-  if (idx < m_value_objects.size()) {
-    valobj_sp = m_value_objects[idx];
-    m_value_objects.erase(m_value_objects.begin() + idx);
-  }
+std::optional<ValueObjectSP>
+ValueObjectList::RemoveValueObjectAtIndex(size_t idx) {
+  if (idx >= m_value_objects.size())
+    return {};
+
+  std::optional<lldb::ValueObjectSP> valobj_sp = m_value_objects[idx];
+  m_value_objects.erase(m_value_objects.begin() + idx);
   return valobj_sp;
 }
 
@@ -59,49 +61,42 @@ void ValueObjectList::SetValueObjectAtIndex(size_t idx,
   m_value_objects[idx] = valobj_sp;
 }
 
-ValueObjectSP ValueObjectList::FindValueObjectByValueName(const char *name) {
+std::optional<ValueObjectSP>
+ValueObjectList::FindValueObjectByValueName(const char *name) {
   ConstString name_const_str(name);
-  ValueObjectSP val_obj_sp;
   collection::iterator pos, end = m_value_objects.end();
   for (pos = m_value_objects.begin(); pos != end; ++pos) {
-    ValueObject *valobj = (*pos).get();
-    if (valobj && valobj->GetName() == name_const_str) {
-      val_obj_sp = *pos;
-      break;
-    }
+    ValueObject *valobj = (*pos)->get();
+    if (valobj && valobj->GetName() == name_const_str)
+      return (*pos);
   }
-  return val_obj_sp;
+  return {};
 }
 
-ValueObjectSP ValueObjectList::FindValueObjectByUID(lldb::user_id_t uid) {
-  ValueObjectSP valobj_sp;
+std::optional<ValueObjectSP>
+ValueObjectList::FindValueObjectByUID(lldb::user_id_t uid) {
   collection::iterator pos, end = m_value_objects.end();
 
   for (pos = m_value_objects.begin(); pos != end; ++pos) {
     // Watch out for NULL objects in our list as the list might get resized to
     // a specific size and lazily filled in
-    ValueObject *valobj = (*pos).get();
-    if (valobj && valobj->GetID() == uid) {
-      valobj_sp = *pos;
-      break;
-    }
+    ValueObject *valobj = (*pos)->get();
+    if (valobj && valobj->GetID() == uid)
+      return (*pos);
   }
-  return valobj_sp;
+  return {};
 }
 
-ValueObjectSP
+std::optional<ValueObjectSP>
 ValueObjectList::FindValueObjectByPointer(ValueObject *find_valobj) {
-  ValueObjectSP valobj_sp;
   collection::iterator pos, end = m_value_objects.end();
 
   for (pos = m_value_objects.begin(); pos != end; ++pos) {
-    ValueObject *valobj = (*pos).get();
-    if (valobj && valobj == find_valobj) {
-      valobj_sp = *pos;
-      break;
-    }
+    ValueObject *valobj = (*pos)->get();
+    if (valobj && valobj == find_valobj)
+      return (*pos);
   }
-  return valobj_sp;
+  return {};
 }
 
 void ValueObjectList::Swap(ValueObjectList &value_object_list) {

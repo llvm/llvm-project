@@ -140,9 +140,9 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   // First, try `expr` as the name of a frame variable.
   if (frame) {
     auto valobj_sp = frame->FindVariable(ConstString(expr));
-    if (valobj_sp && valobj_sp->GetError().Success()) {
+    if (valobj_sp && valobj_sp.value()->GetError().Success()) {
       if (!suppress_result) {
-        if (auto persisted_valobj = valobj_sp->Persist())
+        if (auto persisted_valobj = valobj_sp.value()->Persist())
           valobj_sp = persisted_valobj;
       }
 
@@ -156,12 +156,12 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
       if (is_po) {
         StreamString temp_result_stream;
-        valobj_sp->Dump(temp_result_stream, dump_options);
+        valobj_sp.value()->Dump(temp_result_stream, dump_options);
         llvm::StringRef output = temp_result_stream.GetString();
         maybe_add_hint(output);
         result.GetOutputStream() << output;
       } else {
-        valobj_sp->Dump(result.GetOutputStream(), dump_options);
+        valobj_sp.value()->Dump(result.GetOutputStream(), dump_options);
       }
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return;
@@ -171,7 +171,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   // Second, also lastly, try `expr` as a source expression to evaluate.
   {
     auto *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
-    ValueObjectSP valobj_sp;
+    std::optional<lldb::ValueObjectSP> valobj_sp;
     std::string fixed_expression;
 
     ExpressionResults expr_result = target.EvaluateExpression(
@@ -194,22 +194,23 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
                                         expr);
       }
 
-      if (valobj_sp->GetError().GetError() != UserExpression::kNoResult) {
+      if (valobj_sp && valobj_sp.value()->GetError().GetError() !=
+                           UserExpression::kNoResult) {
         if (is_po) {
           StreamString temp_result_stream;
-          valobj_sp->Dump(temp_result_stream, dump_options);
+          valobj_sp.value()->Dump(temp_result_stream, dump_options);
           llvm::StringRef output = temp_result_stream.GetString();
           maybe_add_hint(output);
           result.GetOutputStream() << output;
         } else {
-          valobj_sp->Dump(result.GetOutputStream(), dump_options);
+          valobj_sp.value()->Dump(result.GetOutputStream(), dump_options);
         }
       }
 
       if (suppress_result)
         if (auto result_var_sp =
-                target.GetPersistentVariable(valobj_sp->GetName())) {
-          auto language = valobj_sp->GetPreferredDisplayLanguage();
+                target.GetPersistentVariable(valobj_sp.value()->GetName())) {
+          auto language = valobj_sp.value()->GetPreferredDisplayLanguage();
           if (auto *persistent_state =
                   target.GetPersistentExpressionStateForLanguage(language))
             persistent_state->RemovePersistentVariable(result_var_sp);
@@ -218,7 +219,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       if (valobj_sp)
-        result.SetError(valobj_sp->GetError());
+        result.SetError(valobj_sp.value()->GetError());
       else
         result.AppendErrorWithFormatv(
             "unknown error evaluating expression `{0}`", expr);

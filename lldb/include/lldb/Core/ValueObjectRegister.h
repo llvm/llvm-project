@@ -52,8 +52,8 @@ public:
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index) override;
 
-  lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
-                                             bool can_create = true) override;
+  std::optional<lldb::ValueObjectSP>
+  GetChildMemberWithName(llvm::StringRef name, bool can_create = true) override;
 
   size_t GetIndexOfChildWithName(llvm::StringRef name) override;
 

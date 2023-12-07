@@ -59,7 +59,7 @@ public:
   // plan is complete, you can call "GetReturnValue()" to retrieve the value
   // that was extracted.
 
-  lldb::ValueObjectSP GetReturnValueObject() override {
+  std::optional<lldb::ValueObjectSP> GetReturnValueObject() override {
     return m_return_valobj_sp;
   }
 

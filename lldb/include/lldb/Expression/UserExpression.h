@@ -266,7 +266,7 @@ public:
   static lldb::ExpressionResults
   Evaluate(ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
            llvm::StringRef expr_cstr, llvm::StringRef expr_prefix,
-           lldb::ValueObjectSP &result_valobj_sp, Status &error,
+           std::optional<lldb::ValueObjectSP> result_valobj_sp, Status &error,
            std::string *fixed_expression = nullptr,
            ValueObject *ctx_obj = nullptr);
 
