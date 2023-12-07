@@ -20940,8 +20940,8 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
                           Ptr, ST->getMemOperand());
     }
 
-    if (ST->isSimple() &&
-        TLI.isOperationLegalOrCustom(ISD::STORE, MVT::i32)) {
+    if (ST->isSimple() && TLI.isOperationLegalOrCustom(ISD::STORE, MVT::i32) &&
+        !TLI.isFPImmLegal(CFP->getValueAPF(), MVT::f64)) {
       // Many FP stores are not made apparent until after legalize, e.g. for
       // argument passing.  Since this is so common, custom legalize the
       // 64-bit integer store into two 32-bit stores.
