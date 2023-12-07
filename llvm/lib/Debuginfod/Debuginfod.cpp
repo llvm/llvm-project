@@ -194,6 +194,20 @@ Error StreamedHTTPResponseHandler::handleBodyChunk(StringRef BodyChunk) {
   return Error::success();
 }
 
+// Make a file 'cache' to remember if a given server failed
+Expected<AddStreamFn> GetServerFailureCache(FileCache &Cache, uint &Task,
+                                            StringRef ServerUrl) {
+  SmallString<96> CachedServerFailurePath(ServerUrl);
+  llvm::transform(CachedServerFailurePath, CachedServerFailurePath.begin(),
+                  [&](char c) { return std::isalnum(c) ? c : '_'; });
+  CachedServerFailurePath.append(".failed");
+  return Cache(Task, CachedServerFailurePath, "");
+}
+
+bool ShouldSkipServer(StringRef ServerID) { return true; }
+
+void RegisterFailedServer(StringRef ServerID) { return; }
+
 // An over-accepting simplification of the HTTP RFC 7230 spec.
 static bool isHeader(StringRef S) {
   StringRef Name;
@@ -269,6 +283,17 @@ Expected<std::string> getCachedOrDownloadArtifact(
   HTTPClient Client;
   Client.setTimeout(Timeout);
   for (StringRef ServerUrl : DebuginfodUrls) {
+    // First, check to make sure we should keep asking this server.
+    Expected<AddStreamFn> ServerFailureCacheOrErr =
+        GetServerFailureCache(Cache, Task, ServerUrl);
+    if (!ServerFailureCacheOrErr)
+      return ServerFailureCacheOrErr.takeError();
+    AddStreamFn &ServerFailureCache = *ServerFailureCacheOrErr;
+    if (!ServerFailureCache)
+      // We found a 'server failure' file in cache which means
+      // this server has failed before: don't bother trying it again.
+      continue;
+
     SmallString<64> ArtifactUrl;
     sys::path::append(ArtifactUrl, sys::path::Style::posix, ServerUrl, UrlPath);
 
@@ -280,8 +305,17 @@ Expected<std::string> getCachedOrDownloadArtifact(
       HTTPRequest Request(ArtifactUrl);
       Request.Headers = getHeaders();
       Error Err = Client.perform(Request, Handler);
-      if (Err)
+      if (Err) {
+        // Put a server-failuire marker in the cache so we don't keep trying it
+        Expected<std::unique_ptr<CachedFileStream>> FileStreamOrError =
+            ServerFailureCache(Task, "");
+        if (!FileStreamOrError)
+          consumeError(FileStreamOrError.takeError());
+        else
+          // Create the server-failure file
+          *FileStreamOrError.get()->OS << "";
         return std::move(Err);
+      }
 
       unsigned Code = Client.responseCode();
       if (Code && Code != 200)
