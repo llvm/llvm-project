@@ -1,8 +1,8 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-unknown-unknown -target-cpu tonga -S -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-unknown-unknown -target-cpu gfx900 -S -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-unknown-unknown -target-cpu gfx1010 -S -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-unknown-unknown -target-cpu gfx1012 -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu tonga -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx900 -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1012 -S -emit-llvm -o - %s | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
@@ -24,7 +24,7 @@ void test_rcp_f16(global half* out, half a)
 }
 
 // CHECK-LABEL: @test_sqrt_f16
-// CHECK: call half @llvm.amdgcn.sqrt.f16
+// CHECK: call half @llvm.sqrt.f16
 void test_sqrt_f16(global half* out, half a)
 {
   *out = __builtin_amdgcn_sqrth(a);
@@ -52,7 +52,7 @@ void test_cos_f16(global half* out, half a)
 }
 
 // CHECK-LABEL: @test_ldexp_f16
-// CHECK: call half @llvm.amdgcn.ldexp.f16
+// CHECK: call half @llvm.ldexp.f16.i32
 void test_ldexp_f16(global half* out, half a, int b)
 {
   *out = __builtin_amdgcn_ldexph(a, b);
@@ -115,19 +115,19 @@ void test_update_dpp(global int* out, int arg1, int arg2)
 }
 
 // CHECK-LABEL: @test_ds_fadd
-// CHECK: call float @llvm.amdgcn.ds.fadd.f32(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
+// CHECK: call float @llvm.amdgcn.ds.fadd.f32(ptr addrspace(3) %out, float %src, i32 0, i32 0, i1 false)
 void test_ds_faddf(local float *out, float src) {
   *out = __builtin_amdgcn_ds_faddf(out, src, 0, 0, false);
 }
 
 // CHECK-LABEL: @test_ds_fmin
-// CHECK: call float @llvm.amdgcn.ds.fmin.f32(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
+// CHECK: call float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) %out, float %src, i32 0, i32 0, i1 false)
 void test_ds_fminf(local float *out, float src) {
   *out = __builtin_amdgcn_ds_fminf(out, src, 0, 0, false);
 }
 
 // CHECK-LABEL: @test_ds_fmax
-// CHECK: call float @llvm.amdgcn.ds.fmax.f32(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
+// CHECK: call float @llvm.amdgcn.ds.fmax.f32(ptr addrspace(3) %out, float %src, i32 0, i32 0, i1 false)
 void test_ds_fmaxf(local float *out, float src) {
   *out = __builtin_amdgcn_ds_fmaxf(out, src, 0, 0, false);
 }

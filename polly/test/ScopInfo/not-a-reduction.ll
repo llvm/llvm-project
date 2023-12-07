@@ -26,17 +26,17 @@ bb:
 
 bb3:                                              ; preds = %bb7, %bb
   %indvar = phi i64 [ %indvar.next, %bb7 ], [ 0, %bb ]
-  %scevgep = getelementptr [4 x float], [4 x float]* @A, i64 0, i64 %indvar
-  %scevgep1 = getelementptr [4 x float], [4 x float]* @C, i64 0, i64 %indvar
-  %scevgep2 = getelementptr [4 x float], [4 x float]* @B, i64 0, i64 %indvar
+  %scevgep = getelementptr [4 x float], ptr @A, i64 0, i64 %indvar
+  %scevgep1 = getelementptr [4 x float], ptr @C, i64 0, i64 %indvar
+  %scevgep2 = getelementptr [4 x float], ptr @B, i64 0, i64 %indvar
   %exitcond = icmp ne i64 %indvar, 4
   br i1 %exitcond, label %bb4, label %bb8
 
 bb4:                                              ; preds = %bb3
-  %tmp = load float, float* %scevgep2, align 4
-  %tmp5 = load float, float* %scevgep1, align 4
+  %tmp = load float, ptr %scevgep2, align 4
+  %tmp5 = load float, ptr %scevgep1, align 4
   %tmp6 = fmul float %tmp, %tmp5
-  store float %tmp6, float* %scevgep, align 4
+  store float %tmp6, ptr %scevgep, align 4
   br label %bb7
 
 bb7:                                              ; preds = %bb4

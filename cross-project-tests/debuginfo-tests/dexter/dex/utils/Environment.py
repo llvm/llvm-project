@@ -10,13 +10,14 @@ import os
 
 
 def is_native_windows():
-    return os.name == 'nt'
+    return os.name == "nt"
 
 
 def has_pywin32():
     try:
         import win32com.client  # pylint:disable=unused-variable
         import win32api  # pylint:disable=unused-variable
+
         return True
     except ImportError:
         return False

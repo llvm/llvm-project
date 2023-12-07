@@ -58,6 +58,8 @@ protected:
   virtual void emitVersion() = 0;
   virtual void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                                     msgpack::ArrayDocNode Args) = 0;
+  virtual void emitKernelAttrs(const Function &Func,
+                               msgpack::MapDocNode Kern) = 0;
 };
 
 class MetadataStreamerMsgPackV3 : public MetadataStreamer {
@@ -82,7 +84,8 @@ protected:
   msgpack::ArrayDocNode getWorkGroupDimensions(MDNode *Node) const;
 
   msgpack::MapDocNode getHSAKernelProps(const MachineFunction &MF,
-                                        const SIProgramInfo &ProgramInfo) const;
+                                        const SIProgramInfo &ProgramInfo,
+                                        unsigned CodeObjectVersion) const;
 
   void emitVersion() override;
 
@@ -90,7 +93,7 @@ protected:
 
   void emitKernelLanguage(const Function &Func, msgpack::MapDocNode Kern);
 
-  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern);
+  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern) override;
 
   void emitKernelArgs(const MachineFunction &MF, msgpack::MapDocNode Kern);
 
@@ -102,8 +105,8 @@ protected:
                      msgpack::ArrayDocNode Args,
                      MaybeAlign PointeeAlign = std::nullopt,
                      StringRef Name = "", StringRef TypeName = "",
-                     StringRef BaseTypeName = "", StringRef AccQual = "",
-                     StringRef TypeQual = "");
+                     StringRef BaseTypeName = "", StringRef ActAccQual = "",
+                     StringRef AccQual = "", StringRef TypeQual = "");
 
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                             msgpack::ArrayDocNode Args) override;
@@ -149,6 +152,7 @@ protected:
   void emitVersion() override;
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                             msgpack::ArrayDocNode Args) override;
+  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern) override;
 
 public:
   MetadataStreamerMsgPackV5() = default;
@@ -209,6 +213,10 @@ protected:
   void emitVersion() override;
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                             msgpack::ArrayDocNode Args) override {
+    llvm_unreachable("Dummy override should not be invoked!");
+  }
+  void emitKernelAttrs(const Function &Func,
+                       msgpack::MapDocNode Kern) override {
     llvm_unreachable("Dummy override should not be invoked!");
   }
 

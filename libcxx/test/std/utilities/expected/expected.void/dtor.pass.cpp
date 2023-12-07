@@ -7,7 +7,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // Older Clangs do not support the C++20 feature to constrain destructors
-// XFAIL: clang-14, apple-clang-14
+// XFAIL: apple-clang-14
 
 // constexpr ~expected();
 //
@@ -27,9 +27,7 @@ struct NonTrivial {
   ~NonTrivial() {}
 };
 
-#if __cpp_concepts >= 202002
 static_assert(std::is_trivially_destructible_v<std::expected<void, int>>);
-#endif
 static_assert(!std::is_trivially_destructible_v<std::expected<void, NonTrivial>>);
 
 struct TrackedDestroy {

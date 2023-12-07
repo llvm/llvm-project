@@ -26,8 +26,8 @@
 ; GFX10: NumSGPRsForWavesPerEU: 2
 ; GFX10: NumVGPRsForWavesPerEU: 1
 
-define amdgpu_kernel void @simple(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @simple(ptr addrspace(1) %out) {
 entry:
-  store i32 0, i32 addrspace(1)* %out
+  store i32 0, ptr addrspace(1) %out
   ret void
 }

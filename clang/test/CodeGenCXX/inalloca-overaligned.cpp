@@ -37,7 +37,7 @@ int pass_inalloca_overaligned() {
 
 // CHECK-LABEL: define dso_local noundef i32 @"?pass_inalloca_overaligned@@Y{{.*}}"
 // CHECK: [[TMP:%[^ ]*]] = alloca %struct.OverAligned, align 64
-// CHECK: call ptr @llvm.stacksave()
+// CHECK: call ptr @llvm.stacksave.p0()
 // CHECK: alloca inalloca <{ %struct.NonTrivial, ptr }>
 
 // Construct OverAligned into TMP.

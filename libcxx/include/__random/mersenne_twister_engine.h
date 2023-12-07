@@ -17,7 +17,6 @@
 #include <cstdint>
 #include <iosfwd>
 #include <limits>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -136,24 +135,19 @@ public:
       seed(__sd);
     }
 #endif
-    template<class _Sseq>
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, mersenne_twister_engine>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        explicit mersenne_twister_engine(_Sseq& __q,
-        typename enable_if<__is_seed_sequence<_Sseq, mersenne_twister_engine>::value>::type* = 0)
+        explicit mersenne_twister_engine(_Sseq& __q)
         {seed(__q);}
-    void seed(result_type __sd = default_seed);
-    template<class _Sseq>
+    _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd = default_seed);
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, mersenne_twister_engine>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-            __is_seed_sequence<_Sseq, mersenne_twister_engine>::value,
-            void
-        >::type
+        void
         seed(_Sseq& __q)
             {__seed(__q, integral_constant<unsigned, 1 + (__w - 1) / 32>());}
 
     // generating functions
-    result_type operator()();
+    _LIBCPP_HIDE_FROM_ABI result_type operator()();
     _LIBCPP_INLINE_VISIBILITY
     void discard(unsigned long long __z) {for (; __z; --__z) operator()();}
 
@@ -199,48 +193,32 @@ public:
 private:
 
     template<class _Sseq>
-        void __seed(_Sseq& __q, integral_constant<unsigned, 1>);
+    _LIBCPP_HIDE_FROM_ABI void __seed(_Sseq& __q, integral_constant<unsigned, 1>);
     template<class _Sseq>
-        void __seed(_Sseq& __q, integral_constant<unsigned, 2>);
+    _LIBCPP_HIDE_FROM_ABI void __seed(_Sseq& __q, integral_constant<unsigned, 2>);
 
-    template <size_t __count>
+    template <size_t __count, __enable_if_t<__count < __w, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         static
-        typename enable_if
-        <
-            __count < __w,
-            result_type
-        >::type
+        result_type
         __lshift(result_type __x) {return (__x << __count) & _Max;}
 
-    template <size_t __count>
+    template <size_t __count, __enable_if_t<(__count >= __w), int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         static
-        typename enable_if
-        <
-            (__count >= __w),
-            result_type
-        >::type
+        result_type
         __lshift(result_type) {return result_type(0);}
 
-    template <size_t __count>
+    template <size_t __count, __enable_if_t<__count < _Dt, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         static
-        typename enable_if
-        <
-            __count < _Dt,
-            result_type
-        >::type
+        result_type
         __rshift(result_type __x) {return __x >> __count;}
 
-    template <size_t __count>
+    template <size_t __count, __enable_if_t<(__count >= _Dt), int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         static
-        typename enable_if
-        <
-            (__count >= _Dt),
-            result_type
-        >::type
+        result_type
         __rshift(result_type) {return result_type(0);}
 };
 
@@ -403,9 +381,9 @@ mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b,
     const size_t __j = (__i_ + 1) % __n;
     const result_type __mask = __r == _Dt ? result_type(~0) :
                                        (result_type(1) << __r) - result_type(1);
-    const result_type _Yp = (__x_[__i_] & ~__mask) | (__x_[__j] & __mask);
+    const result_type __yp = (__x_[__i_] & ~__mask) | (__x_[__j] & __mask);
     const size_t __k = (__i_ + __m) % __n;
-    __x_[__i_] = __x_[__k] ^ __rshift<1>(_Yp) ^ (__a * (_Yp & 1));
+    __x_[__i_] = __x_[__k] ^ __rshift<1>(__yp) ^ (__a * (__yp & 1));
     result_type __z = __x_[__i_] ^ (__rshift<__u>(__x_[__i_]) & __d);
     __i_ = __j;
     __z ^= __lshift<__s>(__z) & __b;

@@ -8,7 +8,6 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCContext.h"
@@ -19,6 +18,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -56,6 +56,10 @@ class COFFAsmParser : public MCAsmParserExtension {
     addDirectiveHandler<&COFFAsmParser::ParseSectionDirectiveData>(".data");
     addDirectiveHandler<&COFFAsmParser::ParseSectionDirectiveBSS>(".bss");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveSection>(".section");
+    addDirectiveHandler<&COFFAsmParser::ParseDirectivePushSection>(
+        ".pushsection");
+    addDirectiveHandler<&COFFAsmParser::ParseDirectivePopSection>(
+        ".popsection");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveDef>(".def");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveScl>(".scl");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveType>(".type");
@@ -67,6 +71,7 @@ class COFFAsmParser : public MCAsmParserExtension {
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveLinkOnce>(".linkonce");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveRVA>(".rva");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveSymbolAttribute>(".weak");
+    addDirectiveHandler<&COFFAsmParser::ParseDirectiveSymbolAttribute>(".weak_anti_dep");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveCGProfile>(".cg_profile");
 
     // Win64 EH directives.
@@ -114,6 +119,9 @@ class COFFAsmParser : public MCAsmParserExtension {
   }
 
   bool ParseDirectiveSection(StringRef, SMLoc);
+  bool parseSectionArguments(StringRef, SMLoc);
+  bool ParseDirectivePushSection(StringRef, SMLoc);
+  bool ParseDirectivePopSection(StringRef, SMLoc);
   bool ParseDirectiveDef(StringRef, SMLoc);
   bool ParseDirectiveScl(StringRef, SMLoc);
   bool ParseDirectiveType(StringRef, SMLoc);
@@ -281,6 +289,7 @@ bool COFFAsmParser::ParseSectionFlags(StringRef SectionName,
 bool COFFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
   MCSymbolAttr Attr = StringSwitch<MCSymbolAttr>(Directive)
     .Case(".weak", MCSA_Weak)
+    .Case(".weak_anti_dep", MCSA_WeakAntiDep)
     .Default(MCSA_Invalid);
   assert(Attr != MCSA_Invalid && "unexpected symbol attribute directive!");
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
@@ -341,7 +350,12 @@ bool COFFAsmParser::ParseSectionName(StringRef &SectionName) {
   return false;
 }
 
+bool COFFAsmParser::ParseDirectiveSection(StringRef directive, SMLoc loc) {
+  return parseSectionArguments(directive, loc);
+}
+
 // .section name [, "flags"] [, identifier [ identifier ], identifier]
+// .pushsection <same as above>
 //
 // Supported flags:
 //   a: Ignored.
@@ -356,7 +370,7 @@ bool COFFAsmParser::ParseSectionName(StringRef &SectionName) {
 //   y: Not-readable section (clears 'r')
 //
 // Subsections are not supported.
-bool COFFAsmParser::ParseDirectiveSection(StringRef, SMLoc) {
+bool COFFAsmParser::parseSectionArguments(StringRef, SMLoc) {
   StringRef SectionName;
 
   if (ParseSectionName(SectionName))
@@ -412,6 +426,23 @@ bool COFFAsmParser::ParseDirectiveSection(StringRef, SMLoc) {
       Flags |= COFF::IMAGE_SCN_MEM_16BIT;
   }
   ParseSectionSwitch(SectionName, Flags, Kind, COMDATSymName, Type);
+  return false;
+}
+
+bool COFFAsmParser::ParseDirectivePushSection(StringRef directive, SMLoc loc) {
+  getStreamer().pushSection();
+
+  if (parseSectionArguments(directive, loc)) {
+    getStreamer().popSection();
+    return true;
+  }
+
+  return false;
+}
+
+bool COFFAsmParser::ParseDirectivePopSection(StringRef, SMLoc) {
+  if (!getStreamer().popSection())
+    return TokError(".popsection without corresponding .pushsection");
   return false;
 }
 

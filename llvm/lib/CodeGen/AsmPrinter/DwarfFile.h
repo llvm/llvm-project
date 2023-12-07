@@ -26,6 +26,7 @@ class DbgEntity;
 class DbgVariable;
 class DbgLabel;
 class DINode;
+class DILocalScope;
 class DwarfCompileUnit;
 class DwarfUnit;
 class LexicalScope;
@@ -87,7 +88,7 @@ class DwarfFile {
   DenseMap<LexicalScope *, LabelList> ScopeLabels;
 
   // Collection of abstract subprogram DIEs.
-  DenseMap<const MDNode *, DIE *> AbstractSPDies;
+  DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
 
   /// Maps MDNodes for type system with the corresponding DIEs. These DIEs can
@@ -162,8 +163,8 @@ public:
     return ScopeLabels;
   }
 
-  DenseMap<const MDNode *, DIE *> &getAbstractSPDies() {
-    return AbstractSPDies;
+  DenseMap<const DILocalScope *, DIE *> &getAbstractScopeDIEs() {
+    return AbstractLocalScopeDIEs;
   }
 
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> &getAbstractEntities() {

@@ -18,7 +18,7 @@
 #include "mlir/Dialect/Async/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -425,7 +425,7 @@ static ParallelComputeFunction createParallelComputeFunction(
       }
 
       // Copy the body of the parallel op into the inner-most loop.
-      BlockAndValueMapping mapping;
+      IRMapping mapping;
       mapping.map(op.getInductionVars(), computeBlockInductionVars);
       mapping.map(computeFuncType.captures, captures);
 
@@ -548,7 +548,7 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
       operands[2] = end;
 
       executeBuilder.create<func::CallOp>(executeLoc, func.getSymName(),
-                                          func.getCallableResults(), operands);
+                                          func.getResultTypes(), operands);
       executeBuilder.create<async::YieldOp>(executeLoc, ValueRange());
     };
 
@@ -569,7 +569,7 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
   computeFuncOperands.append(forwardedInputs.begin(), forwardedInputs.end());
 
   b.create<func::CallOp>(computeFunc.func.getSymName(),
-                         computeFunc.func.getCallableResults(),
+                         computeFunc.func.getResultTypes(),
                          computeFuncOperands);
   b.create<func::ReturnOp>(ValueRange());
 
@@ -616,7 +616,7 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     appendBlockComputeOperands(operands);
 
     b.create<func::CallOp>(parallelComputeFunction.func.getSymName(),
-                           parallelComputeFunction.func.getCallableResults(),
+                           parallelComputeFunction.func.getResultTypes(),
                            operands);
     b.create<scf::YieldOp>();
   };
@@ -635,8 +635,7 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     appendBlockComputeOperands(operands);
 
     b.create<func::CallOp>(asyncDispatchFunction.getSymName(),
-                           asyncDispatchFunction.getCallableResults(),
-                           operands);
+                           asyncDispatchFunction.getResultTypes(), operands);
 
     // Wait for the completion of all parallel compute operations.
     b.create<AwaitAllOp>(group);
@@ -645,7 +644,7 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   };
 
   // Dispatch either single block compute function, or launch async dispatch.
-  b.create<scf::IfOp>(TypeRange(), isSingleBlock, syncDispatch, asyncDispatch);
+  b.create<scf::IfOp>(isSingleBlock, syncDispatch, asyncDispatch);
 }
 
 // Dispatch parallel compute functions by submitting all async compute tasks
@@ -694,7 +693,7 @@ doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     auto executeBodyBuilder = [&](OpBuilder &executeBuilder,
                                   Location executeLoc, ValueRange executeArgs) {
       executeBuilder.create<func::CallOp>(executeLoc, compute.getSymName(),
-                                          compute.getCallableResults(),
+                                          compute.getResultTypes(),
                                           computeFuncOperands(iv));
       executeBuilder.create<async::YieldOp>(executeLoc, ValueRange());
     };
@@ -710,7 +709,7 @@ doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   b.create<scf::ForOp>(c1, blockCount, c1, ValueRange(), loopBuilder);
 
   // Call parallel compute function for the first block in the caller thread.
-  b.create<func::CallOp>(compute.getSymName(), compute.getCallableResults(),
+  b.create<func::CallOp>(compute.getSymName(), compute.getResultTypes(),
                          computeFuncOperands(c0));
 
   // Wait for the completion of all async compute operations.
@@ -910,8 +909,8 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
       Value useBlockAlignedComputeFn = b.create<arith::CmpIOp>(
           arith::CmpIPredicate::sge, blockSize, numIters);
 
-      b.create<scf::IfOp>(TypeRange(), useBlockAlignedComputeFn,
-                          dispatchBlockAligned, dispatchDefault);
+      b.create<scf::IfOp>(useBlockAlignedComputeFn, dispatchBlockAligned,
+                          dispatchDefault);
       b.create<scf::YieldOp>();
     } else {
       dispatchDefault(b, loc);
@@ -919,7 +918,7 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
   };
 
   // Replace the `scf.parallel` operation with the parallel compute function.
-  b.create<scf::IfOp>(TypeRange(), isZeroIterations, noOp, dispatch);
+  b.create<scf::IfOp>(isZeroIterations, noOp, dispatch);
 
   // Parallel operation was replaced with a block iteration loop.
   rewriter.eraseOp(op);

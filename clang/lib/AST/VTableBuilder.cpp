@@ -1560,6 +1560,8 @@ void ItaniumVTableBuilder::AddMethods(
   std::stable_sort(
       NewImplicitVirtualFunctions.begin(), NewImplicitVirtualFunctions.end(),
       [](const CXXMethodDecl *A, const CXXMethodDecl *B) {
+        if (A == B)
+          return false;
         if (A->isCopyAssignmentOperator() != B->isCopyAssignmentOperator())
           return A->isCopyAssignmentOperator();
         if (A->isMoveAssignmentOperator() != B->isMoveAssignmentOperator())
@@ -2259,7 +2261,7 @@ VTableLayout::VTableLayout(ArrayRef<size_t> VTableIndices,
 VTableLayout::~VTableLayout() { }
 
 bool VTableContextBase::hasVtableSlot(const CXXMethodDecl *MD) {
-  return MD->isVirtual() && !MD->isConsteval();
+  return MD->isVirtual() && !MD->isImmediateFunction();
 }
 
 ItaniumVTableContext::ItaniumVTableContext(

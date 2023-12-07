@@ -30,7 +30,7 @@ define float @load_float_align1() {
 ; MIPS32R6-NEXT:    lwc1 $f0, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load float, float* @float_align1, align 1
+  %0 = load float, ptr @float_align1, align 1
   ret float %0
 }
 
@@ -53,7 +53,7 @@ define float @load_float_align2() {
 ; MIPS32R6-NEXT:    lwc1 $f0, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load float, float* @float_align2, align 2
+  %0 = load float, ptr @float_align2, align 2
   ret float %0
 }
 
@@ -73,7 +73,7 @@ define float @load_float_align4() {
 ; MIPS32R6-NEXT:    lwc1 $f0, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load float, float* @float_align4, align 4
+  %0 = load float, ptr @float_align4, align 4
   ret float %0
 }
 
@@ -93,7 +93,7 @@ define float @load_float_align8() {
 ; MIPS32R6-NEXT:    lwc1 $f0, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load float, float* @float_align8, align 8
+  %0 = load float, ptr @float_align8, align 8
   ret float %0
 }
 
@@ -115,7 +115,7 @@ define i32 @load_i32_align1() {
 ; MIPS32R6-NEXT:    lw $2, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load i32, i32* @i32_align1, align 1
+  %0 = load i32, ptr @i32_align1, align 1
   ret i32 %0
 }
 
@@ -137,7 +137,7 @@ define i32 @load_i32_align2() {
 ; MIPS32R6-NEXT:    lw $2, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load i32, i32* @i32_align2, align 2
+  %0 = load i32, ptr @i32_align2, align 2
   ret i32 %0
 }
 
@@ -157,7 +157,7 @@ define i32 @load_i32_align4() {
 ; MIPS32R6-NEXT:    lw $2, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load i32, i32* @i32_align4, align 4
+  %0 = load i32, ptr @i32_align4, align 4
   ret i32 %0
 }
 
@@ -177,6 +177,6 @@ define i32 @load_i32_align8() {
 ; MIPS32R6-NEXT:    lw $2, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load i32, i32* @i32_align8, align 8
+  %0 = load i32, ptr @i32_align8, align 8
   ret i32 %0
 }

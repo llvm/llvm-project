@@ -10,7 +10,6 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   AppleDWARFIndex.cpp
   DebugNamesDWARFIndex.cpp
   DIERef.cpp
-  DWARFAbbreviationDeclaration.cpp
   DWARFASTParser.cpp
   DWARFASTParserClang.cpp
   DWARFAttribute.cpp
@@ -32,7 +31,6 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   DWARFIndex.cpp
   DWARFTypeUnit.cpp
   DWARFUnit.cpp
-  HashedNameToDIE.cpp
   LogChannelDWARF.cpp
   ManualDWARFIndex.cpp
   NameToDIE.cpp

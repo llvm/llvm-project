@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ;; This test checks that the backend is capable to correctly translate
 ;; atomic_cmpxchg OpenCL C 1.2 built-in function [1] into corresponding SPIR-V

@@ -7,7 +7,7 @@
 ; RUN: llc -march=mips64el -mcpu=mips64r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMP
 
 @i1 = global [3 x i32] [i32 1, i32 2, i32 3], align 4
-@i3 = common global i32* null, align 4
+@i3 = common global ptr null, align 4
 
 ; ALL-LABEL: cmov1:
 
@@ -38,12 +38,12 @@
 ; 64-CMP-DAG:   or $[[T2:[0-9]+]], $[[T0]], $[[T1]]
 ; 64-CMP-DAG:   ld $2, 0($[[T2]])
 
-define i32* @cmov1(i32 signext %s) nounwind readonly {
+define ptr @cmov1(i32 signext %s) nounwind readonly {
 entry:
   %tobool = icmp ne i32 %s, 0
-  %tmp1 = load i32*, i32** @i3, align 4
-  %cond = select i1 %tobool, i32* getelementptr inbounds ([3 x i32], [3 x i32]* @i1, i32 0, i32 0), i32* %tmp1
-  ret i32* %cond
+  %tmp1 = load ptr, ptr @i3, align 4
+  %cond = select i1 %tobool, ptr @i1, ptr %tmp1
+  ret ptr %cond
 }
 
 @c = global i32 1, align 4
@@ -81,8 +81,8 @@ entry:
 define i32 @cmov2(i32 signext %s) nounwind readonly {
 entry:
   %tobool = icmp ne i32 %s, 0
-  %tmp1 = load i32, i32* @c, align 4
-  %tmp2 = load i32, i32* @d, align 4
+  %tmp1 = load i32, ptr @c, align 4
+  %tmp2 = load i32, ptr @d, align 4
   %cond = select i1 %tobool, i32 %tmp1, i32 %tmp2
   ret i32 %cond
 }

@@ -104,7 +104,7 @@ uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm,
     // Write section header.
     W.write<char>(ArrayRef<char>(Sec.getName().data(), 4));
 
-    uint64_t PartSize = SectionSize + sizeof(dxbc::PartHeader);
+    uint64_t PartSize = SectionSize;
 
     if (Sec.getName() == "DXIL")
       PartSize += sizeof(dxbc::ProgramHeader);

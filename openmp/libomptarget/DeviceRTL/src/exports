@@ -1,8 +1,10 @@
 omp_*
+ompx_*
 *llvm_*
 __kmpc_*
 
-__keep_alive
+_ZN4ompx*
+
 IsSPMDMode
 
 memcmp

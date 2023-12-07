@@ -89,7 +89,7 @@ struct DeduplicateAndRemoveDeadOperandsAndResults
     Location loc = genericOp.getLoc();
     SmallVector<Type> newResultTypes;
     for (Value v : newOutputOperands)
-      if (v.getType().isa<TensorType>())
+      if (isa<TensorType>(v.getType()))
         newResultTypes.push_back(v.getType());
     auto newOp = rewriter.create<GenericOp>(
         loc, newResultTypes, newInputOperands, newOutputOperands,

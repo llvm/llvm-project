@@ -60,8 +60,8 @@ define dso_local i32 @f(i64 %s1.coerce0, i64 %s1.coerce1, i64 %s2.coerce0, i64 %
 ;; of the earlier DBG_PHIs.
 ; INSTRREF:     ADJCALLSTACKUP
 ; INSTRREF-NOT: DBG_
-; INSTRREF-DAG: DBG_INSTR_REF 1, 0, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
-; INSTRREF-DAG: DBG_INSTR_REF 2, 0, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
+; INSTRREF-DAG: DBG_INSTR_REF ![[S1]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 0, 64), dbg-instr-ref(1, 0)
+; INSTRREF-DAG: DBG_INSTR_REF ![[S1]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(2, 0)
 
 ; And then no more DBG_ instructions before the add.
 ; COMMON-NOT: DBG_

@@ -10,7 +10,7 @@ define void @test_bitcast_v8f16_to_v4f32(<8 x half> %a) {
 
   %x = alloca <4 x float>, align 16
   %y = bitcast <8 x half> %a to <4 x float>
-  store <4 x float> %y, <4 x float>* %x, align 16
+  store <4 x float> %y, ptr %x, align 16
   ret void
 }
 
@@ -23,7 +23,7 @@ define void @test_bitcast_v8f16_to_v2f64(<8 x half> %a) {
 
   %x = alloca <2 x double>, align 16
   %y = bitcast <8 x half> %a to <2 x double>
-  store <2 x double> %y, <2 x double>* %x, align 16
+  store <2 x double> %y, ptr %x, align 16
   ret void
 }
 
@@ -36,7 +36,7 @@ define void @test_bitcast_v8f16_to_fp128(<8 x half> %a) {
 
   %x = alloca fp128, align 16
   %y = bitcast <8 x half> %a to fp128
-  store fp128 %y, fp128* %x, align 16
+  store fp128 %y, ptr %x, align 16
   ret void
 }
 
@@ -49,7 +49,7 @@ define void @test_bitcast_v4f16_to_v2f32(<4 x half> %a) {
 
   %x = alloca <2 x float>, align 8
   %y = bitcast <4 x half> %a to <2 x float>
-  store <2 x float> %y, <2 x float>* %x, align 8
+  store <2 x float> %y, ptr %x, align 8
   ret void
 }
 
@@ -62,6 +62,6 @@ define void @test_bitcast_v4f16_to_v1f64(<4 x half> %a) {
 
   %x = alloca <1 x double>, align 8
   %y = bitcast <4 x half> %a to <1 x double>
-  store <1 x double> %y, <1 x double>* %x, align 8
+  store <1 x double> %y, ptr %x, align 8
   ret void
 }

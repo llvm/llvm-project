@@ -17,12 +17,12 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-forward.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <mutex>
+#include <optional>
 #include <vector>
 
 namespace lldb_private {
@@ -49,7 +49,8 @@ public:
       const char *class_name, const char *description, ConstString plugin_name,
       llvm::Triple::OSType preferred_os,
       llvm::SmallVector<llvm::StringRef, 4> supported_triples,
-      llvm::StringRef sdk, XcodeSDK::Type sdk_type,
+      std::string sdk_name_primary, std::string sdk_name_secondary,
+      XcodeSDK::Type sdk_type,
       CoreSimulatorSupport::DeviceType::ProductFamilyID kind);
 
   static lldb::PlatformSP
@@ -59,7 +60,7 @@ public:
                  llvm::Triple::OSType preferred_os,
                  llvm::SmallVector<llvm::Triple::OSType, 4> supported_os,
                  llvm::SmallVector<llvm::StringRef, 4> supported_triples,
-                 std::string sdk_name_preferred, std::string sdk_name_secondary,
+                 std::string sdk_name_primary, std::string sdk_name_secondary,
                  XcodeSDK::Type sdk_type,
                  CoreSimulatorSupport::DeviceType::ProductFamilyID kind,
                  bool force, const ArchSpec *arch);
@@ -111,14 +112,19 @@ protected:
   const char *m_description;
   ConstString m_plugin_name;
   std::mutex m_core_sim_path_mutex;
-  llvm::Optional<FileSpec> m_core_simulator_framework_path;
-  llvm::Optional<CoreSimulatorSupport::Device> m_device;
+  std::optional<FileSpec> m_core_simulator_framework_path;
+  std::optional<CoreSimulatorSupport::Device> m_device;
   CoreSimulatorSupport::DeviceType::ProductFamilyID m_kind;
 
   FileSpec GetCoreSimulatorPath();
 
+  llvm::StringRef GetSDKFilepath();
+
   llvm::Triple::OSType m_os_type = llvm::Triple::UnknownOS;
   llvm::SmallVector<llvm::StringRef, 4> m_supported_triples = {};
+  std::string m_sdk_name_primary;
+  std::string m_sdk_name_secondary;
+  bool m_have_searched_for_sdk = false;
   llvm::StringRef m_sdk;
   XcodeSDK::Type m_sdk_type;
 

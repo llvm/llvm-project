@@ -2055,30 +2055,18 @@ body: |
     ; VI-LABEL: name: test_fdiv_s16_constant_one_rcp
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; VI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[C]](s16)
-    ; VI-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; VI-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FPEXT1]](s32)
-    ; VI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT]], [[INT]]
-    ; VI-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
-    ; VI-NEXT: [[INT1:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[FPTRUNC]](s16), [[TRUNC]](s16), [[C]](s16)
-    ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
+    ; VI-NEXT: [[INT:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[TRUNC]](s16)
+    ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT]](s16)
     ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-LABEL: name: test_fdiv_s16_constant_one_rcp
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX9-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[C]](s16)
-    ; GFX9-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; GFX9-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FPEXT1]](s32)
-    ; GFX9-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT]], [[INT]]
-    ; GFX9-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
-    ; GFX9-NEXT: [[INT1:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[FPTRUNC]](s16), [[TRUNC]](s16), [[C]](s16)
-    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
+    ; GFX9-NEXT: [[INT:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[TRUNC]](s16)
+    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT]](s16)
     ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-UNSAFE-LABEL: name: test_fdiv_s16_constant_one_rcp
     ; GFX9-UNSAFE: liveins: $vgpr0
@@ -2091,16 +2079,10 @@ body: |
     ; GFX10-LABEL: name: test_fdiv_s16_constant_one_rcp
     ; GFX10: liveins: $vgpr0
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX10-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[C]](s16)
-    ; GFX10-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; GFX10-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FPEXT1]](s32)
-    ; GFX10-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT]], [[INT]]
-    ; GFX10-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
-    ; GFX10-NEXT: [[INT1:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[FPTRUNC]](s16), [[TRUNC]](s16), [[C]](s16)
-    ; GFX10-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
+    ; GFX10-NEXT: [[INT:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[TRUNC]](s16)
+    ; GFX10-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT]](s16)
     ; GFX10-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s16) = G_FCONSTANT half 1.0
     %1:_(s32) = COPY $vgpr0
@@ -2143,30 +2125,20 @@ body: |
     ; VI-LABEL: name: test_fdiv_s16_constant_negative_one_rcp
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xHBC00
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; VI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[C]](s16)
-    ; VI-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; VI-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FPEXT1]](s32)
-    ; VI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT]], [[INT]]
-    ; VI-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
-    ; VI-NEXT: [[INT1:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[FPTRUNC]](s16), [[TRUNC]](s16), [[C]](s16)
-    ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
+    ; VI-NEXT: [[FNEG:%[0-9]+]]:_(s16) = G_FNEG [[TRUNC]]
+    ; VI-NEXT: [[INT:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FNEG]](s16)
+    ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT]](s16)
     ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-LABEL: name: test_fdiv_s16_constant_negative_one_rcp
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xHBC00
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX9-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[C]](s16)
-    ; GFX9-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; GFX9-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FPEXT1]](s32)
-    ; GFX9-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT]], [[INT]]
-    ; GFX9-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
-    ; GFX9-NEXT: [[INT1:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[FPTRUNC]](s16), [[TRUNC]](s16), [[C]](s16)
-    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
+    ; GFX9-NEXT: [[FNEG:%[0-9]+]]:_(s16) = G_FNEG [[TRUNC]]
+    ; GFX9-NEXT: [[INT:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FNEG]](s16)
+    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT]](s16)
     ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-UNSAFE-LABEL: name: test_fdiv_s16_constant_negative_one_rcp
     ; GFX9-UNSAFE: liveins: $vgpr0
@@ -2180,16 +2152,11 @@ body: |
     ; GFX10-LABEL: name: test_fdiv_s16_constant_negative_one_rcp
     ; GFX10: liveins: $vgpr0
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xHBC00
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX10-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX10-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[C]](s16)
-    ; GFX10-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; GFX10-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FPEXT1]](s32)
-    ; GFX10-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT]], [[INT]]
-    ; GFX10-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
-    ; GFX10-NEXT: [[INT1:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[FPTRUNC]](s16), [[TRUNC]](s16), [[C]](s16)
-    ; GFX10-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT1]](s16)
+    ; GFX10-NEXT: [[FNEG:%[0-9]+]]:_(s16) = G_FNEG [[TRUNC]]
+    ; GFX10-NEXT: [[INT:%[0-9]+]]:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FNEG]](s16)
+    ; GFX10-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INT]](s16)
     ; GFX10-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s16) = G_FCONSTANT half -1.0
     %1:_(s32) = COPY $vgpr0

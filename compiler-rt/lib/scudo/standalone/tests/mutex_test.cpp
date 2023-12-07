@@ -99,3 +99,10 @@ TEST(ScudoMutexTest, MutexTry) {
   for (scudo::u32 I = 0; I < NumberOfThreads; I++)
     pthread_join(Threads[I], 0);
 }
+
+TEST(ScudoMutexTest, MutexAssertHeld) {
+  scudo::HybridMutex M;
+  M.lock();
+  M.assertHeld();
+  M.unlock();
+}

@@ -23,6 +23,8 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/TargetSelect.h"
+#include <optional>
 #include <sstream>
 #include <string>
 
@@ -82,7 +84,7 @@ void MapExtDefNamesConsumer::handleDecl(const Decl *D) {
 
 void MapExtDefNamesConsumer::addIfInMain(const DeclaratorDecl *DD,
                                          SourceLocation defStart) {
-  llvm::Optional<std::string> LookupName =
+  std::optional<std::string> LookupName =
       CrossTranslationUnitContext::getLookupName(DD);
   if (!LookupName)
     return;
@@ -152,7 +154,8 @@ static bool HandleAST(StringRef AstPath) {
 
   std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromASTFile(
       AstPath.str(), CI->getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadASTOnly, DiagEngine, CI->getFileSystemOpts());
+      ASTUnit::LoadASTOnly, DiagEngine, CI->getFileSystemOpts(),
+      CI->getHeaderSearchOptsPtr());
 
   if (!Unit)
     return false;
@@ -211,6 +214,10 @@ int main(int argc, const char **argv) {
     return 1;
   }
   CommonOptionsParser &OptionsParser = ExpectedParser.get();
+
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
 
   return HandleFiles(OptionsParser.getSourcePathList(),
                      OptionsParser.getCompilations());

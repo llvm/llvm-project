@@ -15,5 +15,5 @@ bool shouldReverseIterate() {
 #endif
 }
 
-}
+} // namespace llvm
 #endif

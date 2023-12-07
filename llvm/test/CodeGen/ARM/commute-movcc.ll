@@ -23,7 +23,7 @@
 ; CHECK: add{{(s|\.w)?}} [[IV:r[0-9]+]], {{.*}}#1
 ; CHECK: cmp [[IV]], #
 
-define i32 @f(i32* nocapture %a, i32 %Pref) nounwind ssp {
+define i32 @f(ptr nocapture %a, i32 %Pref) nounwind ssp {
 entry:
   br label %for.body
 
@@ -31,8 +31,8 @@ for.body:                                         ; preds = %entry, %if.end8
   %i.012 = phi i32 [ 0, %entry ], [ %inc, %if.end8 ]
   %BestCost.011 = phi i32 [ -1, %entry ], [ %BestCost.1, %if.end8 ]
   %BestIdx.010 = phi i32 [ 0, %entry ], [ %BestIdx.1, %if.end8 ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i32 %i.012
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i.012
+  %0 = load i32, ptr %arrayidx, align 4
   %mul = mul i32 %0, %0
   %sub = add nsw i32 %i.012, -5
   %cmp2 = icmp eq i32 %sub, %Pref
@@ -53,7 +53,7 @@ if.else:                                          ; preds = %for.body
 if.end8:                                          ; preds = %if.else, %if.then
   %BestIdx.1 = phi i32 [ %i.0.BestIdx.0, %if.then ], [ %BestIdx.0.i.0, %if.else ]
   %BestCost.1 = phi i32 [ %mul.BestCost.0, %if.then ], [ %BestCost.0.mul, %if.else ]
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   %inc = add i32 %i.012, 1
   %cmp = icmp eq i32 %inc, 11
   br i1 %cmp, label %for.end, label %for.body

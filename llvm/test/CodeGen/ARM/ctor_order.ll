@@ -21,7 +21,7 @@
 ; GNUEABI:      .long    f152
 
 
-@llvm.global_ctors = appending global [2 x { i32, void ()*, i8* }] [ { i32, void ()*, i8* } { i32 151, void ()* @f151, i8* null }, { i32, void ()*, i8* } { i32 152, void ()* @f152, i8* null } ]
+@llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [ { i32, ptr, ptr } { i32 151, ptr @f151, ptr null }, { i32, ptr, ptr } { i32 152, ptr @f152, ptr null } ]
 
 define void @f151() {
 entry:

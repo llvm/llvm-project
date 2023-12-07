@@ -1,0 +1,20 @@
+# UNSUPPORTED: system-windows
+# RUN: %clangxx_host %p/Inputs/languages.cpp -g -o %t.out
+# RUN: %lldb -b -o 'settings set interpreter.stop-command-source-on-error false' -s %s %t.out 2>&1 | FileCheck %s
+
+settings  show interpreter.stop-command-source-on-error
+# CHECK: interpreter.stop-command-source-on-error (boolean) = false
+
+b main
+run
+# CHECK: stopped
+# CHECK-NEXT: stop reason = breakpoint
+
+watchpoint set expression -- &g_foo
+# CHECK: Watchpoint created:
+
+watchpoint set expression -l c++ -- &g_bar
+# CHECK: Watchpoint created:
+
+watchpoint set expression -l fake -- &g_baz
+# CHECK: Unknown language type: 'fake' for expression. List of supported languages:

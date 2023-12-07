@@ -29,10 +29,8 @@ void p(char *str, int x) {
 // CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca fp128, align 16
 // CHECK-NEXT:    store fp128 [[D:%.*]], ptr [[LD_ADDR]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load fp128, ptr [[LD_ADDR]], align 16
-// CHECK-NEXT:    [[BITCAST:%.*]] = bitcast fp128 [[TMP0]] to i128
-// CHECK-NEXT:    [[SHL1:%.*]] = shl i128 [[BITCAST]], 1
-// CHECK-NEXT:    [[CMP:%.*]] = icmp eq i128 [[SHL1]], -10384593717069655257060992658440192
-// CHECK-NEXT:    [[RES:%.*]] = zext i1 [[CMP]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[TMP0]], i32 516)
+// CHECK-NEXT:    [[RES:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.[[#STRID:1]], i32 noundef [[RES]]) [[ATTR4]]
 // CHECK-NEXT:    ret void
 //
@@ -47,10 +45,8 @@ void test_long_double_isinf(long double ld) {
 // CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca fp128, align 16
 // CHECK-NEXT:    store fp128 [[D:%.*]], ptr [[LD_ADDR]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load fp128, ptr [[LD_ADDR]], align 16
-// CHECK-NEXT:    [[BITCAST:%.*]] = bitcast fp128 [[TMP0]] to i128
-// CHECK-NEXT:    [[SHL1:%.*]] = shl i128 [[BITCAST]], 1
-// CHECK-NEXT:    [[CMP:%.*]] = icmp ult i128 [[SHL1]], -10384593717069655257060992658440192
-// CHECK-NEXT:    [[RES:%.*]] = zext i1 [[CMP]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[TMP0]], i32 504)
+// CHECK-NEXT:    [[RES:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.[[#STRID:STRID+1]], i32 noundef [[RES]]) [[ATTR4]]
 // CHECK-NEXT:    ret void
 //
@@ -65,11 +61,8 @@ void test_long_double_isfinite(long double ld) {
 // CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca fp128, align 16
 // CHECK-NEXT:    store fp128 [[D:%.*]], ptr [[LD_ADDR]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load fp128, ptr [[LD_ADDR]], align 16
-// CHECK-NEXT:    [[BITCAST:%.*]] = bitcast fp128 [[TMP0]] to i128
-// CHECK-NEXT:    [[ABS:%.*]] = and i128 [[BITCAST]], 170141183460469231731687303715884105727
-// CHECK-NEXT:    [[TMP1:%.*]] = sub i128 170135991163610696904058773219554885632, [[ABS]]
-// CHECK-NEXT:    [[ISNAN:%.*]] = lshr i128 [[TMP1]], 127
-// CHECK-NEXT:    [[RES:%.*]] = trunc i128 [[ISNAN]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[TMP0]], i32 3)
+// CHECK-NEXT:    [[RES:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.[[#STRID:STRID+1]], i32 noundef [[RES]])
 // CHECK-NEXT:    ret void
 //

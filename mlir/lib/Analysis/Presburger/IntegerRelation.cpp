@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Debug.h"
 #include <numeric>
+#include <optional>
 
 #define DEBUG_TYPE "presburger"
 
@@ -77,6 +78,30 @@ IntegerRelation IntegerRelation::intersect(IntegerRelation other) const {
 bool IntegerRelation::isEqual(const IntegerRelation &other) const {
   assert(space.isCompatible(other.getSpace()) && "Spaces must be compatible.");
   return PresburgerRelation(*this).isEqual(PresburgerRelation(other));
+}
+
+bool IntegerRelation::isPlainEqual(const IntegerRelation &other) const {
+  if (!space.isEqual(other.getSpace()))
+    return false;
+  if (getNumEqualities() != other.getNumEqualities())
+    return false;
+  if (getNumInequalities() != other.getNumInequalities())
+    return false;
+
+  unsigned cols = getNumCols();
+  for (unsigned i = 0, eqs = getNumEqualities(); i < eqs; ++i) {
+    for (unsigned j = 0; j < cols; ++j) {
+      if (atEq(i, j) != other.atEq(i, j))
+        return false;
+    }
+  }
+  for (unsigned i = 0, ineqs = getNumInequalities(); i < ineqs; ++i) {
+    for (unsigned j = 0; j < cols; ++j) {
+      if (atIneq(i, j) != other.atIneq(i, j))
+        return false;
+    }
+  }
+  return true;
 }
 
 bool IntegerRelation::isSubsetOf(const IntegerRelation &other) const {
@@ -171,7 +196,7 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
     return PresburgerRelation(*this);
 
   // Move all the non-div locals to the end, as the current API to
-  // SymbolicLexMin requires these to form a contiguous range.
+  // SymbolicLexOpt requires these to form a contiguous range.
   //
   // Take a copy so we can perform mutations.
   IntegerRelation copy = *this;
@@ -210,13 +235,13 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
   // exists, which is the union of the domain of the returned lexmin function
   // and the returned set of assignments to the "symbols" that makes the lexmin
   // unbounded.
-  SymbolicLexMin lexminResult =
+  SymbolicLexOpt lexminResult =
       SymbolicLexSimplex(copy, /*symbolOffset*/ 0,
                          IntegerPolyhedron(PresburgerSpace::getSetSpace(
                              /*numDims=*/copy.getNumVars() - numNonDivLocals)))
           .computeSymbolicIntegerLexMin();
   PresburgerRelation result =
-      lexminResult.lexmin.getDomain().unionSet(lexminResult.unboundedDomain);
+      lexminResult.lexopt.getDomain().unionSet(lexminResult.unboundedDomain);
 
   // The result set might lie in the wrong space -- all its ids are dims.
   // Set it to the desired space and return.
@@ -226,7 +251,7 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
   return result;
 }
 
-SymbolicLexMin IntegerRelation::findSymbolicIntegerLexMin() const {
+SymbolicLexOpt IntegerRelation::findSymbolicIntegerLexMin() const {
   // Symbol and Domain vars will be used as symbols for symbolic lexmin.
   // In other words, for every value of the symbols and domain, return the
   // lexmin value of the (range, locals).
@@ -238,7 +263,7 @@ SymbolicLexMin IntegerRelation::findSymbolicIntegerLexMin() const {
   // Compute the symbolic lexmin of the dims and locals, with the symbols being
   // the actual symbols of this set.
   // The resultant space of lexmin is the space of the relation itself.
-  SymbolicLexMin result =
+  SymbolicLexOpt result =
       SymbolicLexSimplex(*this,
                          IntegerPolyhedron(PresburgerSpace::getSetSpace(
                              /*numDims=*/getNumDomainVars(),
@@ -248,9 +273,47 @@ SymbolicLexMin IntegerRelation::findSymbolicIntegerLexMin() const {
 
   // We want to return only the lexmin over the dims, so strip the locals from
   // the computed lexmin.
-  result.lexmin.removeOutputs(result.lexmin.getNumOutputs() - getNumLocalVars(),
-                              result.lexmin.getNumOutputs());
+  result.lexopt.removeOutputs(result.lexopt.getNumOutputs() - getNumLocalVars(),
+                              result.lexopt.getNumOutputs());
   return result;
+}
+
+/// findSymbolicIntegerLexMax is implemented using findSymbolicIntegerLexMin as
+/// follows:
+/// 1. A new relation is created which is `this` relation with the sign of
+/// each dimension variable in range flipped;
+/// 2. findSymbolicIntegerLexMin is called on the range negated relation to
+/// compute the negated lexmax of `this` relation;
+/// 3. The sign of the negated lexmax is flipped and returned.
+SymbolicLexOpt IntegerRelation::findSymbolicIntegerLexMax() const {
+  IntegerRelation flippedRel = *this;
+  // Flip range sign by flipping the sign of range variables in all constraints.
+  for (unsigned j = getNumDomainVars(),
+                b = getNumDomainVars() + getNumRangeVars();
+       j < b; j++) {
+    for (unsigned i = 0, a = getNumEqualities(); i < a; i++)
+      flippedRel.atEq(i, j) = -1 * atEq(i, j);
+    for (unsigned i = 0, a = getNumInequalities(); i < a; i++)
+      flippedRel.atIneq(i, j) = -1 * atIneq(i, j);
+  }
+  // Compute negated lexmax by computing lexmin.
+  SymbolicLexOpt flippedSymbolicIntegerLexMax =
+                     flippedRel.findSymbolicIntegerLexMin(),
+                 symbolicIntegerLexMax(
+                     flippedSymbolicIntegerLexMax.lexopt.getSpace());
+  // Get lexmax by flipping range sign in the PWMA constraints.
+  for (auto &flippedPiece :
+       flippedSymbolicIntegerLexMax.lexopt.getAllPieces()) {
+    Matrix mat = flippedPiece.output.getOutputMatrix();
+    for (unsigned i = 0, e = mat.getNumRows(); i < e; i++)
+      mat.negateRow(i);
+    MultiAffineFunction maf(flippedPiece.output.getSpace(), mat);
+    PWMAFunction::Piece piece = {flippedPiece.domain, maf};
+    symbolicIntegerLexMax.lexopt.addPiece(piece);
+  }
+  symbolicIntegerLexMax.unboundedDomain =
+      flippedSymbolicIntegerLexMax.unboundedDomain;
+  return symbolicIntegerLexMax;
 }
 
 PresburgerRelation
@@ -763,7 +826,8 @@ bool IntegerRelation::isIntegerEmpty() const { return !findIntegerSample(); }
 ///
 /// Concatenating the samples from B and C gives a sample v in S*T, so the
 /// returned sample T*v is a sample in S.
-Optional<SmallVector<MPInt, 8>> IntegerRelation::findIntegerSample() const {
+std::optional<SmallVector<MPInt, 8>>
+IntegerRelation::findIntegerSample() const {
   // First, try the GCD test heuristic.
   if (isEmptyByGCDTest())
     return {};
@@ -802,7 +866,7 @@ Optional<SmallVector<MPInt, 8>> IntegerRelation::findIntegerSample() const {
   boundedSet.removeVarRange(numBoundedDims, boundedSet.getNumVars());
 
   // 3) Try to obtain a sample from the bounded set.
-  Optional<SmallVector<MPInt, 8>> boundedSample =
+  std::optional<SmallVector<MPInt, 8>> boundedSample =
       Simplex(boundedSet).findIntegerSample();
   if (!boundedSample)
     return {};
@@ -901,7 +965,7 @@ bool IntegerRelation::containsPoint(ArrayRef<MPInt> point) const {
 /// compute the values of the locals that have division representations and
 /// only use the integer emptiness check for the locals that don't have this.
 /// Handling this correctly requires ordering the divs, though.
-Optional<SmallVector<MPInt, 8>>
+std::optional<SmallVector<MPInt, 8>>
 IntegerRelation::containsPointNoLocal(ArrayRef<MPInt> point) const {
   assert(point.size() == getNumVars() - getNumLocalVars() &&
          "Point should contain all vars except locals!");
@@ -1080,7 +1144,7 @@ void IntegerRelation::removeRedundantConstraints() {
   equalities.resizeVertically(pos);
 }
 
-Optional<MPInt> IntegerRelation::computeVolume() const {
+std::optional<MPInt> IntegerRelation::computeVolume() const {
   assert(getNumSymbolVars() == 0 && "Symbols are not yet supported!");
 
   Simplex simplex(*this);
@@ -1390,7 +1454,7 @@ void IntegerRelation::constantFoldVarRange(unsigned pos, unsigned num) {
 //       s0 + s1 + 16 <= d0 <= s0 + s1 + 31, returns 16.
 //       s0 - 7 <= 8*j <= s0 returns 1 with lb = s0, lbDivisor = 8 (since lb =
 //       ceil(s0 - 7 / 8) = floor(s0 / 8)).
-Optional<MPInt> IntegerRelation::getConstantBoundOnDimSize(
+std::optional<MPInt> IntegerRelation::getConstantBoundOnDimSize(
     unsigned pos, SmallVectorImpl<MPInt> *lb, MPInt *boundFloorDivisor,
     SmallVectorImpl<MPInt> *ub, unsigned *minLbPos, unsigned *minUbPos) const {
   assert(pos < getNumDimVars() && "Invalid variable position");
@@ -1455,7 +1519,7 @@ Optional<MPInt> IntegerRelation::getConstantBoundOnDimSize(
                                /*eqIndices=*/nullptr, /*offset=*/0,
                                /*num=*/getNumDimVars());
 
-  Optional<MPInt> minDiff;
+  std::optional<MPInt> minDiff;
   unsigned minLbPosition = 0, minUbPosition = 0;
   for (auto ubPos : ubIndices) {
     for (auto lbPos : lbIndices) {
@@ -1516,7 +1580,7 @@ Optional<MPInt> IntegerRelation::getConstantBoundOnDimSize(
 }
 
 template <bool isLower>
-Optional<MPInt>
+std::optional<MPInt>
 IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
   assert(pos < getNumVars() && "invalid position");
   // Project to 'pos'.
@@ -1538,7 +1602,7 @@ IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
     // If it doesn't, there isn't a bound on it.
     return std::nullopt;
 
-  Optional<MPInt> minOrMaxConst;
+  std::optional<MPInt> minOrMaxConst;
 
   // Take the max across all const lower bounds (or min across all constant
   // upper bounds).
@@ -1573,8 +1637,8 @@ IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
   return minOrMaxConst;
 }
 
-Optional<MPInt> IntegerRelation::getConstantBound(BoundType type,
-                                                  unsigned pos) const {
+std::optional<MPInt> IntegerRelation::getConstantBound(BoundType type,
+                                                       unsigned pos) const {
   if (type == BoundType::LB)
     return IntegerRelation(*this)
         .computeConstantLowerOrUpperBound</*isLower=*/true>(pos);
@@ -1583,13 +1647,13 @@ Optional<MPInt> IntegerRelation::getConstantBound(BoundType type,
         .computeConstantLowerOrUpperBound</*isLower=*/false>(pos);
 
   assert(type == BoundType::EQ && "expected EQ");
-  Optional<MPInt> lb =
+  std::optional<MPInt> lb =
       IntegerRelation(*this).computeConstantLowerOrUpperBound</*isLower=*/true>(
           pos);
-  Optional<MPInt> ub =
+  std::optional<MPInt> ub =
       IntegerRelation(*this)
           .computeConstantLowerOrUpperBound</*isLower=*/false>(pos);
-  return (lb && ub && *lb == *ub) ? Optional<MPInt>(*ub) : std::nullopt;
+  return (lb && ub && *lb == *ub) ? std::optional<MPInt>(*ub) : std::nullopt;
 }
 
 // A simple (naive and conservative) check for hyper-rectangularity.
@@ -2244,14 +2308,16 @@ void IntegerRelation::print(raw_ostream &os) const {
   assert(hasConsistentState());
   printSpace(os);
   for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
+    os << " ";
     for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atEq(i, j) << " ";
+      os << atEq(i, j) << "\t";
     }
     os << "= 0\n";
   }
   for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
+    os << " ";
     for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atIneq(i, j) << " ";
+      os << atIneq(i, j) << "\t";
     }
     os << ">= 0\n";
   }

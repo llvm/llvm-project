@@ -34,6 +34,7 @@ public:
   std::size_t GetNextInputBytes(const char *&, IoErrorHandler &);
   bool AdvanceRecord(IoErrorHandler &);
   void BackspaceRecord(IoErrorHandler &);
+  std::int64_t InquirePos();
 
 private:
   Descriptor &descriptor() { return staticDescriptor_.descriptor(); }

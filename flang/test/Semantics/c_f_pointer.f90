@@ -30,6 +30,7 @@ program test
   !ERROR: FPTR= argument to C_F_POINTER() may not have a deferred type parameter
   call c_f_pointer(scalarC, charDeferredF)
   !ERROR: FPTR= argument to C_F_POINTER() may not be a coindexed object
+  !ERROR: A coindexed object may not be a pointer target
   call c_f_pointer(scalarC, coindexed[0]%p)
   !ERROR: FPTR= argument to C_F_POINTER() must have a type
   call c_f_pointer(scalarC, null())

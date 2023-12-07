@@ -307,7 +307,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*defaultImplementation=*/[{
         assert(opOperand->getOwner() == this->getOperation());
         if (auto shapedType =
-              opOperand->get().getType().template dyn_cast<ShapedType>())
+              ::llvm::dyn_cast<ShapedType>(opOperand->get().getType()))
           return shapedType.getRank();
         return 0;
       }]
@@ -359,7 +359,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*defaultImplementation=*/[{
         assert(opOperand->getOwner() == this->getOperation());
         if (auto shapedType =
-              opOperand->get().getType().template dyn_cast<ShapedType>())
+              ::llvm::dyn_cast<ShapedType>(opOperand->get().getType()))
           return shapedType.getShape();
         return {};
       }]
@@ -621,6 +621,31 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         return failure();
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Given a dimension of the iteration space of a Linalg operation, finds
+        all the operands in the operation that are defined on such dimension.
+        Returns all the operand values found and their dimension positions in
+        `operandDimPairs`.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"mapIterationSpaceDimToAllOperandDims",
+      /*args=*/(ins "unsigned":$dimPos,
+                    "mlir::SmallVectorImpl<std::pair<Value, unsigned>>&":$operandDimPairs),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        for (auto [i, idxMap] : llvm::enumerate($_op.getIndexingMapsArray())) {
+          if (idxMap.isProjectedPermutation()) {
+            if (auto mayOperandDim = idxMap.getResultPosition(
+                getAffineDimExpr(dimPos, idxMap.getContext()))) {
+              operandDimPairs.push_back({$_op->getOperand(i), *mayOperandDim});
+            }
+          }
+        }
+
+        return;
+      }]
+    >,
     //===------------------------------------------------------------------===//
     // Linalg generalization hooks.
     //===------------------------------------------------------------------===//
@@ -773,6 +798,9 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     LogicalResult reifyResultShapes(OpBuilder &b,
         ReifiedRankedShapedTypeDims &reifiedReturnShapes);
 
+    /// Return the index in the indexingMaps vector that corresponds to this `opOperand`
+    int64_t getIndexingMapIndex(OpOperand *opOperand);
+
     //========================================================================//
     // Forwarding functions to access interface methods from the
     // DestinationStyleOpInterface.
@@ -846,27 +874,40 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       return cast<DestinationStyleOpInterface>(*this->getOperation())
           .hasTensorSemantics();
     }
-
-    //========================================================================//
-    // Helper functions to mutate the `operand_segment_sizes` attribute.
-    // These are useful when cloning and changing operand types.
-    //========================================================================//
-    void setNumInputs(unsigned num) { setOperandSegmentAt(0, num); }
-    void setNumOutputBuffers(unsigned num) { setOperandSegmentAt(1, num); }
-
-    private:
-    void setOperandSegmentAt(unsigned idx, unsigned val) {
-      auto attr = (*this)->getAttr("operand_segment_sizes")
-        .cast<DenseIntElementsAttr>();
-      unsigned i = 0;
-      auto newAttr = attr.mapValues(IntegerType::get(getContext(), 32),
-        [&](const APInt &v) { return (i++ == idx) ? APInt(32, val) : v; });
-      getOperation()->setAttr("operand_segment_sizes", newAttr);
-    }
   }];
 
   let verify = [{ return detail::verifyStructuredOpInterface($_op); }];
   let verifyWithRegions = 1;
+}
+
+def AggregatedOpInterface : OpInterface<"AggregatedOpInterface"> {
+  let description = [{
+    Interface for decomposing aggregated operations into a sequence of simpler
+    ops.
+  }];
+  let cppNamespace = "::mlir::linalg";
+  let methods = [
+      InterfaceMethod<
+        /*desc=*/[{
+          Method to decompose the operation into simpler operations.
+
+          On success, this method returns one `Value` per result in the
+          original operation.
+          The order of the returned values must match the order of the
+          original values.
+          In other words, the returned vector can be used directly with
+          `RewriterBase::replaceOp(this, returnedValues)`.
+        }],
+        /*retType=*/"FailureOr<SmallVector<Value>>",
+        /*methodName=*/"decomposeOperation",
+        /*args=*/(ins
+            "OpBuilder &":$b),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return {};
+        }]
+      >
+  ];
 }
 
 #endif // LINALG_IR_LINALGINTERFACES

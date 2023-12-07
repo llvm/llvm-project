@@ -25,7 +25,7 @@
 @float = global float 1.0, align 1
 @dword = global i64 283686952306183, align 1
 @double = global double 1.0, align 1
-@pointer = global i8* @byte
+@pointer = global ptr @byte
 
 ; ALL-NOT:       .p2align
 ; ALL-LABEL: byte:
@@ -74,7 +74,7 @@
 @float_array = global [2 x float] [float 1.0, float 2.0], align 1
 @dword_array = global [2 x i64] [i64 1, i64 2], align 1
 @double_array = global [2 x double] [double 1.0, double 2.0], align 1
-@pointer_array = global [2 x i8*] [i8* @byte, i8* @byte]
+@pointer_array = global [2 x ptr] [ptr @byte, ptr @byte]
 
 ; ALL-NOT:       .p2align
 ; ALL-LABEL: byte_array:

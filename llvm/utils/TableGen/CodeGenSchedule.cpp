@@ -298,12 +298,12 @@ processSTIPredicate(STIPredicateFunction &Fn,
     RecVec Classes = Def->getValueAsListOfDefs("Classes");
     for (const Record *EC : Classes) {
       const Record *Pred = EC->getValueAsDef("Predicate");
-      if (Predicate2Index.find(Pred) == Predicate2Index.end())
+      if (!Predicate2Index.contains(Pred))
         Predicate2Index[Pred] = NumUniquePredicates++;
 
       RecVec Opcodes = EC->getValueAsListOfDefs("Opcodes");
       for (const Record *Opcode : Opcodes) {
-        if (Opcode2Index.find(Opcode) == Opcode2Index.end()) {
+        if (!Opcode2Index.contains(Opcode)) {
           Opcode2Index[Opcode] = OpcodeMappings.size();
           OpcodeMappings.emplace_back(Opcode, OpcodeInfo());
         }
@@ -369,19 +369,20 @@ processSTIPredicate(STIPredicateFunction &Fn,
                const std::pair<APInt, APInt> &LhsMasks = OpcodeMasks[LhsIdx];
                const std::pair<APInt, APInt> &RhsMasks = OpcodeMasks[RhsIdx];
 
-               auto LessThan = [](const APInt &Lhs, const APInt &Rhs) {
-                 unsigned LhsCountPopulation = Lhs.countPopulation();
-                 unsigned RhsCountPopulation = Rhs.countPopulation();
-                 return ((LhsCountPopulation < RhsCountPopulation) ||
-                         ((LhsCountPopulation == RhsCountPopulation) &&
-                          (Lhs.countLeadingZeros() > Rhs.countLeadingZeros())));
+               auto PopulationCountAndLeftBit =
+                   [](const APInt &Other) -> std::pair<int, int> {
+                 return std::pair<int, int>(Other.popcount(),
+                                            -Other.countl_zero());
                };
+               auto lhsmask_first = PopulationCountAndLeftBit(LhsMasks.first);
+               auto rhsmask_first = PopulationCountAndLeftBit(RhsMasks.first);
+               if (lhsmask_first != rhsmask_first)
+                 return lhsmask_first < rhsmask_first;
 
-               if (LhsMasks.first != RhsMasks.first)
-                 return LessThan(LhsMasks.first, RhsMasks.first);
-
-               if (LhsMasks.second != RhsMasks.second)
-                 return LessThan(LhsMasks.second, RhsMasks.second);
+               auto lhsmask_second = PopulationCountAndLeftBit(LhsMasks.second);
+               auto rhsmask_second = PopulationCountAndLeftBit(RhsMasks.second);
+               if (lhsmask_second != rhsmask_second)
+                 return lhsmask_second < rhsmask_second;
 
                return LhsIdx < RhsIdx;
              });
@@ -838,7 +839,7 @@ unsigned CodeGenSchedModels::findRWForSequence(ArrayRef<unsigned> Seq,
   std::vector<CodeGenSchedRW> &RWVec = IsRead ? SchedReads : SchedWrites;
 
   auto I = find_if(RWVec, [Seq](CodeGenSchedRW &RW) {
-    return makeArrayRef(RW.Sequence) == Seq;
+    return ArrayRef(RW.Sequence) == Seq;
   });
   // Index zero reserved for invalid RW.
   return I == RWVec.end() ? 0 : std::distance(RWVec.begin(), I);

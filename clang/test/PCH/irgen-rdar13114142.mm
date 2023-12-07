@@ -30,7 +30,7 @@ OOArray operator & (OOString, OOString);
 
 #else
 
-// We just make sure there is no crash on IRGen (rdar://13114142)
+// We just make sure there is no crash on IRGen
 // CHECK: _Z3foov()
 void foo() {
   OOString str;

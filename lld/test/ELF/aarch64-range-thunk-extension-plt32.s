@@ -15,8 +15,6 @@
 // CHECK-LABEL: <__AArch64AbsLongThunk_callee>:
 // CHECK-NEXT:    10004:       ldr     x16, 0x1000c <__AArch64AbsLongThunk_callee+0x8>
 // CHECK-NEXT:    10008:       br      x16
-
-// CHECK-LABEL: <$d>:
 // CHECK-NEXT:    1000c:       00 00 00 00     .word   0x00000000
 // CHECK-NEXT:    10010:       02 00 00 00     .word   0x00000002
 

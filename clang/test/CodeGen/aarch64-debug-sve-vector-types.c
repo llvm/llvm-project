@@ -9,6 +9,12 @@ void test_locals(void) {
   // CHECK-DAG: ![[REALELTS1_64]] = !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_constu, 1, DW_OP_bregx, 46, 0, DW_OP_mul, DW_OP_constu, 1, DW_OP_minus))
   __SVBool_t b8;
 
+  // CHECK-DAG: name: "__SVCount_t",{{.*}}, baseType: ![[CT1_2:[0-9]+]]
+  // CHECK-DAG: ![[CT1_2]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[ELTTYU8]], flags: DIFlagVector, elements: ![[ELTS0_to_1:[0-9]+]])
+  // CHECK-DAG: ![[ELTS0_to_1]] = !{![[REALELTS0_to_1:[0-9]+]]}
+  // CHECK-DAG: ![[REALELTS0_to_1]] = !DISubrange(lowerBound: 0, upperBound: 1)
+  __SVCount_t c8;
+
   // CHECK-DAG: name: "__SVInt8_t",{{.*}}, baseType: ![[CT8:[0-9]+]]
   // CHECK-DAG: ![[CT8]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[ELTTYS8:[0-9]+]], flags: DIFlagVector, elements: ![[ELTS8:[0-9]+]])
   // CHECK-DAG: ![[ELTTYS8]] = !DIBasicType(name: "signed char", size: 8, encoding: DW_ATE_signed_char)

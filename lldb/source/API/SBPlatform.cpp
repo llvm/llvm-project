@@ -11,6 +11,7 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLaunchInfo.h"
+#include "lldb/API/SBModuleSpec.h"
 #include "lldb/API/SBPlatform.h"
 #include "lldb/API/SBUnixSignals.h"
 #include "lldb/Host/File.h"
@@ -100,7 +101,7 @@ const char *SBPlatformConnectOptions::GetURL() {
 
   if (m_opaque_ptr->m_url.empty())
     return nullptr;
-  return m_opaque_ptr->m_url.c_str();
+  return ConstString(m_opaque_ptr->m_url.c_str()).GetCString();
 }
 
 void SBPlatformConnectOptions::SetURL(const char *url) {
@@ -203,7 +204,7 @@ const char *SBPlatformShellCommand::GetShell() {
 
   if (m_opaque_ptr->m_shell.empty())
     return nullptr;
-  return m_opaque_ptr->m_shell.c_str();
+  return ConstString(m_opaque_ptr->m_shell.c_str()).GetCString();
 }
 
 void SBPlatformShellCommand::SetShell(const char *shell_interpreter) {
@@ -220,7 +221,7 @@ const char *SBPlatformShellCommand::GetCommand() {
 
   if (m_opaque_ptr->m_command.empty())
     return nullptr;
-  return m_opaque_ptr->m_command.c_str();
+  return ConstString(m_opaque_ptr->m_command.c_str()).GetCString();
 }
 
 void SBPlatformShellCommand::SetCommand(const char *shell_command) {
@@ -237,7 +238,7 @@ const char *SBPlatformShellCommand::GetWorkingDirectory() {
 
   if (m_opaque_ptr->m_working_dir.empty())
     return nullptr;
-  return m_opaque_ptr->m_working_dir.c_str();
+  return ConstString(m_opaque_ptr->m_working_dir.c_str()).GetCString();
 }
 
 void SBPlatformShellCommand::SetWorkingDirectory(const char *path) {
@@ -283,7 +284,7 @@ const char *SBPlatformShellCommand::GetOutput() {
 
   if (m_opaque_ptr->m_output.empty())
     return nullptr;
-  return m_opaque_ptr->m_output.c_str();
+  return ConstString(m_opaque_ptr->m_output.c_str()).GetCString();
 }
 
 // SBPlatform
@@ -454,7 +455,7 @@ const char *SBPlatform::GetHostname() {
 
   PlatformSP platform_sp(GetSP());
   if (platform_sp)
-    return platform_sp->GetHostname();
+    return ConstString(platform_sp->GetHostname()).GetCString();
   return nullptr;
 }
 
@@ -488,7 +489,7 @@ uint32_t SBPlatform::GetOSUpdateVersion() {
 void SBPlatform::SetSDKRoot(const char *sysroot) {
   LLDB_INSTRUMENT_VA(this, sysroot);
   if (PlatformSP platform_sp = GetSP())
-    platform_sp->SetSDKRootDirectory(ConstString(sysroot));
+    platform_sp->SetSDKRootDirectory(llvm::StringRef(sysroot).str());
 }
 
 SBError SBPlatform::Get(SBFileSpec &src, SBFileSpec &dst) {
@@ -654,4 +655,42 @@ SBEnvironment SBPlatform::GetEnvironment() {
   }
 
   return SBEnvironment();
+}
+
+SBError SBPlatform::SetLocateModuleCallback(
+    lldb::SBPlatformLocateModuleCallback callback, void *callback_baton) {
+  LLDB_INSTRUMENT_VA(this, callback, callback_baton);
+  PlatformSP platform_sp(GetSP());
+  if (!platform_sp)
+    return SBError("invalid platform");
+
+  if (!callback) {
+    // Clear the callback.
+    platform_sp->SetLocateModuleCallback(nullptr);
+    return SBError();
+  }
+
+  // Platform.h does not accept lldb::SBPlatformLocateModuleCallback directly
+  // because of the SBModuleSpec and SBFileSpec dependencies. Use a lambda to
+  // convert ModuleSpec/FileSpec <--> SBModuleSpec/SBFileSpec for the callback
+  // arguments.
+  platform_sp->SetLocateModuleCallback(
+      [callback, callback_baton](const ModuleSpec &module_spec,
+                                 FileSpec &module_file_spec,
+                                 FileSpec &symbol_file_spec) {
+        SBModuleSpec module_spec_sb(module_spec);
+        SBFileSpec module_file_spec_sb;
+        SBFileSpec symbol_file_spec_sb;
+
+        SBError error = callback(callback_baton, module_spec_sb,
+                                 module_file_spec_sb, symbol_file_spec_sb);
+
+        if (error.Success()) {
+          module_file_spec = module_file_spec_sb.ref();
+          symbol_file_spec = symbol_file_spec_sb.ref();
+        }
+
+        return error.ref();
+      });
+  return SBError();
 }

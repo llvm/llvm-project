@@ -122,6 +122,15 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
                         fir::FortranVariableFlagsEnum::optional);
     }
 
+    /// Does this variable have the Fortran CONTIGUOUS attribute?
+    /// Note that not having this attribute does not imply the
+    /// variable is not contiguous.
+    bool hasContiguousAttr() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::contiguous);
+    }
+
     /// Is this a Fortran character variable?
     bool isCharacter() {
       return getElementType().isa<fir::CharacterType>();
@@ -152,6 +161,13 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     /// fir.class?
     bool isBox() {
       return fir::isBoxAddressOrValue(getBase().getType());
+    }
+
+    /// Is this variable a Fortran parameter?
+    bool isParameter() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::parameter);
     }
 
     /// Interface verifier imlementation for declare operations.

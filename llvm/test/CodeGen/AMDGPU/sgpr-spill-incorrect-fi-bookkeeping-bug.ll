@@ -4,7 +4,7 @@
 ; which was due to incorrect book-keeping of removed dead frame indices.
 
 ; CHECK-LABEL: {{^}}kernel0:
-define amdgpu_kernel void @kernel0(i32 addrspace(1)* %out, i32 %in) #1 {
+define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
   call void asm sideeffect "", "~{v[0:7]}" () #0
   call void asm sideeffect "", "~{v[8:15]}" () #0
   call void asm sideeffect "", "~{v[16:19]}"() #0

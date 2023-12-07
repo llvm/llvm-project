@@ -321,7 +321,7 @@ ArrayRef<MCCVLoc> CodeViewContext::getLinesForExtent(size_t L, size_t R) {
     return std::nullopt;
   if (L >= MCCVLines.size())
     return std::nullopt;
-  return makeArrayRef(&MCCVLines[L], R - L);
+  return ArrayRef(&MCCVLines[L], R - L);
 }
 
 void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
@@ -649,8 +649,6 @@ void CodeViewContext::encodeDefRange(MCAsmLayout &Layout,
       const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(RangeBegin, Ctx);
       const MCBinaryExpr *BE =
           MCBinaryExpr::createAdd(SRE, MCConstantExpr::create(Bias, Ctx), Ctx);
-      MCValue Res;
-      BE->evaluateAsRelocatable(Res, &Layout, /*Fixup=*/nullptr);
 
       // Each record begins with a 2-byte number indicating how large the record
       // is.

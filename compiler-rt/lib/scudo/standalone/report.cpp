@@ -21,7 +21,7 @@ public:
   void append(const char *Format, ...) {
     va_list Args;
     va_start(Args, Format);
-    Message.append(Format, Args);
+    Message.vappend(Format, Args);
     va_end(Args);
   }
   NORETURN ~ScopedErrorReport() {
@@ -98,6 +98,11 @@ void NORETURN reportAllocationSizeTooBig(uptr UserSize, uptr TotalSize,
   Report.append("requested allocation size %zu (%zu after adjustments) exceeds "
                 "maximum supported size of %zu\n",
                 UserSize, TotalSize, MaxSize);
+}
+
+void NORETURN reportOutOfBatchClass() {
+  ScopedErrorReport Report;
+  Report.append("BatchClass region is used up, can't hold any free block\n");
 }
 
 void NORETURN reportOutOfMemory(uptr RequestedSize) {

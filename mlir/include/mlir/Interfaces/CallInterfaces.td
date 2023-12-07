@@ -41,11 +41,25 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
       "::mlir::CallInterfaceCallable", "getCallableForCallee"
     >,
     InterfaceMethod<[{
+        Sets the callee of this call-like operation. A `callee` is either a
+        reference to a symbol, via SymbolRefAttr, or a reference to a defined
+        SSA value. The type of the `callee` is expected to be the same as the
+        return type of `getCallableForCallee`, e.g., `callee` should be
+        SymbolRefAttr for `func.call`.
+      }],
+      "void", "setCalleeFromCallable", (ins "::mlir::CallInterfaceCallable":$callee)
+    >,
+    InterfaceMethod<[{
         Returns the operands within this call that are used as arguments to the
         callee.
       }],
       "::mlir::Operation::operand_range", "getArgOperands"
     >,
+    InterfaceMethod<[{
+        Returns the operands within this call that are used as arguments to the
+        callee as a mutable range.
+      }],
+      "::mlir::MutableOperandRange", "getArgOperandsMutable">,
   ];
 
   let extraClassDeclaration = [{
@@ -76,14 +90,58 @@ def CallableOpInterface : OpInterface<"CallableOpInterface"> {
         return null in the case of an external callable object, e.g. an external
         function.
       }],
-      "::mlir::Region *", "getCallableRegion"
-    >,
+      "::mlir::Region *", "getCallableRegion">,
     InterfaceMethod<[{
-        Returns the results types that the callable region produces when
-        executed.
+      Returns the callable's argument types based exclusively on the type (to
+      allow for this method may be called on function declarations).
+    }],
+    "::llvm::ArrayRef<::mlir::Type>", "getArgumentTypes">,
+    InterfaceMethod<[{
+      Returns the callable's result types based exclusively on the type (to
+      allow for this method may be called on function declarations).
+    }],
+    "::llvm::ArrayRef<::mlir::Type>", "getResultTypes">,
+
+    InterfaceMethod<[{
+        Get the array of argument attribute dictionaries. The method should
+        return an array attribute containing only dictionary attributes equal in
+        number to the number of region arguments. Alternatively, the method can
+        return null to indicate that the region has no argument attributes.
       }],
-      "::llvm::ArrayRef<::mlir::Type>", "getCallableResults"
-    >,
+      "::mlir::ArrayAttr", "getArgAttrsAttr", (ins),
+      /*methodBody=*/[{}], /*defaultImplementation=*/[{ return nullptr; }]>,
+    InterfaceMethod<[{
+        Get the array of result attribute dictionaries. The method should return
+        an array attribute containing only dictionary attributes equal in number
+        to the number of region results. Alternatively, the method can return
+        null to indicate that the region has no result attributes.
+      }],
+      "::mlir::ArrayAttr", "getResAttrsAttr", (ins),
+      /*methodBody=*/[{}], /*defaultImplementation=*/[{ return nullptr; }]>,
+    InterfaceMethod<[{
+      Set the array of argument attribute dictionaries.
+    }],
+    "void", "setArgAttrsAttr", (ins "::mlir::ArrayAttr":$attrs),
+      /*methodBody=*/[{}], /*defaultImplementation=*/[{ return; }]>,
+    InterfaceMethod<[{
+      Set the array of result attribute dictionaries.
+    }],
+    "void", "setResAttrsAttr", (ins "::mlir::ArrayAttr":$attrs),
+      /*methodBody=*/[{}], /*defaultImplementation=*/[{ return; }]>,
+    InterfaceMethod<[{
+      Remove the array of argument attribute dictionaries. This is the same as
+      setting all argument attributes to an empty dictionary. The method should
+      return the removed attribute.
+    }],
+    "::mlir::Attribute", "removeArgAttrsAttr", (ins),
+      /*methodBody=*/[{}], /*defaultImplementation=*/[{ return nullptr; }]>,
+    InterfaceMethod<[{
+      Remove the array of result attribute dictionaries. This is the same as
+      setting all result attributes to an empty dictionary. The method should
+      return the removed attribute.
+    }],
+    "::mlir::Attribute", "removeResAttrsAttr", (ins),
+      /*methodBody=*/[{}], /*defaultImplementation=*/[{ return nullptr; }]>,
   ];
 }
 

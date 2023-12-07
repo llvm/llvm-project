@@ -107,8 +107,7 @@ void ReportMmapWriteExec(int prot, int flags) {
   stack->Reset();
   uptr top = 0;
   uptr bottom = 0;
-  GET_CALLER_PC_BP_SP;
-  (void)sp;
+  GET_CALLER_PC_BP;
   bool fast = common_flags()->fast_unwind_on_fatal;
   if (StackTrace::WillUseFastUnwind(fast)) {
     GetThreadStackTopAndBottom(false, &top, &bottom);

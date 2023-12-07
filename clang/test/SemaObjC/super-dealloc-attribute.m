@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -x objective-c++ -fsyntax-only -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1  -fsyntax-only -fobjc-arc -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -x objective-c++ -fobjc-arc -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://6386358
 
 #if __has_attribute(objc_requires_super)
 #define  NS_REQUIRES_SUPER __attribute((objc_requires_super))
@@ -86,9 +85,6 @@
 
 @end
 
-// rdar://14251387
-#define IBAction void)__attribute__((ibaction)
-
 @interface UIViewController @end
 
 @interface ViewController : UIViewController
@@ -110,7 +106,6 @@
 } 
 @end
 
-// rdar://15385981
 @interface Barn
 - (void)openDoor __attribute__((objc_requires_super));
 @end

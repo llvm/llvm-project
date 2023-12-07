@@ -553,10 +553,8 @@ define void @PR38960_eq(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    setnp %al
 ; SSE-NEXT:    sete %cl
 ; SSE-NEXT:    testb %al, %cl
-; SSE-NEXT:    je .LBB24_1
-; SSE-NEXT:  # %bb.2: # %if.then
-; SSE-NEXT:    jmp foo@PLT # TAILCALL
-; SSE-NEXT:  .LBB24_1: # %if.end
+; SSE-NEXT:    jne foo@PLT # TAILCALL
+; SSE-NEXT:  # %bb.1: # %if.end
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR38960_eq:
@@ -565,10 +563,8 @@ define void @PR38960_eq(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    setnp %al
 ; AVX-NEXT:    sete %cl
 ; AVX-NEXT:    testb %al, %cl
-; AVX-NEXT:    je .LBB24_1
-; AVX-NEXT:  # %bb.2: # %if.then
-; AVX-NEXT:    jmp foo@PLT # TAILCALL
-; AVX-NEXT:  .LBB24_1: # %if.end
+; AVX-NEXT:    jne foo@PLT # TAILCALL
+; AVX-NEXT:  # %bb.1: # %if.end
 ; AVX-NEXT:    retq
 entry:
   %call = tail call i32 @llvm.x86.sse.comieq.ss(<4 x float> %A, <4 x float> %B) #3
@@ -590,10 +586,8 @@ define void @PR38960_neq(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    setp %al
 ; SSE-NEXT:    setne %cl
 ; SSE-NEXT:    orb %al, %cl
-; SSE-NEXT:    je .LBB25_1
-; SSE-NEXT:  # %bb.2: # %if.then
-; SSE-NEXT:    jmp foo@PLT # TAILCALL
-; SSE-NEXT:  .LBB25_1: # %if.end
+; SSE-NEXT:    jne foo@PLT # TAILCALL
+; SSE-NEXT:  # %bb.1: # %if.end
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR38960_neq:
@@ -602,10 +596,8 @@ define void @PR38960_neq(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    setp %al
 ; AVX-NEXT:    setne %cl
 ; AVX-NEXT:    orb %al, %cl
-; AVX-NEXT:    je .LBB25_1
-; AVX-NEXT:  # %bb.2: # %if.then
-; AVX-NEXT:    jmp foo@PLT # TAILCALL
-; AVX-NEXT:  .LBB25_1: # %if.end
+; AVX-NEXT:    jne foo@PLT # TAILCALL
+; AVX-NEXT:  # %bb.1: # %if.end
 ; AVX-NEXT:    retq
 entry:
   %call = tail call i32 @llvm.x86.sse.comineq.ss(<4 x float> %A, <4 x float> %B) #3

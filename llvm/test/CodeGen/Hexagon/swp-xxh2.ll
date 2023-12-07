@@ -12,7 +12,7 @@
 ; CHECK: = PHI
 
 ; Function Attrs: nounwind
-define void @f0(i32 %a0, i32* %a1) #0 {
+define void @f0(i32 %a0, ptr %a1) #0 {
 b0:
   %v0 = ashr i32 %a0, 1
   br label %b1
@@ -21,8 +21,8 @@ b1:                                               ; preds = %b1, %b0
   %v1 = phi i64 [ %v8, %b1 ], [ undef, %b0 ]
   %v2 = phi i32 [ %v9, %b1 ], [ 0, %b0 ]
   %v3 = phi i32 [ %v7, %b1 ], [ undef, %b0 ]
-  %v4 = inttoptr i32 %v3 to i32*
-  %v5 = load i32, i32* %v4, align 4, !tbaa !0
+  %v4 = inttoptr i32 %v3 to ptr
+  %v5 = load i32, ptr %v4, align 4, !tbaa !0
   %v6 = tail call i64 @llvm.hexagon.S2.packhl(i32 %v5, i32 undef)
   %v7 = add nsw i32 %v3, -16
   %v8 = tail call i64 @llvm.hexagon.M2.vdmacs.s0(i64 %v1, i64 undef, i64 %v6)
@@ -32,8 +32,8 @@ b1:                                               ; preds = %b1, %b0
 
 b2:                                               ; preds = %b1
   %v11 = trunc i64 %v8 to i32
-  %v12 = getelementptr inbounds i32, i32* %a1, i32 8
-  store i32 %v11, i32* %v12, align 4, !tbaa !0
+  %v12 = getelementptr inbounds i32, ptr %a1, i32 8
+  store i32 %v11, ptr %v12, align 4, !tbaa !0
   call void @llvm.trap()
   unreachable
 }

@@ -22,6 +22,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "reset-machine-function"
@@ -66,6 +67,12 @@ namespace {
         LLVM_DEBUG(dbgs() << "Resetting: " << MF.getName() << '\n');
         ++NumFunctionsReset;
         MF.reset();
+        MF.initTargetMachineFunctionInfo(MF.getSubtarget());
+
+        const LLVMTargetMachine &TM = MF.getTarget();
+        // MRI callback for target specific initializations.
+        TM.registerMachineRegisterInfoCallback(MF);
+
         if (EmitFallbackDiag) {
           const Function &F = MF.getFunction();
           DiagnosticInfoISelFallback DiagFallback(F);

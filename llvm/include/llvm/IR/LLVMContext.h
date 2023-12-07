@@ -68,7 +68,7 @@ class LLVMContext {
 public:
   LLVMContextImpl *const pImpl;
   LLVMContext();
-  LLVMContext(LLVMContext &) = delete;
+  LLVMContext(const LLVMContext &) = delete;
   LLVMContext &operator=(const LLVMContext &) = delete;
   ~LLVMContext();
 
@@ -95,6 +95,7 @@ public:
     OB_clang_arc_attachedcall = 6, // "clang.arc.attachedcall"
     OB_ptrauth = 7,                // "ptrauth"
     OB_kcfi = 8,                   // "kcfi"
+    OB_convergencectrl = 9,        // "convergencectrl"
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
@@ -311,16 +312,15 @@ public:
   /// LLVMContext is used by compilation.
   void setOptPassGate(OptPassGate&);
 
-  /// Whether we've decided on using opaque pointers or typed pointers yet.
-  bool hasSetOpaquePointersValue() const;
-
   /// Set whether opaque pointers are enabled. The method may be called multiple
   /// times, but only with the same value. Note that creating a pointer type or
   /// otherwise querying the opaque pointer mode performs an implicit set to
   /// the default value.
+  [[deprecated("Opaque pointers are always enabled")]]
   void setOpaquePointers(bool Enable) const;
 
   /// Whether typed pointers are supported. If false, all pointers are opaque.
+  [[deprecated("Always returns false")]]
   bool supportsTypedPointers() const;
 
 private:

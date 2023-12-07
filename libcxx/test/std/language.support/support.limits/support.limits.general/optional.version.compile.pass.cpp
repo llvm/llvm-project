@@ -17,7 +17,7 @@
 
 /*  Constant              Value
     __cpp_lib_optional    201606L [C++17]
-                          202110L [C++2b]
+                          202110L [C++23]
 */
 
 #include <optional>
@@ -53,14 +53,23 @@
 #   error "__cpp_lib_optional should have the value 201606L in c++20"
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_optional
-#   error "__cpp_lib_optional should be defined in c++2b"
+#   error "__cpp_lib_optional should be defined in c++23"
 # endif
 # if __cpp_lib_optional != 202110L
-#   error "__cpp_lib_optional should have the value 202110L in c++2b"
+#   error "__cpp_lib_optional should have the value 202110L in c++23"
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_optional
+#   error "__cpp_lib_optional should be defined in c++26"
+# endif
+# if __cpp_lib_optional != 202110L
+#   error "__cpp_lib_optional should have the value 202110L in c++26"
+# endif
+
+#endif // TEST_STD_VER > 23
 

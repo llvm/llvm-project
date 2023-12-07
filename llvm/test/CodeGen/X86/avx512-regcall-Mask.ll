@@ -35,29 +35,29 @@ define dso_local x86_regcallcc i64 @test_argv64i1(<64 x i1> %x0, <64 x i1> %x1, 
 ;
 ; WIN64-LABEL: test_argv64i1:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    addq %rdx, %rcx
-; WIN64-NEXT:    addq %rdi, %rcx
-; WIN64-NEXT:    addq %rsi, %rcx
-; WIN64-NEXT:    addq %r8, %rcx
+; WIN64-NEXT:    addq %rcx, %rax
+; WIN64-NEXT:    addq %rdx, %rax
+; WIN64-NEXT:    addq %rdi, %rax
+; WIN64-NEXT:    leaq (%rsi,%r8), %rcx
 ; WIN64-NEXT:    addq %r9, %rcx
-; WIN64-NEXT:    addq %r10, %rcx
-; WIN64-NEXT:    addq %r11, %rcx
+; WIN64-NEXT:    addq %rcx, %rax
+; WIN64-NEXT:    leaq (%r10,%r11), %rcx
 ; WIN64-NEXT:    addq %r12, %rcx
 ; WIN64-NEXT:    addq %r14, %rcx
-; WIN64-NEXT:    addq %r15, %rcx
 ; WIN64-NEXT:    addq %rcx, %rax
+; WIN64-NEXT:    addq %r15, %rax
 ; WIN64-NEXT:    addq {{[0-9]+}}(%rsp), %rax
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argv64i1:
 ; LINUXOSX64:       # %bb.0:
-; LINUXOSX64-NEXT:    addq %rdx, %rcx
-; LINUXOSX64-NEXT:    addq %rdi, %rcx
-; LINUXOSX64-NEXT:    addq %rsi, %rcx
-; LINUXOSX64-NEXT:    addq %r8, %rcx
+; LINUXOSX64-NEXT:    addq %rcx, %rax
+; LINUXOSX64-NEXT:    addq %rdx, %rax
+; LINUXOSX64-NEXT:    addq %rdi, %rax
+; LINUXOSX64-NEXT:    leaq (%rsi,%r8), %rcx
 ; LINUXOSX64-NEXT:    addq %r9, %rcx
-; LINUXOSX64-NEXT:    addq %r12, %rcx
-; LINUXOSX64-NEXT:    addq %r13, %rcx
+; LINUXOSX64-NEXT:    addq %rcx, %rax
+; LINUXOSX64-NEXT:    leaq (%r12,%r13), %rcx
 ; LINUXOSX64-NEXT:    addq %r14, %rcx
 ; LINUXOSX64-NEXT:    addq %r15, %rcx
 ; LINUXOSX64-NEXT:    addq %rcx, %rax
@@ -98,9 +98,10 @@ define dso_local i64 @caller_argv64i1() #0 {
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    subl $88, %esp
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [2,1,2,1]
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = [2,1,2,1]
+; X32-NEXT:    # xmm0 = mem[0,0]
 ; X32-NEXT:    vmovups %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    vmovaps {{.*#+}} zmm0 = [2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1]
+; X32-NEXT:    vbroadcastsd {{.*#+}} zmm0 = [2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1]
 ; X32-NEXT:    vmovups %zmm0, (%esp)
 ; X32-NEXT:    movl $1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl $2, {{[0-9]+}}(%esp)

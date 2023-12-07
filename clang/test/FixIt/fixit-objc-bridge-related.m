@@ -1,6 +1,5 @@
 // RUN: not %clang_cc1 -triple x86_64-apple-darwin10  -fdiagnostics-parseable-fixits -x objective-c -fobjc-arc %s 2>&1 | FileCheck %s
 // RUN: not %clang_cc1 -triple x86_64-apple-darwin10  -fdiagnostics-parseable-fixits -x objective-c++ -fobjc-arc %s 2>&1 | FileCheck %s
-// rdar://15932435
 
 typedef struct __attribute__((objc_bridge_related(UIColor,colorWithCGColor:,CGColor))) CGColor *CGColorRef;
 
@@ -22,14 +21,14 @@ void test(UIButton *myButton) {
   cgColor = (CGColorRef)[myButton tintColor];
 }
 
-// CHECK: {17:36-17:36}:"["
-// CHECK: {17:54-17:54}:" CGColor]"
+// CHECK: {16:36-16:36}:"["
+// CHECK: {16:54-16:54}:" CGColor]"
 
-// CHECK: {18:13-18:13}:"["
-// CHECK: {18:31-18:31}:" CGColor]"
+// CHECK: {17:13-17:13}:"["
+// CHECK: {17:31-17:31}:" CGColor]"
 
-// CHECK: {22:25-22:25}:"["
-// CHECK: {22:45-22:45}:" CGColor]"
+// CHECK: {21:25-21:25}:"["
+// CHECK: {21:45-21:45}:" CGColor]"
 
 @interface ImplicitPropertyTest
 - (UIColor *)tintColor;
@@ -39,5 +38,5 @@ void test1(ImplicitPropertyTest *myImplicitPropertyTest) {
   CGColorRef cgColor = (CGColorRef)[myImplicitPropertyTest tintColor];
 }
 
-// CHECK: {39:36-39:36}:"["
-// CHECK: {39:70-39:70}:" CGColor]"
+// CHECK: {38:36-38:36}:"["
+// CHECK: {38:70-38:70}:" CGColor]"

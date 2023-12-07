@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++17 -fopenmp -fopenmp-version=51 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++17 -fopenmp -fsyntax-only -verify %s
 
 // This file tests the custom parsing logic for the OpenMP 5.1 attribute
 // syntax. It does not test actual OpenMP directive syntax, just the attribute

@@ -214,8 +214,13 @@ static DecodeStatus DecodeUnconditionalBranch(MCInst &Inst, uint32_t insn,
                                               uint64_t Address,
                                               const MCDisassembler *Decoder);
 static DecodeStatus
-DecodeSystemPStateInstruction(MCInst &Inst, uint32_t insn, uint64_t Address,
-                              const MCDisassembler *Decoder);
+DecodeSystemPStateImm0_15Instruction(MCInst &Inst, uint32_t insn,
+                                     uint64_t Address,
+                                     const MCDisassembler *Decoder);
+static DecodeStatus
+DecodeSystemPStateImm0_1Instruction(MCInst &Inst, uint32_t insn,
+                                    uint64_t Address,
+                                    const MCDisassembler *Decoder);
 static DecodeStatus DecodeTestAndBranch(MCInst &Inst, uint32_t insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder);
@@ -331,8 +336,8 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // operand for the accumulator (ZA) or implicit immediate zero which isn't
     // encoded, manually insert operand.
     for (unsigned i = 0; i < Desc.getNumOperands(); i++) {
-      if (Desc.OpInfo[i].OperandType == MCOI::OPERAND_REGISTER) {
-        switch (Desc.OpInfo[i].RegClass) {
+      if (Desc.operands()[i].OperandType == MCOI::OPERAND_REGISTER) {
+        switch (Desc.operands()[i].RegClass) {
         default:
           break;
         case AArch64::MPRRegClassID:
@@ -345,7 +350,7 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
           MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZT0));
           break;
         }
-      } else if (Desc.OpInfo[i].OperandType ==
+      } else if (Desc.operands()[i].OperandType ==
                  AArch64::OPERAND_IMPLICIT_IMM_0) {
         MI.insert(MI.begin() + i, MCOperand::createImm(0));
       }
@@ -696,17 +701,16 @@ DecodeMatrixTileListRegisterClass(MCInst &Inst, unsigned RegMask,
   return Success;
 }
 
-static const SmallVector<SmallVector<unsigned, 16>, 5>
-    MatrixZATileDecoderTable = {
-        {AArch64::ZAB0},
-        {AArch64::ZAH0, AArch64::ZAH1},
-        {AArch64::ZAS0, AArch64::ZAS1, AArch64::ZAS2, AArch64::ZAS3},
-        {AArch64::ZAD0, AArch64::ZAD1, AArch64::ZAD2, AArch64::ZAD3,
-         AArch64::ZAD4, AArch64::ZAD5, AArch64::ZAD6, AArch64::ZAD7},
-        {AArch64::ZAQ0, AArch64::ZAQ1, AArch64::ZAQ2, AArch64::ZAQ3,
-         AArch64::ZAQ4, AArch64::ZAQ5, AArch64::ZAQ6, AArch64::ZAQ7,
-         AArch64::ZAQ8, AArch64::ZAQ9, AArch64::ZAQ10, AArch64::ZAQ11,
-         AArch64::ZAQ12, AArch64::ZAQ13, AArch64::ZAQ14, AArch64::ZAQ15}};
+static const MCPhysReg MatrixZATileDecoderTable[5][16] = {
+    {AArch64::ZAB0},
+    {AArch64::ZAH0, AArch64::ZAH1},
+    {AArch64::ZAS0, AArch64::ZAS1, AArch64::ZAS2, AArch64::ZAS3},
+    {AArch64::ZAD0, AArch64::ZAD1, AArch64::ZAD2, AArch64::ZAD3, AArch64::ZAD4,
+     AArch64::ZAD5, AArch64::ZAD6, AArch64::ZAD7},
+    {AArch64::ZAQ0, AArch64::ZAQ1, AArch64::ZAQ2, AArch64::ZAQ3, AArch64::ZAQ4,
+     AArch64::ZAQ5, AArch64::ZAQ6, AArch64::ZAQ7, AArch64::ZAQ8, AArch64::ZAQ9,
+     AArch64::ZAQ10, AArch64::ZAQ11, AArch64::ZAQ12, AArch64::ZAQ13,
+     AArch64::ZAQ14, AArch64::ZAQ15}};
 
 template <unsigned NumBitsForTile>
 static DecodeStatus DecodeMatrixTile(MCInst &Inst, unsigned RegNo,
@@ -1814,29 +1818,49 @@ static DecodeStatus DecodeUnconditionalBranch(MCInst &Inst, uint32_t insn,
   return Success;
 }
 
+static bool isInvalidPState(uint64_t Op1, uint64_t Op2) {
+  return Op1 == 0b000 && (Op2 == 0b000 || // CFINV
+                          Op2 == 0b001 || // XAFlag
+                          Op2 == 0b010);  // AXFlag
+}
+
 static DecodeStatus
-DecodeSystemPStateInstruction(MCInst &Inst, uint32_t insn, uint64_t Addr,
-                              const MCDisassembler *Decoder) {
+DecodeSystemPStateImm0_15Instruction(MCInst &Inst, uint32_t insn, uint64_t Addr,
+                                     const MCDisassembler *Decoder) {
   uint64_t op1 = fieldFromInstruction(insn, 16, 3);
   uint64_t op2 = fieldFromInstruction(insn, 5, 3);
-  uint64_t crm = fieldFromInstruction(insn, 8, 4);
+  uint64_t imm = fieldFromInstruction(insn, 8, 4);
   uint64_t pstate_field = (op1 << 3) | op2;
 
-  switch (pstate_field) {
-  case 0x01: // XAFlag
-  case 0x02: // AXFlag
-    return Fail;
-  }
-
-  if ((pstate_field == AArch64PState::PAN  ||
-       pstate_field == AArch64PState::UAO  ||
-       pstate_field == AArch64PState::SSBS) && crm > 1)
+  if (isInvalidPState(op1, op2))
     return Fail;
 
   Inst.addOperand(MCOperand::createImm(pstate_field));
-  Inst.addOperand(MCOperand::createImm(crm));
+  Inst.addOperand(MCOperand::createImm(imm));
 
-  auto PState = AArch64PState::lookupPStateByEncoding(pstate_field);
+  auto PState = AArch64PState::lookupPStateImm0_15ByEncoding(pstate_field);
+  if (PState &&
+      PState->haveFeatures(Decoder->getSubtargetInfo().getFeatureBits()))
+    return Success;
+  return Fail;
+}
+
+static DecodeStatus
+DecodeSystemPStateImm0_1Instruction(MCInst &Inst, uint32_t insn, uint64_t Addr,
+                                    const MCDisassembler *Decoder) {
+  uint64_t op1 = fieldFromInstruction(insn, 16, 3);
+  uint64_t op2 = fieldFromInstruction(insn, 5, 3);
+  uint64_t crm_high = fieldFromInstruction(insn, 9, 3);
+  uint64_t imm = fieldFromInstruction(insn, 8, 1);
+  uint64_t pstate_field = (crm_high << 6) | (op1 << 3) | op2;
+
+  if (isInvalidPState(op1, op2))
+    return Fail;
+
+  Inst.addOperand(MCOperand::createImm(pstate_field));
+  Inst.addOperand(MCOperand::createImm(imm));
+
+  auto PState = AArch64PState::lookupPStateImm0_1ByEncoding(pstate_field);
   if (PState &&
       PState->haveFeatures(Decoder->getSubtargetInfo().getFeatureBits()))
     return Success;

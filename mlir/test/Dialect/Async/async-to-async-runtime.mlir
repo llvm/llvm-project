@@ -455,3 +455,31 @@ async.func @async_func_await(%arg0: f32, %arg1: !async.value<f32>)
 // CHECK-SAME: !async.value<f32>
 // CHECK: async.coro.suspend %[[SAVED]]
 // CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME:.*]], ^[[CLEANUP:.*]]
+
+// -----
+// Async execute inside async func
+
+// CHECK-LABEL: @execute_in_async_func
+async.func @execute_in_async_func(%arg0: f32, %arg1: memref<1xf32>)
+             -> !async.token {
+  %token = async.execute {
+    %c0 = arith.constant 0 : index
+    memref.store %arg0, %arg1[%c0] : memref<1xf32>
+    async.yield
+  }
+  async.await %token : !async.token
+  return
+}
+// Call outlind async execute Function
+// CHECK: %[[RES:.*]] = call @async_execute_fn(
+// CHECK-SAME:    %[[VALUE:arg[0-9]+]],
+// CHECK-SAME:    %[[MEMREF:arg[0-9]+]]
+// CHECK-SAME:  ) : (f32, memref<1xf32>) -> !async.token
+
+// Function outlined from the async.execute operation.
+// CHECK-LABEL: func private @async_execute_fn(
+// CHECK-SAME:    %[[VALUE:arg[0-9]+]]: f32,
+// CHECK-SAME:    %[[MEMREF:arg[0-9]+]]: memref<1xf32>
+// CHECK-SAME:  ) -> !async.token
+// CHECK:         %[[CST:.*]] = arith.constant 0 : index
+// CHECK:         memref.store %[[VALUE]], %[[MEMREF]][%[[CST]]]

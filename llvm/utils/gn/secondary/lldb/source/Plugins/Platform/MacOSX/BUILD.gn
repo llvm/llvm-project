@@ -30,6 +30,7 @@ static_library("MacOSX") {
     "//lldb/source/Target",
     "//lldb/source/Utility",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   # Reaches into Plugins/Platform/POSIX.

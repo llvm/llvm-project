@@ -64,6 +64,12 @@ namespace clang {
         return CharUnits(Quantity);
       }
 
+      /// fromQuantity - Construct a CharUnits quantity from an llvm::Align
+      /// quantity.
+      static CharUnits fromQuantity(llvm::Align Quantity) {
+        return CharUnits(Quantity.value());
+      }
+
       // Compound assignment.
       CharUnits& operator+= (const CharUnits &Other) {
         Quantity += Other.Quantity;

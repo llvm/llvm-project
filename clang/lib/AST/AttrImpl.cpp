@@ -14,6 +14,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include <optional>
 using namespace clang;
 
 void LoopHintAttr::printPrettyPragma(raw_ostream &OS,
@@ -148,16 +149,18 @@ void OMPDeclareTargetDeclAttr::printPrettyPragma(
   }
 }
 
-llvm::Optional<OMPDeclareTargetDeclAttr *>
+std::optional<OMPDeclareTargetDeclAttr *>
 OMPDeclareTargetDeclAttr::getActiveAttr(const ValueDecl *VD) {
-  if (!VD->hasAttrs())
+  if (llvm::all_of(VD->redecls(), [](const Decl *D) { return !D->hasAttrs(); }))
     return std::nullopt;
   unsigned Level = 0;
   OMPDeclareTargetDeclAttr *FoundAttr = nullptr;
-  for (auto *Attr : VD->specific_attrs<OMPDeclareTargetDeclAttr>()) {
-    if (Level <= Attr->getLevel()) {
-      Level = Attr->getLevel();
-      FoundAttr = Attr;
+  for (const Decl *D : VD->redecls()) {
+    for (auto *Attr : D->specific_attrs<OMPDeclareTargetDeclAttr>()) {
+      if (Level <= Attr->getLevel()) {
+        Level = Attr->getLevel();
+        FoundAttr = Attr;
+      }
     }
   }
   if (FoundAttr)
@@ -165,25 +168,25 @@ OMPDeclareTargetDeclAttr::getActiveAttr(const ValueDecl *VD) {
   return std::nullopt;
 }
 
-llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy>
+std::optional<OMPDeclareTargetDeclAttr::MapTypeTy>
 OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(const ValueDecl *VD) {
-  llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
+  std::optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
   if (ActiveAttr)
     return (*ActiveAttr)->getMapType();
   return std::nullopt;
 }
 
-llvm::Optional<OMPDeclareTargetDeclAttr::DevTypeTy>
+std::optional<OMPDeclareTargetDeclAttr::DevTypeTy>
 OMPDeclareTargetDeclAttr::getDeviceType(const ValueDecl *VD) {
-  llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
+  std::optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
   if (ActiveAttr)
     return (*ActiveAttr)->getDevType();
   return std::nullopt;
 }
 
-llvm::Optional<SourceLocation>
+std::optional<SourceLocation>
 OMPDeclareTargetDeclAttr::getLocation(const ValueDecl *VD) {
-  llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
+  std::optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
   if (ActiveAttr)
     return (*ActiveAttr)->getRange().getBegin();
   return std::nullopt;
@@ -236,6 +239,35 @@ void OMPDeclareVariantAttr::printPrettyPragma(
     PrintInteropInfo(appendArgs_begin(), appendArgs_end());
     OS << ")";
   }
+}
+
+unsigned AlignedAttr::getAlignment(ASTContext &Ctx) const {
+  assert(!isAlignmentDependent());
+  if (getCachedAlignmentValue())
+    return *getCachedAlignmentValue();
+
+  // Handle alignmentType case.
+  if (!isAlignmentExpr()) {
+    QualType T = getAlignmentType()->getType();
+
+    // C++ [expr.alignof]p3:
+    //     When alignof is applied to a reference type, the result is the
+    //     alignment of the referenced type.
+    T = T.getNonReferenceType();
+
+    if (T.getQualifiers().hasUnaligned())
+      return Ctx.getCharWidth();
+
+    return Ctx.getTypeAlignInChars(T.getTypePtr()).getQuantity() *
+           Ctx.getCharWidth();
+  }
+
+  // Handle alignmentExpr case.
+  if (alignmentExpr)
+    return alignmentExpr->EvaluateKnownConstInt(Ctx).getZExtValue() *
+           Ctx.getCharWidth();
+
+  return Ctx.getTargetDefaultAlignForAttributeAligned();
 }
 
 #include "clang/AST/AttrImpl.inc"

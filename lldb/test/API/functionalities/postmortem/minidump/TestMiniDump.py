@@ -44,35 +44,35 @@ class MiniDumpTestCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
         expected_modules = [
             {
-                'filename' : r"C:\Users\amccarth\Documents\Visual Studio 2013\Projects\fizzbuzz\Debug\fizzbuzz.exe",
-                'uuid' : '0F45B791-9A96-46F9-BF8F-2D6076EA421A-00000011',
+                "filename": r"C:\Users\amccarth\Documents\Visual Studio 2013\Projects\fizzbuzz\Debug\fizzbuzz.exe",
+                "uuid": "0F45B791-9A96-46F9-BF8F-2D6076EA421A-00000011",
             },
             {
-                'filename' : r"C:\Windows\SysWOW64\ntdll.dll",
-                'uuid' : 'BBB0846A-402C-4052-A16B-67650BBFE6B0-00000002',
+                "filename": r"C:\Windows\SysWOW64\ntdll.dll",
+                "uuid": "BBB0846A-402C-4052-A16B-67650BBFE6B0-00000002",
             },
             {
-                'filename' : r"C:\Windows\SysWOW64\kernel32.dll",
-                'uuid' : 'E5CB7E1B-005E-4113-AB98-98D6913B52D8-00000002',
+                "filename": r"C:\Windows\SysWOW64\kernel32.dll",
+                "uuid": "E5CB7E1B-005E-4113-AB98-98D6913B52D8-00000002",
             },
             {
-                'filename' : r"C:\Windows\SysWOW64\KERNELBASE.dll",
-                'uuid' : '0BF95241-CB0D-4BD4-AC5D-186A6452E522-00000001',
+                "filename": r"C:\Windows\SysWOW64\KERNELBASE.dll",
+                "uuid": "0BF95241-CB0D-4BD4-AC5D-186A6452E522-00000001",
             },
             {
-                'filename' : r"C:\Windows\System32\MSVCP120D.dll",
-                'uuid' : '3C05516E-57E7-40EB-8D3F-9722C5BD80DD-00000001',
+                "filename": r"C:\Windows\System32\MSVCP120D.dll",
+                "uuid": "3C05516E-57E7-40EB-8D3F-9722C5BD80DD-00000001",
             },
             {
-                'filename' : r"C:\Windows\System32\MSVCR120D.dll",
-                'uuid' : '6382FB86-46C4-4046-AE42-8D97B3F91FF2-00000001',
+                "filename": r"C:\Windows\System32\MSVCR120D.dll",
+                "uuid": "6382FB86-46C4-4046-AE42-8D97B3F91FF2-00000001",
             },
         ]
         self.assertEqual(self.target.GetNumModules(), len(expected_modules))
         for module, expected in zip(self.target.modules, expected_modules):
             self.assertTrue(module.IsValid())
-            self.assertEqual(module.file.fullpath, expected['filename'])
-            self.assertEqual(module.GetUUIDString(), expected['uuid'])
+            self.assertEqual(module.file.fullpath, expected["filename"])
+            self.assertEqual(module.GetUUIDString(), expected["uuid"])
 
     def test_breakpad_uuid_matching(self):
         """Test that the uuid computation algorithms in minidump and breakpad
@@ -80,8 +80,15 @@ class MiniDumpTestCase(TestBase):
         self.target = self.dbg.CreateTarget("")
         self.process = self.target.LoadCore("fizzbuzz_no_heap.dmp")
         self.assertTrue(self.process, PROCESS_IS_VALID)
-        self.expect("target symbols add fizzbuzz.syms", substrs=["symbol file",
-            "fizzbuzz.syms", "has been added to", "fizzbuzz.exe"]),
+        self.expect(
+            "target symbols add fizzbuzz.syms",
+            substrs=[
+                "symbol file",
+                "fizzbuzz.syms",
+                "has been added to",
+                "fizzbuzz.exe",
+            ],
+        ),
         self.assertTrue(self.target.modules[0].FindSymbol("main"))
 
     @skipIfLLVMTargetMissing("X86")
@@ -94,7 +101,14 @@ class MiniDumpTestCase(TestBase):
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
 
-        pc_list = [ 0x00164d14, 0x00167c79, 0x00167e6d, 0x7510336a, 0x77759882, 0x77759855]
+        pc_list = [
+            0x00164D14,
+            0x00167C79,
+            0x00167E6D,
+            0x7510336A,
+            0x77759882,
+            0x77759855,
+        ]
 
         self.assertEqual(thread.GetNumFrames(), len(pc_list))
         for i in range(len(pc_list)):
@@ -103,7 +117,7 @@ class MiniDumpTestCase(TestBase):
             self.assertEqual(frame.GetPC(), pc_list[i])
             self.assertTrue(frame.GetModule().IsValid())
 
-    @skipUnlessWindows # Minidump saving works only on windows
+    @skipUnlessWindows  # Minidump saving works only on windows
     def test_deeper_stack_in_mini_dump(self):
         """Test that we can examine a more interesting stack in a mini dump."""
         self.build()
@@ -114,7 +128,8 @@ class MiniDumpTestCase(TestBase):
             target = self.dbg.CreateTarget(exe)
             breakpoint = target.BreakpointCreateByName("bar")
             process = target.LaunchSimple(
-                None, None, self.get_process_working_directory())
+                None, None, self.get_process_working_directory()
+            )
             self.assertState(process.GetState(), lldb.eStateStopped)
             self.assertTrue(process.SaveCore(core))
             self.assertTrue(os.path.isfile(core))
@@ -125,7 +140,7 @@ class MiniDumpTestCase(TestBase):
             process = target.LoadCore(core)
             thread = process.GetThreadAtIndex(0)
 
-            expected_stack = {0: 'bar', 1: 'foo', 2: 'main'}
+            expected_stack = {0: "bar", 1: "foo", 2: "main"}
             self.assertGreaterEqual(thread.GetNumFrames(), len(expected_stack))
             for index, name in expected_stack.items():
                 frame = thread.GetFrameAtIndex(index)
@@ -136,10 +151,10 @@ class MiniDumpTestCase(TestBase):
         finally:
             # Clean up the mini dump file.
             self.assertTrue(self.dbg.DeleteTarget(target))
-            if (os.path.isfile(core)):
+            if os.path.isfile(core):
                 os.unlink(core)
 
-    @skipUnlessWindows # Minidump saving works only on windows
+    @skipUnlessWindows  # Minidump saving works only on windows
     def test_local_variables_in_mini_dump(self):
         """Test that we can examine local variables in a mini dump."""
         self.build()
@@ -150,7 +165,8 @@ class MiniDumpTestCase(TestBase):
             target = self.dbg.CreateTarget(exe)
             breakpoint = target.BreakpointCreateByName("bar")
             process = target.LaunchSimple(
-                None, None, self.get_process_working_directory())
+                None, None, self.get_process_working_directory()
+            )
             self.assertState(process.GetState(), lldb.eStateStopped)
             self.assertTrue(process.SaveCore(core))
             self.assertTrue(os.path.isfile(core))
@@ -161,11 +177,11 @@ class MiniDumpTestCase(TestBase):
             process = target.LoadCore(core)
             thread = process.GetThreadAtIndex(0)
             frame = thread.GetFrameAtIndex(0)
-            value = frame.EvaluateExpression('x')
+            value = frame.EvaluateExpression("x")
             self.assertEqual(value.GetValueAsSigned(), 3)
 
         finally:
             # Clean up the mini dump file.
             self.assertTrue(self.dbg.DeleteTarget(target))
-            if (os.path.isfile(core)):
+            if os.path.isfile(core):
                 os.unlink(core)

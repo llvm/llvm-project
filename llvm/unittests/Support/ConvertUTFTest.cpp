@@ -75,7 +75,7 @@ TEST(ConvertUTFTest, ConvertUTF8ToUTF16String) {
 
 TEST(ConvertUTFTest, OddLengthInput) {
   std::string Result;
-  bool Success = convertUTF16ToUTF8String(makeArrayRef("xxxxx", 5), Result);
+  bool Success = convertUTF16ToUTF8String(ArrayRef("xxxxx", 5), Result);
   EXPECT_FALSE(Success);
 }
 
@@ -88,25 +88,25 @@ TEST(ConvertUTFTest, Empty) {
 }
 
 TEST(ConvertUTFTest, HasUTF16BOM) {
-  bool HasBOM = hasUTF16ByteOrderMark(makeArrayRef("\xff\xfe", 2));
+  bool HasBOM = hasUTF16ByteOrderMark(ArrayRef("\xff\xfe", 2));
   EXPECT_TRUE(HasBOM);
-  HasBOM = hasUTF16ByteOrderMark(makeArrayRef("\xfe\xff", 2));
+  HasBOM = hasUTF16ByteOrderMark(ArrayRef("\xfe\xff", 2));
   EXPECT_TRUE(HasBOM);
-  HasBOM = hasUTF16ByteOrderMark(makeArrayRef("\xfe\xff ", 3));
+  HasBOM = hasUTF16ByteOrderMark(ArrayRef("\xfe\xff ", 3));
   EXPECT_TRUE(HasBOM); // Don't care about odd lengths.
-  HasBOM = hasUTF16ByteOrderMark(makeArrayRef("\xfe\xff\x00asdf", 6));
+  HasBOM = hasUTF16ByteOrderMark(ArrayRef("\xfe\xff\x00asdf", 6));
   EXPECT_TRUE(HasBOM);
 
   HasBOM = hasUTF16ByteOrderMark(std::nullopt);
   EXPECT_FALSE(HasBOM);
-  HasBOM = hasUTF16ByteOrderMark(makeArrayRef("\xfe", 1));
+  HasBOM = hasUTF16ByteOrderMark(ArrayRef("\xfe", 1));
   EXPECT_FALSE(HasBOM);
 }
 
 TEST(ConvertUTFTest, UTF16WrappersForConvertUTF16ToUTF8String) {
   // Src is the look of disapproval.
   alignas(UTF16) static const char Src[] = "\xff\xfe\xa0\x0c_\x00\xa0\x0c";
-  ArrayRef<UTF16> SrcRef = makeArrayRef((const UTF16 *)Src, 4);
+  ArrayRef<UTF16> SrcRef = ArrayRef((const UTF16 *)Src, 4);
   std::string Result;
   bool Success = convertUTF16ToUTF8String(SrcRef, Result);
   EXPECT_TRUE(Success);

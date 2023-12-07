@@ -102,6 +102,14 @@ class oimm<int num> : Operand<i32>,
   let DecoderMethod = "decodeOImmOperand<"#num#">";
 }
 
+def imm_neg_XFORM : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N), MVT::i32);
+}]>;
+
+class oimm_neg<int num> : Operand<i32>,
+  ImmLeaf<i32, "return isUInt<"#num#">(-Imm - 1);"> {
+}
+
 class uimm<int num, int shift = 0> : Operand<i32>,
   ImmLeaf<i32, "return isShiftedUInt<"#num#", "#shift#">(Imm);"> {
   let EncoderMethod = "getImmOpValue<"#shift#">";
@@ -110,6 +118,10 @@ class uimm<int num, int shift = 0> : Operand<i32>,
         UImmAsmOperand<num, "Shift"#shift>,
         UImmAsmOperand<num>);
   let DecoderMethod = "decodeUImmOperand<"#num#", "#shift#">";
+}
+
+class uimm_neg<int num, int shift = 0> : Operand<i32>,
+  ImmLeaf<i32, "return isShiftedUInt<"#num#", "#shift#">(-Imm);"> {
 }
 
 class simm<int num, int shift = 0> : Operand<i32>,
@@ -145,6 +157,30 @@ def uimm_shift : Operand<i32>, ImmLeaf<i32, "return isUInt<2>(Imm);"> {
   let ParserMatchClass = UImmAsmOperand<2>;
   let DecoderMethod = "decodeImmShiftOpValue";
 }
+
+// Optimize (or x, imm) to (BSETI x, log2(imm)). We should exclude the
+// case can be opimized to (ORI32/ORI16 x, imm).
+def imm32_1_pop_bit_XFORM : SDNodeXForm<imm, [{
+  uint32_t I = N->getZExtValue();
+  return CurDAG->getTargetConstant(llvm::Log2_32(I), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+def imm32_1_pop_bit : PatLeaf<(imm), [{
+  uint32_t I = N->getZExtValue();
+  return llvm::popcount(I) == 1 && I > 0xfff;
+}]>;
+
+// Optimize (and x, imm) to (BCLRI x, log2(~imm)). We should exclude the
+// case can be opimized to (ANDNI x, ~imm).
+def imm32_1_zero_bit_XFORM : SDNodeXForm<imm, [{
+  uint32_t I = ~N->getZExtValue();
+  return CurDAG->getTargetConstant(llvm::Log2_32(I), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+def imm32_1_zero_bit : PatLeaf<(imm), [{
+  uint32_t I = ~N->getZExtValue();
+  return llvm::popcount(I) == 1 && I > 0xfff;
+}]>;
 
 def CSKYSymbol : AsmOperandClass {
   let Name = "CSKYSymbol";
@@ -255,6 +291,23 @@ def oimm16 : oimm<16> {
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isUInt<16>(Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+
+def oimm8_neg : oimm_neg<8> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<8>(-Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def oimm12_neg : oimm_neg<12> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<12>(-Imm - 1);
     return MCOp.isBareSymbolRef();
   }];
 }
@@ -370,6 +423,8 @@ def uimm16_16 : uimm<16, 16>;
 def uimm20 : uimm<20>;
 def uimm24 : uimm<24>;
 def uimm24_8 : uimm<24, 8>;
+
+def uimm5_neg : uimm_neg<5>;
 
 def simm8_2 : simm<8, 2>;
 
@@ -517,6 +572,9 @@ let Predicates = [iHasE2] in {
 
   let Size = 8 in
   def RSUBI32 : CSKYPseudo<(outs GPR:$rd), (ins GPR:$rx, uimm12:$imm12), "rsubi32 $rd, $rx, $imm12", []>;
+
+  def : Pat<(add GPR:$rs1, (oimm12_neg:$im)),
+            (SUBI32 GPR:$rs1, (imm_neg_XFORM oimm12_neg:$im))>;
 
   def LSL32 : R_YXZ_SP_F1<0x10, 0x1,
     BinOpFrag<(shl node:$LHS, node:$RHS)>, "lsl32">;
@@ -885,9 +943,9 @@ let Predicates = [iHasE2] in {
   def XTRB3 : R_XZ<0x1C, 0x8, "xtrb3.32">;
   def BTSTI32 : I_5_X<0x0A, 0x4, "btsti32", uimm5, []>;
   def BCLRI32 : I_5_XZ<0xA, 0x1, "bclri32",
-  (outs GPR:$rz), (ins GPR:$rx, uimm5:$imm5), []>;
+    (outs GPR:$rz), (ins GPR:$rx, uimm5:$imm5), []>;
   def BSETI32 : I_5_XZ<0xA, 0x2, "bseti32",
-  (outs GPR:$rz), (ins GPR:$rx, uimm5:$imm5), []>;
+    (outs GPR:$rz), (ins GPR:$rx, uimm5:$imm5), []>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1131,22 +1189,26 @@ def : Pat<(i32 (load constpool:$src)), (LRW32 (to_tconstpool tconstpool:$src))>;
 
 // Branch Patterns.
 let Predicates = [iHasE2] in {
-  def : Pat<(brcond CARRY:$ca, bb:$imm16),
+def : Pat<(brcond CARRY:$ca, bb:$imm16),
           (BT32 CARRY:$ca, bb:$imm16)>;
 
-  def : Pat<(brcond (i32 (setne GPR:$rs1, uimm16:$rs2)), bb:$imm16),
-          (BT32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), bb:$imm16)>;
-  def : Pat<(brcond (i32 (seteq GPR:$rs1, uimm16:$rs2)), bb:$imm16),
-          (BF32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), bb:$imm16)>;
-  def : Pat<(brcond (i32 (setuge GPR:$rs1, oimm16:$rs2)), bb:$imm16),
-          (BT32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
-  def : Pat<(brcond (i32 (setult GPR:$rs1, oimm16:$rs2)), bb:$imm16),
-          (BF32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
-  def : Pat<(brcond (i32 (setlt GPR:$rs1, oimm16:$rs2)), bb:$imm16),
-          (BT32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
-  def : Pat<(brcond (i32 (setge GPR:$rs1, oimm16:$rs2)), bb:$imm16),
-          (BF32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
+multiclass BTF32Pat0<PatFrag cond0, PatFrag cond1, ImmLeaf imm_ty, Instruction inst> {
+  def : Pat<(brcond (i32 (cond0 GPR:$rs1, uimm16:$rs2)), bb:$imm16),
+          (BT32 (inst GPR:$rs1, imm_ty:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (cond1 GPR:$rs1, uimm16:$rs2)), bb:$imm16),
+          (BF32 (inst GPR:$rs1, imm_ty:$rs2), bb:$imm16)>;
+}
 
+defm : BTF32Pat0<setne, seteq, uimm16, CMPNEI32>;
+defm : BTF32Pat0<setuge, setult, oimm16, CMPHSI32>;
+defm : BTF32Pat0<setlt, setge, oimm16, CMPLTI32>;
+
+def : Pat<(brcond (i32 (setne (and GPR:$rs, imm32_1_pop_bit:$im), 0)), bb:$imm16),
+          (BT32 (BTSTI32 GPR:$rs, (imm32_1_pop_bit_XFORM imm32_1_pop_bit:$im)),
+                bb:$imm16)>;
+def : Pat<(brcond (i32 (seteq (and GPR:$rs, imm32_1_pop_bit:$im), 0)), bb:$imm16),
+          (BF32 (BTSTI32 GPR:$rs, (imm32_1_pop_bit_XFORM imm32_1_pop_bit:$im)),
+                bb:$imm16)>;
 }
 
 let Predicates = [iHas2E3] in {
@@ -1155,22 +1217,19 @@ def : Pat<(brcond (i32 (setne GPR:$rs1, GPR:$rs2)), bb:$imm16),
           (BT32 (CMPNE32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
 def : Pat<(brcond (i32 (seteq GPR:$rs1, GPR:$rs2)), bb:$imm16),
           (BF32 (CMPNE32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
-def : Pat<(brcond (i32 (setuge GPR:$rs1, GPR:$rs2)), bb:$imm16),
-          (BT32 (CMPHS32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
-def : Pat<(brcond (i32 (setule GPR:$rs1, GPR:$rs2)), bb:$imm16),
-          (BT32 (CMPHS32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
-def : Pat<(brcond (i32 (setult GPR:$rs1, GPR:$rs2)), bb:$imm16),
-          (BF32 (CMPHS32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
-def : Pat<(brcond (i32 (setugt GPR:$rs1, GPR:$rs2)), bb:$imm16),
-          (BF32 (CMPHS32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
-def : Pat<(brcond (i32 (setlt GPR:$rs1, GPR:$rs2)), bb:$imm16),
-          (BT32 (CMPLT32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
-def : Pat<(brcond (i32 (setgt GPR:$rs1, GPR:$rs2)), bb:$imm16),
-          (BT32 (CMPLT32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
-def : Pat<(brcond (i32 (setge GPR:$rs1, GPR:$rs2)), bb:$imm16),
-          (BF32 (CMPLT32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
-def : Pat<(brcond (i32 (setle GPR:$rs1, GPR:$rs2)), bb:$imm16),
-          (BF32 (CMPLT32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+
+multiclass BTF32Pat1<PatFrag cond0, PatFrag cond1, Instruction cmp,
+                     Instruction br> {
+  def : Pat<(brcond (i32 (cond0 GPR:$rs1, GPR:$rs2)), bb:$imm16),
+            (br (cmp GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (cond1 GPR:$rs1, GPR:$rs2)), bb:$imm16),
+            (br (cmp GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+}
+
+defm : BTF32Pat1<setuge, setule, CMPHS32, BT32>;
+defm : BTF32Pat1<setult, setugt, CMPHS32, BF32>;
+defm : BTF32Pat1<setlt, setgt, CMPLT32, BT32>;
+defm : BTF32Pat1<setge, setle, CMPLT32, BF32>;
 
 def : Pat<(brcond (i32 (seteq GPR:$rs1, (i32 0))), bb:$imm16),
           (BEZ32 GPR:$rs1, bb:$imm16)>;
@@ -1178,18 +1237,28 @@ def : Pat<(brcond (i32 (setne GPR:$rs1, (i32 0))), bb:$imm16),
           (BNEZ32 GPR:$rs1, bb:$imm16)>;
 def : Pat<(brcond (i32 (setlt GPR:$rs1, (i32 0))), bb:$imm16),
           (BLZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setlt GPR:$rs1, (i32 1))), bb:$imm16),
+          (BLSZ32 GPR:$rs1, bb:$imm16)>;
 def : Pat<(brcond (i32 (setge GPR:$rs1, (i32 0))), bb:$imm16),
           (BHSZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setge GPR:$rs1, (i32 1))), bb:$imm16),
+          (BHZ32 GPR:$rs1, bb:$imm16)>;
 def : Pat<(brcond (i32 (setgt GPR:$rs1, (i32 0))), bb:$imm16),
           (BHZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setgt GPR:$rs1, (i32 -1))), bb:$imm16),
+          (BHSZ32 GPR:$rs1, bb:$imm16)>;
 def : Pat<(brcond (i32 (setle GPR:$rs1, (i32 0))), bb:$imm16),
           (BLSZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setle GPR:$rs1, (i32 -1))), bb:$imm16),
+          (BLZ32 GPR:$rs1, bb:$imm16)>;
 }
 
 // Compare Patterns.
 let Predicates = [iHas2E3] in {
   def : Pat<(setne GPR:$rs1, GPR:$rs2),
             (CMPNE32 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(setne (and GPR:$rs, imm32_1_pop_bit:$im), 0),
+            (BTSTI32 GPR:$rs, (imm32_1_pop_bit_XFORM imm32_1_pop_bit:$im))>;
   def : Pat<(i32 (seteq GPR:$rs1, GPR:$rs2)),
             (MVCV32 (CMPNE32 GPR:$rs1, GPR:$rs2))>;
   def : Pat<(setuge GPR:$rs1, GPR:$rs2),
@@ -1231,58 +1300,162 @@ let Predicates = [iHasE2] in {
 // Select Patterns.
 let Predicates = [iHasE2] in {
 
-def : Pat<(select CARRY:$ca, GPR:$rx, GPR:$false),
-          (MOVT32 CARRY:$ca, GPR:$rx, GPR:$false)>;
-def : Pat<(select (and CARRY:$ca, 1), GPR:$rx, GPR:$false),
-          (MOVT32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setne GPR:$rs1, uimm16:$rs2)), (add GPR:$rx, uimm5:$imm), GPR:$false),
+          (INCT32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), GPR:$false, GPR:$rx, uimm5:$imm)>;
+def : Pat<(select (i32 (seteq GPR:$rs1, uimm16:$rs2)), (add GPR:$rx, uimm5:$imm), GPR:$false),
+          (INCF32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), GPR:$false, GPR:$rx, uimm5:$imm)>;
+def : Pat<(select (i32 (setne GPR:$rs1, uimm16:$rs2)), (add GPR:$rx, uimm5_neg:$imm), GPR:$false),
+          (DECT32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), GPR:$false, GPR:$rx,
+                  (imm_neg_XFORM uimm5_neg:$imm))>;
+def : Pat<(select (i32 (seteq GPR:$rs1, uimm16:$rs2)), (add GPR:$rx, uimm5_neg:$imm), GPR:$false),
+          (DECF32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), GPR:$false, GPR:$rx,
+                  (imm_neg_XFORM uimm5:$imm))>;
 
-def : Pat<(select (i32 (setne GPR:$rs1, uimm16:$rs2)), GPR:$rx, GPR:$false),
-          (MOVT32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), GPR:$rx, GPR:$false)>;
-def : Pat<(select (i32 (seteq GPR:$rs1, uimm16:$rs2)), GPR:$rx, GPR:$false),
-          (MOVF32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), GPR:$rx, GPR:$false)>;
-
-def : Pat<(select (i32 (setuge GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
-          (MOVT32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
-def : Pat<(select (i32 (setult GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
-          (MOVF32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
-
-def : Pat<(select (i32 (setlt GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
-          (MOVT32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
-def : Pat<(select (i32 (setge GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
-          (MOVF32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
-
-def : Pat<(select CARRY:$ca, GPR:$rx, GPR:$false),
-          (ISEL32 CARRY:$ca, GPR:$rx, GPR:$false)>;
-def : Pat<(select (and CARRY:$ca, 1), GPR:$rx, GPR:$false),
-          (ISEL32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+multiclass INCDECPat<PatFrag cond0, PatFrag cond1, Instruction cmp> {
+  def : Pat<(select (i32 (cond0 GPR:$rs1, oimm16:$rs2)), (add GPR:$rx, uimm5:$imm), GPR:$other),
+            (INCT32 (cmp GPR:$rs1, oimm16:$rs2), GPR:$other, GPR:$rx, uimm5:$imm)>;
+  def : Pat<(select (i32 (cond1 GPR:$rs1, oimm16:$rs2)), (add GPR:$rx, uimm5:$imm), GPR:$other),
+            (INCF32 (cmp GPR:$rs1, oimm16:$rs2), GPR:$other, GPR:$rx, uimm5:$imm)>;
+  def : Pat<(select (i32 (cond0 GPR:$rs1, oimm16:$rs2)), GPR:$other, (add GPR:$rx, uimm5:$imm)),
+            (INCF32 (cmp GPR:$rs1, oimm16:$rs2), GPR:$other, GPR:$rx, uimm5:$imm)>;
+  def : Pat<(select (i32 (cond1 GPR:$rs1, oimm16:$rs2)), GPR:$other, (add GPR:$rx, uimm5:$imm)),
+            (INCT32 (cmp GPR:$rs1, oimm16:$rs2), GPR:$other, GPR:$rx, uimm5:$imm)>;
+  def : Pat<(select (i32 (cond0 GPR:$rs1, oimm16:$rs2)), (add GPR:$rx, uimm5_neg:$imm), GPR:$other),
+            (DECT32 (cmp GPR:$rs1, oimm16:$rs2), GPR:$other, GPR:$rx,
+                    (imm_neg_XFORM uimm5_neg:$imm))>;
+  def : Pat<(select (i32 (cond1 GPR:$rs1, oimm16:$rs2)), (add GPR:$rx, uimm5_neg:$imm), GPR:$other),
+            (DECF32 (cmp GPR:$rs1, oimm16:$rs2), GPR:$other, GPR:$rx,
+                    (imm_neg_XFORM uimm5_neg:$imm))>;
+  def : Pat<(select (i32 (cond0 GPR:$rs1, oimm16:$rs2)), GPR:$other, (add GPR:$rx, uimm5_neg:$imm)),
+            (DECF32 (cmp GPR:$rs1, oimm16:$rs2), GPR:$other, GPR:$rx,
+                    (imm_neg_XFORM uimm5_neg:$imm))>;
+  def : Pat<(select (i32 (cond1 GPR:$rs1, oimm16:$rs2)), GPR:$other, (add GPR:$rx, uimm5_neg:$imm)),
+            (DECT32 (cmp GPR:$rs1, oimm16:$rs2), GPR:$other, GPR:$rx,
+                    (imm_neg_XFORM uimm5_neg:$imm))>;
 }
 
+defm : INCDECPat<setuge, setult, CMPHSI32>;
+defm : INCDECPat<setlt, setge, CMPLTI32>;
+
+def : Pat<(select CARRY:$ca, (add GPR:$rx, uimm5:$imm), GPR:$other),
+          (INCT32 CARRY:$ca, GPR:$other, GPR:$rx, uimm5:$imm)>;
+def : Pat<(select CARRY:$ca, GPR:$other, (add GPR:$rx, uimm5:$imm)),
+          (INCF32 CARRY:$ca, GPR:$other, GPR:$rx, uimm5:$imm)>;
+def : Pat<(select (and CARRY:$ca, 1), (add GPR:$rx, uimm5:$imm), GPR:$other),
+          (INCT32 CARRY:$ca, GPR:$other, GPR:$rx, uimm5:$imm)>;
+def : Pat<(select (and CARRY:$ca, 1), GPR:$other, (add GPR:$rx, uimm5:$imm)),
+          (INCF32 CARRY:$ca, GPR:$other, GPR:$rx, uimm5:$imm)>;
+
+def : Pat<(select CARRY:$ca, (add GPR:$rx, uimm5_neg:$imm), GPR:$other),
+          (DECT32 CARRY:$ca, GPR:$other, GPR:$rx, (imm_neg_XFORM uimm5_neg:$imm))>;
+def : Pat<(select CARRY:$ca, GPR:$other, (add GPR:$rx, uimm5_neg:$imm)),
+          (DECF32 CARRY:$ca, GPR:$other, GPR:$rx, (imm_neg_XFORM uimm5_neg:$imm))>;
+def : Pat<(select (and CARRY:$ca, 1), (add GPR:$rx, uimm5_neg:$imm), GPR:$other),
+          (DECT32 CARRY:$ca, GPR:$other, GPR:$rx, (imm_neg_XFORM uimm5_neg:$imm))>;
+def : Pat<(select (and CARRY:$ca, 1), GPR:$other, (add GPR:$rx, uimm5_neg:$imm)),
+          (DECF32 CARRY:$ca, GPR:$other, GPR:$rx, (imm_neg_XFORM uimm5_neg:$imm))>;
+
+def : Pat<(select CARRY:$ca, GPR:$rx, GPR:$false),
+          (MOVT32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+def : Pat<(select (and CARRY:$ca, 1), GPR:$rx, GPR:$false),
+          (MOVT32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+
+multiclass MOVTF32Pat0<PatFrag cond0, PatFrag cond1, ImmLeaf imm_ty, Instruction inst> {
+  def : Pat<(select (i32 (cond0 GPR:$rs1, imm_ty:$rs2)), GPR:$rx, GPR:$false),
+            (MOVT32 (inst GPR:$rs1, imm_ty:$rs2), GPR:$rx, GPR:$false)>;
+  def : Pat<(select (i32 (cond1 GPR:$rs1, imm_ty:$rs2)), GPR:$rx, GPR:$false),
+            (MOVF32 (inst GPR:$rs1, imm_ty:$rs2), GPR:$rx, GPR:$false)>;
+}
+
+defm : MOVTF32Pat0<setne, seteq, uimm16, CMPNEI32>;
+defm : MOVTF32Pat0<setuge, setult, oimm16, CMPHSI32>;
+defm : MOVTF32Pat0<setlt, setge, oimm16, CMPLTI32>;
+
+def : Pat<(select CARRY:$ca, GPR:$rx, GPR:$false),
+          (ISEL32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+def : Pat<(select (and CARRY:$ca, 1), GPR:$rx, GPR:$false),
+          (ISEL32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+
+def : Pat<(select (i32 (setne (and GPR:$rs, imm32_1_pop_bit:$im), 0)),
+                  GPR:$true, GPR:$false),
+          (MOVT32 (BTSTI32 GPR:$rs, (imm32_1_pop_bit_XFORM imm32_1_pop_bit:$im)),
+                  GPR:$true, GPR:$false)>;
+def : Pat<(select (i32 (seteq (and GPR:$rs, imm32_1_pop_bit:$im), 0)),
+                  GPR:$true, GPR:$false),
+          (MOVF32 (BTSTI32 GPR:$rs, (imm32_1_pop_bit_XFORM imm32_1_pop_bit:$im)),
+                  GPR:$true, GPR:$false)>;
+}
 
 let Predicates = [iHas2E3] in {
+def : Pat<(select (i32 (setne GPR:$rs1, GPR:$rs2)), (add GPR:$rx, uimm5:$imm), GPR:$false),
+          (INCT32 (CMPNE32 GPR:$rs1, GPR:$rs2), GPR:$false, GPR:$rx, uimm5:$imm)>;
+def : Pat<(select (i32 (seteq GPR:$rs1, GPR:$rs2)), (add GPR:$rx, uimm5:$imm), GPR:$false),
+          (INCF32 (CMPNE32 GPR:$rs1, GPR:$rs2), GPR:$false, GPR:$rx, uimm5:$imm)>;
+def : Pat<(select (i32 (setne GPR:$rs1, GPR:$rs2)), (add GPR:$rx, uimm5_neg:$imm), GPR:$false),
+          (DECT32 (CMPNE32 GPR:$rs1, GPR:$rs2), GPR:$false, GPR:$rx,
+                  (imm_neg_XFORM uimm5_neg:$imm))>;
+def : Pat<(select (i32 (seteq GPR:$rs1, GPR:$rs2)), (add GPR:$rx, uimm5_neg:$imm), GPR:$false),
+          (DECF32 (CMPNE32 GPR:$rs1, GPR:$rs2), GPR:$false, GPR:$rx,
+                  (imm_neg_XFORM uimm5_neg:$imm))>;
+
+multiclass INCPat<PatFrag cond0, PatFrag cond1, Instruction cmp, Instruction inc0, Instruction inc1> {
+  def : Pat<(select (i32 (cond0 GPR:$rs1, GPR:$rs2)), (add GPR:$rx, uimm5:$imm), GPR:$other),
+            (inc0 (cmp GPR:$rs1, GPR:$rs2), GPR:$other, GPR:$rx, uimm5:$imm)>;
+  def : Pat<(select (i32 (cond0 GPR:$rs1, GPR:$rs2)), GPR:$other, (add GPR:$rx, uimm5:$imm)),
+            (inc1 (cmp GPR:$rs1, GPR:$rs2), GPR:$other, GPR:$rx, uimm5:$imm)>;
+  def : Pat<(select (i32 (cond1 GPR:$rs1, GPR:$rs2)), (add GPR:$rx, uimm5:$imm), GPR:$other),
+            (inc0 (cmp GPR:$rs2, GPR:$rs1), GPR:$other, GPR:$rx, uimm5:$imm)>;
+  def : Pat<(select (i32 (cond1 GPR:$rs1, GPR:$rs2)), GPR:$other, (add GPR:$rx, uimm5:$imm)),
+            (inc1 (cmp GPR:$rs2, GPR:$rs1), GPR:$other, GPR:$rx, uimm5:$imm)>;
+}
+
+defm : INCPat<setuge, setule, CMPHS32, INCT32, INCF32>;
+defm : INCPat<setult, setugt, CMPHS32, INCF32, INCT32>;
+defm : INCPat<setlt, setgt, CMPLT32, INCT32, INCF32>;
+defm : INCPat<setge, setle, CMPLT32, INCF32, INCT32>;
+
+multiclass DECPat<PatFrag cond0, PatFrag cond1, Instruction cmp, Instruction dec0, Instruction dec1> {
+  def : Pat<(select (i32 (cond0 GPR:$rs1, GPR:$rs2)), (add GPR:$rx, uimm5_neg:$imm), GPR:$other),
+            (dec0 (cmp GPR:$rs1, GPR:$rs2), GPR:$other, GPR:$rx,
+                  (imm_neg_XFORM uimm5_neg:$imm))>;
+  def : Pat<(select (i32 (cond0 GPR:$rs1, GPR:$rs2)), GPR:$other, (add GPR:$rx, uimm5_neg:$imm)),
+            (dec1 (cmp GPR:$rs1, GPR:$rs2), GPR:$other, GPR:$rx,
+                  (imm_neg_XFORM uimm5_neg:$imm))>;
+  def : Pat<(select (i32 (cond1 GPR:$rs1, GPR:$rs2)), (add GPR:$rx, uimm5_neg:$imm), GPR:$other),
+            (dec0 (cmp GPR:$rs2, GPR:$rs1), GPR:$other, GPR:$rx,
+                  (imm_neg_XFORM uimm5_neg:$imm))>;
+  def : Pat<(select (i32 (cond1 GPR:$rs1, GPR:$rs2)), GPR:$other, (add GPR:$rx, uimm5_neg:$imm)),
+            (dec1 (cmp GPR:$rs2, GPR:$rs1), GPR:$other, GPR:$rx,
+                  (imm_neg_XFORM uimm5_neg:$imm))>;
+}
+
+defm : DECPat<setuge, setule, CMPHS32, DECT32, DECF32>;
+defm : DECPat<setult, setugt, CMPHS32, DECF32, DECT32>;
+defm : DECPat<setlt, setgt, CMPLT32, DECT32, DECF32>;
+defm : DECPat<setge, setle, CMPLT32, DECF32, DECT32>;
 
 def : Pat<(select (i32 (setne GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
           (MOVT32 (CMPNE32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
 def : Pat<(select (i32 (seteq GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
           (MOVF32 (CMPNE32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
 
-def : Pat<(select (i32 (setuge GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
-          (MOVT32 (CMPHS32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
-def : Pat<(select (i32 (setule GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
-          (MOVT32 (CMPHS32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
-def : Pat<(select (i32 (setult GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
-          (MOVF32 (CMPHS32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
-def : Pat<(select (i32 (setugt GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
-          (MOVF32 (CMPHS32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+multiclass MOVTF32Pat1<PatFrag cond0, PatFrag cond1, Instruction cmp_inst,
+                       Instruction mov_inst> {
+  def : Pat<(select (i32 (cond0 GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+            (mov_inst (cmp_inst GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+  def : Pat<(select (i32 (cond1 GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+            (mov_inst (cmp_inst GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+}
 
-def : Pat<(select (i32 (setlt GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
-          (MOVT32 (CMPLT32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
-def : Pat<(select (i32 (setgt GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
-          (MOVT32 (CMPLT32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
-def : Pat<(select (i32 (setge GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
-          (MOVF32 (CMPLT32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
-def : Pat<(select (i32 (setle GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
-          (MOVF32 (CMPLT32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+defm : MOVTF32Pat1<setuge, setule, CMPHS32, MOVT32>;
+defm : MOVTF32Pat1<setult, setugt, CMPHS32, MOVF32>;
+defm : MOVTF32Pat1<setlt, setgt, CMPLT32, MOVT32>;
+defm : MOVTF32Pat1<setge, setle, CMPLT32, MOVF32>;
 
+def : Pat<(select CARRY:$ca, (i32 0), GPR:$other),
+          (CLRT32 CARRY:$ca, GPR:$other)>;
+def : Pat<(select CARRY:$ca, GPR:$other, (i32 0)),
+          (CLRF32 CARRY:$ca, GPR:$other)>;
 }
 
 // Constant materialize patterns.
@@ -1290,6 +1463,13 @@ let Predicates = [iHasE2] in
   def : Pat<(i32 imm:$imm),
             (ORI32 (MOVIH32 (uimm32_hi16 imm:$imm)), (uimm32_lo16 imm:$imm))>;
 
+// Bit operations.
+let Predicates = [iHasE2] in {
+  def : Pat<(or GPR:$rs, imm32_1_pop_bit:$imm),
+            (BSETI32 GPR:$rs, (imm32_1_pop_bit_XFORM imm32_1_pop_bit:$imm))>;
+  def : Pat<(and GPR:$rs, imm32_1_zero_bit:$imm),
+            (BCLRI32 GPR:$rs, (imm32_1_zero_bit_XFORM imm32_1_zero_bit:$imm))>;
+}
 
 // Other operations.
 let Predicates = [iHasE2] in {
@@ -1298,6 +1478,7 @@ let Predicates = [iHasE2] in {
   let Predicates = [iHas2E3] in {
     def : Pat<(bitreverse GPR:$rx), (BREV32 GPR:$rx)>;
     def : Pat<(bswap GPR:$rx), (REVB32 GPR:$rx)>;
+    def : Pat<(i32 (cttz GPR:$rx)), (FF1 (BREV32 GPR:$rx))>;
   }
   def : Pat<(i32 (ctlz GPR:$rx)), (FF1 GPR:$rx)>;
 }
@@ -1352,9 +1533,6 @@ def JBF_E : CSKYPseudo<(outs), (ins CARRY:$ca, br_symbol:$src1), "!jbf_e\t$src1"
 
 let mayLoad = 1, Size = 2, isCodeGenOnly = 0 in
 def PseudoLRW32 : CSKYPseudo<(outs GPR:$rz), (ins bare_symbol:$src), "lrw32 $rz, $src", []>;
-
-
-
 
 let mayLoad = 1, Size = 4, isCodeGenOnly = 0 in
 def PseudoJSRI32 : CSKYPseudo<(outs), (ins call_symbol:$src), "jsri32 $src", []>;

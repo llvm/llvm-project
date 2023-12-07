@@ -8,16 +8,16 @@ config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -I %{libcxx}/test/support -I %{libcxx}/src -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib} -lc++ -lc++abi'
+    '-nostdlib++ -L %{lib} -lc++'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env PATH=%{lib} -- '
+    '%{executor} --execdir %T --prepend_env PATH=%{lib} -- '
 ))
 
 import os, site
 site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
-import libcxx.test.params, libcxx.test.newconfig
-libcxx.test.newconfig.configure(
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
     libcxx.test.params.DEFAULT_PARAMETERS,
     libcxx.test.features.DEFAULT_FEATURES,
     config,

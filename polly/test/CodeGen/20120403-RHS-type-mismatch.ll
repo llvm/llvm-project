@@ -18,7 +18,7 @@ for.body:                                         ; preds = %for.body, %entry
 for.body7:                                        ; preds = %for.body7, %for.cond5.preheader
   %i.128 = phi i64 [ 0, %for.cond5.preheader ], [ %inc07, %for.body7 ]
   %inc07 = add nsw i64 %i.128, 1
-  store i64 undef, i64* %hi.129.reg2mem
+  store i64 undef, ptr %hi.129.reg2mem
   br i1 false, label %for.body7, label %for.end18
 
 for.end18:                                        ; preds = %for.body7

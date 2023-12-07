@@ -13,8 +13,8 @@ target triple = "hexagon"
 @vector_pairs = common global [15 x <32 x i32>] zeroinitializer, align 128
 @VectorPairResult = common global <32 x i32> zeroinitializer, align 128
 @dst_addresses = common global [15 x i8] zeroinitializer, align 8
-@ptr_addresses = common global [15 x i8*] zeroinitializer, align 8
-@src_addresses = common global [15 x i8*] zeroinitializer, align 8
+@ptr_addresses = common global [15 x ptr] zeroinitializer, align 8
+@src_addresses = common global [15 x ptr] zeroinitializer, align 8
 @dst = common global i8 0, align 1
 @ptr = common global [32768 x i8] zeroinitializer, align 8
 
@@ -22,21 +22,21 @@ target triple = "hexagon"
 define i32 @main() #0 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  %0 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
+  store i32 0, ptr %retval, align 4
+  %0 = load volatile <16 x i32>, ptr @vecpreds, align 64
   %1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %0, i32 -1)
-  %2 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 1), align 64
+  %2 = load volatile <16 x i32>, ptr getelementptr inbounds ([15 x <16 x i32>], ptr @vecpreds, i32 0, i32 1), align 64
   %3 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %2, i32 -1)
   %4 = call <64 x i1> @llvm.hexagon.V6.pred.and(<64 x i1> %1, <64 x i1> %3)
   %5 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %4, i32 -1)
-  store volatile <16 x i32> %5, <16 x i32>* @Q6VecPredResult, align 64
-  %6 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 0), align 64
+  store volatile <16 x i32> %5, ptr @Q6VecPredResult, align 64
+  %6 = load volatile <16 x i32>, ptr @vecpreds, align 64
   %7 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %6, i32 -1)
-  %8 = load volatile <16 x i32>, <16 x i32>* getelementptr inbounds ([15 x <16 x i32>], [15 x <16 x i32>]* @vecpreds, i32 0, i32 1), align 64
+  %8 = load volatile <16 x i32>, ptr getelementptr inbounds ([15 x <16 x i32>], ptr @vecpreds, i32 0, i32 1), align 64
   %9 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %8, i32 -1)
   %10 = call <64 x i1> @llvm.hexagon.V6.pred.and.n(<64 x i1> %7, <64 x i1> %9)
   %11 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %10, i32 -1)
-  store volatile <16 x i32> %11, <16 x i32>* @Q6VecPredResult, align 64
+  store volatile <16 x i32> %11, ptr @Q6VecPredResult, align 64
   ret i32 0
 
 }

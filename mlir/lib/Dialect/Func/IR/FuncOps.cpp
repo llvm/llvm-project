@@ -8,17 +8,15 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/FunctionImplementation.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
@@ -34,69 +32,6 @@ using namespace mlir;
 using namespace mlir::func;
 
 //===----------------------------------------------------------------------===//
-// FuncDialect Interfaces
-//===----------------------------------------------------------------------===//
-namespace {
-/// This class defines the interface for handling inlining with func operations.
-struct FuncInlinerInterface : public DialectInlinerInterface {
-  using DialectInlinerInterface::DialectInlinerInterface;
-
-  //===--------------------------------------------------------------------===//
-  // Analysis Hooks
-  //===--------------------------------------------------------------------===//
-
-  /// All call operations can be inlined.
-  bool isLegalToInline(Operation *call, Operation *callable,
-                       bool wouldBeCloned) const final {
-    return true;
-  }
-
-  /// All operations can be inlined.
-  bool isLegalToInline(Operation *, Region *, bool,
-                       BlockAndValueMapping &) const final {
-    return true;
-  }
-
-  /// All functions can be inlined.
-  bool isLegalToInline(Region *, Region *, bool,
-                       BlockAndValueMapping &) const final {
-    return true;
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Transformation Hooks
-  //===--------------------------------------------------------------------===//
-
-  /// Handle the given inlined terminator by replacing it with a new operation
-  /// as necessary.
-  void handleTerminator(Operation *op, Block *newDest) const final {
-    // Only return needs to be handled here.
-    auto returnOp = dyn_cast<ReturnOp>(op);
-    if (!returnOp)
-      return;
-
-    // Replace the return with a branch to the dest.
-    OpBuilder builder(op);
-    builder.create<cf::BranchOp>(op->getLoc(), newDest, returnOp.getOperands());
-    op->erase();
-  }
-
-  /// Handle the given inlined terminator by replacing it with a new operation
-  /// as necessary.
-  void handleTerminator(Operation *op,
-                        ArrayRef<Value> valuesToRepl) const final {
-    // Only return needs to be handled here.
-    auto returnOp = cast<ReturnOp>(op);
-
-    // Replace the values directly with the return operands.
-    assert(returnOp.getNumOperands() == valuesToRepl.size());
-    for (const auto &it : llvm::enumerate(returnOp.getOperands()))
-      valuesToRepl[it.index()].replaceAllUsesWith(it.value());
-  }
-};
-} // namespace
-
-//===----------------------------------------------------------------------===//
 // FuncDialect
 //===----------------------------------------------------------------------===//
 
@@ -105,7 +40,7 @@ void FuncDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Func/IR/FuncOps.cpp.inc"
       >();
-  addInterfaces<FuncInlinerInterface>();
+  declarePromisedInterface<FuncDialect, DialectInlinerInterface>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
@@ -114,7 +49,7 @@ Operation *FuncDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
   if (ConstantOp::isBuildableWith(value, type))
     return builder.create<ConstantOp>(loc, type,
-                                      value.cast<FlatSymbolRefAttr>());
+                                      llvm::cast<FlatSymbolRefAttr>(value));
   return nullptr;
 }
 
@@ -201,8 +136,7 @@ LogicalResult ConstantOp::verify() {
   return success();
 }
 
-OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.empty() && "constant has no operands");
+OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) {
   return getValueAttr();
 }
 
@@ -212,7 +146,7 @@ void ConstantOp::getAsmResultNames(
 }
 
 bool ConstantOp::isBuildableWith(Attribute value, Type type) {
-  return value.isa<FlatSymbolRefAttr>() && type.isa<FunctionType>();
+  return llvm::isa<FlatSymbolRefAttr>(value) && llvm::isa<FunctionType>(type);
 }
 
 //===----------------------------------------------------------------------===//
@@ -229,7 +163,7 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       Operation::dialect_attr_range attrs) {
   SmallVector<NamedAttribute, 8> attrRef(attrs);
-  return create(location, name, type, llvm::makeArrayRef(attrRef));
+  return create(location, name, type, llvm::ArrayRef(attrRef));
 }
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       ArrayRef<NamedAttribute> attrs,
@@ -276,7 +210,7 @@ void FuncOp::print(OpAsmPrinter &p) {
 
 /// Clone the internal blocks from this function into dest and all attributes
 /// from this function to dest.
-void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
+void FuncOp::cloneInto(FuncOp dest, IRMapping &mapper) {
   // Add the attributes of this function to dest.
   llvm::MapVector<StringAttr, Attribute> newAttrMap;
   for (const auto &attr : dest->getAttrs())
@@ -299,7 +233,7 @@ void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
 /// provided (leaving them alone if no entry is present). Replaces references
 /// to cloned sub-values with the corresponding value that is copied, and adds
 /// those mappings to the mapper.
-FuncOp FuncOp::clone(BlockAndValueMapping &mapper) {
+FuncOp FuncOp::clone(IRMapping &mapper) {
   // Create the new function.
   FuncOp newFunc = cast<FuncOp>(getOperation()->cloneWithoutRegions());
 
@@ -338,7 +272,7 @@ FuncOp FuncOp::clone(BlockAndValueMapping &mapper) {
   return newFunc;
 }
 FuncOp FuncOp::clone() {
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   return clone(mapper);
 }
 

@@ -37,6 +37,10 @@ OPTIONS
  Dump the *executable*'s debug-map (the list of the object files containing the
  debug information) in YAML format and exit. No DWARF link will take place.
 
+.. option:: --fat64
+
+ Use a 64-bit header when emitting universal binaries.
+
 .. option:: --flat, -f
 
  Produce a flat dSYM file. A ``.dwarf`` extension will be appended to the
@@ -102,6 +106,10 @@ OPTIONS
  warnings to be part of the end product, rather than just being emitted to the
  output stream. When enabled warnings are embedded in the linked DWARF debug
  information.
+
+.. option:: --remarks-drop-without-debug
+
+ Drop remarks without valid debug locations. Without this flags, all remarks are kept.
 
 .. option:: --remarks-output-format <format>
 

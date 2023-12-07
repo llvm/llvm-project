@@ -9,8 +9,8 @@
 #include "M68kRegisterBankInfo.h"
 #include "M68kSubtarget.h"
 #include "M68kTargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "m68k-isel"

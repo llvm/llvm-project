@@ -65,7 +65,6 @@ static void CheckUnwind() {
 
 // -------------------------- Globals --------------------- {{{1
 int memprof_inited;
-int memprof_init_done;
 bool memprof_init_is_running;
 int memprof_timestamp_inited;
 long memprof_init_timestamp_s;
@@ -195,11 +194,6 @@ static void MemprofInitInternal() {
 
   InitializeAllocator();
 
-  // On Linux MemprofThread::ThreadStart() calls malloc() that's why
-  // memprof_inited should be set to 1 prior to initializing the threads.
-  memprof_inited = 1;
-  memprof_init_is_running = false;
-
   if (flags()->atexit)
     Atexit(memprof_atexit);
 
@@ -218,7 +212,8 @@ static void MemprofInitInternal() {
 
   VReport(1, "MemProfiler Init done\n");
 
-  memprof_init_done = 1;
+  memprof_init_is_running = false;
+  memprof_inited = 1;
 }
 
 void MemprofInitTime() {

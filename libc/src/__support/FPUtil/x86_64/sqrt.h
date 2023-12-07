@@ -9,9 +9,10 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_SQRT_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_SQRT_H
 
-#include "src/__support/architectures.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/properties/architectures.h"
 
-#if !defined(LLVM_LIBC_ARCH_X86)
+#if !defined(LIBC_TARGET_ARCH_IS_X86)
 #error "Invalid include"
 #endif
 
@@ -20,26 +21,26 @@
 namespace __llvm_libc {
 namespace fputil {
 
-template <> inline float sqrt<float>(float x) {
+template <> LIBC_INLINE float sqrt<float>(float x) {
   float result;
   __asm__ __volatile__("sqrtss %x1, %x0" : "=x"(result) : "x"(x));
   return result;
 }
 
-template <> inline double sqrt<double>(double x) {
+template <> LIBC_INLINE double sqrt<double>(double x) {
   double result;
   __asm__ __volatile__("sqrtsd %x1, %x0" : "=x"(result) : "x"(x));
   return result;
 }
 
 #ifdef LONG_DOUBLE_IS_DOUBLE
-template <> inline long double sqrt<long double>(long double x) {
+template <> LIBC_INLINE long double sqrt<long double>(long double x) {
   long double result;
   __asm__ __volatile__("sqrtsd %x1, %x0" : "=x"(result) : "x"(x));
   return result;
 }
 #else
-template <> inline long double sqrt<long double>(long double x) {
+template <> LIBC_INLINE long double sqrt<long double>(long double x) {
   __asm__ __volatile__("fsqrt" : "+t"(x));
   return x;
 }

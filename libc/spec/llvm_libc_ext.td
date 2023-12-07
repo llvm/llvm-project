@@ -1,6 +1,6 @@
 def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
-  HeaderSpec String = HeaderSpec<
-      "string.h",
+  HeaderSpec Strings = HeaderSpec<
+      "strings.h",
       [], // Macros
       [], // Types
       [], // Enumerations
@@ -52,7 +52,7 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
   >;
 
   let Headers = [
-    String,
+    Strings,
     Sched,
     Assert,
   ];

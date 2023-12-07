@@ -55,7 +55,7 @@ public:
     OperandBundlesToKeepIndexes.reserve(Call.getNumOperandBundles());
 
     // Enumerate every operand bundle on this call.
-    for (unsigned BundleIndex : seq(0U, Call.getNumOperandBundles()))
+    for (unsigned BundleIndex : seq(Call.getNumOperandBundles()))
       if (O.shouldKeep()) // Should we keep this one?
         OperandBundlesToKeepIndexes.emplace_back(BundleIndex);
   }
@@ -95,7 +95,9 @@ static void maybeRewriteCallWithDifferentBundles(
 }
 
 /// Removes out-of-chunk operand bundles from calls.
-static void extractOperandBundesFromModule(Oracle &O, Module &Program) {
+static void extractOperandBundesFromModule(Oracle &O,
+                                           ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
   OperandBundleRemapper R(O);
   R.visit(Program);
 

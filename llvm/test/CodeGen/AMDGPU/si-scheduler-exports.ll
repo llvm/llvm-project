@@ -17,9 +17,9 @@ define amdgpu_gs void @_amdgpu_gs_main() {
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, i1 false, i1 false)
-  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> zeroinitializer, <4 x i32> zeroinitializer, i32 0, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> zeroinitializer, ptr addrspace(8) zeroinitializer, i32 0, i32 0, i32 0, i32 0)
   ret void
 }
 
 declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg)
-declare void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32 immarg)
+declare void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32, i32 immarg)

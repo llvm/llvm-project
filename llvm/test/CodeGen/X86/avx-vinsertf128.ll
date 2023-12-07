@@ -29,7 +29,7 @@ define void @insert_crash() nounwind {
 ; CHECK-NEXT:    vminpd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vminsd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; CHECK-NEXT:    vmovups %xmm0, (%rax)
 ; CHECK-NEXT:    retq
 allocas:
@@ -59,13 +59,13 @@ define <4 x i32> @DAGCombineA(<4 x i32> %v1) nounwind readonly {
 define <8 x i32> @DAGCombineB(<8 x i32> %v1, <8 x i32> %v2) nounwind readonly {
 ; CHECK-LABEL: DAGCombineB:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; CHECK-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
-; CHECK-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vpaddd %xmm0, %xmm1, %xmm1
-; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
+; CHECK-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
+; CHECK-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %t1 = add <8 x i32> %v1, %v2
   %t2 = add <8 x i32> %t1, %v1

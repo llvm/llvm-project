@@ -23,14 +23,14 @@
 %14 = type { %15, %16 }
 %15 = type { i8, i8 }
 %16 = type { i8, i8 }
-%17 = type { i8, i8, %1*, i16, i16, i16, i64, i32, i32, %18, i8, %21, i8, [2 x i16], i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i16, i16, i16, i8, i8, i8, i16, i16, [2 x i16], i16, [2 x i32], [2 x i16], [2 x i16], i8, i8, [6 x %23], i8, i8, i8, %24, %25, %26, %28 }
+%17 = type { i8, i8, ptr, i16, i16, i16, i64, i32, i32, %18, i8, %21, i8, [2 x i16], i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i16, i16, i16, i8, i8, i8, i16, i16, [2 x i16], i16, [2 x i32], [2 x i16], [2 x i16], i8, i8, [6 x %23], i8, i8, i8, %24, %25, %26, %28 }
 %18 = type { %19, [10 x %20] }
 %19 = type { i32 }
 %20 = type { [2 x i8], [2 x i8], i8, i8, i8, i8 }
 %21 = type { i8, i8, i8, [8 x %22] }
 %22 = type { i8, i8, i8, i32 }
 %23 = type { i32, i16, i16, [2 x i16], [2 x i16], [2 x i16], i32 }
-%24 = type { [2 x i32], [2 x i64*], [2 x i64*], [2 x i64*], [2 x i32], [2 x i32], i32 }
+%24 = type { [2 x i32], [2 x ptr], [2 x ptr], [2 x ptr], [2 x i32], [2 x i32], i32 }
 %25 = type { [2 x i32], [2 x i32], [2 x i32] }
 %26 = type { i8, i8, i8, i16, i16, %27, i32, i32, i32, i16 }
 %27 = type { i64 }
@@ -47,8 +47,8 @@
 define zeroext i8 @myFun(i8 zeroext, i8 zeroext) {
   %3 = zext i8 %1 to i32
   %4 = zext i8 %0 to i32
-  %5 = getelementptr inbounds %0, %0* @the_global, i32 0, i32 0, i32 %4, i32 60, i32 0, i32 9, i32 1, i32 %3, i32 0, i32 0
-  %6 = load i8, i8* %5, align 4
+  %5 = getelementptr inbounds %0, ptr @the_global, i32 0, i32 0, i32 %4, i32 60, i32 0, i32 9, i32 1, i32 %3, i32 0, i32 0
+  %6 = load i8, ptr %5, align 4
   ret i8 %6
 }
 

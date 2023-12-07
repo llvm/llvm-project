@@ -19,6 +19,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/Refactoring/Extract/SourceExtraction.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {
@@ -68,7 +69,7 @@ const RefactoringDescriptor &ExtractFunction::describe() {
 Expected<ExtractFunction>
 ExtractFunction::initiate(RefactoringRuleContext &Context,
                           CodeRangeASTSelection Code,
-                          Optional<std::string> DeclName) {
+                          std::optional<std::string> DeclName) {
   // We would like to extract code out of functions/methods/blocks.
   // Prohibit extraction from things like global variable / field
   // initializers and other top-level expressions.

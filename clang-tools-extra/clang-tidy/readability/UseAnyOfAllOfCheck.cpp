@@ -37,8 +37,7 @@ AST_MATCHER_P(Stmt, nextStmt, ast_matchers::internal::Matcher<Stmt>,
 }
 } // namespace
 
-namespace tidy {
-namespace readability {
+namespace tidy::readability {
 
 void UseAnyOfAllOfCheck::registerMatchers(MatchFinder *Finder) {
   auto Returns = [](bool V) {
@@ -104,6 +103,5 @@ void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace readability
-} // namespace tidy
+} // namespace tidy::readability
 } // namespace clang

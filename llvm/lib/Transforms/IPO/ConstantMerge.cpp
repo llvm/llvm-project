@@ -28,8 +28,6 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/IPO.h"
 #include <algorithm>
@@ -250,33 +248,4 @@ PreservedAnalyses ConstantMergePass::run(Module &M, ModuleAnalysisManager &) {
   if (!mergeConstants(M))
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
-}
-
-namespace {
-
-struct ConstantMergeLegacyPass : public ModulePass {
-  static char ID; // Pass identification, replacement for typeid
-
-  ConstantMergeLegacyPass() : ModulePass(ID) {
-    initializeConstantMergeLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  // For this pass, process all of the globals in the module, eliminating
-  // duplicate constants.
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-    return mergeConstants(M);
-  }
-};
-
-} // end anonymous namespace
-
-char ConstantMergeLegacyPass::ID = 0;
-
-INITIALIZE_PASS(ConstantMergeLegacyPass, "constmerge",
-                "Merge Duplicate Global Constants", false, false)
-
-ModulePass *llvm::createConstantMergePass() {
-  return new ConstantMergeLegacyPass();
 }

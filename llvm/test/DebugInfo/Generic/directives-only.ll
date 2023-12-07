@@ -10,7 +10,6 @@
 
 
 ; CHECK: .file 1 "/tmp/dbginfo{{.*}}multiline.c"
-; CHECK: .loc 1 2 0
 ; CHECK: .loc 1 3 3
 ; CHECK: .loc 1 3 9
 ; CHECK: .loc 1 3 15

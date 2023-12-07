@@ -9,8 +9,6 @@
 // RUN: not %run %t 2>&1 | \
 // RUN:   FileCheck --check-prefixes=CHECK,CHECK-LASTGRANULE --strict-whitespace %s
 
-// REQUIRES: stable-runtime
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <sanitizer/hwasan_interface.h>

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/sys/select/select.h"
 #include "src/unistd/read.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <sys/select.h>
 #include <unistd.h>
 
@@ -18,7 +18,7 @@
 // Instead, one has to run it manually and press a key on the keyboard
 // to make the test succeed.
 TEST(LlvmLibcSelectTest, ReadStdinAfterSelect) {
-  errno = 0;
+  libc_errno = 0;
   constexpr int STDIN_FD = 0;
   fd_set set;
   FD_ZERO(&set);

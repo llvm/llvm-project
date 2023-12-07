@@ -18,11 +18,13 @@ using namespace lldb;
 using namespace lldb_private;
 
 void DWARFCompileUnit::Dump(Stream *s) const {
-  s->Printf("0x%8.8x: Compile Unit: length = 0x%8.8x, version = 0x%4.4x, "
-            "abbr_offset = 0x%8.8x, addr_size = 0x%2.2x (next CU at "
-            "{0x%8.8x})\n",
-            GetOffset(), GetLength(), GetVersion(), GetAbbrevOffset(),
-            GetAddressByteSize(), GetNextUnitOffset());
+  s->Format(
+
+      "{0:x16}: Compile Unit: length = {1:x8}, version = {2:x}, "
+      "abbr_offset = {3:x8}, addr_size = {4:x2} (next CU at "
+      "[{5:x16}])\n",
+      GetOffset(), GetLength(), GetVersion(), (uint32_t)GetAbbrevOffset(),
+      GetAddressByteSize(), GetNextUnitOffset());
 }
 
 void DWARFCompileUnit::BuildAddressRangeTable(
@@ -38,18 +40,14 @@ void DWARFCompileUnit::BuildAddressRangeTable(
 
   const dw_offset_t cu_offset = GetOffset();
   if (die) {
-    DWARFRangeList ranges;
-    const size_t num_ranges =
-        die->GetAttributeAddressRanges(this, ranges, /*check_hi_lo_pc=*/true);
-    if (num_ranges > 0) {
-      for (size_t i = 0; i < num_ranges; ++i) {
-        const DWARFRangeList::Entry &range = ranges.GetEntryRef(i);
-        debug_aranges->AppendRange(cu_offset, range.GetRangeBase(),
-                                   range.GetRangeEnd());
-      }
+    DWARFRangeList ranges =
+        die->GetAttributeAddressRanges(this, /*check_hi_lo_pc=*/true);
+    for (const DWARFRangeList::Entry &range : ranges)
+      debug_aranges->AppendRange(cu_offset, range.GetRangeBase(),
+                                 range.GetRangeEnd());
 
+    if (!ranges.IsEmpty())
       return;
-    }
   }
 
   if (debug_aranges->GetNumRanges() == num_debug_aranges) {

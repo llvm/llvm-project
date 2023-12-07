@@ -5,6 +5,7 @@ static_library("Reader") {
     "//llvm/lib/Bitstream/Reader",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   sources = [

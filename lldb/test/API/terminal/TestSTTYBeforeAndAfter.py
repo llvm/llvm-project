@@ -11,7 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestSTTYBeforeAndAfter(TestBase):
-
     @classmethod
     def classCleanup(cls):
         """Cleanup the test byproducts."""
@@ -22,14 +21,15 @@ class TestSTTYBeforeAndAfter(TestBase):
 
     @expectedFailureAll(
         hostoslist=["windows"],
-        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows",
+    )
     @no_debug_info_test
     def test_stty_dash_a_before_and_afetr_invoking_lldb_command(self):
         """Test that 'stty -a' displays the same output before and after running the lldb command."""
         import pexpect
-        if not which('expect'):
-            self.skipTest(
-                "The 'expect' program cannot be located, skip the test")
+
+        if not which("expect"):
+            self.skipTest("The 'expect' program cannot be located, skip the test")
 
         # The expect prompt.
         expect_prompt = "expect[0-9.]+> "
@@ -37,7 +37,7 @@ class TestSTTYBeforeAndAfter(TestBase):
         lldb_prompt = "(lldb) "
 
         # So that the child gets torn down after the test.
-        self.child = pexpect.spawnu('expect')
+        self.child = pexpect.spawnu("expect")
         child = self.child
 
         child.expect(expect_prompt)
@@ -46,17 +46,17 @@ class TestSTTYBeforeAndAfter(TestBase):
             child.logfile = sys.stdout
 
         if self.platformIsDarwin():
-            child.sendline('set env(TERM) xterm')
+            child.sendline("set env(TERM) xterm")
         else:
-            child.sendline('set env(TERM) vt100')
+            child.sendline("set env(TERM) vt100")
         child.expect(expect_prompt)
-        child.sendline('puts $env(TERM)')
+        child.sendline("puts $env(TERM)")
         child.expect(expect_prompt)
 
         # Turn on loggings for input/output to/from the child.
         child.logfile_send = child_send1 = io.StringIO()
         child.logfile_read = child_read1 = io.StringIO()
-        child.sendline('stty -a')
+        child.sendline("stty -a")
         child.expect(expect_prompt)
 
         # Now that the stage1 logging is done, restore logfile to None to
@@ -69,15 +69,15 @@ class TestSTTYBeforeAndAfter(TestBase):
         child.expect_exact(lldb_prompt)
 
         # Immediately quit.
-        child.sendline('quit')
+        child.sendline("quit")
         child.expect(expect_prompt)
 
         child.logfile_send = child_send2 = io.StringIO()
         child.logfile_read = child_read2 = io.StringIO()
-        child.sendline('stty -a')
+        child.sendline("stty -a")
         child.expect(expect_prompt)
 
-        child.sendline('exit')
+        child.sendline("exit")
 
         # Now that the stage2 logging is done, restore logfile to None to
         # stop further logging.

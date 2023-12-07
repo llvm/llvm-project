@@ -5,7 +5,7 @@
 //RUN:  -fopenmp-targets=x86_64 -I%S/Inputs -emit-llvm-bc -o %t-host.bc %s
 
 //RUN: %clang_cc1 -x c++ -triple x86_64 -fopenmp -fopenmp-version=51 \
-//RUN:  -fopenmp-targets=x86_64 -I%S/Inputs -fopenmp-is-device \
+//RUN:  -fopenmp-targets=x86_64 -I%S/Inputs -fopenmp-is-target-device \
 //RUN:  -fopenmp-host-ir-file-path %t-host.bc -emit-llvm -o - %s \
 //RUN:  | FileCheck %s --check-prefix=TCHECK
 

@@ -1,7 +1,10 @@
 # Test target to run Python test suite from main build.
 
+# Avoid configurations including '-include' from interfering with
+# our tests by setting CLANG_NO_DEFAULT_CONFIG.
 add_custom_target(check-clang-python
     COMMAND ${CMAKE_COMMAND} -E env
+            CLANG_NO_DEFAULT_CONFIG=1
             CLANG_LIBRARY_PATH=$<TARGET_FILE_DIR:libclang>
             "${Python3_EXECUTABLE}" -m unittest discover
     DEPENDS libclang

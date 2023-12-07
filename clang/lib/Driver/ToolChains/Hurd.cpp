@@ -65,7 +65,7 @@ Hurd::Hurd(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
   GCCInstallation.init(Triple, Args);
   Multilibs = GCCInstallation.getMultilibs();
-  SelectedMultilib = GCCInstallation.getMultilib();
+  SelectedMultilibs.assign({GCCInstallation.getMultilib()});
   std::string SysRoot = computeSysRoot();
   ToolChain::path_list &PPaths = getProgramPaths();
 

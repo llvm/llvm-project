@@ -10,7 +10,7 @@ define hidden void @barrier() align 2 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALLG:%.*]] = tail call i64 @g()
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 undef, i64 0, i64 [[CALLG]]
-; CHECK-NEXT:    [[LOADED:%.*]] = load i64, i64* null, align 8
+; CHECK-NEXT:    [[LOADED:%.*]] = load i64, ptr null, align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[LOADED]], 1
 ; CHECK-NEXT:    [[SHR17:%.*]] = lshr i64 [[ADD]], 1
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i64 [[SHR17]], -1
@@ -28,7 +28,7 @@ entry:
   %callg = tail call i64 @g()
   %sel = select i1 undef, i64 0, i64 %callg
 
-  %loaded = load i64, i64* null, align 8
+  %loaded = load i64, ptr null, align 8
   %add = add i64 %loaded, 1
   %shr17 = lshr i64 %add, 1
   %sub = add nsw i64 %shr17, -1
@@ -53,7 +53,7 @@ third:
 define hidden void @barrier2() align 2 {
 ; CHECK-LABEL: @barrier2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* null, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr null, align 8
 ; CHECK-NEXT:    [[CALL9:%.*]] = tail call i64 @g()
 ; CHECK-NEXT:    [[REM:%.*]] = select i1 undef, i64 0, i64 [[CALL9]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[TMP0]], 1
@@ -76,7 +76,7 @@ define hidden void @barrier2() align 2 {
 ; CHECK-NEXT:    br i1 false, label [[INNERLOOP]], label [[SECOND_EXIT:%.*]]
 ;
 entry:
-  %0 = load i64, i64* null, align 8
+  %0 = load i64, ptr null, align 8
   %call9 = tail call i64 @g()
   %rem = select i1 undef, i64 0, i64 %call9
   %add = add i64 %0, 1

@@ -219,7 +219,8 @@ define i64 @f19(i64 %a, i64 %b, ptr %dest) {
 ; Test a combination involving an ASHR in which the sign bits don't matter.
 define i32 @f20(i32 %a, i32 %b, ptr %dest) {
 ; CHECK-LABEL: f20:
-; CHECK: rnsbg %r2, %r3, 48, 62, 48
+; CHECK-NOT: lr
+; CHECK: rnsbg %r2, %r3, 48, 62, 1
 ; CHECK: br %r14
   %ashrb = ashr i32 %b, 17
   store i32 %ashrb, ptr %dest
@@ -232,7 +233,7 @@ define i32 @f20(i32 %a, i32 %b, ptr %dest) {
 ; ...and again with i64.
 define i64 @f21(i64 %a, i64 %b, ptr %dest) {
 ; CHECK-LABEL: f21:
-; CHECK: rnsbg %r2, %r3, 48, 62, 16
+; CHECK: rnsbg %r2, %r0, 48, 62, 1
 ; CHECK: br %r14
   %ashrb = ashr i64 %b, 49
   store i64 %ashrb, ptr %dest

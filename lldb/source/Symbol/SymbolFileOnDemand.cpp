@@ -12,6 +12,7 @@
 #include "lldb/Symbol/SymbolFile.h"
 
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -197,7 +198,7 @@ Type *SymbolFileOnDemand::ResolveTypeUID(lldb::user_id_t type_uid) {
   return m_sym_file_impl->ResolveTypeUID(type_uid);
 }
 
-llvm::Optional<SymbolFile::ArrayInfo>
+std::optional<SymbolFile::ArrayInfo>
 SymbolFileOnDemand::GetDynamicArrayInfoForUID(
     lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
   if (!m_debug_info_enabled) {
@@ -482,13 +483,16 @@ SymbolFileOnDemand::GetTypeSystemForLanguage(LanguageType language) {
 
 CompilerDeclContext
 SymbolFileOnDemand::FindNamespace(ConstString name,
-                                  const CompilerDeclContext &parent_decl_ctx) {
+                                  const CompilerDeclContext &parent_decl_ctx,
+                                  bool only_root_namespaces) {
   if (!m_debug_info_enabled) {
     LLDB_LOG(GetLog(), "[{0}] {1}({2}) is skipped", GetSymbolFileName(),
              __FUNCTION__, name);
-    return SymbolFile::FindNamespace(name, parent_decl_ctx);
+    return SymbolFile::FindNamespace(name, parent_decl_ctx,
+                                     only_root_namespaces);
   }
-  return m_sym_file_impl->FindNamespace(name, parent_decl_ctx);
+  return m_sym_file_impl->FindNamespace(name, parent_decl_ctx,
+                                        only_root_namespaces);
 }
 
 std::vector<std::unique_ptr<lldb_private::CallEdge>>

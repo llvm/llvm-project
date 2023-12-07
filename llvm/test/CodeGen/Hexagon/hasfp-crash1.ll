@@ -6,10 +6,10 @@
 target triple = "hexagon"
 
 ; Function Attrs: nounwind
-declare i32 @foo0(i32*, i32, i64, i32, i8 zeroext, i8 zeroext, i32) local_unnamed_addr #0
+declare i32 @foo0(ptr, i32, i64, i32, i8 zeroext, i8 zeroext, i32) local_unnamed_addr #0
 
 ; Function Attrs: nounwind
-define i32 @foo1(i32* %a0, i32 %a1, i32 %a2, i32 %a3, i8 zeroext %a4, i8 zeroext %a5, i32 %a6) local_unnamed_addr #0 !dbg !33 {
+define i32 @foo1(ptr %a0, i32 %a1, i32 %a2, i32 %a3, i8 zeroext %a4, i8 zeroext %a5, i32 %a6) local_unnamed_addr #0 !dbg !33 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 %a6, i64 0, metadata !51, metadata !52), !dbg !53
   ret i32 undef, !dbg !54

@@ -46,7 +46,7 @@ define i1 @t3_extrause0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t3_extrause0(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[Y]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = sub i8 %x, %y

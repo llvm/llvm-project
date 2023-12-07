@@ -50,7 +50,6 @@ struct DenormalMode;
 class DISubprogram;
 class LLVMContext;
 class Module;
-template <typename T> class Optional;
 class raw_ostream;
 class Type;
 class User;
@@ -418,10 +417,6 @@ public:
   /// gets the specified attribute from the list of attributes.
   Attribute getParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
-  /// removes noundef and other attributes that imply undefined behavior if a
-  /// `undef` or `poison` value is passed from the list of attributes.
-  void removeParamUndefImplyingAttrs(unsigned ArgNo);
-
   /// Return the stack alignment for the function.
   MaybeAlign getFnStackAlign() const {
     return AttributeSets.getFnStackAlignment();
@@ -437,15 +432,6 @@ public:
   /// adds the dereferenceable_or_null attribute to the list of
   /// attributes for the given arg.
   void addDereferenceableOrNullParamAttr(unsigned ArgNo, uint64_t Bytes);
-
-  /// Extract the alignment for a call or parameter (0=unknown).
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getParamAlign() instead.
-  uint64_t getParamAlignment(unsigned ArgNo) const {
-    if (const auto MA = getParamAlign(ArgNo))
-      return MA->value();
-    return 0;
-  }
 
   MaybeAlign getParamAlign(unsigned ArgNo) const {
     return AttributeSets.getParamAlignment(ArgNo);
@@ -491,6 +477,11 @@ public:
   /// @param ArgNo AttributeList ArgNo, referring to an argument.
   uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const {
     return AttributeSets.getParamDereferenceableOrNullBytes(ArgNo);
+  }
+
+  /// Extract the nofpclass attribute for a parameter.
+  FPClassTest getParamNoFPClass(unsigned ArgNo) const {
+    return AttributeSets.getParamNoFPClass(ArgNo);
   }
 
   /// Determine if the function is presplit coroutine.
@@ -658,6 +649,15 @@ public:
   /// Returns the denormal handling type for the default rounding mode of the
   /// function.
   DenormalMode getDenormalMode(const fltSemantics &FPType) const;
+
+  /// Return the representational value of "denormal-fp-math". Code interested
+  /// in the semantics of the function should use getDenormalMode instead.
+  DenormalMode getDenormalModeRaw() const;
+
+  /// Return the representational value of "denormal-fp-math-f32". Code
+  /// interested in the semantics of the function should use getDenormalMode
+  /// instead.
+  DenormalMode getDenormalModeF32Raw() const;
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a Function) from the Function Src to this one.
@@ -888,13 +888,14 @@ public:
   /// other than direct calls or invokes to it, or blockaddress expressions.
   /// Optionally passes back an offending user for diagnostic purposes,
   /// ignores callback uses, assume like pointer annotation calls, references in
-  /// llvm.used and llvm.compiler.used variables, and operand bundle
-  /// "clang.arc.attachedcall".
-  bool hasAddressTaken(const User ** = nullptr,
-                       bool IgnoreCallbackUses = false,
+  /// llvm.used and llvm.compiler.used variables, operand bundle
+  /// "clang.arc.attachedcall", and direct calls with a different call site
+  /// signature (the function is implicitly casted).
+  bool hasAddressTaken(const User ** = nullptr, bool IgnoreCallbackUses = false,
                        bool IgnoreAssumeLikeCalls = true,
                        bool IngoreLLVMUsed = false,
-                       bool IgnoreARCAttachedCall = false) const;
+                       bool IgnoreARCAttachedCall = false,
+                       bool IgnoreCastedDirectCall = false) const;
 
   /// isDefTriviallyDead - Return true if it is trivially safe to remove
   /// this function definition from the module (because it isn't externally
@@ -918,7 +919,7 @@ public:
   DISubprogram *getSubprogram() const;
 
   /// Returns true if we should emit debug info for profiling.
-  bool isDebugInfoForProfiling() const;
+  bool shouldEmitDebugInfoForProfiling() const;
 
   /// Check if null pointer dereferencing is considered undefined behavior for
   /// the function.

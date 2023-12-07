@@ -14,9 +14,7 @@
 
 #include <memory>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 class PassByValueCheck : public ClangTidyCheck {
 public:
@@ -35,8 +33,6 @@ private:
   const bool ValuesOnly;
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_PASS_BY_VALUE_H

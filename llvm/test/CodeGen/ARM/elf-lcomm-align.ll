@@ -11,5 +11,5 @@
 ; CHECK-NEXT: .comm x,4,4
 
 define i32 @foo() nounwind {
-  ret i32 sub (i32 ptrtoint (i8* @c to i32), i32 ptrtoint (i32* @x to i32))
+  ret i32 sub (i32 ptrtoint (ptr @c to i32), i32 ptrtoint (ptr @x to i32))
 }

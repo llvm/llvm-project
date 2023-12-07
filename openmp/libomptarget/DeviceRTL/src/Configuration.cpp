@@ -12,11 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Configuration.h"
-#include "DeviceEnvironment.h"
+#include "Environment.h"
 #include "State.h"
 #include "Types.h"
 
-using namespace _OMP;
+using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
@@ -25,26 +25,38 @@ extern uint32_t __omp_rtl_debug_kind;
 extern uint32_t __omp_rtl_assume_no_thread_state;
 extern uint32_t __omp_rtl_assume_no_nested_parallelism;
 
-// TODO: We want to change the name as soon as the old runtime is gone.
 // This variable should be visibile to the plugin so we override the default
 // hidden visibility.
-DeviceEnvironmentTy CONSTANT(omptarget_device_environment)
+DeviceEnvironmentTy CONSTANT(__omp_rtl_device_environment)
     __attribute__((used, retain, weak, visibility("protected")));
 
 uint32_t config::getDebugKind() {
-  return __omp_rtl_debug_kind & omptarget_device_environment.DebugKind;
+  return __omp_rtl_debug_kind & __omp_rtl_device_environment.DebugKind;
 }
 
 uint32_t config::getNumDevices() {
-  return omptarget_device_environment.NumDevices;
+  return __omp_rtl_device_environment.NumDevices;
 }
 
 uint32_t config::getDeviceNum() {
-  return omptarget_device_environment.DeviceNum;
+  return __omp_rtl_device_environment.DeviceNum;
 }
 
 uint64_t config::getDynamicMemorySize() {
-  return omptarget_device_environment.DynamicMemSize;
+  return __omp_rtl_device_environment.DynamicMemSize;
+}
+
+uint64_t config::getClockFrequency() {
+  return __omp_rtl_device_environment.ClockFrequency;
+}
+
+void *config::getIndirectCallTablePtr() {
+  return reinterpret_cast<void *>(
+      __omp_rtl_device_environment.IndirectCallTable);
+}
+
+uint64_t config::getIndirectCallTableSize() {
+  return __omp_rtl_device_environment.IndirectCallTableSize;
 }
 
 bool config::isDebugMode(config::DebugKind Kind) {
@@ -54,7 +66,9 @@ bool config::isDebugMode(config::DebugKind Kind) {
 bool config::mayUseThreadStates() { return !__omp_rtl_assume_no_thread_state; }
 
 bool config::mayUseNestedParallelism() {
-  return !__omp_rtl_assume_no_nested_parallelism;
+  if (__omp_rtl_assume_no_nested_parallelism)
+    return false;
+  return state::getKernelEnvironment().Configuration.MayUseNestedParallelism;
 }
 
 #pragma omp end declare target

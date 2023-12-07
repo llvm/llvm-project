@@ -18,15 +18,16 @@
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
@@ -42,6 +43,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -58,9 +60,11 @@ public:
 
   uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
                      lldb::addr_t pc, llvm::MCInst &mc_inst) const;
-  void PrintMCInst(llvm::MCInst &mc_inst, std::string &inst_string,
-                   std::string &comments_string);
+  void PrintMCInst(llvm::MCInst &mc_inst, lldb::addr_t pc,
+                   std::string &inst_string, std::string &comments_string);
   void SetStyle(bool use_hex_immed, HexImmediateStyle hex_style);
+  void SetUseColor(bool use_color);
+  bool GetUseColor() const;
   bool CanBranch(llvm::MCInst &mc_inst) const;
   bool HasDelaySlot(llvm::MCInst &mc_inst) const;
   bool IsCall(llvm::MCInst &mc_inst) const;
@@ -74,7 +78,8 @@ private:
                    std::unique_ptr<llvm::MCAsmInfo> &&asm_info_up,
                    std::unique_ptr<llvm::MCContext> &&context_up,
                    std::unique_ptr<llvm::MCDisassembler> &&disasm_up,
-                   std::unique_ptr<llvm::MCInstPrinter> &&instr_printer_up);
+                   std::unique_ptr<llvm::MCInstPrinter> &&instr_printer_up,
+                   std::unique_ptr<llvm::MCInstrAnalysis> &&instr_analysis_up);
 
   std::unique_ptr<llvm::MCInstrInfo> m_instr_info_up;
   std::unique_ptr<llvm::MCRegisterInfo> m_reg_info_up;
@@ -83,6 +88,7 @@ private:
   std::unique_ptr<llvm::MCContext> m_context_up;
   std::unique_ptr<llvm::MCDisassembler> m_disasm_up;
   std::unique_ptr<llvm::MCInstPrinter> m_instr_printer_up;
+  std::unique_ptr<llvm::MCInstrAnalysis> m_instr_analysis_up;
 };
 
 namespace x86 {
@@ -253,7 +259,7 @@ MapOpcodeIntoControlFlowKind(InstructionOpcodeAndModrm opcode_and_modrm) {
 ///    primary_opcode, opcode_len and modrm byte. Refer to the struct definition
 ///    for more details.
 ///    Otherwise if the given instruction is invalid, returns std::nullopt.
-llvm::Optional<InstructionOpcodeAndModrm>
+std::optional<InstructionOpcodeAndModrm>
 InstructionLengthDecode(const uint8_t *inst_bytes, int bytes_len,
                         bool is_exec_mode_64b) {
   int op_idx = 0;
@@ -384,7 +390,7 @@ InstructionLengthDecode(const uint8_t *inst_bytes, int bytes_len,
 
 lldb::InstructionControlFlowKind GetControlFlowKind(bool is_exec_mode_64b,
                                                     Opcode m_opcode) {
-  llvm::Optional<InstructionOpcodeAndModrm> ret;
+  std::optional<InstructionOpcodeAndModrm> ret;
 
   if (m_opcode.GetOpcodeBytes() == nullptr || m_opcode.GetByteSize() <= 0) {
     // x86_64 and i386 instructions are categorized as Opcode::Type::eTypeBytes
@@ -561,7 +567,9 @@ public:
 
     if (m_opcode.GetData(data)) {
       std::string out_string;
+      std::string markup_out_string;
       std::string comment_string;
+      std::string markup_comment_string;
 
       DisassemblerScope disasm(*this, exe_ctx);
       if (disasm) {
@@ -603,7 +611,14 @@ public:
 
         if (inst_size > 0) {
           mc_disasm_ptr->SetStyle(use_hex_immediates, hex_style);
-          mc_disasm_ptr->PrintMCInst(inst, out_string, comment_string);
+
+          const bool saved_use_color = mc_disasm_ptr->GetUseColor();
+          mc_disasm_ptr->SetUseColor(false);
+          mc_disasm_ptr->PrintMCInst(inst, pc, out_string, comment_string);
+          mc_disasm_ptr->SetUseColor(true);
+          mc_disasm_ptr->PrintMCInst(inst, pc, markup_out_string,
+                                     markup_comment_string);
+          mc_disasm_ptr->SetUseColor(saved_use_color);
 
           if (!comment_string.empty()) {
             AppendComment(comment_string);
@@ -667,6 +682,11 @@ public:
         if (s_regex.Execute(out_string, &matches)) {
           m_opcode_name = matches[1].str();
           m_mnemonics = matches[2].str();
+        }
+        matches.clear();
+        if (s_regex.Execute(markup_out_string, &matches)) {
+          m_markup_opcode_name = matches[1].str();
+          m_markup_mnemonics = matches[2].str();
         }
       }
     }
@@ -1286,11 +1306,17 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple, const char *cpu,
   if (!instr_printer_up)
     return Instance();
 
-  return Instance(
-      new MCDisasmInstance(std::move(instr_info_up), std::move(reg_info_up),
-                           std::move(subtarget_info_up), std::move(asm_info_up),
-                           std::move(context_up), std::move(disasm_up),
-                           std::move(instr_printer_up)));
+  instr_printer_up->setPrintBranchImmAsAddress(true);
+
+  // Not all targets may have registered createMCInstrAnalysis().
+  std::unique_ptr<llvm::MCInstrAnalysis> instr_analysis_up(
+      curr_target->createMCInstrAnalysis(instr_info_up.get()));
+
+  return Instance(new MCDisasmInstance(
+      std::move(instr_info_up), std::move(reg_info_up),
+      std::move(subtarget_info_up), std::move(asm_info_up),
+      std::move(context_up), std::move(disasm_up), std::move(instr_printer_up),
+      std::move(instr_analysis_up)));
 }
 
 DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
@@ -1300,13 +1326,15 @@ DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
     std::unique_ptr<llvm::MCAsmInfo> &&asm_info_up,
     std::unique_ptr<llvm::MCContext> &&context_up,
     std::unique_ptr<llvm::MCDisassembler> &&disasm_up,
-    std::unique_ptr<llvm::MCInstPrinter> &&instr_printer_up)
+    std::unique_ptr<llvm::MCInstPrinter> &&instr_printer_up,
+    std::unique_ptr<llvm::MCInstrAnalysis> &&instr_analysis_up)
     : m_instr_info_up(std::move(instr_info_up)),
       m_reg_info_up(std::move(reg_info_up)),
       m_subtarget_info_up(std::move(subtarget_info_up)),
       m_asm_info_up(std::move(asm_info_up)),
       m_context_up(std::move(context_up)), m_disasm_up(std::move(disasm_up)),
-      m_instr_printer_up(std::move(instr_printer_up)) {
+      m_instr_printer_up(std::move(instr_printer_up)),
+      m_instr_analysis_up(std::move(instr_analysis_up)) {
   assert(m_instr_info_up && m_reg_info_up && m_subtarget_info_up &&
          m_asm_info_up && m_context_up && m_disasm_up && m_instr_printer_up);
 }
@@ -1327,15 +1355,17 @@ uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
 }
 
 void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
-    llvm::MCInst &mc_inst, std::string &inst_string,
+    llvm::MCInst &mc_inst, lldb::addr_t pc, std::string &inst_string,
     std::string &comments_string) {
   llvm::raw_string_ostream inst_stream(inst_string);
   llvm::raw_string_ostream comments_stream(comments_string);
 
+  inst_stream.enable_colors(m_instr_printer_up->getUseColor());
   m_instr_printer_up->setCommentStream(comments_stream);
-  m_instr_printer_up->printInst(&mc_inst, 0, llvm::StringRef(),
+  m_instr_printer_up->printInst(&mc_inst, pc, llvm::StringRef(),
                                 *m_subtarget_info_up, inst_stream);
   m_instr_printer_up->setCommentStream(llvm::nulls());
+
   comments_stream.flush();
 
   static std::string g_newlines("\r\n");
@@ -1362,8 +1392,18 @@ void DisassemblerLLVMC::MCDisasmInstance::SetStyle(
   }
 }
 
+void DisassemblerLLVMC::MCDisasmInstance::SetUseColor(bool use_color) {
+  m_instr_printer_up->setUseColor(use_color);
+}
+
+bool DisassemblerLLVMC::MCDisasmInstance::GetUseColor() const {
+  return m_instr_printer_up->getUseColor();
+}
+
 bool DisassemblerLLVMC::MCDisasmInstance::CanBranch(
     llvm::MCInst &mc_inst) const {
+  if (m_instr_analysis_up)
+    return m_instr_analysis_up->mayAffectControlFlow(mc_inst, *m_reg_info_up);
   return m_instr_info_up->get(mc_inst.getOpcode())
       .mayAffectControlFlow(mc_inst, *m_reg_info_up);
 }
@@ -1374,6 +1414,8 @@ bool DisassemblerLLVMC::MCDisasmInstance::HasDelaySlot(
 }
 
 bool DisassemblerLLVMC::MCDisasmInstance::IsCall(llvm::MCInst &mc_inst) const {
+  if (m_instr_analysis_up)
+    return m_instr_analysis_up->isCall(mc_inst);
   return m_instr_info_up->get(mc_inst.getOpcode()).isCall();
 }
 
@@ -1383,7 +1425,7 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsLoad(llvm::MCInst &mc_inst) const {
 
 bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
     llvm::MCInst &mc_inst) const {
-  auto InstrDesc = m_instr_info_up->get(mc_inst.getOpcode());
+  const auto &InstrDesc = m_instr_info_up->get(mc_inst.getOpcode());
 
   // Treat software auth traps (brk 0xc470 + aut key, where 0x70 == 'p', 0xc4
   // == 'a' + 'c') as authenticated instructions for reporting purposes, in
@@ -1571,16 +1613,14 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
 
 DisassemblerLLVMC::~DisassemblerLLVMC() = default;
 
-Disassembler *DisassemblerLLVMC::CreateInstance(const ArchSpec &arch,
-                                                const char *flavor) {
+lldb::DisassemblerSP DisassemblerLLVMC::CreateInstance(const ArchSpec &arch,
+                                                       const char *flavor) {
   if (arch.GetTriple().getArch() != llvm::Triple::UnknownArch) {
-    std::unique_ptr<DisassemblerLLVMC> disasm_up(
-        new DisassemblerLLVMC(arch, flavor));
-
-    if (disasm_up.get() && disasm_up->IsValid())
-      return disasm_up.release();
+    auto disasm_sp = std::make_shared<DisassemblerLLVMC>(arch, flavor);
+    if (disasm_sp && disasm_sp->IsValid())
+      return disasm_sp;
   }
-  return nullptr;
+  return lldb::DisassemblerSP();
 }
 
 size_t DisassemblerLLVMC::DecodeInstructions(const Address &base_addr,

@@ -4,8 +4,6 @@
 // RUN: %clang_cc1 -x objective-c++ -fsyntax-only -E -dM -triple=x86_64-apple-darwin16 %s | FileCheck --check-prefix=CHAR %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -E -dM -triple=x86_64-apple-darwin16 %s | FileCheck --check-prefix=CHAR %s
 
-// rdar://21170440
-
 // BOOL: #define __OBJC_BOOL_IS_BOOL 1
 // BOOL-NOT: #define __OBJC_BOOL_IS_BOOL 0
 

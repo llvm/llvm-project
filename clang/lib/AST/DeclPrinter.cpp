@@ -309,6 +309,8 @@ void DeclPrinter::PrintConstructorInitializers(CXXConstructorDecl *CDecl,
   for (const auto *BMInitializer : CDecl->inits()) {
     if (BMInitializer->isInClassMemberInitializer())
       continue;
+    if (!BMInitializer->isWritten())
+      continue;
 
     if (!HasInitializerList) {
       Proto += " : ";
@@ -321,15 +323,18 @@ void DeclPrinter::PrintConstructorInitializers(CXXConstructorDecl *CDecl,
     if (BMInitializer->isAnyMemberInitializer()) {
       FieldDecl *FD = BMInitializer->getAnyMember();
       Out << *FD;
+    } else if (BMInitializer->isDelegatingInitializer()) {
+      Out << CDecl->getNameAsString();
     } else {
       Out << QualType(BMInitializer->getBaseClass(), 0).getAsString(Policy);
     }
 
-    Out << "(";
-    if (!BMInitializer->getInit()) {
-      // Nothing to print
-    } else {
-      Expr *Init = BMInitializer->getInit();
+    if (Expr *Init = BMInitializer->getInit()) {
+      bool OutParens = !isa<InitListExpr>(Init);
+
+      if (OutParens)
+        Out << "(";
+
       if (ExprWithCleanups *Tmp = dyn_cast<ExprWithCleanups>(Init))
         Init = Tmp->getSubExpr();
 
@@ -363,8 +368,13 @@ void DeclPrinter::PrintConstructorInitializers(CXXConstructorDecl *CDecl,
                                &Context);
         }
       }
+
+      if (OutParens)
+        Out << ")";
+    } else {
+      Out << "()";
     }
-    Out << ")";
+
     if (BMInitializer->isPackExpansion())
       Out << "...";
   }
@@ -455,12 +465,12 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     else if (isa<ObjCMethodDecl>(*D) && cast<ObjCMethodDecl>(*D)->hasBody())
       Terminator = nullptr;
     else if (auto FD = dyn_cast<FunctionDecl>(*D)) {
-      if (FD->isThisDeclarationADefinition())
+      if (FD->doesThisDeclarationHaveABody() && !FD->isDefaulted())
         Terminator = nullptr;
       else
         Terminator = ";";
     } else if (auto TD = dyn_cast<FunctionTemplateDecl>(*D)) {
-      if (TD->getTemplatedDecl()->isThisDeclarationADefinition())
+      if (TD->getTemplatedDecl()->doesThisDeclarationHaveABody())
         Terminator = nullptr;
       else
         Terminator = ";";
@@ -622,6 +632,8 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     if (D->isConstexprSpecified() && !D->isExplicitlyDefaulted())
       Out << "constexpr ";
     if (D->isConsteval())        Out << "consteval ";
+    else if (D->isImmediateFunction())
+      Out << "immediate ";
     ExplicitSpecifier ExplicitSpec = ExplicitSpecifier::getFromDecl(D);
     if (ExplicitSpec.isSpecified())
       printExplicitSpecifier(ExplicitSpec, Out, Policy, Indentation, Context);
@@ -947,9 +959,9 @@ void DeclPrinter::VisitStaticAssertDecl(StaticAssertDecl *D) {
   Out << "static_assert(";
   D->getAssertExpr()->printPretty(Out, nullptr, Policy, Indentation, "\n",
                                   &Context);
-  if (StringLiteral *SL = D->getMessage()) {
+  if (Expr *E = D->getMessage()) {
     Out << ", ";
-    SL->printPretty(Out, nullptr, Policy, Indentation, "\n", &Context);
+    E->printPretty(Out, nullptr, Policy, Indentation, "\n", &Context);
   }
   Out << ")";
 }
@@ -997,7 +1009,10 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   prettyPrintAttributes(D);
 
   if (D->getIdentifier()) {
-    Out << ' ' << *D;
+    Out << ' ';
+    if (auto *NNS = D->getQualifier())
+      NNS->print(Out, Policy);
+    Out << *D;
 
     if (auto S = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
       ArrayRef<TemplateArgument> Args = S->getTemplateArgs().asArray();

@@ -3,7 +3,7 @@
 ---
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"auto i = 0;"}}}
 ---
-{"jsonrpc":"2.0","id":4,"method":"workspace/executeCommand","params":{"command":"clangd.applyTweak","arguments":[{"file":"test:///main.cpp","selection":{"end":{"character":4,"line":0},"start":{"character":0,"line":0}},"tweakID":"ExpandAutoType"}]}}
+{"jsonrpc":"2.0","id":4,"method":"workspace/executeCommand","params":{"command":"clangd.applyTweak","arguments":[{"file":"test:///main.cpp","selection":{"end":{"character":4,"line":0},"start":{"character":0,"line":0}},"tweakID":"ExpandDeducedType"}]}}
 #      CHECK:  "id": 0,
 #      CHECK:  "method": "workspace/applyEdit",
 #      CHECK:  "newText": "int",
@@ -25,7 +25,7 @@
 # CHECK-NEXT:  },
 # CHECK-NEXT:  "id": 4,
 ---
-{"jsonrpc":"2.0","id":5,"method":"workspace/executeCommand","params":{"command":"clangd.applyTweak","arguments":[{"file":"test:///main.cpp","selection":{"end":{"character":4,"line":0},"start":{"character":0,"line":0}},"tweakID":"ExpandAutoType"}]}}
+{"jsonrpc":"2.0","id":5,"method":"workspace/executeCommand","params":{"command":"clangd.applyTweak","arguments":[{"file":"test:///main.cpp","selection":{"end":{"character":4,"line":0},"start":{"character":0,"line":0}},"tweakID":"ExpandDeducedType"}]}}
 #      CHECK:  "id": 1,
 #      CHECK:  "method": "workspace/applyEdit",
 ---

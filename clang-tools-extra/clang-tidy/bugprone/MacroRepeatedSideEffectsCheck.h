@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Checks for repeated argument with side effects in macros.
 class MacroRepeatedSideEffectsCheck : public ClangTidyCheck {
@@ -24,8 +22,6 @@ public:
                            Preprocessor *ModuleExpanderPP) override;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_MACROREPEATEDSIDEEFFECTSCHECK_H

@@ -13,7 +13,7 @@
 
 namespace __llvm_libc {
 
-void pthread_exit(void *retval);
+[[noreturn]] void pthread_exit(void *retval);
 
 } // namespace __llvm_libc
 

@@ -1,12 +1,12 @@
-# RUN: not llvm-mc -triple aarch64-arm-none-eabi -mattr=+mops,+mte -disassemble < %s 2> %t | FileCheck %s --check-prefixes=CHECK-MOPS,CHECK-MTE
+# RUN: not llvm-mc -triple aarch64 -mattr=+mops,+mte -disassemble < %s 2> %t | FileCheck %s --check-prefixes=CHECK-MOPS,CHECK-MTE
 # RUN: FileCheck %s --check-prefix=CHECK-INVALID < %t
-# RUN: not llvm-mc -triple aarch64-arm-none-eabi -mattr=+v8.8a,+mte -disassemble < %s 2> %t | FileCheck %s --check-prefixes=CHECK-MOPS,CHECK-MTE
+# RUN: not llvm-mc -triple aarch64 -mattr=+v8.8a,+mte -disassemble < %s 2> %t | FileCheck %s --check-prefixes=CHECK-MOPS,CHECK-MTE
 # RUN: FileCheck %s --check-prefix=CHECK-INVALID < %t
-# RUN: not llvm-mc -triple aarch64-arm-none-eabi -mattr=+mops -disassemble < %s 2> %t | FileCheck %s --check-prefix=CHECK-MOPS
+# RUN: not llvm-mc -triple aarch64 -mattr=+mops -disassemble < %s 2> %t | FileCheck %s --check-prefix=CHECK-MOPS
 # RUN: FileCheck %s --check-prefixes=CHECK-INVALID,CHECK-NO-MTE < %t
-# RUN: not llvm-mc -triple aarch64-arm-none-eabi -mattr=+v8.8a -disassemble < %s 2> %t | FileCheck %s --check-prefix=CHECK-MOPS
+# RUN: not llvm-mc -triple aarch64 -mattr=+v8.8a -disassemble < %s 2> %t | FileCheck %s --check-prefix=CHECK-MOPS
 # RUN: FileCheck %s --check-prefixes=CHECK-INVALID,CHECK-NO-MTE < %t
-# RUN: not llvm-mc -triple aarch64-arm-none-eabi -disassemble < %s 2> %t
+# RUN: not llvm-mc -triple aarch64 -disassemble < %s 2> %t
 # RUN: FileCheck %s --check-prefixes=CHECK-INVALID,CHECK-NO-MOPS,CHECK-NO-MTE < %t
 
 

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-apple-ios -run-pass=simple-register-coalescing %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-apple-ios -run-pass=register-coalescer -verify-machineinstrs %s -o - | FileCheck %s
 --- |
   declare void @f2()
 

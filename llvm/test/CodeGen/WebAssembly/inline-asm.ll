@@ -76,8 +76,8 @@ entry:
 ; CHECK: local.get $push[[S0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: local.get $push[[S1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: i32.store16 0($pop[[S0]]), $pop[[S1]]{{$}}
-define void @X_i16(i16 * %t) {
-  call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(i16* elementtype(i16) %t)
+define void @X_i16(ptr %t) {
+  call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(ptr elementtype(i16) %t)
   ret void
 }
 
@@ -86,15 +86,15 @@ define void @X_i16(i16 * %t) {
 ; CHECK: local.get $push[[S0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: local.get $push[[S1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: i32.store 0($pop[[S0]]), $pop[[S1]]{{$}}
-define void @X_ptr(i16 ** %t) {
-  call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(i16** elementtype(i16*) %t)
+define void @X_ptr(ptr %t) {
+  call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(ptr elementtype(ptr) %t)
   ret void
 }
 
 ; CHECK-LABEL: funcname:
 ; CHECK: foo funcname{{$}}
 define void @funcname() {
-  tail call void asm sideeffect "foo $0", "i"(void ()* nonnull @funcname) #0, !srcloc !0
+  tail call void asm sideeffect "foo $0", "i"(ptr nonnull @funcname) #0, !srcloc !0
   ret void
 }
 
@@ -102,7 +102,7 @@ define void @funcname() {
 ; CHECK: foo gv+37{{$}}
 @gv = global [0 x i8] zeroinitializer
 define void @varname() {
-  tail call void asm sideeffect "foo $0", "i"(i8* getelementptr inbounds ([0 x i8], [0 x i8]* @gv, i64 0, i64 37)) #0, !srcloc !0
+  tail call void asm sideeffect "foo $0", "i"(ptr getelementptr inbounds ([0 x i8], ptr @gv, i64 0, i64 37)) #0, !srcloc !0
   ret void
 }
 

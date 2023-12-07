@@ -21,13 +21,13 @@ target triple = "aarch64-unknown-linux-android"
 @global = external global i32
 declare void @func()
 
-define i32* @global_addr() #0 {
+define ptr @global_addr() #0 {
   ; CHECK-PIC: global_addr:
   ; CHECK-PIC: adrp [[REG:x[0-9]+]], :got:global
   ; CHECK-PIC: ldr x0, [[[REG]], :got_lo12:global]
   ; CHECK-PIC: ret
 
-  ret i32* @global
+  ret ptr @global
 }
 
 define i32 @global_load() #0 {
@@ -49,7 +49,7 @@ define i32 @global_load() #0 {
   ; CHECK-PIC: ldr w0, [[[REG]]]
   ; CHECK-PIC: ret
 
-  %load = load i32, i32* @global
+  %load = load i32, ptr @global
   ret i32 %load
 }
 
@@ -72,17 +72,17 @@ define void @global_store() #0 {
   ; CHECK-PIC: str wzr, [[[REG]]]
   ; CHECK-PIC: ret
 
-  store i32 0, i32* @global
+  store i32 0, ptr @global
   ret void
 }
 
-define void ()* @func_addr() #0 {
+define ptr @func_addr() #0 {
   ; CHECK-PIC: func_addr:
   ; CHECK-PIC: adrp [[REG:x[0-9]+]], :got:func
   ; CHECK-PIC: ldr  x0, [[[REG]], :got_lo12:func]
   ; CHECK-PIC: ret
 
-  ret void ()* @func
+  ret ptr @func
 }
 
 attributes #0 = { "target-features"="+tagged-globals" }

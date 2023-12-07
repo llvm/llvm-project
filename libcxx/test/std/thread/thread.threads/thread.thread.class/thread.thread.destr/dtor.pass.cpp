@@ -15,10 +15,11 @@
 
 // ~thread();
 
-#include <thread>
-#include <new>
-#include <cstdlib>
 #include <cassert>
+#include <cstdlib>
+#include <exception>
+#include <new>
+#include <thread>
 
 #include "make_test_thread.h"
 #include "test_macros.h"

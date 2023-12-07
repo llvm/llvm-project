@@ -14,14 +14,15 @@
 #define LLVM_TARGET_TARGETMACHINE_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <string>
 #include <utility>
@@ -63,6 +64,7 @@ class PassManagerBase;
 }
 using legacy::PassManagerBase;
 
+struct MachineFunctionInfo;
 namespace yaml {
 struct MachineFunctionInfo;
 }
@@ -110,7 +112,7 @@ protected: // Can only create subclasses.
   unsigned O0WantsFastISel : 1;
 
   // PGO related tunables.
-  std::optional<PGOOptions> PGOOption = std::nullopt;
+  std::optional<PGOOptions> PGOOption;
 
 public:
   const TargetOptions DefaultOptions;
@@ -133,6 +135,13 @@ public:
     return nullptr;
   }
   virtual TargetLoweringObjectFile *getObjFileLowering() const {
+    return nullptr;
+  }
+
+  /// Create the target's instance of MachineFunctionInfo
+  virtual MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const {
     return nullptr;
   }
 
@@ -223,8 +232,13 @@ public:
   /// target default.
   CodeModel::Model getCodeModel() const { return CMModel; }
 
+  /// Returns the maximum code size possible under the code model.
+  uint64_t getMaxCodeSize() const;
+
   /// Set the code model.
   void setCodeModel(CodeModel::Model CM) { CMModel = CM; }
+
+  bool isLargeData() const;
 
   bool isPositionIndependent() const;
 
@@ -491,6 +505,9 @@ public:
   /// The default variant to use in unqualified `asm` instructions.
   /// If this returns 0, `asm "$(foo$|bar$)"` will evaluate to `asm "foo"`.
   virtual int unqualifiedInlineAsmVariant() const { return 0; }
+
+  // MachineRegisterInfo callback function
+  virtual void registerMachineRegisterInfoCallback(MachineFunction &MF) const {}
 };
 
 /// Helper method for getting the code model, returning Default if

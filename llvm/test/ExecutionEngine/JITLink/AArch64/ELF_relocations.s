@@ -1,0 +1,317 @@
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=aarch64-unknown-linux-gnu -relax-relocations=false \
+# RUN:   -position-independent -filetype=obj -o %t/elf_reloc.o %s
+# RUN: llvm-jitlink -noexec \
+# RUN:              -abs external_data=0xdeadbeef \
+# RUN:              -abs external_func=0xcafef00d \
+# RUN:              -check %s %t/elf_reloc.o
+
+        .text
+
+        .globl  main
+        .p2align  2
+        .type main,@function
+main:
+        ret
+
+        .size   main, .-main
+
+# Check R_AARCH64_CALL26 / R_AARCH64_JUMP26 relocation of a local function call
+#
+# jitlink-check: decode_operand(local_func_call26, 0)[25:0] = (local_func - local_func_call26)[27:2]
+# jitlink-check: decode_operand(local_func_jump26, 0)[25:0] = (local_func - local_func_jump26)[27:2]
+        .globl  local_func
+        .p2align  2
+        .type	local_func,@function
+local_func:
+        ret
+        .size   local_func, .-local_func
+
+        .globl  local_func_call26
+        .p2align  2
+local_func_call26:
+        bl	local_func
+        .size   local_func_call26, .-local_func_call26
+
+        .globl  local_func_jump26
+        .p2align  2
+local_func_jump26:
+        b	local_func
+        .size   local_func_jump26, .-local_func_jump26
+
+# Check R_AARCH64_ADR_PREL_LO21 relocation of a local symbol
+#
+# jitlink-check: decode_operand(test_adr_prel_lo21, 1) = (adr_data - test_adr_prel_lo21)[20:0]
+        .globl  test_adr_prel_lo21, adr_data
+        .p2align  2
+test_adr_prel_lo21:
+        adr	x0, adr_data
+        .size test_adr_prel_lo21, .-test_adr_prel_lo21
+## ADR encoding is a bit tricky so use an offset with an irregular bit pattern
+## to test this bit better
+adr_data = test_adr_prel_lo21 + 0xe46f2
+
+# Check R_AARCH64_ADR_PREL_PG_HI21 / R_AARCH64_ADD_ABS_LO12_NC relocation of a local symbol
+#
+# For the ADR_PREL_PG_HI21/ADRP instruction we have the 21-bit delta to the 4k page
+# containing the global.
+#
+# jitlink-check: decode_operand(test_adr_prel, 1) = (named_data - test_adr_prel)[32:12]
+# jitlink-check: decode_operand(test_add_abs_lo12, 2) = (named_data + 0)[11:0]
+        .globl  test_adr_prel
+        .p2align  2
+test_adr_prel:
+        adrp	x0, named_data
+        .size test_adr_prel, .-test_adr_prel
+
+        .globl  test_add_abs_lo12
+        .p2align  2
+test_add_abs_lo12:
+        add	x0, x0, :lo12:named_data
+        .size test_add_abs_lo12, .-test_add_abs_lo12
+
+# Check that calls/jumps to external functions trigger the generation of stubs and GOT
+# entries.
+#
+# jitlink-check: decode_operand(test_external_call, 0) = (stub_addr(elf_reloc.o, external_func) - test_external_call)[27:2]
+# jitlink-check: decode_operand(test_external_jump, 0) = (stub_addr(elf_reloc.o, external_func) - test_external_jump)[27:2]
+# jitlink-check: *{8}(got_addr(elf_reloc.o, external_func)) = external_func
+        .globl  test_external_call
+        .p2align  2
+test_external_call:
+        bl   external_func
+        .size test_external_call, .-test_external_call
+
+       .globl  test_external_jump
+        .p2align  2
+test_external_jump:
+        b   external_func
+        .size test_external_jump, .-test_external_jump
+
+# Check R_AARCH64_LDST*_ABS_LO12_NC relocation of a local symbol
+#
+# The immediate value should be the symbol address right shifted according to its instruction bitwidth.
+#
+# jitlink-check: decode_operand(test_ldrb, 2) = named_data[11:0]
+# jitlink-check: decode_operand(test_ldrsb, 2) = (named_data + 0)[11:0]
+# jitlink-check: decode_operand(test_ldrh, 2) = (named_data + 0)[11:1]
+# jitlink-check: decode_operand(test_ldrsh, 2) = (named_data + 0)[11:1]
+# jitlink-check: decode_operand(test_ldr_32bit, 2) = (named_data + 0)[11:2]
+# jitlink-check: decode_operand(test_ldr_64bit, 2) = (named_data + 0)[11:3]
+# jitlink-check: decode_operand(test_strb, 2) = named_data[11:0]
+# jitlink-check: decode_operand(test_strh, 2) = (named_data + 0)[11:1]
+# jitlink-check: decode_operand(test_str_32bit, 2) = (named_data + 0)[11:2]
+# jitlink-check: decode_operand(test_str_64bit, 2) = (named_data + 0)[11:3]
+
+        .globl  test_ldrb
+test_ldrb:
+        ldrb	w0, [x1, :lo12:named_data]
+        .size test_ldrb, .-test_ldrb
+
+        .globl  test_ldrsb
+test_ldrsb:
+        ldrsb	w0, [x1, :lo12:named_data]
+        .size test_ldrsb, .-test_ldrsb
+
+        .globl  test_ldrh
+test_ldrh:
+        ldrh	w0, [x1, :lo12:named_data]
+        .size test_ldrh, .-test_ldrh
+
+        .globl  test_ldrsh
+test_ldrsh:
+        ldrsh	w0, [x1, :lo12:named_data]
+        .size test_ldrsh, .-test_ldrsh
+
+        .globl  test_ldr_32bit
+test_ldr_32bit:
+        ldr	w0, [x1, :lo12:named_data]
+        .size test_ldr_32bit, .-test_ldr_32bit
+
+        .globl  test_ldr_64bit
+test_ldr_64bit:
+        ldr	x0, [x1, :lo12:named_data]
+        .size test_ldr_64bit, .-test_ldr_64bit
+
+        .globl  test_strb
+test_strb:
+        strb	w0, [x1, :lo12:named_data]
+        .size test_strb, .-test_strb
+
+        .globl  test_strh
+test_strh:
+        strh	w0, [x1, :lo12:named_data]
+        .size test_strh, .-test_strh
+
+        .globl  test_str_32bit
+test_str_32bit:
+        str	w0, [x1, :lo12:named_data]
+        .size test_str_32bit, .-test_str_32bit
+
+        .globl  test_str_64bit
+test_str_64bit:
+        str	x0, [x1, :lo12:named_data]
+        .size test_str_64bit, .-test_str_64bit
+
+
+# Check R_AARCH64_MOVW_UABS_G*_NC relocation of a local symbol
+#
+# The immediate value should be the symbol address right shifted according to LSL value
+#
+# jitlink-check: decode_operand(test_movz_g0_nc, 1) = named_data[15:0]
+# jitlink-check: decode_operand(test_movk_g0_nc, 2) = named_data[15:0]
+# jitlink-check: decode_operand(test_movz_g1_nc, 1) = named_data[31:16]
+# jitlink-check: decode_operand(test_movk_g1_nc, 2) = named_data[31:16]
+# jitlink-check: decode_operand(test_movz_g2_nc, 1) = named_data[47:32]
+# jitlink-check: decode_operand(test_movk_g2_nc, 2) = named_data[47:32]
+# jitlink-check: decode_operand(test_movz_g3, 1) = named_data[63:48]
+# jitlink-check: decode_operand(test_movk_g3, 2) = named_data[63:48]
+
+        .globl  test_movz_g0_nc
+test_movz_g0_nc:
+        movz x0, #:abs_g0_nc:named_data
+        .size test_movz_g0_nc, .-test_movz_g0_nc
+
+        .globl  test_movk_g0_nc
+test_movk_g0_nc:
+        movk x0, #:abs_g0_nc:named_data
+        .size test_movk_g0_nc, .-test_movk_g0_nc
+
+        .globl  test_movz_g1_nc
+test_movz_g1_nc:
+        movz x0, #:abs_g1_nc:named_data
+        .size test_movz_g1_nc, .-test_movz_g1_nc
+
+        .globl  test_movk_g1_nc
+test_movk_g1_nc:
+        movk x0, #:abs_g1_nc:named_data
+        .size test_movk_g1_nc, .-test_movk_g1_nc
+
+        .globl  test_movz_g2_nc
+test_movz_g2_nc:
+        movz x0, #:abs_g2_nc:named_data
+        .size test_movz_g2_nc, .-test_movz_g2_nc
+
+        .globl  test_movk_g2_nc
+test_movk_g2_nc:
+        movk x0, #:abs_g2_nc:named_data
+        .size test_movk_g2_nc, .-test_movk_g2_nc
+
+        .globl  test_movk_g3
+test_movk_g3:
+        movk x0, #:abs_g3:named_data
+        .size test_movk_g3, .-test_movk_g3
+
+        .globl  test_movz_g3
+test_movz_g3:
+        movz x0, #:abs_g3:named_data
+        .size test_movz_g3, .-test_movz_g3
+
+# Check R_AARCH64_ABS64 relocation of a function pointer to local symbol
+#
+# jitlink-check: *{8}local_func_addr_quad = named_func
+        .globl  local_func_addr_quad
+        .p2align  3
+local_func_addr_quad:
+        .xword	named_func
+        .size	local_func_addr_quad, 8
+
+# Check R_AARCH64_ABS64 relocation of a function pointer to external symbol
+#
+# jitlink-check: *{8}external_func_addr_quad = external_func
+        .globl  external_func_addr_quad
+        .p2align  3
+external_func_addr_quad:
+        .xword	external_func
+        .size	external_func_addr_quad, 8
+
+# Check R_AARCH64_ADR_GOT_PAGE / R_AARCH64_LD64_GOT_LO12_NC handling with a
+# reference to an external symbol. Validate both the reference to the GOT entry,
+# and also the content of the GOT entry.
+#
+# For the ADRP :got: instruction we have the 21-bit delta to the 4k page
+# containing the GOT entry for external_data.
+#
+# For the LDR :got_lo12: instruction we have the 12-bit offset of the entry
+# within the page.
+#
+# jitlink-check: *{8}(got_addr(elf_reloc.o, external_data)) = external_data
+# jitlink-check: decode_operand(test_adr_gotpage_external, 1) = \
+# jitlink-check:     (got_addr(elf_reloc.o, external_data)[32:12] - \
+# jitlink-check:        test_adr_gotpage_external[32:12])
+# jitlink-check: decode_operand(test_ld64_gotlo12_external, 2) = \
+# jitlink-check:     got_addr(elf_reloc.o, external_data)[11:3]
+        .globl  test_adr_gotpage_external
+        .p2align  2
+test_adr_gotpage_external:
+        adrp  x0, :got:external_data
+        .size test_adr_gotpage_external, .-test_adr_gotpage_external
+
+        .globl  test_ld64_gotlo12_external
+        .p2align  2
+test_ld64_gotlo12_external:
+        ldr   x0, [x0, :got_lo12:external_data]
+        .size test_ld64_gotlo12_external, .-test_ld64_gotlo12_external
+
+# Check R_AARCH64_TSTBR14 for tbz
+#
+# jitlink-check: decode_operand(test_tstbr14_tbz, 2) = \
+# jitlink-check:     (test_tstbr14_tbz_target - test_tstbr14_tbz)[16:2]
+        .globl test_tstbr14_tbz, test_tstbr14_tbz_target
+        .p2align 2
+test_tstbr14_tbz:
+        tbz x0, 0, test_tstbr14_tbz_target
+        .skip (1 << 14)
+test_tstbr14_tbz_target:
+        .size test_tstbr14_tbz, .-test_tstbr14_tbz
+
+# Check R_AARCH64_TSTBR14 for tbnz
+#
+# jitlink-check: decode_operand(test_tstbr14_tbnz, 2) = \
+# jitlink-check:     (test_tstbr14_tbnz_target - test_tstbr14_tbnz)[16:2]
+        .globl test_tstbr14_tbnz, test_tstbr14_tbnz_target
+        .p2align 2
+test_tstbr14_tbnz:
+        tbnz x0, 0, test_tstbr14_tbnz_target
+        .skip (1 << 14)
+test_tstbr14_tbnz_target:
+        .size test_tstbr14_tbnz, .-test_tstbr14_tbnz
+
+# Check R_AARCH64_CONDBR19 for compare and branch instructions
+#
+# jitlink-check: decode_operand(test_condbr19_cbz, 1) = \
+# jitlink-check:     (test_condbr19_cbz_target - test_condbr19_cbz)[21:2]
+        .globl test_condbr19_cbz, test_condbr19_cbz_target
+        .p2align 2
+test_condbr19_cbz:
+        cbz x0, test_condbr19_cbz_target
+        .skip (1 << 19)
+test_condbr19_cbz_target:
+        .size test_condbr19_cbz, .-test_condbr19_cbz
+
+# Check R_AARCH64_CONDBR19 for conditional branch instructions
+#
+# jitlink-check: decode_operand(test_condbr19_bc, 1) = \
+# jitlink-check:     (test_condbr19_bc_target - test_condbr19_bc)[21:2]
+        .globl test_condbr19_bc, test_condbr19_bc_target
+        .p2align 2
+test_condbr19_bc:
+        b.eq test_condbr19_bc_target
+        .skip (1 << 19)
+test_condbr19_bc_target:
+        .size test_condbr19_bc, .-test_condbr19_bc
+
+        .globl  named_data
+        .p2align  4
+        .type   named_data,@object
+named_data:
+        .quad   0x2222222222222222
+        .quad   0x3333333333333333
+        .size   named_data, .-named_data
+
+        .globl  named_func
+        .p2align  2
+        .type	named_func,@function
+named_func:
+        ret
+        .size   named_func, .-named_func

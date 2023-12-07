@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cert {
+namespace clang::tidy::cert {
 
 void PostfixOperatorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(functionDecl(hasAnyOverloadedOperatorName("++", "--"),
@@ -79,6 +77,4 @@ void PostfixOperatorCheck::check(const MatchFinder::MatchResult &Result) {
     Diag << FixItHint::CreateInsertion(Location, "const ");
 }
 
-} // namespace cert
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cert

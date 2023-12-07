@@ -15,7 +15,7 @@ else()
         LUA_INCLUDE_DIR)
     endif()
   else()
-    message(STATUS "SWIG 3 or later is required for Lua support in LLDB but could not be found")
+    message(STATUS "SWIG 4 or later is required for Lua support in LLDB but could not be found")
   endif()
 
 

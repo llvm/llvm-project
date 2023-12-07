@@ -302,7 +302,7 @@ public:
   /// modification time criteria, false if the file is either available and
   /// suitable, or is missing.
   bool lookupModuleFile(StringRef FileName, off_t ExpectedSize,
-                        time_t ExpectedModTime, Optional<FileEntryRef> &File);
+                        time_t ExpectedModTime, OptionalFileEntryRef &File);
 
   /// View the graphviz representation of the module graph.
   void viewGraph();

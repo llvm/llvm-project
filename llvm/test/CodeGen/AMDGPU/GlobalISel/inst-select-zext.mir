@@ -14,7 +14,7 @@ body: |
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], 1, implicit-def $scc
+    ; GCN-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], 1, implicit-def dead $scc
     ; GCN-NEXT: [[S_SEXT_I32_I16_:%[0-9]+]]:sreg_32 = S_SEXT_I32_I16 [[S_AND_B32_]]
     ; GCN-NEXT: $sgpr0 = COPY [[S_SEXT_I32_I16_]]
     %0:sgpr(s32) = COPY $sgpr0
@@ -37,7 +37,7 @@ body: |
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], 1, implicit-def $scc
+    ; GCN-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], 1, implicit-def dead $scc
     ; GCN-NEXT: $sgpr0 = COPY [[S_AND_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s1) = G_TRUNC %0
@@ -81,8 +81,9 @@ body: |
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN-NEXT: [[S_BFE_U32_:%[0-9]+]]:sreg_32 = S_BFE_U32 [[COPY]], 1048576, implicit-def $scc
-    ; GCN-NEXT: $sgpr0 = COPY [[S_BFE_U32_]]
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
+    ; GCN-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_MOV_B32_]], [[COPY]], implicit-def dead $scc
+    ; GCN-NEXT: $sgpr0 = COPY [[S_AND_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
     %2:sgpr(s32) = G_ZEXT %1
@@ -126,8 +127,8 @@ body: |
     ; GCN-LABEL: name: zext_sgpr_s32_to_sgpr_s64
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY $sgpr0
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
     ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[REG_SEQUENCE]]
     %0:sgpr(s32) = COPY $sgpr0
@@ -208,8 +209,9 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN-NEXT: [[V_BFE_U32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_U32_e64 [[COPY]], 0, 16, implicit $exec
-    ; GCN-NEXT: $vgpr0 = COPY [[V_BFE_U32_e64_]]
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
+    ; GCN-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[S_MOV_B32_]], [[COPY]], implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY [[V_AND_B32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
     %2:vgpr(s32) = G_ZEXT %1
@@ -230,7 +232,7 @@ body: |
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], 1, implicit-def $scc
+    ; GCN-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], 1, implicit-def dead $scc
     ; GCN-NEXT: $sgpr0 = COPY [[S_AND_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sreg_32(s1) = G_TRUNC %0

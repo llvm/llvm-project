@@ -30,7 +30,7 @@ public:
   /// MCExpr that can be used to refer to the constant pool location.
   const MCExpr *addConstantPoolEntry(const MCExpr *, unsigned Size, SMLoc Loc);
 
-  /// Callback used to implemnt the .ltorg directive.
+  /// Callback used to implement the .ltorg directive.
   /// Emit contents of constant pool for the current section.
   void emitCurrentConstantPool();
 

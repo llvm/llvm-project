@@ -3119,8 +3119,7 @@ void HexagonLoopRescheduling::moveGroup(InstrGroup &G, MachineBasicBlock &LB,
     DebugLoc DL = SI->getDebugLoc();
 
     auto MIB = BuildMI(LB, At, DL, HII->get(SI->getOpcode()), NewDR);
-    for (unsigned j = 0, m = SI->getNumOperands(); j < m; ++j) {
-      const MachineOperand &Op = SI->getOperand(j);
+    for (const MachineOperand &Op : SI->operands()) {
       if (!Op.isReg()) {
         MIB.add(Op);
         continue;

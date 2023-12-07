@@ -9,48 +9,31 @@
 #ifndef LLVM_LIBC_SUPPORT_COMMON_H
 #define LLVM_LIBC_SUPPORT_COMMON_H
 
-#define LIBC_INLINE_ASM __asm__ __volatile__
-
-#ifndef likely
-#define likely(x) __builtin_expect(!!(x), 1)
-#endif
-#ifndef unlikely
-#define unlikely(x) __builtin_expect(x, 0)
-#endif
-#ifndef UNUSED
-#define UNUSED __attribute__((unused))
-#endif
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/properties/architectures.h"
 
 #ifndef LLVM_LIBC_FUNCTION_ATTR
 #define LLVM_LIBC_FUNCTION_ATTR
 #endif
 
-// We use OpenMP to declare these functions on the device.
-#define STR(X) #X
-#define LLVM_LIBC_DECLARE_DEVICE(name)                                         \
-  _Pragma(STR(omp declare target to(name) device_type(nohost)))
-
-// GPU targets do not support aliasing and must be declared on the device.
-#if defined(LLVM_LIBC_PUBLIC_PACKAGING) && defined(_OPENMP)
-#define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
-  LLVM_LIBC_FUNCTION_ATTR decltype(__llvm_libc::name)                          \
-      __##name##_impl__ __asm__(#name);                                        \
-  LLVM_LIBC_DECLARE_DEVICE(__##name##_impl__)                                  \
-  type __##name##_impl__ arglist
 // MacOS needs to be excluded because it does not support aliasing.
-#elif defined(LLVM_LIBC_PUBLIC_PACKAGING) && (!defined(__APPLE__))
-#define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
+#if defined(LIBC_COPT_PUBLIC_PACKAGING) && (!defined(__APPLE__))
+#define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
   LLVM_LIBC_FUNCTION_ATTR decltype(__llvm_libc::name)                          \
       __##name##_impl__ __asm__(#name);                                        \
   decltype(__llvm_libc::name) name [[gnu::alias(#name)]];                      \
   type __##name##_impl__ arglist
 #else
-#define LLVM_LIBC_FUNCTION(type, name, arglist) type name arglist
+#define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist) type name arglist
 #endif
+
+// This extra layer of macro allows `name` to be a macro to rename a function.
+#define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
+  LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)
 
 namespace __llvm_libc {
 namespace internal {
-constexpr bool same_string(char const *lhs, char const *rhs) {
+LIBC_INLINE constexpr bool same_string(char const *lhs, char const *rhs) {
   for (; *lhs || *rhs; ++lhs, ++rhs)
     if (*lhs != *rhs)
       return false;

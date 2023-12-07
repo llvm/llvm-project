@@ -14,8 +14,8 @@ if.then24:                                        ; preds = %entry
   unreachable
 
 if.else295:                                       ; preds = %entry
-  call void @llvm.dbg.declare(metadata i32* %do_tab_convert, metadata !14, metadata !16), !dbg !17
-  store i32 0, i32* %do_tab_convert, align 4, !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %do_tab_convert, metadata !14, metadata !16), !dbg !17
+  store i32 0, ptr %do_tab_convert, align 4, !dbg !18
   unreachable
 }
 

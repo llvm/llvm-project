@@ -13,13 +13,13 @@
 ; CHECK-NEXT:  Data
 ; CHECK-SAME:  Latency=0
 
-define i32 @foo(i32* %a) nounwind optsize {
+define i32 @foo(ptr %a) nounwind optsize {
 entry:
-  %b = getelementptr i32, i32* %a, i32 1
-  %c = getelementptr i32, i32* %a, i32 2 
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
-  %2 = load i32, i32* %c, align 4
+  %b = getelementptr i32, ptr %a, i32 1
+  %c = getelementptr i32, ptr %a, i32 2 
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
+  %2 = load i32, ptr %c, align 4
 
   %mul1 = mul i32 %0, %1
   %mul2 = mul i32 %mul1, %2

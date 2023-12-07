@@ -27,40 +27,43 @@
 ; FOOBAR-NEXT: # Arch: x86_64
 ; FOOBAR-NEXT: # Object files:
 ; FOOBAR-NEXT: [  0] linker synthesized
-; FOOBAR-NEXT: [  1] {{.*}}{{/|\\}}map-file.ll.tmp/foo.thinlto.o
-; FOOBAR-NEXT: [  2] {{.*}}{{/|\\}}map-file.ll.tmp/bar.thinlto.o
+; FOOBAR-NEXT: [  1] {{.*}}{{/|\\}}usr/lib{{/|\\}}libSystem.tbd{{$}}
+; FOOBAR-NEXT: [  2] {{.*}}{{/|\\}}map-file.ll.tmp/foo.thinlto.o{{$}}
+; FOOBAR-NEXT: [  3] {{.*}}{{/|\\}}map-file.ll.tmp/bar.thinlto.o{{$}}
 ; FOOBAR-NEXT: # Sections:
 ; FOOBAR:      # Symbols:
 ; FOOBAR-NEXT: # Address        Size             File  Name
-; FOOBAR-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  1] _foo
-; FOOBAR-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  2] _bar
-; FOOBAR-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  2] _maybe_weak
+; FOOBAR-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  2] _foo
+; FOOBAR-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  3] _bar
+; FOOBAR-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  3] _maybe_weak
 
 ; BARFOO:      # Path: {{.*}}{{/|\\}}map-file.ll.tmp/barfoo.thinlto
 ; BARFOO-NEXT: # Arch: x86_64
 ; BARFOO-NEXT: # Object files:
 ; BARFOO-NEXT: [  0] linker synthesized
-; BARFOO-NEXT: [  1] {{.*}}{{/|\\}}map-file.ll.tmp/bar.thinlto.o
-; BARFOO-NEXT: [  2] {{.*}}{{/|\\}}map-file.ll.tmp/foo.thinlto.o
+; BARFOO-NEXT: [  1] {{.*}}{{/|\\}}usr/lib{{/|\\}}libSystem.tbd
+; BARFOO-NEXT: [  2] {{.*}}{{/|\\}}map-file.ll.tmp/bar.thinlto.o
+; BARFOO-NEXT: [  3] {{.*}}{{/|\\}}map-file.ll.tmp/foo.thinlto.o
 ; BARFOO-NEXT: # Sections:
 ; BARFOO:      # Symbols:
 ; BARFOO-NEXT: # Address        Size             File  Name
-; BARFOO-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  1] _bar
-; BARFOO-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  1] _maybe_weak
-; BARFOO-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  2] _foo
+; BARFOO-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  2] _bar
+; BARFOO-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  2] _maybe_weak
+; BARFOO-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  3] _foo
 
 ; LTO:      # Path: {{.*}}{{/|\\}}map-file.ll.tmp/foobar
 ; LTO-NEXT: # Arch: x86_64
 ; LTO-NEXT: # Object files:
 ; LTO-NEXT: [  0] linker synthesized
-; LTO-NEXT: [  1] {{.*}}{{/|\\}}map-file.ll.tmp/foo.o
-; LTO-NEXT: [  2] {{.*}}{{/|\\}}map-file.ll.tmp/bar.o
+; LTO-NEXT: [  1] {{.*}}{{/|\\}}usr/lib{{/|\\}}libSystem.tbd
+; LTO-NEXT: [  2] {{.*}}{{/|\\}}map-file.ll.tmp/foo.o
+; LTO-NEXT: [  3] {{.*}}{{/|\\}}map-file.ll.tmp/bar.o
 ; LTO-NEXT: # Sections:
 ; LTO:      # Symbols:
 ; LTO-NEXT: # Address        Size             File   Name
-; LTO-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  1]  _foo
-; LTO-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  2]  _bar
-; LTO-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  2]  _maybe_weak
+; LTO-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  2]  _foo
+; LTO-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  3]  _bar
+; LTO-NEXT: 0x{{[0-9A-F]+}}  0x{{[0-9A-F]+}}  [  3]  _maybe_weak
 
 ;--- foo.ll
 target triple = "x86_64-apple-darwin"

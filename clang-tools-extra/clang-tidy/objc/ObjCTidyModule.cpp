@@ -21,8 +21,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace objc {
 
 class ObjCModule : public ClangTidyModule {
@@ -59,5 +58,4 @@ static ClangTidyModuleRegistry::Add<ObjCModule> X(
 // and thus register the ObjCModule.
 volatile int ObjCModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

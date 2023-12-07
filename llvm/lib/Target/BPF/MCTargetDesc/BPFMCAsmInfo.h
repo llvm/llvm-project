@@ -13,8 +13,8 @@
 #ifndef LLVM_LIB_TARGET_BPF_MCTARGETDESC_BPFMCASMINFO_H
 #define LLVM_LIB_TARGET_BPF_MCTARGETDESC_BPFMCASMINFO_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 

@@ -10,6 +10,7 @@
 #define LLVM_LIBC_MATH_H
 
 #include <__llvm-libc-common.h>
+#include <llvm-libc-macros/math-macros.h>
 
 %%public_api()
 

@@ -2,65 +2,59 @@
 ; RUN: opt -S -mtriple=x86_64-pc-linux-gnu -mcpu=generic -passes=slp-vectorizer -pass-remarks-output=%t < %s | FileCheck %s
 ; RUN: FileCheck --input-file=%t --check-prefix=YAML %s
 
-define i32 @foo(i32* nocapture readonly %diff) #0 {
+define i32 @foo(ptr nocapture readonly %diff) #0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[M2:%.*]] = alloca [8 x [8 x i32]], align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast [8 x [8 x i32]]* [[M2]] to i8*
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[A_088:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD24:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[DIFF:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DIFF:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP2]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 [[INDVARS_IV]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[ARRAYIDX]] to <2 x i32>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, <2 x i32>* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[ARRAYIDX2]] to <2 x i32>*
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i32>, <2 x i32>* [[TMP5]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[DIFF]], i64 [[TMP2]]
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [8 x [8 x i32]], ptr [[M2]], i64 0, i64 [[INDVARS_IV]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i32>, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <2 x i32> [[TMP6]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP7]], i32 0
 ; CHECK-NEXT:    [[ADD10:%.*]] = add nsw i32 [[TMP8]], [[A_088]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[ARRAYIDX6]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP7]], <2 x i32>* [[TMP9]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP7]], ptr [[ARRAYIDX6]], align 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP7]], i32 1
 ; CHECK-NEXT:    [[ADD24]] = add nsw i32 [[ADD10]], [[TMP10]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 8
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 0
 ; CHECK-NEXT:    ret i32 [[ADD24]]
 ;
 entry:
   %m2 = alloca [8 x [8 x i32]], align 16
-  %0 = bitcast [8 x [8 x i32]]* %m2 to i8*
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %a.088 = phi i32 [ 0, %entry ], [ %add24, %for.body ]
-  %1 = shl i64 %indvars.iv, 3
-  %arrayidx = getelementptr inbounds i32, i32* %diff, i64 %1
-  %2 = load i32, i32* %arrayidx, align 4
-  %3 = or i64 %1, 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %diff, i64 %3
-  %4 = load i32, i32* %arrayidx2, align 4
-  %add3 = add nsw i32 %4, %2
-  %arrayidx6 = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* %m2, i64 0, i64 %indvars.iv, i64 0
-  store i32 %add3, i32* %arrayidx6, align 16
+  %0 = shl i64 %indvars.iv, 3
+  %arrayidx = getelementptr inbounds i32, ptr %diff, i64 %0
+  %1 = load i32, ptr %arrayidx, align 4
+  %2 = or i64 %0, 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %diff, i64 %2
+  %3 = load i32, ptr %arrayidx2, align 4
+  %add3 = add nsw i32 %3, %1
+  %arrayidx6 = getelementptr inbounds [8 x [8 x i32]], ptr %m2, i64 0, i64 %indvars.iv, i64 0
+  store i32 %add3, ptr %arrayidx6, align 16
   %add10 = add nsw i32 %add3, %a.088
-  %5 = or i64 %1, 1
-  %arrayidx13 = getelementptr inbounds i32, i32* %diff, i64 %5
-  %6 = load i32, i32* %arrayidx13, align 4
-  %7 = or i64 %1, 5
-  %arrayidx16 = getelementptr inbounds i32, i32* %diff, i64 %7
-  %8 = load i32, i32* %arrayidx16, align 4
-  %add17 = add nsw i32 %8, %6
-  %arrayidx20 = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* %m2, i64 0, i64 %indvars.iv, i64 1
-  store i32 %add17, i32* %arrayidx20, align 4
+  %4 = or i64 %0, 1
+  %arrayidx13 = getelementptr inbounds i32, ptr %diff, i64 %4
+  %5 = load i32, ptr %arrayidx13, align 4
+  %6 = or i64 %0, 5
+  %arrayidx16 = getelementptr inbounds i32, ptr %diff, i64 %6
+  %7 = load i32, ptr %arrayidx16, align 4
+  %add17 = add nsw i32 %7, %5
+  %arrayidx20 = getelementptr inbounds [8 x [8 x i32]], ptr %m2, i64 0, i64 %indvars.iv, i64 1
+  store i32 %add17, ptr %arrayidx20, align 4
   %add24 = add nsw i32 %add10, %add17
 
   ; YAML:      Pass:            slp-vectorizer
@@ -68,7 +62,7 @@ for.body:                                         ; preds = %for.body, %entry
   ; YAML-NEXT: Function:        foo
   ; YAML-NEXT: Args:
   ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
-  ; YAML-NEXT:   - Cost:            '-4'
+  ; YAML-NEXT:   - Cost:            '-1'
   ; YAML-NEXT:   - String:          ' and with tree size '
   ; YAML-NEXT:   - TreeSize:        '4'
 
@@ -77,7 +71,6 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  %arraydecay = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* %m2, i64 0, i64 0
   ret i32 %add24
 }
 

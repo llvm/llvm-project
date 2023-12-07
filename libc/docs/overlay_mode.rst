@@ -39,7 +39,7 @@ the CMake configure step as follows:
   $> cd llvm-project  # The llvm-project checkout
   $> mkdir build
   $> cd build
-  $> cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS=”libc”  \
+  $> cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="libc"  \
      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
      -DCMAKE_BUILD_TYPE=<Debug|Release>                    \  # Select build type
      -DCMAKE_INSTALL_PREFIX=<Your prefix of choice>           # Optional
@@ -48,7 +48,7 @@ Next, build the libc:
 
 .. code-block:: sh
 
-  $> ninja llvmlibc
+  $> ninja libc
 
 The build step will build the static archive the in the directory
 ``build/projects/libc/lib``. Notice that the above CMake configure step also
@@ -71,8 +71,8 @@ appropriately:
 
 .. code-block:: sh
 
-  $> cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS=”clang” \
-     -DLLVM_ENABLE_RUNTIMES=”libc”  \  # libc is listed as runtime and not as a project
+  $> cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" \
+     -DLLVM_ENABLE_RUNTIMES="libc"  \  # libc is listed as runtime and not as a project
      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
      -DCMAKE_BUILD_TYPE=<Debug|Release>                    \  # Select build type
      -DCMAKE_INSTALL_PREFIX=<Your prefix of choice>           # Optional
@@ -83,7 +83,7 @@ as ``clang`` will be built before building ``libllvmlibc.a``.
 
 .. code-block:: sh
 
-  $> ninja llvmlibc
+  $> ninja libc
   $> ninja install-llvmlibc
 
 Using the overlay static archive
@@ -109,7 +109,7 @@ Linking the static archive to other LLVM binaries
 
 Since the libc and other LLVM binaries are developed in the same source tree,
 linking ``libllvmlibc.a`` to those LLVM binaries does not require any special
-install step or explicity passing any special linker flags/options. One can
+install step or explicitly passing any special linker flags/options. One can
 simply add ``llvmlibc`` as a link library to that binary's target. For example,
 if you want to link ``libllvmlibc.a`` to ``llvm-objcopy``, all you have to do
 is to add a CMake command as follows:

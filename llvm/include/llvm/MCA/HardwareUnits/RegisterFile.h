@@ -237,10 +237,10 @@ public:
                      SmallVectorImpl<WriteRef> &Writes,
                      SmallVectorImpl<WriteRef> &CommittedWrites) const;
   struct RAWHazard {
-    MCPhysReg RegisterID;
-    int CyclesLeft;
+    MCPhysReg RegisterID = 0;
+    int CyclesLeft = 0;
 
-    RAWHazard() : RegisterID(), CyclesLeft() {}
+    RAWHazard() = default;
     bool isValid() const { return RegisterID; }
     bool hasUnknownCycles() const { return CyclesLeft < 0; }
   };

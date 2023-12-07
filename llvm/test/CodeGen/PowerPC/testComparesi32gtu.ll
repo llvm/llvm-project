@@ -108,8 +108,8 @@ define dso_local i32 @testCompare1(ptr nocapture readonly %arg1) nounwind {
 ; CHECK-P10-CMP-LE-NEXT:    lbz r3, 0(r3)
 ; CHECK-P10-CMP-LE-NEXT:    lbz r4, testCompare1@toc@l(r4)
 ; CHECK-P10-CMP-LE-NEXT:    clrlwi r3, r3, 31
-; CHECK-P10-CMP-LE-NEXT:    clrlwi r4, r4, 31
 ; CHECK-P10-CMP-LE-NEXT:    clrldi r3, r3, 32
+; CHECK-P10-CMP-LE-NEXT:    clrlwi r4, r4, 31
 ; CHECK-P10-CMP-LE-NEXT:    clrldi r4, r4, 32
 ; CHECK-P10-CMP-LE-NEXT:    sub r3, r3, r4
 ; CHECK-P10-CMP-LE-NEXT:    rldicl r3, r3, 1, 63

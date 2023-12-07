@@ -40,7 +40,7 @@ const RISCVAttributeParser::DisplayHandler
 
 Error RISCVAttributeParser::unalignedAccess(unsigned tag) {
   static const char *strings[] = {"No unaligned access", "Unaligned access"};
-  return parseStringAttribute("Unaligned_access", tag, makeArrayRef(strings));
+  return parseStringAttribute("Unaligned_access", tag, ArrayRef(strings));
 }
 
 Error RISCVAttributeParser::stackAlign(unsigned tag) {

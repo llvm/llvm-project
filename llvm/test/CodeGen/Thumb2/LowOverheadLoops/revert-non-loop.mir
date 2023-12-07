@@ -17,7 +17,7 @@
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv8.1m.main"
   
-  define void @non_loop(i16* nocapture %a, i16* nocapture readonly %b, i32 %N) {
+  define void @non_loop(ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
   entry:
     %cmp = icmp ugt i32 %N, 2
     br i1 %cmp, label %not.preheader, label %while.body.preheader
@@ -27,22 +27,22 @@
     br i1 %test, label %while.body.preheader, label %while.end
   
   while.body.preheader:                             ; preds = %not.preheader, %entry
-    %scevgep = getelementptr i16, i16* %a, i32 -1
-    %scevgep3 = getelementptr i16, i16* %b, i32 -1
+    %scevgep = getelementptr i16, ptr %a, i32 -1
+    %scevgep3 = getelementptr i16, ptr %b, i32 -1
     br label %while.body
   
   while.body:                                       ; preds = %while.body, %while.body.preheader
-    %lsr.iv4 = phi i16* [ %scevgep3, %while.body.preheader ], [ %scevgep5, %while.body ]
-    %lsr.iv = phi i16* [ %scevgep, %while.body.preheader ], [ %scevgep1, %while.body ]
+    %lsr.iv4 = phi ptr [ %scevgep3, %while.body.preheader ], [ %scevgep5, %while.body ]
+    %lsr.iv = phi ptr [ %scevgep, %while.body.preheader ], [ %scevgep1, %while.body ]
     %count = phi i32 [ %count.next, %while.body ], [ %N, %while.body.preheader ]
-    %scevgep7 = getelementptr i16, i16* %lsr.iv, i32 1
-    %scevgep4 = getelementptr i16, i16* %lsr.iv4, i32 1
-    %load = load i16, i16* %scevgep4, align 2
-    store i16 %load, i16* %scevgep7, align 2
+    %scevgep7 = getelementptr i16, ptr %lsr.iv, i32 1
+    %scevgep4 = getelementptr i16, ptr %lsr.iv4, i32 1
+    %load = load i16, ptr %scevgep4, align 2
+    store i16 %load, ptr %scevgep7, align 2
     %count.next = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %count, i32 1)
     %cmp1 = icmp ne i32 %count.next, 0
-    %scevgep1 = getelementptr i16, i16* %lsr.iv, i32 1
-    %scevgep5 = getelementptr i16, i16* %lsr.iv4, i32 1
+    %scevgep1 = getelementptr i16, ptr %lsr.iv, i32 1
+    %scevgep5 = getelementptr i16, ptr %lsr.iv4, i32 1
     br i1 %cmp1, label %while.body, label %while.end
   
   while.end:                                        ; preds = %while.body, %not.preheader
@@ -51,7 +51,7 @@
   
   declare i1 @llvm.test.set.loop.iterations.i32(i32) #0
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #0
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
   
   attributes #0 = { noduplicate nounwind }
   attributes #1 = { nounwind }

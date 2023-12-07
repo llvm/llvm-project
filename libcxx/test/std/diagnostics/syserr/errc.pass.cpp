@@ -10,6 +10,7 @@
 
 // enum errc {...}
 
+#include <cerrno>
 #include <system_error>
 
 #include "test_macros.h"

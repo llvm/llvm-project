@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -Wno-strict-prototypes -fsyntax-only -verify -std=c17 %s
 // expected-no-diagnostics
 
-// Functions with an identifier list are not supported in C2x.
+// Functions with an identifier list are not supported in C23.
 void ident_list(a) // c2x-error {{expected ';' after top level declarator}} \
                       c2x-error {{unknown type name 'a'}}
   int a;

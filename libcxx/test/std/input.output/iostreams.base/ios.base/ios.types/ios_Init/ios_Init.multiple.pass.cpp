@@ -16,7 +16,7 @@
 
 // The dylibs shipped on macOS so far do not contain the fix for PR43300, so
 // this test fails.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
 
 int main(int, char**)
 {

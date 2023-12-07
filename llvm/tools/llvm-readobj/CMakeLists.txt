@@ -1,14 +1,12 @@
 set(LLVM_LINK_COMPONENTS
+  BinaryFormat
   DebugInfoCodeView
   DebugInfoDWARF
   Demangle
   Object
-  BinaryFormat
   Option
   Support
-  DebugInfoCodeView
-  DebugInfoMSF
-  DebugInfoPDB
+  TargetParser
   )
 
 set(LLVM_TARGET_DEFINITIONS Opts.td)
@@ -31,6 +29,8 @@ add_llvm_tool(llvm-readobj
   ReadobjOptsTableGen
   GENERATE_DRIVER
   )
+
+setup_host_tool(llvm-readobj LLVM_READOBJ llvm_readobj_exe llvm_readobj_target)
 
 add_llvm_tool_symlink(llvm-readelf llvm-readobj)
 

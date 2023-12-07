@@ -14,7 +14,6 @@
 #include "DXILValueEnumerator.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
@@ -51,6 +50,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 namespace dxil {
@@ -344,8 +344,6 @@ private:
   void writeFunctionLevelValueSymbolTable(const ValueSymbolTable &VST);
   void writeGlobalValueSymbolTable(
       DenseMap<const Function *, uint64_t> &FunctionToBitcodeIndex);
-  void writeUseList(UseListOrder &&Order);
-  void writeUseListBlock(const Function *F);
   void writeFunction(const Function &F);
   void writeBlockInfo();
 
@@ -383,7 +381,7 @@ dxil::BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer,
   Stream->Emit(0xD, 4);
 }
 
-dxil::BitcodeWriter::~BitcodeWriter() { assert(WroteStrtab); }
+dxil::BitcodeWriter::~BitcodeWriter() { }
 
 /// Write the specified module to the specified output stream.
 void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out) {
@@ -398,8 +396,6 @@ void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out) {
 
   BitcodeWriter Writer(Buffer, dyn_cast<raw_fd_stream>(&Out));
   Writer.writeModule(M);
-  Writer.writeSymtab();
-  Writer.writeStrtab();
 
   // Write the generated bitstream to "Out".
   if (!Buffer.empty())
@@ -419,53 +415,7 @@ void BitcodeWriter::writeBlob(unsigned Block, unsigned Record, StringRef Blob) {
   Stream->ExitBlock();
 }
 
-void BitcodeWriter::writeSymtab() {
-  assert(!WroteStrtab && !WroteSymtab);
-
-  // If any module has module-level inline asm, we will require a registered asm
-  // parser for the target so that we can create an accurate symbol table for
-  // the module.
-  for (Module *M : Mods) {
-    if (M->getModuleInlineAsm().empty())
-      continue;
-  }
-
-  WroteSymtab = true;
-  SmallVector<char, 0> Symtab;
-  // The irsymtab::build function may be unable to create a symbol table if the
-  // module is malformed (e.g. it contains an invalid alias). Writing a symbol
-  // table is not required for correctness, but we still want to be able to
-  // write malformed modules to bitcode files, so swallow the error.
-  if (Error E = irsymtab::build(Mods, Symtab, StrtabBuilder, Alloc)) {
-    consumeError(std::move(E));
-    return;
-  }
-
-  writeBlob(bitc::SYMTAB_BLOCK_ID, bitc::SYMTAB_BLOB,
-            {Symtab.data(), Symtab.size()});
-}
-
-void BitcodeWriter::writeStrtab() {
-  assert(!WroteStrtab);
-
-  std::vector<char> Strtab;
-  StrtabBuilder.finalizeInOrder();
-  Strtab.resize(StrtabBuilder.getSize());
-  StrtabBuilder.write((uint8_t *)Strtab.data());
-
-  writeBlob(bitc::STRTAB_BLOCK_ID, bitc::STRTAB_BLOB,
-            {Strtab.data(), Strtab.size()});
-
-  WroteStrtab = true;
-}
-
-void BitcodeWriter::copyStrtab(StringRef Strtab) {
-  writeBlob(bitc::STRTAB_BLOCK_ID, bitc::STRTAB_BLOB, Strtab);
-  WroteStrtab = true;
-}
-
 void BitcodeWriter::writeModule(const Module &M) {
-  assert(!WroteStrtab);
 
   // The Mods vector is used by irsymtab::build, which requires non-const
   // Modules in case it needs to materialize metadata. But the bitcode writer
@@ -563,7 +513,7 @@ unsigned DXILBitcodeWriter::getEncodedBinaryOpcode(unsigned Opcode) {
 }
 
 unsigned DXILBitcodeWriter::getTypeID(Type *T, const Value *V) {
-  if (!T->isOpaquePointerTy() &&
+  if (!T->isPointerTy() &&
       // For Constant, always check PointerMap to make sure OpaquePointer in
       // things like constant struct/array works.
       (!V || !isa<Constant>(V)))
@@ -1070,6 +1020,7 @@ void DXILBitcodeWriter::writeTypeTable() {
     case Type::BFloatTyID:
     case Type::X86_AMXTyID:
     case Type::TokenTyID:
+    case Type::TargetExtTyID:
       llvm_unreachable("These should never be used!!!");
       break;
     case Type::VoidTyID:
@@ -1119,24 +1070,14 @@ void DXILBitcodeWriter::writeTypeTable() {
       break;
     }
     case Type::PointerTyID: {
-      PointerType *PTy = cast<PointerType>(T);
       // POINTER: [pointee type, address space]
-      Code = bitc::TYPE_CODE_POINTER;
-      // Emitting an empty struct type for the opaque pointer's type allows
-      // this to be order-independent. Non-struct types must be emitted in
-      // bitcode before they can be referenced.
-      if (PTy->isOpaquePointerTy()) {
-        TypeVals.push_back(false);
-        Code = bitc::TYPE_CODE_OPAQUE;
-        writeStringRecord(Stream, bitc::TYPE_CODE_STRUCT_NAME,
-                          "dxilOpaquePtrReservedName", StructNameAbbrev);
-      } else {
-        TypeVals.push_back(getTypeID(PTy->getNonOpaquePointerElementType()));
-        unsigned AddressSpace = PTy->getAddressSpace();
-        TypeVals.push_back(AddressSpace);
-        if (AddressSpace == 0)
-          AbbrevToUse = PtrAbbrev;
-      }
+      // Emitting an empty struct type for the pointer's type allows this to be
+      // order-independent. Non-struct types must be emitted in bitcode before
+      // they can be referenced.
+      TypeVals.push_back(false);
+      Code = bitc::TYPE_CODE_OPAQUE;
+      writeStringRecord(Stream, bitc::TYPE_CODE_STRUCT_NAME,
+                        "dxilOpaquePtrReservedName", StructNameAbbrev);
       break;
     }
     case Type::FunctionTyID: {
@@ -1451,17 +1392,23 @@ static uint64_t rotateSign(APInt Val) {
   return I < 0 ? ~(U << 1) : U << 1;
 }
 
-static uint64_t rotateSign(DISubrange::BoundType Val) {
-  return rotateSign(Val.get<ConstantInt *>()->getValue());
-}
-
 void DXILBitcodeWriter::writeDISubrange(const DISubrange *N,
                                         SmallVectorImpl<uint64_t> &Record,
                                         unsigned Abbrev) {
   Record.push_back(N->isDistinct());
+
+  // TODO: Do we need to handle DIExpression here? What about cases where Count
+  // isn't specified but UpperBound and such are?
+  ConstantInt *Count = N->getCount().dyn_cast<ConstantInt *>();
+  assert(Count && "Count is missing or not ConstantInt");
+  Record.push_back(Count->getValue().getSExtValue());
+
+  // TODO: Similarly, DIExpression is allowed here now
+  DISubrange::BoundType LowerBound = N->getLowerBound();
+  assert((LowerBound.isNull() || LowerBound.is<ConstantInt *>()) &&
+         "Lower bound provided but not ConstantInt");
   Record.push_back(
-      N->getCount().get<ConstantInt *>()->getValue().getSExtValue());
-  Record.push_back(rotateSign(N->getLowerBound()));
+      LowerBound ? rotateSign(LowerBound.get<ConstantInt *>()->getValue()) : 0);
 
   Stream.EmitRecord(bitc::METADATA_SUBRANGE, Record, Abbrev);
   Record.clear();
@@ -1825,14 +1772,18 @@ unsigned DXILBitcodeWriter::createMetadataStringsAbbrev() {
 
 void DXILBitcodeWriter::writeMetadataStrings(
     ArrayRef<const Metadata *> Strings, SmallVectorImpl<uint64_t> &Record) {
+  if (Strings.empty())
+    return;
+
+  unsigned MDSAbbrev = createMetadataStringsAbbrev();
+
   for (const Metadata *MD : Strings) {
     const MDString *MDS = cast<MDString>(MD);
     // Code: [strchar x N]
     Record.append(MDS->bytes_begin(), MDS->bytes_end());
 
     // Emit the finished record.
-    Stream.EmitRecord(bitc::METADATA_STRING_OLD, Record,
-                      createMetadataStringsAbbrev());
+    Stream.EmitRecord(bitc::METADATA_STRING_OLD, Record, MDSAbbrev);
     Record.clear();
   }
 }
@@ -2672,35 +2623,6 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
   Stream.ExitBlock();
 }
 
-void DXILBitcodeWriter::writeUseList(UseListOrder &&Order) {
-  assert(Order.Shuffle.size() >= 2 && "Shuffle too small");
-  unsigned Code;
-  if (isa<BasicBlock>(Order.V))
-    Code = bitc::USELIST_CODE_BB;
-  else
-    Code = bitc::USELIST_CODE_DEFAULT;
-
-  SmallVector<uint64_t, 64> Record(Order.Shuffle.begin(), Order.Shuffle.end());
-  Record.push_back(VE.getValueID(Order.V));
-  Stream.EmitRecord(Code, Record);
-}
-
-void DXILBitcodeWriter::writeUseListBlock(const Function *F) {
-  auto hasMore = [&]() {
-    return !VE.UseListOrders.empty() && VE.UseListOrders.back().F == F;
-  };
-  if (!hasMore())
-    // Nothing to do.
-    return;
-
-  Stream.EnterSubblock(bitc::USELIST_BLOCK_ID, 3);
-  while (hasMore()) {
-    writeUseList(std::move(VE.UseListOrders.back()));
-    VE.UseListOrders.pop_back();
-  }
-  Stream.ExitBlock();
-}
-
 /// Emit a function body to the module stream.
 void DXILBitcodeWriter::writeFunction(const Function &F) {
   Stream.EnterSubblock(bitc::FUNCTION_BLOCK_ID, 4);
@@ -2769,7 +2691,6 @@ void DXILBitcodeWriter::writeFunction(const Function &F) {
   if (NeedsMetadataAttachment)
     writeFunctionMetadataAttachment(F);
 
-  writeUseListBlock(&F);
   VE.purgeFunction();
   Stream.ExitBlock();
 }
@@ -2995,9 +2916,6 @@ void DXILBitcodeWriter::write() {
   // DXIL uses the same format for module-level value symbol table as for the
   // function level table.
   writeFunctionLevelValueSymbolTable(M.getValueSymbolTable());
-
-  // Emit module-level use-lists.
-  writeUseListBlock(nullptr);
 
   // Emit function bodies.
   for (const Function &F : M)

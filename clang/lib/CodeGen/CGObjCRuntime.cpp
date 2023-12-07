@@ -107,10 +107,10 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
                              CGF.CGM.getContext().toBits(StorageSize),
                              CharUnits::fromQuantity(0)));
 
-  Address Addr = Address(V, CGF.Int8Ty, Alignment);
-  Addr = CGF.Builder.CreateElementBitCast(Addr,
-                                   llvm::Type::getIntNTy(CGF.getLLVMContext(),
-                                                         Info->StorageSize));
+  Address Addr =
+      Address(V, llvm::Type::getIntNTy(CGF.getLLVMContext(), Info->StorageSize),
+              Alignment);
+
   return LValue::MakeBitfield(Addr, *Info, IvarTy,
                               LValueBaseInfo(AlignmentSource::Decl),
                               TBAAAccessInfo());
@@ -364,13 +364,13 @@ CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
                                   CallArgList &callArgs) {
   unsigned ProgramAS = CGM.getDataLayout().getProgramAddressSpace();
 
+  llvm::PointerType *signatureType =
+      llvm::PointerType::get(CGM.getLLVMContext(), ProgramAS);
+
   // If there's a method, use information from that.
   if (method) {
     const CGFunctionInfo &signature =
       CGM.getTypes().arrangeObjCMessageSendSignature(method, callArgs[0].Ty);
-
-    llvm::PointerType *signatureType =
-      CGM.getTypes().GetFunctionType(signature)->getPointerTo(ProgramAS);
 
     const CGFunctionInfo &signatureForCall =
       CGM.getTypes().arrangeCall(signature, callArgs);
@@ -382,9 +382,6 @@ CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
   const CGFunctionInfo &argsInfo =
     CGM.getTypes().arrangeUnprototypedObjCMessageSend(resultType, callArgs);
 
-  // Derive the signature to call from that.
-  llvm::PointerType *signatureType =
-    CGM.getTypes().GetFunctionType(argsInfo)->getPointerTo(ProgramAS);
   return MessageSendInfo(argsInfo, signatureType);
 }
 

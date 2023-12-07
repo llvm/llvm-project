@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{11.0|12.0}}
+// TODO: Change to XFAIL once https://github.com/llvm/llvm-project/issues/40340 is fixed
+// UNSUPPORTED: availability-pmr-missing
 
 // <memory_resource>
 
@@ -19,12 +19,12 @@
 #include <cstddef> // size_t
 
 struct assert_on_compare : public std::pmr::memory_resource {
-  void* do_allocate(size_t, size_t) override {
+  void* do_allocate(std::size_t, size_t) override {
     assert(false);
     return nullptr;
   }
 
-  void do_deallocate(void*, size_t, size_t) override { assert(false); }
+  void do_deallocate(void*, std::size_t, size_t) override { assert(false); }
 
   bool do_is_equal(const std::pmr::memory_resource&) const noexcept override {
     assert(false);

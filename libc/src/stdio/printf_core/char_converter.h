@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CHAR_CONVERTER_H
 
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/common.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
@@ -17,8 +18,8 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-int inline convert_char(Writer *writer, const FormatSection &to_conv) {
-  char c = to_conv.conv_val_raw;
+LIBC_INLINE int convert_char(Writer *writer, const FormatSection &to_conv) {
+  char c = static_cast<char>(to_conv.conv_val_raw);
 
   constexpr int string_len = 1;
 
@@ -28,7 +29,7 @@ int inline convert_char(Writer *writer, const FormatSection &to_conv) {
   // If the padding is on the left side, write the spaces first.
   if (padding_spaces > 0 &&
       (to_conv.flags & FormatFlags::LEFT_JUSTIFIED) == 0) {
-    RET_IF_RESULT_NEGATIVE(writer->write(' ', to_conv.min_width - string_len));
+    RET_IF_RESULT_NEGATIVE(writer->write(' ', padding_spaces));
   }
 
   RET_IF_RESULT_NEGATIVE(writer->write(c));
@@ -36,7 +37,7 @@ int inline convert_char(Writer *writer, const FormatSection &to_conv) {
   // If the padding is on the right side, write the spaces last.
   if (padding_spaces > 0 &&
       (to_conv.flags & FormatFlags::LEFT_JUSTIFIED) != 0) {
-    RET_IF_RESULT_NEGATIVE(writer->write(' ', to_conv.min_width - string_len));
+    RET_IF_RESULT_NEGATIVE(writer->write(' ', padding_spaces));
   }
 
   return WRITE_OK;

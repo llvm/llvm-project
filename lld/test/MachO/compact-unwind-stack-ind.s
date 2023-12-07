@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 -emit-compact-unwind-non-canonical=true %s -o %t.o
 # RUN: %lld -arch x86_64 -dylib %t.o -o %t.dylib
 # RUN: llvm-objdump --macho --syms --unwind-info %t.dylib | FileCheck %s
 

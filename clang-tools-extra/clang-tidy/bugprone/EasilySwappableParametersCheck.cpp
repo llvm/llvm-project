@@ -16,6 +16,7 @@
 
 #define DEBUG_TYPE "EasilySwappableParametersCheck"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 namespace optutils = clang::tidy::utils::options;
 
@@ -88,9 +89,7 @@ static constexpr std::size_t
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 using TheCheck = EasilySwappableParametersCheck;
 
@@ -480,7 +479,7 @@ struct MixData {
     return *this;
   }
 
-  template <class F> MixData withCommonTypeTransformed(F &&Func) const {
+  template <typename F> MixData withCommonTypeTransformed(const F &Func) const {
     if (CommonType.isNull())
       return *this;
 
@@ -519,9 +518,9 @@ struct Mix {
 };
 
 // NOLINTNEXTLINE(misc-redundant-expression): Seems to be a bogus warning.
-static_assert(std::is_trivially_copyable<Mix>::value &&
-                  std::is_trivially_move_constructible<Mix>::value &&
-                  std::is_trivially_move_assignable<Mix>::value,
+static_assert(std::is_trivially_copyable_v<Mix> &&
+                  std::is_trivially_move_constructible_v<Mix> &&
+                  std::is_trivially_move_assignable_v<Mix>,
               "Keep frequently used data simple!");
 
 struct MixableParameterRange {
@@ -952,7 +951,7 @@ static inline bool isDerivedToBase(const CXXRecordDecl *Derived,
          Base->isCompleteDefinition() && Derived->isDerivedFrom(Base);
 }
 
-static Optional<QualType>
+static std::optional<QualType>
 approximateStandardConversionSequence(const TheCheck &Check, QualType From,
                                       QualType To, const ASTContext &Ctx) {
   LLVM_DEBUG(llvm::dbgs() << ">>> approximateStdConv for LType:\n";
@@ -1127,7 +1126,7 @@ public:
 
   /// Selects the best conversion function that is applicable from the
   /// prepared set of potential conversion functions taken.
-  Optional<PreparedConversion> operator()() const {
+  std::optional<PreparedConversion> operator()() const {
     if (FlaggedConversions.empty()) {
       LLVM_DEBUG(llvm::dbgs() << "--- selectUserDefinedConv. Empty.\n");
       return {};
@@ -1137,7 +1136,7 @@ public:
       return FlaggedConversions.front();
     }
 
-    Optional<PreparedConversion> BestConversion;
+    std::optional<PreparedConversion> BestConversion;
     unsigned short HowManyGoodConversions = 0;
     for (const auto &Prepared : FlaggedConversions) {
       LLVM_DEBUG(llvm::dbgs() << "--- selectUserDefinedConv. Candidate flags: "
@@ -1191,7 +1190,7 @@ private:
 
 } // namespace
 
-static Optional<ConversionSequence>
+static std::optional<ConversionSequence>
 tryConversionOperators(const TheCheck &Check, const CXXRecordDecl *RD,
                        QualType ToType) {
   if (!RD || !RD->isCompleteDefinition())
@@ -1217,7 +1216,7 @@ tryConversionOperators(const TheCheck &Check, const CXXRecordDecl *RD,
     ConversionSet.addConversion(Con, Con->getConversionType(), ToType);
   }
 
-  if (Optional<UserDefinedConversionSelector::PreparedConversion>
+  if (std::optional<UserDefinedConversionSelector::PreparedConversion>
           SelectedConversion = ConversionSet()) {
     QualType RecordType{RD->getTypeForDecl(), 0};
 
@@ -1242,7 +1241,7 @@ tryConversionOperators(const TheCheck &Check, const CXXRecordDecl *RD,
   return {};
 }
 
-static Optional<ConversionSequence>
+static std::optional<ConversionSequence>
 tryConvertingConstructors(const TheCheck &Check, QualType FromType,
                           const CXXRecordDecl *RD) {
   if (!RD || !RD->isCompleteDefinition())
@@ -1268,7 +1267,7 @@ tryConvertingConstructors(const TheCheck &Check, QualType FromType,
     ConversionSet.addConversion(Con, FromType, Con->getParamDecl(0)->getType());
   }
 
-  if (Optional<UserDefinedConversionSelector::PreparedConversion>
+  if (std::optional<UserDefinedConversionSelector::PreparedConversion>
           SelectedConversion = ConversionSet()) {
     QualType RecordType{RD->getTypeForDecl(), 0};
 
@@ -1323,7 +1322,7 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
   ConversionSequence ImplicitSeq{LType, RType};
   QualType WorkType = LType;
 
-  Optional<QualType> AfterFirstStdConv =
+  std::optional<QualType> AfterFirstStdConv =
       approximateStandardConversionSequence(Check, LType, RType, Ctx);
   if (AfterFirstStdConv) {
     LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Standard "
@@ -1343,7 +1342,7 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
     bool FoundConversionOperator = false, FoundConvertingCtor = false;
 
     if (const auto *LRD = WorkType->getAsCXXRecordDecl()) {
-      Optional<ConversionSequence> ConversionOperatorResult =
+      std::optional<ConversionSequence> ConversionOperatorResult =
           tryConversionOperators(Check, LRD, RType);
       if (ConversionOperatorResult) {
         LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Found "
@@ -1358,7 +1357,7 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
       // Use the original "LType" here, and not WorkType, because the
       // conversion to the converting constructors' parameters will be
       // modelled in the recursive call.
-      Optional<ConversionSequence> ConvCtorResult =
+      std::optional<ConversionSequence> ConvCtorResult =
           tryConvertingConstructors(Check, LType, RRD);
       if (ConvCtorResult) {
         LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Found "
@@ -1582,7 +1581,7 @@ bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
     return false;
 
   for (const auto &E1SetElem : E1Iterator->second)
-    if (llvm::is_contained(E2Iterator->second, E1SetElem))
+    if (E2Iterator->second.contains(E1SetElem))
       return true;
 
   return false;
@@ -1675,7 +1674,7 @@ public:
       if (!CalledFn)
         continue;
 
-      llvm::Optional<unsigned> TargetIdx;
+      std::optional<unsigned> TargetIdx;
       unsigned NumFnParams = CalledFn->getNumParams();
       for (unsigned Idx = 0; Idx < NumFnParams; ++Idx)
         if (CalledFn->getParamDecl(Idx) == PassedToParam)
@@ -1953,13 +1952,12 @@ struct FormattedConversionSequence {
   /// The formatted sequence is trivial if it is "Ty1 -> Ty2", but Ty1 and
   /// Ty2 are the types that are shown in the code. A trivial diagnostic
   /// does not need to be printed.
-  bool Trivial;
+  bool Trivial = true;
 
   FormattedConversionSequence(const PrintingPolicy &PP,
                               StringRef StartTypeAsDiagnosed,
                               const model::ConversionSequence &Conv,
                               StringRef DestinationTypeAsDiagnosed) {
-    Trivial = true;
     llvm::raw_string_ostream OS{DiagnosticText};
 
     // Print the type name as it is printed in other places in the diagnostic.
@@ -2310,6 +2308,4 @@ void EasilySwappableParametersCheck::check(
   }
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

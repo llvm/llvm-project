@@ -10,16 +10,16 @@
 
 target triple = "hexagon"
 
-define i64 @_Z3fooxxx(i64 %x, i64 %y, i64 %z) #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i64 @_Z3fooxxx(i64 %x, i64 %y, i64 %z) #0 personality ptr @__gxx_personality_v0 {
 entry:
   %call = invoke i64 @_Z3barxxx(i64 %x, i64 %y, i64 %z)
           to label %try.cont unwind label %lpad
 
 lpad:                                             ; preds = %entry
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
-  %1 = extractvalue { i8*, i32 } %0, 0
-  %2 = tail call i8* @__cxa_begin_catch(i8* %1) #1
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
+  %1 = extractvalue { ptr, i32 } %0, 0
+  %2 = tail call ptr @__cxa_begin_catch(ptr %1) #1
   tail call void @__cxa_end_catch()
   br label %try.cont
 
@@ -35,7 +35,7 @@ declare i64 @_Z3barxxx(i64, i64, i64) #0
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 

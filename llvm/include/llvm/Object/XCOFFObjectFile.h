@@ -576,7 +576,7 @@ public:
   Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override;
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
-
+  bool is64Bit() const override;
   Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
   Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
@@ -619,13 +619,13 @@ public:
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
   Triple::ArchType getArch() const override;
-  SubtargetFeatures getFeatures() const override;
+  Expected<SubtargetFeatures> getFeatures() const override;
   Expected<uint64_t> getStartAddress() const override;
   StringRef mapDebugSectionName(StringRef Name) const override;
   bool isRelocatableObject() const override;
 
   // Below here is the non-inherited interface.
-  bool is64Bit() const;
+
   Expected<StringRef> getRawData(const char *Start, uint64_t Size,
                                  StringRef Name) const;
 
@@ -715,6 +715,8 @@ public:
                                                  uint32_t Distance);
 
   static bool classof(const Binary *B) { return B->isXCOFF(); }
+
+  std::optional<StringRef> tryGetCPUName() const override;
 }; // XCOFFObjectFile
 
 typedef struct {
@@ -846,6 +848,7 @@ public:
 
 class XCOFFTracebackTable {
   const uint8_t *const TBPtr;
+  bool Is64BitObj;
   std::optional<SmallString<32>> ParmsType;
   std::optional<uint32_t> TraceBackTableOffset;
   std::optional<uint32_t> HandlerMask;
@@ -855,8 +858,10 @@ class XCOFFTracebackTable {
   std::optional<uint8_t> AllocaRegister;
   std::optional<TBVectorExt> VecExt;
   std::optional<uint8_t> ExtensionTable;
+  std::optional<uint64_t> EhInfoDisp;
 
-  XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size, Error &Err);
+  XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size, Error &Err,
+                      bool Is64Bit = false);
 
 public:
   /// Parse an XCOFF Traceback Table from \a Ptr with \a Size bytes.
@@ -872,8 +877,8 @@ public:
   ///    If the XCOFF Traceback Table is not parsed successfully or there are
   ///    extra bytes that are not recognized, \a Size will be updated to be the
   ///    size up to the end of the last successfully parsed field of the table.
-  static Expected<XCOFFTracebackTable> create(const uint8_t *Ptr,
-                                              uint64_t &Size);
+  static Expected<XCOFFTracebackTable>
+  create(const uint8_t *Ptr, uint64_t &Size, bool Is64Bits = false);
   uint8_t getVersion() const;
   uint8_t getLanguageID() const;
 
@@ -930,6 +935,7 @@ public:
   const std::optional<uint8_t> &getExtensionTable() const {
     return ExtensionTable;
   }
+  const std::optional<uint64_t> &getEhInfoDisp() const { return EhInfoDisp; }
 };
 
 bool doesXCOFFTracebackTableBegin(ArrayRef<uint8_t> Bytes);

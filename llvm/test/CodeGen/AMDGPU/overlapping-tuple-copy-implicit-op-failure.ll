@@ -93,10 +93,10 @@ define amdgpu_kernel void @test_long_add4(<4 x i64> %arg) #0 {
 ; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; CHECK-NEXT:    s_endpgm
 entry:
-  %load0 = load <4 x i64>, <4 x i64> addrspace(1)* null, align 32
-  %load1 = load <4 x i64>, <4 x i64> addrspace(1)* null, align 32
+  %load0 = load <4 x i64>, ptr addrspace(1) null, align 32
+  %load1 = load <4 x i64>, ptr addrspace(1) null, align 32
   %add = add <4 x i64> %load0, %load1
-  store <4 x i64> %add, <4 x i64> addrspace(1)* null, align 32
+  store <4 x i64> %add, ptr addrspace(1) null, align 32
   ret void
 }
 

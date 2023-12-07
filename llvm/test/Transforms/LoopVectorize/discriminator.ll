@@ -2,6 +2,7 @@
 ; RUN: opt -S -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=3 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPVEC_2_3 %s
 ; RUN: opt -S -passes=loop-unroll  -unroll-count=5 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPUNROLL_5 %s
 ; RUN: opt -S -passes=loop-vectorize,loop-unroll -force-vector-width=4 -force-vector-interleave=4 - -unroll-count=2 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPVEC_UNROLL %s
+; RUN: opt -S -passes=pseudo-probe,loop-unroll  -unroll-count=5 < %s | FileCheck --check-prefix=PSEUDO_PROBE %s
 
 ; Test if vectorization/unroll factor is recorded in discriminator.
 ;
@@ -30,6 +31,7 @@ define void @_Z3foov() local_unnamed_addr #0 !dbg !6 {
   %6 = getelementptr inbounds i32, ptr %2, i64 %indvars.iv, !dbg !13
   %7 = load i32, ptr %6, align 4, !dbg !17, !tbaa !15
   %8 = add nsw i32 %7, %5, !dbg !17
+;PSEUDO_PROBE-COUNT-5: call void @llvm.pseudoprobe(i64 6699318081062747564, i64 2, i32 0, i64 -1), !dbg ![[#PROBE:]]
 ;DBG_VALUE: call void @llvm.dbg.declare{{.*}}!dbg ![[DBG:[0-9]*]]
   call void @llvm.dbg.declare(metadata i32 %8, metadata !22, metadata !DIExpression()), !dbg !17
   store i32 %8, ptr %6, align 4, !dbg !17, !tbaa !15
@@ -50,6 +52,9 @@ define void @_Z3foov() local_unnamed_addr #0 !dbg !6 {
 ;LOOPVEC_UNROLL: discriminator: 9
 ;LOOPVEC_UNROLL: discriminator: 385
 ;DBG_VALUE: ![[DBG]] = {{.*}}, scope: ![[TOP]]
+; Pseudo probe should not have duplication factor assigned.
+;PSEUDO_PROBE: ![[TOP:[0-9]*]] = distinct !DISubprogram(name: "foo"
+;PSEUDO_PROBE: ![[#PROBE]] = !DILocation(line: 6, column: 13, scope: ![[TOP]])
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

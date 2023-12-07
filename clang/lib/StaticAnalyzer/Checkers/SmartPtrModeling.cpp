@@ -31,8 +31,10 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 #include <string>
 
 using namespace clang;
@@ -85,10 +87,10 @@ private:
   using SmartPtrMethodHandlerFn =
       void (SmartPtrModeling::*)(const CallEvent &Call, CheckerContext &) const;
   CallDescriptionMap<SmartPtrMethodHandlerFn> SmartPtrMethodHandlers{
-      {{"reset"}, &SmartPtrModeling::handleReset},
-      {{"release"}, &SmartPtrModeling::handleRelease},
-      {{"swap", 1}, &SmartPtrModeling::handleSwapMethod},
-      {{"get"}, &SmartPtrModeling::handleGet}};
+      {{{"reset"}}, &SmartPtrModeling::handleReset},
+      {{{"release"}}, &SmartPtrModeling::handleRelease},
+      {{{"swap"}, 1}, &SmartPtrModeling::handleSwapMethod},
+      {{{"get"}}, &SmartPtrModeling::handleGet}};
   const CallDescription StdSwapCall{{"std", "swap"}, 2};
   const CallDescription StdMakeUniqueCall{{"std", "make_unique"}};
   const CallDescription StdMakeUniqueForOverwriteCall{
@@ -298,8 +300,9 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
   if (matchesAny(Call, StdMakeUniqueCall, StdMakeUniqueForOverwriteCall)) {
     if (!ModelSmartPtrDereference)
       return false;
-    
-    const Optional<SVal> ThisRegionOpt = Call.getReturnValueUnderConstruction();
+
+    const std::optional<SVal> ThisRegionOpt =
+        Call.getReturnValueUnderConstruction();
     if (!ThisRegionOpt)
       return false;
 
@@ -586,10 +589,9 @@ void SmartPtrModeling::checkLiveSymbols(ProgramStateRef State,
                                         SymbolReaper &SR) const {
   // Marking tracked symbols alive
   TrackedRegionMapTy TrackedRegions = State->get<TrackedRegionMap>();
-  for (auto I = TrackedRegions.begin(), E = TrackedRegions.end(); I != E; ++I) {
-    SVal Val = I->second;
-    for (auto si = Val.symbol_begin(), se = Val.symbol_end(); si != se; ++si) {
-      SR.markLive(*si);
+  for (SVal Val : llvm::make_second_range(TrackedRegions)) {
+    for (SymbolRef Sym : Val.symbols()) {
+      SR.markLive(Sym);
     }
   }
 }

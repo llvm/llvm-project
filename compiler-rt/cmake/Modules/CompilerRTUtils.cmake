@@ -358,6 +358,10 @@ macro(construct_compiler_rt_default_triple)
     if(DEFINED COMPILER_RT_DEFAULT_TARGET_TRIPLE)
       message(FATAL_ERROR "COMPILER_RT_DEFAULT_TARGET_TRIPLE isn't supported when building for default target only")
     endif()
+    if ("${CMAKE_C_COMPILER_TARGET}" STREQUAL "")
+      message(FATAL_ERROR "CMAKE_C_COMPILER_TARGET must also be set when COMPILER_RT_DEFAULT_TARGET_ONLY is ON")
+    endif()
+    message(STATUS "cmake c compiler target: ${CMAKE_C_COMPILER_TARGET}")
     set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${CMAKE_C_COMPILER_TARGET})
   else()
     set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${LLVM_TARGET_TRIPLE} CACHE STRING
@@ -433,6 +437,25 @@ function(get_compiler_rt_target arch variable)
     string(REGEX REPLACE "mipsisa64" "mipsisa32" triple_cpu_mips "${triple_cpu}")
     string(REGEX REPLACE "mips64" "mips" triple_cpu_mips "${triple_cpu_mips}")
     set(target "${triple_cpu_mips}${triple_suffix_gnu}")
+  elseif("${arch}" MATCHES "^arm")
+    # Arch is arm, armhf, armv6m (anything else would come from using
+    # COMPILER_RT_DEFAULT_TARGET_ONLY, which is checked above).
+    if (${arch} STREQUAL "armhf")
+      # If we are building for hard float but our ABI is soft float.
+      if ("${triple_suffix}" MATCHES ".*eabi$")
+        # Change "eabi" -> "eabihf"
+        set(triple_suffix "${triple_suffix}hf")
+      endif()
+      # ABI is already set in the triple, don't repeat it in the architecture.
+      set(arch "arm")
+    else ()
+      # If we are building for soft float, but the triple's ABI is hard float.
+      if ("${triple_suffix}" MATCHES ".*eabihf$")
+        # Change "eabihf" -> "eabi"
+        string(REGEX REPLACE "hf$" "" triple_suffix "${triple_suffix}")
+      endif()
+    endif()
+    set(target "${arch}${triple_suffix}")
   else()
     set(target "${arch}${triple_suffix}")
   endif()

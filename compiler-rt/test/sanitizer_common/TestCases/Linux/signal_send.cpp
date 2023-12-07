@@ -1,7 +1,7 @@
 // RUN: %clangxx -std=c++11 -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
 
 // sigandset is glibc specific.
-// UNSUPPORTED: android, freebsd, netbsd
+// UNSUPPORTED: android, target={{.*(freebsd|netbsd).*}}
 
 #include <assert.h>
 #include <signal.h>

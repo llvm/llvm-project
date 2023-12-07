@@ -122,7 +122,7 @@ define signext i32 @rol_i32(i32 signext %a, i32 signext %b) nounwind {
 }
 
 ; Similar to rol_i32, but doesn't sign extend the result.
-define void @rol_i32_nosext(i32 signext %a, i32 signext %b, i32* %x) nounwind {
+define void @rol_i32_nosext(i32 signext %a, i32 signext %b, ptr %x) nounwind {
 ; RV64I-LABEL: rol_i32_nosext:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sllw a3, a0, a1
@@ -138,7 +138,7 @@ define void @rol_i32_nosext(i32 signext %a, i32 signext %b, i32* %x) nounwind {
 ; RV64ZBB-ZBKB-NEXT:    sw a0, 0(a2)
 ; RV64ZBB-ZBKB-NEXT:    ret
   %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 %b)
-  store i32 %1, i32* %x
+  store i32 %1, ptr %x
   ret void
 }
 
@@ -200,7 +200,7 @@ define signext i32 @ror_i32(i32 signext %a, i32 signext %b) nounwind {
 }
 
 ; Similar to ror_i32, but doesn't sign extend the result.
-define void @ror_i32_nosext(i32 signext %a, i32 signext %b, i32* %x) nounwind {
+define void @ror_i32_nosext(i32 signext %a, i32 signext %b, ptr %x) nounwind {
 ; RV64I-LABEL: ror_i32_nosext:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srlw a3, a0, a1
@@ -216,7 +216,7 @@ define void @ror_i32_nosext(i32 signext %a, i32 signext %b, i32* %x) nounwind {
 ; RV64ZBB-ZBKB-NEXT:    sw a0, 0(a2)
 ; RV64ZBB-ZBKB-NEXT:    ret
   %1 = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 %b)
-  store i32 %1, i32* %x
+  store i32 %1, ptr %x
   ret void
 }
 
@@ -275,11 +275,11 @@ define signext i32 @rori_i32_fshl(i32 signext %a) nounwind {
 }
 
 ; Similar to rori_i32_fshl, but doesn't sign extend the result.
-define void @rori_i32_fshl_nosext(i32 signext %a, i32* %x) nounwind {
+define void @rori_i32_fshl_nosext(i32 signext %a, ptr %x) nounwind {
 ; RV64I-LABEL: rori_i32_fshl_nosext:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a2, a0, 1
-; RV64I-NEXT:    slliw a0, a0, 31
+; RV64I-NEXT:    slli a0, a0, 31
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    sw a0, 0(a1)
 ; RV64I-NEXT:    ret
@@ -290,7 +290,7 @@ define void @rori_i32_fshl_nosext(i32 signext %a, i32* %x) nounwind {
 ; RV64ZBB-ZBKB-NEXT:    sw a0, 0(a1)
 ; RV64ZBB-ZBKB-NEXT:    ret
   %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 31)
-  store i32 %1, i32* %x
+  store i32 %1, ptr %x
   ret void
 }
 
@@ -311,10 +311,10 @@ define signext i32 @rori_i32_fshr(i32 signext %a) nounwind {
 }
 
 ; Similar to rori_i32_fshr, but doesn't sign extend the result.
-define void @rori_i32_fshr_nosext(i32 signext %a, i32* %x) nounwind {
+define void @rori_i32_fshr_nosext(i32 signext %a, ptr %x) nounwind {
 ; RV64I-LABEL: rori_i32_fshr_nosext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a2, a0, 1
+; RV64I-NEXT:    slli a2, a0, 1
 ; RV64I-NEXT:    srliw a0, a0, 31
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    sw a0, 0(a1)
@@ -326,7 +326,7 @@ define void @rori_i32_fshr_nosext(i32 signext %a, i32* %x) nounwind {
 ; RV64ZBB-ZBKB-NEXT:    sw a0, 0(a1)
 ; RV64ZBB-ZBKB-NEXT:    ret
   %1 = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 31)
-  store i32 %1, i32* %x
+  store i32 %1, ptr %x
   ret void
 }
 
@@ -352,7 +352,7 @@ define signext i32 @not_rori_i32(i32 signext %x, i32 signext %y) nounwind {
 define i64 @roriw_bug(i64 %x) nounwind {
 ; CHECK-LABEL: roriw_bug:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slliw a1, a0, 31
+; CHECK-NEXT:    slli a1, a0, 31
 ; CHECK-NEXT:    andi a2, a0, -2
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    or a0, a1, a0

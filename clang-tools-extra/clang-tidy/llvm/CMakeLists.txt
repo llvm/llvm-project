@@ -18,6 +18,7 @@ add_clang_library(clangTidyLLVMModule
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyLLVMModule

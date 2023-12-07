@@ -14,7 +14,6 @@ int main(void)
    }
 }
 
-// rdar://13705391
 void foo(int a[*][2]) {(void)a[0][1]; } // expected-error {{variable length array must be bound in function definition}}
 void foo1(int a[2][*]) {(void)a[0][1]; } // expected-error {{variable length array must be bound in function definition}}
 void foo2(int a[*][*]) {(void)a[0][1]; } // expected-error {{variable length array must be bound in function definition}}

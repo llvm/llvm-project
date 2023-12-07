@@ -63,7 +63,7 @@ STATISTIC(StableHashBailingMetadataUnsupported,
 stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
-    if (Register::isVirtualRegister(MO.getReg())) {
+    if (MO.getReg().isVirtual()) {
       const MachineRegisterInfo &MRI = MO.getParent()->getMF()->getRegInfo();
       SmallVector<unsigned> DefOpcodes;
       for (auto &Def : MRI.def_instructions(MO.getReg()))
@@ -165,6 +165,9 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   case MachineOperand::MO_Predicate:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
                                MO.getPredicate());
+  case MachineOperand::MO_DbgInstrRef:
+    return stable_hash_combine(MO.getType(), MO.getInstrRefInstrIndex(),
+                               MO.getInstrRefOpIndex());
   }
   llvm_unreachable("Invalid machine operand type");
 }
@@ -182,8 +185,7 @@ stable_hash llvm::stableHashValue(const MachineInstr &MI, bool HashVRegs,
   HashComponents.push_back(MI.getOpcode());
   HashComponents.push_back(MI.getFlags());
   for (const MachineOperand &MO : MI.operands()) {
-    if (!HashVRegs && MO.isReg() && MO.isDef() &&
-        Register::isVirtualRegister(MO.getReg()))
+    if (!HashVRegs && MO.isReg() && MO.isDef() && MO.getReg().isVirtual())
       continue; // Skip virtual register defs.
 
     if (MO.isCPI()) {

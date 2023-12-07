@@ -10,12 +10,15 @@
 #define SUPPORT_CHARCONV_TEST_HELPERS_H
 
 #include <algorithm>
-#include <charconv>
 #include <cassert>
+#include <cerrno>
+#include <charconv>
+#include <cstddef>
 #include <limits>
 #include <numeric>
 #include <string.h>
 #include <stdlib.h>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -78,12 +81,12 @@ fits_in(T v)
 template <typename X>
 struct to_chars_test_base
 {
-    template <typename T, size_t N, typename... Ts>
+    template <typename T, std::size_t N, typename... Ts>
     TEST_CONSTEXPR_CXX23 void test(T v, char const (&expect)[N], Ts... args)
     {
         std::to_chars_result r;
 
-        constexpr size_t len = N - 1;
+        constexpr std::size_t len = N - 1;
         static_assert(len > 0, "expected output won't be empty");
 
         if (!fits_in<X>(v))
@@ -110,7 +113,7 @@ struct to_chars_test_base
         std::iota(buf, buf + sizeof(buf), static_cast<unsigned char>(1));
         r = std::to_chars(buf, buf + sizeof(buf), v, args...);
         assert(r.ec == std::errc{});
-        for (size_t i = r.ptr - buf; i < sizeof(buf); ++i)
+        for (std::size_t i = r.ptr - buf; i < sizeof(buf); ++i)
             assert(static_cast<unsigned char>(buf[i]) == i + 1);
         *r.ptr = '\0';
 

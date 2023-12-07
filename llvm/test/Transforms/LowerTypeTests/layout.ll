@@ -17,11 +17,11 @@ target datalayout = "e-p:32:32"
 !1 = !{i32 0, !"typeid2"}
 !2 = !{i32 0, !"typeid3"}
 
-declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
+declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone
 
 define void @foo() {
-  %x = call i1 @llvm.type.test(i8* undef, metadata !"typeid1")
-  %y = call i1 @llvm.type.test(i8* undef, metadata !"typeid2")
-  %z = call i1 @llvm.type.test(i8* undef, metadata !"typeid3")
+  %x = call i1 @llvm.type.test(ptr undef, metadata !"typeid1")
+  %y = call i1 @llvm.type.test(ptr undef, metadata !"typeid2")
+  %z = call i1 @llvm.type.test(ptr undef, metadata !"typeid3")
   ret void
 }

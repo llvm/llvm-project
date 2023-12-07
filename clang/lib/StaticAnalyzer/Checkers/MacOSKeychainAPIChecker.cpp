@@ -19,8 +19,10 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -209,7 +211,7 @@ static SymbolRef getAsPointeeSymbol(const Expr *Expr,
   ProgramStateRef State = C.getState();
   SVal ArgV = C.getSVal(Expr);
 
-  if (Optional<loc::MemRegionVal> X = ArgV.getAs<loc::MemRegionVal>()) {
+  if (std::optional<loc::MemRegionVal> X = ArgV.getAs<loc::MemRegionVal>()) {
     StoreManager& SM = C.getStoreManager();
     SymbolRef sym = SM.getBinding(State->getStore(), *X).getAsLocSymbol();
     if (sym)
@@ -529,9 +531,9 @@ ProgramStateRef MacOSKeychainAPIChecker::evalAssume(ProgramStateRef State,
   }
 
   if (ReturnSymbol)
-    for (auto I = AMap.begin(), E = AMap.end(); I != E; ++I) {
-      if (ReturnSymbol == I->second.Region)
-        State = State->remove<AllocatedData>(I->first);
+    for (auto [Sym, AllocState] : AMap) {
+      if (ReturnSymbol == AllocState.Region)
+        State = State->remove<AllocatedData>(Sym);
     }
 
   return State;
@@ -546,18 +548,18 @@ void MacOSKeychainAPIChecker::checkDeadSymbols(SymbolReaper &SR,
 
   bool Changed = false;
   AllocationPairVec Errors;
-  for (auto I = AMap.begin(), E = AMap.end(); I != E; ++I) {
-    if (!SR.isDead(I->first))
+  for (const auto &[Sym, AllocState] : AMap) {
+    if (!SR.isDead(Sym))
       continue;
 
     Changed = true;
-    State = State->remove<AllocatedData>(I->first);
+    State = State->remove<AllocatedData>(Sym);
     // If the allocated symbol is null do not report.
     ConstraintManager &CMgr = State->getConstraintManager();
-    ConditionTruthVal AllocFailed = CMgr.isNull(State, I.getKey());
+    ConditionTruthVal AllocFailed = CMgr.isNull(State, Sym);
     if (AllocFailed.isConstrainedTrue())
       continue;
-    Errors.push_back(std::make_pair(I->first, &I->second));
+    Errors.push_back(std::make_pair(Sym, &AllocState));
   }
   if (!Changed) {
     // Generate the new, cleaned up state.
@@ -655,8 +657,8 @@ void MacOSKeychainAPIChecker::printState(raw_ostream &Out,
 
   if (!AMap.isEmpty()) {
     Out << Sep << "KeychainAPIChecker :" << NL;
-    for (auto I = AMap.begin(), E = AMap.end(); I != E; ++I) {
-      I.getKey()->dumpToStream(Out);
+    for (SymbolRef Sym : llvm::make_first_range(AMap)) {
+      Sym->dumpToStream(Out);
     }
   }
 }

@@ -8,51 +8,60 @@ import sys
 import time
 
 parser = argparse.ArgumentParser(
-    description="Run an exhaustive test of the LLDB disassembler for a specific architecture.")
+    description="Run an exhaustive test of the LLDB disassembler for a specific architecture."
+)
 
 parser.add_argument(
-    '--arch',
+    "--arch",
     required=True,
-    action='store',
-    help='The architecture whose disassembler is to be tested')
+    action="store",
+    help="The architecture whose disassembler is to be tested",
+)
 parser.add_argument(
-    '--bytes',
+    "--bytes",
     required=True,
-    action='store',
+    action="store",
     type=int,
-    help='The byte width of instructions for that architecture')
+    help="The byte width of instructions for that architecture",
+)
 parser.add_argument(
-    '--random',
+    "--random",
     required=False,
-    action='store_true',
-    help='Enables non-sequential testing')
+    action="store_true",
+    help="Enables non-sequential testing",
+)
 parser.add_argument(
-    '--start',
+    "--start",
     required=False,
-    action='store',
+    action="store",
     type=int,
-    help='The first instruction value to test')
+    help="The first instruction value to test",
+)
 parser.add_argument(
-    '--skip',
+    "--skip",
     required=False,
-    action='store',
+    action="store",
     type=int,
-    help='The interval between instructions to test')
+    help="The interval between instructions to test",
+)
 parser.add_argument(
-    '--log',
+    "--log",
     required=False,
-    action='store',
-    help='A log file to write the most recent instruction being tested')
+    action="store",
+    help="A log file to write the most recent instruction being tested",
+)
 parser.add_argument(
-    '--time',
+    "--time",
     required=False,
-    action='store_true',
-    help='Every 100,000 instructions, print an ETA to standard out')
+    action="store_true",
+    help="Every 100,000 instructions, print an ETA to standard out",
+)
 parser.add_argument(
-    '--lldb',
+    "--lldb",
     required=False,
-    action='store',
-    help='The path to LLDB.framework, if LLDB should be overridden')
+    action="store",
+    help="The path to LLDB.framework, if LLDB should be overridden",
+)
 
 arguments = sys.argv[1:]
 
@@ -75,6 +84,7 @@ def AddLLDBToSysPathOnMacOSX():
         sys.exit(-1)
 
     sys.path.append(lldb_framework_path + "/Resources/Python")
+
 
 if arg_ns.lldb is None:
     AddLLDBToSysPathOnMacOSX()
@@ -103,12 +113,11 @@ def ResetLogFile(log_file):
 
 def PrintByteArray(log_file, byte_array):
     for byte in byte_array:
-        print(hex(byte) + " ", end=' ', file=log_file)
+        print(hex(byte) + " ", end=" ", file=log_file)
     print(file=log_file)
 
 
 class SequentialInstructionProvider:
-
     def __init__(self, byte_width, log_file, start=0, skip=1):
         self.m_byte_width = byte_width
         self.m_log_file = log_file
@@ -146,11 +155,10 @@ class SequentialInstructionProvider:
 
 
 class RandomInstructionProvider:
-
     def __init__(self, byte_width, log_file):
         self.m_byte_width = byte_width
         self.m_log_file = log_file
-        self.m_random_file = open("/dev/random", 'r')
+        self.m_random_file = open("/dev/random", "r")
 
     def PrintCurrentState(self, ret):
         ResetLogFile(self.m_log_file)
@@ -172,13 +180,14 @@ class RandomInstructionProvider:
             raise StopIteration
         return ret
 
+
 log_file = None
 
 
 def GetProviderWithArguments(args):
     global log_file
     if args.log is not None:
-        log_file = open(args.log, 'w')
+        log_file = open(args.log, "w")
     else:
         log_file = sys.stdout
     instruction_provider = None
@@ -192,8 +201,10 @@ def GetProviderWithArguments(args):
         if args.skip is not None:
             skip = args.skip
         instruction_provider = SequentialInstructionProvider(
-            args.bytes, log_file, start, skip)
+            args.bytes, log_file, start, skip
+        )
     return instruction_provider
+
 
 instruction_provider = GetProviderWithArguments(arg_ns)
 
@@ -208,13 +219,12 @@ if actually_time:
 
 for inst_bytes in instruction_provider:
     if actually_time:
-        if (num_instructions_logged != 0) and (
-                num_instructions_logged % 100000 == 0):
+        if (num_instructions_logged != 0) and (num_instructions_logged % 100000 == 0):
             curr_time = time.time()
             elapsed_time = curr_time - start_time
-            remaining_time = float(
-                total_num_instructions - num_instructions_logged) * (
-                float(elapsed_time) / float(num_instructions_logged))
+            remaining_time = float(total_num_instructions - num_instructions_logged) * (
+                float(elapsed_time) / float(num_instructions_logged)
+            )
             print(str(datetime.timedelta(seconds=remaining_time)))
         num_instructions_logged = num_instructions_logged + 1
     inst_list = target.GetInstructions(fake_address, inst_bytes)

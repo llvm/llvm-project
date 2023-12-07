@@ -11,17 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ToolDrivers/llvm-dlltool/DlltoolDriver.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/COFFModuleDefinition.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TargetParser/Host.h"
 
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -32,26 +33,28 @@ namespace {
 
 enum {
   OPT_INVALID = 0,
-#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11, _12) OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
-static constexpr llvm::opt::OptTable::Info InfoTable[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, llvm::opt::Option::KIND##Class, \
-   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
+using namespace llvm::opt;
+static constexpr opt::OptTable::Info InfoTable[] = {
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
 
-class DllOptTable : public llvm::opt::OptTable {
+class DllOptTable : public opt::GenericOptTable {
 public:
-  DllOptTable() : OptTable(InfoTable, false) {}
+  DllOptTable() : opt::GenericOptTable(InfoTable, false) {}
 };
 
 // Opens a file. Path has to be resolved already.
@@ -94,7 +97,7 @@ MachineTypes getDefaultMachine() {
   return getMachine(Triple(sys::getDefaultTargetTriple()));
 }
 
-Optional<std::string> getPrefix(StringRef Argv0) {
+std::optional<std::string> getPrefix(StringRef Argv0) {
   StringRef ProgName = llvm::sys::path::stem(Argv0);
   // x86_64-w64-mingw32-dlltool -> x86_64-w64-mingw32
   // llvm-dlltool -> None
@@ -149,7 +152,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   }
 
   COFF::MachineTypes Machine = getDefaultMachine();
-  if (Optional<std::string> Prefix = getPrefix(ArgsArr[0])) {
+  if (std::optional<std::string> Prefix = getPrefix(ArgsArr[0])) {
     Triple T(*Prefix);
     if (T.getArch() != Triple::UnknownArch)
       Machine = getMachine(T);
@@ -162,8 +165,9 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     return 1;
   }
 
-  Expected<COFFModuleDefinition> Def =
-      parseCOFFModuleDefinition(*MB, Machine, true);
+  bool AddUnderscores = !Args.hasArg(OPT_no_leading_underscore);
+  Expected<COFFModuleDefinition> Def = parseCOFFModuleDefinition(
+      *MB, Machine, /*MingwDef=*/true, AddUnderscores);
 
   if (!Def) {
     llvm::errs() << "error parsing definition\n"
@@ -194,7 +198,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (Machine == IMAGE_FILE_MACHINE_I386 && Args.getLastArg(OPT_k)) {
+  if (Machine == IMAGE_FILE_MACHINE_I386 && Args.hasArg(OPT_k)) {
     for (COFFShortExport& E : Def->Exports) {
       if (!E.AliasTarget.empty() || (!E.Name.empty() && E.Name[0] == '?'))
         continue;
@@ -211,8 +215,8 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (!Path.empty() &&
-      writeImportLibrary(Def->OutputFile, Path, Def->Exports, Machine, true))
+  if (!Path.empty() && writeImportLibrary(Def->OutputFile, Path, Def->Exports,
+                                          Machine, /*MinGW=*/true))
     return 1;
   return 0;
 }

@@ -295,21 +295,19 @@ define i1 @t8_3_2(i8 %X) nounwind {
 define i1 @t64_3_2(i64 %X) nounwind {
 ; X86-LABEL: t64_3_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $-1431655765, %edx # imm = 0xAAAAAAAB
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %edx
 ; X86-NEXT:    imull $-1431655766, %ecx, %ecx # imm = 0xAAAAAAAA
-; X86-NEXT:    imull $-1431655765, {{[0-9]+}}(%esp), %esi # imm = 0xAAAAAAAB
-; X86-NEXT:    addl %ecx, %esi
-; X86-NEXT:    addl %edx, %esi
+; X86-NEXT:    addl %edx, %ecx
+; X86-NEXT:    imull $-1431655765, {{[0-9]+}}(%esp), %edx # imm = 0xAAAAAAAB
+; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    addl $-1431655766, %eax # imm = 0xAAAAAAAA
-; X86-NEXT:    adcl $-1431655766, %esi # imm = 0xAAAAAAAA
+; X86-NEXT:    adcl $-1431655766, %edx # imm = 0xAAAAAAAA
 ; X86-NEXT:    cmpl $1431655765, %eax # imm = 0x55555555
-; X86-NEXT:    sbbl $1431655765, %esi # imm = 0x55555555
+; X86-NEXT:    sbbl $1431655765, %edx # imm = 0x55555555
 ; X86-NEXT:    setb %al
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t64_3_2:

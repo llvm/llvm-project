@@ -11,10 +11,13 @@ unittest("ASTTests") {
     "//clang/lib/Testing",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
+    "//llvm/lib/Testing/Annotations",
     "//llvm/lib/Testing/Support",
   ]
   sources = [
     "ASTContextParentMapTest.cpp",
+    "ASTExprTest.cpp",
     "ASTImporterFixtures.cpp",
     "ASTImporterGenericRedeclTest.cpp",
     "ASTImporterODRStrategiesTest.cpp",
@@ -42,5 +45,6 @@ unittest("ASTTests") {
     "StructuralEquivalenceTest.cpp",
     "TemplateNameTest.cpp",
     "TypePrinterTest.cpp",
+    "UnresolvedSetTest.cpp",
   ]
 }

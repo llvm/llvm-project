@@ -75,7 +75,7 @@ Attribute TestI64ElementsAttr::parse(AsmParser &parser, Type type) {
   if (parser.parseRSquare() || parser.parseGreater())
     return Attribute();
   return parser.getChecked<TestI64ElementsAttr>(
-      parser.getContext(), type.cast<ShapedType>(), elements);
+      parser.getContext(), llvm::cast<ShapedType>(type), elements);
 }
 
 void TestI64ElementsAttr::print(AsmPrinter &printer) const {
@@ -98,11 +98,10 @@ TestI64ElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
-LogicalResult
-TestAttrWithFormatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                               int64_t one, std::string two, IntegerAttr three,
-                               ArrayRef<int> four, uint64_t five,
-                               ArrayRef<AttrWithTypeBuilderAttr> arrayOfAttrs) {
+LogicalResult TestAttrWithFormatAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, int64_t one, std::string two,
+    IntegerAttr three, ArrayRef<int> four, uint64_t five, ArrayRef<int> six,
+    ArrayRef<AttrWithTypeBuilderAttr> arrayOfAttrs) {
   if (four.size() != static_cast<unsigned>(one))
     return emitError() << "expected 'one' to equal 'four.size()'";
   return success();
@@ -164,16 +163,15 @@ ArrayRef<uint64_t> TestExtern1DI64ElementsAttr::getElements() const {
 // TestCustomAnchorAttr
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseTrueFalse(AsmParser &p,
-                                  FailureOr<Optional<int>> &result) {
+static ParseResult parseTrueFalse(AsmParser &p, std::optional<int> &result) {
   bool b;
   if (p.parseInteger(b))
     return failure();
-  result = Optional<int>(b);
+  result = b;
   return success();
 }
 
-static void printTrueFalse(AsmPrinter &p, Optional<int> result) {
+static void printTrueFalse(AsmPrinter &p, std::optional<int> result) {
   p << (*result ? "true" : "false");
 }
 

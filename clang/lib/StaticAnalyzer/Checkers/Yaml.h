@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <optional>
 
 namespace clang {
 namespace ento {
@@ -25,8 +26,8 @@ namespace ento {
 /// template parameter must have a yaml MappingTraits.
 /// Emit diagnostic error in case of any failure.
 template <class T, class Checker>
-llvm::Optional<T> getConfiguration(CheckerManager &Mgr, Checker *Chk,
-                                   StringRef Option, StringRef ConfigFile) {
+std::optional<T> getConfiguration(CheckerManager &Mgr, Checker *Chk,
+                                  StringRef Option, StringRef ConfigFile) {
   if (ConfigFile.trim().empty())
     return std::nullopt;
 
@@ -34,7 +35,7 @@ llvm::Optional<T> getConfiguration(CheckerManager &Mgr, Checker *Chk,
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
       FS->getBufferForFile(ConfigFile.str());
 
-  if (std::error_code ec = Buffer.getError()) {
+  if (Buffer.getError()) {
     Mgr.reportInvalidCheckerOptionValue(Chk, Option,
                                         "a valid filename instead of '" +
                                             std::string(ConfigFile) + "'");

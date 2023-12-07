@@ -29,6 +29,7 @@
 ---
 name: test
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
 stack:
@@ -49,8 +50,8 @@ body:  |
     $rax = MOV64ri 0
     $rdi = MOV64ri 0
 
-    DBG_INSTR_REF 1, 0, !11, !DIExpression(), debug-location !12
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !12
     ; CHECK:      DBG_INSTR_REF
-    ; CHECK-NEXT: DBG_VALUE $esi
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $esi
     RET64 $rsi, debug-location !12
 ...

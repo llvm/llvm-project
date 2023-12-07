@@ -11,10 +11,10 @@
 
 define void @test() nounwind {
 entry:
-  %0 = load i32, i32* @j, align 4
+  %0 = load i32, ptr @j, align 4
   %cmp = icmp ult i32 %0, 10
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @r1, align 4
+  store i32 %conv, ptr @r1, align 4
 ; 16:   sltiu   ${{[0-9]+}}, 10 # 16 bit inst
 ; MMR6: sltiu   ${{[0-9]+}}, ${{[0-9]+}}, 1
 ; 16:   move    ${{[0-9]+}}, $24

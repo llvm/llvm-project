@@ -14,7 +14,7 @@ msgend:
 # CHECK: Disassembly of section .R_AARCH64_ADR_PREL_LO21:
 # CHECK-EMPTY:
 # CHECK: <_start>:
-# CHECK:        0:       10000021        adr     x1, #4
+# CHECK:        0:       10000021        adr     x1, 0x210124
 # CHECK: <msg>:
 # CHECK:        4:
 # #4 is the adr immediate value.
@@ -29,7 +29,7 @@ mystr:
 #
 # CHECK: Disassembly of section .R_AARCH64_ADR_PREL_PG_HI21:
 # CHECK-EMPTY:
-# CHECK-NEXT: <$x.2>:
+# CHECK-NEXT: <.R_AARCH64_ADR_PREL_PG_HI21>:
 # CHECK-NEXT:   210132:       90000001        adrp    x1, 0x210000
 
 .section .R_AARCH64_ADD_ABS_LO12_NC,"ax",@progbits
@@ -43,7 +43,7 @@ mystr:
 #
 # CHECK: Disassembly of section .R_AARCH64_ADD_ABS_LO12_NC:
 # CHECK-EMPTY:
-# CHECK-NEXT: <$x.4>:
+# CHECK-NEXT: <.R_AARCH64_ADD_ABS_LO12_NC>:
 # CHECK-NEXT:   21013b:       9104fc00        add     x0, x0, #319
 
 .section .R_AARCH64_LDST64_ABS_LO12_NC,"ax",@progbits
@@ -57,7 +57,7 @@ foo:
 # 0x0000a400 | 0xf940177c = 0xf940a77c
 # CHECK: Disassembly of section .R_AARCH64_LDST64_ABS_LO12_NC:
 # CHECK-EMPTY:
-# CHECK-NEXT: <$x.6>:
+# CHECK-NEXT: <.R_AARCH64_LDST64_ABS_LO12_NC>:
 # CHECK-NEXT:   210144:       f940a77c        ldr     x28, [x27, #328]
 
 .section .SUB,"ax",@progbits
@@ -67,7 +67,7 @@ sub:
 
 # CHECK: Disassembly of section .SUB:
 # CHECK-EMPTY:
-# CHECK-NEXT: <$x.8>:
+# CHECK-NEXT: <.SUB>:
 # CHECK-NEXT:   21014c:       d503201f        nop
 # CHECK: <sub>:
 # CHECK-NEXT:   210150:       d503201f        nop

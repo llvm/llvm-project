@@ -208,7 +208,7 @@ define i8 @test_xchg_i8() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw xchg i8* @atomic_i8, i8 1 monotonic
+  %0 = atomicrmw xchg ptr @atomic_i8, i8 1 monotonic
   ret i8 %0
 }
 define i8 @test_add_i8() {
@@ -405,7 +405,7 @@ define i8 @test_add_i8() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw add i8* @atomic_i8, i8 1 monotonic
+  %0 = atomicrmw add ptr @atomic_i8, i8 1 monotonic
   ret i8 %0
 }
 define i8 @test_sub_i8() {
@@ -602,7 +602,7 @@ define i8 @test_sub_i8() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw sub i8* @atomic_i8, i8 1 monotonic
+  %0 = atomicrmw sub ptr @atomic_i8, i8 1 monotonic
   ret i8 %0
 }
 define i8 @test_and_i8() {
@@ -801,7 +801,7 @@ define i8 @test_and_i8() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw and i8* @atomic_i8, i8 1 monotonic
+  %0 = atomicrmw and ptr @atomic_i8, i8 1 monotonic
   ret i8 %0
 }
 define i8 @test_nand_i8() {
@@ -1006,7 +1006,7 @@ define i8 @test_nand_i8() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw nand i8* @atomic_i8, i8 1 monotonic
+  %0 = atomicrmw nand ptr @atomic_i8, i8 1 monotonic
   ret i8 %0
 }
 define i8 @test_or_i8() {
@@ -1205,7 +1205,7 @@ define i8 @test_or_i8() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw or i8* @atomic_i8, i8 1 monotonic
+  %0 = atomicrmw or ptr @atomic_i8, i8 1 monotonic
   ret i8 %0
 }
 define i8 @test_xor_i8() {
@@ -1404,7 +1404,7 @@ define i8 @test_xor_i8() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw xor i8* @atomic_i8, i8 1 monotonic
+  %0 = atomicrmw xor ptr @atomic_i8, i8 1 monotonic
   ret i8 %0
 }
 define i8 @test_max_i8() {
@@ -1625,7 +1625,7 @@ define i8 @test_max_i8() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #20
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw max i8* @atomic_i8, i8 1 monotonic
+  %0 = atomicrmw max ptr @atomic_i8, i8 1 monotonic
   ret i8 %0
 }
 define i8 @test_min_i8() {
@@ -1846,7 +1846,7 @@ define i8 @test_min_i8() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #20
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw min i8* @atomic_i8, i8 1 monotonic
+  %0 = atomicrmw min ptr @atomic_i8, i8 1 monotonic
   ret i8 %0
 }
 define i8 @test_umax_i8() {
@@ -2071,7 +2071,7 @@ define i8 @test_umax_i8() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #24
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, r5, r7, pc}
 entry:
-  %0 = atomicrmw umax i8* @atomic_i8, i8 1 monotonic
+  %0 = atomicrmw umax ptr @atomic_i8, i8 1 monotonic
   ret i8 %0
 }
 define i8 @test_umin_i8() {
@@ -2296,7 +2296,7 @@ define i8 @test_umin_i8() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #24
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, r5, r7, pc}
 entry:
-  %0 = atomicrmw umin i8* @atomic_i8, i8 1 monotonic
+  %0 = atomicrmw umin ptr @atomic_i8, i8 1 monotonic
   ret i8 %0
 }
 
@@ -2495,7 +2495,7 @@ define i16 @test_xchg_i16() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw xchg i16* @atomic_i16, i16 1 monotonic
+  %0 = atomicrmw xchg ptr @atomic_i16, i16 1 monotonic
   ret i16 %0
 }
 define i16 @test_add_i16() {
@@ -2692,7 +2692,7 @@ define i16 @test_add_i16() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw add i16* @atomic_i16, i16 1 monotonic
+  %0 = atomicrmw add ptr @atomic_i16, i16 1 monotonic
   ret i16 %0
 }
 define i16 @test_sub_i16() {
@@ -2889,7 +2889,7 @@ define i16 @test_sub_i16() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw sub i16* @atomic_i16, i16 1 monotonic
+  %0 = atomicrmw sub ptr @atomic_i16, i16 1 monotonic
   ret i16 %0
 }
 define i16 @test_and_i16() {
@@ -3088,7 +3088,7 @@ define i16 @test_and_i16() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw and i16* @atomic_i16, i16 1 monotonic
+  %0 = atomicrmw and ptr @atomic_i16, i16 1 monotonic
   ret i16 %0
 }
 define i16 @test_nand_i16() {
@@ -3293,7 +3293,7 @@ define i16 @test_nand_i16() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw nand i16* @atomic_i16, i16 1 monotonic
+  %0 = atomicrmw nand ptr @atomic_i16, i16 1 monotonic
   ret i16 %0
 }
 define i16 @test_or_i16() {
@@ -3492,7 +3492,7 @@ define i16 @test_or_i16() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw or i16* @atomic_i16, i16 1 monotonic
+  %0 = atomicrmw or ptr @atomic_i16, i16 1 monotonic
   ret i16 %0
 }
 define i16 @test_xor_i16() {
@@ -3691,7 +3691,7 @@ define i16 @test_xor_i16() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw xor i16* @atomic_i16, i16 1 monotonic
+  %0 = atomicrmw xor ptr @atomic_i16, i16 1 monotonic
   ret i16 %0
 }
 define i16 @test_max_i16() {
@@ -3912,7 +3912,7 @@ define i16 @test_max_i16() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #20
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw max i16* @atomic_i16, i16 1 monotonic
+  %0 = atomicrmw max ptr @atomic_i16, i16 1 monotonic
   ret i16 %0
 }
 define i16 @test_min_i16() {
@@ -4133,7 +4133,7 @@ define i16 @test_min_i16() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #20
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw min i16* @atomic_i16, i16 1 monotonic
+  %0 = atomicrmw min ptr @atomic_i16, i16 1 monotonic
   ret i16 %0
 }
 define i16 @test_umax_i16() {
@@ -4358,7 +4358,7 @@ define i16 @test_umax_i16() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #24
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, r5, r7, pc}
 entry:
-  %0 = atomicrmw umax i16* @atomic_i16, i16 1 monotonic
+  %0 = atomicrmw umax ptr @atomic_i16, i16 1 monotonic
   ret i16 %0
 }
 define i16 @test_umin_i16() {
@@ -4583,7 +4583,7 @@ define i16 @test_umin_i16() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #24
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, r5, r7, pc}
 entry:
-  %0 = atomicrmw umin i16* @atomic_i16, i16 1 monotonic
+  %0 = atomicrmw umin ptr @atomic_i16, i16 1 monotonic
   ret i16 %0
 }
 
@@ -4774,7 +4774,7 @@ define i32 @test_xchg_i32() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw xchg i32* @atomic_i32, i32 1 monotonic
+  %0 = atomicrmw xchg ptr @atomic_i32, i32 1 monotonic
   ret i32 %0
 }
 define i32 @test_add_i32() {
@@ -4963,7 +4963,7 @@ define i32 @test_add_i32() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw add i32* @atomic_i32, i32 1 monotonic
+  %0 = atomicrmw add ptr @atomic_i32, i32 1 monotonic
   ret i32 %0
 }
 define i32 @test_sub_i32() {
@@ -5152,7 +5152,7 @@ define i32 @test_sub_i32() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw sub i32* @atomic_i32, i32 1 monotonic
+  %0 = atomicrmw sub ptr @atomic_i32, i32 1 monotonic
   ret i32 %0
 }
 define i32 @test_and_i32() {
@@ -5343,7 +5343,7 @@ define i32 @test_and_i32() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw and i32* @atomic_i32, i32 1 monotonic
+  %0 = atomicrmw and ptr @atomic_i32, i32 1 monotonic
   ret i32 %0
 }
 define i32 @test_nand_i32() {
@@ -5540,7 +5540,7 @@ define i32 @test_nand_i32() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw nand i32* @atomic_i32, i32 1 monotonic
+  %0 = atomicrmw nand ptr @atomic_i32, i32 1 monotonic
   ret i32 %0
 }
 define i32 @test_or_i32() {
@@ -5731,7 +5731,7 @@ define i32 @test_or_i32() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw or i32* @atomic_i32, i32 1 monotonic
+  %0 = atomicrmw or ptr @atomic_i32, i32 1 monotonic
   ret i32 %0
 }
 define i32 @test_xor_i32() {
@@ -5922,7 +5922,7 @@ define i32 @test_xor_i32() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw xor i32* @atomic_i32, i32 1 monotonic
+  %0 = atomicrmw xor ptr @atomic_i32, i32 1 monotonic
   ret i32 %0
 }
 define i32 @test_max_i32() {
@@ -6131,7 +6131,7 @@ define i32 @test_max_i32() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #20
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw max i32* @atomic_i32, i32 1 monotonic
+  %0 = atomicrmw max ptr @atomic_i32, i32 1 monotonic
   ret i32 %0
 }
 define i32 @test_min_i32() {
@@ -6340,7 +6340,7 @@ define i32 @test_min_i32() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #20
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw min i32* @atomic_i32, i32 1 monotonic
+  %0 = atomicrmw min ptr @atomic_i32, i32 1 monotonic
   ret i32 %0
 }
 define i32 @test_umax_i32() {
@@ -6549,7 +6549,7 @@ define i32 @test_umax_i32() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #20
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw umax i32* @atomic_i32, i32 1 monotonic
+  %0 = atomicrmw umax ptr @atomic_i32, i32 1 monotonic
   ret i32 %0
 }
 define i32 @test_umin_i32() {
@@ -6758,7 +6758,7 @@ define i32 @test_umin_i32() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #20
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw umin i32* @atomic_i32, i32 1 monotonic
+  %0 = atomicrmw umin ptr @atomic_i32, i32 1 monotonic
   ret i32 %0
 }
 
@@ -6969,7 +6969,7 @@ define i64 @test_xchg_i64() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r7, pc}
 entry:
-  %0 = atomicrmw xchg i64* @atomic_i64, i64 1 monotonic
+  %0 = atomicrmw xchg ptr @atomic_i64, i64 1 monotonic
   ret i64 %0
 }
 define i64 @test_add_i64() {
@@ -7179,7 +7179,7 @@ define i64 @test_add_i64() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r7, pc}
 entry:
-  %0 = atomicrmw add i64* @atomic_i64, i64 1 monotonic
+  %0 = atomicrmw add ptr @atomic_i64, i64 1 monotonic
   ret i64 %0
 }
 define i64 @test_sub_i64() {
@@ -7389,7 +7389,7 @@ define i64 @test_sub_i64() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r7, pc}
 entry:
-  %0 = atomicrmw sub i64* @atomic_i64, i64 1 monotonic
+  %0 = atomicrmw sub ptr @atomic_i64, i64 1 monotonic
   ret i64 %0
 }
 define i64 @test_and_i64() {
@@ -7599,7 +7599,7 @@ define i64 @test_and_i64() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r7, pc}
 entry:
-  %0 = atomicrmw and i64* @atomic_i64, i64 1 monotonic
+  %0 = atomicrmw and ptr @atomic_i64, i64 1 monotonic
   ret i64 %0
 }
 define i64 @test_nand_i64() {
@@ -7814,7 +7814,7 @@ define i64 @test_nand_i64() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r7, pc}
 entry:
-  %0 = atomicrmw nand i64* @atomic_i64, i64 1 monotonic
+  %0 = atomicrmw nand ptr @atomic_i64, i64 1 monotonic
   ret i64 %0
 }
 define i64 @test_or_i64() {
@@ -8021,7 +8021,7 @@ define i64 @test_or_i64() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r7, pc}
 entry:
-  %0 = atomicrmw or i64* @atomic_i64, i64 1 monotonic
+  %0 = atomicrmw or ptr @atomic_i64, i64 1 monotonic
   ret i64 %0
 }
 define i64 @test_xor_i64() {
@@ -8228,7 +8228,7 @@ define i64 @test_xor_i64() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #8
 ; CHECK-THUMB8BASE-NEXT:    pop {r7, pc}
 entry:
-  %0 = atomicrmw xor i64* @atomic_i64, i64 1 monotonic
+  %0 = atomicrmw xor ptr @atomic_i64, i64 1 monotonic
   ret i64 %0
 }
 
@@ -8533,7 +8533,7 @@ define i64 @test_max_i64() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #72
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw max i64* @atomic_i64, i64 1 monotonic
+  %0 = atomicrmw max ptr @atomic_i64, i64 1 monotonic
   ret i64 %0
 }
 define i64 @test_min_i64() {
@@ -8837,7 +8837,7 @@ define i64 @test_min_i64() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #72
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw min i64* @atomic_i64, i64 1 monotonic
+  %0 = atomicrmw min ptr @atomic_i64, i64 1 monotonic
   ret i64 %0
 }
 define i64 @test_umax_i64() {
@@ -9141,7 +9141,7 @@ define i64 @test_umax_i64() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #72
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw umax i64* @atomic_i64, i64 1 monotonic
+  %0 = atomicrmw umax ptr @atomic_i64, i64 1 monotonic
   ret i64 %0
 }
 define i64 @test_umin_i64() {
@@ -9445,6 +9445,6 @@ define i64 @test_umin_i64() {
 ; CHECK-THUMB8BASE-NEXT:    add sp, #72
 ; CHECK-THUMB8BASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = atomicrmw umin i64* @atomic_i64, i64 1 monotonic
+  %0 = atomicrmw umin ptr @atomic_i64, i64 1 monotonic
   ret i64 %0
 }

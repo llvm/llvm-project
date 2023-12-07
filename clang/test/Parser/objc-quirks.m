@@ -3,8 +3,6 @@
 // FIXME: This is a horrible error message here. Fix.
 int @"s" = 5;  // expected-error {{prefix attribute must be}}
 
-
-// rdar://6480479
 @interface A // expected-note {{class started here}}
 }; // expected-error {{missing '@end'}} \
 // expected-error {{extraneous closing brace ('}')}} \

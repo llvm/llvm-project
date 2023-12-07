@@ -63,3 +63,8 @@ void foo10(void) {
     // expected-warning@#5 {{calling 'foo7' is a violation of trusted computing base 'bar'}}
     // expected-warning@#5 {{calling 'foo7' is a violation of trusted computing base 'bar2'}}
 }
+
+int foo11();
+void foo12() PLACE_IN_TCB("bar4"){
+  __typeof(foo11()) x; // OK - the call isn't actually evaluated.
+}

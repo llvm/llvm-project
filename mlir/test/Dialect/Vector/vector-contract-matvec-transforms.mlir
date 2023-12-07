@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-contraction-lowering=vector-outerproduct=1 | FileCheck %s
+// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
 
 #matvec_accesses = [
   affine_map<(i, j) -> (i, j)>,
@@ -206,4 +206,11 @@ func.func @redpar_vecmattrans2x2(%arg0: memref<vector<2x2xf32>>, %arg1: memref<v
   %0 = vector.contract #redpar_vecmattrans_trait %x, %A, %b : vector<2xf32>, vector<2x2xf32> into vector<2xf32>
   memref.store %0, %arg2[] : memref<vector<2xf32>>
   return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%func_op: !transform.op<"func.func">):
+  transform.apply_patterns to %func_op {
+    transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
+  } : !transform.op<"func.func">
 }

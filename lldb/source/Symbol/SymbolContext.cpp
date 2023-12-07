@@ -19,10 +19,12 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Variable.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -539,19 +541,20 @@ Block *SymbolContext::GetFunctionBlock() {
   return nullptr;
 }
 
-bool SymbolContext::GetFunctionMethodInfo(lldb::LanguageType &language,
-                                          bool &is_instance_method,
-                                          ConstString &language_object_name)
+llvm::StringRef SymbolContext::GetInstanceVariableName() {
+  LanguageType lang_type = eLanguageTypeUnknown;
 
-{
-  Block *function_block = GetFunctionBlock();
-  if (function_block) {
-    CompilerDeclContext decl_ctx = function_block->GetDeclContext();
-    if (decl_ctx)
-      return decl_ctx.IsClassMethod(&language, &is_instance_method,
-                                    &language_object_name);
-  }
-  return false;
+  if (Block *function_block = GetFunctionBlock())
+    if (CompilerDeclContext decl_ctx = function_block->GetDeclContext())
+      lang_type = decl_ctx.GetLanguage();
+
+  if (lang_type == eLanguageTypeUnknown)
+    lang_type = GetLanguage();
+
+  if (auto *lang = Language::FindPlugin(lang_type))
+    return lang->GetInstanceVariableName();
+
+  return {};
 }
 
 void SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const {
@@ -768,14 +771,11 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
   Module *module = module_sp.get();
 
   auto ProcessMatches = [this, &name, &target,
-                         module](SymbolContextList &sc_list,
+                         module](const SymbolContextList &sc_list,
                                  Status &error) -> const Symbol * {
     llvm::SmallVector<const Symbol *, 1> external_symbols;
     llvm::SmallVector<const Symbol *, 1> internal_symbols;
-    const uint32_t matches = sc_list.GetSize();
-    for (uint32_t i = 0; i < matches; ++i) {
-      SymbolContext sym_ctx;
-      sc_list.GetContextAtIndex(i, sym_ctx);
+    for (const SymbolContext &sym_ctx : sc_list) {
       if (sym_ctx.symbol) {
         const Symbol *symbol = sym_ctx.symbol;
         const Address sym_address = symbol->GetAddress();

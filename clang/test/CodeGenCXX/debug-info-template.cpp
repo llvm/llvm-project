@@ -222,7 +222,7 @@ template<typename T1, typename T2, typename T3, typename T4>
 void f1() { }
 template void f1<t1 () volatile, t1 () const volatile, t1 () &, t1 () &&>();
 // CHECK: !DISubprogram(name: "f1<RawFuncQual::t1 () volatile, RawFuncQual::t1 () const volatile, RawFuncQual::t1 () &, RawFuncQual::t1 () &&>", 
-// CHECK-SAME: templateParams: ![[RAW_FUNC_QUAL_ARGS:[0-9]*]],
+// CHECK-SAME: templateParams: ![[RAW_FUNC_QUAL_ARGS:[0-9]*]]
 
 // CHECK: ![[RAW_FUNC_QUAL_ARGS]] = !{![[RAW_FUNC_QUAL_T1:[0-9]*]], ![[RAW_FUNC_QUAL_T2:[0-9]*]], ![[RAW_FUNC_QUAL_T3:[0-9]*]], ![[RAW_FUNC_QUAL_T4:[0-9]*]]}
 // CHECK: ![[RAW_FUNC_QUAL_T1]] = !DITemplateTypeParameter(name: "T1", type: ![[RAW_FUNC_QUAL_VOL:[0-9]*]])
@@ -254,7 +254,7 @@ inline namespace inl {
 template<template<typename> class> void f1() { }
 template void f1<t1>();
 // CHECK: !DISubprogram(name: "f1<TemplateTemplateParamInlineNamespace::inl::t1>",
-// CHECK-SAME: templateParams: ![[TEMP_TEMP_INL_ARGS:[0-9]*]],
+// CHECK-SAME: templateParams: ![[TEMP_TEMP_INL_ARGS:[0-9]*]]
 // CHECK: ![[TEMP_TEMP_INL_ARGS]] = !{![[TEMP_TEMP_INL_ARGS_T:[0-9]*]]}
 // CHECK: ![[TEMP_TEMP_INL_ARGS_T]] = !DITemplateValueParameter(tag: DW_TAG_GNU_template_template_param, value: !"TemplateTemplateParamInlineNamespace::inl::t1")
 } // namespace TemplateTemplateParamInlineNamespace

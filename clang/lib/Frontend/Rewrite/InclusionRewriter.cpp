@@ -74,7 +74,7 @@ private:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          OptionalFileEntryRef File, StringRef SearchPath,
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
   void If(SourceLocation Loc, SourceRange ConditionRange,
@@ -182,16 +182,12 @@ void InclusionRewriter::FileSkipped(const FileEntryRef & /*SkippedFile*/,
 /// FileChanged() or FileSkipped() is called after this (or neither is
 /// called if this #include results in an error or does not textually include
 /// anything).
-void InclusionRewriter::InclusionDirective(SourceLocation HashLoc,
-                                           const Token &/*IncludeTok*/,
-                                           StringRef /*FileName*/,
-                                           bool /*IsAngled*/,
-                                           CharSourceRange /*FilenameRange*/,
-                                           Optional<FileEntryRef> /*File*/,
-                                           StringRef /*SearchPath*/,
-                                           StringRef /*RelativePath*/,
-                                           const Module *Imported,
-                                           SrcMgr::CharacteristicKind FileType){
+void InclusionRewriter::InclusionDirective(
+    SourceLocation HashLoc, const Token & /*IncludeTok*/,
+    StringRef /*FileName*/, bool /*IsAngled*/,
+    CharSourceRange /*FilenameRange*/, OptionalFileEntryRef /*File*/,
+    StringRef /*SearchPath*/, StringRef /*RelativePath*/,
+    const Module *Imported, SrcMgr::CharacteristicKind FileType) {
   if (Imported) {
     auto P = ModuleIncludes.insert(std::make_pair(HashLoc, Imported));
     (void)P;
@@ -285,27 +281,33 @@ void InclusionRewriter::OutputContentUpTo(const MemoryBufferRef &FromFile,
 
   StringRef TextToWrite(FromFile.getBufferStart() + WriteFrom,
                         WriteTo - WriteFrom);
+  // count lines manually, it's faster than getPresumedLoc()
+  Line += TextToWrite.count(LocalEOL);
 
   if (MainEOL == LocalEOL) {
     OS << TextToWrite;
-    // count lines manually, it's faster than getPresumedLoc()
-    Line += TextToWrite.count(LocalEOL);
-    if (EnsureNewline && !TextToWrite.endswith(LocalEOL))
-      OS << MainEOL;
   } else {
     // Output the file one line at a time, rewriting the line endings as we go.
     StringRef Rest = TextToWrite;
     while (!Rest.empty()) {
-      StringRef LineText;
-      std::tie(LineText, Rest) = Rest.split(LocalEOL);
+      // Identify and output the next line excluding an EOL sequence if present.
+      size_t Idx = Rest.find(LocalEOL);
+      StringRef LineText = Rest.substr(0, Idx);
       OS << LineText;
-      Line++;
-      if (!Rest.empty())
+      if (Idx != StringRef::npos) {
+        // An EOL sequence was present, output the EOL sequence for the
+        // main source file and skip past the local EOL sequence.
         OS << MainEOL;
+        Idx += LocalEOL.size();
+      }
+      // Strip the line just handled. If Idx is npos or matches the end of the
+      // text, Rest will be set to an empty string and the loop will terminate.
+      Rest = Rest.substr(Idx);
     }
-    if (TextToWrite.endswith(LocalEOL) || EnsureNewline)
-      OS << MainEOL;
   }
+  if (EnsureNewline && !TextToWrite.endswith(LocalEOL))
+    OS << MainEOL;
+
   WriteFrom = WriteTo;
 }
 

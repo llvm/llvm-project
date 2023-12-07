@@ -70,16 +70,16 @@ entry:
 ; CHECK-NEXT:         .vbyte  4, 35                           # 0x23
 ; CHECK-NEXT:         .comm   a[RW],4,2
 ; CHECK-NEXT:         .comm   f[RW],4,2
-; CHECK-NEXT:         .csect .rodata.str1.1L...str[RO],2
+; CHECK-NEXT:         .csect L...str[RO],2
 ; CHECK-NEXT:         .string "abcdefgh"
 ; CHECK32:            .csect p[RW],2
 ; CHECK32-NEXT:       .globl  p[RW]
 ; CHECK32-NEXT:       .align  2
-; CHECK32-NEXT:       .vbyte  4, .rodata.str1.1L...str[RO]
+; CHECK32-NEXT:       .vbyte  4, L...str[RO]
 ; CHECK64:            .csect p[RW],3
 ; CHECK64-NEXT:       .globl  p[RW]
 ; CHECK64-NEXT:       .align  3
-; CHECK64-NEXT:       .vbyte  8, .rodata.str1.1L...str[RO]
+; CHECK64-NEXT:       .vbyte  8, L...str[RO]
 ; CHECK:              .toc
 ; CHECK-NEXT: L..C0:
 ; CHECK-NEXT:         .tc p[TC],p[RW]
@@ -93,7 +93,7 @@ entry:
 ; CHECKOBJ:        00000038 (idx: 7) const_ivar[RO]:
 ; CHECKOBJ-NEXT:         38: 00 00 00 23   <unknown>
 ; CHECKOBJ-EMPTY:
-; CHECKOBJ-NEXT:   0000003c (idx: 9) .rodata.str1.1L...str[RO]:
+; CHECKOBJ-NEXT:   0000003c (idx: 9) L...str[RO]:
 ; CHECKOBJ-NEXT:         3c: 61 62 63 64
 ; CHECKOBJ-NEXT:         40: 65 66 67 68
 ; CHECKOBJ-NEXT:         44: 00 00 00 00   <unknown>
@@ -156,7 +156,7 @@ entry:
 ; CHECKSYM:      }
 ; CHECKSYM:    }
 ; CHECKSYM:    Symbol {
-; CHECKSYM:      Name: .rodata.str1.1L...str
+; CHECKSYM:      Name: L...str
 ; CHECKSYM:      Value (RelocatableAddress): 0x3C
 ; CHECKSYM:      Section: .text
 ; CHECKSYM:      Type: 0x0

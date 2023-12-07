@@ -96,8 +96,7 @@ Expected<JThreadsInfo> JThreadsInfo::create(StringRef Response,
                                             ArrayRef<RegisterInfo> RegInfos) {
   JThreadsInfo jthreads_info;
 
-  StructuredData::ObjectSP json =
-      StructuredData::ParseJSON(std::string(Response));
+  StructuredData::ObjectSP json = StructuredData::ParseJSON(Response);
   StructuredData::Array *array = json->GetAsArray();
   if (!array)
     return make_parsing_error("JThreadsInfo: JSON array");
@@ -155,6 +154,7 @@ Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
           LLDB_INVALID_REGNUM, // process plugin reg num
           LLDB_INVALID_REGNUM  // native register number
       },
+      nullptr,
       nullptr,
       nullptr,
   };

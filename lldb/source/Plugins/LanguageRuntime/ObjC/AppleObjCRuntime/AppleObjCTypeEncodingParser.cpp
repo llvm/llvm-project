@@ -234,15 +234,12 @@ clang::QualType AppleObjCTypeEncodingParser::BuildObjCObjectPointerType(
 
     auto types = decl_vendor->FindTypes(ConstString(name), /*max_matches*/ 1);
 
-// The user can forward-declare something that has no definition.  The runtime
-// doesn't prohibit this at all. This is a rare and very weird case.  We keep
-// this assert in debug builds so we catch other weird cases.
-#ifdef LLDB_CONFIGURATION_DEBUG
-    assert(!types.empty());
-#else
+    // The user can forward-declare something that has no definition.  The runtime
+    // doesn't prohibit this at all. This is a rare and very weird case.  We keep
+    // this assert in debug builds so we catch other weird cases.
+    lldbassert(!types.empty());
     if (types.empty())
       return ast_ctx.getObjCIdType();
-#endif
 
     return ClangUtil::GetQualType(types.front().GetPointerType());
   } else {

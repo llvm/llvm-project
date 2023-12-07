@@ -57,11 +57,7 @@ FAILED = RED + "failed" + NORMAL
 
 
 def find(dir, file_filter=None):
-    files = [
-        walkdir[0]+"/"+file
-        for walkdir in os.walk(dir)
-        for file in walkdir[2]
-    ]
+    files = [walkdir[0] + "/" + file for walkdir in os.walk(dir) for file in walkdir[2]]
     if file_filter is not None:
         files = filter(files, file_filter)
     return sorted(files)
@@ -147,8 +143,10 @@ def check_bisect(choices, perform_test):
         picks = dict(all_a)
         for x in partition:
             picks[x] = choice_map[x][1]
-        announce_test("checking %s [<=%d remaining]" %
-                      (format_namelist(partition), max_remaining_steps))
+        announce_test(
+            "checking %s [<=%d remaining]"
+            % (format_namelist(partition), max_remaining_steps)
+        )
         res = perform_test(picks)
         if res is True:
             known_good.update(partition)
@@ -184,7 +182,7 @@ def extract_functions(file):
         if marker != -1:
             if in_function is not None:
                 warn("Missing end of function %s" % (in_function,))
-            funcname = line[marker + 19:-1]
+            funcname = line[marker + 19 : -1]
             in_function = funcname
             text = line
             continue
@@ -210,7 +208,7 @@ def replace_functions(source, dest, replacements):
         if marker != -1:
             if in_function is not None:
                 warn("Missing end of function %s" % (in_function,))
-            funcname = line[marker + 19:-1]
+            funcname = line[marker + 19 : -1]
             in_function = funcname
             replacement = replacements.get(in_function)
             if replacement is not None:
@@ -229,7 +227,10 @@ def replace_functions(source, dest, replacements):
 
 
 def testrun(files):
-    linkline = "%s %s" % (LINKTEST, " ".join(files),)
+    linkline = "%s %s" % (
+        LINKTEST,
+        " ".join(files),
+    )
     res = subprocess.call(linkline, shell=True)
     if res != 0:
         announce_result(FAILED + ": '%s' exitcode != 0" % LINKTEST)
@@ -244,12 +245,13 @@ def prepare_files(gooddir, baddir, rspfile):
     files_b = []
 
     if rspfile is not None:
+
         def get_basename(name):
             # remove prefix
             if name.startswith(gooddir):
-                return name[len(gooddir):]
+                return name[len(gooddir) :]
             if name.startswith(baddir):
-                return name[len(baddir):]
+                return name[len(baddir) :]
             assert False, ""
 
         with open(rspfile, "r") as rf:
@@ -269,15 +271,13 @@ def prepare_files(gooddir, baddir, rspfile):
     for name in files_b:
         basename = get_basename(name)
         if basename not in basenames_a:
-            warn("There is no corresponding file to '%s' in %s" %
-                 (name, gooddir))
+            warn("There is no corresponding file to '%s' in %s" % (name, gooddir))
     choices = []
     skipped = []
     for name in files_a:
         basename = get_basename(name)
         if basename not in basenames_b:
-            warn("There is no corresponding file to '%s' in %s" %
-                 (name, baddir))
+            warn("There is no corresponding file to '%s' in %s" % (name, baddir))
 
         file_a = gooddir + "/" + basename
         file_b = baddir + "/" + basename
@@ -307,8 +307,7 @@ def prepare_files(gooddir, baddir, rspfile):
         # If response file is used, create a temporary response file for the
         # picked files.
         if rspfile is not None:
-            with tempfile.NamedTemporaryFile('w', suffix='.rsp',
-                                             delete=False) as tf:
+            with tempfile.NamedTemporaryFile("w", suffix=".rsp", delete=False) as tf:
                 tf.write(" ".join(files))
                 tf.flush()
             ret = testrun([tf.name])
@@ -346,7 +345,7 @@ def prepare_functions(to_check, gooddir, goodfile, badfile):
     if len(skipped) > 0:
         info("Skipped (same content): %s" % format_namelist(skipped))
 
-    combined_file = '/tmp/combined2.s'
+    combined_file = "/tmp/combined2.s"
     files = []
     found_good_file = False
     for c in files_good:
@@ -362,21 +361,21 @@ def prepare_functions(to_check, gooddir, goodfile, badfile):
             assert x == functions_a_map[name] or x == functions_b_map[name]
         replace_functions(goodfile, combined_file, picks)
         return testrun(files)
+
     return perform_test, choices
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--a', dest='dir_a', default='before')
-    parser.add_argument('--b', dest='dir_b', default='after')
-    parser.add_argument('--rsp', default=None)
-    parser.add_argument('--test', default='./link_test')
-    parser.add_argument('--insane', help='Skip sanity check',
-                        action='store_true')
-    parser.add_argument('--seq',
-                        help='Check sequentially instead of bisection',
-                        action='store_true')
-    parser.add_argument('file', metavar='file', nargs='?')
+    parser.add_argument("--a", dest="dir_a", default="before")
+    parser.add_argument("--b", dest="dir_b", default="after")
+    parser.add_argument("--rsp", default=None)
+    parser.add_argument("--test", default="./link_test")
+    parser.add_argument("--insane", help="Skip sanity check", action="store_true")
+    parser.add_argument(
+        "--seq", help="Check sequentially instead of bisection", action="store_true"
+    )
+    parser.add_argument("file", metavar="file", nargs="?")
     config = parser.parse_args()
 
     gooddir = config.dir_a
@@ -391,8 +390,9 @@ def main():
     if config.file is not None:
         goodfile = gooddir + "/" + config.file
         badfile = baddir + "/" + config.file
-        perform_test, choices = prepare_functions(config.file, gooddir,
-                                                  goodfile, badfile)
+        perform_test, choices = prepare_functions(
+            config.file, gooddir, goodfile, badfile
+        )
     else:
         perform_test, choices = prepare_files(gooddir, baddir, rspfile)
 
@@ -423,5 +423,5 @@ def main():
         stderr.write("Could not identify failing parts?!?")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -13,9 +13,10 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/IndentedOstream.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
+#include <map>
+#include <optional>
 #include <utility>
 
 namespace mlir {
@@ -33,7 +34,8 @@ static const StringRef kShapeNone = "plain";
 /// Return the size limits for eliding large attributes.
 static int64_t getLargeAttributeSizeLimit() {
   // Use the default from the printer flags if possible.
-  if (Optional<int64_t> limit = OpPrintingFlags().getLargeElementsAttrLimit())
+  if (std::optional<int64_t> limit =
+          OpPrintingFlags().getLargeElementsAttrLimit())
     return *limit;
   return 16;
 }
@@ -56,7 +58,7 @@ static std::string quoteString(const std::string &str) {
   return "\"" + str + "\"";
 }
 
-using AttributeMap = llvm::StringMap<std::string>;
+using AttributeMap = std::map<std::string, std::string>;
 
 namespace {
 
@@ -69,11 +71,11 @@ namespace {
 /// cluster, an invisible "anchor" node is created.
 struct Node {
 public:
-  Node(int id = 0, Optional<int> clusterId = std::nullopt)
+  Node(int id = 0, std::optional<int> clusterId = std::nullopt)
       : id(id), clusterId(clusterId) {}
 
   int id;
-  Optional<int> clusterId;
+  std::optional<int> clusterId;
 };
 
 /// This pass generates a Graphviz dataflow visualization of an MLIR operation.
@@ -85,6 +87,7 @@ public:
   PrintOpPass(const PrintOpPass &o) : PrintOpPass(o.os.getOStream()) {}
 
   void runOnOperation() override {
+    initColorMapping(*getOperation());
     emitGraph([&]() {
       processOperation(getOperation());
       emitAllEdgeStmts();
@@ -95,10 +98,31 @@ public:
   void emitRegionCFG(Region &region) {
     printControlFlowEdges = true;
     printDataFlowEdges = false;
+    initColorMapping(region);
     emitGraph([&]() { processRegion(region); });
   }
 
 private:
+  /// Generate a color mapping that will color every operation with the same
+  /// name the same way. It'll interpolate the hue in the HSV color-space,
+  /// attempting to keep the contrast suitable for black text.
+  template <typename T>
+  void initColorMapping(T &irEntity) {
+    backgroundColors.clear();
+    SmallVector<Operation *> ops;
+    irEntity.walk([&](Operation *op) {
+      auto &entry = backgroundColors[op->getName()];
+      if (entry.first == 0)
+        ops.push_back(op);
+      ++entry.first;
+    });
+    for (auto indexedOps : llvm::enumerate(ops)) {
+      double hue = ((double)indexedOps.index()) / ops.size();
+      backgroundColors[indexedOps.value()->getName()].second =
+          std::to_string(hue) + " 1.0 1.0";
+    }
+  }
+
   /// Emit all edges. This function should be called after all nodes have been
   /// emitted.
   void emitAllEdgeStmts() {
@@ -132,7 +156,7 @@ private:
   void emitAttrList(raw_ostream &os, const AttributeMap &map) {
     os << "[";
     interleaveComma(map, os, [&](const auto &it) {
-      os << this->attrStmt(it.getKey(), it.getValue());
+      os << this->attrStmt(it.first, it.second);
     });
     os << "]";
   }
@@ -143,21 +167,21 @@ private:
     int64_t largeAttrLimit = getLargeAttributeSizeLimit();
 
     // Always emit splat attributes.
-    if (attr.isa<SplatElementsAttr>()) {
+    if (isa<SplatElementsAttr>(attr)) {
       attr.print(os);
       return;
     }
 
     // Elide "big" elements attributes.
-    auto elements = attr.dyn_cast<ElementsAttr>();
+    auto elements = dyn_cast<ElementsAttr>(attr);
     if (elements && elements.getNumElements() > largeAttrLimit) {
-      os << std::string(elements.getType().getRank(), '[') << "..."
-         << std::string(elements.getType().getRank(), ']') << " : "
+      os << std::string(elements.getShapedType().getRank(), '[') << "..."
+         << std::string(elements.getShapedType().getRank(), ']') << " : "
          << elements.getType();
       return;
     }
 
-    auto array = attr.dyn_cast<ArrayAttr>();
+    auto array = dyn_cast<ArrayAttr>(attr);
     if (array && static_cast<int64_t>(array.size()) > largeAttrLimit) {
       os << "[...]";
       return;
@@ -204,11 +228,16 @@ private:
   }
 
   /// Emit a node statement.
-  Node emitNodeStmt(std::string label, StringRef shape = kShapeNode) {
+  Node emitNodeStmt(std::string label, StringRef shape = kShapeNode,
+                    StringRef background = "") {
     int nodeId = ++counter;
     AttributeMap attrs;
     attrs["label"] = quoteString(escapeString(std::move(label)));
     attrs["shape"] = shape.str();
+    if (!background.empty()) {
+      attrs["style"] = "filled";
+      attrs["fillcolor"] = ("\"" + background + "\"").str();
+    }
     os << llvm::format("v%i ", nodeId);
     emitAttrList(os, attrs);
     os << ";\n";
@@ -226,7 +255,6 @@ private:
         llvm::raw_string_ostream ss(buf);
         interleaveComma(op->getResultTypes(), ss);
         os << truncateString(ss.str()) << ")";
-        os << ")";
       }
 
       // Print attributes.
@@ -253,7 +281,7 @@ private:
         valueToNode[blockArg] = emitNodeStmt(getLabel(blockArg));
 
       // Emit a node for each operation.
-      Optional<Node> prevNode;
+      std::optional<Node> prevNode;
       for (Operation &op : block) {
         Node nextNode = processOperation(&op);
         if (printControlFlowEdges && prevNode)
@@ -277,7 +305,8 @@ private:
           },
           getLabel(op));
     } else {
-      node = emitNodeStmt(getLabel(op));
+      node = emitNodeStmt(getLabel(op), kShapeNode,
+                          backgroundColors[op->getName()].second);
     }
 
     // Insert data flow edges originating from each operand.
@@ -317,6 +346,8 @@ private:
   DenseMap<Value, Node> valueToNode;
   /// Counter for generating unique node/subgraph identifiers.
   int counter = 0;
+
+  DenseMap<OperationName, std::pair<int, std::string>> backgroundColors;
 };
 
 } // namespace

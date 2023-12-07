@@ -45,7 +45,9 @@ def PDL_ApplyNativeConstraintOp
     ```
   }];
 
-  let arguments = (ins StrAttr:$name, Variadic<PDL_AnyType>:$args);
+  let arguments = (ins StrAttr:$name, 
+                       Variadic<PDL_AnyType>:$args, 
+                       DefaultValuedAttr<BoolAttr, "false">:$isNegated);
   let assemblyFormat = "$name `(` $args `:` type($args) `)` attr-dict";
   let hasVerifier = 1;
 }
@@ -354,7 +356,7 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
   }];
 
   let builders = [
-    OpBuilder<(ins CArg<"Optional<StringRef>", "std::nullopt">:$name,
+    OpBuilder<(ins CArg<"std::optional<StringRef>", "std::nullopt">:$name,
       CArg<"ValueRange", "std::nullopt">:$operandValues,
       CArg<"ArrayRef<StringRef>", "std::nullopt">:$attrNames,
       CArg<"ValueRange", "std::nullopt">:$attrValues,
@@ -419,8 +421,8 @@ def PDL_PatternOp : PDL_Op<"pattern", [
   }];
 
   let builders = [
-    OpBuilder<(ins CArg<"Optional<uint16_t>", "1">:$benefit,
-                   CArg<"Optional<StringRef>", "std::nullopt">:$name)>,
+    OpBuilder<(ins CArg<"std::optional<uint16_t>", "1">:$benefit,
+                   CArg<"std::optional<StringRef>", "std::nullopt">:$name)>,
   ];
   let extraClassDeclaration = [{
     //===------------------------------------------------------------------===//

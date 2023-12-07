@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s readability-redundant-member-init %t \
 // RUN:   -config="{CheckOptions: \
-// RUN:             [{key: readability-redundant-member-init.IgnoreBaseInCopyConstructors, \
-// RUN:               value: true}] \
+// RUN:             {readability-redundant-member-init.IgnoreBaseInCopyConstructors: \
+// RUN:                true} \
 // RUN:             }"
 
 struct S {

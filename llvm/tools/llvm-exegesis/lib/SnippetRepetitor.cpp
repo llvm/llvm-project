@@ -26,8 +26,10 @@ public:
   // Repeats the snippet until there are at least MinInstructions in the
   // resulting code.
   FillFunction Repeat(ArrayRef<MCInst> Instructions, unsigned MinInstructions,
-                      unsigned LoopBodySize) const override {
-    return [Instructions, MinInstructions](FunctionFiller &Filler) {
+                      unsigned LoopBodySize,
+                      bool CleanupMemory) const override {
+    return [this, Instructions, MinInstructions,
+            CleanupMemory](FunctionFiller &Filler) {
       auto Entry = Filler.getEntry();
       if (!Instructions.empty()) {
         // Add the whole snippet at least once.
@@ -36,7 +38,7 @@ public:
           Entry.addInstruction(Instructions[I % Instructions.size()]);
         }
       }
-      Entry.addReturn();
+      Entry.addReturn(State.getExegesisTarget(), CleanupMemory);
     };
   }
 
@@ -55,9 +57,10 @@ public:
 
   // Loop over the snippet ceil(MinInstructions / Instructions.Size()) times.
   FillFunction Repeat(ArrayRef<MCInst> Instructions, unsigned MinInstructions,
-                      unsigned LoopBodySize) const override {
-    return [this, Instructions, MinInstructions,
-            LoopBodySize](FunctionFiller &Filler) {
+                      unsigned LoopBodySize,
+                      bool CleanupMemory) const override {
+    return [this, Instructions, MinInstructions, LoopBodySize,
+            CleanupMemory](FunctionFiller &Filler) {
       const auto &ET = State.getExegesisTarget();
       auto Entry = Filler.getEntry();
 
@@ -67,7 +70,7 @@ public:
         const MCInstrDesc &MCID = Filler.MCII->get(Opcode);
         if (!MCID.isTerminator())
           continue;
-        Entry.addReturn();
+        Entry.addReturn(State.getExegesisTarget(), CleanupMemory);
         return;
       }
 
@@ -103,7 +106,7 @@ public:
         for (const auto &LiveIn : Entry.MBB->liveins())
           Loop.MBB->addLiveIn(LiveIn);
       }
-      for (auto _ : seq(0U, LoopUnrollFactor)) {
+      for (auto _ : seq(LoopUnrollFactor)) {
         (void)_;
         Loop.addInstructions(Instructions);
       }
@@ -112,7 +115,7 @@ public:
 
       // Set up the exit basic block.
       Loop.MBB->addSuccessor(Exit.MBB, BranchProbability::getZero());
-      Exit.addReturn();
+      Exit.addReturn(State.getExegesisTarget(), CleanupMemory);
     };
   }
 
@@ -131,14 +134,14 @@ private:
 SnippetRepetitor::~SnippetRepetitor() {}
 
 std::unique_ptr<const SnippetRepetitor>
-SnippetRepetitor::Create(InstructionBenchmark::RepetitionModeE Mode,
+SnippetRepetitor::Create(Benchmark::RepetitionModeE Mode,
                          const LLVMState &State) {
   switch (Mode) {
-  case InstructionBenchmark::Duplicate:
+  case Benchmark::Duplicate:
     return std::make_unique<DuplicateSnippetRepetitor>(State);
-  case InstructionBenchmark::Loop:
+  case Benchmark::Loop:
     return std::make_unique<LoopSnippetRepetitor>(State);
-  case InstructionBenchmark::AggregateMin:
+  case Benchmark::AggregateMin:
     break;
   }
   llvm_unreachable("Unknown RepetitionModeE enum");

@@ -7,10 +7,10 @@ entry:
 ; CHECK: vadd.f32 
   %a.addr = alloca float, align 4
   %b.addr = alloca float, align 4
-  store float %a, float* %a.addr, align 4
-  store float %b, float* %b.addr, align 4
-  %0 = load float, float* %a.addr, align 4
-  %1 = load float, float* %b.addr, align 4
+  store float %a, ptr %a.addr, align 4
+  store float %b, ptr %b.addr, align 4
+  %0 = load float, ptr %a.addr, align 4
+  %1 = load float, ptr %b.addr, align 4
   %add = fadd float %0, %1
   ret float %add
 }
@@ -22,10 +22,10 @@ entry:
 ; CHECK: vadd.f64
   %a.addr = alloca double, align 8
   %b.addr = alloca double, align 8
-  store double %a, double* %a.addr, align 8
-  store double %b, double* %b.addr, align 8
-  %0 = load double, double* %a.addr, align 8
-  %1 = load double, double* %b.addr, align 8
+  store double %a, ptr %a.addr, align 8
+  store double %b, ptr %b.addr, align 8
+  %0 = load double, ptr %a.addr, align 8
+  %1 = load double, ptr %b.addr, align 8
   %add = fadd double %0, %1
   ret double %add
 }

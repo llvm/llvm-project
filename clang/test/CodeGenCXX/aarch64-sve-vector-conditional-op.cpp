@@ -164,10 +164,10 @@ svint32_t cond_i32_splat(svint32_t a) {
 
 // CHECK-LABEL: @_Z14cond_u32_splatu12__SVUint32_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CMP:%.*]] = icmp ult <vscale x 4 x i32> [[A:%.*]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+// CHECK-NEXT:    [[CMP:%.*]] = icmp ult <vscale x 4 x i32> [[A:%.*]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 // CHECK-NEXT:    [[CONV:%.*]] = zext <vscale x 4 x i1> [[CMP]] to <vscale x 4 x i32>
 // CHECK-NEXT:    [[VECTOR_COND:%.*]] = icmp ne <vscale x 4 x i32> [[CONV]], zeroinitializer
-// CHECK-NEXT:    [[VECTOR_SELECT:%.*]] = select <vscale x 4 x i1> [[VECTOR_COND]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+// CHECK-NEXT:    [[VECTOR_SELECT:%.*]] = select <vscale x 4 x i1> [[VECTOR_COND]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[VECTOR_SELECT]]
 //
 svuint32_t cond_u32_splat(svuint32_t a) {
@@ -188,10 +188,10 @@ svint64_t cond_i64_splat(svint64_t a) {
 
 // CHECK-LABEL: @_Z14cond_u64_splatu12__SVUint64_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CMP:%.*]] = icmp ult <vscale x 2 x i64> [[A:%.*]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+// CHECK-NEXT:    [[CMP:%.*]] = icmp ult <vscale x 2 x i64> [[A:%.*]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 // CHECK-NEXT:    [[CONV:%.*]] = zext <vscale x 2 x i1> [[CMP]] to <vscale x 2 x i64>
 // CHECK-NEXT:    [[VECTOR_COND:%.*]] = icmp ne <vscale x 2 x i64> [[CONV]], zeroinitializer
-// CHECK-NEXT:    [[VECTOR_SELECT:%.*]] = select <vscale x 2 x i1> [[VECTOR_COND]], <vscale x 2 x i64> [[A]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+// CHECK-NEXT:    [[VECTOR_SELECT:%.*]] = select <vscale x 2 x i1> [[VECTOR_COND]], <vscale x 2 x i64> [[A]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[VECTOR_SELECT]]
 //
 svuint64_t cond_u64_splat(svuint64_t a) {

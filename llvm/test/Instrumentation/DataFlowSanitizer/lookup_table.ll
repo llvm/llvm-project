@@ -5,21 +5,18 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: @__dfsan_arg_tls = external thread_local(initialexec) global [[TLS_ARR:\[100 x i64\]]]
 ; CHECK: @__dfsan_retval_tls = external thread_local(initialexec) global [[TLS_ARR]]
-; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
-; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
-
 @lookup_table_a = external local_unnamed_addr constant [256 x i8], align 16
 @lookup_table_b = external local_unnamed_addr constant [256 x i8], align 16
 
 define i8 @load_lookup_table_a(i8 %p) {
   ; CHECK-LABEL:           @load_lookup_table_a.dfsan
-  ; CHECK-NEXT:            %[[#PS:]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align [[ALIGN:2]]
+  ; CHECK-NEXT:            %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN:2]]
   ; CHECK-NEXT:            %c = zext i8 %p to i64
   ; CHECK-NEXT:            %b = getelementptr inbounds [256 x i8], ptr @lookup_table_a, i64 0, i64 %c
   ; CHECK-NEXT:            %a = load i8, ptr %b, align 1
   ; Propagates p shadow when lookup_table_a flag is provided, otherwise propagates 0 shadow
-  ; LOOKUP_A-NEXT:         store i[[#SBITS]] %[[#PS]], ptr @__dfsan_retval_tls, align [[ALIGN]]
-  ; NO_LOOKUP_A-NEXT:      store i[[#SBITS]] 0, ptr @__dfsan_retval_tls, align [[ALIGN]]
+  ; LOOKUP_A-NEXT:         store i8 %[[#PS]], ptr @__dfsan_retval_tls, align [[ALIGN]]
+  ; NO_LOOKUP_A-NEXT:      store i8 0, ptr @__dfsan_retval_tls, align [[ALIGN]]
   ; CHECK-NEXT:            ret i8 %a
 
   %c = zext i8 %p to i64
@@ -30,12 +27,12 @@ define i8 @load_lookup_table_a(i8 %p) {
 
 define i8 @load_lookup_table_b(i8 %p) {
   ; CHECK-LABEL:           @load_lookup_table_b.dfsan
-  ; CHECK-NEXT:            %[[#PS:]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align 2
+  ; CHECK-NEXT:            %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; CHECK-NEXT:            %c = zext i8 %p to i64
   ; CHECK-NEXT:            %b = getelementptr inbounds [256 x i8], ptr @lookup_table_b, i64 0, i64 %c
   ; CHECK-NEXT:            %a = load i8, ptr %b, align 1
   ; Propagates 0 shadow
-  ; CHECK-NEXT:            store i[[#SBITS]] 0, ptr @__dfsan_retval_tls, align [[ALIGN]]
+  ; CHECK-NEXT:            store i8 0, ptr @__dfsan_retval_tls, align [[ALIGN]]
   ; CHECK-NEXT:            ret i8 %a
 
   %c = zext i8 %p to i64

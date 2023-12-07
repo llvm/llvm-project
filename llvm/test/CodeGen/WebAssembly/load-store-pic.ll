@@ -26,7 +26,7 @@ define i32 @load_hidden_global() {
 ; PIC-NEXT:    i32.load $push[[L3:[0-9]+]]=, 0($pop[[L2]]){{$}}
 ; CHECK-NEXT:    end_function
 
-  %1 = load i32, i32* @hidden_global
+  %1 = load i32, ptr @hidden_global
   ret i32 %1
 }
 
@@ -40,8 +40,8 @@ define i32 @load_hidden_global_offset() {
 ; PIC-NEXT:    i32.load $push{{[0-9]+}}=, 0($pop[[L4]]){{$}}
 ; CHECK-NEXT:  end_function
 
-  %1 = getelementptr [10 x i32], [10 x i32]* @hidden_global_array, i32 0, i32 5
-  %2 = load i32, i32* %1
+  %1 = getelementptr [10 x i32], ptr @hidden_global_array, i32 0, i32 5
+  %2 = load i32, ptr %1
   ret i32 %2
 }
 
@@ -55,7 +55,7 @@ define void @store_hidden_global(i32 %n) {
 ; PIC-NEXT:    i32.store 0($pop[[L2]]), $0{{$}}
 ; CHECK-NEXT:    end_function
 
-  store i32 %n, i32* @hidden_global
+  store i32 %n, ptr @hidden_global
   ret void
 }
 
@@ -70,8 +70,8 @@ define void @store_hidden_global_offset(i32 %n) {
 
 ; CHECK-NEXT:   end_function
 
-  %1 = getelementptr [10 x i32], [10 x i32]* @hidden_global_array, i32 0, i32 5
-  store i32 %n, i32* %1
+  %1 = getelementptr [10 x i32], ptr @hidden_global_array, i32 0, i32 5
+  store i32 %n, ptr %1
   ret void
 }
 
@@ -86,7 +86,7 @@ define i32 @load_external_global() {
 
 ; CHECK-NEXT:   end_function
 
-  %1 = load i32, i32* @external_global
+  %1 = load i32, ptr @external_global
   ret i32 %1
 }
 
@@ -99,8 +99,8 @@ define i32 @load_external_global_offset() {
 
 ; CHECK-NEXT:   end_function
 
-  %1 = getelementptr [10 x i32], [10 x i32]* @external_global_array, i32 0, i32 5
-  %2 = load i32, i32* %1
+  %1 = getelementptr [10 x i32], ptr @external_global_array, i32 0, i32 5
+  %2 = load i32, ptr %1
   ret i32 %2
 }
 
@@ -113,7 +113,7 @@ define void @store_external_global(i32 %n) {
 
 ; CHECK-NEXT:   end_function
 
-  store i32 %n, i32* @external_global
+  store i32 %n, ptr @external_global
   ret void
 }
 
@@ -126,7 +126,7 @@ define void @store_external_global_offset(i32 %n) {
 
 ; CHECK-NEXT:   end_function
 
-  %1 = getelementptr [10 x i32], [10 x i32]* @external_global_array, i32 0, i32 5
-  store i32 %n, i32* %1
+  %1 = getelementptr [10 x i32], ptr @external_global_array, i32 0, i32 5
+  store i32 %n, ptr %1
   ret void
 }

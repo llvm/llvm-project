@@ -3,9 +3,9 @@
 --- |
   target datalayout = "E-m:e-i64:64-n32:64"
   target triple = "powerpc64le-unknown-linux-gnu"
-  define i8* @func(i8* %a) {
+  define ptr @func(ptr %a) {
   entry:
-    ret i8* %a
+    ret ptr %a
   }
   
 ...

@@ -10,8 +10,8 @@
 
 // <string>
 
-// basic_string(nullptr_t) = delete; // C++2b
-// basic_string& operator=(nullptr_t) = delete; // C++2b
+// basic_string(nullptr_t) = delete; // C++23
+// basic_string& operator=(nullptr_t) = delete; // C++23
 
 #include <string>
 #include <type_traits>

@@ -15,7 +15,6 @@
 
 #include "Frame.h"
 #include "Program.h"
-#include "State.h"
 #include <cstdint>
 #include <vector>
 
@@ -33,7 +32,7 @@ public:
 
   /// Creates a new frame for a method call.
   InterpFrame(InterpState &S, const Function *Func, InterpFrame *Caller,
-              CodePtr RetPC, Pointer &&This);
+              CodePtr RetPC);
 
   /// Creates a new frame with the values that make sense.
   /// I.e., the caller is the current frame of S,
@@ -51,13 +50,13 @@ public:
   void popArgs();
 
   /// Describes the frame with arguments for diagnostic purposes.
-  void describe(llvm::raw_ostream &OS) override;
+  void describe(llvm::raw_ostream &OS) const override;
 
   /// Returns the parent frame object.
   Frame *getCaller() const override;
 
   /// Returns the location of the call to the frame.
-  SourceLocation getCallLocation() const override;
+  SourceRange getCallRange() const override;
 
   /// Returns the caller.
   const FunctionDecl *getCallee() const override;
@@ -76,10 +75,11 @@ public:
   /// Mutates a local variable.
   template <typename T> void setLocal(unsigned Offset, const T &Value) {
     localRef<T>(Offset) = Value;
+    localInlineDesc(Offset)->IsInitialized = true;
   }
 
   /// Returns a pointer to a local variables.
-  Pointer getLocalPointer(unsigned Offset);
+  Pointer getLocalPointer(unsigned Offset) const;
 
   /// Returns the value of an argument.
   template <typename T> const T &getParam(unsigned Offset) const {
@@ -118,6 +118,9 @@ public:
   virtual SourceInfo getSource(CodePtr PC) const;
   const Expr *getExpr(CodePtr PC) const;
   SourceLocation getLocation(CodePtr PC) const;
+  SourceRange getRange(CodePtr PC) const;
+
+  unsigned getDepth() const { return Depth; }
 
 private:
   /// Returns an original argument from the stack.
@@ -128,17 +131,24 @@ private:
 
   /// Returns an offset to a local.
   template <typename T> T &localRef(unsigned Offset) const {
-    return *reinterpret_cast<T *>(Locals.get() + Offset);
+    return getLocalPointer(Offset).deref<T>();
   }
 
   /// Returns a pointer to a local's block.
-  void *localBlock(unsigned Offset) const {
-    return Locals.get() + Offset - sizeof(Block);
+  Block *localBlock(unsigned Offset) const {
+    return reinterpret_cast<Block *>(Locals.get() + Offset - sizeof(Block));
+  }
+
+  /// Returns the inline descriptor of the local.
+  InlineDescriptor *localInlineDesc(unsigned Offset) const {
+    return reinterpret_cast<InlineDescriptor *>(Locals.get() + Offset);
   }
 
 private:
   /// Reference to the interpreter state.
   InterpState &S;
+  /// Depth of this frame.
+  unsigned Depth;
   /// Reference to the function being executed.
   const Function *Func;
   /// Current object pointer for methods.

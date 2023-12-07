@@ -90,3 +90,25 @@ bool* ElementRefs() {
   foo(eight_bools.w);    // expected-error@90 {{illegal vector component name ''w''}}
   foo(eight_bools.wyx);  // expected-error@91 {{illegal vector component name ''wyx''}}
 }
+
+void Sizeof() {
+  using FourBools = bool __attribute__((ext_vector_type(4)));
+  using NineBools = bool __attribute__((ext_vector_type(9)));
+  using TwentyEightBools = bool __attribute__((ext_vector_type(28)));
+  using ThirtyThreeBools = bool __attribute__((ext_vector_type(33)));
+  using SixtyFiveBools = bool __attribute__((ext_vector_type(65)));
+  using Bool129 = bool __attribute__((ext_vector_type(129)));
+  using Bool150 = bool __attribute__((ext_vector_type(150)));
+  using Bool195 = bool __attribute__((ext_vector_type(195)));
+  using Bool257 = bool __attribute__((ext_vector_type(257)));
+  static_assert(sizeof(FourBools) == 1);
+  static_assert(sizeof(EightBools) == 1);
+  static_assert(sizeof(NineBools) == 2);
+  static_assert(sizeof(TwentyEightBools) == 4);
+  static_assert(sizeof(ThirtyThreeBools) == 8);
+  static_assert(sizeof(SixtyFiveBools) == 16);
+  static_assert(sizeof(Bool129) == 32);
+  static_assert(sizeof(Bool150) == 32);
+  static_assert(sizeof(Bool195) == 32);
+  static_assert(sizeof(Bool257) == 64);
+}

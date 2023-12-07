@@ -52,6 +52,7 @@ add_lldb_unittest(UtilityTests
       LLVMTestingSupport
   LINK_COMPONENTS
     Support
+    TargetParser
   )
 
 set(test_inputs

@@ -8,9 +8,9 @@
 
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 
 #include <math.h>
 
@@ -84,7 +84,7 @@ public:
   }
 
   void testRange(ModfFunc func) {
-    constexpr UIntType COUNT = 10000000;
+    constexpr UIntType COUNT = 100'000;
     constexpr UIntType STEP = UIntType(-1) / COUNT;
     for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = T(FPBits(v));

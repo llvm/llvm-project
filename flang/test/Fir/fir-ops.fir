@@ -117,13 +117,13 @@ func.func @instructions() {
 // CHECK: [[VAL_31:%.*]] = fir.call @box3() : () -> !fir.class<!fir.type<derived3{f:f32}>>
 // CHECK: [[VAL_32:%.*]] = fir.dispatch "method"([[VAL_31]] : !fir.class<!fir.type<derived3{f:f32}>>) -> i32
 // CHECK: [[VAL_33:%.*]] = fir.convert [[VAL_32]] : (i32) -> i64
-// CHECK: [[VAL_34:%.*]] = fir.gentypedesc !fir.type<x>
+// CHECK: [[VAL_34:%.*]] = fir.type_desc !fir.type<x>
 // CHECK: fir.call @user_tdesc([[VAL_34]]) : (!fir.tdesc<!fir.type<x>>) -> ()
 // CHECK: [[VAL_35:%.*]] = fir.no_reassoc [[VAL_33]] : i64
   %27 = fir.call @box3() : () -> !fir.class<!fir.type<derived3{f:f32}>>
   %28 = fir.dispatch "method"(%27 : !fir.class<!fir.type<derived3{f:f32}>>) -> i32
   %29 = fir.convert %28 : (i32) -> i64
-  %30 = fir.gentypedesc !fir.type<x>
+  %30 = fir.type_desc !fir.type<x>
   fir.call @user_tdesc(%30) : (!fir.tdesc<!fir.type<x>>) -> ()
   %31 = fir.no_reassoc %29 : i64
 
@@ -821,7 +821,8 @@ func.func private @dispatch(%arg0: !fir.class<!fir.type<dispatch_derived1{a:i32,
 }
 
 
-// CHECK-LABEL: func.func @embox_tdesc
+// CHECK-LABEL: func.func @embox_tdesc(
+// CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.array<10x!fir.type<derived_poly{a:i32,b:i32}>>>
 func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived_poly{a:i32,b:i32}>>>) {
   %0 = fir.alloca i32
   %c1_i32 = arith.constant 1 : i32
@@ -837,10 +838,8 @@ func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived_poly{a:
     %c1_i64 = arith.constant 1 : i64
     %11 = arith.subi %10, %c1_i64 : i64
     %12 = fir.coordinate_of %arg0, %11 : (!fir.class<!fir.array<10x!fir.type<derived_poly{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<derived_poly{a:i32,b:i32}>>
-    %tdesc = fir.box_tdesc %arg0 : (!fir.class<!fir.array<10x!fir.type<derived_poly{a:i32,b:i32}>>>) -> (!fir.tdesc<!fir.type<derived_poly{a:i32,b:i32}>>)
-    // CHECK: %[[TDESC:.*]] = fir.box_tdesc %{{.*}} : (!fir.class<!fir.array<10x!fir.type<derived_poly{a:i32,b:i32}>>>) -> !fir.tdesc<!fir.type<derived_poly{a:i32,b:i32}>> 
-    %13 = fir.embox %12 tdesc %tdesc : (!fir.ref<!fir.type<derived_poly{a:i32,b:i32}>>, !fir.tdesc<!fir.type<derived_poly{a:i32,b:i32}>>) -> !fir.class<!fir.type<derived_poly{a:i32,b:i32}>>
-    // CHECK: %{{.*}} = fir.embox %{{.*}} tdesc %[[TDESC]] : (!fir.ref<!fir.type<derived_poly{a:i32,b:i32}>>, !fir.tdesc<!fir.type<derived_poly{a:i32,b:i32}>>) -> !fir.class<!fir.type<derived_poly{a:i32,b:i32}>>
+    %13 = fir.embox %12 source_box %arg0 : (!fir.ref<!fir.type<derived_poly{a:i32,b:i32}>>, !fir.class<!fir.array<10x!fir.type<derived_poly{a:i32,b:i32}>>>) -> !fir.class<!fir.type<derived_poly{a:i32,b:i32}>>
+    // CHECK: %{{.*}} = fir.embox %{{.*}} source_box %[[ARG0]] : (!fir.ref<!fir.type<derived_poly{a:i32,b:i32}>>, !fir.class<!fir.array<10x!fir.type<derived_poly{a:i32,b:i32}>>>) -> !fir.class<!fir.type<derived_poly{a:i32,b:i32}>>
     %14 = arith.addi %arg2, %c1 : index
     %15 = fir.convert %c1 : (index) -> i32
     %16 = fir.load %0 : !fir.ref<i32>

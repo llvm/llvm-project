@@ -24,7 +24,7 @@
 
 @k = external global float
 
-declare float @k2(half *)
+declare float @k2(ptr)
 
 define void @f3(i16 %b) {
 ; MIPS32-LABEL: f3:
@@ -96,9 +96,9 @@ define void @f3(i16 %b) {
 entry:
   %0 = alloca half
   %1 = bitcast i16 %b to half
-  store half %1, half * %0
-  %2 = call float @k2(half * %0)
-  store float %2, float * @k
+  store half %1, ptr %0
+  %2 = call float @k2(ptr %0)
+  store float %2, ptr @k
   ret void
 }
 
@@ -158,7 +158,7 @@ define void  @f(i16 %b) {
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 16
   %1 = bitcast i16 %b to half
   %2 = fpext half %1 to float
-  store float %2, float * @k
+  store float %2, ptr @k
   ret void
 }
 
@@ -241,13 +241,13 @@ define void @fadd_f64() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load half, half * @h, align 2
+  %0 = load half, ptr @h, align 2
   %1 = fpext half %0 to double
-  %2 = load half, half * @h, align 2
+  %2 = load half, ptr @h, align 2
   %3 = fpext half %2 to double
   %add = fadd double %1, %3
   %4 = fptrunc double %add to half
-   store half %4, half * @h, align 2
+   store half %4, ptr @h, align 2
   ret void
 }
 
@@ -303,7 +303,7 @@ define i32 @ffptoui() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    mfc1 $2, $f0
 entry:
-  %0 = load half, half * @h, align 2
+  %0 = load half, ptr @h, align 2
   %1 = fptoui half %0 to i32
   ret i32 %1
 }
@@ -359,7 +359,7 @@ define i32 @ffptosi() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    mfc1 $2, $f0
 entry:
-  %0 = load half, half * @h, align 2
+  %0 = load half, ptr @h, align 2
   %1 = fptosi half %0 to i32
   ret i32 %1
 
@@ -456,7 +456,7 @@ entry:
 
 
   %0 = uitofp i32 %a to half
-  store half %0, half * @h, align 2
+  store half %0, ptr @h, align 2
   ret void
 }
 
@@ -522,18 +522,18 @@ define void @fadd() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %2 = load i16, i16* @g, align 2
+  %2 = load i16, ptr @g, align 2
   %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
   %add = fadd float %1, %3
 
 
  %4 = call i16 @llvm.convert.to.fp16.f32(float %add)
 
-   store i16 %4, i16* @g, align 2
+   store i16 %4, ptr @g, align 2
   ret void
 }
 
@@ -602,11 +602,11 @@ define void @fsub() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %2 = load i16, i16* @g, align 2
+  %2 = load i16, ptr @g, align 2
   %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
   %sub = fsub float %1, %3
 
@@ -614,7 +614,7 @@ entry:
   %4 = call i16 @llvm.convert.to.fp16.f32(float %sub)
 
 
-  store i16 %4, i16* @g, align 2
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
@@ -676,11 +676,11 @@ define void @fmult() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %2 = load i16, i16* @g, align 2
+  %2 = load i16, ptr @g, align 2
   %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
   %mul = fmul float %1, %3
 
@@ -688,7 +688,7 @@ entry:
   %4 = call i16 @llvm.convert.to.fp16.f32(float %mul)
 
 
-  store i16 %4, i16* @g, align 2
+  store i16 %4, ptr @g, align 2
 
   ret void
 }
@@ -752,18 +752,18 @@ define void @fdiv() {
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
 
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %2 = load i16, i16* @g, align 2
+  %2 = load i16, ptr @g, align 2
   %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
   %div = fdiv float %1, %3
 
 
   %4 = call i16 @llvm.convert.to.fp16.f32(float %div)
 
-  store i16 %4, i16* @g, align 2
+  store i16 %4, ptr @g, align 2
   ret void
 }
 
@@ -864,11 +864,11 @@ define void @frem() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %2 = load i16, i16* @g, align 2
+  %2 = load i16, ptr @g, align 2
   %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
   %rem = frem float %1, %3
 
@@ -876,7 +876,7 @@ entry:
   %4 = call i16 @llvm.convert.to.fp16.f32(float %rem)
 
 
-  store i16 %4, i16* @g, align 2
+  store i16 %4, ptr @g, align 2
 
   ret void
 }
@@ -995,16 +995,16 @@ define void @fcmp() {
 ; MIPSR6-N64-NEXT:    jr $ra
 ; MIPSR6-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
-  %2 = load i16, i16* @g, align 2
+  %2 = load i16, ptr @g, align 2
   %3 = call float @llvm.convert.from.fp16.f32(i16 %2)
   %fcmp = fcmp oeq float %1, %3
 
 
   %4 = zext i1 %fcmp to i16
-  store i16 %4, i16* @i1, align 2
+  store i16 %4, ptr @i1, align 2
 
   ret void
 }
@@ -1069,7 +1069,7 @@ define void @fpowi() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1079,7 +1079,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %powi)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
   ret void
 }
 
@@ -1180,7 +1180,7 @@ define void @fpowi_var(i32 %var) {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1190,7 +1190,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %powi)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
   ret void
 }
 
@@ -1293,7 +1293,7 @@ define void @fpow(float %var) {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1303,7 +1303,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %powi)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
   ret void
 }
 
@@ -1403,7 +1403,7 @@ define void @flog2() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1411,7 +1411,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %log2)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -1512,7 +1512,7 @@ define void @flog10() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1520,7 +1520,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %log10)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -1585,7 +1585,7 @@ define void @fsqrt() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1593,7 +1593,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %sqrt)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -1694,7 +1694,7 @@ define void @fsin() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1702,7 +1702,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %sin)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -1803,7 +1803,7 @@ define void @fcos() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -1811,7 +1811,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %cos)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -1912,14 +1912,14 @@ define void @fexp() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
   %exp = call float @llvm.exp.f32(float %1)
   %2 = call i16 @llvm.convert.to.fp16.f32(float %exp)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2020,7 +2020,7 @@ define void @fexp2() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2028,7 +2028,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %exp2)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2136,7 +2136,7 @@ define void @ffma(float %b, float %c) {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2144,7 +2144,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %fma)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2272,7 +2272,7 @@ define void @ffmuladd(float %b, float %c) {
 ; MIPSR6-N64-NEXT:    jr $ra
 ; MIPSR6-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 ; MIPS32-N32:     madd.s $f[[F1:[0-9]]], $f13, $f[[F0]], $f12
@@ -2282,7 +2282,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %fmuladd)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2347,7 +2347,7 @@ define void @ffabs() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2355,7 +2355,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %fabs)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2459,7 +2459,7 @@ define void @fminnum(float %b) {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2467,7 +2467,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %minnum)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2571,7 +2571,7 @@ define void @fmaxnum(float %b) {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2579,7 +2579,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %maxnum)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2646,7 +2646,7 @@ define void @fcopysign(float %b) {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    sh $2, 0($1)
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2654,7 +2654,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %copysign)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2755,7 +2755,7 @@ define void @ffloor() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2763,7 +2763,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %floor)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2864,7 +2864,7 @@ define void @fceil() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2872,7 +2872,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %ceil)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -2973,7 +2973,7 @@ define void @ftrunc() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -2981,7 +2981,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %trunc)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -3082,13 +3082,13 @@ define void @frint() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
   %rint = call float @llvm.rint.f32(float %1)
   %2 = call i16 @llvm.convert.to.fp16.f32(float %rint)
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -3189,7 +3189,7 @@ define void @fnearbyint() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -3197,7 +3197,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %nearbyint)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }
@@ -3298,7 +3298,7 @@ define void @fround() {
 ; MIPS64-N64-NEXT:    jr $ra
 ; MIPS64-N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
@@ -3306,7 +3306,7 @@ entry:
   %2 = call i16 @llvm.convert.to.fp16.f32(float %round)
 
 
-  store i16 %2, i16* @g, align 2
+  store i16 %2, ptr @g, align 2
 
   ret void
 }

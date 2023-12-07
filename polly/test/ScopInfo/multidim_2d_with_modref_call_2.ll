@@ -27,12 +27,12 @@
 ; CHECK-NEXT:    Arrays {
 ; CHECK-NEXT:        i64 MemRef_arg1[*]; // Element size 8
 ; CHECK-NEXT:        i64 MemRef_tmp13; // Element size 8
-; CHECK-NEXT:        [1000 x double]* MemRef_arg4[*]; // Element size 8
+; CHECK-NEXT:        ptr MemRef_arg4[*]; // Element size 8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    Arrays (Bounds as pw_affs) {
 ; CHECK-NEXT:        i64 MemRef_arg1[*]; // Element size 8
 ; CHECK-NEXT:        i64 MemRef_tmp13; // Element size 8
-; CHECK-NEXT:        [1000 x double]* MemRef_arg4[*]; // Element size 8
+; CHECK-NEXT:        ptr MemRef_arg4[*]; // Element size 8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    Alias Groups (0):
 ; CHECK-NEXT:        n/a
@@ -80,14 +80,14 @@
 ; NONAFFINE-NEXT:        i64 MemRef_arg1[*]; // Element size 8
 ; NONAFFINE-NEXT:        i64 MemRef_tmp7; // Element size 8
 ; NONAFFINE-NEXT:        i64 MemRef_tmp8; // Element size 8
-; NONAFFINE-NEXT:        [1000 x double]* MemRef_arg4[*]; // Element size 8
+; NONAFFINE-NEXT:        ptr MemRef_arg4[*]; // Element size 8
 ; NONAFFINE-NEXT:    }
 ; NONAFFINE-NEXT:    Arrays (Bounds as pw_affs) {
 ; NONAFFINE-NEXT:        i64 MemRef_arg[*]; // Element size 8
 ; NONAFFINE-NEXT:        i64 MemRef_arg1[*]; // Element size 8
 ; NONAFFINE-NEXT:        i64 MemRef_tmp7; // Element size 8
 ; NONAFFINE-NEXT:        i64 MemRef_tmp8; // Element size 8
-; NONAFFINE-NEXT:        [1000 x double]* MemRef_arg4[*]; // Element size 8
+; NONAFFINE-NEXT:        ptr MemRef_arg4[*]; // Element size 8
 ; NONAFFINE-NEXT:    }
 ; NONAFFINE-NEXT:    Alias Groups (0):
 ; NONAFFINE-NEXT:        n/a
@@ -118,16 +118,16 @@
 
 target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f16:16:16-f32:32:32-f64:64:64-f128:128:128-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-define void @ham(i64* noalias %arg, i64* noalias %arg1, i64* noalias %arg2, i64* noalias %arg3, [1000 x double]* noalias %arg4) gc "dummy" {
+define void @ham(ptr noalias %arg, ptr noalias %arg1, ptr noalias %arg2, ptr noalias %arg3, ptr noalias %arg4) gc "dummy" {
 bb:
   br label %bb5
 
 bb5:                                              ; preds = %bb
-  %tmp = load i64, i64* %arg1, align 8
+  %tmp = load i64, ptr %arg1, align 8
   %tmp6 = icmp slt i64 %tmp, 0
   %tmp7 = select i1 %tmp6, i64 0, i64 %tmp
   %tmp8 = xor i64 %tmp7, -1
-  %tmp9 = load i64, i64* %arg, align 8
+  %tmp9 = load i64, ptr %arg, align 8
   %tmp10 = icmp sgt i64 %tmp9, 0
   br i1 %tmp10, label %bb11, label %bb32
 
@@ -136,7 +136,7 @@ bb11:                                             ; preds = %bb5
 
 bb12:                                             ; preds = %bb28, %bb11
   %tmp13 = phi i64 [ %tmp30, %bb28 ], [ 1, %bb11 ]
-  %tmp14 = load i64, i64* %arg1, align 8
+  %tmp14 = load i64, ptr %arg1, align 8
   %tmp15 = icmp sgt i64 %tmp14, 0
   br i1 %tmp15, label %bb16, label %bb28
 
@@ -150,10 +150,9 @@ bb17:                                             ; preds = %bb17, %bb16
   %tmp21 = add i64 %tmp20, %tmp18
   %tmp22 = add i64 %tmp18, %tmp13
   %tmp23 = sitofp i64 %tmp22 to double
-  %tmp24 = getelementptr [1000 x double], [1000 x double]* %arg4, i64 0, i64 %tmp21
-  %bc = bitcast double* %tmp24 to i8*
-  %dummy = call i8* @llvm.gcread(i8* %bc, i8** null)
-  store double %tmp23, double* %tmp24, align 8
+  %tmp24 = getelementptr [1000 x double], ptr %arg4, i64 0, i64 %tmp21
+  %dummy = call ptr @llvm.gcread(ptr %tmp24, ptr null)
+  store double %tmp23, ptr %tmp24, align 8
   %tmp25 = icmp eq i64 %tmp18, %tmp14
   %tmp26 = add i64 %tmp18, 1
   br i1 %tmp25, label %bb27, label %bb17
@@ -173,4 +172,4 @@ bb32:                                             ; preds = %bb31, %bb5
   ret void
 }
 
-declare i8* @llvm.gcread(i8*, i8**)
+declare ptr @llvm.gcread(ptr, ptr)

@@ -13,25 +13,25 @@
 
 #include "sanitizer_platform.h"
 #if SANITIZER_POSIX
-#include "sanitizer_allocator_internal.h"
-#include "sanitizer_common.h"
-#include "sanitizer_file.h"
-#include "sanitizer_flags.h"
-#include "sanitizer_internal_defs.h"
-#include "sanitizer_linux.h"
-#include "sanitizer_placement_new.h"
-#include "sanitizer_posix.h"
-#include "sanitizer_procmaps.h"
-#include "sanitizer_symbolizer_internal.h"
-#include "sanitizer_symbolizer_libbacktrace.h"
-#include "sanitizer_symbolizer_mac.h"
+#  include <dlfcn.h>  // for dlsym()
+#  include <errno.h>
+#  include <stdint.h>
+#  include <stdlib.h>
+#  include <sys/wait.h>
+#  include <unistd.h>
 
-#include <dlfcn.h>   // for dlsym()
-#include <errno.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <sys/wait.h>
-#include <unistd.h>
+#  include "sanitizer_allocator_internal.h"
+#  include "sanitizer_common.h"
+#  include "sanitizer_file.h"
+#  include "sanitizer_flags.h"
+#  include "sanitizer_internal_defs.h"
+#  include "sanitizer_linux.h"
+#  include "sanitizer_placement_new.h"
+#  include "sanitizer_posix.h"
+#  include "sanitizer_procmaps.h"
+#  include "sanitizer_symbolizer_internal.h"
+#  include "sanitizer_symbolizer_libbacktrace.h"
+#  include "sanitizer_symbolizer_mac.h"
 
 // C++ demangling function, as required by Itanium C++ ABI. This is weak,
 // because we do not require a C++ ABI library to be linked to a program

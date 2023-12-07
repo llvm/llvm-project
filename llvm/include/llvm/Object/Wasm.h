@@ -104,12 +104,14 @@ public:
 struct WasmSection {
   WasmSection() = default;
 
-  uint32_t Type = 0;         // Section type (See below)
-  uint32_t Offset = 0;       // Offset with in the file
+  uint32_t Type = 0;
+  uint32_t Offset = 0;       // Offset within the file
   StringRef Name;            // Section name (User-defined sections only)
   uint32_t Comdat = UINT32_MAX; // From the "comdat info" section
-  ArrayRef<uint8_t> Content; // Section content
-  std::vector<wasm::WasmRelocation> Relocations; // Relocations for this section
+  ArrayRef<uint8_t> Content;
+  std::vector<wasm::WasmRelocation> Relocations;
+  // Length of the LEB encoding of the section header's size field
+  std::optional<uint8_t> HeaderSecSizeEncodingLen;
 };
 
 struct WasmSegment {
@@ -164,6 +166,8 @@ public:
   basic_symbol_iterator symbol_end() const override;
   Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
 
+  bool is64Bit() const override { return false; }
+
   Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
   uint64_t getWasmSymbolValue(const WasmSymbol &Sym) const;
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
@@ -203,7 +207,7 @@ public:
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
   Triple::ArchType getArch() const override;
-  SubtargetFeatures getFeatures() const override;
+  Expected<SubtargetFeatures> getFeatures() const override;
   bool isRelocatableObject() const override;
   bool isSharedObject() const;
 

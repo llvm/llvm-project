@@ -33,12 +33,14 @@ struct AvailabilityInfo {
   VersionTuple Introduced;
   VersionTuple Deprecated;
   VersionTuple Obsoleted;
+  bool Unavailable;
 
   AvailabilityInfo() = default;
 
   AvailabilityInfo(StringRef Domain, VersionTuple I, VersionTuple D,
-                   VersionTuple O)
-      : Domain(Domain), Introduced(I), Deprecated(D), Obsoleted(O) {}
+                   VersionTuple O, bool U)
+      : Domain(Domain), Introduced(I), Deprecated(D), Obsoleted(O),
+        Unavailable(U) {}
 };
 
 class AvailabilitySet {

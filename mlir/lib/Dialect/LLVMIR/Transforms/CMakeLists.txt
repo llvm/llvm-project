@@ -1,7 +1,9 @@
 add_mlir_dialect_library(MLIRLLVMIRTransforms
+  DIScopeForLLVMFuncOp.cpp
   LegalizeForExport.cpp
   OptimizeForNVVM.cpp
   RequestCWrappers.cpp
+  TypeConsistency.cpp
 
   DEPENDS
   MLIRLLVMPassIncGen

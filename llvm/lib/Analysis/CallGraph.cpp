@@ -14,7 +14,6 @@
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
@@ -92,7 +91,7 @@ void CallGraph::populateCallGraphNode(CallGraphNode *Node) {
 
   // If this function is not defined in this translation unit, it could call
   // anything.
-  if (F->isDeclaration() && !F->isIntrinsic())
+  if (F->isDeclaration() && !F->hasFnAttribute(Attribute::NoCallback))
     Node->addCalledFunction(nullptr, CallsExternalNode.get());
 
   // Look for calls by this function.
@@ -100,12 +99,9 @@ void CallGraph::populateCallGraphNode(CallGraphNode *Node) {
     for (Instruction &I : BB) {
       if (auto *Call = dyn_cast<CallBase>(&I)) {
         const Function *Callee = Call->getCalledFunction();
-        if (!Callee || !Intrinsic::isLeaf(Callee->getIntrinsicID()))
-          // Indirect calls of intrinsics are not allowed so no need to check.
-          // We can be more precise here by using TargetArg returned by
-          // Intrinsic::isLeaf.
+        if (!Callee)
           Node->addCalledFunction(Call, CallsExternalNode.get());
-        else if (!Callee->isIntrinsic())
+        else if (!isDbgInfoIntrinsic(Callee->getIntrinsicID()))
           Node->addCalledFunction(Call, getOrInsertFunction(Callee));
 
         // Add reference to callback functions.

@@ -30,9 +30,7 @@ include "VERegisterInfo.td"
 include "VECallingConv.td"
 include "VEInstrInfo.td"
 
-def VEInstrInfo : InstrInfo {
-  let useDeprecatedPositionallyEncodedOperands = 1;
-}
+def VEInstrInfo : InstrInfo {}
 
 def VEAsmParser : AsmParser {
   // Use both VE register name matcher to accept "S0~S63" register names
@@ -48,7 +46,7 @@ def VEAsmParser : AsmParser {
 class Proc<string Name, list<SubtargetFeature> Features>
  : Processor<Name, NoItineraries, Features>;
 
-def : Proc<"generic", []>;
+def : Proc<"generic", [FeatureEnableVPU]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing

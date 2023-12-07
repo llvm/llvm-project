@@ -1551,11 +1551,11 @@ vector float test_vec_vec_splati_f(void) {
 
 vector double test_vec_vec_splatid(void) {
   // CHECK-BE: [[T1:%.+]] = fpext float %{{.+}} to double
-  // CHECK-BE-NEXT: [[T2:%.+]] = insertelement <2 x double> poison, double [[T1:%.+]], i32 0
+  // CHECK-BE-NEXT: [[T2:%.+]] = insertelement <2 x double> poison, double [[T1:%.+]], i64 0
   // CHECK-BE-NEXT: [[T3:%.+]] = shufflevector <2 x double> [[T2:%.+]], <2 x double> poison, <2 x i32> zeroinitialize
   // CHECK-BE-NEXT: ret <2 x double> [[T3:%.+]]
   // CHECK-LE: [[T1:%.+]] = fpext float %{{.+}} to double
-  // CHECK-LE-NEXT: [[T2:%.+]] = insertelement <2 x double> poison, double [[T1:%.+]], i32 0
+  // CHECK-LE-NEXT: [[T2:%.+]] = insertelement <2 x double> poison, double [[T1:%.+]], i64 0
   // CHECK-LE-NEXT: [[T3:%.+]] = shufflevector <2 x double> [[T2:%.+]], <2 x double> poison, <2 x i32> zeroinitialize
   // CHECK-LE-NEXT: ret <2 x double> [[T3:%.+]]
   return vec_splatid(1.0);
@@ -2160,8 +2160,8 @@ vector unsigned __int128 test_vec_rl_u128(void) {
 
 vector signed __int128 test_vec_rlnm_s128(void) {
   // CHECK-LABEL: @test_vec_rlnm_s128(
-  // CHECK-LE: %shuffle.i = shufflevector <16 x i8> %7, <16 x i8> %8, <16 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 16, i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  // CHECK-BE: %shuffle.i = shufflevector <16 x i8> %7, <16 x i8> %8, <16 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 31, i32 30, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK-LE: %shuffle.i = shufflevector <16 x i8> %7, <16 x i8> %8, <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 16, i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  // CHECK-BE: %shuffle.i = shufflevector <16 x i8> %7, <16 x i8> %8, <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 31, i32 30, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   // CHECK: call <1 x i128> @llvm.ppc.altivec.vrlqnm(<1 x i128>
   // CHECK-NEXT: ret <1 x i128>
   return vec_rlnm(vsi128a, vsi128b, vsi128c);
@@ -2169,8 +2169,8 @@ vector signed __int128 test_vec_rlnm_s128(void) {
 
 vector unsigned __int128 test_vec_rlnm_u128(void) {
   // CHECK-LABEL: @test_vec_rlnm_u128(
-  // CHECK-LE:  %shuffle.i = shufflevector <16 x i8> %7, <16 x i8> %8, <16 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 16, i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  // CHECK-BE: %shuffle.i = shufflevector <16 x i8> %7, <16 x i8> %8, <16 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 31, i32 30, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK-LE:  %shuffle.i = shufflevector <16 x i8> %7, <16 x i8> %8, <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 16, i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  // CHECK-BE: %shuffle.i = shufflevector <16 x i8> %7, <16 x i8> %8, <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 31, i32 30, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   // CHECK: call <1 x i128> @llvm.ppc.altivec.vrlqnm(<1 x i128>
   // CHECK-NEXT: ret <1 x i128>
   return vec_rlnm(vui128a, vui128b, vui128c);

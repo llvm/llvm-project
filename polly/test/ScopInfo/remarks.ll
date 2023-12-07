@@ -41,13 +41,13 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @.str = private unnamed_addr constant [8 x i8] c"Printf!\00", align 1
 
-define void @valid(i32* %A, i32* %B, i32 %N, i32 %M, [100 x i32]* %C, i32 %Debug) #0 !dbg !4 {
+define void @valid(ptr %A, ptr %B, i32 %N, i32 %M, ptr %C, i32 %Debug) #0 !dbg !4 {
 entry:
-  call void @llvm.dbg.value(metadata i32* %A, i64 0, metadata !23, metadata !24), !dbg !25
-  call void @llvm.dbg.value(metadata i32* %B, i64 0, metadata !26, metadata !24), !dbg !27
+  call void @llvm.dbg.value(metadata ptr %A, i64 0, metadata !23, metadata !24), !dbg !25
+  call void @llvm.dbg.value(metadata ptr %B, i64 0, metadata !26, metadata !24), !dbg !27
   call void @llvm.dbg.value(metadata i32 %N, i64 0, metadata !28, metadata !24), !dbg !29
   call void @llvm.dbg.value(metadata i32 %M, i64 0, metadata !30, metadata !24), !dbg !31
-  call void @llvm.dbg.value(metadata [100 x i32]* %C, i64 0, metadata !32, metadata !24), !dbg !33
+  call void @llvm.dbg.value(metadata ptr %C, i64 0, metadata !32, metadata !24), !dbg !33
   call void @llvm.dbg.value(metadata i32 %Debug, i64 0, metadata !34, metadata !24), !dbg !35
   br label %entry.split
 
@@ -57,8 +57,7 @@ entry.split:
   br i1 %cmp, label %if.then, label %if.end, !dbg !39
 
 if.then:                                          ; preds = %entry
-  %arrayidx1 = getelementptr inbounds [100 x i32], [100 x i32]* %C, i64 0, i64 0, !dbg !40
-  store i32 0, i32* %arrayidx1, align 4, !dbg !41
+  store i32 0, ptr %C, align 4, !dbg !41
   br label %if.end, !dbg !40
 
 if.end:                                           ; preds = %if.then, %entry
@@ -84,16 +83,16 @@ for.cond.3:                                       ; preds = %for.inc, %for.body
 for.body.5:                                       ; preds = %for.cond.3
   %tmp8 = mul i64 %indvars.iv3, %M64, !dbg !59
   %tmp9 = add i64 %tmp8, %indvars.iv, !dbg !61
-  %arrayidx7 = getelementptr inbounds i32, i32* %A, i64 %tmp9, !dbg !62
-  %tmp10 = load i32, i32* %arrayidx7, align 4, !dbg !62
+  %arrayidx7 = getelementptr inbounds i32, ptr %A, i64 %tmp9, !dbg !62
+  %tmp10 = load i32, ptr %arrayidx7, align 4, !dbg !62
   %tmp11 = add i64 %indvars.iv3, %indvars.iv, !dbg !63
-  %arrayidx10 = getelementptr inbounds i32, i32* %B, i64 %tmp11, !dbg !64
-  %tmp12 = load i32, i32* %arrayidx10, align 4, !dbg !64
+  %arrayidx10 = getelementptr inbounds i32, ptr %B, i64 %tmp11, !dbg !64
+  %tmp12 = load i32, ptr %arrayidx10, align 4, !dbg !64
   %add11 = add i32 %tmp10, %tmp12, !dbg !65
-  %arrayidx15 = getelementptr inbounds [100 x i32], [100 x i32]* %C, i64 %indvars.iv3, i64 %indvars.iv, !dbg !66
-  %tmp13 = load i32, i32* %arrayidx15, align 4, !dbg !67
+  %arrayidx15 = getelementptr inbounds [100 x i32], ptr %C, i64 %indvars.iv3, i64 %indvars.iv, !dbg !66
+  %tmp13 = load i32, ptr %arrayidx15, align 4, !dbg !67
   %add16 = add i32 %tmp13, %add11, !dbg !67
-  store i32 %add16, i32* %arrayidx15, align 4, !dbg !67
+  store i32 %add16, ptr %arrayidx15, align 4, !dbg !67
   br label %for.inc, !dbg !68
 
 for.inc:                                          ; preds = %for.body.5
@@ -106,7 +105,7 @@ for.end:                                          ; preds = %for.cond.3
   br i1 %tobool, label %if.end.18, label %if.then.17, !dbg !72
 
 if.then.17:                                       ; preds = %for.end
-  %call = call i32 (i8*, ...) @printf(i8* nonnull getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i64 0, i64 0)) #3, !dbg !73
+  %call = call i32 (ptr, ...) @printf(ptr nonnull @.str) #3, !dbg !73
   br label %if.end.18, !dbg !73
 
 if.end.18:                                        ; preds = %for.end, %if.then.17
@@ -123,11 +122,11 @@ for.end.21:                                       ; preds = %for.cond
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-declare i32 @printf(i8*, ...) #2
+declare i32 @printf(ptr, ...) #2
 
-define void @invalid0(i32* %A) #0 !dbg !13 {
+define void @invalid0(ptr %A) #0 !dbg !13 {
 entry:
-  call void @llvm.dbg.value(metadata i32* %A, i64 0, metadata !77, metadata !24), !dbg !78
+  call void @llvm.dbg.value(metadata ptr %A, i64 0, metadata !77, metadata !24), !dbg !78
   call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !79, metadata !24), !dbg !81
   br label %for.cond, !dbg !82
 
@@ -146,12 +145,12 @@ for.cond.1:                                       ; preds = %for.inc, %for.body
   br i1 %exitcond, label %for.body.3, label %for.end, !dbg !90
 
 for.body.3:                                       ; preds = %for.cond.1
-  %tmp = load i32, i32* %A, align 4, !dbg !93
+  %tmp = load i32, ptr %A, align 4, !dbg !93
   %tobool = icmp eq i32 %tmp, 0, !dbg !93
   br i1 %tobool, label %if.end, label %if.then, !dbg !95
 
 if.then:                                          ; preds = %for.body.3
-  store i32 0, i32* %A, align 4, !dbg !96
+  store i32 0, ptr %A, align 4, !dbg !96
   br label %if.end, !dbg !97
 
 if.end:                                           ; preds = %for.body.3, %if.then

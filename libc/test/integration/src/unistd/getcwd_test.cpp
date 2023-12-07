@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
+#include "src/errno/libc_errno.h"
 #include "src/stdlib/getenv.h"
 #include "src/unistd/getcwd.h"
 
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
-#include <errno.h>
 #include <stdlib.h> // For malloc and free
 
 using __llvm_libc::cpp::string_view;
@@ -30,13 +30,13 @@ TEST_MAIN(int argc, char **argv, char **envp) {
   // Bad size
   cwd = __llvm_libc::getcwd(buffer, 0);
   ASSERT_TRUE(cwd == nullptr);
-  ASSERT_EQ(errno, EINVAL);
-  errno = 0;
+  ASSERT_EQ(libc_errno, EINVAL);
+  libc_errno = 0;
 
   // Insufficient size
   cwd = __llvm_libc::getcwd(buffer, 2);
   ASSERT_TRUE(cwd == nullptr);
-  int err = errno;
+  int err = libc_errno;
   ASSERT_EQ(err, ERANGE);
 
   return 0;

@@ -15,6 +15,8 @@
 #include "ReduceIRReferences.h"
 #include "Delta.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 
 using namespace llvm;
 
@@ -25,7 +27,7 @@ static void dropIRReferencesFromInstructions(Oracle &O, MachineFunction &MF) {
         for (MachineMemOperand *MMO : MI.memoperands()) {
           // Leave behind pseudo source values.
           // TODO: Removing all MemOperand values is a further reduction step.
-          if (MMO->getPointerInfo().V.is<const Value *>())
+          if (isa<const Value *>(MMO->getPointerInfo().V))
             MMO->setValue(static_cast<const Value *>(nullptr));
         }
 

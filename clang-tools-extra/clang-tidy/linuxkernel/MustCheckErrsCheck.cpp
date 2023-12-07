@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace linuxkernel {
+namespace clang::tidy::linuxkernel {
 
 void MustCheckErrsCheck::registerMatchers(MatchFinder *Finder) {
   auto ErrFn =
@@ -33,13 +31,13 @@ void MustCheckErrsCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void MustCheckErrsCheck::check(const MatchFinder::MatchResult &Result) {
-  const CallExpr *MatchedCallExpr = Result.Nodes.getNodeAs<CallExpr>("call");
+  const auto *MatchedCallExpr = Result.Nodes.getNodeAs<CallExpr>("call");
   if (MatchedCallExpr) {
     diag(MatchedCallExpr->getExprLoc(), "result from function %0 is unused")
         << MatchedCallExpr->getDirectCallee();
   }
 
-  const CallExpr *MatchedTransitiveCallExpr =
+  const auto *MatchedTransitiveCallExpr =
       Result.Nodes.getNodeAs<CallExpr>("transitive_call");
   if (MatchedTransitiveCallExpr) {
     diag(MatchedTransitiveCallExpr->getExprLoc(),
@@ -48,6 +46,4 @@ void MustCheckErrsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace linuxkernel
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::linuxkernel

@@ -1995,15 +1995,15 @@ def : WriteRes<WriteVST4, []>;
 // Reserve A9UnitFP for 2 consecutive cycles.
 def A9Write2V4 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> {
   let Latency = 4;
-  let ResourceCycles = [2, 1];
+  let ReleaseAtCycles = [2, 1];
 }
 def A9Write2V7 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> {
   let Latency = 7;
-  let ResourceCycles = [2, 1];
+  let ReleaseAtCycles = [2, 1];
 }
 def A9Write2V9 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> {
   let Latency = 9;
-  let ResourceCycles = [2, 1];
+  let ReleaseAtCycles = [2, 1];
 }
 
 // Branches don't have a def operand but still consume resources.
@@ -2239,9 +2239,9 @@ def A9WriteLMfpPostRA : SchedWriteVariant<[
 // Distinguish between our multiple MI-level forms of the same
 // VLDM/VSTM instructions.
 def A9PreRA : SchedPredicate<
-  "Register::isVirtualRegister(MI->getOperand(0).getReg())">;
+  "MI->getOperand(0).getReg().isVirtual()">;
 def A9PostRA : SchedPredicate<
-  "Register::isPhysicalRegister(MI->getOperand(0).getReg())">;
+  "MI->getOperand(0).getReg().isPhysical()">;
 
 // VLDM represents all destination registers as a single register
 // tuple, unlike LDM. So the number of write operands is not variadic.

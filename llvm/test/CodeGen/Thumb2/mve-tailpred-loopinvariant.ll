@@ -5,7 +5,7 @@
 ; active.lane.mask operand. (%exitcount.ptrcnt.to.int = ptrtoint). We
 ; need to make sure it is loop invariant.
 
-define i32 @a(i32* readnone %b, i8* %c) {
+define i32 @a(ptr readnone %b, ptr %c) {
 ; CHECK-LABEL: a:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, lr}
@@ -28,80 +28,78 @@ define i32 @a(i32* readnone %b, i8* %c) {
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
-  %0 = bitcast i32* %b to i8*
-  %cmp3 = icmp ugt i8* %0, %c
+  %cmp3 = icmp ugt ptr %b, %c
   br i1 %cmp3, label %while.body.preheader, label %while.end
 
 while.body.preheader:                             ; preds = %entry
-  %c5 = ptrtoint i8* %c to i32
-  %1 = sub i32 0, %c5
-  %uglygep = getelementptr i8, i8* %0, i32 %1
-  %exitcount.ptrcnt.to.int = ptrtoint i8* %uglygep to i32
+  %c5 = ptrtoint ptr %c to i32
+  %0 = sub i32 0, %c5
+  %uglygep = getelementptr i8, ptr %b, i32 %0
+  %exitcount.ptrcnt.to.int = ptrtoint ptr %uglygep to i32
   %n.rnd.up = add i32 %exitcount.ptrcnt.to.int, 15
   %n.vec = and i32 %n.rnd.up, -16
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %while.body.preheader
   %index = phi i32 [ 0, %while.body.preheader ], [ %index.next, %vector.body ]
-  %next.gep = getelementptr i8, i8* %c, i32 %index
-  %2 = or i32 %index, 1
-  %next.gep7 = getelementptr i8, i8* %c, i32 %2
-  %3 = or i32 %index, 2
-  %next.gep8 = getelementptr i8, i8* %c, i32 %3
-  %4 = or i32 %index, 3
-  %next.gep9 = getelementptr i8, i8* %c, i32 %4
-  %5 = or i32 %index, 4
-  %next.gep10 = getelementptr i8, i8* %c, i32 %5
-  %6 = or i32 %index, 5
-  %next.gep11 = getelementptr i8, i8* %c, i32 %6
-  %7 = or i32 %index, 6
-  %next.gep12 = getelementptr i8, i8* %c, i32 %7
-  %8 = or i32 %index, 7
-  %next.gep13 = getelementptr i8, i8* %c, i32 %8
-  %9 = or i32 %index, 8
-  %next.gep14 = getelementptr i8, i8* %c, i32 %9
-  %10 = or i32 %index, 9
-  %next.gep15 = getelementptr i8, i8* %c, i32 %10
-  %11 = or i32 %index, 10
-  %next.gep16 = getelementptr i8, i8* %c, i32 %11
-  %12 = or i32 %index, 11
-  %next.gep17 = getelementptr i8, i8* %c, i32 %12
-  %13 = or i32 %index, 12
-  %next.gep18 = getelementptr i8, i8* %c, i32 %13
-  %14 = or i32 %index, 13
-  %next.gep19 = getelementptr i8, i8* %c, i32 %14
-  %15 = or i32 %index, 14
-  %next.gep20 = getelementptr i8, i8* %c, i32 %15
-  %16 = or i32 %index, 15
-  %next.gep21 = getelementptr i8, i8* %c, i32 %16
-  %17 = insertelement <16 x i8*> poison, i8* %next.gep, i32 0
-  %18 = insertelement <16 x i8*> %17, i8* %next.gep7, i32 1
-  %19 = insertelement <16 x i8*> %18, i8* %next.gep8, i32 2
-  %20 = insertelement <16 x i8*> %19, i8* %next.gep9, i32 3
-  %21 = insertelement <16 x i8*> %20, i8* %next.gep10, i32 4
-  %22 = insertelement <16 x i8*> %21, i8* %next.gep11, i32 5
-  %23 = insertelement <16 x i8*> %22, i8* %next.gep12, i32 6
-  %24 = insertelement <16 x i8*> %23, i8* %next.gep13, i32 7
-  %25 = insertelement <16 x i8*> %24, i8* %next.gep14, i32 8
-  %26 = insertelement <16 x i8*> %25, i8* %next.gep15, i32 9
-  %27 = insertelement <16 x i8*> %26, i8* %next.gep16, i32 10
-  %28 = insertelement <16 x i8*> %27, i8* %next.gep17, i32 11
-  %29 = insertelement <16 x i8*> %28, i8* %next.gep18, i32 12
-  %30 = insertelement <16 x i8*> %29, i8* %next.gep19, i32 13
-  %31 = insertelement <16 x i8*> %30, i8* %next.gep20, i32 14
-  %32 = insertelement <16 x i8*> %31, i8* %next.gep21, i32 15
+  %next.gep = getelementptr i8, ptr %c, i32 %index
+  %1 = or i32 %index, 1
+  %next.gep7 = getelementptr i8, ptr %c, i32 %1
+  %2 = or i32 %index, 2
+  %next.gep8 = getelementptr i8, ptr %c, i32 %2
+  %3 = or i32 %index, 3
+  %next.gep9 = getelementptr i8, ptr %c, i32 %3
+  %4 = or i32 %index, 4
+  %next.gep10 = getelementptr i8, ptr %c, i32 %4
+  %5 = or i32 %index, 5
+  %next.gep11 = getelementptr i8, ptr %c, i32 %5
+  %6 = or i32 %index, 6
+  %next.gep12 = getelementptr i8, ptr %c, i32 %6
+  %7 = or i32 %index, 7
+  %next.gep13 = getelementptr i8, ptr %c, i32 %7
+  %8 = or i32 %index, 8
+  %next.gep14 = getelementptr i8, ptr %c, i32 %8
+  %9 = or i32 %index, 9
+  %next.gep15 = getelementptr i8, ptr %c, i32 %9
+  %10 = or i32 %index, 10
+  %next.gep16 = getelementptr i8, ptr %c, i32 %10
+  %11 = or i32 %index, 11
+  %next.gep17 = getelementptr i8, ptr %c, i32 %11
+  %12 = or i32 %index, 12
+  %next.gep18 = getelementptr i8, ptr %c, i32 %12
+  %13 = or i32 %index, 13
+  %next.gep19 = getelementptr i8, ptr %c, i32 %13
+  %14 = or i32 %index, 14
+  %next.gep20 = getelementptr i8, ptr %c, i32 %14
+  %15 = or i32 %index, 15
+  %next.gep21 = getelementptr i8, ptr %c, i32 %15
+  %16 = insertelement <16 x ptr> poison, ptr %next.gep, i32 0
+  %17 = insertelement <16 x ptr> %16, ptr %next.gep7, i32 1
+  %18 = insertelement <16 x ptr> %17, ptr %next.gep8, i32 2
+  %19 = insertelement <16 x ptr> %18, ptr %next.gep9, i32 3
+  %20 = insertelement <16 x ptr> %19, ptr %next.gep10, i32 4
+  %21 = insertelement <16 x ptr> %20, ptr %next.gep11, i32 5
+  %22 = insertelement <16 x ptr> %21, ptr %next.gep12, i32 6
+  %23 = insertelement <16 x ptr> %22, ptr %next.gep13, i32 7
+  %24 = insertelement <16 x ptr> %23, ptr %next.gep14, i32 8
+  %25 = insertelement <16 x ptr> %24, ptr %next.gep15, i32 9
+  %26 = insertelement <16 x ptr> %25, ptr %next.gep16, i32 10
+  %27 = insertelement <16 x ptr> %26, ptr %next.gep17, i32 11
+  %28 = insertelement <16 x ptr> %27, ptr %next.gep18, i32 12
+  %29 = insertelement <16 x ptr> %28, ptr %next.gep19, i32 13
+  %30 = insertelement <16 x ptr> %29, ptr %next.gep20, i32 14
+  %31 = insertelement <16 x ptr> %30, ptr %next.gep21, i32 15
   %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %index, i32 %exitcount.ptrcnt.to.int)
-  %33 = ptrtoint <16 x i8*> %32 to <16 x i32>
-  %34 = trunc <16 x i32> %33 to <16 x i8>
-  %35 = bitcast i8* %next.gep to <16 x i8>*
-  call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %34, <16 x i8>* %35, i32 1, <16 x i1> %active.lane.mask)
+  %32 = ptrtoint <16 x ptr> %31 to <16 x i32>
+  %33 = trunc <16 x i32> %32 to <16 x i8>
+  call void @llvm.masked.store.v16i8.p0(<16 x i8> %33, ptr %next.gep, i32 1, <16 x i1> %active.lane.mask)
   %index.next = add i32 %index, 16
-  %36 = icmp eq i32 %index.next, %n.vec
-  br i1 %36, label %while.end, label %vector.body
+  %34 = icmp eq i32 %index.next, %n.vec
+  br i1 %34, label %while.end, label %vector.body
 
 while.end:                                        ; preds = %vector.body, %entry
   ret i32 undef
 }
 
 declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32, i32)
-declare void @llvm.masked.store.v16i8.p0v16i8(<16 x i8>, <16 x i8>*, i32 immarg, <16 x i1>)
+declare void @llvm.masked.store.v16i8.p0(<16 x i8>, ptr, i32 immarg, <16 x i1>)

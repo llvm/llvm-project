@@ -24,7 +24,7 @@ target triple = "thumbv7m-arm-none-eabi"
 ;   return 1 + a * (a + b) / (c + d);
 ; }
 
-@_ZTIi = external dso_local constant i8*
+@_ZTIi = external dso_local constant ptr
 
 define hidden i32 @_Z1hii(i32 %a, i32 %b) local_unnamed_addr #0 {
 entry:
@@ -32,10 +32,9 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %exception = tail call i8* @__cxa_allocate_exception(i32 4) #1
-  %0 = bitcast i8* %exception to i32*
-  store i32 1, i32* %0, align 8
-  tail call void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #2
+  %exception = tail call ptr @__cxa_allocate_exception(i32 4) #1
+  store i32 1, ptr %exception, align 8
+  tail call void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #2
   unreachable
 
 if.end:                                           ; preds = %entry
@@ -63,9 +62,9 @@ if.end:                                           ; preds = %entry
 ; CHECK: aut
 ; CHECK:     .cfi_endproc
 
-declare dso_local i8* @__cxa_allocate_exception(i32) local_unnamed_addr
+declare dso_local ptr @__cxa_allocate_exception(i32) local_unnamed_addr
 
-declare dso_local void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
+declare dso_local void @__cxa_throw(ptr, ptr, ptr) local_unnamed_addr
 
 define hidden i32 @_Z1fiiii(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #0 {
 entry:

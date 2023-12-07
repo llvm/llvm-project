@@ -159,3 +159,16 @@
 // RUN:               --check-prefix=CHECK-LIBCXX-MISSING-BOTH %s
 // CHECK-LIBCXX-MISSING-BOTH: ignoring nonexistent directory "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 // CHECK-LIBCXX-MISSING-BOTH: ignoring nonexistent directory "[[SYSROOT]]/usr/include/c++/v1"
+
+// Make sure that on Darwin, we use libc++ header search paths by default even when
+// -stdlib= isn't passed.
+//
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-apple-darwin \
+// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
+// RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain_no_libcxx \
+// RUN:               --check-prefix=CHECK-LIBCXX-STDLIB-UNSPECIFIED %s
+// CHECK-LIBCXX-STDLIB-UNSPECIFIED: "-cc1"
+// CHECK-LIBCXX-STDLIB-UNSPECIFIED: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"

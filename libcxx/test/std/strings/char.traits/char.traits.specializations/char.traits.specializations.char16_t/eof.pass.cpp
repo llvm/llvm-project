@@ -14,9 +14,8 @@
 
 #include <string>
 
-int main(int, char**)
-{
-    std::char_traits<char16_t>::int_type i = std::char_traits<char16_t>::eof();
-    ((void)i); // Prevent unused warning
-    return 0;
+int main(int, char**) {
+  std::char_traits<char16_t>::int_type i = std::char_traits<char16_t>::eof();
+  ((void)i); // Prevent unused warning
+  return 0;
 }

@@ -41,8 +41,11 @@ static void serializeAndCheck(remarks::RemarkLinker &RL,
 }
 
 static void check(remarks::Format InputFormat, StringRef Input,
-                  remarks::Format OutputFormat, StringRef ExpectedOutput) {
+                  remarks::Format OutputFormat, StringRef ExpectedOutput,
+                  std::optional<bool> KeepAllRemarks = {}) {
   remarks::RemarkLinker RL;
+  if (KeepAllRemarks)
+    RL.setKeepAllRemarks(*KeepAllRemarks);
   EXPECT_FALSE(RL.link(Input, InputFormat));
   serializeAndCheck(RL, OutputFormat, ExpectedOutput);
 }
@@ -73,14 +76,28 @@ TEST(Remarks, LinkingGoodYAML) {
         "Function:        foo\n"
         "...\n");
 
-  // Check that we don't keep remarks without debug locations.
+  // Check that we don't keep remarks without debug locations, unless
+  // KeepAllRemarks is set.
   check(remarks::Format::YAML,
         "--- !Missed\n"
         "Pass:            inline\n"
         "Name:            NoDefinition\n"
         "Function:        foo\n"
         "...\n",
-        remarks::Format::YAML, "");
+        remarks::Format::YAML, "",
+        /*KeepAllRemarks=*/false);
+  check(remarks::Format::YAML,
+        "--- !Missed\n"
+        "Pass:            inline\n"
+        "Name:            NoDefinition\n"
+        "Function:        foo\n"
+        "...\n",
+        remarks::Format::YAML,
+        "--- !Missed\n"
+        "Pass:            inline\n"
+        "Name:            NoDefinition\n"
+        "Function:        foo\n"
+        "...\n");
 
   // Check that we deduplicate remarks.
   check(remarks::Format::YAML,
@@ -125,6 +142,25 @@ TEST(Remarks, LinkingGoodBitstream) {
         "<Remark BlockID=9 NumWords=4 BlockCodeSize=4>\n"
         "  <Remark header codeid=5 abbrevid=4 op0=2 op1=1 op2=0 op3=2/>\n"
         "  <Remark debug location codeid=6 abbrevid=5 op0=3 op1=3 op2=12/>\n"
+        "</Remark>\n");
+
+  // Check that we keep remarks without debug info.
+  check(remarks::Format::YAML,
+        "--- !Missed\n"
+        "Pass:            inline\n"
+        "Name:            NoDefinition\n"
+        "Function:        foo\n"
+        "...\n",
+        remarks::Format::Bitstream,
+        "<BLOCKINFO_BLOCK/>\n"
+        "<Meta BlockID=8 NumWords=10 BlockCodeSize=3>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=0 op1=2/>\n"
+        "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
+        "  <String table codeid=3 abbrevid=6/> blob data = "
+        "'inline\\x00NoDefinition\\x00foo\\x00'\n"
+        "</Meta>\n"
+        "<Remark BlockID=9 NumWords=1 BlockCodeSize=4>\n"
+        "  <Remark header codeid=5 abbrevid=4 op0=2 op1=1 op2=0 op3=2/>\n"
         "</Remark>\n");
 
   // Check that we deduplicate remarks.

@@ -144,7 +144,7 @@ entry:
 
 define <vscale x 2 x i1> @cmp_le_smax_always_true(<vscale x 2 x i64> %x) {
 ; CHECK-LABEL: @cmp_le_smax_always_true(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ;
   %cmp = icmp sle <vscale x 2 x i64> %x, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 9223372036854775807, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
   ret <vscale x 2 x i1> %cmp
@@ -192,10 +192,10 @@ define ptr @getelementptr_constant_foldable_3() {
 
 define ptr @getelementptr_not_constant_foldable(i64 %x) {
 ; CHECK-LABEL: @getelementptr_not_constant_foldable(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <vscale x 4 x i32>, ptr null, i64 [[X:%.*]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <vscale x 4 x i32>, ptr null, i64 1
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
-  %ptr = getelementptr <vscale x 4 x i32>, ptr null, i64 %x
+  %ptr = getelementptr <vscale x 4 x i32>, ptr null, i64 1
   ret ptr %ptr
 }
 

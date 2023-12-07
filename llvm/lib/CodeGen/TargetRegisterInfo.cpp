@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -33,7 +34,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
@@ -56,12 +56,13 @@ TargetRegisterInfo::TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
                              const LaneBitmask *SRILaneMasks,
                              LaneBitmask SRICoveringLanes,
                              const RegClassInfo *const RCIs,
+                             const MVT::SimpleValueType *const RCVTLists,
                              unsigned Mode)
   : InfoDesc(ID), SubRegIndexNames(SRINames),
     SubRegIndexLaneMasks(SRILaneMasks),
     RegClassBegin(RCB), RegClassEnd(RCE),
     CoveringLanes(SRICoveringLanes),
-    RCInfos(RCIs), HwMode(Mode) {
+    RCInfos(RCIs), RCVTLists(RCVTLists), HwMode(Mode) {
 }
 
 TargetRegisterInfo::~TargetRegisterInfo() = default;
@@ -79,8 +80,8 @@ bool TargetRegisterInfo::shouldRegionSplitForVirtReg(
 
 void TargetRegisterInfo::markSuperRegs(BitVector &RegisterSet,
                                        MCRegister Reg) const {
-  for (MCSuperRegIterator AI(Reg, this, true); AI.isValid(); ++AI)
-    RegisterSet.set(*AI);
+  for (MCPhysReg SR : superregs_inclusive(Reg))
+    RegisterSet.set(SR);
 }
 
 bool TargetRegisterInfo::checkAllSuperRegsMarked(const BitVector &RegisterSet,
@@ -90,9 +91,9 @@ bool TargetRegisterInfo::checkAllSuperRegsMarked(const BitVector &RegisterSet,
   for (unsigned Reg : RegisterSet.set_bits()) {
     if (Checked[Reg])
       continue;
-    for (MCSuperRegIterator SR(Reg, this); SR.isValid(); ++SR) {
-      if (!RegisterSet[*SR] && !is_contained(Exceptions, Reg)) {
-        dbgs() << "Error: Super register " << printReg(*SR, this)
+    for (MCPhysReg SR : superregs(Reg)) {
+      if (!RegisterSet[SR] && !is_contained(Exceptions, Reg)) {
+        dbgs() << "Error: Super register " << printReg(SR, this)
                << " of reserved register " << printReg(Reg, this)
                << " is not reserved.\n";
         return false;
@@ -100,7 +101,7 @@ bool TargetRegisterInfo::checkAllSuperRegsMarked(const BitVector &RegisterSet,
 
       // We transitively check superregs. So we can remember this for later
       // to avoid compiletime explosion in deep register hierarchies.
-      Checked.set(*SR);
+      Checked.set(SR);
     }
   }
   return true;
@@ -115,7 +116,7 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
       OS << "$noreg";
     else if (Register::isStackSlot(Reg))
       OS << "SS#" << Register::stackSlot2Index(Reg);
-    else if (Register::isVirtualRegister(Reg)) {
+    else if (Reg.isVirtual()) {
       StringRef Name = MRI ? MRI->getVRegName(Reg) : "";
       if (Name != "") {
         OS << '%' << Name;
@@ -281,7 +282,7 @@ const TargetRegisterClass *firstCommonClass(const uint32_t *A,
                                             const TargetRegisterInfo *TRI) {
   for (unsigned I = 0, E = TRI->getNumRegClasses(); I < E; I += 32)
     if (unsigned Common = *A++ & *B++)
-      return TRI->getRegClass(I + countTrailingZeros(Common));
+      return TRI->getRegClass(I + llvm::countr_zero(Common));
   return nullptr;
 }
 
@@ -424,8 +425,8 @@ bool TargetRegisterInfo::getRegAllocationHints(
     SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const std::pair<Register, SmallVector<Register, 4>> &Hints_MRI =
-    MRI.getRegAllocationHints(VirtReg);
+  const std::pair<unsigned, SmallVector<Register, 4>> &Hints_MRI =
+      MRI.getRegAllocationHints(VirtReg);
 
   SmallSet<Register, 32> HintedRegs;
   // First hint may be a target hint.
@@ -571,10 +572,14 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
         break;
       }
 
-      // Try to cover as much of the remaining lanes as possible but
-      // as few of the already covered lanes as possible.
-      int Cover = (SubRegMask & LanesLeft).getNumLanes() -
-                  (SubRegMask & ~LanesLeft).getNumLanes();
+      // Do not cover already-covered lanes to avoid creating cycles
+      // in copy bundles (= bundle contains copies that write to the
+      // registers).
+      if ((SubRegMask & ~LanesLeft).any())
+        continue;
+
+      // Try to cover as many of the remaining lanes as possible.
+      const int Cover = (SubRegMask & LanesLeft).getNumLanes();
       if (Cover > BestCover) {
         BestCover = Cover;
         BestIdx = Idx;

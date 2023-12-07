@@ -1335,14 +1335,12 @@ define amdgpu_kernel void @agent_acquire_fence() {
 ;
 ; GFX940-NOTTGSPLIT-LABEL: agent_acquire_fence:
 ; GFX940-NOTTGSPLIT:       ; %bb.0: ; %entry
-; GFX940-NOTTGSPLIT-NEXT:    buffer_wbl2 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    buffer_inv sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: agent_acquire_fence:
 ; GFX940-TGSPLIT:       ; %bb.0: ; %entry
-; GFX940-TGSPLIT-NEXT:    buffer_wbl2 sc1
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    buffer_inv sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
@@ -1641,14 +1639,12 @@ define amdgpu_kernel void @agent_one_as_acquire_fence() {
 ;
 ; GFX940-NOTTGSPLIT-LABEL: agent_one_as_acquire_fence:
 ; GFX940-NOTTGSPLIT:       ; %bb.0: ; %entry
-; GFX940-NOTTGSPLIT-NEXT:    buffer_wbl2 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    buffer_inv sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: agent_one_as_acquire_fence:
 ; GFX940-TGSPLIT:       ; %bb.0: ; %entry
-; GFX940-TGSPLIT-NEXT:    buffer_wbl2 sc1
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    buffer_inv sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
@@ -1935,7 +1931,6 @@ define amdgpu_kernel void @system_acquire_fence() {
 ;
 ; GFX90A-NOTTGSPLIT-LABEL: system_acquire_fence:
 ; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
-; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbl2
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_invl2
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
@@ -1943,7 +1938,6 @@ define amdgpu_kernel void @system_acquire_fence() {
 ;
 ; GFX90A-TGSPLIT-LABEL: system_acquire_fence:
 ; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
-; GFX90A-TGSPLIT-NEXT:    buffer_wbl2
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    buffer_invl2
 ; GFX90A-TGSPLIT-NEXT:    buffer_wbinvl1_vol
@@ -1951,14 +1945,12 @@ define amdgpu_kernel void @system_acquire_fence() {
 ;
 ; GFX940-NOTTGSPLIT-LABEL: system_acquire_fence:
 ; GFX940-NOTTGSPLIT:       ; %bb.0: ; %entry
-; GFX940-NOTTGSPLIT-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    buffer_inv sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: system_acquire_fence:
 ; GFX940-TGSPLIT:       ; %bb.0: ; %entry
-; GFX940-TGSPLIT-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    buffer_inv sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
@@ -2255,7 +2247,6 @@ define amdgpu_kernel void @system_one_as_acquire_fence() {
 ;
 ; GFX90A-NOTTGSPLIT-LABEL: system_one_as_acquire_fence:
 ; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
-; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbl2
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_invl2
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
@@ -2263,7 +2254,6 @@ define amdgpu_kernel void @system_one_as_acquire_fence() {
 ;
 ; GFX90A-TGSPLIT-LABEL: system_one_as_acquire_fence:
 ; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
-; GFX90A-TGSPLIT-NEXT:    buffer_wbl2
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    buffer_invl2
 ; GFX90A-TGSPLIT-NEXT:    buffer_wbinvl1_vol
@@ -2271,14 +2261,12 @@ define amdgpu_kernel void @system_one_as_acquire_fence() {
 ;
 ; GFX940-NOTTGSPLIT-LABEL: system_one_as_acquire_fence:
 ; GFX940-NOTTGSPLIT:       ; %bb.0: ; %entry
-; GFX940-NOTTGSPLIT-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    buffer_inv sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: system_one_as_acquire_fence:
 ; GFX940-TGSPLIT:       ; %bb.0: ; %entry
-; GFX940-TGSPLIT-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    buffer_inv sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm

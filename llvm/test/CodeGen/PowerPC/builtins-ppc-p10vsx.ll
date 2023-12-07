@@ -120,8 +120,8 @@ define void @vec_xst_trunc_ss(<1 x i128> %__vec, i64 %__offset, ptr nocapture %_
 ;
 ; CHECK-LINUXBE-LABEL: vec_xst_trunc_ss:
 ; CHECK-LINUXBE:       # %bb.0: # %entry
-; CHECK-LINUXBE-NEXT:    sldi r3, r5, 1
 ; CHECK-LINUXBE-NEXT:    vsldoi v2, v2, v2, 10
+; CHECK-LINUXBE-NEXT:    sldi r3, r5, 1
 ; CHECK-LINUXBE-NEXT:    stxsihx v2, r6, r3
 ; CHECK-LINUXBE-NEXT:    blr
 ;
@@ -137,8 +137,8 @@ define void @vec_xst_trunc_ss(<1 x i128> %__vec, i64 %__offset, ptr nocapture %_
 ;
 ; CHECK-AIXBE-LABEL: vec_xst_trunc_ss:
 ; CHECK-AIXBE:       # %bb.0: # %entry
-; CHECK-AIXBE-NEXT:    sldi r3, r3, 1
 ; CHECK-AIXBE-NEXT:    vsldoi v2, v2, v2, 10
+; CHECK-AIXBE-NEXT:    sldi r3, r3, 1
 ; CHECK-AIXBE-NEXT:    stxsihx v2, r4, r3
 ; CHECK-AIXBE-NEXT:    blr
 entry:
@@ -158,8 +158,8 @@ define void @vec_xst_trunc_us(<1 x i128> %__vec, i64 %__offset, ptr nocapture %_
 ;
 ; CHECK-LINUXBE-LABEL: vec_xst_trunc_us:
 ; CHECK-LINUXBE:       # %bb.0: # %entry
-; CHECK-LINUXBE-NEXT:    sldi r3, r5, 1
 ; CHECK-LINUXBE-NEXT:    vsldoi v2, v2, v2, 10
+; CHECK-LINUXBE-NEXT:    sldi r3, r5, 1
 ; CHECK-LINUXBE-NEXT:    stxsihx v2, r6, r3
 ; CHECK-LINUXBE-NEXT:    blr
 ;
@@ -175,8 +175,8 @@ define void @vec_xst_trunc_us(<1 x i128> %__vec, i64 %__offset, ptr nocapture %_
 ;
 ; CHECK-AIXBE-LABEL: vec_xst_trunc_us:
 ; CHECK-AIXBE:       # %bb.0: # %entry
-; CHECK-AIXBE-NEXT:    sldi r3, r3, 1
 ; CHECK-AIXBE-NEXT:    vsldoi v2, v2, v2, 10
+; CHECK-AIXBE-NEXT:    sldi r3, r3, 1
 ; CHECK-AIXBE-NEXT:    stxsihx v2, r4, r3
 ; CHECK-AIXBE-NEXT:    blr
 entry:
@@ -196,8 +196,8 @@ define void @vec_xst_trunc_si(<1 x i128> %__vec, i64 %__offset, ptr nocapture %_
 ;
 ; CHECK-LINUXBE-LABEL: vec_xst_trunc_si:
 ; CHECK-LINUXBE:       # %bb.0: # %entry
-; CHECK-LINUXBE-NEXT:    sldi r3, r5, 2
 ; CHECK-LINUXBE-NEXT:    xxsldwi vs0, v2, v2, 3
+; CHECK-LINUXBE-NEXT:    sldi r3, r5, 2
 ; CHECK-LINUXBE-NEXT:    stfiwx f0, r6, r3
 ; CHECK-LINUXBE-NEXT:    blr
 ;
@@ -213,8 +213,8 @@ define void @vec_xst_trunc_si(<1 x i128> %__vec, i64 %__offset, ptr nocapture %_
 ;
 ; CHECK-AIXBE-LABEL: vec_xst_trunc_si:
 ; CHECK-AIXBE:       # %bb.0: # %entry
-; CHECK-AIXBE-NEXT:    sldi r3, r3, 2
 ; CHECK-AIXBE-NEXT:    xxsldwi vs0, v2, v2, 3
+; CHECK-AIXBE-NEXT:    sldi r3, r3, 2
 ; CHECK-AIXBE-NEXT:    stfiwx f0, r4, r3
 ; CHECK-AIXBE-NEXT:    blr
 entry:
@@ -234,8 +234,8 @@ define void @vec_xst_trunc_ui(<1 x i128> %__vec, i64 %__offset, ptr nocapture %_
 ;
 ; CHECK-LINUXBE-LABEL: vec_xst_trunc_ui:
 ; CHECK-LINUXBE:       # %bb.0: # %entry
-; CHECK-LINUXBE-NEXT:    sldi r3, r5, 2
 ; CHECK-LINUXBE-NEXT:    xxsldwi vs0, v2, v2, 3
+; CHECK-LINUXBE-NEXT:    sldi r3, r5, 2
 ; CHECK-LINUXBE-NEXT:    stfiwx f0, r6, r3
 ; CHECK-LINUXBE-NEXT:    blr
 ;
@@ -251,8 +251,8 @@ define void @vec_xst_trunc_ui(<1 x i128> %__vec, i64 %__offset, ptr nocapture %_
 ;
 ; CHECK-AIXBE-LABEL: vec_xst_trunc_ui:
 ; CHECK-AIXBE:       # %bb.0: # %entry
-; CHECK-AIXBE-NEXT:    sldi r3, r3, 2
 ; CHECK-AIXBE-NEXT:    xxsldwi vs0, v2, v2, 3
+; CHECK-AIXBE-NEXT:    sldi r3, r3, 2
 ; CHECK-AIXBE-NEXT:    stfiwx f0, r4, r3
 ; CHECK-AIXBE-NEXT:    blr
 entry:

@@ -43,7 +43,7 @@ _start:
   mov x0, #0
   ret 
 
-.section .dummy, "da"
+.section .dummy, "a", @progbits
 dummy:
   .word 0
 

@@ -9,11 +9,8 @@
 #ifndef LLVM_CLANG_DRIVER_OPTIONS_H
 #define LLVM_CLANG_DRIVER_OPTIONS_H
 
-namespace llvm {
-namespace opt {
-class OptTable;
-}
-}
+#include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 
 namespace clang {
 namespace driver {
@@ -26,25 +23,27 @@ enum ClangFlags {
   LinkerInput = (1 << 5),
   NoArgumentUnused = (1 << 6),
   Unsupported = (1 << 7),
-  CoreOption = (1 << 8),
-  CLOption = (1 << 9),
-  CC1Option = (1 << 10),
-  CC1AsOption = (1 << 11),
-  NoDriverOption = (1 << 12),
-  LinkOption = (1 << 13),
-  FlangOption = (1 << 14),
-  FC1Option = (1 << 15),
-  FlangOnlyOption = (1 << 16),
-  DXCOption = (1 << 17),
-  CLDXCOption = (1 << 18),
-  Ignored = (1 << 19),
+  LinkOption = (1 << 8),
+  Ignored = (1 << 9),
+  TargetSpecific = (1 << 10),
+};
+
+// Flags specifically for clang option visibility. We alias DefaultVis to
+// ClangOption, because "DefaultVis" is confusing in Options.td, which is used
+// for multiple drivers (clang, cl, flang, etc).
+enum ClangVisibility {
+  ClangOption = llvm::opt::DefaultVis,
+  CLOption = (1 << 1),
+  CC1Option = (1 << 2),
+  CC1AsOption = (1 << 3),
+  FlangOption = (1 << 4),
+  FC1Option = (1 << 5),
+  DXCOption = (1 << 6),
 };
 
 enum ID {
     OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "clang/Driver/Options.inc"
     LastOption
 #undef OPTION

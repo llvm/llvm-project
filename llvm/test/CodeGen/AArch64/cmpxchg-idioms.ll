@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64-apple-ios7.0 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-apple-ios7.0 -mattr=+outline-atomics -o - %s | FileCheck %s --check-prefix=OUTLINE-ATOMICS
 
-define i32 @test_return(i32* %p, i32 %oldval, i32 %newval) {
+define i32 @test_return(ptr %p, i32 %oldval, i32 %newval) {
 ; CHECK-LABEL: test_return:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:  LBB0_1: ; %cmpxchg.start
@@ -15,7 +15,7 @@ define i32 @test_return(i32* %p, i32 %oldval, i32 %newval) {
 ; CHECK-NEXT:    stlxr w8, w2, [x0]
 ; CHECK-NEXT:    cbnz w8, LBB0_1
 ; CHECK-NEXT:  ; %bb.3:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_4: ; %cmpxchg.nostore
 ; CHECK-NEXT:    mov w0, wzr
@@ -25,8 +25,8 @@ define i32 @test_return(i32* %p, i32 %oldval, i32 %newval) {
 ; OUTLINE-ATOMICS-LABEL: test_return:
 ; OUTLINE-ATOMICS:       ; %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 32
 ; OUTLINE-ATOMICS-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 32
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w30, -8
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w29, -16
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w19, -24
@@ -42,14 +42,14 @@ define i32 @test_return(i32* %p, i32 %oldval, i32 %newval) {
 ; OUTLINE-ATOMICS-NEXT:    cset w0, eq
 ; OUTLINE-ATOMICS-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
-  %pair = cmpxchg i32* %p, i32 %oldval, i32 %newval seq_cst seq_cst
+  %pair = cmpxchg ptr %p, i32 %oldval, i32 %newval seq_cst seq_cst
   %success = extractvalue { i32, i1 } %pair, 1
   %conv = zext i1 %success to i32
   ret i32 %conv
 }
 
 ; FIXME: DAG combine should be able to deal with this EOR better.
-define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
+define i1 @test_return_bool(ptr %value, i8 %oldValue, i8 %newValue) {
 ; CHECK-LABEL: test_return_bool:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    and w8, w1, #0xff
@@ -64,7 +64,7 @@ define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
 ; CHECK-NEXT:    stlxrb w9, w2, [x0]
 ; CHECK-NEXT:    cbnz w9, LBB1_1
 ; CHECK-NEXT:  ; %bb.3:
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-NEXT:    eor w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB1_4: ; %cmpxchg.nostore
@@ -75,8 +75,8 @@ define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
 ; OUTLINE-ATOMICS-LABEL: test_return_bool:
 ; OUTLINE-ATOMICS:       ; %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 32
 ; OUTLINE-ATOMICS-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 32
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w30, -8
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w29, -16
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w19, -24
@@ -87,19 +87,19 @@ define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
 ; OUTLINE-ATOMICS-NEXT:    mov w1, w2
 ; OUTLINE-ATOMICS-NEXT:    mov x2, x8
 ; OUTLINE-ATOMICS-NEXT:    bl ___aarch64_cas1_acq_rel
-; OUTLINE-ATOMICS-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    cmp w0, w19, uxtb
+; OUTLINE-ATOMICS-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    cset w8, eq
 ; OUTLINE-ATOMICS-NEXT:    eor w0, w8, #0x1
 ; OUTLINE-ATOMICS-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
-  %pair = cmpxchg i8* %value, i8 %oldValue, i8 %newValue acq_rel monotonic
+  %pair = cmpxchg ptr %value, i8 %oldValue, i8 %newValue acq_rel monotonic
   %success = extractvalue { i8, i1 } %pair, 1
   %failure = xor i1 %success, 1
   ret i1 %failure
 }
 
-define void @test_conditional(i32* %p, i32 %oldval, i32 %newval) {
+define void @test_conditional(ptr %p, i32 %oldval, i32 %newval) {
 ; CHECK-LABEL: test_conditional:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:  LBB2_1: ; %cmpxchg.start
@@ -120,8 +120,8 @@ define void @test_conditional(i32* %p, i32 %oldval, i32 %newval) {
 ; OUTLINE-ATOMICS-LABEL: test_conditional:
 ; OUTLINE-ATOMICS:       ; %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 32
 ; OUTLINE-ATOMICS-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 32
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w30, -8
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w29, -16
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w19, -24
@@ -142,7 +142,7 @@ define void @test_conditional(i32* %p, i32 %oldval, i32 %newval) {
 ; OUTLINE-ATOMICS-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    b _baz
-  %pair = cmpxchg i32* %p, i32 %oldval, i32 %newval seq_cst seq_cst
+  %pair = cmpxchg ptr %p, i32 %oldval, i32 %newval seq_cst seq_cst
   %success = extractvalue { i32, i1 } %pair, 1
   br i1 %success, label %true, label %false
 
@@ -162,13 +162,13 @@ declare void @bar()
 declare void @baz()
 
 ; verify the preheader is simplified by simplifycfg.
-define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
+define i1 @test_conditional2(i32 %a, i32 %b, ptr %c) {
 ; CHECK-LABEL: test_conditional2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stp x22, x21, [sp, #-48]! ; 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    .cfi_offset w19, -24
@@ -188,13 +188,13 @@ define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
 ; CHECK-NEXT:    stlxr w8, w20, [x19]
 ; CHECK-NEXT:    cbnz w8, LBB3_1
 ; CHECK-NEXT:  ; %bb.3:
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-NEXT:    b LBB3_5
 ; CHECK-NEXT:  LBB3_4: ; %cmpxchg.nostore
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    clrex
 ; CHECK-NEXT:  LBB3_5: ; %for.cond.preheader
-; CHECK-NEXT:    mov w22, #2
+; CHECK-NEXT:    mov w22, #2 ; =0x2
 ; CHECK-NEXT:  LBB3_6: ; %for.cond
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cbz w22, LBB3_9
@@ -222,9 +222,9 @@ define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
 ; OUTLINE-ATOMICS-LABEL: test_conditional2:
 ; OUTLINE-ATOMICS:       ; %bb.0: ; %entry
 ; OUTLINE-ATOMICS-NEXT:    stp x22, x21, [sp, #-48]! ; 16-byte Folded Spill
-; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 48
 ; OUTLINE-ATOMICS-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
 ; OUTLINE-ATOMICS-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 48
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w30, -8
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w29, -16
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w19, -24
@@ -236,7 +236,7 @@ define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
 ; OUTLINE-ATOMICS-NEXT:    mov w21, w0
 ; OUTLINE-ATOMICS-NEXT:    bl ___aarch64_cas4_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    cmp w0, w21
-; OUTLINE-ATOMICS-NEXT:    mov w22, #2
+; OUTLINE-ATOMICS-NEXT:    mov w22, #2 ; =0x2
 ; OUTLINE-ATOMICS-NEXT:    cset w8, eq
 ; OUTLINE-ATOMICS-NEXT:  LBB3_1: ; %for.cond
 ; OUTLINE-ATOMICS-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -262,7 +262,7 @@ define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
 ; OUTLINE-ATOMICS-NEXT:    ldp x22, x21, [sp], #48 ; 16-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
 entry:
-  %pair = cmpxchg i32* %c, i32 %a, i32 %b seq_cst seq_cst
+  %pair = cmpxchg ptr %c, i32 %a, i32 %b seq_cst seq_cst
   %success = extractvalue { i32, i1 } %pair, 1
   br label %for.cond
 
@@ -280,13 +280,13 @@ for.cond.cleanup:                                 ; preds = %for.cond
 for.body:                                         ; preds = %for.cond
   %or = or i32 %a, %b
   %idxprom = sext i32 %dec to i64
-  %arrayidx = getelementptr inbounds i32, i32* %c, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %c, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp = icmp eq i32 %or, %0
   br i1 %cmp, label %if.end, label %if.then
 
 if.then:                                          ; preds = %for.body
-  store i32 %or, i32* %arrayidx, align 4
+  store i32 %or, ptr %arrayidx, align 4
   tail call void @foo()
   br label %if.end
 

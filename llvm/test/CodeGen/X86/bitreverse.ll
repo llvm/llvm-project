@@ -592,12 +592,12 @@ define <2 x i16> @fold_v2i16() {
 ;
 ; X86XOP-LABEL: fold_v2i16:
 ; X86XOP:       # %bb.0:
-; X86XOP-NEXT:    vmovaps {{.*#+}} xmm0 = <61440,240,u,u,u,u,u,u>
+; X86XOP-NEXT:    vbroadcastss {{.*#+}} xmm0 = [61440,240,61440,240,61440,240,61440,240]
 ; X86XOP-NEXT:    retl
 ;
 ; GFNI-LABEL: fold_v2i16:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    vmovaps {{.*#+}} xmm0 = <61440,240,u,u,u,u,u,u>
+; GFNI-NEXT:    vbroadcastss {{.*#+}} xmm0 = [61440,240,61440,240,61440,240,61440,240]
 ; GFNI-NEXT:    retq
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> <i16 15, i16 3840>)
   ret <2 x i16> %b

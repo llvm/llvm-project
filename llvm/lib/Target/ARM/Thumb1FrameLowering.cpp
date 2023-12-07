@@ -81,8 +81,9 @@ emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
     MachineFunction &MF = *MBB.getParent();
     const ARMSubtarget &ST = MF.getSubtarget<ARMSubtarget>();
     if (ST.genExecuteOnly()) {
-      BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MOVi32imm), ScratchReg)
-        .addImm(NumBytes).setMIFlags(MIFlags);
+      unsigned XOInstr = ST.useMovt() ? ARM::t2MOVi32imm : ARM::tMOVi32imm;
+      BuildMI(MBB, MBBI, dl, TII.get(XOInstr), ScratchReg)
+          .addImm(NumBytes).setMIFlags(MIFlags);
     } else {
       MRI.emitLoadConstPool(MBB, MBBI, dl, ScratchReg, 0, NumBytes, ARMCC::AL,
                             0, MIFlags);
@@ -537,18 +538,30 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
                  AFI->getDPRCalleeSavedAreaSize() +
                  ArgRegsSaveSize);
 
+    // We are likely to need a scratch register and we know all callee-save
+    // registers are free at this point in the epilogue, so pick one.
+    unsigned ScratchRegister = ARM::NoRegister;
+    bool HasFP = hasFP(MF);
+    for (auto &I : MFI.getCalleeSavedInfo()) {
+      Register Reg = I.getReg();
+      if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr)) {
+        ScratchRegister = Reg;
+        break;
+      }
+    }
+
     if (AFI->shouldRestoreSPFromFP()) {
       NumBytes = AFI->getFramePtrSpillOffset() - NumBytes;
       // Reset SP based on frame pointer only if the stack frame extends beyond
       // frame pointer stack slot, the target is ELF and the function has FP, or
       // the target uses var sized objects.
       if (NumBytes) {
-        assert(!MFI.getPristineRegs(MF).test(ARM::R4) &&
+        assert(ScratchRegister != ARM::NoRegister &&
                "No scratch register to restore SP from FP!");
-        emitThumbRegPlusImmediate(MBB, MBBI, dl, ARM::R4, FramePtr, -NumBytes,
+        emitThumbRegPlusImmediate(MBB, MBBI, dl, ScratchRegister, FramePtr, -NumBytes,
                                   TII, *RegInfo, MachineInstr::FrameDestroy);
         BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::SP)
-            .addReg(ARM::R4)
+            .addReg(ScratchRegister)
             .add(predOps(ARMCC::AL))
             .setMIFlag(MachineInstr::FrameDestroy);
       } else
@@ -557,18 +570,6 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
             .add(predOps(ARMCC::AL))
             .setMIFlag(MachineInstr::FrameDestroy);
     } else {
-      // For a large stack frame, we might need a scratch register to store
-      // the size of the frame.  We know all callee-save registers are free
-      // at this point in the epilogue, so pick one.
-      unsigned ScratchRegister = ARM::NoRegister;
-      bool HasFP = hasFP(MF);
-      for (auto &I : MFI.getCalleeSavedInfo()) {
-        Register Reg = I.getReg();
-        if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr)) {
-          ScratchRegister = Reg;
-          break;
-        }
-      }
       if (MBBI != MBB.end() && MBBI->getOpcode() == ARM::tBX_RET &&
           &MBB.front() != &*MBBI && std::prev(MBBI)->getOpcode() == ARM::tPOP) {
         MachineBasicBlock::iterator PMBBI = std::prev(MBBI);

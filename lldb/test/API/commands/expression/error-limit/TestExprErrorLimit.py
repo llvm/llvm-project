@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
     @no_debug_info_test
     def test(self):
         # FIXME: The only reason this test needs to create a real target is because

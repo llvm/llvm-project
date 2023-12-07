@@ -11,6 +11,7 @@
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "clang/Basic/Module.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -49,7 +50,7 @@ public:
 
   /// Module-related methods.
   /// \{
-  llvm::Optional<clang::ASTSourceDescriptor>
+  std::optional<clang::ASTSourceDescriptor>
   getSourceDescriptor(unsigned ID) override;
   clang::Module *getModule(unsigned ID) override;
   OptionalClangModuleID RegisterModule(clang::Module *module);

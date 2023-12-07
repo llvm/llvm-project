@@ -12,7 +12,9 @@
 #include "lldb/Host/posix/HostInfoPosix.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/XcodeSDK.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -24,13 +26,15 @@ class HostInfoMacOSX : public HostInfoPosix {
 public:
   static llvm::VersionTuple GetOSVersion();
   static llvm::VersionTuple GetMacCatalystVersion();
-  static llvm::Optional<std::string> GetOSBuildString();
+  static std::optional<std::string> GetOSBuildString();
   static FileSpec GetProgramFileSpec();
   static FileSpec GetXcodeContentsDirectory();
   static FileSpec GetXcodeDeveloperDirectory();
 
   /// Query xcrun to find an Xcode SDK directory.
-  static llvm::Expected<llvm::StringRef> GetXcodeSDKPath(XcodeSDK sdk);
+  static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options);
+  static llvm::Expected<llvm::StringRef> FindSDKTool(XcodeSDK sdk,
+                                                     llvm::StringRef tool);
 
   /// Shared cache utilities
   static SharedCacheImageInfo

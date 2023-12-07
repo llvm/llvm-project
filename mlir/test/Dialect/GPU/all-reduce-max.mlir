@@ -5,7 +5,7 @@
 gpu.module @kernels {
 
   // CHECK-LABEL: gpu.func @kernel(
-  // CHECK-SAME: [[VAL_0:%.*]]: f32) workgroup([[VAL_1:%.*]] : memref<32xf32, 3>) kernel {
+  // CHECK-SAME: [[VAL_0:%.*]]: f32) workgroup([[VAL_1:%.*]] : memref<32xf32, #gpu.address_space<workgroup>>) kernel {
   gpu.func @kernel(%arg0 : f32) kernel {
     // CHECK-DAG:   [[VAL_2:%.*]] = arith.constant 31 : i32
     // CHECK-DAG:   [[VAL_3:%.*]] = arith.constant 0 : i32
@@ -109,7 +109,7 @@ gpu.module @kernels {
     // CHECK: ^bb19:
     // CHECK:   [[VAL_80:%.*]] = arith.divsi [[VAL_27]], [[VAL_5]] : i32
     // CHECK:   [[VAL_81:%.*]] = arith.index_cast [[VAL_80]] : i32 to index
-    // CHECK:   store [[VAL_79]], [[VAL_1]]{{\[}}[[VAL_81]]] : memref<32xf32, 3>
+    // CHECK:   store [[VAL_79]], [[VAL_1]]{{\[}}[[VAL_81]]] : memref<32xf32, #gpu.address_space<workgroup>>
     // CHECK:   cf.br ^bb21
     // CHECK: ^bb20:
     // CHECK:   cf.br ^bb21
@@ -121,7 +121,7 @@ gpu.module @kernels {
     // CHECK:   cf.cond_br [[VAL_84]], ^bb22, ^bb41
     // CHECK: ^bb22:
     // CHECK:   [[VAL_85:%.*]] = arith.index_cast [[VAL_27]] : i32 to index
-    // CHECK:   [[VAL_86:%.*]] = memref.load [[VAL_1]]{{\[}}[[VAL_85]]] : memref<32xf32, 3>
+    // CHECK:   [[VAL_86:%.*]] = memref.load [[VAL_1]]{{\[}}[[VAL_85]]] : memref<32xf32, #gpu.address_space<workgroup>>
     // CHECK:   [[VAL_87:%.*]] = arith.cmpi slt, [[VAL_83]], [[VAL_5]] : i32
     // CHECK:   cf.cond_br [[VAL_87]], ^bb23, ^bb39
     // CHECK: ^bb23:
@@ -189,7 +189,7 @@ gpu.module @kernels {
     // CHECK:   [[VAL_132:%.*]] = arith.select [[VAL_131]], [[VAL_128]], [[VAL_129]] : f32
     // CHECK:   cf.br ^bb40([[VAL_132]] : f32)
     // CHECK: ^bb40([[VAL_133:%.*]]: f32):
-    // CHECK:   store [[VAL_133]], [[VAL_1]]{{\[}}[[VAL_4]]] : memref<32xf32, 3>
+    // CHECK:   store [[VAL_133]], [[VAL_1]]{{\[}}[[VAL_4]]] : memref<32xf32, #gpu.address_space<workgroup>>
     // CHECK:   cf.br ^bb42
     // CHECK: ^bb41:
     // CHECK:   cf.br ^bb42

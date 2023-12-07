@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace mpi {
+namespace clang::tidy::mpi {
 
 /// Check if a BuiltinType::Kind matches the MPI datatype.
 ///
@@ -77,7 +75,7 @@ static bool isStandardMPIDatatype(StringRef MPIDatatype) {
                                        "MPI_CXX_DOUBLE_COMPLEX",
                                        "MPI_CXX_LONG_DOUBLE_COMPLEX"};
 
-  return AllTypes.find(MPIDatatype) != AllTypes.end();
+  return AllTypes.contains(MPIDatatype);
 }
 
 /// Check if a BuiltinType matches the MPI datatype.
@@ -330,6 +328,4 @@ void TypeMismatchCheck::checkArguments(ArrayRef<const Type *> BufferTypes,
 }
 
 void TypeMismatchCheck::onEndOfTranslationUnit() { FuncClassifier.reset(); }
-} // namespace mpi
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::mpi

@@ -1,8 +1,8 @@
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-fir %s -o - | FileCheck %s
 
 ! This test checks the lowering of atomic write
 
-!CHECK: func @_QQmain() {
+!CHECK: func @_QQmain() attributes {fir.bindc_name = "ompatomicwrite"} {
 !CHECK: %[[VAR_X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
 !CHECK: %[[VAR_Y:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
 !CHECK: %[[VAR_Z:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFEz"}
@@ -63,3 +63,13 @@ subroutine atomic_write_pointer()
   x = 2
 end
 
+!CHECK-LABEL: func.func @_QPatomic_write_typed_assign
+!CHECK: %[[VAR:.*]] = fir.alloca f32 {bindc_name = "r2", uniq_name = "{{.*}}r2"}
+!CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+!CHECK: omp.atomic.write %[[VAR]] = %[[CST]]   : !fir.ref<f32>, f32
+
+subroutine atomic_write_typed_assign
+  real :: r2
+  !$omp atomic write
+  r2 = 0
+end subroutine

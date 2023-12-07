@@ -3,9 +3,9 @@
 
 declare i1 @foo()
 
-define i32 @test(i32* %A, i32* %B) {
-	%a = load i32, i32* %A
-	%b = load i32, i32* %B
+define i32 @test(ptr %A, ptr %B) {
+	%a = load i32, ptr %A
+	%b = load i32, ptr %B
 	%cond = call i1 @foo()
 	%c = select i1 %cond, i32 %a, i32 %b
 	ret i32 %c

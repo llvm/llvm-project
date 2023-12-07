@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   Support
+  TargetParser
   )
 
 add_clang_library(clangTidyPortabilityModule
@@ -15,6 +16,7 @@ add_clang_library(clangTidyPortabilityModule
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyPortabilityModule

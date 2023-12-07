@@ -25,8 +25,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {

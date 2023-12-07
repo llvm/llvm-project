@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple spir-unknown-unknown %s -DHAVE
 // RUN: %clang_cc1 -fsyntax-only -verify -triple armv7a-linux-gnu %s -DHAVE
 // RUN: %clang_cc1 -fsyntax-only -verify -triple aarch64-linux-gnu %s -DHAVE
+// RUN: %clang_cc1 -fsyntax-only -verify -triple riscv32 %s -DHAVE
+// RUN: %clang_cc1 -fsyntax-only -verify -triple riscv64 %s -DHAVE
 
 #ifndef HAVE
 // expected-error@+2{{_Float16 is not supported on this target}}

@@ -131,7 +131,7 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
                         NewSection.SectionData->getBufferSize());
     std::unique_ptr<MemoryBuffer> BufferCopy = MemoryBuffer::getMemBufferCopy(
         InputData, NewSection.SectionData->getBufferIdentifier());
-    Sec.Contents = makeArrayRef<uint8_t>(
+    Sec.Contents = ArrayRef<uint8_t>(
         reinterpret_cast<const uint8_t *>(BufferCopy->getBufferStart()),
         BufferCopy->getBufferSize());
 

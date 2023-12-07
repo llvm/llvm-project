@@ -38,7 +38,7 @@ define <4 x i32> @const_vector() {
 ;
 ; AVX-LABEL: const_vector:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [42,42,42,42]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [42,42,42,42]
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: const_vector:

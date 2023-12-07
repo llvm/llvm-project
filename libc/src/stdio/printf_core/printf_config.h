@@ -25,10 +25,20 @@
 // the index array is 10, then when the 20th index is requested the first 10
 // types can be found immediately, and then the format string must be parsed 10
 // times to find the types of the next 10 arguments.
-#ifndef LLVM_LIBC_PRINTF_INDEX_ARR_LEN
-#define LLVM_LIBC_PRINTF_INDEX_ARR_LEN 128
+#ifndef LIBC_COPT_PRINTF_INDEX_ARR_LEN
+#define LIBC_COPT_PRINTF_INDEX_ARR_LEN 128
 #endif
 
+// TODO(michaelrj): Provide a proper interface for these options.
+// LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
+// LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT
+// LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT_LD
+// LIBC_COPT_FLOAT_TO_STR_USE_INT_CALC
+// LIBC_COPT_FLOAT_TO_STR_NO_TABLE
+// LIBC_COPT_PRINTF_HEX_LONG_DOUBLE
+
 // TODO(michaelrj): Move the other printf configuration options into this file.
+
+// LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PRINTF_CONFIG_H

@@ -28,21 +28,23 @@ add_llvm_target(ARCCodeGen
   ARCTargetMachine.cpp
 
   LINK_COMPONENTS
+  ARCDesc
+  ARCInfo
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   MC
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
-  ARCDesc
-  ARCInfo
 
   ADD_TO_COMPONENT
   ARC
-)
+  )
 
 add_subdirectory(Disassembler)
 add_subdirectory(MCTargetDesc)

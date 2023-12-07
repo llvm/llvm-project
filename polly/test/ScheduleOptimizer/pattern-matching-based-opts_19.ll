@@ -15,7 +15,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define internal void @kernel_tc([8 x [4 x [1024 x [4 x double]]]]* %C, [4 x [8 x [1024 x [8 x double]]]]* %A, [1024 x double]* %B) {
+define internal void @kernel_tc(ptr %C, ptr %A, ptr %B) {
 entry:
   br label %for.cond1.preheader
 
@@ -41,15 +41,15 @@ for.cond13.preheader:                             ; preds = %for.inc38, %for.con
 
 for.body15:                                       ; preds = %for.body15, %for.cond13.preheader
   %indvars.iv = phi i64 [ 0, %for.cond13.preheader ], [ %indvars.iv.next, %for.body15 ]
-  %arrayidx23 = getelementptr inbounds [4 x [8 x [1024 x [8 x double]]]], [4 x [8 x [1024 x [8 x double]]]]* %A, i64 %indvars.iv, i64 %indvars.iv65, i64 %indvars.iv68, i64 %indvars.iv62, i64 %indvars.iv71
-  %i = load double, double* %arrayidx23, align 8
-  %arrayidx27 = getelementptr inbounds [1024 x double], [1024 x double]* %B, i64 %indvars.iv62, i64 %indvars.iv59
-  %i1 = load double, double* %arrayidx27, align 8
+  %arrayidx23 = getelementptr inbounds [4 x [8 x [1024 x [8 x double]]]], ptr %A, i64 %indvars.iv, i64 %indvars.iv65, i64 %indvars.iv68, i64 %indvars.iv62, i64 %indvars.iv71
+  %i = load double, ptr %arrayidx23, align 8
+  %arrayidx27 = getelementptr inbounds [1024 x double], ptr %B, i64 %indvars.iv62, i64 %indvars.iv59
+  %i1 = load double, ptr %arrayidx27, align 8
   %mul = fmul fast double %i1, %i
-  %arrayidx37 = getelementptr inbounds [8 x [4 x [1024 x [4 x double]]]], [8 x [4 x [1024 x [4 x double]]]]* %C, i64 %indvars.iv71, i64 %indvars.iv68, i64 %indvars.iv65, i64 %indvars.iv59, i64 %indvars.iv
-  %i2 = load double, double* %arrayidx37, align 8
+  %arrayidx37 = getelementptr inbounds [8 x [4 x [1024 x [4 x double]]]], ptr %C, i64 %indvars.iv71, i64 %indvars.iv68, i64 %indvars.iv65, i64 %indvars.iv59, i64 %indvars.iv
+  %i2 = load double, ptr %arrayidx37, align 8
   %add = fadd fast double %i2, %mul
-  store double %add, double* %arrayidx37, align 8
+  store double %add, ptr %arrayidx37, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 4
   br i1 %exitcond, label %for.body15, label %for.inc38

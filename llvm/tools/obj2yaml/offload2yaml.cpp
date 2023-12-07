@@ -27,7 +27,7 @@ void populateYAML(OffloadYAML::Binary &YAMLBinary, object::OffloadBinary &OB,
     Member.StringEntries = std::vector<OffloadYAML::Binary::StringEntry>();
     for (const auto &Entry : OB.strings())
       Member.StringEntries->emplace_back(OffloadYAML::Binary::StringEntry(
-          {Saver.save(Entry.getKey()), Saver.save(Entry.getValue())}));
+          {Saver.save(Entry.first), Saver.save(Entry.second)}));
   }
 
   if (!OB.getImage().empty())

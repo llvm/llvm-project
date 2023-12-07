@@ -10,6 +10,7 @@
 #define LLDB_SYMBOL_COMPILERTYPE_H
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -163,6 +164,8 @@ public:
 
   bool IsFunctionPointerType() const;
 
+  bool IsMemberFunctionPointerType() const;
+
   bool
   IsBlockPointerType(CompilerType *function_pointer_type_ptr = nullptr) const;
 
@@ -192,6 +195,8 @@ public:
   bool ShouldTreatScalarValueAsAddress() const;
 
   bool IsScalarType() const;
+
+  bool IsTemplateType() const;
 
   bool IsTypedefType() const;
 
@@ -324,23 +329,20 @@ public:
   struct IntegralTemplateArgument;
 
   /// Return the size of the type in bytes.
-  llvm::Optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
+  std::optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
   /// Return the size of the type in bits.
-  llvm::Optional<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
+  std::optional<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
 
   lldb::Encoding GetEncoding(uint64_t &count) const;
 
   lldb::Format GetFormat() const;
 
-  llvm::Optional<size_t>
-  GetTypeBitAlign(ExecutionContextScope *exe_scope) const;
+  std::optional<size_t> GetTypeBitAlign(ExecutionContextScope *exe_scope) const;
 
   uint32_t GetNumChildren(bool omit_empty_base_classes,
                           const ExecutionContext *exe_ctx) const;
 
   lldb::BasicType GetBasicTypeEnumeration() const;
-
-  static lldb::BasicType GetBasicTypeEnumeration(ConstString name);
 
   /// If this type is an enumeration, iterate through all of its enumerators
   /// using a callback. If the callback returns true, keep iterating, else abort
@@ -383,7 +385,7 @@ public:
 
   /// Lookup a child given a name. This function will match base class names and
   /// member member names in "clang_type" only, not descendants.
-  uint32_t GetIndexOfChildWithName(const char *name,
+  uint32_t GetIndexOfChildWithName(llvm::StringRef name,
                                    bool omit_empty_base_classes) const;
 
   /// Lookup a child member given a name. This function will match member names
@@ -393,7 +395,8 @@ public:
   /// vector<vector<uint32_t>>
   /// so we catch all names that match a given child name, not just the first.
   size_t
-  GetIndexOfChildMemberWithName(const char *name, bool omit_empty_base_classes,
+  GetIndexOfChildMemberWithName(llvm::StringRef name,
+                                bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) const;
 
   /// Return the number of template arguments the type has.
@@ -416,7 +419,7 @@ public:
   /// expanded to their supplied arguments. With expand_pack set to false, an
   /// arguement pack will count as 1 argument and it is invalid to call this
   /// method on the pack argument.
-  llvm::Optional<IntegralTemplateArgument>
+  std::optional<IntegralTemplateArgument>
   GetIntegralTemplateArgument(size_t idx, bool expand_pack = false) const;
 
   CompilerType GetTypeForFormatters() const;

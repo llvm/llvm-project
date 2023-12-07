@@ -76,8 +76,8 @@ int main(int, char**)
     static_assert(test_convertible<std::ranlux48_base>(), "");
     test_implicit_ctor<std::ranlux24_base>();
     test_implicit_ctor<std::ranlux48_base>();
-    static_assert(!test_convertible<std::ranlux24_base, uint_fast32_t>(), "");
-    static_assert(!test_convertible<std::ranlux48_base, uint_fast64_t>(), "");
+    static_assert(!test_convertible<std::ranlux24_base, std::uint_fast32_t>(), "");
+    static_assert(!test_convertible<std::ranlux48_base, std::uint_fast64_t>(), "");
 #endif
 
   return 0;

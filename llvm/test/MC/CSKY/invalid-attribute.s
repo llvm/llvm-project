@@ -5,6 +5,21 @@
 
 # RUN: not llvm-mc %s -triple=csky -filetype=asm 2>&1 | FileCheck %s
 
+.csky_attribute CSKY_UNKNOWN
+# CHECK: [[@LINE-1]]:17: error: attribute name not recognised: CSKY_UNKNOWN
+
+.csky_attribute CSKY_ARCH_NAME
+# CHECK: [[@LINE-1]]:31: error: expected comma
+
+.csky_attribute CSKY_ISA_FLAGS
+# CHECK: [[@LINE-1]]:31: error: expected comma
+
+.csky_attribute CSKY_ARCH_NAME, "foo",
+# CHECK: [[@LINE-1]]:38: error: expected newline
+
+.csky_attribute CSKY_ISA_FLAGS, 42,
+# CHECK: [[@LINE-1]]:35: error: expected newline
+
 .csky_attribute CSKY_ARCH_NAME, "foo"
 # CHECK: [[@LINE-1]]:33: error: unknown arch name 
 

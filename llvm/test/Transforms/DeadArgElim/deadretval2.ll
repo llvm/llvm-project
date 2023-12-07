@@ -2,7 +2,7 @@
 ; RUN: cat %t | not grep DEAD
 ; RUN: cat %t | grep LIVE | count 4
 
-@P = external global i32                ; <i32*> [#uses=1]
+@P = external global i32                ; <ptr> [#uses=1]
 
 ; Dead arg only used by dead retval
 define internal i32 @test(i32 %DEADARG) {
@@ -20,7 +20,7 @@ define void @test3(i32 %X) {
 }
 
 define internal i32 @foo() {
-        %DEAD = load i32, i32* @P            ; <i32> [#uses=1]
+        %DEAD = load i32, ptr @P            ; <i32> [#uses=1]
         ret i32 %DEAD
 }
 

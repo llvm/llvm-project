@@ -80,29 +80,29 @@ define ghccc void @foo() nounwind {
 ; CHECK-NEXT:    lw s1, %lo(base)(a0)
 ; CHECK-NEXT:    tail bar@plt
 entry:
-  %0  = load double, double* @d6
-  %1  = load double, double* @d5
-  %2  = load double, double* @d4
-  %3  = load double, double* @d3
-  %4  = load double, double* @d2
-  %5  = load double, double* @d1
-  %6  = load float, float* @f6
-  %7  = load float, float* @f5
-  %8  = load float, float* @f4
-  %9  = load float, float* @f3
-  %10 = load float, float* @f2
-  %11 = load float, float* @f1
-  %12 = load i32, i32* @splim
-  %13 = load i32, i32* @r7
-  %14 = load i32, i32* @r6
-  %15 = load i32, i32* @r5
-  %16 = load i32, i32* @r4
-  %17 = load i32, i32* @r3
-  %18 = load i32, i32* @r2
-  %19 = load i32, i32* @r1
-  %20 = load i32, i32* @hp
-  %21 = load i32, i32* @sp
-  %22 = load i32, i32* @base
+  %0  = load double, ptr @d6
+  %1  = load double, ptr @d5
+  %2  = load double, ptr @d4
+  %3  = load double, ptr @d3
+  %4  = load double, ptr @d2
+  %5  = load double, ptr @d1
+  %6  = load float, ptr @f6
+  %7  = load float, ptr @f5
+  %8  = load float, ptr @f4
+  %9  = load float, ptr @f3
+  %10 = load float, ptr @f2
+  %11 = load float, ptr @f1
+  %12 = load i32, ptr @splim
+  %13 = load i32, ptr @r7
+  %14 = load i32, ptr @r6
+  %15 = load i32, ptr @r5
+  %16 = load i32, ptr @r4
+  %17 = load i32, ptr @r3
+  %18 = load i32, ptr @r2
+  %19 = load i32, ptr @r1
+  %20 = load i32, ptr @hp
+  %21 = load i32, ptr @sp
+  %22 = load i32, ptr @base
   tail call ghccc void @bar(i32 %22, i32 %21, i32 %20, i32 %19, i32 %18, i32 %17, i32 %16, i32 %15, i32 %14, i32 %13, i32 %12,
                             float %11, float %10, float %9, float %8, float %7, float %6,
                             double %5, double %4, double %3, double %2, double %1, double %0) nounwind

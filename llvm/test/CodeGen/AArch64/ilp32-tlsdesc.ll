@@ -6,7 +6,7 @@
 define i32 @test_thread_local() {
 ; CHECK-LABEL: test_thread_local:
 
-  %val = load i32, i32* @var
+  %val = load i32, ptr @var
   ret i32 %val
 
 ; CHECK: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc:var

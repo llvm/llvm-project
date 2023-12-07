@@ -131,7 +131,7 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
        _Atomic(int*) *p, _Atomic(float) *f, _Atomic(double) *d,
        _Atomic(long double) *ld,
        int *I, const int *CI,
-       int **P, float *D, struct S *s1, struct S *s2) {
+       int **P, float *F, double *D, struct S *s1, struct S *s2) {
   __c11_atomic_init(I, 5); // expected-error {{pointer to _Atomic}}
   __c11_atomic_init(ci, 5); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
 
@@ -199,14 +199,27 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __c11_atomic_fetch_add(f, 1.0f, memory_order_seq_cst);
   __c11_atomic_fetch_add(d, 1.0, memory_order_seq_cst);
   __c11_atomic_fetch_add(ld, 1.0, memory_order_seq_cst); // fp80-error {{must be a pointer to atomic integer, pointer or supported floating point type}}
+  __c11_atomic_fetch_min(i, 1, memory_order_seq_cst);
+  __c11_atomic_fetch_min(p, 1, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer or supported floating point type}}
+  __c11_atomic_fetch_min(f, 1.0f, memory_order_seq_cst);
+  __c11_atomic_fetch_min(d, 1.0, memory_order_seq_cst);
+  __c11_atomic_fetch_min(ld, 1.0, memory_order_seq_cst); // fp80-error {{must be a pointer to atomic integer or supported floating point type}}
+  __c11_atomic_fetch_max(i, 1, memory_order_seq_cst);
+  __c11_atomic_fetch_max(p, 1, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer or supported floating point type}}
+  __c11_atomic_fetch_max(f, 1.0f, memory_order_seq_cst);
+  __c11_atomic_fetch_max(d, 1.0, memory_order_seq_cst);
+  __c11_atomic_fetch_max(ld, 1.0, memory_order_seq_cst); // fp80-error {{must be a pointer to atomic integer or supported floating point type}}
 
   __atomic_fetch_add(i, 3, memory_order_seq_cst); // expected-error {{pointer to integer, pointer or supported floating point type}}
   __atomic_fetch_sub(I, 3, memory_order_seq_cst);
   __atomic_fetch_sub(P, 3, memory_order_seq_cst);
-  __atomic_fetch_sub(D, 3, memory_order_seq_cst);
+  __atomic_fetch_sub(F, 3, memory_order_seq_cst);
   __atomic_fetch_sub(s1, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer, pointer or supported floating point type}}
-  __atomic_fetch_min(D, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
-  __atomic_fetch_max(P, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
+  __atomic_fetch_min(F, 3, memory_order_seq_cst);
+  __atomic_fetch_min(D, 3, memory_order_seq_cst);
+  __atomic_fetch_max(F, 3, memory_order_seq_cst);
+  __atomic_fetch_max(D, 3, memory_order_seq_cst);
+  __atomic_fetch_max(P, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer or supported floating point type}}
   __atomic_fetch_max(p, 3);                       // expected-error {{too few arguments to function call, expected 3, have 2}}
 
   __c11_atomic_fetch_and(i, 1, memory_order_seq_cst);
@@ -216,7 +229,7 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __atomic_fetch_and(i, 3, memory_order_seq_cst); // expected-error {{pointer to integer}}
   __atomic_fetch_or(I, 3, memory_order_seq_cst);
   __atomic_fetch_xor(P, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
-  __atomic_fetch_or(D, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
+  __atomic_fetch_or(F, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
   __atomic_fetch_and(s1, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
 
   _Bool cmpexch_1 = __c11_atomic_compare_exchange_strong(i, I, 1, memory_order_seq_cst, memory_order_seq_cst);

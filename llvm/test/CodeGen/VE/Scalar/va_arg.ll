@@ -43,44 +43,43 @@ define i32 @func_vainout(i32, ...) {
 ; CHECK:         bsic
 ; CHECK:         bsic
 
-  %a = alloca i8*, align 8
-  %a8 = bitcast i8** %a to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %a8)
-  call void @llvm.va_start(i8* nonnull %a8)
-  %p0 = va_arg i8** %a, i32
-  %p1 = va_arg i8** %a, i16
-  %p2 = va_arg i8** %a, i8
-  %p3 = va_arg i8** %a, i32
-  %p4 = va_arg i8** %a, i16
-  %p5 = va_arg i8** %a, i8
-  %p6 = va_arg i8** %a, float
-  %p7 = va_arg i8** %a, i8*
-  %p8 = va_arg i8** %a, i64
-  %p9 = va_arg i8** %a, double
-  %p10 = va_arg i8** %a, fp128
-  %p11 = va_arg i8** %a, double
-  call void @llvm.va_end(i8* nonnull %a8)
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %a8)
-  %pf0 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0), i32 %p0)
+  %a = alloca ptr, align 8
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %a)
+  call void @llvm.va_start(ptr nonnull %a)
+  %p0 = va_arg ptr %a, i32
+  %p1 = va_arg ptr %a, i16
+  %p2 = va_arg ptr %a, i8
+  %p3 = va_arg ptr %a, i32
+  %p4 = va_arg ptr %a, i16
+  %p5 = va_arg ptr %a, i8
+  %p6 = va_arg ptr %a, float
+  %p7 = va_arg ptr %a, ptr
+  %p8 = va_arg ptr %a, i64
+  %p9 = va_arg ptr %a, double
+  %p10 = va_arg ptr %a, fp128
+  %p11 = va_arg ptr %a, double
+  call void @llvm.va_end(ptr nonnull %a)
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %a)
+  %pf0 = call i32 (ptr, ...) @printf(ptr @.str, i32 %p0)
   %p1.s32 = sext i16 %p1 to i32
-  %pf1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.1, i64 0, i64 0), i32 %p1.s32)
+  %pf1 = call i32 (ptr, ...) @printf(ptr @.str.1, i32 %p1.s32)
   %p2.s32 = sext i8 %p2 to i32
-  %pf2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.2, i64 0, i64 0), i32 %p2.s32)
-  %pf3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.3, i64 0, i64 0), i32 %p3)
+  %pf2 = call i32 (ptr, ...) @printf(ptr @.str.2, i32 %p2.s32)
+  %pf3 = call i32 (ptr, ...) @printf(ptr @.str.3, i32 %p3)
   %p4.z32 = zext i16 %p4 to i32
-  %pf4 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.4, i64 0, i64 0), i32 %p4.z32)
+  %pf4 = call i32 (ptr, ...) @printf(ptr @.str.4, i32 %p4.z32)
   %p5.z32 = zext i8 %p5 to i32
-  %pf5 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.5, i64 0, i64 0), i32 %p5.z32)
-  %pf6 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.6, i64 0, i64 0), float %p6)
-  %pf7 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.7, i64 0, i64 0), i8* %p7)
-  %pf8 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.8, i64 0, i64 0), i64 %p8)
-  %pf9 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.9, i64 0, i64 0), double %p9)
-  %pf10 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.10, i64 0, i64 0), fp128 %p10)
-  %pf11 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.9, i64 0, i64 0), double %p11)
+  %pf5 = call i32 (ptr, ...) @printf(ptr @.str.5, i32 %p5.z32)
+  %pf6 = call i32 (ptr, ...) @printf(ptr @.str.6, float %p6)
+  %pf7 = call i32 (ptr, ...) @printf(ptr @.str.7, ptr %p7)
+  %pf8 = call i32 (ptr, ...) @printf(ptr @.str.8, i64 %p8)
+  %pf9 = call i32 (ptr, ...) @printf(ptr @.str.9, double %p9)
+  %pf10 = call i32 (ptr, ...) @printf(ptr @.str.10, fp128 %p10)
+  %pf11 = call i32 (ptr, ...) @printf(ptr @.str.9, double %p11)
   ret i32 0
 }
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_end(i8*)
-declare i32 @printf(i8* nocapture readonly, ...)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_end(ptr)
+declare i32 @printf(ptr nocapture readonly, ...)

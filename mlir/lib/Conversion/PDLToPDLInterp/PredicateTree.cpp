@@ -41,14 +41,14 @@ static bool comparePosDepth(Position *lhs, Position *rhs) {
 /// Returns the number of non-range elements within `values`.
 static unsigned getNumNonRangeValues(ValueRange values) {
   return llvm::count_if(values.getTypes(),
-                        [](Type type) { return !type.isa<pdl::RangeType>(); });
+                        [](Type type) { return !isa<pdl::RangeType>(type); });
 }
 
 static void getTreePredicates(std::vector<PositionalPredicate> &predList,
                               Value val, PredicateBuilder &builder,
                               DenseMap<Value, Position *> &inputs,
                               AttributePosition *pos) {
-  assert(val.getType().isa<pdl::AttributeType>() && "expected attribute type");
+  assert(isa<pdl::AttributeType>(val.getType()) && "expected attribute type");
   pdl::AttributeOp attr = cast<pdl::AttributeOp>(val.getDefiningOp());
   predList.emplace_back(pos, builder.getIsNotNull());
 
@@ -65,7 +65,7 @@ static void getOperandTreePredicates(std::vector<PositionalPredicate> &predList,
                                      DenseMap<Value, Position *> &inputs,
                                      Position *pos) {
   Type valueType = val.getType();
-  bool isVariadic = valueType.isa<pdl::RangeType>();
+  bool isVariadic = isa<pdl::RangeType>(valueType);
 
   // If this is a typed operand, add a type constraint.
   TypeSwitch<Operation *>(val.getDefiningOp())
@@ -111,7 +111,7 @@ getTreePredicates(std::vector<PositionalPredicate> &predList, Value val,
                   PredicateBuilder &builder,
                   DenseMap<Value, Position *> &inputs, OperationPosition *pos,
                   std::optional<unsigned> ignoreOperand = std::nullopt) {
-  assert(val.getType().isa<pdl::OperationType>() && "expected operation");
+  assert(isa<pdl::OperationType>(val.getType()) && "expected operation");
   pdl::OperationOp op = cast<pdl::OperationOp>(val.getDefiningOp());
   OperationPosition *opPos = cast<OperationPosition>(pos);
 
@@ -148,7 +148,7 @@ getTreePredicates(std::vector<PositionalPredicate> &predList, Value val,
        llvm::zip(op.getAttributeValueNames(), op.getAttributeValues())) {
     getTreePredicates(
         predList, attr, builder, inputs,
-        builder.getAttribute(opPos, attrName.cast<StringAttr>().getValue()));
+        builder.getAttribute(opPos, cast<StringAttr>(attrName).getValue()));
   }
 
   // Process the operands and results of the operation. For all values up to
@@ -157,7 +157,7 @@ getTreePredicates(std::vector<PositionalPredicate> &predList, Value val,
   // concrete indices until runtime. If there is only one variadic operand
   // group, we treat it as all of the operands/results of the operation.
   /// Operands.
-  if (operands.size() == 1 && operands[0].getType().isa<pdl::RangeType>()) {
+  if (operands.size() == 1 && isa<pdl::RangeType>(operands[0].getType())) {
     // Ignore the operands if we are performing an upward traversal (in that
     // case, they have already been visited).
     if (opPos->isRoot() || opPos->isOperandDefiningOp())
@@ -166,7 +166,7 @@ getTreePredicates(std::vector<PositionalPredicate> &predList, Value val,
   } else {
     bool foundVariableLength = false;
     for (const auto &operandIt : llvm::enumerate(operands)) {
-      bool isVariadic = operandIt.value().getType().isa<pdl::RangeType>();
+      bool isVariadic = isa<pdl::RangeType>(operandIt.value().getType());
       foundVariableLength |= isVariadic;
 
       // Ignore the specified operand, usually because this position was
@@ -182,23 +182,23 @@ getTreePredicates(std::vector<PositionalPredicate> &predList, Value val,
     }
   }
   /// Results.
-  if (types.size() == 1 && types[0].getType().isa<pdl::RangeType>()) {
+  if (types.size() == 1 && isa<pdl::RangeType>(types[0].getType())) {
     getTreePredicates(predList, types.front(), builder, inputs,
                       builder.getType(builder.getAllResults(opPos)));
-  } else {
-    bool foundVariableLength = false;
-    for (auto &resultIt : llvm::enumerate(types)) {
-      bool isVariadic = resultIt.value().getType().isa<pdl::RangeType>();
-      foundVariableLength |= isVariadic;
+    return;
+  }
 
-      auto *resultPos =
-          foundVariableLength
-              ? builder.getResultGroup(pos, resultIt.index(), isVariadic)
-              : builder.getResult(pos, resultIt.index());
-      predList.emplace_back(resultPos, builder.getIsNotNull());
-      getTreePredicates(predList, resultIt.value(), builder, inputs,
-                        builder.getType(resultPos));
-    }
+  bool foundVariableLength = false;
+  for (auto [idx, typeValue] : llvm::enumerate(types)) {
+    bool isVariadic = isa<pdl::RangeType>(typeValue.getType());
+    foundVariableLength |= isVariadic;
+
+    auto *resultPos = foundVariableLength
+                          ? builder.getResultGroup(pos, idx, isVariadic)
+                          : builder.getResult(pos, idx);
+    predList.emplace_back(resultPos, builder.getIsNotNull());
+    getTreePredicates(predList, typeValue, builder, inputs,
+                      builder.getType(resultPos));
   }
 }
 
@@ -273,7 +273,7 @@ static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
   Position *pos = *std::max_element(allPositions.begin(), allPositions.end(),
                                     comparePosDepth);
   PredicateBuilder::Predicate pred =
-      builder.getConstraint(op.getName(), allPositions);
+      builder.getConstraint(op.getName(), allPositions, op.getIsNegated());
   predList.emplace_back(pos, pred);
 }
 
@@ -301,7 +301,7 @@ static void getResultPredicates(pdl::ResultsOp op,
 
   // Ensure that the result isn't null if the result has an index.
   auto *parentPos = cast<OperationPosition>(inputs.lookup(op.getParent()));
-  bool isVariadic = op.getType().isa<pdl::RangeType>();
+  bool isVariadic = isa<pdl::RangeType>(op.getType());
   std::optional<unsigned> index = op.getIndex();
   resultPos = builder.getResultGroup(parentPos, index, isVariadic);
   if (index)
@@ -458,7 +458,7 @@ static void buildCostGraph(ArrayRef<Value> roots, RootOrderingGraph &graph,
             // Special case when we pass all the operands in one range.
             // For those, the index is empty.
             if (operands.size() == 1 &&
-                operands[0].getType().isa<pdl::RangeType>()) {
+                isa<pdl::RangeType>(operands[0].getType())) {
               toVisit.emplace(operands[0], entry.value, std::nullopt,
                               entry.depth + 1);
               return;
@@ -514,7 +514,7 @@ static bool useOperandGroup(pdl::OperationOp op, unsigned index) {
   OperandRange operands = op.getOperandValues();
   assert(index < operands.size() && "operand index out of range");
   for (unsigned i = 0; i <= index; ++i)
-    if (operands[i].getType().isa<pdl::RangeType>())
+    if (isa<pdl::RangeType>(operands[i].getType()))
       return true;
   return false;
 }
@@ -542,7 +542,7 @@ static void visitUpward(std::vector<PositionalPredicate> &predList,
         } else if (useOperandGroup(operationOp, *opIndex.index)) {
           // We are querying an operand group.
           Type type = operationOp.getOperandValues()[*opIndex.index].getType();
-          bool variadic = type.isa<pdl::RangeType>();
+          bool variadic = isa<pdl::RangeType>(type);
           operandPos = builder.getOperandGroup(opPos, opIndex.index, variadic);
         } else {
           // We are querying an individual operand.
@@ -578,7 +578,7 @@ static void visitUpward(std::vector<PositionalPredicate> &predList,
         // Traverse up a group of results.
         auto *opPos = dyn_cast<OperationPosition>(pos);
         assert(opPos && "operations and results must be interleaved");
-        bool isVariadic = value.getType().isa<pdl::RangeType>();
+        bool isVariadic = isa<pdl::RangeType>(value.getType());
         if (opIndex.index)
           pos = builder.getResultGroup(opPos, opIndex.index, isVariadic);
         else
@@ -815,7 +815,7 @@ static void propagatePattern(std::unique_ptr<MatcherNode> &node,
         std::make_unique<SuccessNode>(list.pattern, list.root, std::move(node));
 
     // If the pattern doesn't contain this predicate, ignore it.
-  } else if (list.predicates.find(*current) == list.predicates.end()) {
+  } else if (!list.predicates.contains(*current)) {
     propagatePattern(node, list, std::next(current), end);
 
     // If the current matcher node is invalid, create a new one for this

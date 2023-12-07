@@ -36,11 +36,10 @@ advanced features are discussed.
 
 .. warning::
   This document deals with the legacy pass manager. LLVM uses the new pass
-  manager by default for the optimization pipeline (the codegen pipeline is
-  still using the legacy pass manager), which has its own way of defining
+  manager for the optimization pipeline (the codegen pipeline
+  still uses the legacy pass manager), which has its own way of defining
   passes. For more details, see :doc:`WritingAnLLVMNewPMPass` and
-  :doc:`NewPassManager`. To use the legacy pass manager with ``opt``, pass
-  the ``-enable-new-pm=0`` flag to all ``opt`` invocations.
+  :doc:`NewPassManager`.
 
 Quick Start --- Writing hello world
 ===================================
@@ -194,7 +193,6 @@ As a whole, the ``.cpp`` file looks like:
   #include "llvm/Support/raw_ostream.h"
 
   #include "llvm/IR/LegacyPassManager.h"
-  #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
   using namespace llvm;
 
@@ -1263,7 +1261,7 @@ Then you need to declare the registry.  Example: if your pass registry is
 
 .. code-block:: c++
 
-  MachinePassRegistry RegisterMyPasses::Registry;
+  MachinePassRegistry<RegisterMyPasses::FunctionPassCtor> RegisterMyPasses::Registry;
 
 And finally, declare the command line option for your passes.  Example:
 

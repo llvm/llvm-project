@@ -7,7 +7,7 @@
 ; CHECK: ret
 define i32 @test_call_known_max_range() #0 {
 entry:
-  %id = tail call i32 @foo(), !range !0
+  %id = tail call i32 @foo(), !range !0, !noundef !{}
   %and = and i32 %id, 1023
   ret i32 %and
 }
@@ -18,7 +18,7 @@ entry:
 ; CHECK: ret
 define i32 @test_call_known_trunc_1_bit_range() #0 {
 entry:
-  %id = tail call i32 @foo(), !range !0
+  %id = tail call i32 @foo(), !range !0, !noundef !{}
   %and = and i32 %id, 511
   ret i32 %and
 }
@@ -29,7 +29,7 @@ entry:
 ; CHECK: ret
 define i32 @test_call_known_max_range_m1() #0 {
 entry:
-  %id = tail call i32 @foo(), !range !1
+  %id = tail call i32 @foo(), !range !1, !noundef !{}
   %and = and i32 %id, 255
   ret i32 %and
 }

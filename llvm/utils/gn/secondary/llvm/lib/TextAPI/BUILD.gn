@@ -3,6 +3,7 @@ static_library("TextAPI") {
   deps = [
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "Architecture.cpp",
@@ -11,8 +12,11 @@ static_library("TextAPI") {
     "PackedVersion.cpp",
     "Platform.cpp",
     "Symbol.cpp",
+    "SymbolSet.cpp",
     "Target.cpp",
+    "TextAPIError.cpp",
     "TextStub.cpp",
     "TextStubCommon.cpp",
+    "TextStubV5.cpp",
   ]
 }

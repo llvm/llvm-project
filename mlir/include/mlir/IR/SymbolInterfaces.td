@@ -31,7 +31,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
 
   let methods = [
     InterfaceMethod<"Returns the name of this symbol.",
-      "StringAttr", "getNameAttr", (ins), [{
+      "::mlir::StringAttr", "getNameAttr", (ins), [{
         // Don't rely on the trait implementation as optional symbol operations
         // may override this.
         return mlir::SymbolTable::getSymbolName($_op);
@@ -99,7 +99,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
         given operation 'from'.
         Note: See mlir::SymbolTable::getSymbolUses for more details.
       }],
-      "::llvm::Optional<::mlir::SymbolTable::UseRange>", "getSymbolUses",
+      "::std::optional<::mlir::SymbolTable::UseRange>", "getSymbolUses",
       (ins "::mlir::Operation *":$from), [{}],
       /*defaultImplementation=*/[{
         return ::mlir::SymbolTable::getSymbolUses(this->getOperation(), from);
@@ -174,39 +174,23 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     return success();
   }];
 
-  let extraClassDeclaration = [{
-    /// Convenience version of `getNameAttr` that returns a StringRef.
-    StringRef getName() {
-      return getNameAttr().getValue();
-    }
-
-    /// Convenience version of `setName` that take a StringRef.
-    void setName(StringRef name) {
-      setName(StringAttr::get(this->getContext(), name));
-    }
-
-    /// Custom classof that handles the case where the symbol is optional.
-    static bool classof(Operation *op) {
-      auto *opConcept = getInterfaceFor(op);
-      if (!opConcept)
-        return false;
-      return !opConcept->isOptionalSymbol(opConcept, op) ||
-             op->getAttr(::mlir::SymbolTable::getSymbolAttrName());
-    }
-  }];
-
-  let extraTraitClassDeclaration = [{
+  let extraSharedClassDeclaration = [{
     using Visibility = mlir::SymbolTable::Visibility;
 
     /// Convenience version of `getNameAttr` that returns a StringRef.
-    StringRef getName() {
+    ::mlir::StringRef getName() {
       return getNameAttr().getValue();
     }
 
     /// Convenience version of `setName` that take a StringRef.
-    void setName(StringRef name) {
-      setName(StringAttr::get($_op->getContext(), name));
+    void setName(::mlir::StringRef name) {
+      setName(::mlir::StringAttr::get($_op->getContext(), name));
     }
+  }];
+
+  // Add additional classof checks to properly handle "optional" symbols.
+  let extraClassOf = [{
+    return $_op->hasAttr(::mlir::SymbolTable::getSymbolAttrName());
   }];
 }
 

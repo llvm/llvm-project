@@ -24,28 +24,6 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
-/// Return configuration options for One-Shot Bufferize.
-static bufferization::OneShotBufferizationOptions
-getBufferizationOptions(bool analysisOnly) {
-  using namespace bufferization;
-  OneShotBufferizationOptions options;
-  options.bufferizeFunctionBoundaries = true;
-  // TODO(springerm): To spot memory leaks more easily, returning dense allocs
-  // should be disallowed.
-  options.allowReturnAllocs = true;
-  options.functionBoundaryTypeConversion = LayoutMapOption::IdentityLayoutMap;
-  options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
-                                      const BufferizationOptions &options) {
-    return getMemRefTypeWithStaticIdentityLayout(
-        value.getType().cast<TensorType>(), memorySpace);
-  };
-  if (analysisOnly) {
-    options.testAnalysisOnly = true;
-    options.printConflicts = true;
-  }
-  return options;
-}
-
 //===----------------------------------------------------------------------===//
 // Pipeline implementation.
 //===----------------------------------------------------------------------===//
@@ -54,25 +32,23 @@ void mlir::sparse_tensor::buildSparseKokkosCompiler(
     OpPassManager &pm, const SparseCompilerOptions &options) {
   pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
   pm.addPass(createSparsificationAndBufferizationPass(
-      getBufferizationOptions(options.testBufferizationAnalysisOnly),
+      getBufferizationOptionsForSparsification(
+          options.testBufferizationAnalysisOnly),
       options.sparsificationOptions(), options.sparseTensorConversionOptions(),
-      options.enableRuntimeLibrary, options.enableBufferInitialization,
-      options.vectorLength,
+      options.createSparseDeallocs, options.enableRuntimeLibrary,
+      options.enableBufferInitialization, options.vectorLength,
       /*enableVLAVectorization=*/options.armSVE,
       /*enableSIMDIndex32=*/options.force32BitVectorIndices));
-  if (options.testBufferizationAnalysisOnly)
-    return;
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   pm.addNestedPass<func::FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());
-  // TODO(springerm): Add sparse support to the BufferDeallocation pass and add
-  // it to this pipeline.
+  pm.addPass(createSparseKokkosCodegenPass());
   pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());
   pm.addNestedPass<func::FuncOp>(createConvertVectorToSCFPass());
+  pm.addNestedPass<func::FuncOp>(memref::createExpandReallocPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
   pm.addPass(createLowerAffinePass());
-  pm.addNestedPass<func::FuncOp>(createConvertComplexToStandardPass());
-  pm.addNestedPass<mlir::func::FuncOp>(mlir::arith::createArithExpandOpsPass());
+  pm.addPass(createReconcileUnrealizedCastsPass());
 }
 
 //===----------------------------------------------------------------------===//
@@ -83,7 +59,7 @@ void mlir::sparse_tensor::registerSparseTensorKokkosPipelines() {
   PassPipelineRegistration<SparseCompilerOptions>(
       "sparse-compiler-kokkos",
       "The standard pipeline for taking sparsity-agnostic IR using the"
-      " sparse-tensor type, and lowering it to LLVM IR with concrete"
-      " representations and algorithms for sparse tensors.",
+      " sparse-tensor type, and lowering it to dialects compatible with"
+      " the Kokkos emitter.",
       buildSparseKokkosCompiler);
 }

@@ -14,6 +14,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
@@ -25,11 +26,10 @@
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -205,6 +205,8 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           ConstantAsMetadata::get(ConstantInt::get(IntTy32, 0)),
           ConstantAsMetadata::get(ConstantInt::get(IntTy32, 0x10000))};
       II.setMetadata(LLVMContext::MD_range, MDNode::get(II.getContext(), M));
+      II.setMetadata(LLVMContext::MD_noundef,
+                     MDNode::get(II.getContext(), std::nullopt));
       return &II;
     }
     break;
@@ -445,7 +447,7 @@ InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     return 0;
 
   // We can convert <= -1 to < 0, which is generally quite cheap.
-  if (Inst && Opcode == Instruction::ICmp && Idx == 1 && Imm.isAllOnesValue()) {
+  if (Inst && Opcode == Instruction::ICmp && Idx == 1 && Imm.isAllOnes()) {
     ICmpInst::Predicate Pred = cast<ICmpInst>(Inst)->getPredicate();
     if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE)
       return std::min(getIntImmCost(Imm, Ty, CostKind),
@@ -874,7 +876,9 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 }
 
 InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                               unsigned Index) {
+                                               TTI::TargetCostKind CostKind,
+                                               unsigned Index, Value *Op0,
+                                               Value *Op1) {
   // Penalize inserting into an D-subregister. We end up with a three times
   // lower estimated throughput on swift.
   if (ST->hasSlowLoadDSubregister() && Opcode == Instruction::InsertElement &&
@@ -893,7 +897,8 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     if (ValTy->isVectorTy() &&
         ValTy->getScalarSizeInBits() <= 32)
       return std::max<InstructionCost>(
-          BaseT::getVectorInstrCost(Opcode, ValTy, Index), 2U);
+          BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1),
+          2U);
   }
 
   if (ST->hasMVEIntegerOps() && (Opcode == Instruction::InsertElement ||
@@ -906,7 +911,7 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     return LT.first * (ValTy->getScalarType()->isIntegerTy() ? 4 : 1);
   }
 
-  return BaseT::getVectorInstrCost(Opcode, ValTy, Index);
+  return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1);
 }
 
 InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
@@ -1020,12 +1025,14 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     if (Opcode == Instruction::FCmp && !ST->hasMVEFloatOps()) {
       // One scalaization insert, one scalarization extract and the cost of the
       // fcmps.
-      return BaseT::getScalarizationOverhead(VecValTy, false, true) +
-             BaseT::getScalarizationOverhead(VecCondTy, true, false) +
+      return BaseT::getScalarizationOverhead(VecValTy, /*Insert*/ false,
+                                             /*Extract*/ true, CostKind) +
+             BaseT::getScalarizationOverhead(VecCondTy, /*Insert*/ true,
+                                             /*Extract*/ false, CostKind) +
              VecValTy->getNumElements() *
                  getCmpSelInstrCost(Opcode, ValTy->getScalarType(),
-                                    VecCondTy->getScalarType(), VecPred, CostKind,
-                                    I);
+                                    VecCondTy->getScalarType(), VecPred,
+                                    CostKind, I);
     }
 
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
@@ -1038,7 +1045,8 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     if (LT.second.isVector() && LT.second.getVectorNumElements() > 2) {
       if (LT.first > 1)
         return LT.first * BaseCost +
-               BaseT::getScalarizationOverhead(VecCondTy, true, false);
+               BaseT::getScalarizationOverhead(VecCondTy, /*Insert*/ true,
+                                               /*Extract*/ false, CostKind);
       return BaseCost;
     }
   }
@@ -1205,7 +1213,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args) {
-  Kind = improveShuffleKindFromMask(Kind, Mask);
+  Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
   if (ST->hasNEON()) {
     if (Kind == TTI::SK_Broadcast) {
       static const CostTblEntry NEONDupTbl[] = {
@@ -1441,7 +1449,8 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     // Return the cost of multiple scalar invocation plus the cost of
     // inserting and extracting the values.
     SmallVector<Type *> Tys(Args.size(), Ty);
-    return BaseT::getScalarizationOverhead(VTy, Args, Tys) + Num * Cost;
+    return BaseT::getScalarizationOverhead(VTy, Args, Tys, CostKind) +
+           Num * Cost;
   }
 
   return BaseCost;
@@ -1544,7 +1553,7 @@ InstructionCost ARMTTIImpl::getInterleavedMemoryOpCost(
     // vmovn.
     if (ST->hasMVEIntegerOps() && Factor == 2 && NumElts / Factor > 2 &&
         VecTy->isIntOrIntVectorTy() &&
-        DL.getTypeSizeInBits(SubVecTy).getFixedSize() <= 64)
+        DL.getTypeSizeInBits(SubVecTy).getFixedValue() <= 64)
       return 2 * BaseCost;
   }
 
@@ -1578,10 +1587,15 @@ InstructionCost ARMTTIImpl::getGatherScatterOpCost(
   InstructionCost VectorCost =
       NumElems * LT.first * ST->getMVEVectorCostFactor(CostKind);
   // The scalarization cost should be a lot higher. We use the number of vector
-  // elements plus the scalarization overhead.
+  // elements plus the scalarization overhead. If masking is required then a lot
+  // of little blocks will be needed and potentially a scalarized p0 mask,
+  // greatly increasing the cost.
   InstructionCost ScalarCost =
-      NumElems * LT.first + BaseT::getScalarizationOverhead(VTy, true, false) +
-      BaseT::getScalarizationOverhead(VTy, false, true);
+      NumElems * LT.first + (VariableMask ? NumElems * 5 : 0) +
+      BaseT::getScalarizationOverhead(VTy, /*Insert*/ true, /*Extract*/ false,
+                                      CostKind) +
+      BaseT::getScalarizationOverhead(VTy, /*Insert*/ false, /*Extract*/ true,
+                                      CostKind);
 
   if (EltSize < 8 || Alignment < EltSize / 8)
     return ScalarCost;
@@ -1656,12 +1670,73 @@ InstructionCost
 ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                        std::optional<FastMathFlags> FMF,
                                        TTI::TargetCostKind CostKind) {
-  if (TTI::requiresOrderedReduction(FMF))
-    return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 
   EVT ValVT = TLI->getValueType(DL, ValTy);
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
-  if (!ST->hasMVEIntegerOps() || !ValVT.isSimple() || ISD != ISD::ADD)
+  unsigned EltSize = ValVT.getScalarSizeInBits();
+
+  // In general floating point reductions are a series of elementwise
+  // operations, with free extracts on each step. These are either in-order or
+  // treewise depending on whether that is allowed by the fast math flags.
+  if ((ISD == ISD::FADD || ISD == ISD::FMUL) &&
+      ((EltSize == 32 && ST->hasVFP2Base()) ||
+       (EltSize == 64 && ST->hasFP64()) ||
+       (EltSize == 16 && ST->hasFullFP16()))) {
+    unsigned NumElts = cast<FixedVectorType>(ValTy)->getNumElements();
+    unsigned VecLimit = ST->hasMVEFloatOps() ? 128 : (ST->hasNEON() ? 64 : -1);
+    InstructionCost VecCost = 0;
+    while (!TTI::requiresOrderedReduction(FMF) && isPowerOf2_32(NumElts) &&
+           NumElts * EltSize > VecLimit) {
+      Type *VecTy = FixedVectorType::get(ValTy->getElementType(), NumElts / 2);
+      VecCost += getArithmeticInstrCost(Opcode, VecTy, CostKind);
+      NumElts /= 2;
+    }
+
+    // For fp16 we need to extract the upper lane elements. MVE can add a
+    // VREV+FMIN/MAX to perform another vector step instead.
+    InstructionCost ExtractCost = 0;
+    if (!TTI::requiresOrderedReduction(FMF) && ST->hasMVEFloatOps() &&
+        ValVT.getVectorElementType() == MVT::f16 && NumElts == 8) {
+      VecCost += ST->getMVEVectorCostFactor(CostKind) * 2;
+      NumElts /= 2;
+    } else if (ValVT.getVectorElementType() == MVT::f16)
+      ExtractCost = NumElts / 2;
+
+    return VecCost + ExtractCost +
+           NumElts *
+               getArithmeticInstrCost(Opcode, ValTy->getElementType(), CostKind);
+  }
+
+  if ((ISD == ISD::AND || ISD == ISD::OR || ISD == ISD::XOR) &&
+      (EltSize == 64 || EltSize == 32 || EltSize == 16 || EltSize == 8)) {
+    unsigned NumElts = cast<FixedVectorType>(ValTy)->getNumElements();
+    unsigned VecLimit =
+        ST->hasMVEIntegerOps() ? 128 : (ST->hasNEON() ? 64 : -1);
+    InstructionCost VecCost = 0;
+    while (isPowerOf2_32(NumElts) && NumElts * EltSize > VecLimit) {
+      Type *VecTy = FixedVectorType::get(ValTy->getElementType(), NumElts / 2);
+      VecCost += getArithmeticInstrCost(Opcode, VecTy, CostKind);
+      NumElts /= 2;
+    }
+    // For i16/i8, MVE will perform a VREV + VORR/VAND/VEOR for the 64bit vector
+    // step.
+    if (ST->hasMVEIntegerOps() && ValVT.getScalarSizeInBits() <= 16 &&
+        NumElts * EltSize == 64) {
+      Type *VecTy = FixedVectorType::get(ValTy->getElementType(), NumElts);
+      VecCost += ST->getMVEVectorCostFactor(CostKind) +
+                 getArithmeticInstrCost(Opcode, VecTy, CostKind);
+      NumElts /= 2;
+    }
+
+    // From here we extract the elements and perform the and/or/xor.
+    InstructionCost ExtractCost = NumElts;
+    return VecCost + ExtractCost +
+           (NumElts - 1) * getArithmeticInstrCost(
+                               Opcode, ValTy->getElementType(), CostKind);
+  }
+
+  if (!ST->hasMVEIntegerOps() || !ValVT.isSimple() || ISD != ISD::ADD ||
+      TTI::requiresOrderedReduction(FMF))
     return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
@@ -1679,7 +1754,7 @@ ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
 InstructionCost ARMTTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
-    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
+    FastMathFlags FMF, TTI::TargetCostKind CostKind) {
   EVT ValVT = TLI->getValueType(DL, ValTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
@@ -1736,6 +1811,66 @@ ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
   }
 
   return BaseT::getMulAccReductionCost(IsUnsigned, ResTy, ValTy, CostKind);
+}
+
+InstructionCost
+ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                   FastMathFlags FMF,
+                                   TTI::TargetCostKind CostKind) {
+  EVT ValVT = TLI->getValueType(DL, Ty);
+
+  // In general floating point reductions are a series of elementwise
+  // operations, with free extracts on each step. These are either in-order or
+  // treewise depending on whether that is allowed by the fast math flags.
+  if ((IID == Intrinsic::minnum || IID == Intrinsic::maxnum) &&
+      ((ValVT.getVectorElementType() == MVT::f32 && ST->hasVFP2Base()) ||
+       (ValVT.getVectorElementType() == MVT::f64 && ST->hasFP64()) ||
+       (ValVT.getVectorElementType() == MVT::f16 && ST->hasFullFP16()))) {
+    unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
+    unsigned EltSize = ValVT.getScalarSizeInBits();
+    unsigned VecLimit = ST->hasMVEFloatOps() ? 128 : (ST->hasNEON() ? 64 : -1);
+    InstructionCost VecCost;
+    while (isPowerOf2_32(NumElts) && NumElts * EltSize > VecLimit) {
+      Type *VecTy = FixedVectorType::get(Ty->getElementType(), NumElts/2);
+      IntrinsicCostAttributes ICA(IID, VecTy, {VecTy, VecTy}, FMF);
+      VecCost += getIntrinsicInstrCost(ICA, CostKind);
+      NumElts /= 2;
+    }
+
+    // For fp16 we need to extract the upper lane elements. MVE can add a
+    // VREV+FMIN/MAX to perform another vector step instead.
+    InstructionCost ExtractCost = 0;
+    if (ST->hasMVEFloatOps() && ValVT.getVectorElementType() == MVT::f16 &&
+        NumElts == 8) {
+      VecCost += ST->getMVEVectorCostFactor(CostKind) * 2;
+      NumElts /= 2;
+    } else if (ValVT.getVectorElementType() == MVT::f16)
+      ExtractCost = cast<FixedVectorType>(Ty)->getNumElements() / 2;
+
+    IntrinsicCostAttributes ICA(IID, Ty->getElementType(),
+                                {Ty->getElementType(), Ty->getElementType()},
+                                FMF);
+    return VecCost + ExtractCost +
+           (NumElts - 1) * getIntrinsicInstrCost(ICA, CostKind);
+  }
+
+  if (IID == Intrinsic::smin || IID == Intrinsic::smax ||
+      IID == Intrinsic::umin || IID == Intrinsic::umax) {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
+
+    // All costs are the same for u/s min/max.  These lower to vminv, which are
+    // given a slightly higher cost as they tend to take multiple cycles for
+    // smaller type sizes.
+    static const CostTblEntry CostTblAdd[]{
+        {ISD::SMIN, MVT::v16i8, 4},
+        {ISD::SMIN, MVT::v8i16, 3},
+        {ISD::SMIN, MVT::v4i32, 2},
+    };
+    if (const auto *Entry = CostTableLookup(CostTblAdd, ISD::SMIN, LT.second))
+      return Entry->Cost * ST->getMVEVectorCostFactor(CostKind) * LT.first;
+  }
+
+  return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 }
 
 InstructionCost
@@ -2228,10 +2363,7 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   return true;
 }
 
-bool ARMTTIImpl::preferPredicateOverEpilogue(
-    Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,
-    TargetLibraryInfo *TLI, DominatorTree *DT, LoopVectorizationLegality *LVL,
-    InterleavedAccessInfo *IAI) {
+bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
   if (!EnableTailPredication) {
     LLVM_DEBUG(dbgs() << "Tail-predication not enabled.\n");
     return false;
@@ -2243,6 +2375,9 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(
   if (!ST->hasMVEIntegerOps())
     return false;
 
+  LoopVectorizationLegality *LVL = TFI->LVL;
+  Loop *L = LVL->getLoop();
+
   // For now, restrict this to single block loops.
   if (L->getNumBlocks() > 1) {
     LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: not a single block "
@@ -2252,6 +2387,7 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(
 
   assert(L->isInnermost() && "preferPredicateOverEpilogue: inner-loop expected");
 
+  LoopInfo *LI = LVL->getLoopInfo();
   HardwareLoopInfo HWLoopInfo(L);
   if (!HWLoopInfo.canAnalyze(*LI)) {
     LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
@@ -2259,32 +2395,37 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(
     return false;
   }
 
+  AssumptionCache *AC = LVL->getAssumptionCache();
+  ScalarEvolution *SE = LVL->getScalarEvolution();
+
   // This checks if we have the low-overhead branch architecture
   // extension, and if we will create a hardware-loop:
-  if (!isHardwareLoopProfitable(L, SE, AC, TLI, HWLoopInfo)) {
+  if (!isHardwareLoopProfitable(L, *SE, *AC, TFI->TLI, HWLoopInfo)) {
     LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
                          "profitable.\n");
     return false;
   }
 
-  if (!HWLoopInfo.isHardwareLoopCandidate(SE, *LI, *DT)) {
+  DominatorTree *DT = LVL->getDominatorTree();
+  if (!HWLoopInfo.isHardwareLoopCandidate(*SE, *LI, *DT)) {
     LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
                          "a candidate.\n");
     return false;
   }
 
-  return canTailPredicateLoop(L, LI, SE, DL, LVL->getLAI());
+  return canTailPredicateLoop(L, LI, *SE, DL, LVL->getLAI());
 }
 
-PredicationStyle ARMTTIImpl::emitGetActiveLaneMask() const {
+TailFoldingStyle
+ARMTTIImpl::getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const {
   if (!ST->hasMVEIntegerOps() || !EnableTailPredication)
-    return PredicationStyle::None;
+    return TailFoldingStyle::DataWithoutLaneMask;
 
   // Intrinsic @llvm.get.active.lane.mask is supported.
   // It is used in the MVETailPredication pass, which requires the number of
   // elements processed by this vector loop to setup the tail-predicated
   // loop.
-  return PredicationStyle::Data;
+  return TailFoldingStyle::Data;
 }
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP,
@@ -2430,4 +2571,17 @@ InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     return 0;
   }
   return -1;
+}
+
+bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {
+  if (Thumb) {
+    // B.W is available in any Thumb2-supporting target, and also in every
+    // version of Armv8-M, even Baseline which does not include the rest of
+    // Thumb2.
+    return ST->isThumb2() || ST->hasV8MBaselineOps();
+  } else {
+    // B is available in all versions of the Arm ISA, so the only question is
+    // whether that ISA is available at all.
+    return ST->hasARMOps();
+  }
 }

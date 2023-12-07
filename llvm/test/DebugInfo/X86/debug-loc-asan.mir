@@ -221,7 +221,7 @@ body:             |
     $rsp = frame-setup AND64ri8 $rsp, -32, implicit-def dead $eflags
     $rsp = frame-setup SUB64ri32 $rsp, 160, implicit-def dead $eflags
     renamable $rax = LEA64r $rsp, 1, $noreg, 64, $noreg
-    CMP32mi8 $noreg, 1, $noreg, @__asan_option_detect_stack_use_after_return, $noreg, 0, implicit-def $eflags :: (load (s32) from @__asan_option_detect_stack_use_after_return)
+    CMP32mi $noreg, 1, $noreg, @__asan_option_detect_stack_use_after_return, $noreg, 0, implicit-def $eflags :: (load (s32) from @__asan_option_detect_stack_use_after_return)
     $rcx = MOV64rr $rax
     MOV32mr $rsp, 1, $noreg, 60, $noreg, killed $edi :: (store (s32) into %stack.1)
     MOV64mr $rsp, 1, $noreg, 48, $noreg, killed $rax :: (store (s64) into %stack.2)

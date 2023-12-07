@@ -12,8 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -21,6 +25,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include <optional>
 #include <string>
 
 #define DEBUG_TYPE "serialize-to-blob"
@@ -35,7 +40,7 @@ gpu::SerializeToBlobPass::SerializeToBlobPass(TypeID passID)
 gpu::SerializeToBlobPass::SerializeToBlobPass(const SerializeToBlobPass &other)
     : OperationPass<gpu::GPUModuleOp>(other) {}
 
-Optional<std::string>
+std::optional<std::string>
 gpu::SerializeToBlobPass::translateToISA(llvm::Module &llvmModule,
                                          llvm::TargetMachine &targetMachine) {
   llvmModule.setDataLayout(targetMachine.createDataLayout());
@@ -72,7 +77,7 @@ void gpu::SerializeToBlobPass::runOnOperation() {
   if (!targetMachine)
     return signalPassFailure();
 
-  Optional<std::string> maybeTargetISA =
+  std::optional<std::string> maybeTargetISA =
       translateToISA(*llvmModule, *targetMachine);
 
   if (!maybeTargetISA.has_value())
@@ -100,15 +105,25 @@ void gpu::SerializeToBlobPass::runOnOperation() {
 LogicalResult
 gpu::SerializeToBlobPass::optimizeLlvm(llvm::Module &llvmModule,
                                        llvm::TargetMachine &targetMachine) {
-  // TODO: If serializeToCubin ends up defining optimizations, factor them
-  // into here from SerializeToHsaco
-  return success();
-}
+  int optLevel = this->optLevel.getValue();
+  if (optLevel < 0 || optLevel > 3)
+    return getOperation().emitError()
+           << "invalid optimization level " << optLevel;
 
-void gpu::SerializeToBlobPass::getDependentDialects(
-    DialectRegistry &registry) const {
-  registerLLVMDialectTranslation(registry);
-  OperationPass<gpu::GPUModuleOp>::getDependentDialects(registry);
+  targetMachine.setOptLevel(static_cast<llvm::CodeGenOpt::Level>(optLevel));
+
+  auto transformer =
+      makeOptimizingTransformer(optLevel, /*sizeLevel=*/0, &targetMachine);
+  auto error = transformer(&llvmModule);
+  if (error) {
+    InFlightDiagnostic mlirError = getOperation()->emitError();
+    llvm::handleAllErrors(
+        std::move(error), [&mlirError](const llvm::ErrorInfoBase &ei) {
+          mlirError << "could not optimize LLVM IR: " << ei.message();
+        });
+    return mlirError;
+  }
+  return success();
 }
 
 std::unique_ptr<llvm::TargetMachine>

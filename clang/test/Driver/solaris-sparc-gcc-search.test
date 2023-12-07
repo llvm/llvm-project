@@ -1,0 +1,56 @@
+/// Check that clang can handle both old-style (32) and new-style (sparcv8plus)
+/// 32-bit sparc multilib subdirs.
+
+/// Check sparc-sun-solaris2.11, 32-bit, GCC 4.8 tree
+// RUN: %clang -v 2>&1 --target=sparc-sun-solaris2.11 \
+// RUN:     --gcc-toolchain=%S/Inputs/solaris_sparc_tree/usr/gcc/4.8 \
+// RUN:   | FileCheck --check-prefix=CHECK-SPARC32-GCC48 %s
+// CHECK-SPARC32-GCC48: Selected GCC installation: {{.*}}4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2
+// CHECK-SPARC32-GCC48-NEXT: Candidate multilib: .;@m32
+// CHECK-SPARC32-GCC48-NEXT: Candidate multilib: sparcv9;@m64
+// CHECK-SPARC32-GCC48-NEXT: Selected multilib: .;@m32
+
+/// Check sparc-sun-solaris2.11, 32-bit, GCC 10 tree
+// RUN: %clang -v 2>&1 --target=sparc-sun-solaris2.11 \
+// RUN:     --gcc-toolchain=%S/Inputs/solaris_sparc32_tree/usr/gcc/10 \
+// RUN:   | FileCheck --check-prefix=CHECK-SPARC32-GCC10 %s
+// CHECK-SPARC32-GCC10: Selected GCC installation: {{.*}}10/lib/gcc/sparcv9-sun-solaris2.11/10.4.0
+// CHECK-SPARC32-GCC10-NEXT: Candidate multilib: .;@m64
+// CHECK-SPARC32-GCC10-NEXT: Candidate multilib: 32;@m32
+// CHECK-SPARC32-GCC10-NEXT: Selected multilib: 32;@m32
+
+/// Check sparc-sun-solaris2.11, 32-bit, GCC 11 tree
+// RUN: %clang -v 2>&1 --target=sparc-sun-solaris2.11 \
+// RUN:     --gcc-toolchain=%S/Inputs/solaris_sparcv8+_tree/usr/gcc/11 \
+// RUN:   | FileCheck --check-prefix=CHECK-SPARC32-GCC11 %s
+// CHECK-SPARC32-GCC11: Selected GCC installation: {{.*}}11/lib/gcc/sparcv9-sun-solaris2.11/11.3.0
+// CHECK-SPARC32-GCC11-NEXT: Candidate multilib: .;@m64
+// CHECK-SPARC32-GCC11-NEXT: Candidate multilib: sparcv8plus;@m32
+// CHECK-SPARC32-GCC11-NEXT: Selected multilib: sparcv8plus;@m32
+
+/// Check sparcv9-sun-solaris2.11, 64-bit, GCC 4.8 tree
+// RUN: %clang -v 2>&1 --target=sparcv9-sun-solaris2.11 \
+// RUN:     --gcc-toolchain=%S/Inputs/solaris_sparc_tree/usr/gcc/4.8 \
+// RUN:   | FileCheck --check-prefix=CHECK-SPARC64-GCC48 %s
+// CHECK-SPARC64-GCC48: Selected GCC installation: {{.*}}gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2
+// CHECK-SPARC64-GCC48-NEXT: Candidate multilib: .;@m32
+// CHECK-SPARC64-GCC48-NEXT: Candidate multilib: sparcv9;@m64
+// CHECK-SPARC64-GCC48-NEXT: Selected multilib: sparcv9;@m64
+
+/// Check sparcv9-sun-solaris2.11, 64-bit, GCC 10 tree
+// RUN: %clang -v 2>&1 --target=sparcv9-sun-solaris2.11 \
+// RUN:     --gcc-toolchain=%S/Inputs/solaris_sparc32_tree/usr/gcc/10 \
+// RUN:   | FileCheck --check-prefix=CHECK-SPARC64-GCC10 %s
+// CHECK-SPARC64-GCC10: Selected GCC installation: {{.*}}10/lib/gcc/sparcv9-sun-solaris2.11/10.4.0
+// CHECK-SPARC64-GCC10-NEXT: Candidate multilib: .;@m64
+// CHECK-SPARC64-GCC10-NEXT: Candidate multilib: 32;@m32
+// CHECK-SPARC64-GCC10-NEXT: Selected multilib: .;@m64
+
+/// Check sparcv9-sun-solaris2.11, 64-bit, GCC 11 tree
+// RUN: %clang -v 2>&1 --target=sparcv9-sun-solaris2.11 \
+// RUN:     --gcc-toolchain=%S/Inputs/solaris_sparcv8+_tree/usr/gcc/11 \
+// RUN:   | FileCheck --check-prefix=CHECK-SPARC64-GCC11 %s
+// CHECK-SPARC64-GCC11: Selected GCC installation: {{.*}}11/lib/gcc/sparcv9-sun-solaris2.11/11.3.0
+// CHECK-SPARC64-GCC11-NEXT: Candidate multilib: .;@m64
+// CHECK-SPARC64-GCC11-NEXT: Candidate multilib: sparcv8plus;@m32
+// CHECK-SPARC64-GCC11-NEXT: Selected multilib: .;@m64

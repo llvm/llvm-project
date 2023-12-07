@@ -44,7 +44,7 @@ std::pair<uint64_t, int16_t> ScaledNumbers::multiply64(uint64_t LHS,
     return std::make_pair(Lower, 0);
 
   // Shift as little as possible to maximize precision.
-  unsigned LeadingZeros = countLeadingZeros(Upper);
+  unsigned LeadingZeros = llvm::countl_zero(Upper);
   int Shift = 64 - LeadingZeros;
   if (LeadingZeros)
     Upper = Upper << LeadingZeros | Lower >> Shift;
@@ -62,7 +62,7 @@ std::pair<uint32_t, int16_t> ScaledNumbers::divide32(uint32_t Dividend,
   // Use 64-bit math and canonicalize the dividend to gain precision.
   uint64_t Dividend64 = Dividend;
   int Shift = 0;
-  if (int Zeros = countLeadingZeros(Dividend64)) {
+  if (int Zeros = llvm::countl_zero(Dividend64)) {
     Shift -= Zeros;
     Dividend64 <<= Zeros;
   }
@@ -84,7 +84,7 @@ std::pair<uint64_t, int16_t> ScaledNumbers::divide64(uint64_t Dividend,
 
   // Minimize size of divisor.
   int Shift = 0;
-  if (int Zeros = countTrailingZeros(Divisor)) {
+  if (int Zeros = llvm::countr_zero(Divisor)) {
     Shift -= Zeros;
     Divisor >>= Zeros;
   }
@@ -94,7 +94,7 @@ std::pair<uint64_t, int16_t> ScaledNumbers::divide64(uint64_t Dividend,
     return std::make_pair(Dividend, Shift);
 
   // Maximize size of dividend.
-  if (int Zeros = countLeadingZeros(Dividend)) {
+  if (int Zeros = llvm::countl_zero(Dividend)) {
     Shift -= Zeros;
     Dividend <<= Zeros;
   }

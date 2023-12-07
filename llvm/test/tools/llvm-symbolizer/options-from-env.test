@@ -1,6 +1,16 @@
-# RUN: env LLVM_SYMBOLIZER_OPTS='0 1 --verbose' llvm-symbolizer 2 | FileCheck %s
-# RUN: env LLVM_ADDR2LINE_OPTS='0 1 --verbose' llvm-addr2line 2 | FileCheck %s
+RUN: env LLVM_SYMBOLIZER_OPTS='-e %p/Inputs/discrim --verbose' llvm-symbolizer 0x400590 | FileCheck --check-prefix=LLVM %s
+RUN: env LLVM_ADDR2LINE_OPTS='-e %p/Inputs/discrim --verbose' llvm-addr2line 0x400590 | FileCheck --check-prefix=GNU %s
 
-# CHECK:      0
-# CHECK-NEXT: 1
-# CHECK-NEXT: 2
+LLVM:      foo
+LLVM-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+LLVM-NEXT: Function start filename: /tmp{{[\\/]}}discrim.c
+LLVM-NEXT: Function start line: 4
+LLVM-NEXT: Function start address: 0x400590
+LLVM-NEXT: Line: 5
+LLVM-NEXT: Column: 7
+
+GNU:      Filename: /tmp{{[\\/]}}discrim.c
+GNU-NEXT: Function start filename: /tmp{{[\\/]}}discrim.c
+GNU-NEXT: Function start line: 4
+GNU-NEXT: Line: 5
+GNU-NEXT: Column: 7

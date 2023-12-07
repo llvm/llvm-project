@@ -14,7 +14,28 @@ def Test_Dialect : Dialect {
   }];
   let cppNamespace = "NS";
 }
-def AOp : Op<Test_Dialect, "a", [NoMemoryEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
+
+def OpGroupA : OpDocGroup {
+  let summary = "Group of ops";
+  let description = "Grouped for some reason.";
+}
+
+let opDocGroup = OpGroupA in {
+def ADOp : Op<Test_Dialect, "d", [NoMemoryEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
+def AAOp : Op<Test_Dialect, "a", [NoMemoryEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
+}
+
+def OpGroupB : OpDocGroup {
+  let summary = "Other group of ops";
+  let description = "Grouped for some other reason.";
+}
+
+let opDocGroup = OpGroupB in {
+def ACOp : Op<Test_Dialect, "c", [NoMemoryEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
+def ABOp : Op<Test_Dialect, "b", [NoMemoryEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
+}
+
+def AEOp : Op<Test_Dialect, "e", [NoMemoryEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
 
 def TestAttr : DialectAttr<Test_Dialect, CPred<"true">> {
   let summary = "attribute summary";
@@ -53,7 +74,14 @@ def TestTypeDefParams : TypeDef<Test_Dialect, "TestTypeDefParams"> {
 // CHECK: [TOC]
 
 // CHECK-NOT: [TOC]
-// CHECK: Traits: SingleBlockImplicitTerminator<YieldOp>
+// CHECK: test.e
+// CHECK: Group of ops
+// CHECK: test.a
+// CHECK: test.d
+// CHECK: Other group
+// CHECK: test.b
+// CHECK: test.c
+// CHECK: Traits: SingleBlock, SingleBlockImplicitTerminator<YieldOp>
 // CHECK: Interfaces: NoMemoryEffect (MemoryEffectOpInterface)
 // CHECK: Effects: MemoryEffects::Effect{}
 

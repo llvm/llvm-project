@@ -114,8 +114,8 @@ TEST(ConstReferenceDeclRefExprsTest, ConstValueVar) {
       (void)*&target;
       S copy1 = /*const*/target;
       S copy2(/*const*/target);
-      useInt(target.int_member);
-      useIntConstRef(target.int_member);
+      useInt(/*const*/target.int_member);
+      useIntConstRef(/*const*/target.int_member);
       useIntPtr(target.ptr_member);
       useIntConstPtr(&target.int_member);
     }
@@ -140,8 +140,8 @@ TEST(ConstReferenceDeclRefExprsTest, ConstRefVar) {
       (void)*&target;
       S copy1 = /*const*/target;
       S copy2(/*const*/target);
-      useInt(target.int_member);
-      useIntConstRef(target.int_member);
+      useInt(/*const*/target.int_member);
+      useIntConstRef(/*const*/target.int_member);
       useIntPtr(target.ptr_member);
       useIntConstPtr(&target.int_member);
     }
@@ -172,8 +172,8 @@ TEST(ConstReferenceDeclRefExprsTest, ValueVar) {
       (void)*&target;
       S copy1 = /*const*/target;
       S copy2(/*const*/target);
-      useInt(target.int_member);
-      useIntConstRef(target.int_member);
+      useInt(/*const*/target.int_member);
+      useIntConstRef(/*const*/target.int_member);
       useIntPtr(target.ptr_member);
       useIntConstPtr(&target.int_member);
     }
@@ -199,8 +199,8 @@ TEST(ConstReferenceDeclRefExprsTest, RefVar) {
       (void)*&target;
       S copy1 = /*const*/target;
       S copy2(/*const*/target);
-      useInt(target.int_member);
-      useIntConstRef(target.int_member);
+      useInt(/*const*/target.int_member);
+      useIntConstRef(/*const*/target.int_member);
       useIntPtr(target.ptr_member);
       useIntConstPtr(&target.int_member);
     }

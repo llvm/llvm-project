@@ -1,10 +1,10 @@
 ; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
-; RUN: ld.lld %t.o -o %t2 --no-lto-legacy-pass-manager --lto-debug-pass-manager \
+; RUN: ld.lld %t.o -o %t2 --lto-debug-pass-manager \
 ; RUN:   2>&1 | FileCheck -check-prefix=DEFAULT-NPM %s
-; RUN: ld.lld %t.o -o %t2 --no-lto-legacy-pass-manager --lto-debug-pass-manager \
+; RUN: ld.lld %t.o -o %t2 --lto-debug-pass-manager \
 ; RUN:   -disable-verify 2>&1 | FileCheck -check-prefix=DISABLE-NPM %s
-; RUN: ld.lld %t.o -o %t2 --no-lto-legacy-pass-manager --lto-debug-pass-manager \
+; RUN: ld.lld %t.o -o %t2 --lto-debug-pass-manager \
 ; RUN:   --plugin-opt=disable-verify 2>&1 | FileCheck -check-prefix=DISABLE-NPM %s
 
 target triple = "x86_64-unknown-linux-gnu"

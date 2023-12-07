@@ -25,7 +25,8 @@
 using namespace clang;
 
 // Returns a desugared version of the QualType, and marks ShouldAKA as true
-// whenever we remove significant sugar from the type.
+// whenever we remove significant sugar from the type. Make sure ShouldAKA
+// is initialized before passing it in.
 QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
                                      bool &ShouldAKA) {
   QualifierCollector QC;
@@ -227,7 +228,7 @@ break; \
           desugarForDiagnostic(Context, Ty->getBaseType(), ShouldAKA);
       QT = Context.getObjCObjectType(
           BaseType, Ty->getTypeArgsAsWritten(),
-          llvm::makeArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
+          llvm::ArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
           Ty->isKindOfTypeAsWritten());
     }
   }

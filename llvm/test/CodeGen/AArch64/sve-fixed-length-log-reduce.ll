@@ -13,8 +13,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define i8 @andv_v8i8(<8 x i8> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    andv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -26,8 +26,8 @@ define i8 @andv_v8i8(<8 x i8> %a) vscale_range(2,0) #0 {
 define i8 @andv_v16i8(<16 x i8> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    andv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -51,8 +51,8 @@ define i8 @andv_v32i8(ptr %a) vscale_range(2,0) #0 {
 define i8 @andv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: andv_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    and z0.d, z1.d, z0.d
@@ -102,8 +102,8 @@ define i8 @andv_v256i8(ptr %a) vscale_range(16,0) #0 {
 define i16 @andv_v4i16(<4 x i16> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    andv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -115,8 +115,8 @@ define i16 @andv_v4i16(<4 x i16> %a) vscale_range(2,0) #0 {
 define i16 @andv_v8i16(<8 x i16> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    andv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -140,8 +140,8 @@ define i16 @andv_v16i16(ptr %a) vscale_range(2,0) #0 {
 define i16 @andv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: andv_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    and z0.d, z1.d, z0.d
@@ -191,8 +191,8 @@ define i16 @andv_v128i16(ptr %a) vscale_range(16,0) #0 {
 define i32 @andv_v2i32(<2 x i32> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    andv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -204,8 +204,8 @@ define i32 @andv_v2i32(<2 x i32> %a) vscale_range(2,0) #0 {
 define i32 @andv_v4i32(<4 x i32> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    andv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -229,8 +229,8 @@ define i32 @andv_v8i32(ptr %a) vscale_range(2,0) #0 {
 define i32 @andv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: andv_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    and z0.d, z1.d, z0.d
@@ -291,8 +291,8 @@ define i64 @andv_v1i64(<1 x i64> %a) vscale_range(2,0) #0 {
 define i64 @andv_v2i64(<2 x i64> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    andv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -316,8 +316,8 @@ define i64 @andv_v4i64(ptr %a) vscale_range(2,0) #0 {
 define i64 @andv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: andv_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    and z0.d, z1.d, z0.d
@@ -371,8 +371,8 @@ define i64 @andv_v32i64(ptr %a) vscale_range(16,0) #0 {
 define i8 @eorv_v8i8(<8 x i8> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    eorv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -384,8 +384,8 @@ define i8 @eorv_v8i8(<8 x i8> %a) vscale_range(2,0) #0 {
 define i8 @eorv_v16i8(<16 x i8> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    eorv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -409,8 +409,8 @@ define i8 @eorv_v32i8(ptr %a) vscale_range(2,0) #0 {
 define i8 @eorv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: eorv_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    eor z0.d, z1.d, z0.d
@@ -460,8 +460,8 @@ define i8 @eorv_v256i8(ptr %a) vscale_range(16,0) #0 {
 define i16 @eorv_v4i16(<4 x i16> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    eorv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -473,8 +473,8 @@ define i16 @eorv_v4i16(<4 x i16> %a) vscale_range(2,0) #0 {
 define i16 @eorv_v8i16(<8 x i16> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    eorv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -498,8 +498,8 @@ define i16 @eorv_v16i16(ptr %a) vscale_range(2,0) #0 {
 define i16 @eorv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: eorv_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    eor z0.d, z1.d, z0.d
@@ -549,8 +549,8 @@ define i16 @eorv_v128i16(ptr %a) vscale_range(16,0) #0 {
 define i32 @eorv_v2i32(<2 x i32> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    eorv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -562,8 +562,8 @@ define i32 @eorv_v2i32(<2 x i32> %a) vscale_range(2,0) #0 {
 define i32 @eorv_v4i32(<4 x i32> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    eorv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -587,8 +587,8 @@ define i32 @eorv_v8i32(ptr %a) vscale_range(2,0) #0 {
 define i32 @eorv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: eorv_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    eor z0.d, z1.d, z0.d
@@ -649,8 +649,8 @@ define i64 @eorv_v1i64(<1 x i64> %a) vscale_range(2,0) #0 {
 define i64 @eorv_v2i64(<2 x i64> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    eorv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -674,8 +674,8 @@ define i64 @eorv_v4i64(ptr %a) vscale_range(2,0) #0 {
 define i64 @eorv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: eorv_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    eor z0.d, z1.d, z0.d
@@ -729,8 +729,8 @@ define i64 @eorv_v32i64(ptr %a) vscale_range(16,0) #0 {
 define i8 @orv_v8i8(<8 x i8> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    orv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -742,8 +742,8 @@ define i8 @orv_v8i8(<8 x i8> %a) vscale_range(2,0) #0 {
 define i8 @orv_v16i8(<16 x i8> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    orv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -767,8 +767,8 @@ define i8 @orv_v32i8(ptr %a) vscale_range(2,0) #0 {
 define i8 @orv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: orv_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    orr z0.d, z1.d, z0.d
@@ -818,8 +818,8 @@ define i8 @orv_v256i8(ptr %a) vscale_range(16,0) #0 {
 define i16 @orv_v4i16(<4 x i16> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    orv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -831,8 +831,8 @@ define i16 @orv_v4i16(<4 x i16> %a) vscale_range(2,0) #0 {
 define i16 @orv_v8i16(<8 x i16> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    orv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -856,8 +856,8 @@ define i16 @orv_v16i16(ptr %a) vscale_range(2,0) #0 {
 define i16 @orv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: orv_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    orr z0.d, z1.d, z0.d
@@ -907,8 +907,8 @@ define i16 @orv_v128i16(ptr %a) vscale_range(16,0) #0 {
 define i32 @orv_v2i32(<2 x i32> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    orv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -920,8 +920,8 @@ define i32 @orv_v2i32(<2 x i32> %a) vscale_range(2,0) #0 {
 define i32 @orv_v4i32(<4 x i32> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    orv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -945,8 +945,8 @@ define i32 @orv_v8i32(ptr %a) vscale_range(2,0) #0 {
 define i32 @orv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: orv_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    orr z0.d, z1.d, z0.d
@@ -1007,8 +1007,8 @@ define i64 @orv_v1i64(<1 x i64> %a) vscale_range(2,0) #0 {
 define i64 @orv_v2i64(<2 x i64> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    orv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -1032,8 +1032,8 @@ define i64 @orv_v4i64(ptr %a) vscale_range(2,0) #0 {
 define i64 @orv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: orv_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    orr z0.d, z1.d, z0.d

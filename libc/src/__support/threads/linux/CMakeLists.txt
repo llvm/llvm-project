@@ -28,13 +28,27 @@ add_object_library(
     .futex_word_type
     libc.config.linux.app_h
     libc.include.sys_syscall
+    libc.src.errno.errno
     libc.src.__support.CPP.atomic
-    libc.src.__support.error_or
     libc.src.__support.CPP.stringstream
     libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.error_or
     libc.src.__support.threads.thread_common
   COMPILE_OPTIONS
     -O3
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
                             # the new thread's stack reliably.
+)
+
+add_object_library(
+  callonce
+  SRCS
+    callonce.cpp
+  HDRS
+    ../callonce.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.CPP.atomic
+    libc.src.__support.OSUtil.osutil
 )

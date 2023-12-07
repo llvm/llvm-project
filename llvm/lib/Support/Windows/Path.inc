@@ -130,7 +130,7 @@ namespace fs {
 
 const file_t kInvalidFile = INVALID_HANDLE_VALUE;
 
-std::string getMainExecutableImpl(const char *argv0, void *MainExecAddr) {
+std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
   SmallVector<wchar_t, MAX_PATH> PathName;
   PathName.resize_for_overwrite(PathName.capacity());
   DWORD Size = ::GetModuleFileNameW(NULL, PathName.data(), PathName.size());
@@ -650,8 +650,6 @@ bool equivalent(file_status A, file_status B) {
   return A.FileIndexHigh == B.FileIndexHigh &&
          A.FileIndexLow == B.FileIndexLow && A.FileSizeHigh == B.FileSizeHigh &&
          A.FileSizeLow == B.FileSizeLow &&
-         A.LastAccessedTimeHigh == B.LastAccessedTimeHigh &&
-         A.LastAccessedTimeLow == B.LastAccessedTimeLow &&
          A.LastWriteTimeHigh == B.LastWriteTimeHigh &&
          A.LastWriteTimeLow == B.LastWriteTimeLow &&
          A.VolumeSerialNumber == B.VolumeSerialNumber;

@@ -8,10 +8,10 @@ class OperatingSystemPlugIn(object):
     """Class that provides data for an instance of a LLDB 'OperatingSystemPython' plug-in class"""
 
     def __init__(self, process):
-        '''Initialization needs a valid.SBProcess object.
+        """Initialization needs a valid.SBProcess object.
 
         This plug-in will get created after a live process is valid and has stopped for the
-        first time.'''
+        first time."""
         self.process = None
         self.registers = None
         self.threads = None
@@ -28,11 +28,12 @@ class OperatingSystemPlugIn(object):
     def create_thread(self, tid, context):
         if tid == 0x444444444:
             thread_info = {
-                'tid': tid,
-                'name': 'four',
-                'queue': 'queue4',
-                'state': 'stopped',
-                'stop_reason': 'none'}
+                "tid": tid,
+                "name": "four",
+                "queue": "queue4",
+                "state": "stopped",
+                "stop_reason": "none",
+            }
             self.threads.append(thread_info)
             return thread_info
         return None
@@ -56,22 +57,30 @@ class OperatingSystemPlugIn(object):
             #   in memory. Don't specify this if your register layout in memory doesn't match the layout
             # described by the dictionary returned from a call to the
             # get_register_info() method.
-            self.threads = [{'tid': 0x111111111,
-                             'name': 'one',
-                             'queue': 'queue1',
-                             'state': 'stopped',
-                             'stop_reason': 'breakpoint'},
-                            {'tid': 0x222222222,
-                             'name': 'two',
-                             'queue': 'queue2',
-                             'state': 'stopped',
-                             'stop_reason': 'none'},
-                            {'tid': 0x333333333,
-                             'name': 'three',
-                             'queue': 'queue3',
-                             'state': 'stopped',
-                             'stop_reason': 'trace',
-                             'register_data_addr': 0x100000000}]
+            self.threads = [
+                {
+                    "tid": 0x111111111,
+                    "name": "one",
+                    "queue": "queue1",
+                    "state": "stopped",
+                    "stop_reason": "breakpoint",
+                },
+                {
+                    "tid": 0x222222222,
+                    "name": "two",
+                    "queue": "queue2",
+                    "state": "stopped",
+                    "stop_reason": "none",
+                },
+                {
+                    "tid": 0x333333333,
+                    "name": "three",
+                    "queue": "queue3",
+                    "state": "stopped",
+                    "stop_reason": "trace",
+                    "register_data_addr": 0x100000000,
+                },
+            ]
         return self.threads
 
     def get_register_info(self):
@@ -79,38 +88,239 @@ class OperatingSystemPlugIn(object):
             self.registers = dict()
             triple = self.process.target.triple
             if triple:
-                arch = triple.split('-')[0]
-                if arch == 'x86_64':
-                    self.registers['sets'] = ['GPR', 'FPU', 'EXC']
-                    self.registers['registers'] = [
-                        {'name': 'rax', 'bitsize': 64, 'offset': 0, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 0, 'dwarf': 0},
-                        {'name': 'rbx', 'bitsize': 64, 'offset': 8, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 3, 'dwarf': 3},
-                        {'name': 'rcx', 'bitsize': 64, 'offset': 16, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 2, 'dwarf': 2, 'generic': 'arg4', 'alt-name': 'arg4', },
-                        {'name': 'rdx', 'bitsize': 64, 'offset': 24, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 1, 'dwarf': 1, 'generic': 'arg3', 'alt-name': 'arg3', },
-                        {'name': 'rdi', 'bitsize': 64, 'offset': 32, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 5, 'dwarf': 5, 'generic': 'arg1', 'alt-name': 'arg1', },
-                        {'name': 'rsi', 'bitsize': 64, 'offset': 40, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 4, 'dwarf': 4, 'generic': 'arg2', 'alt-name': 'arg2', },
-                        {'name': 'rbp', 'bitsize': 64, 'offset': 48, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 6, 'dwarf': 6, 'generic': 'fp', 'alt-name': 'fp', },
-                        {'name': 'rsp', 'bitsize': 64, 'offset': 56, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 7, 'dwarf': 7, 'generic': 'sp', 'alt-name': 'sp', },
-                        {'name': 'r8', 'bitsize': 64, 'offset': 64, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 8, 'dwarf': 8, 'generic': 'arg5', 'alt-name': 'arg5', },
-                        {'name': 'r9', 'bitsize': 64, 'offset': 72, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 9, 'dwarf': 9, 'generic': 'arg6', 'alt-name': 'arg6', },
-                        {'name': 'r10', 'bitsize': 64, 'offset': 80, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 10, 'dwarf': 10},
-                        {'name': 'r11', 'bitsize': 64, 'offset': 88, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 11, 'dwarf': 11},
-                        {'name': 'r12', 'bitsize': 64, 'offset': 96, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 12, 'dwarf': 12},
-                        {'name': 'r13', 'bitsize': 64, 'offset': 104, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 13, 'dwarf': 13},
-                        {'name': 'r14', 'bitsize': 64, 'offset': 112, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 14, 'dwarf': 14},
-                        {'name': 'r15', 'bitsize': 64, 'offset': 120, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 15, 'dwarf': 15},
-                        {'name': 'rip', 'bitsize': 64, 'offset': 128, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 16, 'dwarf': 16, 'generic': 'pc', 'alt-name': 'pc'},
-                        {'name': 'rflags', 'bitsize': 64, 'offset': 136, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'generic': 'flags', 'alt-name': 'flags'},
-                        {'name': 'cs', 'bitsize': 64, 'offset': 144, 'encoding': 'uint', 'format': 'hex', 'set': 0},
-                        {'name': 'fs', 'bitsize': 64, 'offset': 152, 'encoding': 'uint', 'format': 'hex', 'set': 0},
-                        {'name': 'gs', 'bitsize': 64, 'offset': 160, 'encoding': 'uint', 'format': 'hex', 'set': 0},
+                arch = triple.split("-")[0]
+                if arch == "x86_64":
+                    self.registers["sets"] = ["GPR", "FPU", "EXC"]
+                    self.registers["registers"] = [
+                        {
+                            "name": "rax",
+                            "bitsize": 64,
+                            "offset": 0,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 0,
+                            "dwarf": 0,
+                        },
+                        {
+                            "name": "rbx",
+                            "bitsize": 64,
+                            "offset": 8,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 3,
+                            "dwarf": 3,
+                        },
+                        {
+                            "name": "rcx",
+                            "bitsize": 64,
+                            "offset": 16,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 2,
+                            "dwarf": 2,
+                            "generic": "arg4",
+                            "alt-name": "arg4",
+                        },
+                        {
+                            "name": "rdx",
+                            "bitsize": 64,
+                            "offset": 24,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 1,
+                            "dwarf": 1,
+                            "generic": "arg3",
+                            "alt-name": "arg3",
+                        },
+                        {
+                            "name": "rdi",
+                            "bitsize": 64,
+                            "offset": 32,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 5,
+                            "dwarf": 5,
+                            "generic": "arg1",
+                            "alt-name": "arg1",
+                        },
+                        {
+                            "name": "rsi",
+                            "bitsize": 64,
+                            "offset": 40,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 4,
+                            "dwarf": 4,
+                            "generic": "arg2",
+                            "alt-name": "arg2",
+                        },
+                        {
+                            "name": "rbp",
+                            "bitsize": 64,
+                            "offset": 48,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 6,
+                            "dwarf": 6,
+                            "generic": "fp",
+                            "alt-name": "fp",
+                        },
+                        {
+                            "name": "rsp",
+                            "bitsize": 64,
+                            "offset": 56,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 7,
+                            "dwarf": 7,
+                            "generic": "sp",
+                            "alt-name": "sp",
+                        },
+                        {
+                            "name": "r8",
+                            "bitsize": 64,
+                            "offset": 64,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 8,
+                            "dwarf": 8,
+                            "generic": "arg5",
+                            "alt-name": "arg5",
+                        },
+                        {
+                            "name": "r9",
+                            "bitsize": 64,
+                            "offset": 72,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 9,
+                            "dwarf": 9,
+                            "generic": "arg6",
+                            "alt-name": "arg6",
+                        },
+                        {
+                            "name": "r10",
+                            "bitsize": 64,
+                            "offset": 80,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 10,
+                            "dwarf": 10,
+                        },
+                        {
+                            "name": "r11",
+                            "bitsize": 64,
+                            "offset": 88,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 11,
+                            "dwarf": 11,
+                        },
+                        {
+                            "name": "r12",
+                            "bitsize": 64,
+                            "offset": 96,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 12,
+                            "dwarf": 12,
+                        },
+                        {
+                            "name": "r13",
+                            "bitsize": 64,
+                            "offset": 104,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 13,
+                            "dwarf": 13,
+                        },
+                        {
+                            "name": "r14",
+                            "bitsize": 64,
+                            "offset": 112,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 14,
+                            "dwarf": 14,
+                        },
+                        {
+                            "name": "r15",
+                            "bitsize": 64,
+                            "offset": 120,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 15,
+                            "dwarf": 15,
+                        },
+                        {
+                            "name": "rip",
+                            "bitsize": 64,
+                            "offset": 128,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "gcc": 16,
+                            "dwarf": 16,
+                            "generic": "pc",
+                            "alt-name": "pc",
+                        },
+                        {
+                            "name": "rflags",
+                            "bitsize": 64,
+                            "offset": 136,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                            "generic": "flags",
+                            "alt-name": "flags",
+                        },
+                        {
+                            "name": "cs",
+                            "bitsize": 64,
+                            "offset": 144,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                        },
+                        {
+                            "name": "fs",
+                            "bitsize": 64,
+                            "offset": 152,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                        },
+                        {
+                            "name": "gs",
+                            "bitsize": 64,
+                            "offset": 160,
+                            "encoding": "uint",
+                            "format": "hex",
+                            "set": 0,
+                        },
                     ]
         return self.registers
 
     def get_register_data(self, tid):
         if tid == 0x111111111:
             return struct.pack(
-                '21Q',
+                "21Q",
                 1,
                 2,
                 3,
@@ -131,10 +341,11 @@ class OperatingSystemPlugIn(object):
                 18,
                 19,
                 20,
-                21)
+                21,
+            )
         elif tid == 0x222222222:
             return struct.pack(
-                '21Q',
+                "21Q",
                 11,
                 12,
                 13,
@@ -155,10 +366,11 @@ class OperatingSystemPlugIn(object):
                 118,
                 119,
                 120,
-                121)
+                121,
+            )
         elif tid == 0x333333333:
             return struct.pack(
-                '21Q',
+                "21Q",
                 21,
                 22,
                 23,
@@ -179,10 +391,11 @@ class OperatingSystemPlugIn(object):
                 218,
                 219,
                 220,
-                221)
+                221,
+            )
         elif tid == 0x444444444:
             return struct.pack(
-                '21Q',
+                "21Q",
                 31,
                 32,
                 33,
@@ -203,10 +416,11 @@ class OperatingSystemPlugIn(object):
                 318,
                 319,
                 320,
-                321)
+                321,
+            )
         else:
             return struct.pack(
-                '21Q',
+                "21Q",
                 41,
                 42,
                 43,
@@ -227,5 +441,6 @@ class OperatingSystemPlugIn(object):
                 418,
                 419,
                 420,
-                421)
+                421,
+            )
         return None

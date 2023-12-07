@@ -47,9 +47,9 @@
 [0x20,0xaa,0x1e,0xd5]
 # CHECK: msr MECID_RL_A_EL3, x0
 # CHECK-NO-MEC: msr S3_6_C10_C10_1, x0
-[0x00,0x7e,0x0c,0xd5]
-# CHECK: dc cigdpae, x0
-# CHECK-NO-MEC: sys #4, c7, c14, #0, x0
 [0xe0,0x7e,0x0c,0xd5]
-# CHECK: dc cipae, x0
+# CHECK: dc cigdpae, x0
 # CHECK-NO-MEC: sys #4, c7, c14, #7, x0
+[0x00,0x7e,0x0c,0xd5]
+# CHECK: dc cipae, x0
+# CHECK-NO-MEC: sys #4, c7, c14, #0, x0

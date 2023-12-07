@@ -25,12 +25,10 @@ static_assert(!std::is_convertible<std::string_view, std::string const&>::value,
 static_assert(!std::is_convertible<std::string_view, std::string>::value, "");
 
 template <class charT>
-TEST_CONSTEXPR_CXX20 void
-test(std::basic_string_view<charT> sv)
-{
-    typedef std::basic_string<charT, std::char_traits<charT>, test_allocator<charT> > S;
-    typedef typename S::traits_type T;
-    typedef typename S::allocator_type A;
+TEST_CONSTEXPR_CXX20 void test(std::basic_string_view<charT> sv) {
+  typedef std::basic_string<charT, std::char_traits<charT>, test_allocator<charT> > S;
+  typedef typename S::traits_type T;
+  typedef typename S::allocator_type A;
   {
     S s2(sv);
     LIBCPP_ASSERT(s2.__invariants());
@@ -51,11 +49,9 @@ test(std::basic_string_view<charT> sv)
 }
 
 template <class charT, class A>
-TEST_CONSTEXPR_CXX20 void
-test(std::basic_string_view<charT> sv, const A& a)
-{
-    typedef std::basic_string<charT, std::char_traits<charT>, A> S;
-    typedef typename S::traits_type T;
+TEST_CONSTEXPR_CXX20 void test(std::basic_string_view<charT> sv, const A& a) {
+  typedef std::basic_string<charT, std::char_traits<charT>, A> S;
+  typedef typename S::traits_type T;
   {
     S s2(sv, a);
     LIBCPP_ASSERT(s2.__invariants());
@@ -84,7 +80,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test(SV(""), A(2));
 
     test(SV("1"));
-    test(SV("1") ,A(2));
+    test(SV("1"), A(2));
 
     test(SV("1234567980"));
     test(SV("1234567980"), A(2));
@@ -101,7 +97,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test(SV(""), A());
 
     test(SV("1"));
-    test(SV("1") ,A());
+    test(SV("1"), A());
 
     test(SV("1234567980"));
     test(SV("1234567980"), A());
@@ -114,8 +110,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

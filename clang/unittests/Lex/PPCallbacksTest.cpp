@@ -36,7 +36,7 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          OptionalFileEntryRef File, StringRef SearchPath,
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     this->HashLoc = HashLoc;
@@ -56,7 +56,7 @@ public:
   SmallString<16> FileName;
   bool IsAngled;
   CharSourceRange FilenameRange;
-  Optional<FileEntryRef> File;
+  OptionalFileEntryRef File;
   SmallString<16> SearchPath;
   SmallString<16> RelativePath;
   const Module* Imported;
@@ -442,6 +442,50 @@ TEST_F(PPCallbacksTest, TrigraphInMacro) {
     InclusionDirectiveFilenameRange(Source, "/tri~graph.h", false);
 
   ASSERT_EQ("\"tri\?\?-graph.h\"", GetSourceString(Range));
+}
+
+TEST_F(PPCallbacksTest, FileNotFoundSkipped) {
+  const char *SourceText = "#include \"skipped.h\"\n";
+
+  std::unique_ptr<llvm::MemoryBuffer> SourceBuf =
+      llvm::MemoryBuffer::getMemBuffer(SourceText);
+  SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
+
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, Target.get());
+  TrivialModuleLoader ModLoader;
+
+  DiagnosticConsumer *DiagConsumer = new DiagnosticConsumer;
+  DiagnosticsEngine FileNotFoundDiags(DiagID, DiagOpts.get(), DiagConsumer);
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), FileNotFoundDiags,
+                  LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup=*/nullptr,
+                  /*OwnsHeaderSearch=*/false);
+  PP.Initialize(*Target);
+
+  class FileNotFoundCallbacks : public PPCallbacks {
+  public:
+    unsigned int NumCalls = 0;
+    bool FileNotFound(StringRef FileName) override {
+      NumCalls++;
+      return FileName == "skipped.h";
+    }
+  };
+
+  auto *Callbacks = new FileNotFoundCallbacks;
+  PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(Callbacks));
+
+  // Lex source text.
+  PP.EnterMainSourceFile();
+  while (true) {
+    Token Tok;
+    PP.Lex(Tok);
+    if (Tok.is(tok::eof))
+      break;
+  }
+
+  ASSERT_EQ(1u, Callbacks->NumCalls);
+  ASSERT_EQ(0u, DiagConsumer->getNumErrors());
 }
 
 TEST_F(PPCallbacksTest, OpenCLExtensionPragmaEnabled) {

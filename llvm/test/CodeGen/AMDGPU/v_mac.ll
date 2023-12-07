@@ -279,6 +279,34 @@ bb:
   ret void
 }
 
+; Need to assume denormal handling is needed for dynamic denormal mode
+; GCN-LABEL: {{^}}v_mac_f32_dynamic:
+; GCN: v_mul_f32
+; GCN: v_add_f32
+define float @v_mac_f32_dynamic(float %a, float %b, float %c) "denormal-fp-math-f32"="dynamic,dynamic" {
+  %mul = fmul float %a, %b
+  %mad = fadd float %mul, %c
+  ret float %mad
+}
+
+; GCN-LABEL: {{^}}v_mac_f32_dynamic_daz:
+; GCN: v_mul_f32
+; GCN: v_add_f32
+define float @v_mac_f32_dynamic_daz(float %a, float %b, float %c) "denormal-fp-math-f32"="preserve-sign,dynamic" {
+  %mul = fmul float %a, %b
+  %mad = fadd float %mul, %c
+  ret float %mad
+}
+
+; GCN-LABEL: {{^}}v_mac_f32_dynamic_ftz:
+; GCN: v_mul_f32
+; GCN: v_add_f32
+define float @v_mac_f32_dynamic_ftz(float %a, float %b, float %c) "denormal-fp-math-f32"="dynamic,preserve-sign" {
+  %mul = fmul float %a, %b
+  %mad = fadd float %mul, %c
+  ret float %mad
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 
 attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" }

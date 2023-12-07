@@ -31,7 +31,7 @@
 // If extensions are to be enumerated without any information,
 // define OPENCLEXTNAME(ext) where ext is the name of the extension.
 //
-// Difference between optional core feature and core feature is that the 
+// Difference between optional core feature and core feature is that the
 // later is unconditionally supported in specific OpenCL version.
 //
 // As per The OpenCL Extension Specification, Section 1.2, in this file, an

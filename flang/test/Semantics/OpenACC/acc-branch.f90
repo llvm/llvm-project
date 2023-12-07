@@ -53,6 +53,7 @@ program openacc_clause_validity
   ! Exit branches out of parallel construct, attached to an OpenACC parallel construct.
   thisblk: BLOCK
     fortname: if (.true.) then
+      !PORTABILITY: The construct name 'name1' should be distinct at the subprogram level
       name1: do k = 1, N
         !$acc parallel
         !ERROR: EXIT to construct 'fortname' outside of PARALLEL construct is not allowed
@@ -165,5 +166,13 @@ program openacc_clause_validity
     end if
   end do
   !$acc end serial
+
+
+  !$acc data create(a)
+
+  !ERROR: RETURN statement is not allowed in a DATA construct
+  if (size(a) == 10) return
+
+  !$acc end data
 
 end program openacc_clause_validity

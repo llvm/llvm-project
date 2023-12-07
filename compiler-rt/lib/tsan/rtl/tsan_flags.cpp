@@ -10,19 +10,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "sanitizer_common/sanitizer_flags.h"
-#include "sanitizer_common/sanitizer_flag_parser.h"
-#include "sanitizer_common/sanitizer_libc.h"
 #include "tsan_flags.h"
-#include "tsan_rtl.h"
+
+#include "sanitizer_common/sanitizer_flag_parser.h"
+#include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_libc.h"
+#include "tsan_interface.h"
 #include "tsan_mman.h"
+#include "tsan_rtl.h"
 #include "ubsan/ubsan_flags.h"
 
 namespace __tsan {
 
 // Can be overriden in frontend.
 #ifdef TSAN_EXTERNAL_HOOKS
-extern "C" const char* __tsan_default_options();
+extern "C" const char *__tsan_default_options();
 #else
 SANITIZER_WEAK_DEFAULT_IMPL
 const char *__tsan_default_options() {

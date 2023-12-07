@@ -13,6 +13,8 @@
 #include "lldb/Utility/Status.h"
 #include "llvm/Support/JSON.h"
 #include <map>
+#include <mutex>
+#include <optional>
 #include <vector>
 
 namespace lldb_private {
@@ -49,9 +51,15 @@ public:
 
   llvm::json::Value ToJSON();
 
-  bool IsEmpty() const { return m_pairs.empty(); }
+  bool IsEmpty() const {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    return m_pairs.empty();
+  }
 
-  size_t GetSize() const { return m_pairs.size(); }
+  size_t GetSize() const {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    return m_pairs.size();
+  }
 
   bool GetPathsAtIndex(uint32_t idx, ConstString &path,
                        ConstString &new_path) const;
@@ -89,8 +97,8 @@ public:
   ///
   /// \return
   ///     The remapped filespec that may or may not exist on disk.
-  llvm::Optional<FileSpec> RemapPath(llvm::StringRef path,
-                                     bool only_if_exists = false) const;
+  std::optional<FileSpec> RemapPath(llvm::StringRef path,
+                                    bool only_if_exists = false) const;
   bool RemapPath(const char *, std::string &) const = delete;
 
   /// Perform reverse source path remap for input \a file.
@@ -107,8 +115,8 @@ public:
   ///     std::nullopt if no remapping happens, otherwise, the matching source
   ///     map entry's ""to_new_pathto"" part (which is the prefix of \a file) is
   ///     returned.
-  llvm::Optional<llvm::StringRef> ReverseRemapPath(const FileSpec &file,
-                                                   FileSpec &fixed) const;
+  std::optional<llvm::StringRef> ReverseRemapPath(const FileSpec &file,
+                                                  FileSpec &fixed) const;
 
   /// Finds a source file given a file spec using the path remappings.
   ///
@@ -123,13 +131,17 @@ public:
   ///
   /// \return
   ///     The newly remapped filespec that is guaranteed to exist.
-  llvm::Optional<FileSpec> FindFile(const FileSpec &orig_spec) const;
+  std::optional<FileSpec> FindFile(const FileSpec &orig_spec) const;
 
   uint32_t FindIndexForPath(llvm::StringRef path) const;
 
-  uint32_t GetModificationID() const { return m_mod_id; }
+  uint32_t GetModificationID() const {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    return m_mod_id;
+  }
 
 protected:
+  mutable std::recursive_mutex m_mutex;
   typedef std::pair<ConstString, ConstString> pair;
   typedef std::vector<pair> collection;
   typedef collection::iterator iterator;

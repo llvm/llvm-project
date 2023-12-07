@@ -36,7 +36,6 @@
     <a href="https://discourse.llvm.org/c/clang">Clang Forum</a>
     <a href="http://lists.llvm.org/mailman/listinfo/cfe-commits">cfe-commits List</a>
     <a href="https://github.com/llvm/llvm-project/issues">Bug Reports</a>
-    <a href="http://planet.clang.org/">Planet Clang</a>
     <a href="irc://irc.oftc.net/llvm">IRC: irc.oftc.net#llvm</a>
   </div>
 
@@ -45,11 +44,6 @@
     <a href="/get_started.html#build">Check Out Sources</a>
     <a href="https://github.com/llvm/llvm-project/tree/main/clang/">Browse Sources</a>
     <a href="http://clang.llvm.org/doxygen/">doxygen</a>
-  </div>
-
-  <div class="submenu">
-    <label>Quick Links</label>
-    <a href="http://llvm.org/reports/coverage/">Testing Coverage</a>
   </div>
 
   <div class="submenu">

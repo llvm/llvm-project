@@ -169,7 +169,7 @@ body:             |
   ; CHECK-NEXT:   $x10 = ADD $x2, killed $x10
   ; CHECK-NEXT:   SD killed renamable $x16, killed $x10, 64 :: (store (s64) into %fixed-stack.1, align 16)
   ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype
-  ; CHECK-NEXT:   renamable $v8 = PseudoVMV_V_I_MF8 0, 2, 3 /* e8 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   renamable $v8 = PseudoVMV_V_I_MF8 undef $v8, 0, 2, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   $x10 = ADDI $x2, 32
   ; CHECK-NEXT:   VS1R_V killed renamable $v8, killed $x10 :: (store unknown-size into %stack.1, align 8)
   ; CHECK-NEXT: {{  $}}
@@ -200,7 +200,7 @@ body:             |
     SD killed renamable $x17, %fixed-stack.0, 0 :: (store (s64))
     SD killed renamable $x16, %fixed-stack.1, 0 :: (store (s64) into %fixed-stack.1, align 16)
     dead $x0 = PseudoVSETIVLI 2, 69, implicit-def $vl, implicit-def $vtype
-    renamable $v8 = PseudoVMV_V_I_MF8 0, 2, 3, implicit $vl, implicit $vtype
+    renamable $v8 = PseudoVMV_V_I_MF8 undef $v8, 0, 2, 3, 0, implicit $vl, implicit $vtype
     VS1R_V killed renamable $v8, %stack.1 :: (store unknown-size into %stack.1, align 8)
 
   bb.1.while.cond:

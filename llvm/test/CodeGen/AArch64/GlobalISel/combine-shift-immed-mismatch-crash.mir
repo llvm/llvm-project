@@ -13,19 +13,19 @@ body:             |
   ; CHECK:   liveins: $x0
   ; CHECK:   [[DEF:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
   ; CHECK:   [[DEF1:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
+  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; CHECK:   G_BRCOND [[DEF]](s1), %bb.2
   ; CHECK:   G_BR %bb.1
   ; CHECK: bb.1:
   ; CHECK:   successors:
   ; CHECK: bb.2:
   ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF1]](p0) :: (load (s32) from `ptr undef`, align 8)
-  ; CHECK:   [[MUL:%[0-9]+]]:_(s32) = nsw G_MUL [[C]], [[LOAD]]
-  ; CHECK:   [[MUL1:%[0-9]+]]:_(s32) = nsw G_MUL [[MUL]], [[C1]]
+  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; CHECK:   [[SHL:%[0-9]+]]:_(s32) = nsw G_SHL [[LOAD]], [[C1]](s32)
+  ; CHECK:   [[MUL:%[0-9]+]]:_(s32) = nsw G_MUL [[SHL]], [[C]]
   ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-  ; CHECK:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[MUL1]], [[C2]](s64)
-  ; CHECK:   $w0 = COPY [[SHL]](s32)
+  ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[MUL]], [[C2]](s64)
+  ; CHECK:   $w0 = COPY [[SHL1]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
   bb.1:
     liveins: $x0

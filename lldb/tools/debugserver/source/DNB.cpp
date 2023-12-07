@@ -382,11 +382,22 @@ nub_process_t DNBProcessLaunch(
         if (err_str && err_len > 0) {
           if (launch_err.AsString()) {
             ::snprintf(err_str, err_len,
-                       "failed to get the task for process %i (%s)", pid,
+                       "failed to get the task for process %i: %s", pid,
                        launch_err.AsString());
           } else {
+
+            const char *ent_name =
+#if TARGET_OS_OSX
+              "com.apple.security.get-task-allow";
+#else
+              "get-task-allow";
+#endif
             ::snprintf(err_str, err_len,
-                       "failed to get the task for process %i", pid);
+                       "failed to get the task for process %i: this likely "
+                       "means the process cannot be debugged, either because "
+                       "it's a system process or because the process is "
+                       "missing the %s entitlement.",
+                       pid, ent_name);
           }
         }
       } else {
@@ -521,7 +532,9 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
 
     if (set_events == 0) {
       if (err_str && err_len > 0)
-        snprintf(err_str, err_len, "operation timed out");
+        snprintf(err_str, err_len,
+                 "attached to process, but could not pause execution; attach "
+                 "failed");
       pid = INVALID_NUB_PROCESS;
     } else {
       if (set_events & (eEventProcessRunningStateChanged |
@@ -793,6 +806,14 @@ DNBProcessAttachWait(RNBContext *ctx, const char *waitfor_process_name,
   if (waitfor_pid != INVALID_NUB_PROCESS) {
     DNBLogThreadedIf(LOG_PROCESS, "Attaching to %s with pid %i...\n",
                      waitfor_process_name, waitfor_pid);
+    // In some cases, we attempt to attach during the transition from
+    // /usr/lib/dyld to the dyld in the shared cache. If that happens, we may
+    // end up in a state where there is no dyld in the process and from there
+    // the debugging session is doomed.
+    // In an attempt to make this scenario much less likely, we sleep
+    // for an additional `waitfor_interval` number of microseconds before
+    // attaching.
+    ::usleep(waitfor_interval);
     waitfor_pid = DNBProcessAttach(waitfor_pid, timeout_abstime,
                                    ctx->GetIgnoredExceptions(), err_str, 
                                    err_len);
@@ -1015,20 +1036,11 @@ DNBGetTSDAddressForThread(nub_process_t pid, nub_thread_t tid,
   return INVALID_NUB_ADDRESS;
 }
 
-JSONGenerator::ObjectSP DNBGetLoadedDynamicLibrariesInfos(
-    nub_process_t pid, nub_addr_t image_list_address, nub_addr_t image_count) {
+JSONGenerator::ObjectSP
+DNBGetAllLoadedLibrariesInfos(nub_process_t pid, bool report_load_commands) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
-    return procSP->GetLoadedDynamicLibrariesInfos(pid, image_list_address,
-                                                  image_count);
-  }
-  return JSONGenerator::ObjectSP();
-}
-
-JSONGenerator::ObjectSP DNBGetAllLoadedLibrariesInfos(nub_process_t pid) {
-  MachProcessSP procSP;
-  if (GetProcessSP(pid, procSP)) {
-    return procSP->GetAllLoadedLibrariesInfos(pid);
+    return procSP->GetAllLoadedLibrariesInfos(pid, report_load_commands);
   }
   return JSONGenerator::ObjectSP();
 }
@@ -1457,9 +1469,13 @@ DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
     major_version = info.major_version;
     minor_version = info.minor_version;
     patch_version = info.patch_version;
+    // MachProcess::DeploymentInfo has a bool operator to tell whether we have
+    // set the platform.  If that's not true, don't report out the platform:
+    if (!info)
+      return {};
     return procSP->GetPlatformString(info.platform);
   }
-  return nullptr;
+  return {};
 }
 
 // Get the current shared library information for a process. Only return
@@ -1760,10 +1776,8 @@ std::string DNBGetMacCatalystVersionString() {
 void DNBInitialize() {
   DNBLogThreadedIf(LOG_PROCESS, "DNBInitialize ()");
 #if defined(__i386__) || defined(__x86_64__)
-  DNBArchImplI386::Initialize();
   DNBArchImplX86_64::Initialize();
 #elif defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
-  DNBArchMachARM::Initialize();
   DNBArchMachARM64::Initialize();
 #endif
 }
@@ -1846,4 +1860,12 @@ bool DNBGetAddressingBits(uint32_t &addressing_bits) {
   addressing_bits = g_addressing_bits;
 
   return addressing_bits > 0;
+}
+
+nub_process_t DNBGetParentProcessID(nub_process_t child_pid) {
+  return MachProcess::GetParentProcessID(child_pid);
+}
+
+bool DNBProcessIsBeingDebugged(nub_process_t pid) {
+  return MachProcess::ProcessIsBeingDebugged(pid);
 }

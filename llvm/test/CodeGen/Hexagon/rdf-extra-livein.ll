@@ -8,7 +8,7 @@ target triple = "hexagon"
 
 @.str.13 = external unnamed_addr constant [60 x i8], align 1
 
-declare void @printf(i8* nocapture readonly, ...) local_unnamed_addr #0
+declare void @printf(ptr nocapture readonly, ...) local_unnamed_addr #0
 
 declare void @danny() local_unnamed_addr #0
 declare zeroext i8 @sammy() local_unnamed_addr #0
@@ -58,7 +58,7 @@ if.end88:                                         ; preds = %if.then81, %sw.epil
   %mul92 = fmul float undef, %div89
   %div93 = fdiv float %mul92, 1.000000e+06
   %conv107 = fpext float %div93 to double
-  call void (i8*, ...) @printf(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @.str.13, i32 0, i32 0), double %conv107, double undef, i64 undef, i32 undef) #0
+  call void (ptr, ...) @printf(ptr @.str.13, double %conv107, double undef, i64 undef, i32 undef) #0
   br i1 undef, label %if.end88.do.body_crit_edge, label %if.then124
 
 if.end88.do.body_crit_edge:                       ; preds = %if.end88

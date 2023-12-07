@@ -24,6 +24,12 @@ tablegen("SparcGenRegisterInfo") {
   td_file = "../Sparc.td"
 }
 
+tablegen("SparcGenSearchableTables") {
+  visibility = [ ":MCTargetDesc" ]
+  args = [ "-gen-searchable-tables" ]
+  td_file = "../Sparc.td"
+}
+
 tablegen("SparcGenSubtargetInfo") {
   visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-subtarget" ]
@@ -39,6 +45,7 @@ static_library("MCTargetDesc") {
   public_deps = [
     ":SparcGenInstrInfo",
     ":SparcGenRegisterInfo",
+    ":SparcGenSearchableTables",
     ":SparcGenSubtargetInfo",
   ]
   deps = [
@@ -46,6 +53,7 @@ static_library("MCTargetDesc") {
     ":SparcGenMCCodeEmitter",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ ".." ]
   sources = [

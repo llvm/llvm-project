@@ -7,25 +7,25 @@
 ; Any invalidation that shows up here is a bug, unless we started modifying
 ; the IR, in which case we need to make it immutable harder.
 
-; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
+; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
 ; RUN:     -passes='default<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-CORO
-; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager -enable-matrix \
+; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager -enable-matrix \
 ; RUN:     -passes='default<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-MATRIX,CHECK-CORO
-; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager -debug-info-for-profiling \
+; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager -debug-info-for-profiling \
 ; RUN:     -passes='default<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DIS,CHECK-CORO
-; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
+; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto-pre-link<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-PRE-LINK,CHECK-CORO
-; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
+; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
 ; RUN:     -passes='lto-pre-link<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-PRE-LINK,CHECK-CORO
-; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
+; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-THINLTO
-; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
+; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-LTO
 
@@ -41,12 +41,10 @@
 ; CHECK-CORO-NEXT: Running pass: CoroConditionalWrapper
 ; CHECK-PRE-LINK: Running pass: CanonicalizeAliasesPass
 ; CHECK-PRE-LINK-NEXT: Running pass: NameAnonGlobalPass
-; CHECK-THINLTO: Running pass: Annotation2MetadataPass
-; CHECK-THINLTO-NEXT: Running pass: LowerTypeTestsPass
+; CHECK-THINLTO: Running pass: LowerTypeTestsPass
 ; CHECK-THINLTO-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-THINLTO-NEXT: Running pass: GlobalDCEPass
-; CHECK-LTO: Running pass: Annotation2MetadataPass
-; CHECK-LTO-NEXT: Running pass: CrossDSOCFIPass on [module]
+; CHECK-LTO: Running pass: CrossDSOCFIPass on [module]
 ; CHECK-LTO-NEXT: Running pass: WholeProgramDevirtPass
 ; CHECK-LTO-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass

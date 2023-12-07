@@ -31,6 +31,7 @@ public:
                          CodeGenOpt::Level OL, bool JIT);
   ~LoongArchTargetMachine() override;
 
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
   const LoongArchSubtarget *getSubtargetImpl(const Function &F) const override;
   const LoongArchSubtarget *getSubtargetImpl() const = delete;
 
@@ -40,6 +41,10 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
 };
 
 } // end namespace llvm

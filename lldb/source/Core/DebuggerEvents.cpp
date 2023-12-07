@@ -23,17 +23,18 @@ static const T *GetEventDataFromEventImpl(const Event *event_ptr) {
   return nullptr;
 }
 
-ConstString ProgressEventData::GetFlavorString() {
-  static ConstString g_flavor("ProgressEventData");
-  return g_flavor;
+llvm::StringRef ProgressEventData::GetFlavorString() {
+  return "ProgressEventData";
 }
 
-ConstString ProgressEventData::GetFlavor() const {
+llvm::StringRef ProgressEventData::GetFlavor() const {
   return ProgressEventData::GetFlavorString();
 }
 
 void ProgressEventData::Dump(Stream *s) const {
-  s->Printf(" id = %" PRIu64 ", message = \"%s\"", m_id, m_message.c_str());
+  s->Printf(" id = %" PRIu64 ", title = \"%s\"", m_id, m_title.c_str());
+  if (!m_details.empty())
+    s->Printf(", details = \"%s\"", m_details.c_str());
   if (m_completed == 0 || m_completed == m_total)
     s->Printf(", type = %s", m_completed == 0 ? "start" : "end");
   else
@@ -47,6 +48,27 @@ void ProgressEventData::Dump(Stream *s) const {
 const ProgressEventData *
 ProgressEventData::GetEventDataFromEvent(const Event *event_ptr) {
   return GetEventDataFromEventImpl<ProgressEventData>(event_ptr);
+}
+
+StructuredData::DictionarySP
+ProgressEventData::GetAsStructuredData(const Event *event_ptr) {
+  const ProgressEventData *progress_data =
+      ProgressEventData::GetEventDataFromEvent(event_ptr);
+
+  if (!progress_data)
+    return {};
+
+  auto dictionary_sp = std::make_shared<StructuredData::Dictionary>();
+  dictionary_sp->AddStringItem("title", progress_data->GetTitle());
+  dictionary_sp->AddStringItem("details", progress_data->GetDetails());
+  dictionary_sp->AddStringItem("message", progress_data->GetMessage());
+  dictionary_sp->AddIntegerItem("progress_id", progress_data->GetID());
+  dictionary_sp->AddIntegerItem("completed", progress_data->GetCompleted());
+  dictionary_sp->AddIntegerItem("total", progress_data->GetTotal());
+  dictionary_sp->AddBooleanItem("debugger_specific",
+                                progress_data->IsDebuggerSpecific());
+
+  return dictionary_sp;
 }
 
 llvm::StringRef DiagnosticEventData::GetPrefix() const {
@@ -71,12 +93,11 @@ void DiagnosticEventData::Dump(Stream *s) const {
   s->Flush();
 }
 
-ConstString DiagnosticEventData::GetFlavorString() {
-  static ConstString g_flavor("DiagnosticEventData");
-  return g_flavor;
+llvm::StringRef DiagnosticEventData::GetFlavorString() {
+  return "DiagnosticEventData";
 }
 
-ConstString DiagnosticEventData::GetFlavor() const {
+llvm::StringRef DiagnosticEventData::GetFlavor() const {
   return DiagnosticEventData::GetFlavorString();
 }
 
@@ -85,12 +106,27 @@ DiagnosticEventData::GetEventDataFromEvent(const Event *event_ptr) {
   return GetEventDataFromEventImpl<DiagnosticEventData>(event_ptr);
 }
 
-ConstString SymbolChangeEventData::GetFlavorString() {
-  static ConstString g_flavor("SymbolChangeEventData");
-  return g_flavor;
+StructuredData::DictionarySP
+DiagnosticEventData::GetAsStructuredData(const Event *event_ptr) {
+  const DiagnosticEventData *diagnostic_data =
+      DiagnosticEventData::GetEventDataFromEvent(event_ptr);
+
+  if (!diagnostic_data)
+    return {};
+
+  auto dictionary_sp = std::make_shared<StructuredData::Dictionary>();
+  dictionary_sp->AddStringItem("message", diagnostic_data->GetMessage());
+  dictionary_sp->AddStringItem("type", diagnostic_data->GetPrefix());
+  dictionary_sp->AddBooleanItem("debugger_specific",
+                                diagnostic_data->IsDebuggerSpecific());
+  return dictionary_sp;
 }
 
-ConstString SymbolChangeEventData::GetFlavor() const {
+llvm::StringRef SymbolChangeEventData::GetFlavorString() {
+  return "SymbolChangeEventData";
+}
+
+llvm::StringRef SymbolChangeEventData::GetFlavor() const {
   return SymbolChangeEventData::GetFlavorString();
 }
 

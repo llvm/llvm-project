@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strerror.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStrErrorTest, KnownErrors) {
   ASSERT_STREQ(__llvm_libc::strerror(0), "Success");
@@ -150,7 +150,7 @@ TEST(LlvmLibcStrErrorTest, KnownErrors) {
   };
 
   for (size_t i = 0; i < (sizeof(message_array) / sizeof(char *)); ++i) {
-    EXPECT_STREQ(__llvm_libc::strerror(i), message_array[i]);
+    EXPECT_STREQ(__llvm_libc::strerror(static_cast<int>(i)), message_array[i]);
   }
 }
 

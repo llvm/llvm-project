@@ -80,6 +80,24 @@ TEST_F(RegexTest, Backreferences) {
   EXPECT_EQ("z", Matches[2].str());
   EXPECT_FALSE(r3.match("a6zb6y"));
   EXPECT_FALSE(r3.match("a6zb7z"));
+
+  Regex r4("(abc|xyz|uvw)_\\1");
+  EXPECT_TRUE(r4.match("abc_abc", &Matches));
+  EXPECT_EQ(2u, Matches.size());
+  EXPECT_FALSE(r4.match("abc_ab", &Matches));
+  EXPECT_FALSE(r4.match("abc_xyz", &Matches));
+
+  Regex r5("(xyz|abc|uvw)_\\1");
+  EXPECT_TRUE(r5.match("abc_abc", &Matches));
+  EXPECT_EQ(2u, Matches.size());
+  EXPECT_FALSE(r5.match("abc_ab", &Matches));
+  EXPECT_FALSE(r5.match("abc_xyz", &Matches));
+
+  Regex r6("(xyz|uvw|abc)_\\1");
+  EXPECT_TRUE(r6.match("abc_abc", &Matches));
+  EXPECT_EQ(2u, Matches.size());
+  EXPECT_FALSE(r6.match("abc_ab", &Matches));
+  EXPECT_FALSE(r6.match("abc_xyz", &Matches));
 }
 
 TEST_F(RegexTest, Substitution) {

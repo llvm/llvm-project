@@ -286,7 +286,7 @@ define i32 @f22(i32 %a) {
 ; CHECK-NOT: sxth
 ; CHECK: smulwb r0, r0, r1
 ; DISABLED-NOT: smulwb
-        %b = load i16, i16* @global_b, align 2
+        %b = load i16, ptr @global_b, align 2
         %sext = sext i16 %b to i64
         %conv = sext i32 %a to i64
         %mul = mul nsw i64 %sext, %conv
@@ -300,7 +300,7 @@ define i32 @f23(i32 %a, i32 %c) {
 ; CHECK-NOT: sxth
 ; CHECK: smlawb r0, r0, r2, r1
 ; DISABLED-NOT: smlawb
-        %b = load i16, i16* @global_b, align 2
+        %b = load i16, ptr @global_b, align 2
         %sext = sext i16 %b to i64
         %conv = sext i32 %a to i64
         %mul = mul nsw i64 %sext, %conv
@@ -313,64 +313,64 @@ define i32 @f23(i32 %a, i32 %c) {
 ; CHECK-LABEL: f24
 ; CHECK-NOT: sxth
 ; CHECK: smulbb
-define i32 @f24(i16* %a, i32* %b, i32* %c) {
-  %ld.0 = load i16, i16* %a, align 2
-  %ld.1 = load i32, i32* %b, align 4
+define i32 @f24(ptr %a, ptr %b, ptr %c) {
+  %ld.0 = load i16, ptr %a, align 2
+  %ld.1 = load i32, ptr %b, align 4
   %conv.0 = sext i16 %ld.0 to i32
   %shift = shl i32 %ld.1, 16
   %conv.1 = ashr i32 %shift, 16
   %mul.0 = mul i32 %conv.0, %conv.1
-  store i32 %ld.1, i32* %c
+  store i32 %ld.1, ptr %c
   ret i32 %mul.0
 }
 
 ; CHECK-LABEL: f25
 ; CHECK-NOT: sxth
 ; CHECK: smulbb
-define i32 @f25(i16* %a, i32 %b, i32* %c) {
-  %ld.0 = load i16, i16* %a, align 2
+define i32 @f25(ptr %a, i32 %b, ptr %c) {
+  %ld.0 = load i16, ptr %a, align 2
   %conv.0 = sext i16 %ld.0 to i32
   %shift = shl i32 %b, 16
   %conv.1 = ashr i32 %shift, 16
   %mul.0 = mul i32 %conv.0, %conv.1
-  store i32 %b, i32* %c
+  store i32 %b, ptr %c
   ret i32 %mul.0
 }
 
 ; CHECK-LABEL: f25_b
 ; CHECK-NOT: sxth
 ; CHECK: smulbb
-define i32 @f25_b(i16* %a, i32 %b, i32* %c) {
-  %ld.0 = load i16, i16* %a, align 2
+define i32 @f25_b(ptr %a, i32 %b, ptr %c) {
+  %ld.0 = load i16, ptr %a, align 2
   %conv.0 = sext i16 %ld.0 to i32
   %shift = shl i32 %b, 16
   %conv.1 = ashr i32 %shift, 16
   %mul.0 = mul i32 %conv.1, %conv.0
-  store i32 %b, i32* %c
+  store i32 %b, ptr %c
   ret i32 %mul.0
 }
 
 ; CHECK-LABEL: f26
 ; CHECK-NOT: sxth
 ; CHECK: {{smulbt | smultb}}
-define i32 @f26(i16* %a, i32 %b, i32* %c) {
-  %ld.0 = load i16, i16* %a, align 2
+define i32 @f26(ptr %a, i32 %b, ptr %c) {
+  %ld.0 = load i16, ptr %a, align 2
   %conv.0 = sext i16 %ld.0 to i32
   %conv.1 = ashr i32 %b, 16
   %mul.0 = mul i32 %conv.0, %conv.1
-  store i32 %b, i32* %c
+  store i32 %b, ptr %c
   ret i32 %mul.0
 }
 
 ; CHECK-LABEL: f26_b
 ; CHECK-NOT: sxth
 ; CHECK: {{smulbt | smultb}}
-define i32 @f26_b(i16* %a, i32 %b, i32* %c) {
-  %ld.0 = load i16, i16* %a, align 2
+define i32 @f26_b(ptr %a, i32 %b, ptr %c) {
+  %ld.0 = load i16, ptr %a, align 2
   %conv.0 = sext i16 %ld.0 to i32
   %conv.1 = ashr i32 %b, 16
   %mul.0 = mul i32 %conv.1, %conv.0
-  store i32 %b, i32* %c
+  store i32 %b, ptr %c
   ret i32 %mul.0
 }
 
@@ -378,9 +378,9 @@ define i32 @f26_b(i16* %a, i32 %b, i32* %c) {
 ; CHECK-NOT: sxth
 ; CHECK: smulbb
 ; CHECK: {{smlabt | smlatb}}
-define i32 @f27(i16* %a, i32* %b) {
-  %ld.0 = load i16, i16* %a, align 2
-  %ld.1 = load i32, i32* %b, align 4
+define i32 @f27(ptr %a, ptr %b) {
+  %ld.0 = load i16, ptr %a, align 2
+  %ld.1 = load i32, ptr %b, align 4
   %conv.0 = sext i16 %ld.0 to i32
   %shift = shl i32 %ld.1, 16
   %conv.1 = ashr i32 %shift, 16
@@ -395,9 +395,9 @@ define i32 @f27(i16* %a, i32* %b) {
 ; CHECK-NOT: sxth
 ; CHECK: smulbb
 ; CHECK: {{smlabt | smlatb}}
-define i32 @f27_b(i16* %a, i32* %b) {
-  %ld.0 = load i16, i16* %a, align 2
-  %ld.1 = load i32, i32* %b, align 4
+define i32 @f27_b(ptr %a, ptr %b) {
+  %ld.0 = load i16, ptr %a, align 2
+  %ld.1 = load i32, ptr %b, align 4
   %conv.0 = sext i16 %ld.0 to i32
   %shift = shl i32 %ld.1, 16
   %conv.1 = ashr i32 %shift, 16

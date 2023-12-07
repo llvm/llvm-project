@@ -8,13 +8,18 @@ define <4 x i8> @udiv_by_minus_one(<4 x i8> %x) {
 ; CHECK-LABEL: udiv_by_minus_one:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s0, %s0, (56)0
+; CHECK-NEXT:    lea %s4, 16843010
+; CHECK-NEXT:    muls.l %s0, %s0, %s4
+; CHECK-NEXT:    srl %s0, %s0, 32
 ; CHECK-NEXT:    and %s1, %s1, (56)0
+; CHECK-NEXT:    muls.l %s1, %s1, %s4
+; CHECK-NEXT:    srl %s1, %s1, 32
 ; CHECK-NEXT:    and %s2, %s2, (56)0
+; CHECK-NEXT:    muls.l %s2, %s2, %s4
+; CHECK-NEXT:    srl %s2, %s2, 32
 ; CHECK-NEXT:    and %s3, %s3, (56)0
-; CHECK-NEXT:    divu.w %s3, %s3, (56)0
-; CHECK-NEXT:    divu.w %s2, %s2, (56)0
-; CHECK-NEXT:    divu.w %s1, %s1, (56)0
-; CHECK-NEXT:    divu.w %s0, %s0, (56)0
+; CHECK-NEXT:    muls.l %s3, %s3, %s4
+; CHECK-NEXT:    srl %s3, %s3, 32
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = udiv <4 x i8> %x, <i8 255, i8 255, i8 255, i8 255>
   ret <4 x i8> %r
@@ -27,16 +32,21 @@ define <4 x i8> @urem_by_minus_one(<4 x i8> %x) {
 ; CHECK-NEXT:    and %s1, %s1, (56)0
 ; CHECK-NEXT:    and %s2, %s2, (56)0
 ; CHECK-NEXT:    and %s3, %s3, (56)0
-; CHECK-NEXT:    divu.w %s4, %s3, (56)0
-; CHECK-NEXT:    muls.w.sx %s4, %s4, (56)0
-; CHECK-NEXT:    subs.w.sx %s3, %s3, %s4
-; CHECK-NEXT:    divu.w %s4, %s2, (56)0
-; CHECK-NEXT:    muls.w.sx %s4, %s4, (56)0
-; CHECK-NEXT:    subs.w.sx %s2, %s2, %s4
-; CHECK-NEXT:    divu.w %s4, %s1, (56)0
-; CHECK-NEXT:    muls.w.sx %s4, %s4, (56)0
-; CHECK-NEXT:    subs.w.sx %s1, %s1, %s4
-; CHECK-NEXT:    divu.w %s4, %s0, (56)0
+; CHECK-NEXT:    lea %s4, 16843010
+; CHECK-NEXT:    muls.l %s5, %s3, %s4
+; CHECK-NEXT:    srl %s5, %s5, 32
+; CHECK-NEXT:    muls.w.sx %s5, %s5, (56)0
+; CHECK-NEXT:    subs.w.sx %s3, %s3, %s5
+; CHECK-NEXT:    muls.l %s5, %s2, %s4
+; CHECK-NEXT:    srl %s5, %s5, 32
+; CHECK-NEXT:    muls.w.sx %s5, %s5, (56)0
+; CHECK-NEXT:    subs.w.sx %s2, %s2, %s5
+; CHECK-NEXT:    muls.l %s5, %s1, %s4
+; CHECK-NEXT:    srl %s5, %s5, 32
+; CHECK-NEXT:    muls.w.sx %s5, %s5, (56)0
+; CHECK-NEXT:    subs.w.sx %s1, %s1, %s5
+; CHECK-NEXT:    muls.l %s4, %s0, %s4
+; CHECK-NEXT:    srl %s4, %s4, 32
 ; CHECK-NEXT:    muls.w.sx %s4, %s4, (56)0
 ; CHECK-NEXT:    subs.w.sx %s0, %s0, %s4
 ; CHECK-NEXT:    b.l.t (, %s10)

@@ -34,11 +34,9 @@ define ptr addrspace(1) @foo(ptr addrspace(1) %arg) gc "statepoint-example" {
 ; CHECK-NEXT:    movabsq $nocsr, %rax
 ; CHECK-NEXT:    callq *%rax
 ; CHECK-NEXT:    movabsq $bar, %rax
-; CHECK-NEXT:    movq (%rsp), %rbx # 8-byte Reload
-; CHECK-NEXT:    movq %rbx, %rdi
-; CHECK-NEXT:    callq *%rax
+; CHECK-NEXT:    movq (%rsp), %rdi # 8-byte Reload
+; CHECK-NEXT:    callq *%rax # 8-byte Folded Reload
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    movq %rbx, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movabsq $nocsr, %rax
 ; CHECK-NEXT:    callq *%rax
 ; CHECK-NEXT:    movq (%rsp), %rax # 8-byte Reload

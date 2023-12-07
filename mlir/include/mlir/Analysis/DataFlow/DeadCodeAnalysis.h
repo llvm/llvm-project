@@ -18,6 +18,7 @@
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include <optional>
 
 namespace mlir {
 
@@ -25,6 +26,7 @@ class CallOpInterface;
 class CallableOpInterface;
 class BranchOpInterface;
 class RegionBranchOpInterface;
+class RegionBranchTerminatorOpInterface;
 
 namespace dataflow {
 
@@ -206,7 +208,8 @@ private:
   /// Visit the given terminator operation that exits a region under an
   /// operation with control-flow semantics. These are terminators with no CFG
   /// successors.
-  void visitRegionTerminator(Operation *op, RegionBranchOpInterface branch);
+  void visitRegionTerminator(RegionBranchTerminatorOpInterface op,
+                             RegionBranchOpInterface branch);
 
   /// Visit the given terminator operation that exits a callable region. These
   /// are terminators with no CFG successors.
@@ -218,9 +221,9 @@ private:
   /// Mark the entry blocks of the operation as executable.
   void markEntryBlocksLive(Operation *op);
 
-  /// Get the constant values of the operands of the operation. Returns none if
-  /// any of the operand lattices are uninitialized.
-  Optional<SmallVector<Attribute>> getOperandValues(Operation *op);
+  /// Get the constant values of the operands of the operation. Returns
+  /// std::nullopt if any of the operand lattices are uninitialized.
+  std::optional<SmallVector<Attribute>> getOperandValues(Operation *op);
 
   /// The top-level operation the analysis is running on. This is used to detect
   /// if a callable is outside the scope of the analysis and thus must be

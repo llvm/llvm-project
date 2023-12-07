@@ -20,7 +20,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @I = common global [1 x i32] zeroinitializer, align 4
 
-define void @f(i32* %A, i8 zeroext %c) {
+define void @f(ptr %A, i8 zeroext %c) {
 entry:
   br label %for.cond
 
@@ -35,11 +35,11 @@ for.body:                                         ; preds = %for.cond
   br i1 %cmp3, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.body
-  %tmp = load i32, i32* getelementptr inbounds ([1 x i32], [1 x i32]* @I, i64 0, i64 0), align 4
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp1 = load i32, i32* %arrayidx, align 4
+  %tmp = load i32, ptr @I, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp1 = load i32, ptr %arrayidx, align 4
   %add5 = add nsw i32 %tmp1, %tmp
-  store i32 %add5, i32* %arrayidx, align 4
+  store i32 %add5, ptr %arrayidx, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %for.body

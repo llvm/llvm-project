@@ -35,7 +35,8 @@ std::vector<CodeTemplate> getSingleton(CodeTemplate &&CT);
 
 // Generates code templates that has a self-dependency.
 Expected<std::vector<CodeTemplate>>
-generateSelfAliasingCodeTemplates(InstructionTemplate Variant);
+generateSelfAliasingCodeTemplates(InstructionTemplate Variant,
+                                  const BitVector &ForbiddenRegisters);
 
 // Generates code templates without assignment constraints.
 Expected<std::vector<CodeTemplate>>
@@ -105,6 +106,9 @@ void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
 Error randomizeUnsetVariables(const LLVMState &State,
                               const BitVector &ForbiddenRegs,
                               InstructionTemplate &IT);
+
+// Sanity check generated instruction.
+Error validateGeneratedInstruction(const LLVMState &State, const MCInst &Inst);
 
 } // namespace exegesis
 } // namespace llvm

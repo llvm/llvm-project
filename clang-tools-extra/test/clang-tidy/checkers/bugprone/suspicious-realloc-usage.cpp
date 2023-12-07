@@ -100,3 +100,10 @@ void warn_if_copy_exists_after(void *p) {
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'p' may be set to null if 'realloc' fails, which may result in a leak of the original buffer [bugprone-suspicious-realloc-usage]
   void *q = p;
 }
+
+void test_null_child(void *p) {
+  for (;;)
+    break;
+  p = realloc(p, 111);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'p' may be set to null if 'realloc' fails, which may result in a leak of the original buffer [bugprone-suspicious-realloc-usage]
+}

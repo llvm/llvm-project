@@ -52,9 +52,6 @@ struct FuncAnalysisState : public OneShotAnalysisState::Extension {
   /// indices.
   DenseMap<FuncOp, IndexMapping> equivalentFuncArgs;
 
-  /// A mapping of ReturnOp OpOperand indices to aliasing FuncOp BBArg indices.
-  DenseMap<FuncOp, IndexToIndexListMapping> aliasingFuncArgs;
-
   /// A mapping of FuncOp BBArg indices to aliasing ReturnOp OpOperand indices.
   DenseMap<FuncOp, IndexToIndexListMapping> aliasingReturnVals;
 

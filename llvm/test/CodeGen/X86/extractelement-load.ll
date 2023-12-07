@@ -469,61 +469,33 @@ define i32 @main() nounwind {
 ; X64-SSSE3-NEXT:    popq %rbp
 ; X64-SSSE3-NEXT:    retq
 ;
-; X64-AVX1-LABEL: main:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    pushq %rbp
-; X64-AVX1-NEXT:    movq %rsp, %rbp
-; X64-AVX1-NEXT:    andq $-32, %rsp
-; X64-AVX1-NEXT:    subq $64, %rsp
-; X64-AVX1-NEXT:    movq n1@GOTPCREL(%rip), %rax
-; X64-AVX1-NEXT:    vmovaps (%rax), %ymm0
-; X64-AVX1-NEXT:    movl zero+4(%rip), %ecx
-; X64-AVX1-NEXT:    movl zero+8(%rip), %eax
-; X64-AVX1-NEXT:    vmovaps %ymm0, zero(%rip)
-; X64-AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [2,2,2,2,2,2,2,2]
-; X64-AVX1-NEXT:    vmovaps %ymm0, (%rsp)
-; X64-AVX1-NEXT:    vmovaps (%rsp), %ymm0
-; X64-AVX1-NEXT:    vextractps $2, %xmm0, %esi
-; X64-AVX1-NEXT:    xorl %edx, %edx
-; X64-AVX1-NEXT:    divl %esi
-; X64-AVX1-NEXT:    movl %eax, %esi
-; X64-AVX1-NEXT:    vextractps $1, %xmm0, %edi
-; X64-AVX1-NEXT:    movl %ecx, %eax
-; X64-AVX1-NEXT:    xorl %edx, %edx
-; X64-AVX1-NEXT:    divl %edi
-; X64-AVX1-NEXT:    addl %esi, %eax
-; X64-AVX1-NEXT:    movq %rbp, %rsp
-; X64-AVX1-NEXT:    popq %rbp
-; X64-AVX1-NEXT:    vzeroupper
-; X64-AVX1-NEXT:    retq
-;
-; X64-AVX2-LABEL: main:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    pushq %rbp
-; X64-AVX2-NEXT:    movq %rsp, %rbp
-; X64-AVX2-NEXT:    andq $-32, %rsp
-; X64-AVX2-NEXT:    subq $64, %rsp
-; X64-AVX2-NEXT:    movq n1@GOTPCREL(%rip), %rax
-; X64-AVX2-NEXT:    vmovaps (%rax), %ymm0
-; X64-AVX2-NEXT:    movl zero+4(%rip), %ecx
-; X64-AVX2-NEXT:    movl zero+8(%rip), %eax
-; X64-AVX2-NEXT:    vmovaps %ymm0, zero(%rip)
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm0 = [2,2,2,2,2,2,2,2]
-; X64-AVX2-NEXT:    vmovaps %ymm0, (%rsp)
-; X64-AVX2-NEXT:    vmovaps (%rsp), %ymm0
-; X64-AVX2-NEXT:    vextractps $2, %xmm0, %esi
-; X64-AVX2-NEXT:    xorl %edx, %edx
-; X64-AVX2-NEXT:    divl %esi
-; X64-AVX2-NEXT:    movl %eax, %esi
-; X64-AVX2-NEXT:    vextractps $1, %xmm0, %edi
-; X64-AVX2-NEXT:    movl %ecx, %eax
-; X64-AVX2-NEXT:    xorl %edx, %edx
-; X64-AVX2-NEXT:    divl %edi
-; X64-AVX2-NEXT:    addl %esi, %eax
-; X64-AVX2-NEXT:    movq %rbp, %rsp
-; X64-AVX2-NEXT:    popq %rbp
-; X64-AVX2-NEXT:    vzeroupper
-; X64-AVX2-NEXT:    retq
+; X64-AVX-LABEL: main:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    pushq %rbp
+; X64-AVX-NEXT:    movq %rsp, %rbp
+; X64-AVX-NEXT:    andq $-32, %rsp
+; X64-AVX-NEXT:    subq $64, %rsp
+; X64-AVX-NEXT:    movq n1@GOTPCREL(%rip), %rax
+; X64-AVX-NEXT:    vmovaps (%rax), %ymm0
+; X64-AVX-NEXT:    movl zero+4(%rip), %ecx
+; X64-AVX-NEXT:    movl zero+8(%rip), %eax
+; X64-AVX-NEXT:    vmovaps %ymm0, zero(%rip)
+; X64-AVX-NEXT:    vbroadcastss {{.*#+}} ymm0 = [2,2,2,2,2,2,2,2]
+; X64-AVX-NEXT:    vmovaps %ymm0, (%rsp)
+; X64-AVX-NEXT:    vmovaps (%rsp), %ymm0
+; X64-AVX-NEXT:    vextractps $2, %xmm0, %esi
+; X64-AVX-NEXT:    xorl %edx, %edx
+; X64-AVX-NEXT:    divl %esi
+; X64-AVX-NEXT:    movl %eax, %esi
+; X64-AVX-NEXT:    vextractps $1, %xmm0, %edi
+; X64-AVX-NEXT:    movl %ecx, %eax
+; X64-AVX-NEXT:    xorl %edx, %edx
+; X64-AVX-NEXT:    divl %edi
+; X64-AVX-NEXT:    addl %esi, %eax
+; X64-AVX-NEXT:    movq %rbp, %rsp
+; X64-AVX-NEXT:    popq %rbp
+; X64-AVX-NEXT:    vzeroupper
+; X64-AVX-NEXT:    retq
   %stackptr = alloca <8 x i32>, align 32
   %z = load <8 x i32>, ptr @zero, align 32
   %t1 = load <8 x i32>, ptr @n1, align 32

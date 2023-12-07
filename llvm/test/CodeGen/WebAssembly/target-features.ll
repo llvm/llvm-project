@@ -8,17 +8,17 @@
 
 target triple = "wasm32-unknown-unknown"
 
-define void @fn_atomics(i32* %p1, float %f2) #0 {
-  %a = atomicrmw min i32* undef, i32 42 seq_cst
+define void @fn_atomics(ptr %p1, float %f2) #0 {
+  %a = atomicrmw min ptr undef, i32 42 seq_cst
   %v = fptoui float %f2 to i32
-  store i32 %v, i32* %p1
+  store i32 %v, ptr %p1
   ret void
 }
 
-define void @fn_nontrapping_fptoint(i32* %p1, float %f2) #1 {
-  %a = atomicrmw min i32* undef, i32 42 seq_cst
+define void @fn_nontrapping_fptoint(ptr %p1, float %f2) #1 {
+  %a = atomicrmw min ptr undef, i32 42 seq_cst
   %v = fptoui float %f2 to i32
-  store i32 %v, i32* %p1
+  store i32 %v, ptr %p1
   ret void
 }
 

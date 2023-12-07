@@ -12,12 +12,18 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/MachineValueType.h"
+#include <cassert>
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <utility>
 
 namespace llvm {
-  struct CodeGenRegister;
+  class CodeGenRegister;
   class CodeGenDAGPatterns;
+  class CodeGenInstruction;
   class Matcher;
   class PatternToMatch;
   class raw_ostream;
@@ -41,7 +47,7 @@ class Matcher {
   // The next matcher node that is executed after this one.  Null if this is the
   // last stage of a match.
   std::unique_ptr<Matcher> Next;
-  size_t Size; // Size in bytes of matcher and all its children (if any).
+  size_t Size = 0; // Size in bytes of matcher and all its children (if any).
   virtual void anchor();
 public:
   enum KindTy {
@@ -189,9 +195,8 @@ protected:
 class ScopeMatcher : public Matcher {
   SmallVector<Matcher*, 4> Children;
 public:
-  ScopeMatcher(ArrayRef<Matcher *> children)
-    : Matcher(Scope), Children(children.begin(), children.end()) {
-  }
+  ScopeMatcher(SmallVectorImpl<Matcher *> &&children)
+      : Matcher(Scope), Children(std::move(children)) {}
   ~ScopeMatcher() override;
 
   unsigned getNumChildren() const { return Children.size(); }
@@ -473,8 +478,9 @@ private:
 class SwitchOpcodeMatcher : public Matcher {
   SmallVector<std::pair<const SDNodeInfo*, Matcher*>, 8> Cases;
 public:
-  SwitchOpcodeMatcher(ArrayRef<std::pair<const SDNodeInfo*, Matcher*> > cases)
-    : Matcher(SwitchOpcode), Cases(cases.begin(), cases.end()) {}
+  SwitchOpcodeMatcher(
+      SmallVectorImpl<std::pair<const SDNodeInfo *, Matcher *>> &&cases)
+      : Matcher(SwitchOpcode), Cases(std::move(cases)) {}
   ~SwitchOpcodeMatcher() override;
 
   static bool classof(const Matcher *N) {
@@ -523,8 +529,9 @@ private:
 class SwitchTypeMatcher : public Matcher {
   SmallVector<std::pair<MVT::SimpleValueType, Matcher*>, 8> Cases;
 public:
-  SwitchTypeMatcher(ArrayRef<std::pair<MVT::SimpleValueType, Matcher*> > cases)
-  : Matcher(SwitchType), Cases(cases.begin(), cases.end()) {}
+  SwitchTypeMatcher(
+      SmallVectorImpl<std::pair<MVT::SimpleValueType, Matcher *>> &&cases)
+      : Matcher(SwitchType), Cases(std::move(cases)) {}
   ~SwitchTypeMatcher() override;
 
   static bool classof(const Matcher *N) {
@@ -991,7 +998,7 @@ private:
 /// EmitNodeMatcherCommon - Common class shared between EmitNode and
 /// MorphNodeTo.
 class EmitNodeMatcherCommon : public Matcher {
-  std::string OpcodeName;
+  const CodeGenInstruction &CGI;
   const SmallVector<MVT::SimpleValueType, 3> VTs;
   const SmallVector<unsigned, 6> Operands;
   bool HasChain, HasInGlue, HasOutGlue, HasMemRefs;
@@ -1001,18 +1008,17 @@ class EmitNodeMatcherCommon : public Matcher {
   /// operands in the root of the pattern.  The rest are appended to this node.
   int NumFixedArityOperands;
 public:
-  EmitNodeMatcherCommon(const std::string &opcodeName,
+  EmitNodeMatcherCommon(const CodeGenInstruction &cgi,
                         ArrayRef<MVT::SimpleValueType> vts,
-                        ArrayRef<unsigned> operands,
-                        bool hasChain, bool hasInGlue, bool hasOutGlue,
-                        bool hasmemrefs,
+                        ArrayRef<unsigned> operands, bool hasChain,
+                        bool hasInGlue, bool hasOutGlue, bool hasmemrefs,
                         int numfixedarityoperands, bool isMorphNodeTo)
-    : Matcher(isMorphNodeTo ? MorphNodeTo : EmitNode), OpcodeName(opcodeName),
-      VTs(vts.begin(), vts.end()), Operands(operands.begin(), operands.end()),
-      HasChain(hasChain), HasInGlue(hasInGlue), HasOutGlue(hasOutGlue),
-      HasMemRefs(hasmemrefs), NumFixedArityOperands(numfixedarityoperands) {}
+      : Matcher(isMorphNodeTo ? MorphNodeTo : EmitNode), CGI(cgi),
+        VTs(vts.begin(), vts.end()), Operands(operands.begin(), operands.end()),
+        HasChain(hasChain), HasInGlue(hasInGlue), HasOutGlue(hasOutGlue),
+        HasMemRefs(hasmemrefs), NumFixedArityOperands(numfixedarityoperands) {}
 
-  const std::string &getOpcodeName() const { return OpcodeName; }
+  const CodeGenInstruction &getInstruction() const { return CGI; }
 
   unsigned getNumVTs() const { return VTs.size(); }
   MVT::SimpleValueType getVT(unsigned i) const {
@@ -1031,8 +1037,8 @@ public:
 
 
   bool hasChain() const { return HasChain; }
-  bool hasInFlag() const { return HasInGlue; }
-  bool hasOutFlag() const { return HasOutGlue; }
+  bool hasInGlue() const { return HasInGlue; }
+  bool hasOutGlue() const { return HasOutGlue; }
   bool hasMemRefs() const { return HasMemRefs; }
   int getNumFixedArityOperands() const { return NumFixedArityOperands; }
 
@@ -1050,16 +1056,15 @@ class EmitNodeMatcher : public EmitNodeMatcherCommon {
   void anchor() override;
   unsigned FirstResultSlot;
 public:
-  EmitNodeMatcher(const std::string &opcodeName,
+  EmitNodeMatcher(const CodeGenInstruction &cgi,
                   ArrayRef<MVT::SimpleValueType> vts,
-                  ArrayRef<unsigned> operands,
-                  bool hasChain, bool hasInFlag, bool hasOutFlag,
-                  bool hasmemrefs,
-                  int numfixedarityoperands, unsigned firstresultslot)
-  : EmitNodeMatcherCommon(opcodeName, vts, operands, hasChain,
-                          hasInFlag, hasOutFlag, hasmemrefs,
-                          numfixedarityoperands, false),
-    FirstResultSlot(firstresultslot) {}
+                  ArrayRef<unsigned> operands, bool hasChain, bool hasInGlue,
+                  bool hasOutGlue, bool hasmemrefs, int numfixedarityoperands,
+                  unsigned firstresultslot)
+      : EmitNodeMatcherCommon(cgi, vts, operands, hasChain, hasInGlue,
+                              hasOutGlue, hasmemrefs, numfixedarityoperands,
+                              false),
+        FirstResultSlot(firstresultslot) {}
 
   unsigned getFirstResultSlot() const { return FirstResultSlot; }
 
@@ -1073,17 +1078,15 @@ class MorphNodeToMatcher : public EmitNodeMatcherCommon {
   void anchor() override;
   const PatternToMatch &Pattern;
 public:
-  MorphNodeToMatcher(const std::string &opcodeName,
+  MorphNodeToMatcher(const CodeGenInstruction &cgi,
                      ArrayRef<MVT::SimpleValueType> vts,
-                     ArrayRef<unsigned> operands,
-                     bool hasChain, bool hasInFlag, bool hasOutFlag,
-                     bool hasmemrefs,
+                     ArrayRef<unsigned> operands, bool hasChain, bool hasInGlue,
+                     bool hasOutGlue, bool hasmemrefs,
                      int numfixedarityoperands, const PatternToMatch &pattern)
-    : EmitNodeMatcherCommon(opcodeName, vts, operands, hasChain,
-                            hasInFlag, hasOutFlag, hasmemrefs,
-                            numfixedarityoperands, true),
-      Pattern(pattern) {
-  }
+      : EmitNodeMatcherCommon(cgi, vts, operands, hasChain, hasInGlue,
+                              hasOutGlue, hasmemrefs, numfixedarityoperands,
+                              true),
+        Pattern(pattern) {}
 
   const PatternToMatch &getPattern() const { return Pattern; }
 

@@ -73,8 +73,7 @@ BinaryStreamRef::BinaryStreamRef(ArrayRef<uint8_t> Data, endianness Endian)
     : BinaryStreamRefBase(std::make_shared<ArrayRefImpl>(Data, Endian), 0,
                           Data.size()) {}
 BinaryStreamRef::BinaryStreamRef(StringRef Data, endianness Endian)
-    : BinaryStreamRef(makeArrayRef(Data.bytes_begin(), Data.bytes_end()),
-                      Endian) {}
+    : BinaryStreamRef(ArrayRef(Data.bytes_begin(), Data.bytes_end()), Endian) {}
 
 Error BinaryStreamRef::readBytes(uint64_t Offset, uint64_t Size,
                                  ArrayRef<uint8_t> &Buffer) const {

@@ -8,7 +8,7 @@
  */
 
 #include <stdlib.h>
-#include <isl/hash.h>
+#include <isl_hash_private.h>
 #include <isl/ctx.h>
 #include "isl_config.h"
 
@@ -192,6 +192,26 @@ struct isl_hash_table_entry *isl_hash_table_find(struct isl_ctx *ctx,
 	return &table->entries[h];
 }
 
+/* Return the first entry containing data in "table".
+ * Return isl_hash_table_entry_none is there is no such entry and
+ * NULL on error.
+ */
+struct isl_hash_table_entry *isl_hash_table_first(struct isl_hash_table *table)
+{
+	size_t size;
+	uint32_t h;
+
+	if (!table->entries)
+		return NULL;
+
+	size = 1 << table->bits;
+	for (h = 0; h < size; ++ h)
+		if (table->entries[h].data)
+			return &table->entries[h];
+
+	return isl_hash_table_entry_none;
+}
+
 isl_stat isl_hash_table_foreach(isl_ctx *ctx, struct isl_hash_table *table,
 	isl_stat (*fn)(void **entry, void *user), void *user)
 {
@@ -208,6 +228,31 @@ isl_stat isl_hash_table_foreach(isl_ctx *ctx, struct isl_hash_table *table,
 			return isl_stat_error;
 	
 	return isl_stat_ok;
+}
+
+/* Does "test" succeed on every (non-empty) entry of "table"?
+ */
+isl_bool isl_hash_table_every(isl_ctx *ctx, struct isl_hash_table *table,
+	isl_bool (*test)(void **entry, void *user), void *user)
+{
+	size_t size;
+	uint32_t h;
+
+	if (!table->entries)
+		return isl_bool_error;
+
+	size = 1 << table->bits;
+	for (h = 0; h < size; ++ h) {
+		isl_bool r;
+
+		if (!table->entries[h].data)
+			continue;
+		r = test(&table->entries[h].data, user);
+		if (r < 0 || !r)
+			return r;
+	}
+
+	return isl_bool_true;
 }
 
 void isl_hash_table_remove(struct isl_ctx *ctx,

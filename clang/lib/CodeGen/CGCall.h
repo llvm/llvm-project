@@ -30,6 +30,7 @@ class Value;
 namespace clang {
 class Decl;
 class FunctionDecl;
+class TargetOptions;
 class VarDecl;
 
 namespace CodeGen {
@@ -108,9 +109,6 @@ public:
     AbstractInfo = abstractInfo;
     assert(functionPtr && "configuring callee without function pointer");
     assert(functionPtr->getType()->isPointerTy());
-    assert(functionPtr->getType()->isOpaquePointerTy() ||
-           functionPtr->getType()->getNonOpaquePointerElementType()
-               ->isFunctionTy());
   }
 
   static CGCallee forBuiltin(unsigned builtinID,
@@ -258,7 +256,7 @@ public:
 /// arguments in a call.
 class CallArgList : public SmallVector<CallArg, 8> {
 public:
-  CallArgList() : StackBase(nullptr) {}
+  CallArgList() = default;
 
   struct Writeback {
     /// The original argument.  Note that the argument l-value
@@ -344,7 +342,7 @@ private:
   SmallVector<CallArgCleanup, 1> CleanupsToDeactivate;
 
   /// The stacksave call.  It dominates all of the argument evaluation.
-  llvm::CallInst *StackBase;
+  llvm::CallInst *StackBase = nullptr;
 };
 
 /// FunctionArgList - Type for representing both the decl and type
@@ -376,6 +374,58 @@ public:
   bool isUnused() const { return IsUnused; }
   bool isExternallyDestructed() const { return IsExternallyDestructed; }
 };
+
+/// Adds attributes to \p F according to our \p CodeGenOpts and \p LangOpts, as
+/// though we had emitted it ourselves. We remove any attributes on F that
+/// conflict with the attributes we add here.
+///
+/// This is useful for adding attrs to bitcode modules that you want to link
+/// with but don't control, such as CUDA's libdevice.  When linking with such
+/// a bitcode library, you might want to set e.g. its functions'
+/// "unsafe-fp-math" attribute to match the attr of the functions you're
+/// codegen'ing.  Otherwise, LLVM will interpret the bitcode module's lack of
+/// unsafe-fp-math attrs as tantamount to unsafe-fp-math=false, and then LLVM
+/// will propagate unsafe-fp-math=false up to every transitive caller of a
+/// function in the bitcode library!
+///
+/// With the exception of fast-math attrs, this will only make the attributes
+/// on the function more conservative.  But it's unsafe to call this on a
+/// function which relies on particular fast-math attributes for correctness.
+/// It's up to you to ensure that this is safe.
+void mergeDefaultFunctionDefinitionAttributes(llvm::Function &F,
+                                              const CodeGenOptions &CodeGenOpts,
+                                              const LangOptions &LangOpts,
+                                              const TargetOptions &TargetOpts,
+                                              bool WillInternalize);
+
+enum class FnInfoOpts {
+  None = 0,
+  IsInstanceMethod = 1 << 0,
+  IsChainCall = 1 << 1,
+  IsDelegateCall = 1 << 2,
+};
+
+inline FnInfoOpts operator|(FnInfoOpts A, FnInfoOpts B) {
+  return static_cast<FnInfoOpts>(
+      static_cast<std::underlying_type_t<FnInfoOpts>>(A) |
+      static_cast<std::underlying_type_t<FnInfoOpts>>(B));
+}
+
+inline FnInfoOpts operator&(FnInfoOpts A, FnInfoOpts B) {
+  return static_cast<FnInfoOpts>(
+      static_cast<std::underlying_type_t<FnInfoOpts>>(A) &
+      static_cast<std::underlying_type_t<FnInfoOpts>>(B));
+}
+
+inline FnInfoOpts operator|=(FnInfoOpts A, FnInfoOpts B) {
+  A = A | B;
+  return A;
+}
+
+inline FnInfoOpts operator&=(FnInfoOpts A, FnInfoOpts B) {
+  A = A & B;
+  return A;
+}
 
 } // end namespace CodeGen
 } // end namespace clang

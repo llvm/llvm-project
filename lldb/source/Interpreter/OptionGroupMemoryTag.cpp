@@ -32,7 +32,7 @@ OptionGroupMemoryTag::OptionGroupMemoryTag(bool note_binary /*=false*/)
                                          : "Include memory tags in output."} {}
 
 llvm::ArrayRef<OptionDefinition> OptionGroupMemoryTag::GetDefinitions() {
-  return llvm::makeArrayRef(m_option_definition);
+  return llvm::ArrayRef(m_option_definition);
 }
 
 Status

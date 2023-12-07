@@ -50,12 +50,12 @@ TEST(CRCTest, LargeCRC32) {
   size_t TestSize = (size_t)UINT32_MAX + 42;
   uint8_t *TestData = (uint8_t*)calloc(TestSize, 1);
   if (!TestData)
-    return;
+    GTEST_SKIP();
 
   // Test expectation generated with:
   // $ truncate --size=`echo 2^32-1+42 | bc` /tmp/foo
   // $ crc32 /tmp/foo
-  EXPECT_EQ(0xE46F28FBU, llvm::crc32(makeArrayRef(TestData, TestSize)));
+  EXPECT_EQ(0xE46F28FBU, llvm::crc32(ArrayRef(TestData, TestSize)));
 
   free(TestData);
 }

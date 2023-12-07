@@ -9,8 +9,6 @@
 #include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -18,18 +16,24 @@ using namespace llvm;
 
 #define DEBUG_TYPE "forceattrs"
 
-static cl::list<std::string>
-    ForceAttributes("force-attribute", cl::Hidden,
-                    cl::desc("Add an attribute to a function. This should be a "
-                             "pair of 'function-name:attribute-name', for "
-                             "example -force-attribute=foo:noinline. This "
-                             "option can be specified multiple times."));
+static cl::list<std::string> ForceAttributes(
+    "force-attribute", cl::Hidden,
+    cl::desc(
+        "Add an attribute to a function. This can be a "
+        "pair of 'function-name:attribute-name', to apply an attribute to a "
+        "specific function. For "
+        "example -force-attribute=foo:noinline. Specifying only an attribute "
+        "will apply the attribute to every function in the module. This "
+        "option can be specified multiple times."));
 
 static cl::list<std::string> ForceRemoveAttributes(
     "force-remove-attribute", cl::Hidden,
-    cl::desc("Remove an attribute from a function. This should be a "
-             "pair of 'function-name:attribute-name', for "
-             "example -force-remove-attribute=foo:noinline. This "
+    cl::desc("Remove an attribute from a function. This can be a "
+             "pair of 'function-name:attribute-name' to remove an attribute "
+             "from a specific function. For "
+             "example -force-remove-attribute=foo:noinline. Specifying only an "
+             "attribute will remove the attribute from all functions in the "
+             "module. This "
              "option can be specified multiple times."));
 
 /// If F has any forced attributes given on the command line, add them.
@@ -38,13 +42,18 @@ static cl::list<std::string> ForceRemoveAttributes(
 /// takes precedence.
 static void forceAttributes(Function &F) {
   auto ParseFunctionAndAttr = [&](StringRef S) {
-    auto Kind = Attribute::None;
-    auto KV = StringRef(S).split(':');
-    if (KV.first != F.getName())
-      return Kind;
-    Kind = Attribute::getAttrKindFromName(KV.second);
+    StringRef AttributeText;
+    if (S.contains(':')) {
+      auto KV = StringRef(S).split(':');
+      if (KV.first != F.getName())
+        return Attribute::None;
+      AttributeText = KV.second;
+    } else {
+      AttributeText = S;
+    }
+    auto Kind = Attribute::getAttrKindFromName(AttributeText);
     if (Kind == Attribute::None || !Attribute::canUseAsFnAttr(Kind)) {
-      LLVM_DEBUG(dbgs() << "ForcedAttribute: " << KV.second
+      LLVM_DEBUG(dbgs() << "ForcedAttribute: " << AttributeText
                         << " unknown or not a function attribute!\n");
     }
     return Kind;
@@ -79,33 +88,4 @@ PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
 
   // Just conservatively invalidate analyses, this isn't likely to be important.
   return PreservedAnalyses::none();
-}
-
-namespace {
-struct ForceFunctionAttrsLegacyPass : public ModulePass {
-  static char ID; // Pass identification, replacement for typeid
-  ForceFunctionAttrsLegacyPass() : ModulePass(ID) {
-    initializeForceFunctionAttrsLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (!hasForceAttributes())
-      return false;
-
-    for (Function &F : M.functions())
-      forceAttributes(F);
-
-    // Conservatively assume we changed something.
-    return true;
-  }
-};
-}
-
-char ForceFunctionAttrsLegacyPass::ID = 0;
-INITIALIZE_PASS(ForceFunctionAttrsLegacyPass, "forceattrs",
-                "Force set function attributes", false, false)
-
-Pass *llvm::createForceFunctionAttrsLegacyPass() {
-  return new ForceFunctionAttrsLegacyPass();
 }

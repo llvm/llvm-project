@@ -44,7 +44,7 @@ for.cond.cleanup:                                 ; preds = %cont
 
 for.body:                                         ; preds = %entry, %cont
 ; CHECK:  %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %cont ]
-; CHECK-NEXT:  -->  {0,+,1}<%for.body> U: [0,16) S: [0,16)
+; CHECK-NEXT:  -->  {0,+,1}<nuw><nsw><%for.body> U: [0,16) S: [0,16)
 
 ; SCEV can prove <nsw> for the above induction variable; but it does
 ; not bother so before it sees the sext below since it is not a 100%
@@ -198,7 +198,7 @@ for.cond.cleanup:                                 ; preds = %cont
 
 for.body:                                         ; preds = %entry, %cont
 ; CHECK:  %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %cont ]
-; CHECK-NEXT:  -->  {0,+,1}<nuw><%for.body> U: [0,16) S: [0,16)
+; CHECK-NEXT:  -->  {0,+,1}<nuw><nsw><%for.body> U: [0,16) S: [0,16)
 
   %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %cont ]
   %idxprom = sext i32 %i.04 to i64
@@ -229,7 +229,7 @@ for.cond.cleanup:                                 ; preds = %cont
 
 for.body:                                         ; preds = %entry, %cont
 ; CHECK:  %i.04 = phi i32 [ 15, %entry ], [ %tmp2, %cont ]
-; CHECK-NEXT:  -->  {15,+,-1}<%for.body> U: [0,16) S: [0,16)
+; CHECK-NEXT:  -->  {15,+,-1}<nsw><%for.body> U: [0,16) S: [0,16)
 
   %i.04 = phi i32 [ 15, %entry ], [ %tmp2, %cont ]
   %idxprom = sext i32 %i.04 to i64
@@ -260,7 +260,7 @@ for.cond.cleanup:                                 ; preds = %cont
 
 for.body:                                         ; preds = %entry, %cont
 ; CHECK:  %i.04 = phi i32 [ 15, %entry ], [ %tmp2, %cont ]
-; CHECK-NEXT:  -->  {15,+,-1}<%for.body> U: [0,16) S: [0,16)
+; CHECK-NEXT:  -->  {15,+,-1}<nsw><%for.body> U: [0,16) S: [0,16)
 
   %i.04 = phi i32 [ 15, %entry ], [ %tmp2, %cont ]
   %idxprom = sext i32 %i.04 to i64

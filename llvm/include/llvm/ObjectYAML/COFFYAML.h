@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/ObjectYAML/CodeViewYAMLDebugSections.h"
 #include "llvm/ObjectYAML/CodeViewYAMLTypeHashing.h"
 #include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
@@ -66,6 +67,16 @@ struct Relocation {
   std::optional<uint32_t> SymbolTableIndex;
 };
 
+struct SectionDataEntry {
+  std::optional<uint32_t> UInt32;
+  yaml::BinaryRef Binary;
+  std::optional<object::coff_load_configuration32> LoadConfig32;
+  std::optional<object::coff_load_configuration64> LoadConfig64;
+
+  size_t size() const;
+  void writeAsBinary(raw_ostream &OS) const;
+};
+
 struct Section {
   COFF::section Header;
   unsigned Alignment = 0;
@@ -74,6 +85,7 @@ struct Section {
   std::vector<CodeViewYAML::LeafRecord> DebugT;
   std::vector<CodeViewYAML::LeafRecord> DebugP;
   std::optional<CodeViewYAML::DebugHSection> DebugH;
+  std::vector<SectionDataEntry> StructuredData;
   std::vector<Relocation> Relocations;
   StringRef Name;
 
@@ -117,6 +129,7 @@ struct Object {
 LLVM_YAML_IS_SEQUENCE_VECTOR(COFFYAML::Section)
 LLVM_YAML_IS_SEQUENCE_VECTOR(COFFYAML::Symbol)
 LLVM_YAML_IS_SEQUENCE_VECTOR(COFFYAML::Relocation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(COFFYAML::SectionDataEntry)
 
 namespace llvm {
 namespace yaml {
@@ -236,9 +249,25 @@ template <> struct MappingTraits<COFF::AuxiliaryCLRToken> {
   static void mapping(IO &IO, COFF::AuxiliaryCLRToken &ACT);
 };
 
+template <> struct MappingTraits<object::coff_load_configuration32> {
+  static void mapping(IO &IO, object::coff_load_configuration32 &ACT);
+};
+
+template <> struct MappingTraits<object::coff_load_configuration64> {
+  static void mapping(IO &IO, object::coff_load_configuration64 &ACT);
+};
+
+template <> struct MappingTraits<object::coff_load_config_code_integrity> {
+  static void mapping(IO &IO, object::coff_load_config_code_integrity &ACT);
+};
+
 template <>
 struct MappingTraits<COFFYAML::Symbol> {
   static void mapping(IO &IO, COFFYAML::Symbol &S);
+};
+
+template <> struct MappingTraits<COFFYAML::SectionDataEntry> {
+  static void mapping(IO &IO, COFFYAML::SectionDataEntry &Sec);
 };
 
 template <>

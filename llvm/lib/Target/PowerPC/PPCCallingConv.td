@@ -112,10 +112,46 @@ def CC_PPC64_AnyReg : CallingConv<[
   CCCustom<"CC_PPC_AnyReg_Error">
 ]>;
 
-// Note that we don't currently have calling conventions for 64-bit
-// PowerPC, but handle all the complexities of the ABI in the lowering
-// logic.  FIXME: See if the logic can be simplified with use of CCs.
-// This may require some extensions to current table generation.
+// Calling Convention corresponding to the 64-bit PowerPC ELFv2 ABI.
+// This calling convention currently only handles integers, floats and
+// vectors within registers, as well as it handles the shadowing of GPRs
+// when floating point and vector arguments are used.
+// FIXME: This calling convention needs to be extended to handle all types and
+// complexities of the ABI.
+let Entry = 1 in
+def CC_PPC64_ELF : CallingConv<[
+  CCIfCC<"CallingConv::AnyReg", CCDelegateTo<CC_PPC64_AnyReg>>,
+
+  CCIfType<[i1],  CCPromoteToType<i64>>,
+  CCIfType<[i8],  CCPromoteToType<i64>>,
+  CCIfType<[i16], CCPromoteToType<i64>>,
+  CCIfType<[i32], CCPromoteToType<i64>>,
+  CCIfType<[i64], CCAssignToReg<[X3, X4, X5, X6, X7, X8, X9, X10]>>,
+
+  // Handle fp types and shadow the corresponding registers as necessary.
+  CCIfType<[f32, f64], CCIfNotVarArg<CCCustom<"CC_PPC64_ELF_Shadow_GPR_Regs">>>,
+  CCIfType<[f32, f64],
+           CCIfNotVarArg<CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10,
+                                        F11, F12, F13]>>>,
+
+  // f128 is handled through vector registers instead of fp registers.
+  CCIfType<[f128],
+           CCIfSubtarget<"hasAltivec()",
+           CCIfNotVarArg<CCCustom<"CC_PPC64_ELF_Shadow_GPR_Regs">>>>,
+  CCIfType<[f128],
+           CCIfSubtarget<"hasAltivec()",
+           CCIfNotVarArg<CCAssignToReg<[V2, V3, V4, V5, V6, V7, V8, V9, V10,
+                                        V11, V12, V13]>>>>,
+
+  // Handle support for vector types, and shadow GPRs as necessary.
+  CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v1i128],
+           CCIfSubtarget<"hasAltivec()",
+           CCIfNotVarArg<CCCustom<"CC_PPC64_ELF_Shadow_GPR_Regs">>>>,
+  CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v1i128],
+           CCIfSubtarget<"hasAltivec()",
+           CCIfNotVarArg<CCAssignToReg<[V2, V3, V4, V5, V6, V7, V8, V9, V10,
+                                        V11, V12, V13]>>>>,
+]>;
 
 // Simple calling convention for 64-bit ELF PowerPC fast isel.
 // Only handle ints and floats.  All ints are promoted to i64.

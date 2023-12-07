@@ -12,6 +12,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::pdll::ast;
@@ -107,7 +108,7 @@ private:
     if (elementIndentStack.empty())
       return;
 
-    for (bool isLastElt : llvm::makeArrayRef(elementIndentStack).drop_back())
+    for (bool isLastElt : llvm::ArrayRef(elementIndentStack).drop_back())
       os << (isLastElt ? "  " : " |");
     os << (elementIndentStack.back() ? " `" : " |");
   }
@@ -133,7 +134,7 @@ void NodePrinter::print(Type type) {
       .Case([&](ConstraintType) { os << "Constraint"; })
       .Case([&](OperationType type) {
         os << "Op";
-        if (Optional<StringRef> name = type.getName())
+        if (std::optional<StringRef> name = type.getName())
           os << "<" << *name << ">";
       })
       .Case([&](RangeType type) {
@@ -224,7 +225,10 @@ void NodePrinter::printImpl(const AttributeExpr *expr) {
 void NodePrinter::printImpl(const CallExpr *expr) {
   os << "CallExpr " << expr << " Type<";
   print(expr->getType());
-  os << ">\n";
+  os << ">";
+  if (expr->getIsNegated())
+    os << " Negated";
+  os << "\n";
   printChildren(expr->getCallableExpr());
   printChildren("Arguments", expr->getArguments());
 }
@@ -297,7 +301,7 @@ void NodePrinter::printImpl(const TypeRangeConstraintDecl *decl) {
 void NodePrinter::printImpl(const UserConstraintDecl *decl) {
   os << "UserConstraintDecl " << decl << " Name<" << decl->getName().getName()
      << "> ResultType<" << decl->getResultType() << ">";
-  if (Optional<StringRef> codeBlock = decl->getCodeBlock()) {
+  if (std::optional<StringRef> codeBlock = decl->getCodeBlock()) {
     os << " Code<";
     llvm::printEscapedString(*codeBlock, os);
     os << ">";
@@ -329,7 +333,7 @@ void NodePrinter::printImpl(const NamedAttributeDecl *decl) {
 
 void NodePrinter::printImpl(const OpNameDecl *decl) {
   os << "OpNameDecl " << decl;
-  if (Optional<StringRef> name = decl->getName())
+  if (std::optional<StringRef> name = decl->getName())
     os << " Name<" << *name << ">";
   os << "\n";
 }
@@ -338,7 +342,7 @@ void NodePrinter::printImpl(const PatternDecl *decl) {
   os << "PatternDecl " << decl;
   if (const Name *name = decl->getName())
     os << " Name<" << name->getName() << ">";
-  if (Optional<uint16_t> benefit = decl->getBenefit())
+  if (std::optional<uint16_t> benefit = decl->getBenefit())
     os << " Benefit<" << *benefit << ">";
   if (decl->hasBoundedRewriteRecursion())
     os << " Recursion";
@@ -350,7 +354,7 @@ void NodePrinter::printImpl(const PatternDecl *decl) {
 void NodePrinter::printImpl(const UserRewriteDecl *decl) {
   os << "UserRewriteDecl " << decl << " Name<" << decl->getName().getName()
      << "> ResultType<" << decl->getResultType() << ">";
-  if (Optional<StringRef> codeBlock = decl->getCodeBlock()) {
+  if (std::optional<StringRef> codeBlock = decl->getCodeBlock()) {
     os << " Code<";
     llvm::printEscapedString(*codeBlock, os);
     os << ">";

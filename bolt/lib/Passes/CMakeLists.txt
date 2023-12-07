@@ -13,6 +13,8 @@ add_llvm_library(LLVMBOLTPasses
   DataflowInfoManager.cpp
   FrameAnalysis.cpp
   FrameOptimizer.cpp
+  FixRelaxationPass.cpp
+  FixRISCVCallsPass.cpp
   HFSort.cpp
   HFSortPlus.cpp
   Hugify.cpp
@@ -56,6 +58,7 @@ add_llvm_library(LLVMBOLTPasses
   AsmPrinter
   MC
   Support
+  TargetParser
   TransformUtils
   )
 

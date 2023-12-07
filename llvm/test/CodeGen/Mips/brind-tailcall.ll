@@ -31,9 +31,9 @@ define void @test1(i32 %a) {
 entry:
   %0 = trunc i32 %a to i1
   %1 = select i1 %0,
-              i8* blockaddress(@test1, %bb),
-              i8* blockaddress(@test1, %bb6)
-  indirectbr i8* %1, [label %bb, label %bb6]
+              ptr blockaddress(@test1, %bb),
+              ptr blockaddress(@test1, %bb6)
+  indirectbr ptr %1, [label %bb, label %bb6]
 
 ; STATIC:     PseudoIndirectBranch
 ; STATIC-MM:  PseudoIndirectBranch

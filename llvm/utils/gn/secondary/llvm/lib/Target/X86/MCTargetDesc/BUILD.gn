@@ -57,20 +57,22 @@ static_library("MCTargetDesc") {
   deps = [
     ":X86GenAsmWriter",
     ":X86GenAsmWriter1",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target/X86/TargetInfo",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ ".." ]
   sources = [
     "X86ATTInstPrinter.cpp",
     "X86AsmBackend.cpp",
     "X86ELFObjectWriter.cpp",
+    "X86EncodingOptimization.cpp",
     "X86InstComments.cpp",
     "X86InstPrinterCommon.cpp",
-    "X86InstrRelaxTables.cpp",
     "X86IntelInstPrinter.cpp",
     "X86MCAsmInfo.cpp",
     "X86MCCodeEmitter.cpp",

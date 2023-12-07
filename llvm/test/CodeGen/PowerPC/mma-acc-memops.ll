@@ -377,8 +377,8 @@ define dso_local void @testLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED:       # %bb.0: # %entry
 ; LE-PAIRED-NEXT:    plxv v3, g@PCREL+32(0), 1
 ; LE-PAIRED-NEXT:    plxv v2, g@PCREL+48(0), 1
-; LE-PAIRED-NEXT:    pstxv v3, g@PCREL+64(0), 1
 ; LE-PAIRED-NEXT:    pstxv v2, g@PCREL+80(0), 1
+; LE-PAIRED-NEXT:    pstxv v3, g@PCREL+64(0), 1
 ; LE-PAIRED-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testLdStPair:
@@ -454,8 +454,8 @@ define dso_local void @testXLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-NEXT:    add r6, r5, r3
 ; LE-PAIRED-NEXT:    lxvx v3, r5, r3
 ; LE-PAIRED-NEXT:    sldi r3, r4, 5
-; LE-PAIRED-NEXT:    lxv v2, 16(r6)
 ; LE-PAIRED-NEXT:    add r4, r5, r3
+; LE-PAIRED-NEXT:    lxv v2, 16(r6)
 ; LE-PAIRED-NEXT:    stxvx v3, r5, r3
 ; LE-PAIRED-NEXT:    stxv v2, 16(r4)
 ; LE-PAIRED-NEXT:    blr
@@ -468,8 +468,8 @@ define dso_local void @testXLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PAIRED-NEXT:    add r6, r5, r3
 ; BE-PAIRED-NEXT:    lxvx v2, r5, r3
 ; BE-PAIRED-NEXT:    sldi r3, r4, 5
-; BE-PAIRED-NEXT:    lxv v3, 16(r6)
 ; BE-PAIRED-NEXT:    add r4, r5, r3
+; BE-PAIRED-NEXT:    lxv v3, 16(r6)
 ; BE-PAIRED-NEXT:    stxvx v2, r5, r3
 ; BE-PAIRED-NEXT:    stxv v3, 16(r4)
 ; BE-PAIRED-NEXT:    blr
@@ -544,8 +544,8 @@ define dso_local void @testUnalignedLdStPair() {
 ; LE-PAIRED:       # %bb.0: # %entry
 ; LE-PAIRED-NEXT:    plxv v3, g@PCREL+11(0), 1
 ; LE-PAIRED-NEXT:    plxv v2, g@PCREL+27(0), 1
-; LE-PAIRED-NEXT:    pstxv v3, g@PCREL+19(0), 1
 ; LE-PAIRED-NEXT:    pstxv v2, g@PCREL+35(0), 1
+; LE-PAIRED-NEXT:    pstxv v3, g@PCREL+19(0), 1
 ; LE-PAIRED-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testUnalignedLdStPair:

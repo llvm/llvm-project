@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is a RISCV specific version of CodeGenPrepare.
+// This is a RISC-V specific version of CodeGenPrepare.
 // It munges the code in the input function to better prepare it for
 // SelectionDAG-based code generation. This works around limitations in it's
 // basic-block-at-a-time approach.
@@ -26,7 +26,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-codegenprepare"
-#define PASS_NAME "RISCV CodeGenPrepare"
+#define PASS_NAME "RISC-V CodeGenPrepare"
 
 STATISTIC(NumZExtToSExt, "Number of SExt instructions converted to ZExt");
 

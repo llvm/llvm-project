@@ -77,9 +77,9 @@ return:                                           ; preds = %if.end
 }
 
 @channelColumns = external global i64
-@horzPlane = external global i8*, align 8
+@horzPlane = external global ptr, align 8
 
-define void @FindFreeHorzSeg(i64 %startCol, i64 %row, i64* %rowStart) {
+define void @FindFreeHorzSeg(i64 %startCol, i64 %row, ptr %rowStart) {
 ; Ensure that the loop increment basic block is rotated into the tail of the
 ; body, even though it contains a debug intrinsic call.
 ; CHECK-LABEL: define void @FindFreeHorzSeg(
@@ -100,12 +100,12 @@ for.cond:
   br i1 %cmp, label %for.end, label %for.body
 
 for.body:
-  %0 = load i64, i64* @channelColumns, align 8
+  %0 = load i64, ptr @channelColumns, align 8
   %mul = mul i64 %0, %row
   %add = add i64 %mul, %i.0
-  %1 = load i8*, i8** @horzPlane, align 8
-  %arrayidx = getelementptr inbounds i8, i8* %1, i64 %add
-  %2 = load i8, i8* %arrayidx, align 1
+  %1 = load ptr, ptr @horzPlane, align 8
+  %arrayidx = getelementptr inbounds i8, ptr %1, i64 %add
+  %2 = load i8, ptr %arrayidx, align 1
   %tobool = icmp eq i8 %2, 0
   br i1 %tobool, label %for.inc, label %for.end
 
@@ -116,7 +116,7 @@ for.inc:
 
 for.end:
   %add1 = add i64 %i.0, 1
-  store i64 %add1, i64* %rowStart, align 8
+  store i64 %add1, ptr %rowStart, align 8
   ret void
 }
 

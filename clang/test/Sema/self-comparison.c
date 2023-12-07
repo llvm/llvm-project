@@ -76,7 +76,7 @@ int array_comparisons(void) {
 }
 
 // Don't issue a warning when either the left or right side of the comparison
-// results from a macro expansion.  <rdar://problem/8435950>
+// results from a macro expansion.
 #define R8435950_A i 
 #define R8435950_B i 
 

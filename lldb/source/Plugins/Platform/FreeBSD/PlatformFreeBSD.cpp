@@ -28,8 +28,8 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 // Define these constants from FreeBSD mman.h for use when targeting remote
 // FreeBSD systems even when host has different values.
@@ -244,7 +244,7 @@ CompilerType PlatformFreeBSD::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->AddFieldToRecordType(
       union_type, "_fault",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"_trapno", int_type},
                                      }),
@@ -252,7 +252,7 @@ CompilerType PlatformFreeBSD::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->AddFieldToRecordType(
       union_type, "_timer",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"_timerid", int_type},
                                          {"_overrun", int_type},
@@ -261,7 +261,7 @@ CompilerType PlatformFreeBSD::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->AddFieldToRecordType(
       union_type, "_mesgq",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"_mqd", int_type},
                                      }),
@@ -269,7 +269,7 @@ CompilerType PlatformFreeBSD::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->AddFieldToRecordType(
       union_type, "_poll",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"_band", long_type},
                                      }),

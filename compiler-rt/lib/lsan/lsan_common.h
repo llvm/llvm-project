@@ -18,6 +18,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_platform.h"
+#include "sanitizer_common/sanitizer_range.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stoptheworld.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
@@ -42,6 +43,8 @@
 #elif defined(__i386__) && (SANITIZER_LINUX || SANITIZER_APPLE)
 #  define CAN_SANITIZE_LEAKS 1
 #elif defined(__arm__) && SANITIZER_LINUX
+#  define CAN_SANITIZE_LEAKS 1
+#elif SANITIZER_LOONGARCH64 && SANITIZER_LINUX
 #  define CAN_SANITIZE_LEAKS 1
 #elif SANITIZER_RISCV64 && SANITIZER_LINUX
 #  define CAN_SANITIZE_LEAKS 1
@@ -89,8 +92,8 @@ bool WordIsPoisoned(uptr addr);
 //// --------------------------------------------------------------------------
 
 // Wrappers for ThreadRegistry access.
-void LockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
-void UnlockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
+void LockThreads() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
+void UnlockThreads() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
 // If called from the main thread, updates the main thread's TID in the thread
 // registry. We need this to handle processes that fork() without a subsequent
 // exec(), which invalidates the recorded TID. To update it, we must call
@@ -103,12 +106,11 @@ bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
                            uptr *cache_end, DTLS **dtls);
 void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches);
-void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
-                            void *arg);
-
-void RunCallbackForEachThreadLocked(__sanitizer::ThreadRegistry::ThreadCallback cb,
-                                    void *arg);
-void FinishThreadLocked(u32 tid);
+void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges);
+void GetThreadExtraStackRangesLocked(tid_t os_id,
+                                     InternalMmapVector<Range> *ranges);
+void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs);
+void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads);
 
 //// --------------------------------------------------------------------------
 //// Allocator prototypes.
@@ -125,6 +127,9 @@ void GetAllocatorGlobalRange(uptr *begin, uptr *end);
 uptr PointsIntoChunk(void *p);
 // Returns address of user-visible chunk contained in this allocator chunk.
 uptr GetUserBegin(uptr chunk);
+// Returns user-visible address for chunk. If memory tagging is used this
+// function will return the tagged address.
+uptr GetUserAddr(uptr chunk);
 
 // Wrapper for chunk metadata operations.
 class LsanMetadata {
@@ -145,21 +150,19 @@ class LsanMetadata {
 void ForEachChunk(ForEachChunkCallback callback, void *arg);
 
 // Helper for __lsan_ignore_object().
-IgnoreObjectResult IgnoreObjectLocked(const void *p);
-
-void GetAdditionalThreadContextPtrs(ThreadContextBase *tctx, void *ptrs);
+IgnoreObjectResult IgnoreObject(const void *p);
 
 // The rest of the LSan interface which is implemented by library.
 
 struct ScopedStopTheWorldLock {
   ScopedStopTheWorldLock() {
-    LockThreadRegistry();
+    LockThreads();
     LockAllocator();
   }
 
   ~ScopedStopTheWorldLock() {
     UnlockAllocator();
-    UnlockThreadRegistry();
+    UnlockThreads();
   }
 
   ScopedStopTheWorldLock &operator=(const ScopedStopTheWorldLock &) = delete;
@@ -232,11 +235,6 @@ void InitializePlatformSpecificModules();
 void ProcessGlobalRegions(Frontier *frontier);
 void ProcessPlatformSpecificAllocations(Frontier *frontier);
 
-struct RootRegion {
-  uptr begin;
-  uptr size;
-};
-
 // LockStuffAndStopTheWorld can start to use Scan* calls to collect into
 // this Frontier vector before the StopTheWorldCallback actually runs.
 // This is used when the OS has a unified callback API for suspending
@@ -249,10 +247,11 @@ struct CheckForLeaksParam {
   bool success = false;
 };
 
-InternalMmapVectorNoCtor<RootRegion> const *GetRootRegions();
-void ScanRootRegion(Frontier *frontier, RootRegion const &region,
-                    uptr region_begin, uptr region_end, bool is_readable);
-void ForEachExtraStackRangeCb(uptr begin, uptr end, void *arg);
+using Region = Range;
+
+bool HasRootRegions();
+void ScanRootRegions(Frontier *frontier,
+                     const InternalMmapVectorNoCtor<Region> &region);
 // Run stoptheworld while holding any platform-specific locks, as well as the
 // allocator and thread registry locks.
 void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
@@ -262,6 +261,8 @@ void ScanRangeForPointers(uptr begin, uptr end,
                           Frontier *frontier,
                           const char *region_type, ChunkTag tag);
 void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier);
+void ScanExtraStackRanges(const InternalMmapVector<Range> &ranges,
+                          Frontier *frontier);
 
 // Functions called from the parent tool.
 const char *MaybeCallLsanDefaultOptions();

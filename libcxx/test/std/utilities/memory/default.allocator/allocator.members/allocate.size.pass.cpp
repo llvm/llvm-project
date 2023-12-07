@@ -19,7 +19,7 @@
 #include "test_macros.h"
 
 template <typename T>
-void test_max(size_t count)
+void test_max(std::size_t count)
 {
     std::allocator<T> a;
     try {
@@ -38,8 +38,8 @@ void test()
     A a;
     test_max<T> (AT::max_size(a) + 1);             // just barely too large
     test_max<T> (AT::max_size(a) * 2);             // significantly too large
-    test_max<T> (((size_t) -1) / sizeof(T) + 1);   // multiply will overflow
-    test_max<T> ((size_t) -1);                     // way too large
+    test_max<T> (((std::size_t) -1) / sizeof(T) + 1);   // multiply will overflow
+    test_max<T> ((std::size_t) -1);                     // way too large
 }
 
 int main(int, char**)

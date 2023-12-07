@@ -10,6 +10,16 @@
     ret i64 %shl
   }
 
+  define <8 x i16> @pr63777(<8 x i16> %vmull.i, ptr %iPtr) {
+  entry:
+    %ld = load <8 x i8>, ptr %iPtr, align 1
+    %shuffle.i.i = shufflevector <8 x i8> %ld, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %bc = bitcast <16 x i8> %shuffle.i.i to <8 x i16>
+    %vecinit7.i = shufflevector <8 x i16> %bc, <8 x i16> zeroinitializer, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+    %mul.i109 = mul <8 x i16> %vecinit7.i, %vmull.i
+    %or.i = or <8 x i16> %mul.i109, %bc
+    ret <8 x i16> %or.i
+  }
 ...
 ---
 ---
@@ -45,3 +55,60 @@ body: |
     %4:gpr64 = nuw nsw UBFMXri killed %2, 63, 31
     $x0 = COPY %4
     RET_ReallyLR implicit $x0
+
+...
+---
+name:            pr63777
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr128, preferred-register: '' }
+  - { id: 1, class: gpr64common, preferred-register: '' }
+  - { id: 2, class: fpr64, preferred-register: '' }
+  - { id: 3, class: fpr128, preferred-register: '' }
+  - { id: 4, class: fpr64, preferred-register: '' }
+  - { id: 5, class: fpr128, preferred-register: '' }
+  - { id: 6, class: fpr128, preferred-register: '' }
+  - { id: 7, class: fpr128, preferred-register: '' }
+  - { id: 8, class: fpr128, preferred-register: '' }
+  - { id: 9, class: fpr128_lo, preferred-register: '' }
+  - { id: 10, class: fpr128, preferred-register: '' }
+  - { id: 11, class: fpr128, preferred-register: '' }
+liveins:
+  - { reg: '$q0', virtual-reg: '%0' }
+  - { reg: '$x0', virtual-reg: '%1' }
+body:             |
+  bb.0.entry:
+    liveins: $q0, $x0
+
+    ; CHECK-LABEL: name: pr63777
+    ; CHECK: liveins: $q0, $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY]], 0 :: (load (s64) from %ir.iPtr, align 1)
+    ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[MOVIv2d_ns]].dsub
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], killed [[COPY2]], %subreg.dsub
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128_lo = INSERT_SUBREG [[DEF1]], killed [[LDRDui]], %subreg.dsub
+    ; CHECK-NEXT: [[MULv8i16_indexed:%[0-9]+]]:fpr128 = MULv8i16_indexed [[COPY1]], [[INSERT_SUBREG1]], 1
+    ; CHECK-NEXT: [[ORRv16i8_:%[0-9]+]]:fpr128 = ORRv16i8 killed [[MULv8i16_indexed]], [[INSERT_SUBREG1]]
+    ; CHECK-NEXT: $q0 = COPY [[ORRv16i8_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %1:gpr64common = COPY $x0
+    %0:fpr128 = COPY $q0
+    %2:fpr64 = LDRDui %1, 0 :: (load (s64) from %ir.iPtr, align 1)
+    %3:fpr128 = MOVIv2d_ns 0
+    %4:fpr64 = COPY %3.dsub
+    %6:fpr128 = IMPLICIT_DEF
+    %5:fpr128 = INSERT_SUBREG %6, killed %4, %subreg.dsub
+    %8:fpr128 = IMPLICIT_DEF
+    %7:fpr128 = INSERT_SUBREG %8, killed %2, %subreg.dsub
+    %9:fpr128_lo = INSvi64lane %7, 1, killed %5, 0
+    %10:fpr128 = MULv8i16_indexed %0, %9, 1
+    %11:fpr128 = ORRv16i8 killed %10, %9
+    $q0 = COPY %11
+    RET_ReallyLR implicit $q0
+
+...

@@ -545,3 +545,230 @@ void triggerIntegerRankCheck() {
   auto b4 = (v4 >= 0x12);
 }
 #endif
+
+namespace all_operators {
+typedef unsigned int v2u __attribute__((ext_vector_type(2)));
+typedef float v2f __attribute__((ext_vector_type(2)));
+
+void test_int_vector_scalar(unsigned int ua, v2u v2ua) {
+  // Operators with one integer vector and one integer scalar operand. The scalar will splat.
+  (void)(v2ua + ua);
+  (void)(ua + v2ua);
+  (void)(v2ua - ua);
+  (void)(ua - v2ua);
+  (void)(v2ua * ua);
+  (void)(ua * v2ua);
+  (void)(v2ua / ua);
+  (void)(ua / v2ua);
+  (void)(v2ua % ua);
+  (void)(ua % v2ua);
+
+  (void)(v2ua == ua);
+  (void)(ua == v2ua);
+  (void)(v2ua != ua);
+  (void)(ua != v2ua);
+  (void)(v2ua <= ua);
+  (void)(ua <= v2ua);
+  (void)(v2ua >= ua);
+  (void)(ua >= v2ua);
+  (void)(v2ua < ua);
+  (void)(ua < v2ua);
+  (void)(v2ua > ua);
+  (void)(ua > v2ua);
+  (void)(v2ua && ua);
+  (void)(ua && v2ua);
+  (void)(v2ua || ua);
+  (void)(ua || v2ua);
+
+  (void)(v2ua & ua);
+  (void)(ua & v2ua);
+  (void)(v2ua | ua);
+  (void)(ua | v2ua);
+  (void)(v2ua ^ ua);
+  (void)(ua ^ v2ua);
+  (void)(v2ua << ua);
+  (void)(ua << v2ua);
+  (void)(v2ua >> ua);
+  (void)(ua >> v2ua);
+
+  v2ua += ua;
+  v2ua -= ua;
+  v2ua *= ua;
+  v2ua /= ua;
+  v2ua %= ua;
+  v2ua &= ua;
+  v2ua |= ua;
+  v2ua ^= ua;
+  v2ua >>= ua;
+  v2ua <<= ua;
+
+  ua += v2ua; // expected-error{{assigning to 'unsigned int' from incompatible type 'v2u'}}
+  ua -= v2ua; // expected-error{{assigning to 'unsigned int' from incompatible type 'v2u'}}
+  ua *= v2ua; // expected-error{{assigning to 'unsigned int' from incompatible type 'v2u'}}
+  ua /= v2ua; // expected-error{{assigning to 'unsigned int' from incompatible type 'v2u'}}
+  ua %= v2ua; // expected-error{{assigning to 'unsigned int' from incompatible type 'v2u'}}
+  ua &= v2ua; // expected-error{{assigning to 'unsigned int' from incompatible type 'v2u'}}
+  ua |= v2ua; // expected-error{{assigning to 'unsigned int' from incompatible type 'v2u'}}
+  ua ^= v2ua; // expected-error{{assigning to 'unsigned int' from incompatible type 'v2u'}}
+  ua >>= v2ua; // expected-error{{assigning to 'unsigned int' from incompatible type 'v2u'}}
+  ua <<= v2ua; // expected-error{{assigning to 'unsigned int' from incompatible type 'v2u'}}
+}
+
+void test_float_vector_scalar(float fa, unsigned int ua, v2f v2fa) {
+  // Operators with one float vector and one float scalar operand. The scalar will splat.
+  (void)(v2fa + fa);
+  (void)(fa + v2fa);
+  (void)(v2fa - fa);
+  (void)(fa - v2fa);
+  (void)(v2fa * fa);
+  (void)(fa * v2fa);
+  (void)(v2fa / fa);
+  (void)(fa / v2fa);
+  (void)(v2fa % fa); // expected-error{{invalid operands to binary expression}}
+  (void)(fa % v2fa); // expected-error{{invalid operands to binary expression}}
+
+  (void)(v2fa == fa);
+  (void)(fa == v2fa);
+  (void)(v2fa != fa);
+  (void)(fa != v2fa);
+  (void)(v2fa <= fa);
+  (void)(fa <= v2fa);
+  (void)(v2fa >= fa);
+  (void)(fa >= v2fa);
+  (void)(v2fa < fa);
+  (void)(fa < v2fa);
+  (void)(v2fa > fa);
+  (void)(fa > v2fa);
+  (void)(v2fa && fa);
+  (void)(fa && v2fa);
+  (void)(v2fa || fa);
+  (void)(fa || v2fa);
+
+  (void)(v2fa & fa); // expected-error{{invalid operands to binary expression}}
+  (void)(fa & v2fa); // expected-error{{invalid operands to binary expression}}
+  (void)(v2fa | fa); // expected-error{{invalid operands to binary expression}}
+  (void)(fa | v2fa); // expected-error{{invalid operands to binary expression}}
+  (void)(v2fa ^ fa); // expected-error{{invalid operands to binary expression}}
+  (void)(fa ^ v2fa); // expected-error{{invalid operands to binary expression}}
+  (void)(v2fa << fa); // expected-error{{used type 'v2f' (vector of 2 'float' values) where integer is required}}
+  (void)(v2fa << ua); // expected-error{{used type 'v2f' (vector of 2 'float' values) where integer is required}}
+  (void)(fa << v2fa); // expected-error{{used type 'float' where integer is required}}
+  (void)(ua << v2fa); // expected-error{{used type 'v2f' (vector of 2 'float' values) where integer is required}}
+  (void)(v2fa >> fa); // expected-error{{used type 'v2f' (vector of 2 'float' values) where integer is required}}
+  (void)(v2fa >> ua); // expected-error{{used type 'v2f' (vector of 2 'float' values) where integer is required}}
+  (void)(fa >> v2fa); // expected-error{{used type 'float' where integer is required}}
+  (void)(ua >> v2fa); // expected-error{{used type 'v2f' (vector of 2 'float' values) where integer is required}}
+
+  v2fa += fa;
+  v2fa -= fa;
+  v2fa *= fa;
+  v2fa /= fa;
+  v2fa %= fa; // expected-error{{invalid operands to binary expression}}
+  v2fa &= fa; // expected-error{{invalid operands to binary expression}}
+  v2fa |= fa; // expected-error{{invalid operands to binary expression}}
+  v2fa ^= fa; // expected-error{{invalid operands to binary expression}}
+  v2fa >>= fa; // expected-error{{used type 'v2f' (vector of 2 'float' values) where integer is required}}
+  v2fa <<= fa; // expected-error{{used type 'v2f' (vector of 2 'float' values) where integer is required}}
+
+  fa += v2fa; // expected-error{{assigning to 'float' from incompatible type 'v2f'}}
+  fa -= v2fa; // expected-error{{assigning to 'float' from incompatible type 'v2f'}}
+  fa *= v2fa; // expected-error{{assigning to 'float' from incompatible type 'v2f'}}
+  fa /= v2fa; // expected-error{{assigning to 'float' from incompatible type 'v2f'}}
+  fa %= v2fa; // expected-error{{invalid operands to binary expression}}
+  fa &= v2fa; // expected-error{{invalid operands to binary expression}}
+  fa |= v2fa; // expected-error{{invalid operands to binary expression}}
+  fa ^= v2fa; // expected-error{{invalid operands to binary expression}}
+  fa >>= v2fa; // expected-error{{used type 'float' where integer is required}}
+  fa <<= v2fa; // expected-error{{used type 'float' where integer is required}}
+}
+
+enum Enum { ENUM };
+
+void test_enum_vector_scalar(Enum ea, v2u v2ua) {
+  // Operators with one integer vector and one enum scalar operand.
+  // The scalar will have an implicit conversion to an integral type and then splat.
+  // FIXME: These should behave the same as in C, they should be accepted via
+  // the enum converting to an integer then splatting to the vector width.
+  // https://github.com/llvm/llvm-project/issues/62869
+  (void)(v2ua + ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea + v2ua); // expected-error{{cannot convert between vector values of different size}}
+  (void)(v2ua - ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea - v2ua); // expected-error{{cannot convert between vector values of different size}}
+  (void)(v2ua * ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea * v2ua); // expected-error{{cannot convert between vector values of different size}}
+  (void)(v2ua / ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea / v2ua); // expected-error{{cannot convert between vector values of different size}}
+  (void)(v2ua % ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea % v2ua); // expected-error{{cannot convert between vector values of different size}}
+
+  (void)(v2ua == ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea == v2ua); // expected-error{{cannot convert between vector values of different size}}
+  (void)(v2ua != ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea != v2ua); // expected-error{{cannot convert between vector values of different size}}
+  (void)(v2ua <= ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea <= v2ua); // expected-error{{cannot convert between vector values of different size}}
+  (void)(v2ua >= ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea >= v2ua); // expected-error{{cannot convert between vector values of different size}}
+  (void)(v2ua < ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea < v2ua); // expected-error{{cannot convert between vector values of different size}}
+  (void)(v2ua > ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea > v2ua); // expected-error{{cannot convert between vector values of different size}}
+  (void)(v2ua && ea); // expected-error{{cannot convert between vector values of different size}}
+  // expected-error@-1{{invalid operands to binary expression}}
+  (void)(ea && v2ua); // expected-error{{cannot convert between vector values of different size}}
+  // expected-error@-1{{invalid operands to binary expression}}
+  (void)(v2ua || ea); // expected-error{{cannot convert between vector values of different size}}
+  // expected-error@-1{{invalid operands to binary expression}}
+  (void)(ea || v2ua); // expected-error{{cannot convert between vector values of different size}}
+  // expected-error@-1{{invalid operands to binary expression}}
+
+  (void)(v2ua & ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea & v2ua); // expected-error{{cannot convert between vector values of different size}}
+  (void)(v2ua | ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea | v2ua); // expected-error{{cannot convert between vector values of different size}}
+  (void)(v2ua ^ ea); // expected-error{{cannot convert between vector values of different size}}
+  (void)(ea ^ v2ua); // expected-error{{cannot convert between vector values of different size}}
+  // FIXME: Vector/scalar shifts cause an assertion failure
+  // https://github.com/llvm/llvm-project/issues/62870
+  // (void)(v2ua << ea);
+  // (void)(ea << v2ua);
+  // (void)(v2ua >> ea);
+  // (void)(ea >> v2ua);
+
+  v2ua += ea; // expected-error{{cannot convert between vector values of different size}}
+  v2ua -= ea; // expected-error{{cannot convert between vector values of different size}}
+  v2ua *= ea; // expected-error{{cannot convert between vector values of different size}}
+  v2ua /= ea; // expected-error{{cannot convert between vector values of different size}}
+  v2ua %= ea; // expected-error{{cannot convert between vector values of different size}}
+  v2ua &= ea; // expected-error{{cannot convert between vector values of different size}}
+  v2ua |= ea; // expected-error{{cannot convert between vector values of different size}}
+  v2ua ^= ea; // expected-error{{cannot convert between vector values of different size}}
+  // FIXME: Vector/scalar shifts cause an assertion failure
+  // https://github.com/llvm/llvm-project/issues/62870
+  // v2ua >>= ea;
+  // v2ua <<= ea;
+
+  ea += v2ua; // expected-error{{cannot convert between vector values of different size}}
+  ea -= v2ua; // expected-error{{cannot convert between vector values of different size}}
+  ea *= v2ua; // expected-error{{cannot convert between vector values of different size}}
+  ea /= v2ua; // expected-error{{cannot convert between vector values of different size}}
+  ea %= v2ua; // expected-error{{cannot convert between vector values of different size}}
+  ea &= v2ua; // expected-error{{cannot convert between vector values of different size}}
+  ea |= v2ua; // expected-error{{cannot convert between vector values of different size}}
+  ea ^= v2ua; // expected-error{{cannot convert between vector values of different size}}
+  // FIXME: Vector/scalar shifts cause an assertion failure
+  // https://github.com/llvm/llvm-project/issues/62870
+  // ea >>= v2ua; // not-expected-error{{assigning to 'enum Enum' from incompatible type 'v2u'}}
+  // ea <<= v2ua; // not-expected-error{{assigning to 'enum Enum' from incompatible type 'v2u'}}
+}
+
+#if __cplusplus >= 201103L // C++11 or later
+enum class EnumClass { ENUM };
+
+void test_scoped_enum_vector(EnumClass ea, v2u v2ua) {
+  // Scoped enumerations are only compatible with exactly matching types. They shouldn't integral promote.
+  (void)(v2ua + ea); // expected-error{{cannot convert between vector and non-scalar values}}
+  (void)(ea + v2ua); // expected-error{{cannot convert between vector and non-scalar values}}
+}
+#endif
+}

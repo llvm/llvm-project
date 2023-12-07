@@ -47,10 +47,12 @@ Using Clang as a Compiler
    OpenCLSupport
    OpenMPSupport
    SYCLSupport
+   HIPSupport
    HLSL/HLSLDocs
    ThinLTO
    APINotes
    DebuggingCoroutines
+   AMDGPUSupport
    CommandGuide/index
    FAQ
 
@@ -64,6 +66,7 @@ Using Clang as a Library
    ExternalClangExamples
    IntroductionToTheClangAST
    LibTooling
+   LibClang
    LibFormat
    ClangPlugins
    RAVFrontendAction
@@ -87,9 +90,7 @@ Using Clang Tools
    ClangFormatStyleOptions
    ClangFormattedStatus
    ClangLinkerWrapper
-   ClangNvlinkWrapper
    ClangOffloadBundler
-   ClangOffloadWrapper
    ClangOffloadPackager
    ClangRepl
 
@@ -102,6 +103,7 @@ Design Documents
    CodeOwners
    InternalsManual
    DriverInternals
+   Multilib
    OffloadingDesign
    PCHInternals
    ItaniumMangleAbiTags

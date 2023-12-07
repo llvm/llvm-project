@@ -149,6 +149,7 @@ add_clang_library(libclang ${ENABLE_SHARED} ${ENABLE_STATIC} INSTALL_WITH_TOOLCH
   ${LLVM_TARGETS_TO_BUILD}
   Core
   Support
+  TargetParser
   )
 
 if(ENABLE_STATIC)

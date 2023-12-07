@@ -17,9 +17,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 StringFindStartswithCheck::StringFindStartswithCheck(StringRef Name,
                                                      ClangTidyContext *Context)
@@ -88,8 +86,7 @@ void StringFindStartswithCheck::check(const MatchFinder::MatchResult &Result) {
   const Expr *Haystack = Result.Nodes.getNodeAs<CXXMemberCallExpr>("findexpr")
                              ->getImplicitObjectArgument();
   assert(Haystack != nullptr);
-  const CXXMethodDecl *FindFun =
-      Result.Nodes.getNodeAs<CXXMethodDecl>("findfun");
+  const auto *FindFun = Result.Nodes.getNodeAs<CXXMethodDecl>("findfun");
   assert(FindFun != nullptr);
 
   bool Rev = FindFun->getName().contains("rfind");
@@ -142,6 +139,4 @@ void StringFindStartswithCheck::storeOptions(
   Options.store(Opts, "AbseilStringsMatchHeader", AbseilStringsMatchHeader);
 }
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil

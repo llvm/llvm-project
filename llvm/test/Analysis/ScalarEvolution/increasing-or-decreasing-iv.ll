@@ -9,13 +9,13 @@ define void @f0(i1 %c) {
 ; CHECK-NEXT:    %step = select i1 %c, i32 -1, i32 1
 ; CHECK-NEXT:    --> %step U: [1,0) S: [-2,2)
 ; CHECK-NEXT:    %loop.iv = phi i32 [ 0, %entry ], [ %loop.iv.inc, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,%step}<%loop> U: [0,128) S: [0,128) Exits: ((127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,%step}<nsw><%loop> U: [0,128) S: [0,128) Exits: ((127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
-; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i32 %loop.iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f0
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 127
@@ -49,41 +49,41 @@ define void @f1(i1 %c) {
 ; CHECK-NEXT:    %step = select i1 %c, i32 -8, i32 8
 ; CHECK-NEXT:    --> %step U: [8,-7) S: [-16,16)
 ; CHECK-NEXT:    %loop.iv = phi i32 [ 0, %entry ], [ %loop.iv.inc, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,16) S: [0,16) Exits: 15 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,16) S: [0,16) Exits: 15 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,%step}<%loop> U: [0,121) S: [0,121) Exits: ((15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,%step}<nsw><%loop> U: [0,121) S: [0,121) Exits: ((15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.1 = add i32 %iv, 1
-; CHECK-NEXT:    --> {(1 + %start)<nuw><nsw>,+,%step}<%loop> U: [1,122) S: [1,122) Exits: (1 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %start)<nuw><nsw>,+,%step}<nsw><%loop> U: [1,122) S: [1,122) Exits: (1 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.2 = add i32 %iv, 2
-; CHECK-NEXT:    --> {(2 + %start)<nuw><nsw>,+,%step}<%loop> U: [2,123) S: [2,123) Exits: (2 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(2 + %start)<nuw><nsw>,+,%step}<nsw><%loop> U: [2,123) S: [2,123) Exits: (2 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.3 = add i32 %iv, 3
-; CHECK-NEXT:    --> {(3 + %start)<nuw><nsw>,+,%step}<%loop> U: [3,124) S: [3,124) Exits: (3 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(3 + %start)<nuw><nsw>,+,%step}<nsw><%loop> U: [3,124) S: [3,124) Exits: (3 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.4 = add i32 %iv, 4
-; CHECK-NEXT:    --> {(4 + %start)<nuw><nsw>,+,%step}<%loop> U: [4,125) S: [4,125) Exits: (4 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(4 + %start)<nuw><nsw>,+,%step}<nsw><%loop> U: [4,125) S: [4,125) Exits: (4 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.5 = add i32 %iv, 5
-; CHECK-NEXT:    --> {(5 + %start)<nuw><nsw>,+,%step}<%loop> U: [5,126) S: [5,126) Exits: (5 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(5 + %start)<nuw><nsw>,+,%step}<nsw><%loop> U: [5,126) S: [5,126) Exits: (5 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.6 = add i32 %iv, 6
-; CHECK-NEXT:    --> {(6 + %start)<nuw><nsw>,+,%step}<%loop> U: [6,127) S: [6,127) Exits: (6 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(6 + %start)<nuw><nsw>,+,%step}<nsw><%loop> U: [6,127) S: [6,127) Exits: (6 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.7 = add i32 %iv, 7
-; CHECK-NEXT:    --> {(7 + %start)<nuw><nsw>,+,%step}<%loop> U: [7,128) S: [7,128) Exits: (7 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(7 + %start)<nuw><nsw>,+,%step}<nsw><%loop> U: [7,128) S: [7,128) Exits: (7 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.m1 = sub i32 %iv, 1
-; CHECK-NEXT:    --> {(-1 + %start)<nsw>,+,%step}<%loop> U: [-1,120) S: [-1,120) Exits: (-1 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(-1 + %start)<nsw>,+,%step}<nsw><%loop> U: [-1,120) S: [-1,120) Exits: (-1 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.m2 = sub i32 %iv, 2
-; CHECK-NEXT:    --> {(-2 + %start)<nsw>,+,%step}<%loop> U: [0,-1) S: [-2,119) Exits: (-2 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(-2 + %start)<nsw>,+,%step}<nsw><%loop> U: [0,-1) S: [-2,119) Exits: (-2 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.m3 = sub i32 %iv, 3
-; CHECK-NEXT:    --> {(-3 + %start)<nsw>,+,%step}<%loop> U: [-3,118) S: [-3,118) Exits: (-3 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(-3 + %start)<nsw>,+,%step}<nsw><%loop> U: [-3,118) S: [-3,118) Exits: (-3 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.m4 = sub i32 %iv, 4
-; CHECK-NEXT:    --> {(-4 + %start)<nsw>,+,%step}<%loop> U: [0,-3) S: [-4,117) Exits: (-4 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(-4 + %start)<nsw>,+,%step}<nsw><%loop> U: [0,-3) S: [-4,117) Exits: (-4 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.m5 = sub i32 %iv, 5
-; CHECK-NEXT:    --> {(-5 + %start)<nsw>,+,%step}<%loop> U: [-5,116) S: [-5,116) Exits: (-5 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(-5 + %start)<nsw>,+,%step}<nsw><%loop> U: [-5,116) S: [-5,116) Exits: (-5 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.m6 = sub i32 %iv, 6
-; CHECK-NEXT:    --> {(-6 + %start)<nsw>,+,%step}<%loop> U: [0,-1) S: [-6,115) Exits: (-6 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(-6 + %start)<nsw>,+,%step}<nsw><%loop> U: [0,-1) S: [-6,115) Exits: (-6 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.m7 = sub i32 %iv, 7
-; CHECK-NEXT:    --> {(-7 + %start)<nsw>,+,%step}<%loop> U: [-7,114) S: [-7,114) Exits: (-7 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(-7 + %start)<nsw>,+,%step}<nsw><%loop> U: [-7,114) S: [-7,114) Exits: (-7 + (15 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
-; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [0,-7) S: [-256,361) Exits: ((16 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [0,-7) S: [-256,361) Exits: ((16 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i32 %loop.iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,17) S: [1,17) Exits: 16 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,17) S: [1,17) Exits: 16 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 15
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 15
@@ -136,15 +136,15 @@ define void @f2(i1 %c) {
 ; CHECK-NEXT:    %step = select i1 %c, i32 -1, i32 1
 ; CHECK-NEXT:    --> %step U: [1,0) S: [-2,2)
 ; CHECK-NEXT:    %loop.iv = phi i32 [ 0, %entry ], [ %loop.iv.inc, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,%step}<%loop> U: [0,128) S: [0,128) Exits: ((127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,%step}<nsw><%loop> U: [0,128) S: [0,128) Exits: ((127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.sext = sext i32 %iv to i64
 ; CHECK-NEXT:    --> {(zext i32 %start to i64),+,(sext i32 %step to i64)}<nsw><%loop> U: [0,128) S: [0,128) Exits: ((zext i32 %start to i64) + (127 * (sext i32 %step to i64))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
 ; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i32 %loop.iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 127
@@ -179,15 +179,15 @@ define void @f3(i1 %c) {
 ; CHECK-NEXT:    %step = select i1 %c, i16 1, i16 509
 ; CHECK-NEXT:    --> %step U: [1,510) S: [1,510)
 ; CHECK-NEXT:    %loop.iv = phi i16 [ 0, %entry ], [ %loop.iv.inc, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv = phi i16 [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,%step}<%loop> U: [0,-892) S: [0,-892) Exits: ((127 * %step)<nuw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,%step}<nuw><%loop> U: [0,-892) S: [0,-892) Exits: ((127 * %step)<nuw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.zext = zext i16 %iv to i64
 ; CHECK-NEXT:    --> {(zext i16 %start to i64),+,(zext i16 %step to i64)}<nuw><%loop> U: [0,64644) S: [0,64644) Exits: ((zext i16 %start to i64) + (127 * (zext i16 %step to i64))<nuw><nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i16 %iv, %step
 ; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: full-set S: full-set Exits: ((128 * %step)<nuw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i16 %loop.iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f3
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 127
@@ -229,15 +229,15 @@ define void @f4(i1 %c) {
 ; CHECK-NEXT:    %step = select i1 %c, i32 -1, i32 1
 ; CHECK-NEXT:    --> %step U: [1,0) S: [-2,2)
 ; CHECK-NEXT:    %loop.iv = phi i32 [ 0, %entry ], [ %loop.iv.inc, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,%step}<%loop> U: [0,128) S: [0,128) Exits: ((127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,%step}<nsw><%loop> U: [0,128) S: [0,128) Exits: ((127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.trunc = trunc i32 %iv to i16
-; CHECK-NEXT:    --> {(trunc i32 %start to i16),+,(trunc i32 %step to i16)}<%loop> U: full-set S: full-set Exits: ((trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(trunc i32 %start to i16),+,(trunc i32 %step to i16)}<%loop> U: [0,128) S: [0,128) Exits: ((trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
-; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i32 %loop.iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f4
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 127
@@ -247,11 +247,6 @@ define void @f4(i1 %c) {
 ; CHECK:       Loop %loop: Trip multiple is 128
 ;
 
-; @f4() demonstrates a case where SCEV is not able to compute a
-; precise range for %iv.trunc, though it should be able to, in theory.
-; This is because SCEV looks into affine add recurrences only when the
-; backedge taken count of the loop has the same bitwidth as the
-; induction variable.
 entry:
   %start = select i1 %c, i32 127, i32 0
   %step  = select i1 %c, i32 -1,  i32 1
@@ -278,15 +273,15 @@ define void @f5(i1 %c) {
 ; CHECK-NEXT:    %step = select i1 %c, i32 -1, i32 1
 ; CHECK-NEXT:    --> %step U: [1,0) S: [-2,2)
 ; CHECK-NEXT:    %loop.iv = phi i16 [ 0, %entry ], [ %loop.iv.inc, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,%step}<%loop> U: [0,128) S: [0,128) Exits: ((127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,%step}<nsw><%loop> U: [0,128) S: [0,128) Exits: ((127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.trunc = trunc i32 %iv to i16
 ; CHECK-NEXT:    --> {(trunc i32 %start to i16),+,(trunc i32 %step to i16)}<%loop> U: [0,128) S: [0,128) Exits: ((trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
-; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i16 %loop.iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f5
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 127
@@ -322,17 +317,17 @@ define void @f6(i1 %c) {
 ; CHECK-NEXT:    %step = select i1 %c, i32 -2, i32 0
 ; CHECK-NEXT:    --> %step U: [0,-1) S: [-2,2)
 ; CHECK-NEXT:    %loop.iv = phi i16 [ 0, %entry ], [ %loop.iv.inc, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,(1 + %step)<nuw><nsw>}<%loop> U: [0,128) S: [0,128) Exits: (127 + (127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,(1 + %step)<nuw><nsw>}<nsw><%loop> U: [0,128) S: [0,128) Exits: (127 + (127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %step.plus.one = add i32 %step, 1
 ; CHECK-NEXT:    --> (1 + %step)<nuw><nsw> U: [1,0) S: [-1,3) Exits: (1 + %step)<nuw><nsw> LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step.plus.one
-; CHECK-NEXT:    --> {(1 + %step + %start),+,(1 + %step)<nuw><nsw>}<%loop> U: [-128,384) S: [-128,384) Exits: (128 + (128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %step + %start),+,(1 + %step)<nuw><nsw>}<nw><%loop> U: [-128,384) S: [-128,384) Exits: (128 + (128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.sext = sext i32 %iv to i64
 ; CHECK-NEXT:    --> {(zext i32 %start to i64),+,(1 + (sext i32 %step to i64))<nuw><nsw>}<nsw><%loop> U: [0,128) S: [0,128) Exits: (127 + (zext i32 %start to i64) + (127 * (sext i32 %step to i64))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i16 %loop.iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f6
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 127
@@ -369,19 +364,19 @@ define void @f7(i1 %c) {
 ; CHECK-NEXT:    %step = select i1 %c, i32 -1, i32 1
 ; CHECK-NEXT:    --> %step U: [1,0) S: [-2,2)
 ; CHECK-NEXT:    %loop.iv = phi i16 [ 0, %entry ], [ %loop.iv.inc, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,%step}<%loop> U: [0,128) S: [0,128) Exits: ((127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,%step}<nsw><%loop> U: [0,128) S: [0,128) Exits: ((127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.trunc = trunc i32 %iv to i16
 ; CHECK-NEXT:    --> {(trunc i32 %start to i16),+,(trunc i32 %step to i16)}<%loop> U: [0,128) S: [0,128) Exits: ((trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
-; CHECK-NEXT:    --> {(%step + %start),+,%step}<%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.trunc.plus.one = add i16 %iv.trunc, 1
 ; CHECK-NEXT:    --> {(1 + (trunc i32 %start to i16))<nuw><nsw>,+,(trunc i32 %step to i16)}<%loop> U: [1,129) S: [1,129) Exits: (1 + (trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.trunc.plus.two = add i16 %iv.trunc, 2
 ; CHECK-NEXT:    --> {(2 + (trunc i32 %start to i16))<nuw><nsw>,+,(trunc i32 %step to i16)}<%loop> U: [2,130) S: [2,130) Exits: (2 + (trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i16 %loop.iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f7
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 127

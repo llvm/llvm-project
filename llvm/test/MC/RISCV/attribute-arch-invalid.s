@@ -5,5 +5,5 @@
 
 ## Version strings are required for experimental extensions
 
-.attribute arch, "rv32izvfh"
-# CHECK: error: invalid arch name 'rv32izvfh', experimental extension requires explicit version number `zvfh`
+.attribute arch, "rv32izvfbfmin"
+# CHECK: error: invalid arch name 'rv32izvfbfmin', experimental extension requires explicit version number `zvfbfmin`

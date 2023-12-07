@@ -18,8 +18,8 @@ struct TestDataLayoutPropagationPass
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDataLayoutPropagationPass)
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<AffineDialect, linalg::LinalgDialect, tensor::TensorDialect>();
+    registry.insert<affine::AffineDialect, linalg::LinalgDialect,
+                    tensor::TensorDialect>();
   }
 
   StringRef getArgument() const final {
@@ -32,7 +32,8 @@ struct TestDataLayoutPropagationPass
   void runOnOperation() override {
     MLIRContext *context = &getContext();
     RewritePatternSet patterns(context);
-    linalg::populateDataLayoutPropagationPatterns(patterns);
+    linalg::populateDataLayoutPropagationPatterns(
+        patterns, [](Operation *op) { return true; });
     if (failed(
             applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();

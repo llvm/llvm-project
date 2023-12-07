@@ -95,7 +95,7 @@ class VPRecipeBuilder {
   /// return a new VPWidenCallRecipe. Range.End may be decreased to ensure same
   /// decision from \p Range.Start to \p Range.End.
   VPWidenCallRecipe *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
-                                    VFRange &Range) const;
+                                    VFRange &Range, VPlanPtr &Plan);
 
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
   /// if it can. The function should only be called if the cost-model indicates
@@ -133,14 +133,17 @@ public:
     Ingredient2Recipe[I] = R;
   }
 
+  /// Create the mask for the vector loop header block.
+  void createHeaderMask(VPlan &Plan);
+
   /// A helper function that computes the predicate of the block BB, assuming
-  /// that the header block of the loop is set to True. It returns the *entry*
-  /// mask for the block BB.
-  VPValue *createBlockInMask(BasicBlock *BB, VPlanPtr &Plan);
+  /// that the header block of the loop is set to True or the loop mask when
+  /// tail folding. It returns the *entry* mask for the block BB.
+  VPValue *createBlockInMask(BasicBlock *BB, VPlan &Plan);
 
   /// A helper function that computes the predicate of the edge between SRC
   /// and DST.
-  VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst, VPlanPtr &Plan);
+  VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst, VPlan &Plan);
 
   /// Mark given ingredient for recording its recipe once one is created for
   /// it.
@@ -159,19 +162,11 @@ public:
     return Ingredient2Recipe[I];
   }
 
-  /// Create a replicating region for \p PredRecipe.
-  VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
-                                       VPlanPtr &Plan);
-
-  /// Build a VPReplicationRecipe for \p I and enclose it within a Region if it
-  /// is predicated. \return \p VPBB augmented with this new recipe if \p I is
-  /// not predicated, otherwise \return a new VPBasicBlock that succeeds the new
-  /// Region. Update the packing decision of predicated instructions if they
-  /// feed \p I. Range.End may be decreased to ensure same recipe behavior from
-  /// \p Range.Start to \p Range.End.
-  VPBasicBlock *handleReplication(
-      Instruction *I, VFRange &Range, VPBasicBlock *VPBB,
-      VPlanPtr &Plan);
+  /// Build a VPReplicationRecipe for \p I. If it is predicated, add the mask as
+  /// last operand. Range.End may be decreased to ensure same recipe behavior
+  /// from \p Range.Start to \p Range.End.
+  VPRecipeOrVPValueTy handleReplication(Instruction *I, VFRange &Range,
+                                        VPlan &Plan);
 
   /// Add the incoming values from the backedge to reduction & first-order
   /// recurrence cross-iteration phis.

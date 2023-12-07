@@ -7,10 +7,9 @@ define <4 x i32> @extract_v4i32_nxv16i32_12(<vscale x 16 x i32> %arg) {
 ; CHECK-LABEL: extract_v4i32_nxv16i32_12:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1w { z3.s }, p0, [sp, #3, mul vl]
 ; CHECK-NEXT:    st1w { z2.s }, p0, [sp, #2, mul vl]
@@ -28,10 +27,9 @@ define <8 x i16> @extract_v8i16_nxv32i16_8(<vscale x 32 x i16> %arg) {
 ; CHECK-LABEL: extract_v8i16_nxv32i16_8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    st1h { z1.h }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
@@ -47,10 +45,9 @@ define <4 x i16> @extract_v4i16_nxv32i16_8(<vscale x 32 x i16> %arg) {
 ; CHECK-LABEL: extract_v4i16_nxv32i16_8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    st1h { z3.h }, p0, [sp, #3, mul vl]
 ; CHECK-NEXT:    st1h { z2.h }, p0, [sp, #2, mul vl]
@@ -70,12 +67,11 @@ define <2 x i16> @extract_v2i16_nxv32i16_8(<vscale x 32 x i16> %arg) {
 ; CHECK-LABEL: extract_v2i16_nxv32i16_8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-8
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xc0, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
-; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    add x8, x8, #32
 ; CHECK-NEXT:    st1h { z3.h }, p0, [sp, #3, mul vl]
 ; CHECK-NEXT:    st1h { z2.h }, p0, [sp, #2, mul vl]
@@ -101,19 +97,18 @@ define <2 x i64> @extract_v2i64_nxv8i64_8(<vscale x 8 x i64> %arg) {
 ; CHECK-LABEL: extract_v2i64_nxv8i64_8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
-; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    mov w9, #8
-; CHECK-NEXT:    sub x8, x8, #2
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    cnth x8
+; CHECK-NEXT:    mov w9, #8 // =0x8
+; CHECK-NEXT:    sub x8, x8, #2
 ; CHECK-NEXT:    cmp x8, #8
-; CHECK-NEXT:    st1d { z3.d }, p0, [sp, #3, mul vl]
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    lsl x8, x8, #3
+; CHECK-NEXT:    st1d { z3.d }, p0, [sp, #3, mul vl]
 ; CHECK-NEXT:    st1d { z2.d }, p0, [sp, #2, mul vl]
 ; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
@@ -129,10 +124,9 @@ define <4 x float> @extract_v4f32_nxv16f32_12(<vscale x 16 x float> %arg) {
 ; CHECK-LABEL: extract_v4f32_nxv16f32_12:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1w { z3.s }, p0, [sp, #3, mul vl]
 ; CHECK-NEXT:    st1w { z2.s }, p0, [sp, #2, mul vl]
@@ -150,10 +144,9 @@ define <2 x float> @extract_v2f32_nxv16f32_2(<vscale x 16 x float> %arg) {
 ; CHECK-LABEL: extract_v2f32_nxv16f32_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
 ; CHECK-NEXT:    ldr d0, [sp, #8]
@@ -169,8 +162,8 @@ define <4 x i1> @extract_v4i1_nxv32i1_0(<vscale x 32 x i1> %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
 ; CHECK-NEXT:    umov w8, v1.b[1]
-; CHECK-NEXT:    umov w9, v1.b[2]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    umov w9, v1.b[2]
 ; CHECK-NEXT:    mov v0.h[1], w8
 ; CHECK-NEXT:    umov w8, v1.b[3]
 ; CHECK-NEXT:    mov v0.h[2], w9
@@ -187,15 +180,14 @@ define <4 x i1> @extract_v4i1_nxv32i1_16(<vscale x 32 x i1> %arg) {
 ; CHECK-LABEL: extract_v4i1_nxv32i1_16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-8
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xc0, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
-; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    st1b { z0.b }, p2, [sp, #1, mul vl]
 ; CHECK-NEXT:    st1b { z1.b }, p2, [sp]
 ; CHECK-NEXT:    st1b { z0.b }, p2, [sp, #3, mul vl]
@@ -245,12 +237,11 @@ define <4 x i3> @extract_v4i3_nxv32i3_16(<vscale x 32 x i3> %arg) {
 ; CHECK-LABEL: extract_v4i3_nxv32i3_16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-8
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xc0, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
-; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    st1b { z1.b }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
@@ -284,10 +275,9 @@ define <2 x i32> @extract_v2i32_nxv16i32_2(<vscale x 16 x i32> %arg) {
 ; CHECK-LABEL: extract_v2i32_nxv16i32_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
 ; CHECK-NEXT:    ldr d0, [sp, #8]
@@ -302,15 +292,14 @@ define <4 x i64> @extract_v4i64_nxv8i64_0(<vscale x 8 x i64> %arg) {
 ; CHECK-LABEL: extract_v4i64_nxv8i64_0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
-; CHECK-NEXT:    ldr q1, [sp, #16]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ldr q1, [sp, #16]
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

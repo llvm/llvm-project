@@ -152,6 +152,9 @@ public:
   /// Get the name of the method.
   StringRef getName() const { return methodName; }
 
+  /// Get the return type of the method
+  StringRef getReturnType() const { return returnType; }
+
   /// Get the number of parameters.
   unsigned getNumParameters() const { return parameters.getNumParameters(); }
 
@@ -163,6 +166,21 @@ public:
   /// method definition).
   void writeDefTo(raw_indented_ostream &os, StringRef namePrefix) const;
 
+  /// Write the template parameters of the signature.
+  void writeTemplateParamsTo(raw_indented_ostream &os) const;
+
+  /// Add a template parameter.
+  template <typename ParamT>
+  void addTemplateParam(ParamT param) {
+    templateParams.push_back(stringify(param));
+  }
+
+  /// Add a list of template parameters.
+  template <typename ContainerT>
+  void addTemplateParams(ContainerT &&container) {
+    templateParams.insert(std::begin(container), std::end(container));
+  }
+
 private:
   /// The method's C++ return type.
   std::string returnType;
@@ -170,6 +188,8 @@ private:
   std::string methodName;
   /// The method's parameter list.
   MethodParameters parameters;
+  /// An optional list of template parameters.
+  SmallVector<std::string, 0> templateParams;
 };
 
 /// This class contains the body of a C++ method.
@@ -326,6 +346,11 @@ public:
   /// Get the method body.
   MethodBody &body() { return methodBody; }
 
+  /// Sets or removes the deprecation message of the method.
+  void setDeprecated(std::optional<StringRef> message) {
+    this->deprecationMessage = message;
+  }
+
   /// Returns true if this is a static method.
   bool isStatic() const { return properties & Static; }
 
@@ -344,6 +369,9 @@ public:
   /// Returns the name of this method.
   StringRef getName() const { return methodSignature.getName(); }
 
+  /// Returns the return type of this method
+  StringRef getReturnType() const { return methodSignature.getReturnType(); }
+
   /// Returns if this method makes the `other` method redundant.
   bool makesRedundant(const Method &other) const {
     return methodSignature.makesRedundant(other.methodSignature);
@@ -356,6 +384,14 @@ public:
   void writeDefTo(raw_indented_ostream &os,
                   StringRef namePrefix) const override;
 
+  /// Add a template parameter.
+  template <typename ParamT>
+  void addTemplateParam(ParamT param);
+
+  /// Add a list of template parameters.
+  template <typename ContainerT>
+  void addTemplateParams(ContainerT &&container);
+
 protected:
   /// A collection of method properties.
   Properties properties;
@@ -363,6 +399,8 @@ protected:
   MethodSignature methodSignature;
   /// The body of the method, if it has one.
   MethodBody methodBody;
+  /// Deprecation message if the method is deprecated.
+  std::optional<std::string> deprecationMessage;
 };
 
 /// This enum describes C++ inheritance visibility.
@@ -436,8 +474,29 @@ operator|(mlir::tblgen::Method::Properties lhs,
                                           static_cast<unsigned>(rhs));
 }
 
+inline constexpr mlir::tblgen::Method::Properties &
+operator|=(mlir::tblgen::Method::Properties &lhs,
+           mlir::tblgen::Method::Properties rhs) {
+  return lhs = mlir::tblgen::Method::Properties(static_cast<unsigned>(lhs) |
+                                                static_cast<unsigned>(rhs));
+}
+
 namespace mlir {
 namespace tblgen {
+
+template <typename ParamT>
+void Method::addTemplateParam(ParamT param) {
+  // Templates imply inline.
+  properties |= Method::Inline;
+  methodSignature.addTemplateParam(param);
+}
+
+template <typename ContainerT>
+void Method::addTemplateParams(ContainerT &&container) {
+  // Templates imply inline.
+  properties |= Method::Inline;
+  methodSignature.addTemplateParam(std::forward<ContainerT>(container));
+}
 
 /// This class describes a C++ parent class declaration.
 class ParentClass {
@@ -488,11 +547,27 @@ public:
   /// Write the using declaration.
   void writeDeclTo(raw_indented_ostream &os) const override;
 
+  /// Add a template parameter.
+  template <typename ParamT>
+  void addTemplateParam(ParamT param) {
+    templateParams.insert(stringify(param));
+  }
+
+  /// Add a list of template parameters.
+  template <typename ContainerT>
+  void addTemplateParams(ContainerT &&container) {
+    templateParams.insert(std::begin(container), std::end(container));
+  }
+
 private:
   /// The name of the declaration, or a resolved name to an inherited function.
   std::string name;
   /// The type that is being aliased. Leave empty for inheriting functions.
   std::string value;
+  /// An optional list of class template parameters.
+  /// This is simply a ordered list of parameter names that are then added as
+  /// template type parameters when the using declaration is emitted.
+  SetVector<std::string, SmallVector<std::string>, StringSet<>> templateParams;
 };
 
 /// This class describes a class field.
@@ -540,7 +615,12 @@ class ExtraClassDeclaration
 public:
   /// Create an extra class declaration.
   ExtraClassDeclaration(StringRef extraClassDeclaration,
-                        StringRef extraClassDefinition = "")
+                        std::string extraClassDefinition = "")
+      : ExtraClassDeclaration(extraClassDeclaration.str(),
+                              std::move(extraClassDefinition)) {}
+
+  ExtraClassDeclaration(std::string extraClassDeclaration,
+                        std::string extraClassDefinition = "")
       : extraClassDeclaration(extraClassDeclaration),
         extraClassDefinition(extraClassDefinition) {}
 
@@ -554,7 +634,7 @@ public:
 private:
   /// The string of the extra class declarations. It is re-indented before
   /// printed.
-  StringRef extraClassDeclaration;
+  std::string extraClassDeclaration;
   /// The string of the extra class definitions. It is re-indented before
   /// printed.
   std::string extraClassDefinition;
@@ -583,8 +663,13 @@ public:
   /// returns a pointer to the new constructor.
   template <Method::Properties Properties = Method::None, typename... Args>
   Constructor *addConstructor(Args &&...args) {
+    Method::Properties defaultProperties = Method::Constructor;
+    // If the class has template parameters, the constructor has to be defined
+    // inline.
+    if (!templateParams.empty())
+      defaultProperties |= Method::Inline;
     return addConstructorAndPrune(Constructor(getClassName(),
-                                              Properties | Method::Constructor,
+                                              Properties | defaultProperties,
                                               std::forward<Args>(args)...));
   }
 
@@ -592,12 +677,33 @@ public:
   /// Returns null if the method was not added (because an existing method would
   /// make it redundant). Else, returns a pointer to the new method.
   template <Method::Properties Properties = Method::None, typename RetTypeT,
+            typename NameT>
+  Method *addMethod(RetTypeT &&retType, NameT &&name,
+                    Method::Properties properties,
+                    ArrayRef<MethodParameter> parameters) {
+    // If the class has template parameters, the has to defined inline.
+    if (!templateParams.empty())
+      properties |= Method::Inline;
+    return addMethodAndPrune(Method(std::forward<RetTypeT>(retType),
+                                    std::forward<NameT>(name),
+                                    Properties | properties, parameters));
+  }
+
+  /// Add a method with statically-known properties.
+  template <Method::Properties Properties = Method::None, typename RetTypeT,
+            typename NameT>
+  Method *addMethod(RetTypeT &&retType, NameT &&name,
+                    ArrayRef<MethodParameter> parameters) {
+    return addMethod(std::forward<RetTypeT>(retType), std::forward<NameT>(name),
+                     Properties, parameters);
+  }
+
+  template <Method::Properties Properties = Method::None, typename RetTypeT,
             typename NameT, typename... Args>
   Method *addMethod(RetTypeT &&retType, NameT &&name,
                     Method::Properties properties, Args &&...args) {
-    return addMethodAndPrune(
-        Method(std::forward<RetTypeT>(retType), std::forward<NameT>(name),
-               Properties | properties, std::forward<Args>(args)...));
+    return addMethod(std::forward<RetTypeT>(retType), std::forward<NameT>(name),
+                     properties | Properties, {std::forward<Args>(args)...});
   }
 
   /// Add a method with statically-known properties.
@@ -673,6 +779,18 @@ public:
 
   /// Add a parent class.
   ParentClass &addParent(ParentClass parent);
+
+  /// Add a template parameter.
+  template <typename ParamT>
+  void addTemplateParam(ParamT param) {
+    templateParams.insert(stringify(param));
+  }
+
+  /// Add a list of template parameters.
+  template <typename ContainerT>
+  void addTemplateParams(ContainerT &&container) {
+    templateParams.insert(std::begin(container), std::end(container));
+  }
 
   /// Return the C++ name of the class.
   StringRef getClassName() const { return className; }
@@ -751,6 +869,9 @@ protected:
 
   /// A list of declarations in the class, emitted in order.
   std::vector<std::unique_ptr<ClassDeclaration>> declarations;
+
+  /// An optional list of class template parameters.
+  SetVector<std::string, SmallVector<std::string>, StringSet<>> templateParams;
 };
 
 } // namespace tblgen

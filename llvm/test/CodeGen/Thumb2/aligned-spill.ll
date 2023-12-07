@@ -11,12 +11,12 @@ target triple = "thumbv7-apple-ios"
 ; CHECK: push {r4, r7, lr}
 ; CHECK: bfc r4, #0, #3
 ; CHECK: mov sp, r4
-define void @f(double* nocapture %p) nounwind ssp "frame-pointer"="all" {
+define void @f(ptr nocapture %p) nounwind ssp "frame-pointer"="all" {
 entry:
-  %0 = load double, double* %p, align 4
+  %0 = load double, ptr %p, align 4
   tail call void asm sideeffect "", "~{d8},~{d9},~{d10},~{d11},~{d12},~{d13},~{d14},~{d15}"() nounwind
   tail call void @g() nounwind
-  store double %0, double* %p, align 4
+  store double %0, ptr %p, align 4
   ret void
 }
 
@@ -45,7 +45,7 @@ entry:
 declare void @g()
 
 ; Spill 7 d-registers.
-define void @f7(double* nocapture %p) nounwind ssp "frame-pointer"="all" {
+define void @f7(ptr nocapture %p) nounwind ssp "frame-pointer"="all" {
 entry:
   tail call void asm sideeffect "", "~{d8},~{d9},~{d10},~{d11},~{d12},~{d13},~{d14}"() nounwind
   ret void
@@ -69,7 +69,7 @@ entry:
 ; NEON: pop
 
 ; Spill 7 d-registers, leave a hole.
-define void @f3plus4(double* nocapture %p) nounwind ssp "frame-pointer"="all" {
+define void @f3plus4(ptr nocapture %p) nounwind ssp "frame-pointer"="all" {
 entry:
   tail call void asm sideeffect "", "~{d8},~{d9},~{d10},~{d12},~{d13},~{d14},~{d15}"() nounwind
   ret void

@@ -424,11 +424,11 @@ bool DWARFTypePrinter::appendTemplateParameters(DWARFDie D,
             OS << (char)Val;
             OS << "'";
           } else if (Val < 256)
-            OS << to_string(llvm::format("'\\x%02x'", Val));
+            OS << llvm::format("'\\x%02" PRIx64 "'", Val);
           else if (Val <= 0xFFFF)
-            OS << to_string(llvm::format("'\\u%04x'", Val));
+            OS << llvm::format("'\\u%04" PRIx64 "'", Val);
           else
-            OS << to_string(llvm::format("'\\U%08x'", Val));
+            OS << llvm::format("'\\U%08" PRIx64 "'", Val);
         }
       }
       continue;

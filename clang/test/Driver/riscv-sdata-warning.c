@@ -6,3 +6,7 @@
 // RUN: %clang -S --target=riscv64-unknown-elf -mcmodel=large -msmall-data-limit=8 %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-RV64-LARGE-SDATA %s
 // CHECK-RV64-LARGE-SDATA: warning: ignoring '-msmall-data-limit=' with -mcmodel=large for -fpic or RV64
+
+// RUN: %clang -S --target=riscv64-linux-android -msmall-data-limit=8 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-RV64-LARGE-SDATA-ANDROID %s
+// CHECK-RV64-LARGE-SDATA-ANDROID: warning: ignoring '-msmall-data-limit=' with -mcmodel=large for -fpic or RV64

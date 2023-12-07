@@ -1,8 +1,8 @@
 ; RUN: llc < %s -mtriple=armv6-apple-darwin9
 
-@JJ = external global i32*		; <i32**> [#uses=1]
+@JJ = external global ptr		; <ptr> [#uses=1]
 
-define void @SIM(i8* %A, i8* %B, i32 %M, i32 %N, i32 %K, [256 x i32]* %V, i32 %Q, i32 %R, i32 %nseq) nounwind {
+define void @SIM(ptr %A, ptr %B, i32 %M, i32 %N, i32 %K, ptr %V, i32 %Q, i32 %R, i32 %nseq) nounwind {
 entry:
 	br i1 undef, label %bb5, label %bb
 
@@ -28,7 +28,7 @@ bb11:		; preds = %bb9
 	br i1 undef, label %bb15, label %bb12
 
 bb12:		; preds = %bb11
-	%0 = load i32*, i32** @JJ, align 4		; <i32*> [#uses=1]
+	%0 = load ptr, ptr @JJ, align 4		; <ptr> [#uses=1]
 	br label %bb228.i
 
 bb74.i:		; preds = %bb228.i
@@ -84,22 +84,22 @@ bb167.i:		; preds = %bb163.i
 bb168.i:		; preds = %bb167.i, %bb163.i, %bb161.i, %bb160.i, %bb158.i
 	%fi.5.i = phi i32 [ undef, %bb167.i ], [ %ci.910.i, %bb158.i ], [ undef, %bb160.i ], [ %ci.910.i, %bb161.i ], [ undef, %bb163.i ]		; <i32> [#uses=1]
 	%fj.4.i = phi i32 [ undef, %bb167.i ], [ undef, %bb158.i ], [ %fj.515.i, %bb160.i ], [ undef, %bb161.i ], [ %fj.515.i, %bb163.i ]		; <i32> [#uses=2]
-	%scevgep88.i = getelementptr i32, i32* null, i32 %i.121.i		; <i32*> [#uses=3]
-	%4 = load i32, i32* %scevgep88.i, align 4		; <i32> [#uses=2]
-	%scevgep89.i = getelementptr i32, i32* %0, i32 %i.121.i		; <i32*> [#uses=3]
-	%5 = load i32, i32* %scevgep89.i, align 4		; <i32> [#uses=1]
+	%scevgep88.i = getelementptr i32, ptr null, i32 %i.121.i		; <ptr> [#uses=3]
+	%4 = load i32, ptr %scevgep88.i, align 4		; <i32> [#uses=2]
+	%scevgep89.i = getelementptr i32, ptr %0, i32 %i.121.i		; <ptr> [#uses=3]
+	%5 = load i32, ptr %scevgep89.i, align 4		; <i32> [#uses=1]
 	%ci.10.i = select i1 undef, i32 %pi.316.i, i32 %i.121.i		; <i32> [#uses=0]
 	%cj.9.i = select i1 undef, i32 %pj.317.i, i32 undef		; <i32> [#uses=0]
 	%6 = icmp slt i32 undef, 0		; <i1> [#uses=3]
 	%ci.12.i = select i1 %6, i32 %fi.5.i, i32 %4		; <i32> [#uses=2]
 	%cj.11.i100 = select i1 %6, i32 %fj.4.i, i32 %5		; <i32> [#uses=1]
 	%c.14.i = select i1 %6, i32 0, i32 undef		; <i32> [#uses=2]
-	store i32 %c.14.i, i32* undef, align 4
-	%7 = load i32, i32* %scevgep88.i, align 4		; <i32> [#uses=1]
-	%8 = load i32, i32* %scevgep89.i, align 4		; <i32> [#uses=1]
-	store i32 %ci.12.i, i32* %scevgep88.i, align 4
-	store i32 %cj.11.i100, i32* %scevgep89.i, align 4
-	store i32 %4, i32* undef, align 4
+	store i32 %c.14.i, ptr undef, align 4
+	%7 = load i32, ptr %scevgep88.i, align 4		; <i32> [#uses=1]
+	%8 = load i32, ptr %scevgep89.i, align 4		; <i32> [#uses=1]
+	store i32 %ci.12.i, ptr %scevgep88.i, align 4
+	store i32 %cj.11.i100, ptr %scevgep89.i, align 4
+	store i32 %4, ptr undef, align 4
 	br i1 undef, label %bb211.i, label %bb218.i
 
 bb211.i:		; preds = %bb168.i

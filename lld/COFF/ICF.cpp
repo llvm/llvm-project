@@ -38,7 +38,7 @@ namespace lld::coff {
 
 class ICF {
 public:
-  ICF(COFFLinkerContext &c, ICFLevel icfLevel) : icfLevel(icfLevel), ctx(c){};
+  ICF(COFFLinkerContext &c) : ctx(c){};
   void run();
 
 private:
@@ -61,7 +61,6 @@ private:
   std::vector<SectionChunk *> chunks;
   int cnt = 0;
   std::atomic<bool> repeat = {false};
-  ICFLevel icfLevel = ICFLevel::All;
 
   COFFLinkerContext &ctx;
 };
@@ -84,7 +83,7 @@ bool ICF::isEligible(SectionChunk *c) {
     return false;
 
   // Under regular (not safe) ICF, all code sections are eligible.
-  if ((icfLevel == ICFLevel::All) &&
+  if ((ctx.config.doICF == ICFLevel::All) &&
       c->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
     return true;
 
@@ -94,7 +93,7 @@ bool ICF::isEligible(SectionChunk *c) {
     return true;
 
   // So are vtables.
-  if (c->sym && c->sym->getName().startswith("??_7"))
+  if (c->sym && c->sym->getName().starts_with("??_7"))
     return true;
 
   // Anything else not in an address-significance table is eligible.
@@ -133,7 +132,7 @@ bool ICF::assocEquals(const SectionChunk *a, const SectionChunk *b) {
   // debug info and CFGuard metadata.
   auto considerForICF = [](const SectionChunk &assoc) {
     StringRef Name = assoc.getSectionName();
-    return !(Name.startswith(".debug") || Name == ".gfids$y" ||
+    return !(Name.starts_with(".debug") || Name == ".gfids$y" ||
              Name == ".giats$y" || Name == ".gljmp$y");
   };
   auto ra = make_filter_range(a->children(), considerForICF);
@@ -269,7 +268,7 @@ void ICF::run() {
 
   // Initially, we use hash values to partition sections.
   parallelForEach(chunks, [&](SectionChunk *sc) {
-    sc->eqClass[0] = xxHash64(sc->getContents());
+    sc->eqClass[0] = xxh3_64bits(sc->getContents());
   });
 
   // Combine the hashes of the sections referenced by each section into its
@@ -317,8 +316,6 @@ void ICF::run() {
 }
 
 // Entry point to ICF.
-void doICF(COFFLinkerContext &ctx, ICFLevel icfLevel) {
-  ICF(ctx, icfLevel).run();
-}
+void doICF(COFFLinkerContext &ctx) { ICF(ctx).run(); }
 
 } // namespace lld::coff

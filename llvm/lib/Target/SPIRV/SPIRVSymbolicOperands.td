@@ -195,7 +195,7 @@ defm SPV_AMD_shader_ballot : ExtensionOperand<5>;
 defm SPV_AMD_gpu_shader_half_float : ExtensionOperand<6>;
 defm SPV_KHR_shader_draw_parameters : ExtensionOperand<7>;
 defm SPV_KHR_subgroup_vote : ExtensionOperand<8>;
-defm SPV_KHR_16bit_storeage : ExtensionOperand<9>;
+defm SPV_KHR_16bit_storage : ExtensionOperand<9>;
 defm SPV_KHR_device_group : ExtensionOperand<10>;
 defm SPV_KHR_multiview : ExtensionOperand<11>;
 defm SPV_NVX_multiview_per_view_attributes : ExtensionOperand<12>;
@@ -243,6 +243,7 @@ defm SPV_KHR_shader_clock : ExtensionOperand<54>;
 defm SPV_INTEL_unstructured_loop_controls : ExtensionOperand<55>;
 defm SPV_EXT_demote_to_helper_invocation : ExtensionOperand<56>;
 defm SPV_INTEL_fpga_reg : ExtensionOperand<57>;
+defm SPV_INTEL_optnone : ExtensionOperand<58>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -335,10 +336,10 @@ defm GroupNonUniformQuad : CapabilityOperand<68, 0x10300, 0, [], [GroupNonUnifor
 defm SubgroupBallotKHR : CapabilityOperand<4423, 0, 0, [SPV_KHR_shader_ballot], []>;
 defm DrawParameters : CapabilityOperand<4427, 0x10300, 0, [SPV_KHR_shader_draw_parameters], [Shader]>;
 defm SubgroupVoteKHR : CapabilityOperand<4431, 0, 0, [SPV_KHR_subgroup_vote], []>;
-defm StorageBuffer16BitAccess : CapabilityOperand<4433, 0x10300, 0, [SPV_KHR_16bit_storeage], []>;
-defm StorageUniform16 : CapabilityOperand<4434, 0x10300, 0, [SPV_KHR_16bit_storeage], [StorageBuffer16BitAccess]>;
-defm StoragePushConstant16 : CapabilityOperand<4435, 0x10300, 0, [SPV_KHR_16bit_storeage], []>;
-defm StorageInputOutput16 : CapabilityOperand<4436, 0x10300, 0, [SPV_KHR_16bit_storeage], []>;
+defm StorageBuffer16BitAccess : CapabilityOperand<4433, 0x10300, 0, [SPV_KHR_16bit_storage], []>;
+defm StorageUniform16 : CapabilityOperand<4434, 0x10300, 0, [SPV_KHR_16bit_storage], [StorageBuffer16BitAccess]>;
+defm StoragePushConstant16 : CapabilityOperand<4435, 0x10300, 0, [SPV_KHR_16bit_storage], []>;
+defm StorageInputOutput16 : CapabilityOperand<4436, 0x10300, 0, [SPV_KHR_16bit_storage], []>;
 defm DeviceGroup : CapabilityOperand<4437, 0x10300, 0, [SPV_KHR_device_group], []>;
 defm MultiView : CapabilityOperand<4439, 0x10300, 0, [SPV_KHR_multiview], [Shader]>;
 defm VariablePointersStorageBuffer : CapabilityOperand<4441, 0x10300, 0, [SPV_KHR_variable_pointers], [Shader]>;
@@ -396,6 +397,7 @@ defm ComputeDerivativeGroupLinearNV : CapabilityOperand<5350, 0, 0, [], []>;
 defm FragmentDensityEXT : CapabilityOperand<5291, 0, 0, [], [Shader]>;
 defm PhysicalStorageBufferAddressesEXT : CapabilityOperand<5347, 0, 0, [], [Shader]>;
 defm CooperativeMatrixNV : CapabilityOperand<5357, 0, 0, [], [Shader]>;
+defm OptNoneINTEL : CapabilityOperand<6094, 0, 0, [SPV_INTEL_optnone], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time

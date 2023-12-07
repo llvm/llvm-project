@@ -7,16 +7,16 @@ import shlex
 def stack_frames(debugger, command, result, dict):
     command_args = shlex.split(command)
     usage = "usage: %prog [options] <PATH> [PATH ...]"
-    description = '''This command will enumerate all stack frames, print the stack size for each, and print an aggregation of which functions have the largest stack frame sizes at the end.'''
-    parser = optparse.OptionParser(
-        description=description, prog='ls', usage=usage)
+    description = """This command will enumerate all stack frames, print the stack size for each, and print an aggregation of which functions have the largest stack frame sizes at the end."""
+    parser = optparse.OptionParser(description=description, prog="ls", usage=usage)
     parser.add_option(
-        '-v',
-        '--verbose',
-        action='store_true',
-        dest='verbose',
-        help='display verbose debug info',
-        default=False)
+        "-v",
+        "--verbose",
+        action="store_true",
+        dest="verbose",
+        help="display verbose debug info",
+        default=False,
+    )
     try:
         (options, args) = parser.parse_args(command_args)
     except:
@@ -63,6 +63,7 @@ def stack_frames(debugger, command, result, dict):
 
 
 def __lldb_init_module(debugger, internal_dict):
-    debugger.HandleCommand(
-        "command script add -f stacks.stack_frames stack_frames")
-    print("A new command called 'stack_frames' was added, type 'stack_frames --help' for more information.")
+    debugger.HandleCommand("command script add -o -f stacks.stack_frames stack_frames")
+    print(
+        "A new command called 'stack_frames' was added, type 'stack_frames --help' for more information."
+    )

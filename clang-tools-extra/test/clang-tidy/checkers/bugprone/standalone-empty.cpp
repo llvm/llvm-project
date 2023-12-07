@@ -80,6 +80,10 @@ template <class T>
 void empty(T &&);
 } // namespace test
 
+namespace test_no_args {
+bool empty();
+} // namespace test_no_args
+
 namespace base {
 template <typename T>
 struct base_vector {
@@ -155,7 +159,7 @@ bool empty(T &&);
 } // namespace qualifiers
 
 
-void test_member_empty() {
+bool test_member_empty() {
   {
     std::vector<int> v;
     v.empty();
@@ -231,9 +235,69 @@ void test_member_empty() {
     s.empty();
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'empty()' [bugprone-standalone-empty]
   }
+
+  {
+    std::vector<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    std::vector_with_clear<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    std::vector_with_int_empty<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    std::vector_with_clear_args<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    std::vector_with_clear_variable<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    absl::string s;
+    return s.empty();
+    // no-warning
+  }
+
+  {
+    absl::string_with_clear s;
+    return s.empty();
+    // no-warning
+  }
+
+  {
+    absl::string_with_int_empty s;
+    return s.empty();
+    // no-warning
+  }
+
+  {
+    absl::string_with_clear_args s;
+    return s.empty();
+    // no-warning
+  }
+
+  {
+    absl::string_with_clear_variable s;
+    return s.empty();
+    // no-warning
+  }
 }
 
-void test_qualified_empty() {
+bool test_qualified_empty() {
   {
     absl::string_with_clear v;
     std::empty(v);
@@ -245,6 +309,9 @@ void test_qualified_empty() {
     // CHECK-FIXES: {{^  }}  v.clear();{{$}}
 
     test::empty(v);
+    // no-warning
+
+    test_no_args::empty();
     // no-warning
   }
 
@@ -260,9 +327,30 @@ void test_qualified_empty() {
     absl::empty(nullptr);
     // no-warning
   }
+
+  {
+    absl::string_with_clear s;
+    return std::empty(s);
+    // no-warning
+    return absl::empty(s);
+    // no-warning
+  }
+
+  {
+    absl::string s;
+    return std::empty(s);
+    // no-warning
+  }
+
+  {
+    return std::empty(0);
+    // no-warning
+    return absl::empty(nullptr);
+    // no-warning
+  }
 }
 
-void test_unqualified_empty() {
+bool test_unqualified_empty() {
   {
     std::vector<int> v;
     empty(v);
@@ -369,6 +457,106 @@ void test_unqualified_empty() {
     empty(s);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'absl::empty'; did you mean 'clear()'? [bugprone-standalone-empty]
     // CHECK-FIXES: {{^  }}  s.clear();{{$}}
+  }
+
+  {
+    std::vector<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    std::vector_with_void_empty<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    std::vector_with_clear<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    std::vector_with_int_empty<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    std::vector_with_clear_args<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    std::vector_with_clear_variable<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    absl::string s;
+    return empty(s);
+    // no-warning
+  }
+
+  {
+    absl::string_with_void_empty s;
+    return empty(s);
+    // no-warning
+  }
+
+  {
+    absl::string_with_clear s;
+    return empty(s);
+    // no-warning
+  }
+
+  {
+    absl::string_with_int_empty s;
+    return empty(s);
+    // no-warning
+  }
+
+  {
+    absl::string_with_clear_args s;
+    return empty(s);
+    // no-warning
+  }
+
+  {
+    absl::string_with_clear_variable s;
+    return empty(s);
+    // no-warning
+  }
+
+  {
+    std::vector<int> v;
+    using std::empty;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    std::vector_with_clear<int> v;
+    using std::empty;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    absl::string s;
+    using absl::empty;
+    return empty(s);
+    // no-warning
+  }
+
+  {
+    absl::string_with_clear s;
+    using absl::empty;
+    return empty(s);
+    // no-warning
   }
 }
 
@@ -444,8 +632,7 @@ void test_empty_expressions() {
   // CHECK-MESSAGES: :[[#@LINE-1]]:27: warning: ignoring the result of 'std::empty' [bugprone-standalone-empty]
 }
 
-void test_clear_in_base_class() {
-
+bool test_clear_in_base_class() {
   {
     base::vector<int> v;
     v.empty();
@@ -496,10 +683,58 @@ void test_clear_in_base_class() {
     base::vector_clear_variable<int> v;
     empty(v);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'base::empty' [bugprone-standalone-empty]
+  }
+
+  {
+    base::vector<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    base::vector_non_dependent<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    base::vector_clear_with_args<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    base::vector_clear_variable<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    base::vector<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    base::vector_non_dependent<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    base::vector_clear_with_args<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    base::vector_clear_variable<int> v;
+    return empty(v);
+    // no-warning
   }
 }
 
-void test_clear_with_qualifiers() {
+bool test_clear_with_qualifiers() {
   {
     qualifiers::vector_with_const_clear<int> v;
     v.empty();
@@ -575,4 +810,97 @@ void test_clear_with_qualifiers() {
     empty(v);
     // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: ignoring the result of 'std::empty' [bugprone-standalone-empty]
   }
+
+  {
+    qualifiers::vector_with_const_clear<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    const qualifiers::vector_with_const_clear<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    const qualifiers::vector_with_const_empty<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    qualifiers::vector_with_const_clear<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    const qualifiers::vector_with_const_clear<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    const std::vector_with_clear<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    qualifiers::vector_with_volatile_clear<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    volatile qualifiers::vector_with_volatile_clear<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    volatile qualifiers::vector_with_volatile_empty<int> v;
+    return v.empty();
+    // no-warning
+  }
+
+  {
+    qualifiers::vector_with_volatile_clear<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    volatile qualifiers::vector_with_volatile_clear<int> v;
+    return empty(v);
+    // no-warning
+  }
+
+  {
+    volatile std::vector_with_clear<int> v;
+    return empty(v);
+    // no-warning
+  }
+}
+
+namespace user_lib {
+template <typename T>
+struct vector {
+  bool empty();
+  bool test_empty_inside_impl() {
+    empty();
+    // no-warning
+    return empty();
+    // no-warning
+  }
+};
+} // namespace user_lib
+
+bool test_template_empty_outside_impl() {
+  user_lib::vector<int> v;
+  v.empty();
+  // CHECK-MESSAGES: :[[#@LINE-1]]:3: warning: ignoring the result of 'empty()' [bugprone-standalone-empty]
+  return v.empty();
+  // no-warning
 }

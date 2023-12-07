@@ -25,12 +25,11 @@ entry:
   %retval = alloca i32, align 4
   %ret = alloca i32, align 4
   %cleanup.dest.slot = alloca i32, align 4
-  %0 = bitcast i32* %ret to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #3
-  %call = call i32 bitcast (i32 (...)* @foo to i32 ()*)()
-  store i32 %call, i32* %ret, align 4, !tbaa !2
-  %1 = load i32, i32* %ret, align 4, !tbaa !2
-  %cmp = icmp sle i32 %1, 0
+  call void @llvm.lifetime.start.p0(i64 4, ptr %ret) #3
+  %call = call i32 @foo()
+  store i32 %call, ptr %ret, align 4, !tbaa !2
+  %0 = load i32, ptr %ret, align 4, !tbaa !2
+  %cmp = icmp sle i32 %0, 0
   br i1 %cmp, label %if.then, label %lor.lhs.false
 
 ; CHECK:         [[REG1:r[0-9]+]] <<= 32
@@ -46,38 +45,37 @@ entry:
 ; CHECK-DISABLE: if [[REG2]] > [[REG1]] goto
 
 lor.lhs.false:                                    ; preds = %entry
-  %2 = load i32, i32* %ret, align 4, !tbaa !2
-  %cmp1 = icmp sgt i32 %2, 7
+  %1 = load i32, ptr %ret, align 4, !tbaa !2
+  %cmp1 = icmp sgt i32 %1, 7
   br i1 %cmp1, label %if.then, label %if.end
 
 if.then:                                          ; preds = %lor.lhs.false, %entry
-  store i32 0, i32* %retval, align 4
-  store i32 1, i32* %cleanup.dest.slot, align 4
+  store i32 0, ptr %retval, align 4
+  store i32 1, ptr %cleanup.dest.slot, align 4
   br label %cleanup
 
 if.end:                                           ; preds = %lor.lhs.false
-  %3 = load i32, i32* %ret, align 4, !tbaa !2
-  %call2 = call i32 @bar(i32 %3)
-  store i32 %call2, i32* %retval, align 4
-  store i32 1, i32* %cleanup.dest.slot, align 4
+  %2 = load i32, ptr %ret, align 4, !tbaa !2
+  %call2 = call i32 @bar(i32 %2)
+  store i32 %call2, ptr %retval, align 4
+  store i32 1, ptr %cleanup.dest.slot, align 4
   br label %cleanup
 
 cleanup:                                          ; preds = %if.end, %if.then
-  %4 = bitcast i32* %ret to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %4) #3
-  %5 = load i32, i32* %retval, align 4
-  ret i32 %5
+  call void @llvm.lifetime.end.p0(i64 4, ptr %ret) #3
+  %3 = load i32, ptr %retval, align 4
+  ret i32 %3
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 declare dso_local i32 @foo(...) #2
 
 declare dso_local i32 @bar(i32) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 attributes #0 = { nounwind "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind willreturn }

@@ -30,7 +30,7 @@ static bool canComputePointerDiff(ScalarEvolution &SE,
       SE.getEffectiveSCEVType(B->getType()))
     return false;
 
-  return SE.instructionCouldExistWitthOperands(A, B);
+  return SE.instructionCouldExistWithOperands(A, B);
 }
 
 AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
@@ -105,8 +105,7 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
               AAQI, nullptr) == AliasResult::NoAlias)
       return AliasResult::NoAlias;
 
-  // Forward the query to the next analysis.
-  return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
+  return AliasResult::MayAlias;
 }
 
 /// Given an expression, try to find a base value.

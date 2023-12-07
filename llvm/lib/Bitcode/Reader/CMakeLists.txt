@@ -15,4 +15,5 @@ add_llvm_component_library(LLVMBitReader
   BitstreamReader
   Core
   Support
+  TargetParser
   )

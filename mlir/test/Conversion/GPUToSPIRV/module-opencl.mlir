@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -convert-gpu-to-spirv -verify-diagnostics -split-input-file %s -o - | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -convert-gpu-to-spirv="use-64bit-index=true" -verify-diagnostics -split-input-file %s -o - | FileCheck %s
 
 module attributes {
   gpu.container_module,

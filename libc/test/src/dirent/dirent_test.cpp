@@ -11,11 +11,11 @@
 #include "src/dirent/dirfd.h"
 #include "src/dirent/opendir.h"
 #include "src/dirent/readdir.h"
+#include "src/errno/libc_errno.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <dirent.h>
-#include <errno.h>
 
 using string_view = __llvm_libc::cpp::string_view;
 
@@ -44,7 +44,7 @@ TEST(LlvmLibcDirentTest, SimpleOpenAndRead) {
   }
 
   // Verify that we don't break out of the above loop in error.
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
 
   ASSERT_TRUE(file1 != nullptr);
   ASSERT_TRUE(file2 != nullptr);
@@ -55,17 +55,17 @@ TEST(LlvmLibcDirentTest, SimpleOpenAndRead) {
 }
 
 TEST(LlvmLibcDirentTest, OpenNonExistentDir) {
-  errno = 0;
+  libc_errno = 0;
   ::DIR *dir = __llvm_libc::opendir("___xyz123__.non_existent__");
   ASSERT_TRUE(dir == nullptr);
-  ASSERT_EQ(errno, ENOENT);
-  errno = 0;
+  ASSERT_EQ(libc_errno, ENOENT);
+  libc_errno = 0;
 }
 
 TEST(LlvmLibcDirentTest, OpenFile) {
-  errno = 0;
+  libc_errno = 0;
   ::DIR *dir = __llvm_libc::opendir("testdata/file1.txt");
   ASSERT_TRUE(dir == nullptr);
-  ASSERT_EQ(errno, ENOTDIR);
-  errno = 0;
+  ASSERT_EQ(libc_errno, ENOTDIR);
+  libc_errno = 0;
 }

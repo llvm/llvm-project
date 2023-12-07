@@ -66,13 +66,13 @@ define <8 x float> @hadd_reverse_v8f32(<8 x float> %a0, <8 x float> %a1) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: hadd_reverse_v8f32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; AVX2-NEXT:    retq
   %lhs = shufflevector <8 x float> %a0, <8 x float> %a1, <8 x i32> <i32 7, i32 5, i32 15, i32 13, i32 3, i32 1, i32 11, i32 9>
@@ -96,17 +96,17 @@ define <8 x float> @hadd_reverse2_v8f32(<8 x float> %a0, <8 x float> %a1) {
 ; AVX1-LABEL: hadd_reverse2_v8f32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3,0,1]
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[3,2,1,0,7,6,5,4]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[3,2,1,0,7,6,5,4]
 ; AVX1-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: hadd_reverse2_v8f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX2-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[3,2,1,0,7,6,5,4]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[3,2,1,0,7,6,5,4]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,3,0,1]
 ; AVX2-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -133,13 +133,13 @@ define <8 x float> @hadd_reverse3_v8f32(<8 x float> %a0, <8 x float> %a1) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vhaddps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: hadd_reverse3_v8f32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vhaddps %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; AVX2-NEXT:    retq
   %shuf0 = shufflevector <8 x float> %a0, <8 x float> %a1, <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 6, i32 12, i32 14>
@@ -337,17 +337,17 @@ define <16 x float> @hadd_reverse_v16f32(<16 x float> %a0, <16 x float> %a1) nou
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],ymm3[2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
 ; AVX1-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm1 = ymm2[1,0,3,2,5,4,7,6]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm1 = ymm2[1,0,3,2,5,4,7,6]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: hadd_reverse_v16f32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vhaddps %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[1,0,3,2,5,4,7,6]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[1,0,3,2,5,4,7,6]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm1[2,0,3,1]
 ; AVX2-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[2,0,3,1]
 ; AVX2-NEXT:    vmovaps %ymm3, %ymm0
 ; AVX2-NEXT:    retq
@@ -380,20 +380,20 @@ define <16 x float> @hadd_reverse2_v16f32(<16 x float> %a0, <16 x float> %a1) no
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vhaddps %ymm3, %ymm1, %ymm1
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3,0,1]
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm3 = ymm1[1,0,3,2,5,4,7,6]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm3 = ymm1[1,0,3,2,5,4,7,6]
 ; AVX1-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm1 = ymm0[1,0,3,2,5,4,7,6]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm1 = ymm0[1,0,3,2,5,4,7,6]
 ; AVX1-NEXT:    vmovaps %ymm3, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: hadd_reverse2_v16f32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vhaddps %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[1,0,3,2,5,4,7,6]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[1,0,3,2,5,4,7,6]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm1[2,3,0,1]
 ; AVX2-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[2,3,0,1]
 ; AVX2-NEXT:    vmovaps %ymm3, %ymm0
 ; AVX2-NEXT:    retq

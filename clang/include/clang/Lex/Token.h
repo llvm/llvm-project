@@ -117,8 +117,13 @@ public:
   }
 
   /// Return true if this is any of tok::annot_* kind tokens.
-  bool isAnnotation() const {
-    return tok::isAnnotation(getKind());
+  bool isAnnotation() const { return tok::isAnnotation(getKind()); }
+
+  /// Return true if the token is a keyword that is parsed in the same
+  /// position as a standard attribute, but that has semantic meaning
+  /// and so cannot be a true attribute.
+  bool isRegularKeywordAttribute() const {
+    return tok::isRegularKeywordAttribute(getKind());
   }
 
   /// Return a source location identifier for the specified

@@ -9,12 +9,12 @@
 
   @e = external constant [2 x %struct.anon], align 4
 
-  define arm_aapcscc void @g(i32 * noalias %a, i32 *%b, i32 %x) {
+  define arm_aapcscc void @g(ptr noalias %a, ptr %b, i32 %x) {
   entry:
-    %c = getelementptr inbounds [2 x %struct.anon], [2 x %struct.anon]* @e, i32 0, i32 %x, i32 0
-    %l1 = load i32, i32* %c, align 4
-    %d = getelementptr inbounds [2 x %struct.anon], [2 x %struct.anon]* @e, i32 0, i32 %x, i32 1
-    %l2 = load i32, i32* %d, align 4
+    %c = getelementptr inbounds [2 x %struct.anon], ptr @e, i32 0, i32 %x, i32 0
+    %l1 = load i32, ptr %c, align 4
+    %d = getelementptr inbounds [2 x %struct.anon], ptr @e, i32 0, i32 %x, i32 1
+    %l2 = load i32, ptr %d, align 4
     br i1 undef, label %land.lhs.true, label %if.end
 
   land.lhs.true:                                    ; preds = %entry
@@ -40,7 +40,6 @@ registers:
 liveins:
   - { reg: '$r0', virtual-reg: '%8' }
   - { reg: '$r1', virtual-reg: '%9' }
-liveins:         []
 body:             |
   ; CHECK-LABEL: name: g
   ; CHECK: bb.0:

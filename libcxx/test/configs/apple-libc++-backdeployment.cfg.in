@@ -7,7 +7,7 @@
 
 import os, site
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
-import libcxx.test.params, libcxx.test.newconfig, libcxx.test.dsl
+import libcxx.test.params, libcxx.test.config, libcxx.test.dsl
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
@@ -54,7 +54,9 @@ config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T --env DYLD_LIBRARY_PATH="%{cxx-runtime-root}:%{abi-runtime-root}:%{unwind-runtime-root}" -- '
 ))
 
-libcxx.test.newconfig.configure(
+config.stdlib = 'apple-libc++'
+
+libcxx.test.config.configure(
     libcxx.test.params.DEFAULT_PARAMETERS + BACKDEPLOYMENT_PARAMETERS,
     libcxx.test.features.DEFAULT_FEATURES,
     config,

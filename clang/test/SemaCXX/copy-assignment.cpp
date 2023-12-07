@@ -110,7 +110,7 @@ void test() {
   i = a; // expected-error{{assigning to 'int' from incompatible type 'A'}}
 }
 
-// <rdar://problem/8315440>: Don't crash
+// Don't crash
 namespace test1 {
   template<typename T> class A : public unknown::X { // expected-error {{undeclared identifier 'unknown'}} expected-error {{expected class name}}
     A(UndeclaredType n) : X(n) {} // expected-error {{unknown type name 'UndeclaredType'}}

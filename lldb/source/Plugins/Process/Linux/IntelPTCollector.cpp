@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <linux/perf_event.h>
+#include <optional>
 #include <sstream>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
@@ -80,7 +81,7 @@ static std::optional<int> GetCGroupFileDescriptor(lldb::pid_t pid) {
     if (line.find("0:") != 0)
       continue;
 
-    std::string slice = line.substr(line.find_first_of("/"));
+    std::string slice = line.substr(line.find_first_of('/'));
     if (slice.empty())
       return std::nullopt;
     std::string cgroup_file = formatv("/sys/fs/cgroup/{0}", slice);
@@ -224,7 +225,7 @@ IntelPTCollector::GetBinaryData(const TraceGetBinaryDataRequest &request) {
     return GetProcfsCpuInfo();
 
   if (m_process_trace_up) {
-    Expected<Optional<std::vector<uint8_t>>> data =
+    Expected<std::optional<std::vector<uint8_t>>> data =
         m_process_trace_up->TryGetBinaryData(request);
     if (!data)
       return data.takeError();
@@ -233,7 +234,7 @@ IntelPTCollector::GetBinaryData(const TraceGetBinaryDataRequest &request) {
   }
 
   {
-    Expected<Optional<std::vector<uint8_t>>> data =
+    Expected<std::optional<std::vector<uint8_t>>> data =
         m_thread_traces.TryGetBinaryData(request);
     if (!data)
       return data.takeError();

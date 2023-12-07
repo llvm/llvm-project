@@ -1,9 +1,9 @@
 // Test this without pch.
-// RUN: %clang_cc1 -include %s -verify -std=c++1z -fcoroutines-ts %s
+// RUN: %clang_cc1 -include %s -verify -std=c++20 %s
 
 // Test with pch.
-// RUN: %clang_cc1 -std=c++1z -fcoroutines-ts  -emit-pch -o %t %s
-// RUN: %clang_cc1 -include-pch %t -verify -std=c++1z -fcoroutines-ts %s
+// RUN: %clang_cc1 -std=c++20  -emit-pch -o %t %s
+// RUN: %clang_cc1 -include-pch %t -verify -std=c++20 %s
 
 #ifndef HEADER
 #define HEADER

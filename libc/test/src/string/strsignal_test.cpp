@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strsignal.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <signal.h>
 
@@ -66,10 +66,11 @@ TEST(LlvmLibcStrSignalTest, KnownSignals) {
   };
 
   for (size_t i = 0; i < (sizeof(message_array) / sizeof(char *)); ++i) {
-    EXPECT_STREQ(__llvm_libc::strsignal(i), message_array[i]);
+    ASSERT_EQ(static_cast<size_t>(static_cast<int>(i)), i);
+    EXPECT_STREQ(__llvm_libc::strsignal(static_cast<int>(i)), message_array[i]);
   }
 
-  for (size_t i = 0; i < SIGRTMAX - SIGRTMIN; ++i) {
+  for (int i = 0; i < SIGRTMAX - SIGRTMIN; ++i) {
     EXPECT_STREQ(__llvm_libc::strsignal(i + SIGRTMIN), rt_message_array[i]);
   }
 }

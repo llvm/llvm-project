@@ -17,10 +17,10 @@
 ; CHECK: s_add_u32 s[[ADDR_LO:[0-9]+]], s[[PC_LO]], private@rel32@lo+8
 ; CHECK: s_addc_u32 s[[ADDR_HI:[0-9]+]], s[[PC_HI]], private@rel32@hi+16
 ; CHECK: s_load_dword s{{[0-9]+}}, s[[[ADDR_LO]]:[[ADDR_HI]]]
-define amdgpu_kernel void @private_test(i32 addrspace(1)* %out) {
-  %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @private, i32 0, i32 1
-  %val = load i32, i32 addrspace(1)* %ptr
-  store i32 %val, i32 addrspace(1)* %out
+define amdgpu_kernel void @private_test(ptr addrspace(1) %out) {
+  %ptr = getelementptr [256 x i32], ptr addrspace(1) @private, i32 0, i32 1
+  %val = load i32, ptr addrspace(1) %ptr
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -29,10 +29,10 @@ define amdgpu_kernel void @private_test(i32 addrspace(1)* %out) {
 ; CHECK: s_add_u32 s[[ADDR_LO:[0-9]+]], s[[PC_LO]], internal@rel32@lo+8
 ; CHECK: s_addc_u32 s[[ADDR_HI:[0-9]+]], s[[PC_HI]], internal@rel32@hi+16
 ; CHECK: s_load_dword s{{[0-9]+}}, s[[[ADDR_LO]]:[[ADDR_HI]]]
-define amdgpu_kernel void @internal_test(i32 addrspace(1)* %out) {
-  %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @internal, i32 0, i32 1
-  %val = load i32, i32 addrspace(1)* %ptr
-  store i32 %val, i32 addrspace(1)* %out
+define amdgpu_kernel void @internal_test(ptr addrspace(1) %out) {
+  %ptr = getelementptr [256 x i32], ptr addrspace(1) @internal, i32 0, i32 1
+  %val = load i32, ptr addrspace(1) %ptr
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -42,10 +42,10 @@ define amdgpu_kernel void @internal_test(i32 addrspace(1)* %out) {
 ; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], available_externally@gotpcrel32@hi+12
 ; CHECK: s_load_dwordx2 s[[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]], s[[[GOTADDR_LO]]:[[GOTADDR_HI]]], 0x0
 ; CHECK: s_load_dword s{{[0-9]+}}, s[[[ADDR_LO]]:[[ADDR_HI]]], 0x4
-define amdgpu_kernel void @available_externally_test(i32 addrspace(1)* %out) {
-  %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @available_externally, i32 0, i32 1
-  %val = load i32, i32 addrspace(1)* %ptr
-  store i32 %val, i32 addrspace(1)* %out
+define amdgpu_kernel void @available_externally_test(ptr addrspace(1) %out) {
+  %ptr = getelementptr [256 x i32], ptr addrspace(1) @available_externally, i32 0, i32 1
+  %val = load i32, ptr addrspace(1) %ptr
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -55,10 +55,10 @@ define amdgpu_kernel void @available_externally_test(i32 addrspace(1)* %out) {
 ; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], linkonce@gotpcrel32@hi+12
 ; CHECK: s_load_dwordx2 s[[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]], s[[[GOTADDR_LO]]:[[GOTADDR_HI]]], 0x0
 ; CHECK: s_load_dword s{{[0-9]+}}, s[[[ADDR_LO]]:[[ADDR_HI]]], 0x4
-define amdgpu_kernel void @linkonce_test(i32 addrspace(1)* %out) {
-  %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @linkonce, i32 0, i32 1
-  %val = load i32, i32 addrspace(1)* %ptr
-  store i32 %val, i32 addrspace(1)* %out
+define amdgpu_kernel void @linkonce_test(ptr addrspace(1) %out) {
+  %ptr = getelementptr [256 x i32], ptr addrspace(1) @linkonce, i32 0, i32 1
+  %val = load i32, ptr addrspace(1) %ptr
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -68,10 +68,10 @@ define amdgpu_kernel void @linkonce_test(i32 addrspace(1)* %out) {
 ; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], weak@gotpcrel32@hi+12
 ; CHECK: s_load_dwordx2 s[[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]], s[[[GOTADDR_LO]]:[[GOTADDR_HI]]], 0x0
 ; CHECK: s_load_dword s{{[0-9]+}}, s[[[ADDR_LO]]:[[ADDR_HI]]], 0x4
-define amdgpu_kernel void @weak_test(i32 addrspace(1)* %out) {
-  %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @weak, i32 0, i32 1
-  %val = load i32, i32 addrspace(1)* %ptr
-  store i32 %val, i32 addrspace(1)* %out
+define amdgpu_kernel void @weak_test(ptr addrspace(1) %out) {
+  %ptr = getelementptr [256 x i32], ptr addrspace(1) @weak, i32 0, i32 1
+  %val = load i32, ptr addrspace(1) %ptr
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -81,10 +81,10 @@ define amdgpu_kernel void @weak_test(i32 addrspace(1)* %out) {
 ; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], common@gotpcrel32@hi+12
 ; CHECK: s_load_dwordx2 s[[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]], s[[[GOTADDR_LO]]:[[GOTADDR_HI]]], 0x0
 ; CHECK: s_load_dword s{{[0-9]+}}, s[[[ADDR_LO]]:[[ADDR_HI]]], 0x4
-define amdgpu_kernel void @common_test(i32 addrspace(1)* %out) {
-  %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @common, i32 0, i32 1
-  %val = load i32, i32 addrspace(1)* %ptr
-  store i32 %val, i32 addrspace(1)* %out
+define amdgpu_kernel void @common_test(ptr addrspace(1) %out) {
+  %ptr = getelementptr [256 x i32], ptr addrspace(1) @common, i32 0, i32 1
+  %val = load i32, ptr addrspace(1) %ptr
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -94,10 +94,10 @@ define amdgpu_kernel void @common_test(i32 addrspace(1)* %out) {
 ; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], extern_weak@gotpcrel32@hi+12
 ; CHECK: s_load_dwordx2 s[[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]], s[[[GOTADDR_LO]]:[[GOTADDR_HI]]], 0x0
 ; CHECK: s_load_dword s{{[0-9]+}}, s[[[ADDR_LO]]:[[ADDR_HI]]], 0x4
-define amdgpu_kernel void @extern_weak_test(i32 addrspace(1)* %out) {
-  %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @extern_weak, i32 0, i32 1
-  %val = load i32, i32 addrspace(1)* %ptr
-  store i32 %val, i32 addrspace(1)* %out
+define amdgpu_kernel void @extern_weak_test(ptr addrspace(1) %out) {
+  %ptr = getelementptr [256 x i32], ptr addrspace(1) @extern_weak, i32 0, i32 1
+  %val = load i32, ptr addrspace(1) %ptr
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -107,10 +107,10 @@ define amdgpu_kernel void @extern_weak_test(i32 addrspace(1)* %out) {
 ; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], linkonce_odr@gotpcrel32@hi+12
 ; CHECK: s_load_dwordx2 s[[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]], s[[[GOTADDR_LO]]:[[GOTADDR_HI]]], 0x0
 ; CHECK: s_load_dword s{{[0-9]+}}, s[[[ADDR_LO]]:[[ADDR_HI]]], 0x4
-define amdgpu_kernel void @linkonce_odr_test(i32 addrspace(1)* %out) {
-  %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @linkonce_odr, i32 0, i32 1
-  %val = load i32, i32 addrspace(1)* %ptr
-  store i32 %val, i32 addrspace(1)* %out
+define amdgpu_kernel void @linkonce_odr_test(ptr addrspace(1) %out) {
+  %ptr = getelementptr [256 x i32], ptr addrspace(1) @linkonce_odr, i32 0, i32 1
+  %val = load i32, ptr addrspace(1) %ptr
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -120,10 +120,10 @@ define amdgpu_kernel void @linkonce_odr_test(i32 addrspace(1)* %out) {
 ; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], weak_odr@gotpcrel32@hi+12
 ; CHECK: s_load_dwordx2 s[[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]], s[[[GOTADDR_LO]]:[[GOTADDR_HI]]], 0x0
 ; CHECK: s_load_dword s{{[0-9]+}}, s[[[ADDR_LO]]:[[ADDR_HI]]], 0x4
-define amdgpu_kernel void @weak_odr_test(i32 addrspace(1)* %out) {
-  %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @weak_odr, i32 0, i32 1
-  %val = load i32, i32 addrspace(1)* %ptr
-  store i32 %val, i32 addrspace(1)* %out
+define amdgpu_kernel void @weak_odr_test(ptr addrspace(1) %out) {
+  %ptr = getelementptr [256 x i32], ptr addrspace(1) @weak_odr, i32 0, i32 1
+  %val = load i32, ptr addrspace(1) %ptr
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -133,10 +133,10 @@ define amdgpu_kernel void @weak_odr_test(i32 addrspace(1)* %out) {
 ; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], external@gotpcrel32@hi+12
 ; CHECK: s_load_dwordx2 s[[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]], s[[[GOTADDR_LO]]:[[GOTADDR_HI]]], 0x0
 ; CHECK: s_load_dword s{{[0-9]+}}, s[[[ADDR_LO]]:[[ADDR_HI]]], 0x4
-define amdgpu_kernel void @external_test(i32 addrspace(1)* %out) {
-  %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @external, i32 0, i32 1
-  %val = load i32, i32 addrspace(1)* %ptr
-  store i32 %val, i32 addrspace(1)* %out
+define amdgpu_kernel void @external_test(ptr addrspace(1) %out) {
+  %ptr = getelementptr [256 x i32], ptr addrspace(1) @external, i32 0, i32 1
+  %val = load i32, ptr addrspace(1) %ptr
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -146,10 +146,10 @@ define amdgpu_kernel void @external_test(i32 addrspace(1)* %out) {
 ; CHECK: s_addc_u32 s[[GOTADDR_HI:[0-9]+]], s[[PC_HI]], external_w_init@gotpcrel32@hi+12
 ; CHECK: s_load_dwordx2 s[[[ADDR_LO:[0-9]+]]:[[ADDR_HI:[0-9]+]]], s[[[GOTADDR_LO]]:[[GOTADDR_HI]]], 0x0
 ; CHECK: s_load_dword s{{[0-9]+}}, s[[[ADDR_LO]]:[[ADDR_HI]]], 0x4
-define amdgpu_kernel void @external_w_init_test(i32 addrspace(1)* %out) {
-  %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @external_w_init, i32 0, i32 1
-  %val = load i32, i32 addrspace(1)* %ptr
-  store i32 %val, i32 addrspace(1)* %out
+define amdgpu_kernel void @external_w_init_test(ptr addrspace(1) %out) {
+  %ptr = getelementptr [256 x i32], ptr addrspace(1) @external_w_init, i32 0, i32 1
+  %val = load i32, ptr addrspace(1) %ptr
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 

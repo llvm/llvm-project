@@ -109,19 +109,19 @@
 ;         CHECK-NEXT: .short  0
 ;         CHECK-NEXT: .long   0
 
-@p32 = external global i8 addrspace(270)*
+@p32 = external global ptr addrspace(270)
 
 %struct1 = type {i32, i64}
 %struct2 = type {i1, i1, i1}
 
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 
-define dso_local i32 @main(i32 %argc, i8** %argv) {
+define dso_local i32 @main(i32 %argc, ptr %argv) {
 entry:
   %i1reg = icmp eq i32 %argc, 5
   %i7reg = zext i1 %i1reg to i7
   %halfreg = sitofp i32 %argc to half
-  %ptr32 = load i8 addrspace(270)*, i8 addrspace(270)** @p32
+  %ptr32 = load ptr addrspace(270), ptr @p32
   %structreg1 = insertvalue %struct1 zeroinitializer, i32 %argc, 0
   %structreg2 = insertvalue %struct2 zeroinitializer, i1 %i1reg, 0
   call void (i64, i32, ...) @llvm.experimental.stackmap(
@@ -140,7 +140,7 @@ entry:
     ; FIXME: test non-constant i128 once these are fixed:
     ;  - https://github.com/llvm/llvm-project/issues/26431
     ;  - https://github.com/llvm/llvm-project/issues/55957
-    i8 addrspace(270)* %ptr32,
+    ptr addrspace(270) %ptr32,
     ; FIXME: The stackmap record generated for structs is incorrect:
     ;  - https://github.com/llvm/llvm-project/issues/55649
     ;  - https://github.com/llvm/llvm-project/issues/55957

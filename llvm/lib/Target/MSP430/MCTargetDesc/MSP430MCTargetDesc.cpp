@@ -14,6 +14,7 @@
 #include "MSP430InstPrinter.h"
 #include "MSP430MCAsmInfo.h"
 #include "TargetInfo/MSP430TargetInfo.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -43,6 +44,27 @@ static MCRegisterInfo *createMSP430MCRegisterInfo(const Triple &TT) {
   return X;
 }
 
+static MCAsmInfo *createMSP430MCAsmInfo(const MCRegisterInfo &MRI,
+                                        const Triple &TT,
+                                        const MCTargetOptions &Options) {
+  MCAsmInfo *MAI = new MSP430MCAsmInfo(TT);
+
+  // Initialize initial frame state.
+  int stackGrowth = -2;
+
+  // Initial state of the frame pointer is sp+ptr_size.
+  MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(
+      nullptr, MRI.getDwarfRegNum(MSP430::SP, true), -stackGrowth);
+  MAI->addInitialFrameState(Inst);
+
+  // Add return address to move list
+  MCCFIInstruction Inst2 = MCCFIInstruction::createOffset(
+      nullptr, MRI.getDwarfRegNum(MSP430::PC, true), stackGrowth);
+  MAI->addInitialFrameState(Inst2);
+
+  return MAI;
+}
+
 static MCSubtargetInfo *
 createMSP430MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   return createMSP430MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
@@ -61,7 +83,7 @@ static MCInstPrinter *createMSP430MCInstPrinter(const Triple &T,
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430TargetMC() {
   Target &T = getTheMSP430Target();
 
-  RegisterMCAsmInfo<MSP430MCAsmInfo> X(T);
+  TargetRegistry::RegisterMCAsmInfo(T, createMSP430MCAsmInfo);
   TargetRegistry::RegisterMCInstrInfo(T, createMSP430MCInstrInfo);
   TargetRegistry::RegisterMCRegInfo(T, createMSP430MCRegisterInfo);
   TargetRegistry::RegisterMCSubtargetInfo(T, createMSP430MCSubtargetInfo);

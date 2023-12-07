@@ -396,7 +396,7 @@ define amdgpu_kernel void @bfe_sext_in_reg_i24(ptr addrspace(1) %out, ptr addrsp
 ; GCN: buffer_load_dword [[LOAD:v[0-9]+]]
 ; GCN: v_bfe_i32 [[BFE:v[0-9]+]], [[LOAD]], 1, 16
 ; GCN: v_lshrrev_b32_e32 [[TMP0:v[0-9]+]], 31, [[BFE]]
-; GCN: v_add_{{[iu]}}32_e32 [[TMP1:v[0-9]+]], vcc, [[TMP0]], [[BFE]]
+; GCN: v_add_{{[iu]}}32_e32 [[TMP1:v[0-9]+]], vcc, [[BFE]], [[TMP0]]
 ; GCN: v_ashrrev_i32_e32 [[TMP2:v[0-9]+]], 1, [[TMP1]]
 ; GCN: buffer_store_dword [[TMP2]]
 define amdgpu_kernel void @simplify_demanded_bfe_sdiv(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {

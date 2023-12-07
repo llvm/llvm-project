@@ -15,7 +15,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: %polly.rtc.result = and i1 %0, true
 ; CHECK: br i1 %polly.rtc.result, label %polly.start, label %for.i
 
-define void @foo(i64 %n, i64 %m, double* %A) {
+define void @foo(i64 %n, i64 %m, ptr %A) {
 entry:
   br label %for.i
 
@@ -27,8 +27,8 @@ for.i:
 for.j:
   %j = phi i64 [ 0, %for.i ], [ %j.inc, %for.j ]
   %vlaarrayidx.sum = add i64 %j, %tmp
-  %arrayidx = getelementptr inbounds double, double* %A, i64 %vlaarrayidx.sum
-  store double 1.0, double* %arrayidx
+  %arrayidx = getelementptr inbounds double, ptr %A, i64 %vlaarrayidx.sum
+  store double 1.0, ptr %arrayidx
   %j.inc = add nsw i64 %j, 1
   %j.exitcond = icmp eq i64 %j.inc, 150
   br i1 %j.exitcond, label %for.i.inc, label %for.j

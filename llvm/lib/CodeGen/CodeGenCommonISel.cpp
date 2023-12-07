@@ -103,8 +103,8 @@ static bool MIIsInTerminatorSequence(const MachineInstr &MI) {
 
   // Make sure that the copy dest is not a vreg when the copy source is a
   // physical register.
-  if (!OPI2->isReg() || (!Register::isPhysicalRegister(OPI->getReg()) &&
-                         Register::isPhysicalRegister(OPI2->getReg())))
+  if (!OPI2->isReg() ||
+      (!OPI->getReg().isPhysical() && OPI2->getReg().isPhysical()))
     return false;
 
   return true;
@@ -173,11 +173,11 @@ llvm::findSplitPointForStackProtector(MachineBasicBlock *BB,
   return SplitPoint;
 }
 
-unsigned llvm::getInvertedFPClassTest(unsigned Test) {
-  unsigned InvertedTest = ~Test & fcAllFlags;
-  switch (InvertedTest) {
-  default:
-    break;
+FPClassTest llvm::invertFPClassTestIfSimpler(FPClassTest Test) {
+  FPClassTest InvertedTest = ~Test;
+  // Pick the direction with fewer tests
+  // TODO: Handle more combinations of cases that can be handled together
+  switch (static_cast<unsigned>(InvertedTest)) {
   case fcNan:
   case fcSNan:
   case fcQNan:
@@ -196,9 +196,15 @@ unsigned llvm::getInvertedFPClassTest(unsigned Test) {
   case fcFinite:
   case fcPosFinite:
   case fcNegFinite:
+  case fcZero | fcNan:
+  case fcSubnormal | fcZero:
+  case fcSubnormal | fcZero | fcNan:
     return InvertedTest;
+  default:
+    return fcNone;
   }
-  return 0;
+
+  llvm_unreachable("covered FPClassTest");
 }
 
 static MachineOperand *getSalvageOpsForCopy(const MachineRegisterInfo &MRI,

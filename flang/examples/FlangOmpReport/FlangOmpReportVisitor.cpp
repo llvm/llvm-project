@@ -128,6 +128,10 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
             const CharBlock &source{std::get<0>(c.t).source};
             return normalize_construct_name(source.ToString());
           },
+          [&](const OpenMPAllocatorsConstruct &c) -> std::string {
+            const CharBlock &source{std::get<0>(c.t).source};
+            return normalize_construct_name(source.ToString());
+          },
           [&](const OpenMPAtomicConstruct &c) -> std::string {
             return std::visit(
                 [&](const auto &c) {
@@ -176,8 +180,8 @@ void OpenMPCounterVisitor::PostConstructsCommon() {
       clauseStrings[curConstruct].begin(), clauseStrings[curConstruct].end());
 
   SourcePosition s{getLocation(*curConstruct)};
-  LogRecord r{s.file.path(), s.line, getName(*curConstruct),
-      clauseStrings[curConstruct]};
+  LogRecord r{
+      s.path, s.line, getName(*curConstruct), clauseStrings[curConstruct]};
   constructClauses.push_back(r);
 
   auto it = clauseStrings.find(curConstruct);
@@ -193,6 +197,10 @@ void OpenMPCounterVisitor::Post(const OmpProcBindClause::Type &c) {
 void OpenMPCounterVisitor::Post(const OmpDefaultClause::Type &c) {
   clauseDetails +=
       "type=" + std::string{OmpDefaultClause::EnumToString(c)} + ";";
+}
+void OpenMPCounterVisitor::Post(const OmpDeviceTypeClause::Type &c) {
+  clauseDetails +=
+      "type=" + std::string{OmpDeviceTypeClause::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(
     const OmpDefaultmapClause::ImplicitBehavior &c) {

@@ -7,7 +7,7 @@
 // Out-of-line LSE atomics helpers. Ported from libgcc library.
 // N = {1, 2, 4, 8}
 // M = {1, 2, 4, 8, 16}
-// ORDER = {'relax', 'acq', 'rel', 'acq_rel'}
+// ORDER = {'relax', 'acq', 'rel', 'acq_rel', 'sync'}
 // Routines implemented:
 //
 //  iM __aarch64_casM_ORDER(iM expected, iM desired, iM *ptr)
@@ -35,8 +35,8 @@ HIDDEN(___aarch64_have_lse_atomics)
 #endif
 
 // Generate mnemonics for
-// L_cas:                                 SIZE: 1,2,4,8,16 MODEL: 1,2,3,4
-// L_swp L_ldadd L_ldclr L_ldeor L_ldset: SIZE: 1,2,4,8    MODEL: 1,2,3,4
+// L_cas:                                 SIZE: 1,2,4,8,16 MODEL: 1,2,3,4,5
+// L_swp L_ldadd L_ldclr L_ldeor L_ldset: SIZE: 1,2,4,8    MODEL: 1,2,3,4,5
 
 #if SIZE == 1
 #define S b
@@ -64,24 +64,44 @@ HIDDEN(___aarch64_have_lse_atomics)
 #define L
 #define M 0x000000
 #define N 0x000000
+#define BARRIER
 #elif MODEL == 2
 #define SUFF _acq
 #define A a
 #define L
 #define M 0x400000
 #define N 0x800000
+#define BARRIER
 #elif MODEL == 3
 #define SUFF _rel
 #define A
 #define L l
 #define M 0x008000
 #define N 0x400000
+#define BARRIER
 #elif MODEL == 4
 #define SUFF _acq_rel
 #define A a
 #define L l
 #define M 0x408000
 #define N 0xc00000
+#define BARRIER
+#elif MODEL == 5
+#define SUFF _sync
+#ifdef L_swp
+// swp has _acq semantics.
+#define A a
+#define L
+#define M 0x400000
+#define N 0x800000
+#else
+// All other _sync functions have _seq semantics.
+#define A a
+#define L l
+#define M 0x408000
+#define N 0xc00000
+#endif
+#define BARRIER dmb ish
 #else
 #error
 #endif // MODEL
@@ -96,7 +116,12 @@ HIDDEN(___aarch64_have_lse_atomics)
 #endif
 
 #define NAME(BASE) GLUE4(__aarch64_, BASE, SIZE, SUFF)
+#if MODEL == 5
+// Drop A for _sync functions.
+#define LDXR GLUE3(ld, xr, S)
+#else
 #define LDXR GLUE4(ld, A, xr, S)
+#endif
 #define STXR GLUE4(st, L, xr, S)
 
 // Define temporary registers.
@@ -136,9 +161,15 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(cas))
         STXR   w(tmp1), s(1), [x2]
         cbnz   w(tmp1), 0b
 1:
+        BARRIER
         ret
 #else
+#if MODEL == 5
+// Drop A for _sync functions.
+#define LDXP GLUE2(ld, xp)
+#else
 #define LDXP GLUE3(ld, A, xp)
+#endif
 #define STXP GLUE3(st, L, xp)
 #ifdef HAS_ASM_LSE
 #define CASP GLUE3(casp, A, L)  x0, x1, x2, x3, [x4]
@@ -159,6 +190,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(cas))
         STXP   w(tmp2), x2, x3, [x4]
         cbnz   w(tmp2), 0b
 1:
+        BARRIER
         ret
 #endif
 END_COMPILERRT_OUTLINE_FUNCTION(NAME(cas))
@@ -180,6 +212,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(swp))
         LDXR   s(0), [x1]
         STXR   w(tmp1), s(tmp0), [x1]
         cbnz   w(tmp1), 0b
+        BARRIER
         ret
 END_COMPILERRT_OUTLINE_FUNCTION(NAME(swp))
 #endif // L_swp
@@ -224,6 +257,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(NAME(LDNM))
         OP     s(tmp1), s(0), s(tmp0)
         STXR   w(tmp2), s(tmp1), [x1]
         cbnz   w(tmp2), 0b
+        BARRIER
         ret
 END_COMPILERRT_OUTLINE_FUNCTION(NAME(LDNM))
 #endif // L_ldadd L_ldclr L_ldeor L_ldset

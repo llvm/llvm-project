@@ -4,13 +4,13 @@
 ;; know the size at compile time.
 
 ; CHECK: Globals cannot contain scalable vectors
-; CHECK-NEXT: <vscale x 4 x i32>* @ScalableVecGlobal
+; CHECK-NEXT: ptr @ScalableVecGlobal
 @ScalableVecGlobal = global <vscale x 4 x i32> zeroinitializer
 
 ; CHECK-NEXT: Globals cannot contain scalable vectors
-; CHECK-NEXT: { i32, <vscale x 4 x i32> }* @ScalableVecStructGlobal
+; CHECK-NEXT: ptr @ScalableVecStructGlobal
 @ScalableVecStructGlobal = global { i32,  <vscale x 4 x i32> } zeroinitializer
 
 ;; Global _pointers_ to scalable vectors are fine
 ; CHECK-NOT: Globals cannot contain scalable vectors
-@ScalableVecPtr = global <vscale x 8 x i16>* zeroinitializer
+@ScalableVecPtr = global ptr zeroinitializer

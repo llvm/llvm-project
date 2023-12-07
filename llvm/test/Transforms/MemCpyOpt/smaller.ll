@@ -19,10 +19,10 @@ define void @foo() nounwind {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 4
-; CHECK-NEXT:    store i32 99, ptr getelementptr inbounds (%struct.s, ptr @cell, i32 0, i32 1), align 4
+; CHECK-NEXT:    store i32 99, ptr getelementptr inbounds ([[STRUCT_S]], ptr @cell, i32 0, i32 1), align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 @cell, ptr align 1 @.str, i32 11, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TMP]], ptr align 4 @cell, i32 16, i1 false)
-; CHECK-NEXT:    call void @check(ptr byval(%struct.s) [[AGG_TMP]])
+; CHECK-NEXT:    call void @check(ptr [[AGG_TMP]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -30,6 +30,6 @@ entry:
   store i32 99, ptr getelementptr inbounds (%struct.s, ptr @cell, i32 0, i32 1), align 4
   call void @llvm.memcpy.p0.p0.i32(ptr align 1 @cell, ptr align 1 @.str, i32 11, i1 false)
   call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.tmp, ptr align 4 @cell, i32 16, i1 false)
-  call void @check(ptr byval(%struct.s) %agg.tmp)
+  call void @check(ptr %agg.tmp)
   ret void
 }

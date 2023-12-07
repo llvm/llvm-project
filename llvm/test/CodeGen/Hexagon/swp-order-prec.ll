@@ -14,10 +14,10 @@ b0:
 
 b1:                                               ; preds = %b1, %b0
   %v0 = phi i32 [ %v3, %b1 ], [ 0, %b0 ]
-  %v1 = getelementptr inbounds %s.0, %s.0* undef, i32 0, i32 1, i32 %v0, i32 0
-  store i16 0, i16* %v1, align 1
-  %v2 = getelementptr inbounds %s.0, %s.0* undef, i32 0, i32 1, i32 %v0, i32 1
-  store i16 -1, i16* %v2, align 1
+  %v1 = getelementptr inbounds %s.0, ptr undef, i32 0, i32 1, i32 %v0, i32 0
+  store i16 0, ptr %v1, align 1
+  %v2 = getelementptr inbounds %s.0, ptr undef, i32 0, i32 1, i32 %v0, i32 1
+  store i16 -1, ptr %v2, align 1
   %v3 = add nsw i32 %v0, 1
   %v4 = icmp eq i32 %v3, 20
   br i1 %v4, label %b2, label %b1

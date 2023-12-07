@@ -104,6 +104,15 @@ bool PPCCTRLoops::runOnMachineFunction(MachineFunction &MF) {
       Changed |= processLoop(ML);
   }
 
+#ifndef NDEBUG
+  for (const MachineBasicBlock &BB : MF) {
+    for (const MachineInstr &I : BB)
+      assert((I.getOpcode() != PPC::DecreaseCTRloop &&
+              I.getOpcode() != PPC::DecreaseCTR8loop) &&
+             "CTR loop pseudo is not expanded!");
+  }
+#endif
+
   return Changed;
 }
 

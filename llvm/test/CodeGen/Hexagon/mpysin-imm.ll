@@ -10,7 +10,7 @@ target triple = "hexagon-unknown--elf"
 define i32 @f0(i32 %a0) #0 {
 b0:
   %v0 = mul nsw i32 %a0, 1536
-  store i32 %v0, i32* @g0, align 4
+  store i32 %v0, ptr @g0, align 4
   %v1 = sub nsw i32 0, %v0
   ret i32 %v1
 }

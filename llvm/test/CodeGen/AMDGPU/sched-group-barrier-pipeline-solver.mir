@@ -3,10 +3,10 @@
 # RUN: llc -march=amdgcn -mcpu=gfx908 -amdgpu-igrouplp-exact-solver -run-pass=machine-scheduler -o - %s | FileCheck -check-prefix=EXACT %s
 
 --- |
-  define amdgpu_kernel void @sched_group_barrier_2_VMEM_10_ALU_5_MFMA_2_VMEM_WRITE(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_group_barrier_MFMA_VALU_and_SALU_alternating(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_group_barrier_2_separate_pipes(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_group_barrier_3_separate_pipes(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
+  define amdgpu_kernel void @sched_group_barrier_2_VMEM_10_ALU_5_MFMA_2_VMEM_WRITE(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_group_barrier_MFMA_VALU_and_SALU_alternating(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_group_barrier_2_separate_pipes(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_group_barrier_3_separate_pipes(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
 
   !0 = distinct !{!0}
   !1 = !{!1, !0}

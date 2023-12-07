@@ -246,11 +246,11 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
         if (isVariadicOperandName(op, name)) {
           as << formatv(
               "FailureOr<SmallVector<Value>> _llvmir_gen_operand_{0} = "
-              "convertValues(llvmOperands.drop_front({1}));\n",
+              "moduleImport.convertValues(llvmOperands.drop_front({1}));\n",
               name, idx);
         } else {
           as << formatv("FailureOr<Value> _llvmir_gen_operand_{0} = "
-                        "convertValue(llvmOperands[{1}]);\n",
+                        "moduleImport.convertValue(llvmOperands[{1}]);\n",
                         name, idx);
         }
         as << formatv("if (failed(_llvmir_gen_operand_{0}))\n"
@@ -261,15 +261,21 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
     } else if (isResultName(op, name)) {
       if (op.getNumResults() != 1)
         return emitError(record, "expected op to have one result");
-      bs << "mapValue(inst)";
+      bs << "moduleImport.mapValue(inst)";
+    } else if (name == "_op") {
+      bs << "moduleImport.mapNoResultOp(inst)";
     } else if (name == "_int_attr") {
-      bs << "matchIntegerAttr";
+      bs << "moduleImport.matchIntegerAttr";
+    } else if (name == "_float_attr") {
+      bs << "moduleImport.matchFloatAttr";
     } else if (name == "_var_attr") {
-      bs << "matchLocalVariableAttr";
+      bs << "moduleImport.matchLocalVariableAttr";
+    } else if (name == "_label_attr") {
+      bs << "moduleImport.matchLabelAttr";
     } else if (name == "_resultType") {
-      bs << "convertType(inst->getType())";
+      bs << "moduleImport.convertType(inst->getType())";
     } else if (name == "_location") {
-      bs << "translateLoc(inst->getDebugLoc())";
+      bs << "moduleImport.translateLoc(inst->getDebugLoc())";
     } else if (name == "_builder") {
       bs << "odsBuilder";
     } else if (name == "_qualCppClassName") {
@@ -360,6 +366,18 @@ public:
 
     for (auto &c : tblgen::EnumAttr::getAllCases())
       cases.emplace_back(c);
+
+    return cases;
+  }
+
+  std::vector<LLVMEnumAttrCase> getAllUnsupportedCases() const {
+    const auto *inits = def->getValueAsListInit("unsupported");
+
+    std::vector<LLVMEnumAttrCase> cases;
+    cases.reserve(inits->size());
+
+    for (const llvm::Init *init : *inits)
+      cases.emplace_back(cast<llvm::DefInit>(init));
 
     return cases;
   }
@@ -470,6 +488,12 @@ static void emitOneEnumFromConversion(const llvm::Record *record,
     os << formatv("  case {0}::{1}:\n", llvmClass, llvmEnumerant);
     os << formatv("    return {0}::{1}::{2};\n", cppNamespace, cppClassName,
                   cppEnumerant);
+  }
+  for (const auto &enumerant : enumAttr.getAllUnsupportedCases()) {
+    StringRef llvmEnumerant = enumerant.getLLVMEnumerant();
+    os << formatv("  case {0}::{1}:\n", llvmClass, llvmEnumerant);
+    os << formatv("    llvm_unreachable(\"unsupported case {0}::{1}\");\n",
+                  enumAttr.getLLVMClassName(), llvmEnumerant);
   }
 
   os << "  }\n";

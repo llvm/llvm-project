@@ -16,10 +16,10 @@ target triple = "thumbv7-apple-ios5.0"
 ; CHECK: add sp, #12
 ; CHECK: b.w _puts
 
-define void @f(i8* %s, %struct.A* nocapture byval(%struct.A) %a) nounwind optsize {
+define void @f(ptr %s, ptr nocapture byval(%struct.A) %a) nounwind optsize {
 entry:
-  %puts = tail call i32 @puts(i8* %s)
+  %puts = tail call i32 @puts(ptr %s)
   ret void
 }
 
-declare i32 @puts(i8* nocapture) nounwind
+declare i32 @puts(ptr nocapture) nounwind

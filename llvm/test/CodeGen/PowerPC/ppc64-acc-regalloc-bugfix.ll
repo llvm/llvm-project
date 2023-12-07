@@ -6,9 +6,8 @@
 define void @copy_novsrp() local_unnamed_addr {
 ; CHECK-LABEL: copy_novsrp:
 ; CHECK:       # %bb.0: # %dmblvi_entry
-; CHECK-NEXT:    xxlxor v2, v2, v2
+; CHECK-NEXT:    xxlxor vs3, vs3, vs3
 ; CHECK-NEXT:    xxlxor vs0, vs0, vs0
-; CHECK-NEXT:    xxlor vs3, v2, v2
 ; CHECK-NEXT:    stxv vs0, 0(0)
 dmblvi_entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> zeroinitializer, <16 x i8> undef, <16 x i8> undef, <16 x i8> zeroinitializer)

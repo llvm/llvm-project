@@ -57,14 +57,14 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SVE:       vector.body:
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x double> [ insertelement (<vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), double 0.000000e+00, i32 0), [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
+; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x double> [ insertelement (<vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), double 0.000000e+00, i32 0), [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
 ; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[OFFSET:%.*]], i64 [[TMP4]]
 ; SVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[TMP6]], align 4
 ; SVE-NEXT:    [[TMP7:%.*]] = sext <vscale x 2 x i32> [[WIDE_LOAD]] to <vscale x 2 x i64>
 ; SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[DATA:%.*]], <vscale x 2 x i64> [[TMP7]]
-; SVE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> [[TMP8]], i32 8, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x double> poison)
+; SVE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> [[TMP8]], i32 8, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x double> poison)
 ; SVE-NEXT:    [[TMP9]] = fadd <vscale x 2 x double> [[VEC_PHI]], [[WIDE_MASKED_GATHER]]
 ; SVE-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; SVE-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 2

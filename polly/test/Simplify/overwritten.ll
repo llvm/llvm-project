@@ -8,7 +8,7 @@
 ;   A[0] = 42.0;
 ; }
 ;
-define void @overwritten(i32 %n, double* noalias nonnull %A) {
+define void @overwritten(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -18,8 +18,8 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 21.0, double* %A
-      store double 42.0, double* %A
+      store double 21.0, ptr %A
+      store double 42.0, ptr %A
       br label %inc
 
 inc:

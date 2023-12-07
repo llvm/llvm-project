@@ -47,14 +47,9 @@ Symbols:
 ## If st_name of the STT_FILE symbols is invalid, the symbol name is lost as well.
 ## TODO Keep the symbol name.
 # RUN: yaml2obj --docnum=2 %s -o %t2
-# RUN: llvm-symbolizer --obj=%t2 0 0 2>&1 | FileCheck %s --check-prefix=CHECK2
+# RUN: not llvm-symbolizer --obj=%t2 0 0 2>&1 | FileCheck %s --check-prefix=CHECK2
 
-# CHECK2:      error reading file: st_name (0xffff) is past the end of the string table of size
-# CHECK2-NEXT: ??
-# CHECK2-NEXT: ??:0:0
-# CHECK2-EMPTY:
-# CHECK2-NEXT: ??
-# CHECK2-NEXT: ??:0:0
+# CHECK2:      llvm-symbolizer{{.*}}: error: '{{.*}}symtab-file2.yaml.tmp2': st_name (0xffff) is past the end of the string table of size
 
 --- !ELF
 FileHeader:

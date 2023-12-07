@@ -1,4 +1,10 @@
-/* Typemap definitions, to allow SWIG to properly handle 'char**' data types. */
+/* Typemap definitions, to allow SWIG to properly handle 'char**' data types.
+
+NOTE: If there's logic to free memory in a %typemap(freearg), it will also be
+run if you call SWIG_fail on an error path. Don't manually free() an argument
+AND call SWIG_fail at the same time, because it will result in a double free.
+
+*/
 
 %inline %{
 
@@ -17,7 +23,6 @@
       PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
       if (!py_str.IsAllocated()) {
         PyErr_SetString(PyExc_TypeError, "list must contain strings");
-        free($1);
         SWIG_fail;
       }
 
@@ -52,6 +57,87 @@
 
 %typemap(freearg) char** {
   free((char *) $1);
+}
+
+%typecheck(SWIG_TYPECHECK_POINTER) lldb::ScriptObjectPtr {
+  PythonObject obj(PyRefType::Borrowed, $input);
+  if (!obj.IsValid()) {
+    PyErr_Clear();
+    $1 = 0;
+  } else {
+    $1 = 1;
+  }
+}
+
+%typemap(in) lldb::ScriptObjectPtr {
+  if ($input == Py_None) {
+    $1 = nullptr;
+  } else {
+    PythonObject obj(PyRefType::Borrowed, $input);
+    if (!obj.IsValid()) {
+      PyErr_SetString(PyExc_TypeError, "Script object is not valid");
+      SWIG_fail;
+    }
+
+    auto lldb_module = PythonModule::Import("lldb");
+    if (!lldb_module) {
+      std::string err_msg = llvm::toString(lldb_module.takeError());
+      PyErr_SetString(PyExc_TypeError, err_msg.c_str());
+      SWIG_fail;
+    }
+
+    auto sb_structured_data_class = lldb_module.get().Get("SBStructuredData");
+    if (!sb_structured_data_class) {
+      std::string err_msg = llvm::toString(sb_structured_data_class.takeError());
+      PyErr_SetString(PyExc_TypeError, err_msg.c_str());
+      SWIG_fail;
+    }
+
+    if (obj.IsInstance(sb_structured_data_class.get())) {
+      $1 = obj.get();
+    } else {
+      auto type = obj.GetType();
+      if (!type) {
+        std::string err_msg = llvm::toString(type.takeError());
+        PyErr_SetString(PyExc_TypeError, err_msg.c_str());
+        SWIG_fail;
+      }
+
+      auto type_name = As<std::string>(type.get().GetAttribute("__name__"));
+      if (!type_name) {
+        std::string err_msg = llvm::toString(type_name.takeError());
+        PyErr_SetString(PyExc_TypeError, err_msg.c_str());
+        SWIG_fail;
+      }
+
+      if (llvm::StringRef(type_name.get()).startswith("SB")) {
+        std::string error_msg = "Input type is invalid: " + type_name.get();
+        PyErr_SetString(PyExc_TypeError, error_msg.c_str());
+        SWIG_fail;
+      } else {
+        $1 = obj.get();
+      }
+    }
+  }
+}
+
+%typemap(out) lldb::ScriptObjectPtr {
+  $result = (PyObject*) $1;
+  if (!$result)
+    $result = Py_None;
+  Py_INCREF($result);
+}
+
+%typemap(out) lldb::SBScriptObject {
+  $result = nullptr;
+  if (const void* impl = $1.GetPointer())
+    $result = (PyObject*) impl;
+  if (!$result) {
+    $result = Py_None;
+    Py_INCREF(Py_None);
+  } else {
+    Py_INCREF($result);
+  }
 }
 
 %typemap(out) char** {
@@ -91,11 +177,11 @@
 
 // typemap for a char buffer
 %typemap(in) (char *dst, size_t dst_len) {
-  if (!PyInt_Check($input)) {
+  if (!PyLong_Check($input)) {
     PyErr_SetString(PyExc_ValueError, "Expecting an integer");
     SWIG_fail;
   }
-  $2 = PyInt_AsLong($input);
+  $2 = PyLong_AsLong($input);
   if ($2 <= 0) {
     PyErr_SetString(PyExc_ValueError, "Positive integer expected");
     SWIG_fail;
@@ -127,11 +213,11 @@
 
 // typemap for handling an snprintf-like API like SBThread::GetStopDescription.
 %typemap(in) (char *dst_or_null, size_t dst_len) {
-  if (!PyInt_Check($input)) {
+  if (!PyLong_Check($input)) {
     PyErr_SetString(PyExc_ValueError, "Expecting an integer");
     SWIG_fail;
   }
-  $2 = PyInt_AsLong($input);
+  $2 = PyLong_AsLong($input);
   if ($2 <= 0) {
     PyErr_SetString(PyExc_ValueError, "Positive integer expected");
     SWIG_fail;
@@ -193,9 +279,7 @@
 // typemap for an incoming buffer
 // See also SBProcess::ReadMemory.
 %typemap(in) (void *buf, size_t size) {
-  if (PyInt_Check($input)) {
-    $2 = PyInt_AsLong($input);
-  } else if (PyLong_Check($input)) {
+  if (PyLong_Check($input)) {
     $2 = PyLong_AsLong($input);
   } else {
     PyErr_SetString(PyExc_ValueError, "Expecting an integer or long object");
@@ -246,9 +330,7 @@ template <> int32_t PyLongAsT<int32_t>(PyObject *obj) {
 }
 
 template <class T> bool SetNumberFromPyObject(T &number, PyObject *obj) {
-  if (PyInt_Check(obj))
-    number = static_cast<T>(PyInt_AsLong(obj));
-  else if (PyLong_Check(obj))
+  if (PyLong_Check(obj))
     number = PyLongAsT<T>(obj);
   else
     return false;
@@ -286,12 +368,10 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
       PyObject *o = PyList_GetItem($input, i);
       if (!SetNumberFromPyObject($1[i], o)) {
         PyErr_SetString(PyExc_TypeError, "list must contain numbers");
-        free($1);
         SWIG_fail;
       }
 
       if (PyErr_Occurred()) {
-        free($1);
         SWIG_fail;
       }
     }
@@ -333,7 +413,7 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
     count = $2;
   PyObject *list = PyList_New(count);
   for (uint32_t j = 0; j < count; j++) {
-    PyObject *item = PyInt_FromLong($1[j]);
+    PyObject *item = PyLong_FromLong($1[j]);
     int ok = PyList_SetItem(list, j, item);
     if (ok != 0) {
       $result = Py_None;
@@ -372,6 +452,29 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }
 
+// For lldb::SBDebuggerDestroyCallback
+%typemap(in) (lldb::SBDebuggerDestroyCallback destroy_callback, void *baton) {
+  if (!($input == Py_None ||
+        PyCallable_Check(reinterpret_cast<PyObject *>($input)))) {
+    PyErr_SetString(PyExc_TypeError, "Need a callable object or None!");
+    SWIG_fail;
+  }
+
+  // FIXME (filcab): We can't currently check if our callback is already
+  // LLDBSwigPythonCallPythonSBDebuggerTerminateCallback (to DECREF the previous
+  // baton) nor can we just remove all traces of a callback, if we want to
+  // revert to a file logging mechanism.
+
+  // Don't lose the callback reference
+  Py_INCREF($input);
+  $1 = LLDBSwigPythonCallPythonSBDebuggerTerminateCallback;
+  $2 = $input;
+}
+
+%typemap(typecheck) (lldb::SBDebuggerDestroyCallback destroy_callback, void *baton) {
+  $1 = $input == Py_None;
+  $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
+}
 
 %typemap(in) lldb::FileSP {
   PythonFile py_file(PyRefType::Borrowed, $input);
@@ -515,3 +618,81 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 
 %pybuffer_binary(const uint8_t *buf, size_t num_bytes);
 %pybuffer_mutable_binary(uint8_t *buf, size_t num_bytes);
+
+%typemap(in) (const char **symbol_name, uint32_t num_names) {
+  using namespace lldb_private;
+  /* Check if is a list  */
+  if (PythonList::Check($input)) {
+    PythonList list(PyRefType::Borrowed, $input);
+    $2 = list.GetSize();
+    int i = 0;
+    $1 = (char**)malloc(($2+1)*sizeof(char*));
+    for (i = 0; i < $2; i++) {
+      PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
+      if (!py_str.IsAllocated()) {
+        PyErr_SetString(PyExc_TypeError,"list must contain strings and blubby");
+        free($1);
+        return nullptr;
+      }
+
+      $1[i] = const_cast<char*>(py_str.GetString().data());
+    }
+    $1[i] = 0;
+  } else if ($input == Py_None) {
+    $1 =  NULL;
+  } else {
+    PyErr_SetString(PyExc_TypeError,"not a list");
+    return NULL;
+  }
+}
+
+// For lldb::SBPlatformLocateModuleCallback
+%typemap(in) (lldb::SBPlatformLocateModuleCallback callback,
+              void *callback_baton) {
+  if (!($input == Py_None ||
+        PyCallable_Check(reinterpret_cast<PyObject *>($input)))) {
+    PyErr_SetString(PyExc_TypeError, "Need a callable object or None!");
+    SWIG_fail;
+  }
+
+  if ($input == Py_None) {
+    $1 = nullptr;
+    $2 = nullptr;
+  } else {
+    PythonCallable callable = Retain<PythonCallable>($input);
+    if (!callable.IsValid()) {
+      PyErr_SetString(PyExc_TypeError, "Need a valid callable object");
+      SWIG_fail;
+    }
+
+    llvm::Expected<PythonCallable::ArgInfo> arg_info = callable.GetArgInfo();
+    if (!arg_info) {
+      PyErr_SetString(PyExc_TypeError,
+                      ("Could not get arguments: " +
+                          llvm::toString(arg_info.takeError())).c_str());
+      SWIG_fail;
+    }
+
+    if (arg_info.get().max_positional_args != 3) {
+      PyErr_SetString(PyExc_TypeError, "Expected 3 argument callable object");
+      SWIG_fail;
+    }
+
+    // NOTE: When this is called multiple times, this will leak the Python
+    // callable object as other callbacks, because this does not call Py_DECREF
+    // the object. But it should be almost zero impact since this method is
+    // expected to be called only once.
+
+    // Don't lose the callback reference
+    Py_INCREF($input);
+
+    $1 = LLDBSwigPythonCallLocateModuleCallback;
+    $2 = $input;
+  }
+}
+
+%typemap(typecheck) (lldb::SBPlatformLocateModuleCallback callback,
+                     void *callback_baton) {
+  $1 = $input == Py_None;
+  $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
+}

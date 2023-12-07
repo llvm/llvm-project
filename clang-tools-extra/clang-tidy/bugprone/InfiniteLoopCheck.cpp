@@ -31,8 +31,7 @@ AST_MATCHER(FunctionType, typeHasNoReturnAttr) {
   return Node.getNoReturnAttr();
 }
 } // namespace ast_matchers
-namespace tidy {
-namespace bugprone {
+namespace tidy::bugprone {
 
 static internal::Matcher<Stmt>
 loopEndingStmt(internal::Matcher<Stmt> Internal) {
@@ -329,6 +328,5 @@ void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace bugprone
-} // namespace tidy
+} // namespace tidy::bugprone
 } // namespace clang

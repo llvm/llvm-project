@@ -4,7 +4,7 @@
 declare float @llvm.amdgcn.raw.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i32 immarg)
 declare <2 x half> @llvm.amdgcn.raw.buffer.atomic.fadd.v2f16(<2 x half>, <4 x i32>, i32, i32, i32 immarg)
 
-; GFX908: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(s32) = G_AMDGPU_BUFFER_ATOMIC_FADD %{{[0-9]+}}:vgpr, %{{[0-9]+}}:sgpr(<4 x s32>), %{{[0-9]+}}:vgpr(s32), %{{[0-9]+}}:vgpr, %{{[0-9]+}}:sgpr, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 7) (in function: buffer_atomic_add_f32_rtn)
+; GFX908: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(s32) = G_AMDGPU_BUFFER_ATOMIC_FADD %{{[0-9]+}}:vgpr, %{{[0-9]+}}:sgpr(<4 x s32>), %{{[0-9]+}}:vgpr(s32), %{{[0-9]+}}:vgpr, %{{[0-9]+}}:sgpr, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8) (in function: buffer_atomic_add_f32_rtn)
 
 ; GFX90A-LABEL: {{^}}buffer_atomic_add_f32_rtn:
 ; GFX90A: buffer_atomic_add_f32 v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9:]+}}], s{{[0-9]+}} offen glc

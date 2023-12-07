@@ -15,6 +15,9 @@ add_mlir_conversion_library(MLIRVectorToLLVM
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRArmNeonDialect
+  MLIRArmSMEDialect
+  MLIRArmSMETransforms
+  MLIRVectorToArmSME
   MLIRArmSVEDialect
   MLIRArmSVETransforms
   MLIRAMXDialect

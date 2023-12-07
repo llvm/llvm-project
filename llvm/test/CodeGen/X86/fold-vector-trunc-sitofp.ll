@@ -7,7 +7,8 @@
 define <4 x float> @test1() {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [-1.0E+0,0.0E+0,-1.0E+0,0.0E+0]
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = [-1.0E+0,0.0E+0,-1.0E+0,0.0E+0]
+; CHECK-NEXT:    # xmm0 = mem[0,0]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = trunc <4 x i3> <i3 -1, i3 -22, i3 7, i3 8> to <4 x i1>
   %2 = sitofp <4 x i1> %1 to <4 x float>

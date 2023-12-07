@@ -72,7 +72,7 @@ entry:
 
 ; It's possible to make use of fp vmla / vmls on Cortex-A9.
 ; rdar://8659675
-define void @t4(float %acc1, float %a, float %b, float %acc2, float %c, float* %P1, float* %P2) {
+define void @t4(float %acc1, float %a, float %b, float %acc2, float %c, ptr %P1, ptr %P2) {
 entry:
 ; A8-LABEL: t4:
 ; A8: vmul.f32
@@ -92,8 +92,8 @@ entry:
   %1 = fadd float %acc1, %0
   %2 = fmul float %a, %c
   %3 = fadd float %acc2, %2
-  store float %1, float* %P1
-  store float %3, float* %P2
+  store float %1, ptr %P1
+  store float %3, ptr %P2
   ret void
 }
 

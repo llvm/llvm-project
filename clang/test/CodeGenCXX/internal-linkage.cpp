@@ -17,7 +17,6 @@ Anon anon1;
 // CHECK: @anon2 = internal global
 X<Anon> anon2;
 
-// rdar: // 8071804
 char const * const xyzzy = "Hello, world!";
 extern char const * const xyzzy;
 

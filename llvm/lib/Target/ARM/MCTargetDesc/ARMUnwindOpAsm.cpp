@@ -77,7 +77,7 @@ void UnwindOpcodeAssembler::EmitRegSave(uint32_t RegSave) {
 
     // Compute the consecutive registers from r4 to r11.
     uint32_t Mask = RegSave & 0xff0u;
-    uint32_t Range = countTrailingOnes(Mask >> 5); // Exclude r4.
+    uint32_t Range = llvm::countr_one(Mask >> 5); // Exclude r4.
     // Mask off non-consecutive registers. Keep r4.
     Mask &= ~(0xffffffe0u << Range);
 
@@ -110,8 +110,8 @@ void UnwindOpcodeAssembler::EmitVFPRegSave(uint32_t VFPRegSave) {
   for (uint32_t Regs : {VFPRegSave & 0xffff0000u, VFPRegSave & 0x0000ffffu}) {
     while (Regs) {
       // Now look for a run of set bits. Remember the MSB and LSB of the run.
-      auto RangeMSB = 32 - countLeadingZeros(Regs);
-      auto RangeLen = countLeadingOnes(Regs << (32 - RangeMSB));
+      auto RangeMSB = llvm::bit_width(Regs);
+      auto RangeLen = llvm::countl_one(Regs << (32 - RangeMSB));
       auto RangeLSB = RangeMSB - RangeLen;
 
       int Opcode = RangeLSB >= 16

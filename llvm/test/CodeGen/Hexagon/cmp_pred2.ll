@@ -11,12 +11,12 @@ entry:
   br i1 %cmp, label %if.then, label %entry.if.end_crit_edge
 
 entry.if.end_crit_edge:
-  %.pre = load i32, i32* @c, align 4
+  %.pre = load i32, ptr @c, align 4
   br label %if.end
 
 if.then:
   %sub = add nsw i32 %a, -10
-  store i32 %sub, i32* @c, align 4
+  store i32 %sub, ptr @c, align 4
   br label %if.end
 
 if.end:
@@ -32,12 +32,12 @@ entry:
   br i1 %cmp, label %entry.if.end_crit_edge, label %if.then
 
 entry.if.end_crit_edge:
-  %.pre = load i32, i32* @c, align 4
+  %.pre = load i32, ptr @c, align 4
   br label %if.end
 
 if.then:
   %sub = add nsw i32 %a, -10
-  store i32 %sub, i32* @c, align 4
+  store i32 %sub, ptr @c, align 4
   br label %if.end
 
 if.end:
@@ -53,12 +53,12 @@ entry:
   br i1 %cmp, label %entry.if.end_crit_edge, label %if.then
 
 entry.if.end_crit_edge:
-  %.pre = load i32, i32* @c, align 4
+  %.pre = load i32, ptr @c, align 4
   br label %if.end
 
 if.then:
   %sub = add i32 %a, -10
-  store i32 %sub, i32* @c, align 4
+  store i32 %sub, ptr @c, align 4
   br label %if.end
 
 if.end:
@@ -73,12 +73,12 @@ entry:
   br i1 %cmp, label %if.then, label %entry.if.end_crit_edge
 
 entry.if.end_crit_edge:
-  %.pre = load i32, i32* @c, align 4
+  %.pre = load i32, ptr @c, align 4
   br label %if.end
 
 if.then:
   %sub = add i32 %a, -10
-  store i32 %sub, i32* @c, align 4
+  store i32 %sub, ptr @c, align 4
   br label %if.end
 
 if.end:

@@ -18,6 +18,7 @@
 #include "gmock/gmock.h"
 #include <future>
 #include <limits>
+#include <optional>
 
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;
@@ -178,7 +179,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
       // the FileSpecs they create.
       FileSpec("/foo/baw.so", FileSpec::Style::windows),
   };
-  std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
+  std::future<std::optional<std::vector<ModuleSpec>>> async_result =
       std::async(std::launch::async,
                  [&] { return client.GetModulesInfo(file_specs, triple); });
   HandlePacket(
@@ -203,7 +204,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo_UUID20) {
   llvm::Triple triple("i386-pc-linux");
 
   FileSpec file_spec("/foo/bar.so", FileSpec::Style::posix);
-  std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
+  std::future<std::optional<std::vector<ModuleSpec>>> async_result =
       std::async(std::launch::async,
                  [&] { return client.GetModulesInfo(file_spec, triple); });
   HandlePacket(
@@ -249,7 +250,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfoInvalidResponse) {
   };
 
   for (const char *response : invalid_responses) {
-    std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
+    std::future<std::optional<std::vector<ModuleSpec>>> async_result =
         std::async(std::launch::async,
                    [&] { return client.GetModulesInfo(file_spec, triple); });
     HandlePacket(
@@ -286,7 +287,7 @@ TEST_F(GDBRemoteCommunicationClientTest, TestPacketSpeedJSON) {
   server_thread.join();
 
   GTEST_LOG_(INFO) << "Formatted output: " << ss.GetData();
-  auto object_sp = StructuredData::ParseJSON(std::string(ss.GetString()));
+  auto object_sp = StructuredData::ParseJSON(ss.GetString());
   ASSERT_TRUE(bool(object_sp));
   auto dict_sp = object_sp->GetAsDictionary();
   ASSERT_TRUE(bool(dict_sp));
@@ -296,10 +297,10 @@ TEST_F(GDBRemoteCommunicationClientTest, TestPacketSpeedJSON) {
   dict_sp = object_sp->GetAsDictionary();
   ASSERT_TRUE(bool(dict_sp));
 
-  int num_packets;
+  size_t num_packets;
   ASSERT_TRUE(dict_sp->GetValueForKeyAsInteger("num_packets", num_packets))
       << ss.GetString();
-  ASSERT_EQ(10, num_packets);
+  ASSERT_EQ(10, (int)num_packets);
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SendSignalsToIgnore) {
@@ -442,8 +443,8 @@ TEST_F(GDBRemoteCommunicationClientTest, SendTraceSupportedPacket) {
 
 TEST_F(GDBRemoteCommunicationClientTest, GetQOffsets) {
   const auto &GetQOffsets = [&](llvm::StringRef response) {
-    std::future<Optional<QOffsets>> result = std::async(
-        std::launch::async, [&] { return client.GetQOffsets(); });
+    std::future<std::optional<QOffsets>> result =
+        std::async(std::launch::async, [&] { return client.GetQOffsets(); });
 
     HandlePacket(server, "qOffsets", response);
     return result.get();
@@ -469,7 +470,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetQOffsets) {
 static void
 check_qmemtags(TestClient &client, MockServer &server, size_t read_len,
                int32_t type, const char *packet, llvm::StringRef response,
-               llvm::Optional<std::vector<uint8_t>> expected_tag_data) {
+               std::optional<std::vector<uint8_t>> expected_tag_data) {
   const auto &ReadMemoryTags = [&]() {
     std::future<DataBufferSP> result = std::async(std::launch::async, [&] {
       return client.ReadMemoryTags(0xDEF0, read_len, type);

@@ -60,6 +60,7 @@ public:
     keyword_start,
     kw_attr_dict,
     kw_attr_dict_w_keyword,
+    kw_prop_dict,
     kw_custom,
     kw_functional_type,
     kw_oilist,
@@ -234,7 +235,15 @@ private:
 class VariableElement : public FormatElementBase<FormatElement::Variable> {
 public:
   /// These are the kinds of variables.
-  enum Kind { Attribute, Operand, Region, Result, Successor, Parameter };
+  enum Kind {
+    Attribute,
+    Operand,
+    Region,
+    Result,
+    Successor,
+    Parameter,
+    Property
+  };
 
   /// Get the kind of variable.
   Kind getKind() const { return kind; }
@@ -287,6 +296,7 @@ public:
   /// These are the kinds of directives.
   enum Kind {
     AttrDict,
+    PropDict,
     Custom,
     FunctionalType,
     OIList,
@@ -387,14 +397,14 @@ public:
   /// Return the `then` elements of the optional group. Drops the first
   /// `thenParseStart` whitespace elements if `parseable` is true.
   ArrayRef<FormatElement *> getThenElements(bool parseable = false) const {
-    return llvm::makeArrayRef(thenElements)
+    return llvm::ArrayRef(thenElements)
         .drop_front(parseable ? thenParseStart : 0);
   }
 
   /// Return the `else` elements of the optional group. Drops the first
   /// `elseParseStart` whitespace elements if `parseable` is true.
   ArrayRef<FormatElement *> getElseElements(bool parseable = false) const {
-    return llvm::makeArrayRef(elseElements)
+    return llvm::ArrayRef(elseElements)
         .drop_front(parseable ? elseParseStart : 0);
   }
 

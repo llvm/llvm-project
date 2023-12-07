@@ -224,7 +224,7 @@ void Filler::insertDefsUses(MachineBasicBlock::instr_iterator MI,
                             SmallSet<unsigned, 32> &RegDefs,
                             SmallSet<unsigned, 32> &RegUses) {
   // If MI is a call or return, just examine the explicit non-variadic operands.
-  MCInstrDesc MCID = MI->getDesc();
+  const MCInstrDesc &MCID = MI->getDesc();
   unsigned E = MI->isCall() || MI->isReturn() ? MCID.getNumOperands()
                                               : MI->getNumOperands();
   for (unsigned I = 0; I != E; ++I) {

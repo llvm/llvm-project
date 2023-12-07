@@ -9,9 +9,9 @@ define void @umin_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:    %len.sext = sext i32 %len to i64
 ; CHECK-NEXT:    --> (sext i32 %len to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 %len to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 %len to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %and = and i1 %cmp1, %cmp2
 ; CHECK-NEXT:    --> (%cmp1 umin %cmp2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_sext_x_zext_x
@@ -45,9 +45,9 @@ define void @ule_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:    %len.sext = sext i32 %len to i64
 ; CHECK-NEXT:    --> (sext i32 %len to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 %len to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 %len to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %sel = select i1 %cmp1, i64 %len.zext, i64 %len.sext
 ; CHECK-NEXT:    --> (zext i32 %len to i64) U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @ule_sext_x_zext_x
@@ -117,9 +117,9 @@ define void @ult_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:    %len.sext = sext i32 %len to i64
 ; CHECK-NEXT:    --> (sext i32 %len to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 %len to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 %len to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = select i1 %cmp1, i64 %len.zext, i64 %len.sext
 ; CHECK-NEXT:    --> (zext i32 %len to i64) U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_sext_x_zext_x
@@ -189,9 +189,9 @@ define void @sle_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:    %len.sext = sext i32 %len to i64
 ; CHECK-NEXT:    --> (sext i32 %len to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 %len to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 %len to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %sel = select i1 %cmp1, i64 %len.zext, i64 %len.sext
 ; CHECK-NEXT:    --> (zext i32 %len to i64) U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @sle_sext_x_zext_x
@@ -225,9 +225,9 @@ define void @sge_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:    %len.sext = sext i32 %len to i64
 ; CHECK-NEXT:    --> (sext i32 %len to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 %len to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 %len to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %sel = select i1 %cmp1, i64 %len.zext, i64 %len.sext
 ; CHECK-NEXT:    --> (zext i32 %len to i64) U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @sge_sext_x_zext_x
@@ -297,9 +297,9 @@ define void @sgt_sext_x_zext_x(i32 %len) {
 ; CHECK-NEXT:    %len.sext = sext i32 %len to i64
 ; CHECK-NEXT:    --> (sext i32 %len to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 %len to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 %len to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umax = select i1 %cmp1, i64 %len.zext, i64 %len.sext
 ; CHECK-NEXT:    --> (zext i32 %len to i64) U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 %len to i64) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @sgt_sext_x_zext_x

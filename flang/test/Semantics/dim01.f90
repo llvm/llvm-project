@@ -18,6 +18,8 @@ module m
     integer, optional, intent(in) :: d
     !PORTABILITY: The actual argument for DIM= is optional, pointer, or allocatable, and it is assumed to be present and equal to 1 at execution time
     f1 = sum(a,dim=d)
+    !PORTABILITY: The actual argument for DIM= is optional, pointer, or allocatable, and it is assumed to be present and equal to 1 at execution time
+    f1 = norm2(a,dim=d)
   end function
   function f2(a,d)
     real, intent(in) :: a(:)
@@ -49,6 +51,8 @@ module m
     real, allocatable :: f11(:)
     !WARNING: The actual argument for DIM= is optional, pointer, or allocatable, and may not be absent during execution; parenthesize to silence this warning
     f11 = sum(a,dim=d)
+    !WARNING: The actual argument for DIM= is optional, pointer, or allocatable, and may not be absent during execution; parenthesize to silence this warning
+    f11 = norm2(a,dim=d)
   end function
   function f12(a,d)
     real, intent(in) :: a(:,:)
@@ -65,4 +69,3 @@ module m
     f13 = sum(a,dim=d)
   end function
 end module
-

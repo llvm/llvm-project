@@ -206,6 +206,27 @@ struct ExecutorAddrRange {
                          const ExecutorAddrRange &RHS) {
     return !(LHS == RHS);
   }
+  friend bool operator<(const ExecutorAddrRange &LHS,
+                        const ExecutorAddrRange &RHS) {
+    return LHS.Start < RHS.Start ||
+           (LHS.Start == RHS.Start && LHS.End < RHS.End);
+  }
+  friend bool operator<=(const ExecutorAddrRange &LHS,
+                         const ExecutorAddrRange &RHS) {
+    return LHS.Start < RHS.Start ||
+           (LHS.Start == RHS.Start && LHS.End <= RHS.End);
+  }
+  friend bool operator>(const ExecutorAddrRange &LHS,
+                        const ExecutorAddrRange &RHS) {
+    return LHS.Start > RHS.Start ||
+           (LHS.Start == RHS.Start && LHS.End > RHS.End);
+  }
+  friend bool operator>=(const ExecutorAddrRange &LHS,
+                         const ExecutorAddrRange &RHS) {
+    return LHS.Start > RHS.Start ||
+           (LHS.Start == RHS.Start && LHS.End >= RHS.End);
+  }
+
   bool contains(ExecutorAddr Addr) const { return Start <= Addr && Addr < End; }
   bool overlaps(const ExecutorAddrRange &Other) {
     return !(Other.End <= Start || End <= Other.Start);

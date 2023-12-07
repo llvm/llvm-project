@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -24,9 +25,13 @@ using namespace taint;
 
 namespace {
 class DivZeroChecker : public Checker< check::PreStmt<BinaryOperator> > {
-  mutable std::unique_ptr<BuiltinBug> BT;
-  void reportBug(const char *Msg, ProgramStateRef StateZero, CheckerContext &C,
-                 std::unique_ptr<BugReporterVisitor> Visitor = nullptr) const;
+  mutable std::unique_ptr<BugType> BT;
+  mutable std::unique_ptr<BugType> TaintBT;
+  void reportBug(StringRef Msg, ProgramStateRef StateZero,
+                 CheckerContext &C) const;
+  void reportTaintBug(StringRef Msg, ProgramStateRef StateZero,
+                      CheckerContext &C,
+                      llvm::ArrayRef<SymbolRef> TaintedSyms) const;
 
 public:
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
@@ -40,16 +45,30 @@ static const Expr *getDenomExpr(const ExplodedNode *N) {
   return nullptr;
 }
 
-void DivZeroChecker::reportBug(
-    const char *Msg, ProgramStateRef StateZero, CheckerContext &C,
-    std::unique_ptr<BugReporterVisitor> Visitor) const {
+void DivZeroChecker::reportBug(StringRef Msg, ProgramStateRef StateZero,
+                               CheckerContext &C) const {
   if (ExplodedNode *N = C.generateErrorNode(StateZero)) {
     if (!BT)
-      BT.reset(new BuiltinBug(this, "Division by zero"));
+      BT.reset(new BugType(this, "Division by zero", categories::LogicError));
 
     auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
-    R->addVisitor(std::move(Visitor));
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
+    C.emitReport(std::move(R));
+  }
+}
+
+void DivZeroChecker::reportTaintBug(
+    StringRef Msg, ProgramStateRef StateZero, CheckerContext &C,
+    llvm::ArrayRef<SymbolRef> TaintedSyms) const {
+  if (ExplodedNode *N = C.generateErrorNode(StateZero)) {
+    if (!TaintBT)
+      TaintBT.reset(
+          new BugType(this, "Division by zero", categories::TaintedData));
+
+    auto R = std::make_unique<PathSensitiveBugReport>(*TaintBT, Msg, N);
+    bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
+    for (auto Sym : TaintedSyms)
+      R->markInteresting(Sym);
     C.emitReport(std::move(R));
   }
 }
@@ -67,7 +86,7 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
     return;
 
   SVal Denom = C.getSVal(B->getRHS());
-  Optional<DefinedSVal> DV = Denom.getAs<DefinedSVal>();
+  std::optional<DefinedSVal> DV = Denom.getAs<DefinedSVal>();
 
   // Divide-by-undefined handled in the generic checking for uses of
   // undefined values.
@@ -85,11 +104,13 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
     return;
   }
 
-  bool TaintedD = isTainted(C.getState(), *DV);
-  if ((stateNotZero && stateZero && TaintedD)) {
-    reportBug("Division by a tainted value, possibly zero", stateZero, C,
-              std::make_unique<taint::TaintBugVisitor>(*DV));
-    return;
+  if ((stateNotZero && stateZero)) {
+    std::vector<SymbolRef> taintedSyms = getTaintedSymbols(C.getState(), *DV);
+    if (!taintedSyms.empty()) {
+      reportTaintBug("Division by a tainted value, possibly zero", stateZero, C,
+                     taintedSyms);
+      return;
+    }
   }
 
   // If we get here, then the denom should not be zero. We abandon the implicit

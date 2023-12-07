@@ -1,4 +1,4 @@
-# RUN: llc -O0 -mtriple x86_64-pc-linux-gnu -run-pass simple-register-coalescing -verify-coalescing -o - %s | FileCheck %s
+# RUN: llc -O0 -mtriple x86_64-pc-linux-gnu -run-pass register-coalescer -verify-coalescing -o - %s | FileCheck %s
 
 --- |
   define i16 @main() {

@@ -35,9 +35,9 @@ false_type __and_helper(...);
 // be instantiated) since it is an alias, unlike `conjunction<_Pred...>`, which is a struct.
 // If you want to defer the evaluation of `_And<_Pred...>` itself, use `_Lazy<_And, _Pred...>`.
 template <class... _Pred>
-using _And _LIBCPP_NODEBUG = decltype(__and_helper<_Pred...>(0));
+using _And _LIBCPP_NODEBUG = decltype(std::__and_helper<_Pred...>(0));
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 template <class...>
 struct conjunction : true_type {};
@@ -51,7 +51,7 @@ struct conjunction<_Arg, _Args...> : conditional_t<!bool(_Arg::value), _Arg, con
 template <class... _Args>
 inline constexpr bool conjunction_v = conjunction<_Args...>::value;
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

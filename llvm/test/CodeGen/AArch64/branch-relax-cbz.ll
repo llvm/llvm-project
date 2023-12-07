@@ -5,7 +5,6 @@
 define void @split_block_no_fallthrough(i64 %val) #0 {
 ; CHECK-LABEL: split_block_no_fallthrough:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; CHECK-NEXT:    cmn x0, #5
 ; CHECK-NEXT:    b.le LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %b3
@@ -13,15 +12,16 @@ define void @split_block_no_fallthrough(i64 %val) #0 {
 ; CHECK-NEXT:    cbnz w8, LBB0_2
 ; CHECK-NEXT:    b LBB0_4
 ; CHECK-NEXT:  LBB0_2: ; %common.ret
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_3: ; %b2
-; CHECK-NEXT:    mov w0, #93
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-NEXT:    mov w0, #93 ; =0x5d
 ; CHECK-NEXT:    bl _extfunc
-; CHECK-NEXT:    cbnz w0, LBB0_2
-; CHECK-NEXT:  LBB0_4: ; %b7
-; CHECK-NEXT:    mov w0, #13
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-NEXT:    cbz w0, LBB0_4
+; CHECK-NEXT:    b LBB0_2
+; CHECK-NEXT:  LBB0_4: ; %b7
+; CHECK-NEXT:    mov w0, #13 ; =0xd
 ; CHECK-NEXT:    b _extfunc
 bb:
   %c0 = icmp sgt i64 %val, -5
@@ -33,7 +33,7 @@ b2:
   br i1 %c1, label %b7, label %b8
 
 b3:
-  %v1 = load volatile i32, i32* undef, align 4
+  %v1 = load volatile i32, ptr undef, align 4
   %c2 = icmp eq i32 %v1, 0
   br i1 %c2, label %b7, label %b8
 

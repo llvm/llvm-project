@@ -58,7 +58,7 @@ static_assert(!HasSortR<UncheckedRange<int*, SentinelForNotWeaklyEqualityCompara
 static_assert(!HasSortR<UncheckedRange<int*>, BadComparator>);
 static_assert(!HasSortR<UncheckedRange<const int*>>); // Doesn't satisfy `sortable`.
 
-template <class Iter, class Sent, size_t N>
+template <class Iter, class Sent, std::size_t N>
 constexpr void test_one(std::array<int, N> input, std::array<int, N> expected) {
   { // (iterator, sentinel) overload.
     auto sorted = input;

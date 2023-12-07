@@ -19,3 +19,6 @@ declare i8* @strcpy(i8*, i8*)
 declare i32 @puts(i8*)
 
 attributes #0 = { noinline nounwind optnone ssp }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 7, !"direct-access-external-data", i32 1}

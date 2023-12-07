@@ -29,8 +29,7 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
     : StoppointSite(0, addr, size, hardware), m_target(target),
       m_enabled(false), m_is_hardware(hardware), m_is_watch_variable(false),
       m_is_ephemeral(false), m_disabled_count(0), m_watch_read(0),
-      m_watch_write(0), m_watch_was_read(0), m_watch_was_written(0),
-      m_ignore_count(0), m_false_alarms(0), m_being_created(true) {
+      m_watch_write(0), m_ignore_count(0), m_being_created(true) {
 
   if (type && type->IsValid())
     m_type = *type;
@@ -41,14 +40,14 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
         target.GetScratchTypeSystemForLanguage(eLanguageTypeC);
     if (auto err = type_system_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
-                     "Failed to set type.");
+                     "Failed to set type: {0}");
     } else {
       if (auto ts = *type_system_or_err)
         m_type =
             ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8 * size);
       else
         LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
-                       "Failed to set type. Typesystem is no longer live.");
+                       "Failed to set type: Typesystem is no longer live: {0}");
     }
   }
 
@@ -67,7 +66,7 @@ Watchpoint::~Watchpoint() = default;
 void Watchpoint::SetCallback(WatchpointHitCallback callback, void *baton,
                              bool is_synchronous) {
   // The default "Baton" class will keep a copy of "baton" and won't free or
-  // delete it when it goes goes out of scope.
+  // delete it when it goes out of scope.
   m_options.SetCallback(callback, std::make_shared<UntypedBaton>(baton),
                         is_synchronous);
 
@@ -81,6 +80,94 @@ void Watchpoint::SetCallback(WatchpointHitCallback callback,
                              bool is_synchronous) {
   m_options.SetCallback(callback, callback_baton_sp, is_synchronous);
   SendWatchpointChangedEvent(eWatchpointEventTypeCommandChanged);
+}
+
+bool Watchpoint::SetupVariableWatchpointDisabler(StackFrameSP frame_sp) const {
+  if (!frame_sp)
+    return false;
+
+  ThreadSP thread_sp = frame_sp->GetThread();
+  if (!thread_sp)
+    return false;
+
+  uint32_t return_frame_index =
+      thread_sp->GetSelectedFrameIndex(DoNoSelectMostRelevantFrame) + 1;
+  if (return_frame_index >= LLDB_INVALID_FRAME_ID)
+    return false;
+
+  StackFrameSP return_frame_sp(
+      thread_sp->GetStackFrameAtIndex(return_frame_index));
+  if (!return_frame_sp)
+    return false;
+
+  ExecutionContext exe_ctx(return_frame_sp);
+  TargetSP target_sp = exe_ctx.GetTargetSP();
+  if (!target_sp)
+    return false;
+
+  Address return_address(return_frame_sp->GetFrameCodeAddress());
+  lldb::addr_t return_addr = return_address.GetLoadAddress(target_sp.get());
+  if (return_addr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  BreakpointSP bp_sp = target_sp->CreateBreakpoint(
+      return_addr, /*internal=*/true, /*request_hardware=*/false);
+  if (!bp_sp || !bp_sp->HasResolvedLocations())
+    return false;
+
+  auto wvc_up = std::make_unique<WatchpointVariableContext>(GetID(), exe_ctx);
+  auto baton_sp = std::make_shared<WatchpointVariableBaton>(std::move(wvc_up));
+  bp_sp->SetCallback(VariableWatchpointDisabler, baton_sp);
+  bp_sp->SetOneShot(true);
+  bp_sp->SetBreakpointKind("variable watchpoint disabler");
+  return true;
+}
+
+bool Watchpoint::VariableWatchpointDisabler(void *baton,
+                                            StoppointCallbackContext *context,
+                                            user_id_t break_id,
+                                            user_id_t break_loc_id) {
+  assert(baton && "null baton");
+  if (!baton || !context)
+    return false;
+
+  Log *log = GetLog(LLDBLog::Watchpoints);
+
+  WatchpointVariableContext *wvc =
+      static_cast<WatchpointVariableContext *>(baton);
+
+  LLDB_LOGF(log, "called by breakpoint %" PRIu64 ".%" PRIu64, break_id,
+            break_loc_id);
+
+  if (wvc->watch_id == LLDB_INVALID_WATCH_ID)
+    return false;
+
+  TargetSP target_sp = context->exe_ctx_ref.GetTargetSP();
+  if (!target_sp)
+    return false;
+
+  ProcessSP process_sp = target_sp->GetProcessSP();
+  if (!process_sp)
+    return false;
+
+  WatchpointSP watch_sp =
+      target_sp->GetWatchpointList().FindByID(wvc->watch_id);
+  if (!watch_sp)
+    return false;
+
+  if (wvc->exe_ctx == context->exe_ctx_ref) {
+    LLDB_LOGF(log,
+              "callback for watchpoint %" PRId32
+              " matched internal breakpoint execution context",
+              watch_sp->GetID());
+    process_sp->DisableWatchpoint(watch_sp.get());
+    return false;
+  }
+  LLDB_LOGF(log,
+            "callback for watchpoint %" PRId32
+            " didn't match internal breakpoint execution context",
+            watch_sp->GetID());
+  return false;
 }
 
 void Watchpoint::ClearCallback() {
@@ -122,19 +209,6 @@ bool Watchpoint::CaptureWatchedValue(const ExecutionContext &exe_ctx) {
       watch_address, m_type);
   m_new_value_sp = m_new_value_sp->CreateConstantValue(watch_name);
   return (m_new_value_sp && m_new_value_sp->GetError().Success());
-}
-
-void Watchpoint::IncrementFalseAlarmsAndReviseHitCount() {
-  ++m_false_alarms;
-  if (m_false_alarms) {
-    if (m_hit_counter.GetValue() >= m_false_alarms) {
-      m_hit_counter.Decrement(m_false_alarms);
-      m_false_alarms = 0;
-    } else {
-      m_false_alarms -= m_hit_counter.GetValue();
-      m_hit_counter.Reset();
-    }
-  }
 }
 
 // RETURNS - true if we should stop at this breakpoint, false if we
@@ -337,12 +411,11 @@ Watchpoint::WatchpointEventData::WatchpointEventData(
 
 Watchpoint::WatchpointEventData::~WatchpointEventData() = default;
 
-ConstString Watchpoint::WatchpointEventData::GetFlavorString() {
-  static ConstString g_flavor("Watchpoint::WatchpointEventData");
-  return g_flavor;
+llvm::StringRef Watchpoint::WatchpointEventData::GetFlavorString() {
+  return "Watchpoint::WatchpointEventData";
 }
 
-ConstString Watchpoint::WatchpointEventData::GetFlavor() const {
+llvm::StringRef Watchpoint::WatchpointEventData::GetFlavor() const {
   return WatchpointEventData::GetFlavorString();
 }
 

@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s readability-avoid-const-params-in-decls %t -- \
-// RUN:   -config="{CheckOptions: [{key: readability-avoid-const-params-in-decls.IgnoreMacros, value: false}]}"
+// RUN:   -config="{CheckOptions: {readability-avoid-const-params-in-decls.IgnoreMacros: false}}"
 
 // Regression tests involving macros
 #define CONCAT(a, b) a##b

@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=armv6m < %s | FileCheck %s --check-prefix=THUMB
 ; RUN: llc -mtriple=armv7m < %s | FileCheck %s --check-prefix=THUMB2
 
-define void @bool_eq(i1 zeroext %a, i1 zeroext %b, void ()* nocapture %c) nounwind {
+define void @bool_eq(i1 zeroext %a, i1 zeroext %b, ptr nocapture %c) nounwind {
 ; ARM-LABEL: bool_eq:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    cmp r0, r1
@@ -40,7 +40,7 @@ if.end:
   ret void
 }
 
-define void @bool_ne(i1 zeroext %a, i1 zeroext %b, void ()* nocapture %c) nounwind {
+define void @bool_ne(i1 zeroext %a, i1 zeroext %b, ptr nocapture %c) nounwind {
 ; ARM-LABEL: bool_ne:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    cmp r0, r1

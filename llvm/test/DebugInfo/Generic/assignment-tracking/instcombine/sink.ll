@@ -1,4 +1,4 @@
-; RUN: opt %s -S -passes=instcombine -o - -experimental-assignment-tracking \
+; RUN: opt %s -S -passes=instcombine -o - \
 ; RUN: | FileCheck %s
 
 ;; Check that when instcombine sinks an instruction used by a dbg.assign, the
@@ -88,7 +88,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #3
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #4
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!7, !8, !9}
+!llvm.module.flags = !{!7, !8, !9, !1000}
 !llvm.ident = !{!10}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -140,3 +140,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !53 = distinct !DIAssignID()
 !54 = !DILocation(line: 17, column: 3, scope: !35)
 !55 = !DILocation(line: 18, column: 1, scope: !35)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

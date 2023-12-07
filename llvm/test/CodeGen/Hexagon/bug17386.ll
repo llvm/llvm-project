@@ -4,7 +4,7 @@
 target triple = "hexagon"
 
 ; Function Attrs: nounwind
-define void @f0(i8* %a0, ...) #0 {
+define void @f0(ptr %a0, ...) #0 {
 b0:
   br i1 undef, label %b1, label %b2
 
@@ -27,7 +27,7 @@ b6:                                               ; preds = %b12, %b5
   br i1 undef, label %b9, label %b7
 
 b7:                                               ; preds = %b6
-  %v0 = load i8, i8* undef, align 1, !tbaa !0
+  %v0 = load i8, ptr undef, align 1, !tbaa !0
   %v1 = zext i8 %v0 to i32
   br i1 undef, label %b9, label %b8
 
@@ -63,9 +63,9 @@ b16:                                              ; preds = %b15, %b14
   br label %b17
 
 b17:                                              ; preds = %b18, %b16
-  %v6 = phi i8* [ undef, %b16 ], [ %v7, %b18 ]
-  %v7 = getelementptr inbounds i8, i8* %v6, i32 1
-  %v8 = load i8, i8* %v7, align 1, !tbaa !0
+  %v6 = phi ptr [ undef, %b16 ], [ %v7, %b18 ]
+  %v7 = getelementptr inbounds i8, ptr %v6, i32 1
+  %v8 = load i8, ptr %v7, align 1, !tbaa !0
   br label %b18
 
 b18:                                              ; preds = %b19, %b17

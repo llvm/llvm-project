@@ -35,7 +35,7 @@
 // CHECK-NEXT:  Version: 1
 // CHECK-NEXT:  Entry: 0x0
 // CHECK-NEXT:  ProgramHeaderOffset: 0x40
-// CHECK-NEXT:  SectionHeaderOffset: 0x330
+// CHECK-NEXT:  SectionHeaderOffset: 0x340
 // CHECK-NEXT:  Flags [ (0x2)
 // CHECK-NEXT:    0x2
 // CHECK-NEXT:  ]
@@ -149,7 +149,7 @@
 // CHECK-NEXT:    ]
 // CHECK-NEXT:    Address: 0x20238
 // CHECK-NEXT:    Offset: 0x238
-// CHECK-NEXT:    Size: 96
+// CHECK-NEXT:    Size: 112
 // CHECK-NEXT:    Link: 3
 // CHECK-NEXT:    Info: 0
 // CHECK-NEXT:    AddressAlignment: 8
@@ -160,13 +160,15 @@
 // LE-NEXT:         0020: 05000000 00000000 28020000 00000000  |
 // LE-NEXT:         0030: 0A000000 00000000 01000000 00000000  |
 // LE-NEXT:         0040: 04000000 00000000 18020000 00000000  |
-// LE-NEXT:         0050: 00000000 00000000 00000000 00000000  |
+// LE-NEXT:         0050: 03000070 00000000 00000000 00000000  |
+// LE-NEXT:         0060: 00000000 00000000 00000000 00000000  |
 // BE-NEXT:         0000: 00000000 00000006 00000000 00000200  |
 // BE-NEXT:         0010: 00000000 0000000B 00000000 00000018  |
 // BE-NEXT:         0020: 00000000 00000005 00000000 00000228  |
 // BE-NEXT:         0030: 00000000 0000000A 00000000 00000001  |
 // BE-NEXT:         0040: 00000000 00000004 00000000 00000218  |
-// BE-NEXT:         0050: 00000000 00000000 00000000 00000000  |
+// BE-NEXT:         0050: 00000000 70000003 00000000 00000000  |
+// BE-NEXT:         0060: 00000000 00000000 00000000 00000000  |
 // CHECK-NEXT:    )
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Section {
@@ -177,8 +179,8 @@
 // CHECK-NEXT:      SHF_ALLOC (0x2)
 // CHECK-NEXT:      SHF_WRITE (0x1)
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x30298
-// CHECK-NEXT:    Offset: 0x298
+// CHECK-NEXT:    Address: 0x302A8
+// CHECK-NEXT:    Offset: 0x2A8
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Link: 0
 // CHECK-NEXT:    Info: 0
@@ -194,7 +196,7 @@
 // CHECK-NEXT:      SHF_STRINGS (0x20)
 // CHECK-NEXT:    ]
 // CHECK-NEXT:    Address: 0x0
-// CHECK-NEXT:    Offset: 0x298
+// CHECK-NEXT:    Offset: 0x2A8
 // CHECK-NEXT:    Size: 8
 // CHECK-NEXT:    Link: 0
 // CHECK-NEXT:    Info: 0
@@ -211,7 +213,7 @@
 // CHECK-NEXT:    Flags [ (0x0)
 // CHECK-NEXT:    ]
 // CHECK-NEXT:    Address: 0x0
-// CHECK-NEXT:    Offset: 0x2A0
+// CHECK-NEXT:    Offset: 0x2B0
 // CHECK-NEXT:    Size: 48
 // CHECK-NEXT:    Link: 10
 // CHECK-NEXT:    Info: 2
@@ -233,7 +235,7 @@
 // CHECK-NEXT:    Flags [ (0x0)
 // CHECK-NEXT:    ]
 // CHECK-NEXT:    Address: 0x0
-// CHECK-NEXT:    Offset: 0x2D0
+// CHECK-NEXT:    Offset: 0x2E0
 // CHECK-NEXT:    Size: 84
 // CHECK-NEXT:    Link: 0
 // CHECK-NEXT:    Info: 0
@@ -255,7 +257,7 @@
 // CHECK-NEXT:    Flags [ (0x0)
 // CHECK-NEXT:    ]
 // CHECK-NEXT:    Address: 0x0
-// CHECK-NEXT:    Offset: 0x324
+// CHECK-NEXT:    Offset: 0x334
 // CHECK-NEXT:    Size: 10
 // CHECK-NEXT:    Link: 0
 // CHECK-NEXT:    Info: 0
@@ -309,8 +311,8 @@
 // CHECK-NEXT:    Offset: 0x238
 // CHECK-NEXT:    VirtualAddress: 0x20238
 // CHECK-NEXT:    PhysicalAddress: 0x20238
-// CHECK-NEXT:    FileSize: 96
-// CHECK-NEXT:    MemSize: 96
+// CHECK-NEXT:    FileSize: 112
+// CHECK-NEXT:    MemSize: 112
 // CHECK-NEXT:    Flags [ (0x6)
 // CHECK-NEXT:      PF_R (0x4)
 // CHECK-NEXT:      PF_W (0x2)
@@ -322,8 +324,8 @@
 // CHECK-NEXT:    Offset: 0x238
 // CHECK-NEXT:    VirtualAddress: 0x20238
 // CHECK-NEXT:    PhysicalAddress: 0x20238
-// CHECK-NEXT:    FileSize: 96
-// CHECK-NEXT:    MemSize: 96
+// CHECK-NEXT:    FileSize: 112
+// CHECK-NEXT:    MemSize: 112
 // CHECK-NEXT:    Flags [ (0x6)
 // CHECK-NEXT:      PF_R (0x4)
 // CHECK-NEXT:      PF_W (0x2)
@@ -335,7 +337,7 @@
 // CHECK-NEXT:    Offset: 0x238
 // CHECK-NEXT:    VirtualAddress: 0x20238
 // CHECK-NEXT:    PhysicalAddress: 0x20238
-// CHECK-NEXT:    FileSize: 96
+// CHECK-NEXT:    FileSize: 112
 // CHECK-NEXT:    MemSize: 3528
 // CHECK-NEXT:    Flags [ (0x4)
 // CHECK-NEXT:      PF_R (0x4)

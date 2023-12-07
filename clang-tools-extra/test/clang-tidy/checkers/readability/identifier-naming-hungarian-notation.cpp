@@ -1,54 +1,7 @@
-// RUN: clang-tidy %s --config-file=%S/Inputs/identifier-naming/hungarian-notation2/.clang-tidy 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHECK-MESSAGES %s
+// RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
+// RUN:   --config-file=%S/Inputs/identifier-naming/hungarian-notation1/.clang-tidy -- -I %S
 
-// clang-format off
-typedef signed char         int8_t;     // NOLINT
-typedef short               int16_t;    // NOLINT
-typedef long                int32_t;    // NOLINT
-typedef long long           int64_t;    // NOLINT
-typedef unsigned char       uint8_t;    // NOLINT
-typedef unsigned short      uint16_t;   // NOLINT
-typedef unsigned long       uint32_t;   // NOLINT
-typedef unsigned long long  uint64_t;   // NOLINT
-#ifndef _WIN32
-typedef unsigned long long  size_t;     // NOLINT
-#endif
-typedef long                intptr_t;   // NOLINT
-typedef unsigned long       uintptr_t;  // NOLINT
-typedef long int            ptrdiff_t;  // NOLINT
-typedef unsigned char       BYTE;       // NOLINT
-typedef unsigned short      WORD;       // NOLINT
-typedef unsigned long       DWORD;      // NOLINT
-typedef int                 BOOL;       // NOLINT
-typedef int                 BOOLEAN;    // NOLINT
-typedef float               FLOAT;      // NOLINT
-typedef int                 INT;        // NOLINT
-typedef unsigned int        UINT;       // NOLINT
-typedef unsigned long       ULONG;      // NOLINT
-typedef short               SHORT;      // NOLINT
-typedef unsigned short      USHORT;     // NOLINT
-typedef char                CHAR;       // NOLINT
-typedef unsigned char       UCHAR;      // NOLINT
-typedef signed char         INT8;       // NOLINT
-typedef signed short        INT16;      // NOLINT
-typedef signed int          INT32;      // NOLINT
-typedef signed long long    INT64;      // NOLINT
-typedef unsigned char       UINT8;      // NOLINT
-typedef unsigned short      UINT16;     // NOLINT
-typedef unsigned int        UINT32;     // NOLINT
-typedef unsigned long long  UINT64;     // NOLINT
-typedef long                LONG;       // NOLINT
-typedef signed int          LONG32;     // NOLINT
-typedef unsigned int        ULONG32;    // NOLINT
-typedef uint64_t            ULONG64;    // NOLINT
-typedef unsigned int        DWORD32;    // NOLINT
-typedef uint64_t            DWORD64;    // NOLINT
-typedef uint64_t            ULONGLONG;  // NOLINT
-typedef void*               PVOID;      // NOLINT
-typedef void*               HANDLE;     // NOLINT
-typedef void*               FILE;       // NOLINT
-#define NULL                (0)         // NOLINT
-// clang-format on
+#include "identifier-naming-standard-types.h"
 
 // clang-format off
 //===----------------------------------------------------------------------===//
@@ -162,9 +115,14 @@ struct MyStruct { int StructCase; };
 // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: invalid case style for public member 'StructCase' [readability-identifier-naming]
 // CHECK-FIXES: {{^}}struct MyStruct { int iStructCase; };
 
+struct shouldBeCamelCaseStruct { int iField; };
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'shouldBeCamelCaseStruct' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}struct ShouldBeCamelCaseStruct { int iField; };
+
 union MyUnion { int UnionCase; long lUnionCase; };
-// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: invalid case style for public member 'UnionCase' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}union MyUnion { int iUnionCase; long lUnionCase; };
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for union 'MyUnion' [readability-identifier-naming]
+// CHECK-MESSAGES: :[[@LINE-2]]:21: warning: invalid case style for public member 'UnionCase' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}union myUnion { int iUnionCase; long lUnionCase; };
 
 //===----------------------------------------------------------------------===//
 // C string
@@ -402,6 +360,14 @@ uint8_t *ValueU8Ptr;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global pointer 'ValueU8Ptr' [readability-identifier-naming]
 // CHECK-FIXES: {{^}}uint8_t *pu8ValueU8Ptr;
 
+unsigned char *ValueUcPtr;
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for global pointer 'ValueUcPtr' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}unsigned char *pucValueUcPtr;
+
+unsigned char **ValueUcPtr2;
+// CHECK-MESSAGES: :[[@LINE-1]]:17: warning: invalid case style for global pointer 'ValueUcPtr2' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}unsigned char **ppucValueUcPtr2;
+
 void MyFunc2(void* Val){}
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: invalid case style for pointer parameter 'Val' [readability-identifier-naming]
 // CHECK-FIXES: {{^}}void MyFunc2(void* pVal){}
@@ -567,6 +533,10 @@ unsigned short ValueUnsignedShort = 0;
 unsigned int ValueUnsignedInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for global variable 'ValueUnsignedInt' [readability-identifier-naming]
 // CHECK-FIXES: {{^}}unsigned int uiValueUnsignedInt = 0;
+
+unsigned char ValueUnsignedChar = 0;
+// CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for global variable 'ValueUnsignedChar' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}unsigned char ucValueUnsignedChar = 0;
 
 long int ValueLongInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'ValueLongInt' [readability-identifier-naming]

@@ -49,8 +49,8 @@ void test_half(__fp16 *H, __fp16 *H2) {
   // CHECK: fcmp ogt float
   // CHECK-NEXT: zext i1
   (void)__builtin_isinf(*H);
-  // NOFP16: fcmp oeq float %{{.+}}, 0x7FF
-  // FP16: fcmp oeq half %{{.+}}, 0xH7C
+  // FP16: call i1 @llvm.is.fpclass.f16(half %{{.*}}, i32 516)
+  // NOFP16: call i1 @llvm.is.fpclass.f32(float %{{.*}}, i32 516)
 }
 
 void test_mixed(double d1, float f2) {

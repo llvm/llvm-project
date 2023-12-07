@@ -31,7 +31,7 @@ class CSKYMachineFunctionInfo : public MachineFunctionInfo {
   unsigned PICLabelUId = 0;
 
 public:
-  CSKYMachineFunctionInfo(MachineFunction &) {}
+  CSKYMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,

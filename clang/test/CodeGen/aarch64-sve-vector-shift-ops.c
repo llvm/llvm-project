@@ -153,7 +153,7 @@ svuint64_t rshift_u64(svuint64_t a, svuint64_t b) {
 
 // CHECK-LABEL: @lshift_i8_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[SHL]]
@@ -164,7 +164,7 @@ svint8_t lshift_i8_rsplat(svint8_t a, int8_t b) {
 
 // CHECK-LABEL: @lshift_i8_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 16 x i8> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[SHL]]
@@ -175,7 +175,7 @@ svint8_t lshift_i8_lsplat(svint8_t a, int8_t b) {
 
 // CHECK-LABEL: @rshift_i8_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = ashr <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[SHR]]
@@ -186,7 +186,7 @@ svint8_t rshift_i8_rsplat(svint8_t a, int8_t b) {
 
 // CHECK-LABEL: @rshift_i8_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = ashr <vscale x 16 x i8> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[SHR]]
@@ -197,7 +197,7 @@ svint8_t rshift_i8_lsplat(svint8_t a, int8_t b) {
 
 // CHECK-LABEL: @lshift_u8_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[SHL]]
@@ -208,7 +208,7 @@ svuint8_t lshift_u8_rsplat(svuint8_t a, uint8_t b) {
 
 // CHECK-LABEL: @lshift_u8_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 16 x i8> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[SHL]]
@@ -219,7 +219,7 @@ svuint8_t lshift_u8_lsplat(svuint8_t a, uint8_t b) {
 
 // CHECK-LABEL: @rshift_u8_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[SHR]]
@@ -230,7 +230,7 @@ svuint8_t rshift_u8_rsplat(svuint8_t a, uint8_t b) {
 
 // CHECK-LABEL: @rshift_u8_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 16 x i8> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[SHR]]
@@ -241,7 +241,7 @@ svuint8_t rshift_u8_lsplat(svuint8_t a, uint8_t b) {
 
 // CHECK-LABEL: @lshift_i16_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[SHL]]
@@ -252,7 +252,7 @@ svint16_t lshift_i16_rsplat(svint16_t a, int16_t b) {
 
 // CHECK-LABEL: @lshift_i16_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 8 x i16> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[SHL]]
@@ -263,7 +263,7 @@ svint16_t lshift_i16_lsplat(svint16_t a, int16_t b) {
 
 // CHECK-LABEL: @rshift_i16_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = ashr <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[SHR]]
@@ -274,7 +274,7 @@ svint16_t rshift_i16_rsplat(svint16_t a, int16_t b) {
 
 // CHECK-LABEL: @rshift_i16_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = ashr <vscale x 8 x i16> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[SHR]]
@@ -285,7 +285,7 @@ svint16_t rshift_i16_lsplat(svint16_t a, int16_t b) {
 
 // CHECK-LABEL: @lshift_u16_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[SHL]]
@@ -296,7 +296,7 @@ svuint16_t lshift_u16_rsplat(svuint16_t a, uint16_t b) {
 
 // CHECK-LABEL: @lshift_u16_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 8 x i16> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[SHL]]
@@ -307,7 +307,7 @@ svuint16_t lshift_u16_lsplat(svuint16_t a, uint16_t b) {
 
 // CHECK-LABEL: @rshift_u16_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[SHR]]
@@ -318,7 +318,7 @@ svuint16_t rshift_u16_rsplat(svuint16_t a, uint16_t b) {
 
 // CHECK-LABEL: @rshift_u16_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 8 x i16> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[SHR]]
@@ -329,7 +329,7 @@ svuint16_t rshift_u16_lsplat(svuint16_t a, uint16_t b) {
 
 // CHECK-LABEL: @lshift_i32_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[SHL]]
@@ -340,7 +340,7 @@ svint32_t lshift_i32_rsplat(svint32_t a, int32_t b) {
 
 // CHECK-LABEL: @lshift_i32_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 4 x i32> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[SHL]]
@@ -351,7 +351,7 @@ svint32_t lshift_i32_lsplat(svint32_t a, int32_t b) {
 
 // CHECK-LABEL: @rshift_i32_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = ashr <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[SHR]]
@@ -362,7 +362,7 @@ svint32_t rshift_i32_rsplat(svint32_t a, int32_t b) {
 
 // CHECK-LABEL: @rshift_i32_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = ashr <vscale x 4 x i32> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[SHR]]
@@ -373,7 +373,7 @@ svint32_t rshift_i32_lsplat(svint32_t a, int32_t b) {
 
 // CHECK-LABEL: @lshift_u32_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[SHL]]
@@ -384,7 +384,7 @@ svuint32_t lshift_u32_rsplat(svuint32_t a, uint32_t b) {
 
 // CHECK-LABEL: @lshift_u32_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 4 x i32> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[SHL]]
@@ -395,7 +395,7 @@ svuint32_t lshift_u32_lsplat(svuint32_t a, uint32_t b) {
 
 // CHECK-LABEL: @rshift_u32_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[SHR]]
@@ -406,7 +406,7 @@ svuint32_t rshift_u32_rsplat(svuint32_t a, uint32_t b) {
 
 // CHECK-LABEL: @rshift_u32_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 4 x i32> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[SHR]]
@@ -417,7 +417,7 @@ svuint32_t rshift_u32_lsplat(svuint32_t a, uint32_t b) {
 
 // CHECK-LABEL: @lshift_i64_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[SHL]]
@@ -428,7 +428,7 @@ svint64_t lshift_i64_rsplat(svint64_t a, int64_t b) {
 
 // CHECK-LABEL: @lshift_i64_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 2 x i64> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[SHL]]
@@ -439,7 +439,7 @@ svint64_t lshift_i64_lsplat(svint64_t a, int64_t b) {
 
 // CHECK-LABEL: @rshift_i64_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = ashr <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[SHR]]
@@ -450,7 +450,7 @@ svint64_t rshift_i64_rsplat(svint64_t a, int64_t b) {
 
 // CHECK-LABEL: @rshift_i64_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = ashr <vscale x 2 x i64> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[SHR]]
@@ -461,7 +461,7 @@ svint64_t rshift_i64_lsplat(svint64_t a, int64_t b) {
 
 // CHECK-LABEL: @lshift_u64_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[SHL]]
@@ -472,7 +472,7 @@ svuint64_t lshift_u64_rsplat(svuint64_t a, uint64_t b) {
 
 // CHECK-LABEL: @lshift_u64_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 2 x i64> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[SHL]]
@@ -483,7 +483,7 @@ svuint64_t lshift_u64_lsplat(svuint64_t a, uint64_t b) {
 
 // CHECK-LABEL: @rshift_u64_rsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[SHR]]
@@ -494,7 +494,7 @@ svuint64_t rshift_u64_rsplat(svuint64_t a, uint64_t b) {
 
 // CHECK-LABEL: @rshift_u64_lsplat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 2 x i64> [[SPLAT_SPLAT]], [[A:%.*]]
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[SHR]]

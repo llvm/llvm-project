@@ -1,5 +1,5 @@
 # UNSUPPORTED: system-windows
-# RUN: %clangxx_host -g -O0 %S/Inputs/names.cpp -std=c++17 -o %t.out
+# RUN: %build %S/Inputs/names.cpp --std c++17 -o %t.out
 # RUN: %lldb -b -s %s %t.out | FileCheck %s
 settings set -f frame-format "frame ${function.name-with-args}\n"
 break set -n foo

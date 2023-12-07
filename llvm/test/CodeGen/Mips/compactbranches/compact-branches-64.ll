@@ -172,11 +172,11 @@ if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
-define i64 @l9(i8* ()* %i) {
+define i64 @l9(ptr %i) {
 entry:
 ; CHECK-LABEL: l9:
-  %i.addr = alloca i8* ()*, align 4
-  store i8* ()* %i, i8* ()** %i.addr, align 4
+  %i.addr = alloca ptr, align 4
+  store ptr %i, ptr %i.addr, align 4
 ; CHECK: jalrc $25
   %call = call i64 @k()
   %cmp = icmp ne i64 %call, 0
@@ -184,9 +184,9 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %0 = load i8* ()*, i8* ()** %i.addr, align 4
+  %0 = load ptr, ptr %i.addr, align 4
 ; CHECK: jalrc $25
-  %call1 = call i8* %0()
+  %call1 = call ptr %0()
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry

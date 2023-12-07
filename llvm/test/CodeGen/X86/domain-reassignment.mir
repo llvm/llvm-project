@@ -6,7 +6,7 @@
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-unknown"
 
-  define void @test_fcmp_storefloat(i1 %cond, float* %fptr, float %f1, float %f2, float %f3, float %f4, float %f5, float %f6) #0 {
+  define void @test_fcmp_storefloat(i1 %cond, ptr %fptr, float %f1, float %f2, float %f3, float %f4, float %f5, float %f6) #0 {
   entry:
     br i1 %cond, label %if, label %else
 
@@ -21,7 +21,7 @@
   exit:                                             ; preds = %else, %if
     %val = phi i1 [ %cmp1, %if ], [ %cmp2, %else ]
     %selected = select i1 %val, float %f1, float %f2
-    store float %selected, float* %fptr
+    store float %selected, ptr %fptr
     ret void
   }
 

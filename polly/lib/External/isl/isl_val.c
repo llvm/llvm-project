@@ -1577,6 +1577,8 @@ __isl_give isl_val *isl_val_zero_on_domain(__isl_take isl_local_space *ls)
 #include <isl_multi_no_domain_templ.c>
 #include <isl_multi_no_explicit_domain.c>
 #include <isl_multi_templ.c>
+#include <isl_multi_un_op_templ.c>
+#include <isl_multi_bin_val_templ.c>
 #include <isl_multi_arith_templ.c>
 #include <isl_multi_dim_id_templ.c>
 #include <isl_multi_dims.c>
@@ -1592,34 +1594,6 @@ __isl_give isl_val *isl_val_zero_on_domain(__isl_take isl_local_space *ls)
 isl_bool isl_multi_val_is_zero(__isl_keep isl_multi_val *mv)
 {
 	return isl_multi_val_every(mv, &isl_val_is_zero);
-}
-
-/* Apply "fn" to each of the elements of "mv" with as second argument "v".
- */
-static __isl_give isl_multi_val *isl_multi_val_fn_val(
-	__isl_take isl_multi_val *mv,
-	__isl_give isl_val *(*fn)(__isl_take isl_val *v1,
-					__isl_take isl_val *v2),
-	__isl_take isl_val *v)
-{
-	int i;
-
-	mv = isl_multi_val_cow(mv);
-	if (!mv || !v)
-		goto error;
-
-	for (i = 0; i < mv->n; ++i) {
-		mv->u.p[i] = fn(mv->u.p[i], isl_val_copy(v));
-		if (!mv->u.p[i])
-			goto error;
-	}
-
-	isl_val_free(v);
-	return mv;
-error:
-	isl_val_free(v);
-	isl_multi_val_free(mv);
-	return NULL;
 }
 
 /* Add "v" to each of the elements of "mv".

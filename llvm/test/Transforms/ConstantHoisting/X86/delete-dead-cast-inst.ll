@@ -8,15 +8,15 @@ target triple = "x86_64-apple-macosx10.9.0"
 define i32 @test1() nounwind {
 ; CHECK-LABEL:  @test1
 ; CHECK:        %const = bitcast i32 12345678 to i32
-; CHECK-NOT:    %base = inttoptr i32 12345678 to %T*
-; CHECK-NEXT:   %1 = inttoptr i32 %const to %T*
-; CHECK-NEXT:   %addr1 = getelementptr %T, %T* %1, i32 0, i32 1
-; CHECK-NEXT:   %addr2 = getelementptr %T, %T* %1, i32 0, i32 2
-; CHECK-NEXT:   %addr3 = getelementptr %T, %T* %1, i32 0, i32 3
-  %base = inttoptr i32 12345678 to %T*
-  %addr1 = getelementptr %T, %T* %base, i32 0, i32 1
-  %addr2 = getelementptr %T, %T* %base, i32 0, i32 2
-  %addr3 = getelementptr %T, %T* %base, i32 0, i32 3
+; CHECK-NOT:    %base = inttoptr i32 12345678 to ptr
+; CHECK-NEXT:   %1 = inttoptr i32 %const to ptr
+; CHECK-NEXT:   %addr1 = getelementptr %T, ptr %1, i32 0, i32 1
+; CHECK-NEXT:   %addr2 = getelementptr %T, ptr %1, i32 0, i32 2
+; CHECK-NEXT:   %addr3 = getelementptr %T, ptr %1, i32 0, i32 3
+  %base = inttoptr i32 12345678 to ptr
+  %addr1 = getelementptr %T, ptr %base, i32 0, i32 1
+  %addr2 = getelementptr %T, ptr %base, i32 0, i32 2
+  %addr3 = getelementptr %T, ptr %base, i32 0, i32 3
   ret i32 12345678
 }
 

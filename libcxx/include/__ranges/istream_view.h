@@ -39,6 +39,8 @@ concept __stream_extractable = requires(basic_istream<_CharT, _Traits>& __is, _V
 template <movable _Val, class _CharT, class _Traits = char_traits<_CharT>>
   requires default_initializable<_Val> && __stream_extractable<_Val, _CharT, _Traits>
 class basic_istream_view : public view_interface<basic_istream_view<_Val, _CharT, _Traits>> {
+  class __iterator;
+
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit basic_istream_view(basic_istream<_CharT, _Traits>& __stream)
       : __stream_(std::addressof(__stream)) {}
@@ -51,8 +53,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr default_sentinel_t end() const noexcept { return default_sentinel; }
 
 private:
-  class __iterator;
-
   basic_istream<_CharT, _Traits>* __stream_;
   _LIBCPP_NO_UNIQUE_ADDRESS _Val __value_ = _Val();
 };
@@ -65,7 +65,8 @@ public:
   using difference_type  = ptrdiff_t;
   using value_type       = _Val;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(basic_istream_view& __parent) noexcept
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(
+      basic_istream_view<_Val, _CharT, _Traits>& __parent) noexcept
       : __parent_(std::addressof(__parent)) {}
 
   __iterator(const __iterator&)                  = delete;
@@ -88,7 +89,7 @@ public:
   }
 
 private:
-  basic_istream_view* __parent_;
+  basic_istream_view<_Val, _CharT, _Traits>* __parent_;
 
   _LIBCPP_HIDE_FROM_ABI constexpr basic_istream<_CharT, _Traits>* __get_parent_stream() const {
     return __parent_->__stream_;
@@ -98,10 +99,10 @@ private:
 template <class _Val>
 using istream_view = basic_istream_view<_Val, char>;
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <class _Val>
 using wistream_view = basic_istream_view<_Val, wchar_t>;
-#endif
+#  endif
 
 namespace views {
 namespace __istream {
@@ -127,7 +128,7 @@ struct __fn {
 
 inline namespace __cpo {
 template <class _Tp>
-  inline constexpr auto istream = __istream::__fn<_Tp>{};
+inline constexpr auto istream = __istream::__fn<_Tp>{};
 } // namespace __cpo
 } // namespace views
 

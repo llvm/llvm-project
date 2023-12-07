@@ -18,7 +18,7 @@ define i32 @load_hidden_global() {
 ; NON-PIC-NEXT:    i32.load $push1=, hidden_global($pop0){{$}}
 ; CHECK-NEXT:    end_function
 
-  %1 = load i32, i32* @hidden_global
+  %1 = load i32, ptr @hidden_global
   ret i32 %1
 }
 
@@ -28,8 +28,8 @@ define i32 @load_hidden_global_offset() {
 ; NON-PIC-NEXT:i32.load  $push1=, hidden_global_array+20($pop0){{$}}
 ; CHECK-NEXT:  end_function
 
-  %1 = getelementptr [10 x i32], [10 x i32]* @hidden_global_array, i32 0, i32 5
-  %2 = load i32, i32* %1
+  %1 = getelementptr [10 x i32], ptr @hidden_global_array, i32 0, i32 5
+  %2 = load i32, ptr %1
   ret i32 %2
 }
 
@@ -41,7 +41,7 @@ define void @store_hidden_global(i32 %n) {
 ; NON-PIC-NEXT:  i32.store hidden_global($pop0), $0{{$}}
 ; CHECK-NEXT:    end_function
 
-  store i32 %n, i32* @hidden_global
+  store i32 %n, ptr @hidden_global
   ret void
 }
 
@@ -51,8 +51,8 @@ define void @store_hidden_global_offset(i32 %n) {
 ; NON-PIC-NEXT: i32.store hidden_global_array+20($pop0), $0{{$}}
 ; CHECK-NEXT:   end_function
 
-  %1 = getelementptr [10 x i32], [10 x i32]* @hidden_global_array, i32 0, i32 5
-  store i32 %n, i32* %1
+  %1 = getelementptr [10 x i32], ptr @hidden_global_array, i32 0, i32 5
+  store i32 %n, ptr %1
   ret void
 }
 
@@ -66,7 +66,7 @@ define i32 @load_external_global() {
 ; NON-PIC-NEXT: i32.load $push1=, external_global($pop0){{$}}
 ; CHECK-NEXT:   end_function
 
-  %1 = load i32, i32* @external_global
+  %1 = load i32, ptr @external_global
   ret i32 %1
 }
 
@@ -76,8 +76,8 @@ define i32 @load_external_global_offset() {
 ; NON-PIC-NEXT: i32.load $push{{[0-9]+}}=, external_global_array+20($pop[[L0]]){{$}}
 ; CHECK-NEXT:   end_function
 
-  %1 = getelementptr [10 x i32], [10 x i32]* @external_global_array, i32 0, i32 5
-  %2 = load i32, i32* %1
+  %1 = getelementptr [10 x i32], ptr @external_global_array, i32 0, i32 5
+  %2 = load i32, ptr %1
   ret i32 %2
 }
 
@@ -89,7 +89,7 @@ define void @store_external_global(i32 %n) {
 ; NON-PIC-NEXT: i32.store external_global($pop0), $0{{$}}
 ; CHECK-NEXT:   end_function
 
-  store i32 %n, i32* @external_global
+  store i32 %n, ptr @external_global
   ret void
 }
 
@@ -99,7 +99,7 @@ define void @store_external_global_offset(i32 %n) {
 ; NON-PIC-NEXT: i32.store external_global_array+20($pop0), $0{{$}}
 ; CHECK-NEXT:   end_function
 
-  %1 = getelementptr [10 x i32], [10 x i32]* @external_global_array, i32 0, i32 5
-  store i32 %n, i32* %1
+  %1 = getelementptr [10 x i32], ptr @external_global_array, i32 0, i32 5
+  store i32 %n, ptr %1
   ret void
 }

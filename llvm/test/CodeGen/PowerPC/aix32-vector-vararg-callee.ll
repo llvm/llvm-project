@@ -24,37 +24,36 @@ define <4 x i32> @callee(i32 %count, ...) {
   ; CHECK:   STW [[COPY]], 24, %fixed-stack.0 :: (store (s32))
   ; CHECK:   LIFETIME_START %stack.0.arg_list
   ; CHECK:   [[ADDI:%[0-9]+]]:gprc = ADDI %fixed-stack.0, 0
-  ; CHECK:   STW killed [[ADDI]], 0, %stack.0.arg_list :: (store (s32) into %ir.0)
+  ; CHECK:   STW killed [[ADDI]], 0, %stack.0.arg_list :: (store (s32) into %ir.arg_list)
   ; CHECK:   [[ADDI1:%[0-9]+]]:gprc = ADDI %fixed-stack.0, 15
   ; CHECK:   [[RLWINM:%[0-9]+]]:gprc = RLWINM killed [[ADDI1]], 0, 0, 27
-  ; CHECK:   [[LXVW4X:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[RLWINM]] :: (load (s128) from %ir.4)
+  ; CHECK:   [[LXVW4X:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[RLWINM]] :: (load (s128) from %ir.argp.cur.aligned)
   ; CHECK:   LIFETIME_END %stack.0.arg_list
   ; CHECK:   $v2 = COPY [[LXVW4X]]
   ; CHECK:   BLR implicit $lr, implicit $rm, implicit $v2
 entry:
-  %arg_list = alloca i8*, align 4
-  %0 = bitcast i8** %arg_list to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0)
-  call void @llvm.va_start(i8* nonnull %0)
-  %argp.cur = load i8*, i8** %arg_list, align 4
-  %1 = ptrtoint i8* %argp.cur to i32
-  %2 = add i32 %1, 15
-  %3 = and i32 %2, -16
-  %argp.cur.aligned = inttoptr i32 %3 to i8*
-  %argp.next = getelementptr inbounds i8, i8* %argp.cur.aligned, i32 16
-  store i8* %argp.next, i8** %arg_list, align 4
-  %4 = inttoptr i32 %3 to <4 x i32>*
-  %5 = load <4 x i32>, <4 x i32>* %4, align 16
-  call void @llvm.va_end(i8* nonnull %0)
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0)
-  ret <4 x i32> %5
+  %arg_list = alloca ptr, align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %arg_list)
+  call void @llvm.va_start(ptr nonnull %arg_list)
+  %argp.cur = load ptr, ptr %arg_list, align 4
+  %0 = ptrtoint ptr %argp.cur to i32
+  %1 = add i32 %0, 15
+  %2 = and i32 %1, -16
+  %argp.cur.aligned = inttoptr i32 %2 to ptr
+  %argp.next = getelementptr inbounds i8, ptr %argp.cur.aligned, i32 16
+  store ptr %argp.next, ptr %arg_list, align 4
+  %3 = inttoptr i32 %2 to ptr
+  %4 = load <4 x i32>, ptr %3, align 16
+  call void @llvm.va_end(ptr nonnull %arg_list)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %arg_list)
+  ret <4 x i32> %4
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start(ptr)
 
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_end(ptr)
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 

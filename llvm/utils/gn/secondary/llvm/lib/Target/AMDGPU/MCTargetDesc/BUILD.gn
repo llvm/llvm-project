@@ -87,11 +87,13 @@ static_library("MCTargetDesc") {
     ":R600GenAsmWriter",
     ":R600GenMCCodeEmitter",
     "//llvm/lib/BinaryFormat",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target/AMDGPU/TargetInfo",
     "//llvm/lib/Target/AMDGPU/Utils",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ ".." ]
   sources = [
@@ -106,6 +108,5 @@ static_library("MCTargetDesc") {
     "R600InstPrinter.cpp",
     "R600MCCodeEmitter.cpp",
     "R600MCTargetDesc.cpp",
-    "SIMCCodeEmitter.cpp",
   ]
 }

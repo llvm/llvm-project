@@ -187,14 +187,14 @@ getCopyRegClasses(const MachineInstr &Copy,
 
   const TargetRegisterClass *SrcRC = SrcReg.isVirtual()
                                          ? MRI.getRegClass(SrcReg)
-                                         : TRI.getPhysRegClass(SrcReg);
+                                         : TRI.getPhysRegBaseClass(SrcReg);
 
   // We don't really care about the subregister here.
   // SrcRC = TRI.getSubRegClass(SrcRC, Copy.getOperand(1).getSubReg());
 
   const TargetRegisterClass *DstRC = DstReg.isVirtual()
                                          ? MRI.getRegClass(DstReg)
-                                         : TRI.getPhysRegClass(DstReg);
+                                         : TRI.getPhysRegBaseClass(DstReg);
 
   return std::pair(SrcRC, DstRC);
 }
@@ -231,7 +231,7 @@ static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
         UseMI->getOpcode() <= TargetOpcode::GENERIC_OP_END)
       return false;
 
-    unsigned OpIdx = UseMI->getOperandNo(&MO);
+    unsigned OpIdx = MO.getOperandNo();
     if (OpIdx >= UseMI->getDesc().getNumOperands() ||
         !TII->isOperandLegal(*UseMI, OpIdx, &Src))
       return false;
@@ -658,7 +658,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
                   TRI->getEquivalentSGPRClass(SrcRC);
               Register NewDst = MRI->createVirtualRegister(DestRC);
               MachineBasicBlock *BlockToInsertCopy =
-                  MI.isPHI() ? MI.getOperand(MI.getOperandNo(&MO) + 1).getMBB()
+                  MI.isPHI() ? MI.getOperand(MO.getOperandNo() + 1).getMBB()
                              : MBB;
               MachineBasicBlock::iterator PointToInsertCopy =
                   MI.isPHI() ? BlockToInsertCopy->getFirstInstrTerminator() : I;
@@ -869,7 +869,9 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
     return true;
   }
   if (!SrcReg.isVirtual() || TRI->isAGPR(*MRI, SrcReg)) {
-    TII->moveToVALU(MI, MDT);
+    SIInstrWorklist worklist;
+    worklist.insert(&MI);
+    TII->moveToVALU(worklist, MDT);
     return true;
   }
 
@@ -991,6 +993,10 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
       LoweringWorklist.push_back(C.second.ID);
   }
 
+  // Store all the V2S copy instructions that need to be moved to VALU
+  // in the Copies worklist.
+  SIInstrWorklist Copies;
+
   while (!LoweringWorklist.empty()) {
     unsigned CurID = LoweringWorklist.pop_back_val();
     auto CurInfoIt = V2SCopies.find(CurID);
@@ -1013,9 +1019,12 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
       LLVM_DEBUG(dbgs() << "V2S copy " << *C.Copy
                         << " is being turned to VALU\n");
       V2SCopies.erase(C.ID);
-      TII->moveToVALU(*C.Copy, MDT);
+      Copies.insert(C.Copy);
     }
   }
+
+  TII->moveToVALU(Copies, MDT);
+  Copies.clear();
 
   // Now do actual lowering
   for (auto C : V2SCopies) {

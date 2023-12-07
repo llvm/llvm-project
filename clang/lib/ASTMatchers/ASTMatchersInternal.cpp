@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -338,7 +339,7 @@ bool DynTypedMatcher::matchesNoKindCheck(const DynTypedNode &DynNode,
   return false;
 }
 
-llvm::Optional<DynTypedMatcher> DynTypedMatcher::tryBind(StringRef ID) const {
+std::optional<DynTypedMatcher> DynTypedMatcher::tryBind(StringRef ID) const {
   if (!AllowBind)
     return std::nullopt;
   auto Result = *this;
@@ -685,7 +686,7 @@ static bool isTokenAtLoc(const SourceManager &SM, const LangOptions &LangOpts,
   return !Invalid && Text == TokenText;
 }
 
-llvm::Optional<SourceLocation>
+std::optional<SourceLocation>
 getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
                        const ASTContext &Context) {
   auto &SM = Context.getSourceManager();
@@ -696,7 +697,7 @@ getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
     if (Expansion.isMacroArgExpansion())
       // Check macro argument for an expansion of the given macro. For example,
       // `F(G(3))`, where `MacroName` is `G`.
-      if (llvm::Optional<SourceLocation> ArgLoc = getExpansionLocOfMacro(
+      if (std::optional<SourceLocation> ArgLoc = getExpansionLocOfMacro(
               MacroName, Expansion.getSpellingLoc(), Context))
         return ArgLoc;
     Loc = Expansion.getExpansionLocStart();
@@ -799,6 +800,7 @@ const internal::VariadicDynCastAllOfMatcher<Decl, TagDecl> tagDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXMethodDecl> cxxMethodDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXConversionDecl>
     cxxConversionDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, ConceptDecl> conceptDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, VarDecl> varDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, FieldDecl> fieldDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, IndirectFieldDecl>
@@ -881,6 +883,10 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNoexceptExpr>
     cxxNoexceptExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ArraySubscriptExpr>
     arraySubscriptExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitIndexExpr>
+    arrayInitIndexExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitLoopExpr>
+    arrayInitLoopExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDefaultArgExpr>
     cxxDefaultArgExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXOperatorCallExpr>
@@ -909,6 +915,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, SwitchCase> switchCase;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CaseStmt> caseStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, DefaultStmt> defaultStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundStmt> compoundStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CoroutineBodyStmt>
+    coroutineBodyStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXCatchStmt> cxxCatchStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXTryStmt> cxxTryStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXThrowExpr> cxxThrowExpr;
@@ -933,6 +941,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundLiteralExpr>
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNullPtrLiteralExpr>
     cxxNullPtrLiteralExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ChooseExpr> chooseExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ConvertVectorExpr>
+    convertVectorExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CoawaitExpr>
     coawaitExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, DependentCoawaitExpr>
@@ -1038,6 +1048,7 @@ const AstTypeMatcher<ConstantArrayType> constantArrayType;
 const AstTypeMatcher<DeducedTemplateSpecializationType>
     deducedTemplateSpecializationType;
 const AstTypeMatcher<DependentSizedArrayType> dependentSizedArrayType;
+const AstTypeMatcher<DependentSizedExtVectorType> dependentSizedExtVectorType;
 const AstTypeMatcher<IncompleteArrayType> incompleteArrayType;
 const AstTypeMatcher<VariableArrayType> variableArrayType;
 const AstTypeMatcher<AtomicType> atomicType;
@@ -1047,6 +1058,7 @@ const AstTypeMatcher<FunctionType> functionType;
 const AstTypeMatcher<FunctionProtoType> functionProtoType;
 const AstTypeMatcher<ParenType> parenType;
 const AstTypeMatcher<BlockPointerType> blockPointerType;
+const AstTypeMatcher<MacroQualifiedType> macroQualifiedType;
 const AstTypeMatcher<MemberPointerType> memberPointerType;
 const AstTypeMatcher<PointerType> pointerType;
 const AstTypeMatcher<ObjCObjectPointerType> objcObjectPointerType;

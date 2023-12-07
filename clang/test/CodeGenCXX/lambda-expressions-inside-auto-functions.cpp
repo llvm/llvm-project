@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10.0.0 -fblocks -emit-llvm -o - %s -fexceptions -std=c++1y | FileCheck --check-prefix CHECK_ABI_LATEST %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10.0.0 -fblocks -emit-llvm -o - %s -fexceptions -std=c++1y -fclang-abi-compat=6.0 | FileCheck --check-prefix CHECK_ABIV6 %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fblocks -emit-llvm -o - %s -fexceptions -std=c++1y | FileCheck --check-prefix CHECK_ABI_LATEST %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fblocks -emit-llvm -o - %s -fexceptions -std=c++1y -fclang-abi-compat=6.0 | FileCheck --check-prefix CHECK_ABIV6 %s
 
 // CHECK-LABEL: define void @_ZN19non_inline_function3fooEv
 // CHECK-LABEL: define internal void @"_ZZN19non_inline_function3fooEvENK3$_0clEi"(%class.anon
@@ -24,9 +24,9 @@ auto foo2() {
 auto use = foo2<int>();
 
 }
-//CHECK-LABEL: define linkonce_odr void @_ZN22inline_member_function1X3fooEv(%"struct.inline_member_function::X"* %this)
-//CHECK-LABEL: define linkonce_odr void @_ZZN22inline_member_function1X3fooEvENKUliE_clEi(%class.anon
-//CHECK-LABEL: define linkonce_odr signext i8 @_ZZZN22inline_member_function1X3fooEvENKUliE_clEiENKUlcE_clEc(%class.anon
+//CHECK-LABEL: define linkonce_odr void @_ZN22inline_member_function1X3fooEv(ptr %this)
+//CHECK-LABEL: define linkonce_odr void @_ZZN22inline_member_function1X3fooEvENKUliE_clEi(ptr
+//CHECK-LABEL: define linkonce_odr signext i8 @_ZZZN22inline_member_function1X3fooEvENKUliE_clEiENKUlcE_clEc(ptr
 
 namespace inline_member_function {
 struct X {
@@ -53,12 +53,12 @@ struct A {
   
   template<class T> auto foo() { return [](const T&) { return 42; }; }
 };
-//CHECK_ABIV6: define linkonce_odr noundef i32 @_ZZN22inline_member_function1AIdE14default_lambdaIdEEDavENKUlRKdE_clES5_(%class.anon
-//CHECK_ABI_LATEST: define linkonce_odr noundef i32 @_ZZN22inline_member_function1AIdE14default_lambdaIdEEDavENKUlRKdE_clES4_(%class.anon
+//CHECK_ABIV6: define linkonce_odr noundef i32 @_ZZN22inline_member_function1AIdE14default_lambdaIdEEDavENKUlRKdE_clES5_(ptr
+//CHECK_ABI_LATEST: define linkonce_odr noundef i32 @_ZZN22inline_member_function1AIdE14default_lambdaIdEEDavENKUlRKdE_clES4_(ptr
 int run2 = A<double>{}.func()(3.14);
 
-//CHECK_ABIV6: define linkonce_odr noundef i32 @_ZZN22inline_member_function1AIcE14default_lambdaIcEEDavENKUlRKcE_clES5_(%class.anon
-//CHECK_ABI_LATEST: define linkonce_odr noundef i32 @_ZZN22inline_member_function1AIcE14default_lambdaIcEEDavENKUlRKcE_clES4_(%class.anon
+//CHECK_ABIV6: define linkonce_odr noundef i32 @_ZZN22inline_member_function1AIcE14default_lambdaIcEEDavENKUlRKcE_clES5_(ptr
+//CHECK_ABI_LATEST: define linkonce_odr noundef i32 @_ZZN22inline_member_function1AIcE14default_lambdaIcEEDavENKUlRKcE_clES4_(ptr
 int run3 = A<char>{}.func()('a');
 } // end inline_member_function
 

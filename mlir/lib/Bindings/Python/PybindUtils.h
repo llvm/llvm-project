@@ -10,21 +10,14 @@
 #define MLIR_BINDINGS_PYTHON_PYBINDUTILS_H
 
 #include "mlir-c/Support.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/DataTypes.h"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
 namespace mlir {
 namespace python {
-
-// Sets a python error, ready to be thrown to return control back to the
-// python runtime.
-// Correct usage:
-//   throw SetPyError(PyExc_ValueError, "Foobar'd");
-pybind11::error_already_set SetPyError(PyObject *excClass,
-                                       const llvm::Twine &message);
 
 /// CRTP template for special wrapper types that are allowed to be passed in as
 /// 'None' function arguments and can be resolved by some global mechanic if
@@ -94,9 +87,6 @@ struct MlirDefaultingCaster {
     return pybind11::cast(src, policy);
   }
 };
-
-template <typename T>
-struct type_caster<llvm::Optional<T>> : optional_caster<llvm::Optional<T>> {};
 } // namespace detail
 } // namespace pybind11
 
@@ -363,5 +353,26 @@ private:
 };
 
 } // namespace mlir
+
+namespace llvm {
+
+template <>
+struct DenseMapInfo<MlirTypeID> {
+  static inline MlirTypeID getEmptyKey() {
+    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    return mlirTypeIDCreate(pointer);
+  }
+  static inline MlirTypeID getTombstoneKey() {
+    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    return mlirTypeIDCreate(pointer);
+  }
+  static inline unsigned getHashValue(const MlirTypeID &val) {
+    return mlirTypeIDHashValue(val);
+  }
+  static inline bool isEqual(const MlirTypeID &lhs, const MlirTypeID &rhs) {
+    return mlirTypeIDEqual(lhs, rhs);
+  }
+};
+} // namespace llvm
 
 #endif // MLIR_BINDINGS_PYTHON_PYBINDUTILS_H

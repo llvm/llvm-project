@@ -15,10 +15,11 @@
 //   stable_sort(Iter first, Iter last);
 
 #include <algorithm>
+#include <cassert>
 #include <iterator>
 #include <random>
-#include <cassert>
 
+#include "count_new.h"
 #include "test_macros.h"
 
 std::mt19937 randomness;
@@ -154,6 +155,14 @@ int main(int, char**)
     test_larger_sorts(997);
     test_larger_sorts(1000);
     test_larger_sorts(1009);
+
+#if !defined(TEST_HAS_NO_EXCEPTIONS)
+    { // check that the algorithm works without memory
+        std::vector<int> vec(150, 3);
+        getGlobalMemCounter()->throw_after = 0;
+        std::stable_sort(vec.begin(), vec.end());
+    }
+#endif // !defined(TEST_HAS_NO_EXCEPTIONS)
 
   return 0;
 }

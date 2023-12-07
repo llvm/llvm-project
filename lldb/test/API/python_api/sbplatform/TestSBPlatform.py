@@ -3,29 +3,31 @@
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
+
 class SBPlatformAPICase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfRemote # Remote environment not supported.
+    @skipIfRemote  # Remote environment not supported.
     def test_run(self):
         self.build()
         plat = lldb.SBPlatform.GetHostPlatform()
 
-        os.environ["MY_TEST_ENV_VAR"]="SBPlatformAPICase.test_run"
+        os.environ["MY_TEST_ENV_VAR"] = "SBPlatformAPICase.test_run"
+
         def cleanup():
             del os.environ["MY_TEST_ENV_VAR"]
+
         self.addTearDownHook(cleanup)
         cmd = lldb.SBPlatformShellCommand(self.getBuildArtifact("a.out"))
         self.assertSuccess(plat.Run(cmd))
         self.assertIn("MY_TEST_ENV_VAR=SBPlatformAPICase.test_run", cmd.GetOutput())
 
     def test_SetSDKRoot(self):
-        plat = lldb.SBPlatform("remote-linux") # arbitrary choice
+        plat = lldb.SBPlatform("remote-linux")  # arbitrary choice
         self.assertTrue(plat)
         plat.SetSDKRoot(self.getBuildDir())
         self.dbg.SetSelectedPlatform(plat)
-        self.expect("platform status",
-                substrs=["Sysroot:", self.getBuildDir()])
+        self.expect("platform status", substrs=["Sysroot:", self.getBuildDir()])
 
     def test_SetCurrentPlatform_floating(self):
         # floating platforms cannot be referenced by name until they are

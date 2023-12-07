@@ -117,7 +117,7 @@ entry:
   ret i1 %cmp
 }
 
-define i1 @eq_ptr(i32* %a, i32* %b){
+define i1 @eq_ptr(ptr %a, ptr %b){
 ; MIPS32-LABEL: eq_ptr:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    xor $1, $4, $5
@@ -125,7 +125,7 @@ define i1 @eq_ptr(i32* %a, i32* %b){
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
-  %cmp = icmp eq i32* %a, %b
+  %cmp = icmp eq ptr %a, %b
   ret i1 %cmp
 }
 

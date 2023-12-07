@@ -76,6 +76,9 @@ LegacyLegalizerInfo::LegacyLegalizerInfo() {
 
   setScalarAction(TargetOpcode::G_INTRINSIC, 0, {{1, Legal}});
   setScalarAction(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS, 0, {{1, Legal}});
+  setScalarAction(TargetOpcode::G_INTRINSIC_CONVERGENT, 0, {{1, Legal}});
+  setScalarAction(TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS, 0,
+                  {{1, Legal}});
 
   setLegalizeScalarToDifferentSizeStrategy(
       TargetOpcode::G_IMPLICIT_DEF, 0, narrowToSmallerAndUnsupportedIfTooSmall);

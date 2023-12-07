@@ -28,7 +28,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @fast(i8* %A, i8 %N, i8 %M) {
+define void @fast(ptr %A, i8 %N, i8 %M) {
 entry:
   br label %for.cond
 
@@ -42,10 +42,10 @@ for.body:                                         ; preds = %for.cond
   %mul = mul nsw i8 %tmp3, 16
   %add2 = add nsw i8 %mul, %M
   %add2ext = sext i8 %add2 to i16
-  %arrayidx = getelementptr inbounds i8, i8* %A, i16 %add2ext
-  %tmp4 = load i8, i8* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i8, ptr %A, i16 %add2ext
+  %tmp4 = load i8, ptr %arrayidx, align 4
   %inc = add nsw i8 %tmp4, 1
-  store i8 %inc, i8* %arrayidx, align 4
+  store i8 %inc, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -56,7 +56,7 @@ for.end:                                          ; preds = %for.cond
   ret void
 }
 
-define void @slow(i8* %A, i8 %N, i8 %M) {
+define void @slow(ptr %A, i8 %N, i8 %M) {
 entry:
   br label %for.cond
 
@@ -71,10 +71,10 @@ for.body:                                         ; preds = %for.cond
   %mulext = sext i8 %mul to i16
   %Mext = sext i8 %M to i16
   %add2 = add nsw i16 %mulext, %Mext
-  %arrayidx = getelementptr inbounds i8, i8* %A, i16 %add2
-  %tmp4 = load i8, i8* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i8, ptr %A, i16 %add2
+  %tmp4 = load i8, ptr %arrayidx, align 4
   %inc = add nsw i8 %tmp4, 1
-  store i8 %inc, i8* %arrayidx, align 4
+  store i8 %inc, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

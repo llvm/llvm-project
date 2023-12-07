@@ -72,26 +72,26 @@ public:
                                                    SVal) const;
 
   CallDescriptionMap<NoItParamFn> NoIterParamFunctions = {
-      {{"clear", 0}, &ContainerModeling::handleClear},
-      {{"assign", 2}, &ContainerModeling::handleAssign},
-      {{"push_back", 1}, &ContainerModeling::handlePushBack},
-      {{"emplace_back", 1}, &ContainerModeling::handlePushBack},
-      {{"pop_back", 0}, &ContainerModeling::handlePopBack},
-      {{"push_front", 1}, &ContainerModeling::handlePushFront},
-      {{"emplace_front", 1}, &ContainerModeling::handlePushFront},
-      {{"pop_front", 0}, &ContainerModeling::handlePopFront},
+      {{{"clear"}, 0}, &ContainerModeling::handleClear},
+      {{{"assign"}, 2}, &ContainerModeling::handleAssign},
+      {{{"push_back"}, 1}, &ContainerModeling::handlePushBack},
+      {{{"emplace_back"}, 1}, &ContainerModeling::handlePushBack},
+      {{{"pop_back"}, 0}, &ContainerModeling::handlePopBack},
+      {{{"push_front"}, 1}, &ContainerModeling::handlePushFront},
+      {{{"emplace_front"}, 1}, &ContainerModeling::handlePushFront},
+      {{{"pop_front"}, 0}, &ContainerModeling::handlePopFront},
   };
 
   CallDescriptionMap<OneItParamFn> OneIterParamFunctions = {
-      {{"insert", 2}, &ContainerModeling::handleInsert},
-      {{"emplace", 2}, &ContainerModeling::handleInsert},
-      {{"erase", 1}, &ContainerModeling::handleErase},
-      {{"erase_after", 1}, &ContainerModeling::handleEraseAfter},
+      {{{"insert"}, 2}, &ContainerModeling::handleInsert},
+      {{{"emplace"}, 2}, &ContainerModeling::handleInsert},
+      {{{"erase"}, 1}, &ContainerModeling::handleErase},
+      {{{"erase_after"}, 1}, &ContainerModeling::handleEraseAfter},
   };
 
   CallDescriptionMap<TwoItParamFn> TwoIterParamFunctions = {
-      {{"erase", 2}, &ContainerModeling::handleErase},
-      {{"erase_after", 2}, &ContainerModeling::handleEraseAfter},
+      {{{"erase"}, 2}, &ContainerModeling::handleErase},
+      {{{"erase_after"}, 2}, &ContainerModeling::handleEraseAfter},
   };
 };
 
@@ -227,7 +227,7 @@ void ContainerModeling::checkDeadSymbols(SymbolReaper &SR,
                                          CheckerContext &C) const {
   // Cleanup
   auto State = C.getState();
-  
+
   auto ContMap = State->get<ContainerMap>();
   for (const auto &Cont : ContMap) {
     if (!SR.isLiveRegion(Cont.first)) {
@@ -749,14 +749,14 @@ bool isBeginCall(const FunctionDecl *Func) {
   const auto *IdInfo = Func->getIdentifier();
   if (!IdInfo)
     return false;
-  return IdInfo->getName().endswith_insensitive("begin");
+  return IdInfo->getName().ends_with_insensitive("begin");
 }
 
 bool isEndCall(const FunctionDecl *Func) {
   const auto *IdInfo = Func->getIdentifier();
   if (!IdInfo)
     return false;
-  return IdInfo->getName().endswith_insensitive("end");
+  return IdInfo->getName().ends_with_insensitive("end");
 }
 
 const CXXRecordDecl *getCXXRecordDecl(ProgramStateRef State,
@@ -1021,7 +1021,7 @@ SymbolRef rebaseSymbol(ProgramStateRef State, SValBuilder &SVB,
                        SymbolRef NewSym) {
   auto &SymMgr = SVB.getSymbolManager();
   auto Diff = SVB.evalBinOpNN(State, BO_Sub, nonloc::SymbolVal(OrigExpr),
-                              nonloc::SymbolVal(OldExpr), 
+                              nonloc::SymbolVal(OldExpr),
                               SymMgr.getType(OrigExpr));
 
   const auto DiffInt = Diff.getAs<nonloc::ConcreteInt>();

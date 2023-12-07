@@ -14,39 +14,39 @@ define half @constraint_f_half(half %a) nounwind {
 ; RV32ZFH-LABEL: constraint_f_half:
 ; RV32ZFH:       # %bb.0:
 ; RV32ZFH-NEXT:    lui a0, %hi(gh)
-; RV32ZFH-NEXT:    flh ft0, %lo(gh)(a0)
+; RV32ZFH-NEXT:    flh fa5, %lo(gh)(a0)
 ; RV32ZFH-NEXT:    #APP
-; RV32ZFH-NEXT:    fadd.h fa0, fa0, ft0
+; RV32ZFH-NEXT:    fadd.h fa0, fa0, fa5
 ; RV32ZFH-NEXT:    #NO_APP
 ; RV32ZFH-NEXT:    ret
 ;
 ; RV64ZFH-LABEL: constraint_f_half:
 ; RV64ZFH:       # %bb.0:
 ; RV64ZFH-NEXT:    lui a0, %hi(gh)
-; RV64ZFH-NEXT:    flh ft0, %lo(gh)(a0)
+; RV64ZFH-NEXT:    flh fa5, %lo(gh)(a0)
 ; RV64ZFH-NEXT:    #APP
-; RV64ZFH-NEXT:    fadd.h fa0, fa0, ft0
+; RV64ZFH-NEXT:    fadd.h fa0, fa0, fa5
 ; RV64ZFH-NEXT:    #NO_APP
 ; RV64ZFH-NEXT:    ret
 ;
 ; RV32DZFH-LABEL: constraint_f_half:
 ; RV32DZFH:       # %bb.0:
 ; RV32DZFH-NEXT:    lui a0, %hi(gh)
-; RV32DZFH-NEXT:    flh ft0, %lo(gh)(a0)
+; RV32DZFH-NEXT:    flh fa5, %lo(gh)(a0)
 ; RV32DZFH-NEXT:    #APP
-; RV32DZFH-NEXT:    fadd.h fa0, fa0, ft0
+; RV32DZFH-NEXT:    fadd.h fa0, fa0, fa5
 ; RV32DZFH-NEXT:    #NO_APP
 ; RV32DZFH-NEXT:    ret
 ;
 ; RV64DZFH-LABEL: constraint_f_half:
 ; RV64DZFH:       # %bb.0:
 ; RV64DZFH-NEXT:    lui a0, %hi(gh)
-; RV64DZFH-NEXT:    flh ft0, %lo(gh)(a0)
+; RV64DZFH-NEXT:    flh fa5, %lo(gh)(a0)
 ; RV64DZFH-NEXT:    #APP
-; RV64DZFH-NEXT:    fadd.h fa0, fa0, ft0
+; RV64DZFH-NEXT:    fadd.h fa0, fa0, fa5
 ; RV64DZFH-NEXT:    #NO_APP
 ; RV64DZFH-NEXT:    ret
-  %1 = load half, half* @gh
+  %1 = load half, ptr @gh
   %2 = tail call half asm "fadd.h $0, $1, $2", "=f,f,f"(half %a, half %1)
   ret half %2
 }
@@ -107,7 +107,7 @@ define half @constraint_f_half_abi_name(half %a) nounwind {
 ; RV64DZFH-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
 ; RV64DZFH-NEXT:    addi sp, sp, 16
 ; RV64DZFH-NEXT:    ret
-  %1 = load half, half* @gh
+  %1 = load half, ptr @gh
   %2 = tail call half asm "fadd.s $0, $1, $2", "={ft0},{fa0},{fs0}"(half %a, half %1)
   ret half %2
 }

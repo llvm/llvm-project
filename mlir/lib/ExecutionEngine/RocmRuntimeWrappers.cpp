@@ -146,10 +146,26 @@ mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
   std::rotate(denseStrides.begin(), denseStrides.begin() + 1,
               denseStrides.end());
   denseStrides.back() = 1;
-  assert(strides == llvm::makeArrayRef(denseStrides));
+  assert(strides == llvm::ArrayRef(denseStrides));
 
   auto ptr = descriptor->data + descriptor->offset * elementSizeBytes;
   mgpuMemHostRegister(ptr, sizeBytes);
+}
+
+// Allows to unregister byte array with the ROCM runtime. Helpful until we have
+// transfer functions implemented.
+extern "C" void mgpuMemHostUnregister(void *ptr) {
+  HIP_REPORT_IF_ERROR(hipHostUnregister(ptr));
+}
+
+// Allows to unregister a MemRef with the ROCm runtime. Helpful until we have
+// transfer functions implemented.
+extern "C" void
+mgpuMemHostUnregisterMemRef(int64_t rank,
+                            StridedMemRefType<char, 1> *descriptor,
+                            int64_t elementSizeBytes) {
+  auto ptr = descriptor->data + descriptor->offset * elementSizeBytes;
+  mgpuMemHostUnregister(ptr);
 }
 
 template <typename T>

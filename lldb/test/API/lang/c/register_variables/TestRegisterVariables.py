@@ -9,16 +9,15 @@ from lldbsuite.test import lldbutil
 
 def re_expr_equals(val_type, val):
     # Match ({val_type}) ${sum_digits} = {val}
-    return re.compile(r'\(' + val_type + '\) \$\d+ = ' + str(val))
+    return re.compile(r"\(" + val_type + "\) \$\d+ = " + str(val))
 
 
 class RegisterVariableTestCase(TestBase):
-
-    @expectedFailureAll(compiler="clang", compiler_version=['<', '3.5'])
-    @expectedFailureAll(compiler="gcc", compiler_version=[
-            '>=', '4.8.2'], archs=["i386"])
-    @expectedFailureAll(compiler="gcc", compiler_version=[
-            '<', '4.9'], archs=["x86_64"])
+    @expectedFailureAll(compiler="clang", compiler_version=["<", "3.5"])
+    @expectedFailureAll(
+        compiler="gcc", compiler_version=[">=", "4.8.2"], archs=["i386"]
+    )
+    @expectedFailureAll(compiler="gcc", compiler_version=["<", "4.9"], archs=["x86_64"])
     def test_and_run_command(self):
         """Test expressions on register values."""
 
@@ -34,8 +33,7 @@ class RegisterVariableTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the main.
-        lldbutil.run_break_set_by_source_regexp(
-            self, "break", num_expected_locations=3)
+        lldbutil.run_break_set_by_source_regexp(self, "break", num_expected_locations=3)
 
         ####################
         # First breakpoint
@@ -43,25 +41,39 @@ class RegisterVariableTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         # The breakpoint should have a hit count of 1.
-        lldbutil.check_breakpoint(self, bpno = 1, location_id = 1, expected_location_hit_count = 1)
+        lldbutil.check_breakpoint(
+            self, bpno=1, location_id=1, expected_location_hit_count=1
+        )
 
         # Try some variables that should be visible
-        frame = self.dbg.GetSelectedTarget().GetProcess(
-        ).GetSelectedThread().GetSelectedFrame()
-        if self.is_variable_in_register(frame, 'a'):
+        frame = (
+            self.dbg.GetSelectedTarget()
+            .GetProcess()
+            .GetSelectedThread()
+            .GetSelectedFrame()
+        )
+        if self.is_variable_in_register(frame, "a"):
             register_variables_count += 1
-            self.expect("expr a", VARIABLES_DISPLAYED_CORRECTLY,
-                        patterns=[re_expr_equals('int', 2)])
+            self.expect(
+                "expr a",
+                VARIABLES_DISPLAYED_CORRECTLY,
+                patterns=[re_expr_equals("int", 2)],
+            )
 
-        if self.is_struct_pointer_in_register(frame, 'b', self.TraceOn()):
+        if self.is_struct_pointer_in_register(frame, "b", self.TraceOn()):
             register_variables_count += 1
-            self.expect("expr b->m1", VARIABLES_DISPLAYED_CORRECTLY,
-                        patterns=[re_expr_equals('int', 3)])
+            self.expect(
+                "expr b->m1",
+                VARIABLES_DISPLAYED_CORRECTLY,
+                patterns=[re_expr_equals("int", 3)],
+            )
 
         #####################
         # Second breakpoint
@@ -69,25 +81,39 @@ class RegisterVariableTestCase(TestBase):
         self.runCmd("continue")
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         # The breakpoint should have a hit count of 1.
-        lldbutil.check_breakpoint(self, bpno = 1, location_id = 2, expected_location_hit_count = 1)
+        lldbutil.check_breakpoint(
+            self, bpno=1, location_id=2, expected_location_hit_count=1
+        )
 
         # Try some variables that should be visible
-        frame = self.dbg.GetSelectedTarget().GetProcess(
-        ).GetSelectedThread().GetSelectedFrame()
-        if self.is_struct_pointer_in_register(frame, 'b', self.TraceOn()):
+        frame = (
+            self.dbg.GetSelectedTarget()
+            .GetProcess()
+            .GetSelectedThread()
+            .GetSelectedFrame()
+        )
+        if self.is_struct_pointer_in_register(frame, "b", self.TraceOn()):
             register_variables_count += 1
-            self.expect("expr b->m2", VARIABLES_DISPLAYED_CORRECTLY,
-                        patterns=[re_expr_equals('int', 5)])
+            self.expect(
+                "expr b->m2",
+                VARIABLES_DISPLAYED_CORRECTLY,
+                patterns=[re_expr_equals("int", 5)],
+            )
 
-        if self.is_variable_in_register(frame, 'c'):
+        if self.is_variable_in_register(frame, "c"):
             register_variables_count += 1
-            self.expect("expr c", VARIABLES_DISPLAYED_CORRECTLY,
-                        patterns=[re_expr_equals('int', 5)])
+            self.expect(
+                "expr c",
+                VARIABLES_DISPLAYED_CORRECTLY,
+                patterns=[re_expr_equals("int", 5)],
+            )
 
         #####################
         # Third breakpoint
@@ -95,29 +121,44 @@ class RegisterVariableTestCase(TestBase):
         self.runCmd("continue")
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         # The breakpoint should have a hit count of 1.
-        lldbutil.check_breakpoint(self, bpno = 1, location_id = 3, expected_location_hit_count = 1)
+        lldbutil.check_breakpoint(
+            self, bpno=1, location_id=3, expected_location_hit_count=1
+        )
 
         # Try some variables that should be visible
-        frame = self.dbg.GetSelectedTarget().GetProcess(
-        ).GetSelectedThread().GetSelectedFrame()
-        if self.is_variable_in_register(frame, 'f'):
+        frame = (
+            self.dbg.GetSelectedTarget()
+            .GetProcess()
+            .GetSelectedThread()
+            .GetSelectedFrame()
+        )
+        if self.is_variable_in_register(frame, "f"):
             register_variables_count += 1
-            self.expect("expr f", VARIABLES_DISPLAYED_CORRECTLY,
-                        patterns=[re_expr_equals('float', '3.1')])
+            self.expect(
+                "expr f",
+                VARIABLES_DISPLAYED_CORRECTLY,
+                patterns=[re_expr_equals("float", "3.1")],
+            )
 
         # Validate that we verified at least one register variable
         self.assertTrue(
             register_variables_count > 0,
-            "expected to verify at least one variable in a register")
-        self.trace("executed {} expressions with values in registers".format(register_variables_count))
+            "expected to verify at least one variable in a register",
+        )
+        self.trace(
+            "executed {} expressions with values in registers".format(
+                register_variables_count
+            )
+        )
 
         self.runCmd("kill")
-
 
     def is_variable_in_register(self, frame, var_name):
         # Ensure we can lookup the variable.
@@ -147,14 +188,21 @@ class RegisterVariableTestCase(TestBase):
         self.trace("checking address...")
         if var_addr.IsValid():
             # We have an address, it must not be in a register.
-            self.trace("var {} is not in a register: has a valid address {}".format(var_name, var_addr))
+            self.trace(
+                "var {} is not in a register: has a valid address {}".format(
+                    var_name, var_addr
+                )
+            )
             return False
         else:
             # We don't have an address but we can read the value.
             # It is likely stored in a register.
-            self.trace("var {} is in a register (we don't have an address for it)".format(var_name))
+            self.trace(
+                "var {} is in a register (we don't have an address for it)".format(
+                    var_name
+                )
+            )
             return True
-
 
     def is_struct_pointer_in_register(self, frame, var_name, trace):
         # Ensure we can lookup the variable.
@@ -188,4 +236,3 @@ class RegisterVariableTestCase(TestBase):
         else:
             self.trace("frame var {} is in a register".format(var_name))
             return True
-

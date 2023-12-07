@@ -9,11 +9,13 @@
 #ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDEBUGMAP_H
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDEBUGMAP_H
 
+#include "DIERef.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Utility/RangeMap.h"
 #include "llvm/Support/Chrono.h"
 #include <bitset>
 #include <map>
+#include <optional>
 #include <vector>
 
 #include "UniqueDWARFASTType.h"
@@ -60,6 +62,8 @@ public:
   ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
   lldb_private::XcodeSDK
   ParseXcodeSDK(lldb_private::CompileUnit &comp_unit) override;
+  llvm::SmallSet<lldb::LanguageType, 4>
+  ParseAllLanguages(lldb_private::CompileUnit &comp_unit) override;
   size_t ParseFunctions(lldb_private::CompileUnit &comp_unit) override;
   bool ParseLineTable(lldb_private::CompileUnit &comp_unit) override;
   bool ParseDebugMacros(lldb_private::CompileUnit &comp_unit) override;
@@ -83,7 +87,7 @@ public:
   ParseVariablesForContext(const lldb_private::SymbolContext &sc) override;
 
   lldb_private::Type *ResolveTypeUID(lldb::user_id_t type_uid) override;
-  llvm::Optional<ArrayInfo> GetDynamicArrayInfoForUID(
+  std::optional<ArrayInfo> GetDynamicArrayInfoForUID(
       lldb::user_id_t type_uid,
       const lldb_private::ExecutionContext *exe_ctx) override;
 
@@ -132,9 +136,10 @@ public:
             lldb_private::LanguageSet languages,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
-  lldb_private::CompilerDeclContext FindNamespace(
-      lldb_private::ConstString name,
-      const lldb_private::CompilerDeclContext &parent_decl_ctx) override;
+  lldb_private::CompilerDeclContext
+  FindNamespace(lldb_private::ConstString name,
+                const lldb_private::CompilerDeclContext &parent_decl_ctx,
+                bool only_root_namespaces) override;
   void GetTypes(lldb_private::SymbolContextScope *sc_scope,
                 lldb::TypeClass type_mask,
                 lldb_private::TypeList &type_list) override;
@@ -148,6 +153,9 @@ public:
 
   // Statistics overrides.
   lldb_private::ModuleList GetDebugInfoModules() override;
+
+  void GetCompileOptions(
+      std::unordered_map<lldb::CompUnitSP, lldb_private::Args> &args) override;
 
 protected:
   enum { kHaveInitializedOSOs = (1 << 0), kNumFlags };
@@ -208,7 +216,9 @@ protected:
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
   static uint32_t GetOSOIndexFromUserID(lldb::user_id_t uid) {
-    return (uint32_t)((uid >> 32ull) - 1ull);
+    std::optional<uint32_t> OsoNum = DIERef(uid).file_index();
+    lldbassert(OsoNum && "Invalid OSO Index");
+    return *OsoNum;
   }
 
   static SymbolFileDWARF *GetSymbolFileAsSymbolFileDWARF(SymbolFile *sym_file);

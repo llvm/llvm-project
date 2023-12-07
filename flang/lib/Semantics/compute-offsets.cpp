@@ -101,7 +101,7 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   }
   // Assign offsets for non-COMMON EQUIVALENCE blocks
   for (auto &[symbol, blockInfo] : equivalenceBlock_) {
-    if (!InCommonBlock(*symbol)) {
+    if (!FindCommonBlockContaining(*symbol)) {
       DoSymbol(*symbol);
       DoEquivalenceBlockBase(*symbol, blockInfo);
       offset_ = std::max(offset_, symbol->offset() + blockInfo.size);
@@ -110,7 +110,7 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   // Process remaining non-COMMON symbols; this is all of them if there
   // was no use of EQUIVALENCE in the scope.
   for (auto &symbol : scope.GetSymbols()) {
-    if (!InCommonBlock(*symbol) &&
+    if (!FindCommonBlockContaining(*symbol) &&
         dependents_.find(symbol) == dependents_.end() &&
         equivalenceBlock_.find(symbol) == equivalenceBlock_.end()) {
       DoSymbol(*symbol);
@@ -321,11 +321,12 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
     const Symbol &symbol, bool entire) -> SizeAndAlignment {
   auto &targetCharacteristics{context_.targetCharacteristics()};
   if (IsDescriptor(symbol)) {
-    const auto *derived{
-        evaluate::GetDerivedTypeSpec(evaluate::DynamicType::From(symbol))};
+    auto dyType{evaluate::DynamicType::From(symbol)};
+    const auto *derived{evaluate::GetDerivedTypeSpec(dyType)};
     int lenParams{derived ? CountLenParameters(*derived) : 0};
+    bool needAddendum{derived || (dyType && dyType->IsUnlimitedPolymorphic())};
     std::size_t size{runtime::Descriptor::SizeInBytes(
-        symbol.Rank(), derived != nullptr, lenParams)};
+        symbol.Rank(), needAddendum, lenParams)};
     return {size, targetCharacteristics.descriptorAlignment()};
   }
   if (IsProcedurePointer(symbol)) {

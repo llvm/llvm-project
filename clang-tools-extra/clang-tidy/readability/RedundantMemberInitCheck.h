@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 /// Finds member initializations that are unnecessary because the same default
 /// constructor would be called if they were not present.
@@ -40,8 +38,6 @@ private:
   bool IgnoreBaseInCopyConstructors;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_MEMBER_INIT_H

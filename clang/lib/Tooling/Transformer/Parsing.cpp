@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -119,8 +120,8 @@ getBinaryRangeSelectors() {
 }
 
 template <typename Element>
-llvm::Optional<Element> findOptional(const llvm::StringMap<Element> &Map,
-                                     llvm::StringRef Key) {
+std::optional<Element> findOptional(const llvm::StringMap<Element> &Map,
+                                    llvm::StringRef Key) {
   auto it = Map.find(Key);
   if (it == Map.end())
     return std::nullopt;

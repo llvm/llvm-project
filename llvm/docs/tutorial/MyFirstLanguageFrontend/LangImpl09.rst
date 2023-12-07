@@ -87,7 +87,7 @@ Then we're going to remove the command line code wherever it exists:
   @@ -1129,7 +1129,6 @@ static void HandleTopLevelExpression() {
    /// top ::= definition | external | expression | ';'
    static void MainLoop() {
-     while (1) {
+     while (true) {
   -    fprintf(stderr, "ready> ");
        switch (CurTok) {
        case tok_eof:
@@ -120,7 +120,7 @@ code is that the LLVM IR goes to standard error:
   -      double (*FP)() = (double (*)())(intptr_t)FPtr;
   -      // Ignore the return value for this.
   -      (void)FP;
-  +    if (!F->codegen()) {
+  +    if (!FnAST->codegen()) {
   +      fprintf(stderr, "Error generating code for top level expr");
        }
      } else {
@@ -184,7 +184,7 @@ expressions:
 
 .. code-block:: c++
 
-  static DIBuilder *DBuilder;
+  static std::unique_ptr<DIBuilder> DBuilder;
 
   struct DebugInfo {
     DICompileUnit *TheCU;
@@ -205,11 +205,11 @@ And then later on in ``main`` when we're constructing our module:
 
 .. code-block:: c++
 
-  DBuilder = new DIBuilder(*TheModule);
+  DBuilder = std::make_unique<DIBuilder>(*TheModule);
 
   KSDbgInfo.TheCU = DBuilder->createCompileUnit(
       dwarf::DW_LANG_C, DBuilder->createFile("fib.ks", "."),
-      "Kaleidoscope Compiler", 0, "", 0);
+      "Kaleidoscope Compiler", false, "", 0);
 
 There are a couple of things to note here. First, while we're producing a
 compile unit for a language called Kaleidoscope we used the language
@@ -238,7 +238,7 @@ Functions
 =========
 
 Now that we have our ``Compile Unit`` and our source locations, we can add
-function definitions to the debug info. So in ``PrototypeAST::codegen()`` we
+function definitions to the debug info. So in ``FunctionAST::codegen()`` we
 add a few lines of code to describe a context for our subprogram, in this
 case the "File", and the actual definition of the function itself.
 
@@ -246,8 +246,8 @@ So the context:
 
 .. code-block:: c++
 
-  DIFile *Unit = DBuilder->createFile(KSDbgInfo.TheCU.getFilename(),
-                                      KSDbgInfo.TheCU.getDirectory());
+  DIFile *Unit = DBuilder->createFile(KSDbgInfo.TheCU->getFilename(),
+                                      KSDbgInfo.TheCU->getDirectory());
 
 giving us an DIFile and asking the ``Compile Unit`` we created above for the
 directory and filename where we are currently. Then, for now, we use some
@@ -336,19 +336,21 @@ We use a small helper function for this:
 .. code-block:: c++
 
   void DebugInfo::emitLocation(ExprAST *AST) {
+    if (!AST)
+      return Builder->SetCurrentDebugLocation(DebugLoc());
     DIScope *Scope;
     if (LexicalBlocks.empty())
       Scope = TheCU;
     else
       Scope = LexicalBlocks.back();
-    Builder.SetCurrentDebugLocation(
+    Builder->SetCurrentDebugLocation(
         DILocation::get(Scope->getContext(), AST->getLine(), AST->getCol(), Scope));
   }
 
 This both tells the main ``IRBuilder`` where we are, but also what scope
 we're in. The scope can either be on compile-unit level or be the nearest
 enclosing lexical block like the current function.
-To represent this we create a stack of scopes:
+To represent this we create a stack of scopes in ``DebugInfo``:
 
 .. code-block:: c++
 
@@ -402,13 +404,13 @@ argument allocas in ``FunctionAST::codegen``.
 
       DBuilder->insertDeclare(Alloca, D, DBuilder->createExpression(),
                               DILocation::get(SP->getContext(), LineNo, 0, SP),
-                              Builder.GetInsertBlock());
+                              Builder->GetInsertBlock());
 
       // Store the initial value into the alloca.
-      Builder.CreateStore(&Arg, Alloca);
+      Builder->CreateStore(&Arg, Alloca);
 
       // Add arguments to variable symbol table.
-      NamedValues[Arg.getName()] = Alloca;
+      NamedValues[std::string(Arg.getName())] = Alloca;
     }
 
 

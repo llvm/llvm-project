@@ -8,9 +8,9 @@
 
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/UInt.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 
 using Float128 = __llvm_libc::fputil::DyadicFloat<128>;
 using Float192 = __llvm_libc::fputil::DyadicFloat<192>;

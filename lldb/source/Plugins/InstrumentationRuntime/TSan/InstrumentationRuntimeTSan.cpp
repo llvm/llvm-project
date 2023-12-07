@@ -14,9 +14,9 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -87,11 +87,14 @@ extern "C"
     void *dlsym(void* handle, const char* symbol);
     int (*ptr__tsan_get_report_loc_object_type)(void *report, unsigned long idx, const char **object_type);
 }
+)";
+
+const char *thread_sanitizer_retrieve_report_data_command = R"(
 
 const int REPORT_TRACE_SIZE = 128;
 const int REPORT_ARRAY_SIZE = 4;
 
-struct data {
+struct {
     void *report;
     const char *description;
     int report_count;
@@ -154,11 +157,7 @@ struct data {
         int idx;
         int tid;
     } unique_tids[REPORT_ARRAY_SIZE];
-};
-)";
-
-const char *thread_sanitizer_retrieve_report_data_command = R"(
-data t = {0};
+} t = {0};
 
 ptr__tsan_get_report_loc_object_type = (typeof(ptr__tsan_get_report_loc_object_type))(void *)dlsym((void*)-2 /*RTLD_DEFAULT*/, "__tsan_get_report_loc_object_type");
 
@@ -215,10 +214,10 @@ CreateStackTrace(ValueObjectSP o,
   size_t count = trace_value_object->GetNumChildren();
   for (size_t j = 0; j < count; j++) {
     addr_t trace_addr =
-        trace_value_object->GetChildAtIndex(j, true)->GetValueAsUnsigned(0);
+        trace_value_object->GetChildAtIndex(j)->GetValueAsUnsigned(0);
     if (trace_addr == 0)
       break;
-    trace_sp->AddItem(std::make_shared<StructuredData::Integer>(trace_addr));
+    trace_sp->AddIntegerItem(trace_addr);
   }
   return trace_sp;
 }
@@ -236,7 +235,7 @@ static StructuredData::ArraySP ConvertToStructuredArray(
   ValueObjectSP objects =
       return_value_sp->GetValueForExpressionPath(items_name.c_str());
   for (unsigned int i = 0; i < count; i++) {
-    ValueObjectSP o = objects->GetChildAtIndex(i, true);
+    ValueObjectSP o = objects->GetChildAtIndex(i);
     auto dict_sp = std::make_shared<StructuredData::Dictionary>();
 
     callback(o, dict_sp);
@@ -304,7 +303,8 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
     return StructuredData::ObjectSP();
 
   ThreadSP thread_sp = exe_ctx_ref.GetThreadSP();
-  StackFrameSP frame_sp = thread_sp->GetSelectedFrame();
+  StackFrameSP frame_sp =
+      thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame);
 
   if (!frame_sp)
     return StructuredData::ObjectSP();
@@ -668,13 +668,11 @@ InstrumentationRuntimeTSan::GenerateSummary(StructuredData::ObjectSP report) {
     }
     addr_t addr = loc->GetAsDictionary()
                       ->GetValueForKey("address")
-                      ->GetAsInteger()
-                      ->GetValue();
+                      ->GetUnsignedIntegerValue();
     if (addr == 0)
       addr = loc->GetAsDictionary()
                  ->GetValueForKey("start")
-                 ->GetAsInteger()
-                 ->GetValue();
+                 ->GetUnsignedIntegerValue();
 
     if (addr != 0) {
       std::string global_name = GetSymbolNameFromAddress(process_sp, addr);
@@ -686,8 +684,7 @@ InstrumentationRuntimeTSan::GenerateSummary(StructuredData::ObjectSP report) {
     } else {
       int fd = loc->GetAsDictionary()
                    ->GetValueForKey("file_descriptor")
-                   ->GetAsInteger()
-                   ->GetValue();
+                   ->GetSignedIntegerValue();
       if (fd != 0) {
         summary = summary + " on file descriptor " + Sprintf("%d", fd);
       }
@@ -703,8 +700,8 @@ addr_t InstrumentationRuntimeTSan::GetMainRacyAddress(
 
   report->GetObjectForDotSeparatedPath("mops")->GetAsArray()->ForEach(
       [&result](StructuredData::Object *o) -> bool {
-        addr_t addr =
-            o->GetObjectForDotSeparatedPath("address")->GetIntegerValue();
+        addr_t addr = o->GetObjectForDotSeparatedPath("address")
+                          ->GetUnsignedIntegerValue();
         if (addr < result)
           result = addr;
         return true;
@@ -733,8 +730,8 @@ std::string InstrumentationRuntimeTSan::GetLocationDescription(
     if (type == "global") {
       global_addr = loc->GetAsDictionary()
                         ->GetValueForKey("address")
-                        ->GetAsInteger()
-                        ->GetValue();
+                        ->GetUnsignedIntegerValue();
+
       global_name = GetSymbolNameFromAddress(process_sp, global_addr);
       if (!global_name.empty()) {
         result = Sprintf("'%s' is a global variable (0x%llx)",
@@ -752,12 +749,12 @@ std::string InstrumentationRuntimeTSan::GetLocationDescription(
     } else if (type == "heap") {
       addr_t addr = loc->GetAsDictionary()
                         ->GetValueForKey("start")
-                        ->GetAsInteger()
-                        ->GetValue();
-      long size = loc->GetAsDictionary()
-                      ->GetValueForKey("size")
-                      ->GetAsInteger()
-                      ->GetValue();
+                        ->GetUnsignedIntegerValue();
+
+      size_t size = loc->GetAsDictionary()
+                        ->GetValueForKey("size")
+                        ->GetUnsignedIntegerValue();
+
       std::string object_type = std::string(loc->GetAsDictionary()
                                                 ->GetValueForKey("object_type")
                                                 ->GetAsString()
@@ -770,22 +767,22 @@ std::string InstrumentationRuntimeTSan::GetLocationDescription(
             Sprintf("Location is a %ld-byte heap object at 0x%llx", size, addr);
       }
     } else if (type == "stack") {
-      int tid = loc->GetAsDictionary()
-                    ->GetValueForKey("thread_id")
-                    ->GetAsInteger()
-                    ->GetValue();
+      tid_t tid = loc->GetAsDictionary()
+                      ->GetValueForKey("thread_id")
+                      ->GetUnsignedIntegerValue();
+
       result = Sprintf("Location is stack of thread %d", tid);
     } else if (type == "tls") {
-      int tid = loc->GetAsDictionary()
-                    ->GetValueForKey("thread_id")
-                    ->GetAsInteger()
-                    ->GetValue();
+      tid_t tid = loc->GetAsDictionary()
+                      ->GetValueForKey("thread_id")
+                      ->GetUnsignedIntegerValue();
+
       result = Sprintf("Location is TLS of thread %d", tid);
     } else if (type == "fd") {
       int fd = loc->GetAsDictionary()
                    ->GetValueForKey("file_descriptor")
-                   ->GetAsInteger()
-                   ->GetValue();
+                   ->GetSignedIntegerValue();
+
       result = Sprintf("Location is file descriptor %d", fd);
     }
   }
@@ -848,8 +845,8 @@ bool InstrumentationRuntimeTSan::NotifyBreakpointHit(
     report->GetObjectForDotSeparatedPath("mops")->GetAsArray()->ForEach(
         [&all_addresses_are_same,
          main_address](StructuredData::Object *o) -> bool {
-          addr_t addr =
-              o->GetObjectForDotSeparatedPath("address")->GetIntegerValue();
+          addr_t addr = o->GetObjectForDotSeparatedPath("address")
+                            ->GetUnsignedIntegerValue();
           if (main_address != addr)
             all_addresses_are_same = false;
           return true;
@@ -946,14 +943,16 @@ static std::string GenerateThreadName(const std::string &path,
   std::string result = "additional information";
 
   if (path == "mops") {
-    int size = o->GetObjectForDotSeparatedPath("size")->GetIntegerValue();
-    int thread_id =
-        o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
+    size_t size =
+        o->GetObjectForDotSeparatedPath("size")->GetUnsignedIntegerValue();
+    tid_t thread_id =
+        o->GetObjectForDotSeparatedPath("thread_id")->GetUnsignedIntegerValue();
     bool is_write =
         o->GetObjectForDotSeparatedPath("is_write")->GetBooleanValue();
     bool is_atomic =
         o->GetObjectForDotSeparatedPath("is_atomic")->GetBooleanValue();
-    addr_t addr = o->GetObjectForDotSeparatedPath("address")->GetIntegerValue();
+    addr_t addr =
+        o->GetObjectForDotSeparatedPath("address")->GetUnsignedIntegerValue();
 
     std::string addr_string = Sprintf(" at 0x%llx", addr);
 
@@ -970,44 +969,44 @@ static std::string GenerateThreadName(const std::string &path,
                    ->GetStringValue() == "swift-access-race") {
       result = Sprintf("modifying access by thread %d", thread_id);
     } else {
-      result = Sprintf("%s%s of size %d%s by thread %d",
+      result = Sprintf("%s%s of size %zu%s by thread %" PRIu64,
                        is_atomic ? "atomic " : "", is_write ? "write" : "read",
                        size, addr_string.c_str(), thread_id);
     }
   }
 
   if (path == "threads") {
-    int thread_id =
-        o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
-    result = Sprintf("Thread %d created", thread_id);
+    tid_t thread_id =
+        o->GetObjectForDotSeparatedPath("thread_id")->GetUnsignedIntegerValue();
+    result = Sprintf("Thread %zu created", thread_id);
   }
 
   if (path == "locs") {
     std::string type = std::string(
         o->GetAsDictionary()->GetValueForKey("type")->GetStringValue());
-    int thread_id =
-        o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
-    int fd =
-        o->GetObjectForDotSeparatedPath("file_descriptor")->GetIntegerValue();
+    tid_t thread_id =
+        o->GetObjectForDotSeparatedPath("thread_id")->GetUnsignedIntegerValue();
+    int fd = o->GetObjectForDotSeparatedPath("file_descriptor")
+                 ->GetSignedIntegerValue();
     if (type == "heap") {
-      result = Sprintf("Heap block allocated by thread %d", thread_id);
+      result = Sprintf("Heap block allocated by thread %" PRIu64, thread_id);
     } else if (type == "fd") {
-      result =
-          Sprintf("File descriptor %d created by thread %t", fd, thread_id);
+      result = Sprintf("File descriptor %d created by thread %" PRIu64, fd,
+                       thread_id);
     }
   }
 
   if (path == "mutexes") {
     int mutex_id =
-        o->GetObjectForDotSeparatedPath("mutex_id")->GetIntegerValue();
+        o->GetObjectForDotSeparatedPath("mutex_id")->GetSignedIntegerValue();
 
     result = Sprintf("Mutex M%d created", mutex_id);
   }
 
   if (path == "stacks") {
-    int thread_id =
-        o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
-    result = Sprintf("Thread %d", thread_id);
+    tid_t thread_id =
+        o->GetObjectForDotSeparatedPath("thread_id")->GetUnsignedIntegerValue();
+    result = Sprintf("Thread %" PRIu64, thread_id);
   }
 
   result[0] = toupper(result[0]);
@@ -1023,7 +1022,7 @@ static void AddThreadsForPath(const std::string &path,
         std::vector<lldb::addr_t> pcs;
         o->GetObjectForDotSeparatedPath("trace")->GetAsArray()->ForEach(
             [&pcs](StructuredData::Object *pc) -> bool {
-              pcs.push_back(pc->GetAsInteger()->GetValue());
+              pcs.push_back(pc->GetUnsignedIntegerValue());
               return true;
             });
 
@@ -1032,7 +1031,8 @@ static void AddThreadsForPath(const std::string &path,
 
         StructuredData::ObjectSP thread_id_obj =
             o->GetObjectForDotSeparatedPath("thread_os_id");
-        tid_t tid = thread_id_obj ? thread_id_obj->GetIntegerValue() : 0;
+        tid_t tid =
+            thread_id_obj ? thread_id_obj->GetUnsignedIntegerValue() : 0;
 
         ThreadSP new_thread_sp =
             std::make_shared<HistoryThread>(*process_sp, tid, pcs);

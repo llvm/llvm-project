@@ -12,7 +12,7 @@
 #include "src/stdio/fwrite.h"
 #include "src/stdio/setbuf.h"
 #include "src/stdio/ungetc.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <stdio.h>
 

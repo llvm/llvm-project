@@ -261,9 +261,11 @@ body:             |
 # GCN-NEXT: dead %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, implicit $exec
 # GCN-NEXT: dead %5:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, implicit $exec
 # GCN-NEXT: dead %6:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 64, 0, implicit $exec
+# GCN-NEXT: dead %7:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 80, 0, implicit $exec
+# GCN-NEXT: dead %8:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 96, 0, implicit $exec
 # GCN-NEXT: KILL %0{{$}}
-# GCN-NEXT: dead %7:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 80, 0, implicit $exec
-# GCN-NEXT: dead %8:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 96, 0, implicit $exec
+# GCN-NEXT: dead %9:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 128, 0, implicit $exec
+# GCN-NEXT: dead %10:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 144, 0, implicit $exec
 # GCN-NEXT: KILL %1{{$}}
 
 ---
@@ -278,8 +280,10 @@ body:             |
     %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, implicit $exec
     %5:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, implicit $exec
     %6:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 64, 0, implicit $exec
-    %7:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 80, 0, implicit $exec
-    %8:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 96, 0, implicit $exec
+    %7:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 80, 0, implicit $exec
+    %8:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 96, 0, implicit $exec
+    %9:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 128, 0, implicit $exec
+    %10:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 144, 0, implicit $exec
 ...
 
 # GCN-LABEL: {{^}}name: image_clause{{$}}

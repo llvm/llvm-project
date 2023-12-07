@@ -9,11 +9,11 @@
 
 define void @test() nounwind {
 entry:
-  %0 = load i32, i32* @i, align 4
-  %1 = load i32, i32* @k, align 4
+  %0 = load i32, ptr @i, align 4
+  %1 = load i32, ptr @k, align 4
   %cmp = icmp eq i32 %0, %1
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @r1, align 4
+  store i32 %conv, ptr @r1, align 4
 ; 16:   xor     $[[REGISTER:[0-9A-Ba-b_]+]], ${{[0-9]+}}
 ; 16:   sltiu   $[[REGISTER:[0-9A-Ba-b_]+]], 1
 ; MMR6: sltiu   ${{[0-9]+}}, ${{[0-9]+}}, 1

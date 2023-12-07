@@ -57,4 +57,10 @@ DECLARE_REAL(char *, strstr, const char *s1, const char *s2)
               ver, #name);                                                     \
   } while (0)
 
+#define MEMPROF_INTERCEPTOR_ENTER(ctx, func)                                   \
+  ctx = 0;                                                                     \
+  (void)ctx;
+
+#define COMMON_INTERCEPT_FUNCTION(name) MEMPROF_INTERCEPT_FUNC(name)
+
 #endif // MEMPROF_INTERCEPTORS_H

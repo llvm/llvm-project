@@ -2091,7 +2091,7 @@ define <32 x i16> @test_masked_z_32xi16_perm_low_mem_mask7(ptr %vp, <32 x i16> %
 define <4 x i32> @test_4xi32_perm_mask0(<4 x i32> %vec) {
 ; CHECK-LABEL: test_4xi32_perm_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,3,0]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,3,0]
 ; CHECK-NEXT:    retq
   %res = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 3, i32 0>
   ret <4 x i32> %res
@@ -2171,7 +2171,7 @@ define <4 x i32> @test_masked_z_4xi32_perm_mask2(<4 x i32> %vec, <4 x i32> %mask
 define <4 x i32> @test_4xi32_perm_mask3(<4 x i32> %vec) {
 ; CHECK-LABEL: test_4xi32_perm_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,0,3]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,0,3]
 ; CHECK-NEXT:    retq
   %res = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 0, i32 3>
   ret <4 x i32> %res
@@ -2325,7 +2325,7 @@ define <4 x i32> @test_masked_z_4xi32_perm_mem_mask3(ptr %vp, <4 x i32> %mask) {
 define <8 x i32> @test_8xi32_perm_mask0(<8 x i32> %vec) {
 ; CHECK-LABEL: test_8xi32_perm_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[2,3,1,0,6,7,5,4]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,3,1,0,6,7,5,4]
 ; CHECK-NEXT:    retq
   %res = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 1, i32 0, i32 6, i32 7, i32 5, i32 4>
   ret <8 x i32> %res
@@ -2405,7 +2405,7 @@ define <8 x i32> @test_masked_z_8xi32_perm_mask2(<8 x i32> %vec, <8 x i32> %mask
 define <8 x i32> @test_8xi32_perm_mask3(<8 x i32> %vec) {
 ; CHECK-LABEL: test_8xi32_perm_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,3,1,0,5,7,5,4]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3,1,0,5,7,5,4]
 ; CHECK-NEXT:    retq
   %res = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 1, i32 3, i32 1, i32 0, i32 5, i32 7, i32 5, i32 4>
   ret <8 x i32> %res
@@ -2559,7 +2559,7 @@ define <8 x i32> @test_masked_z_8xi32_perm_mem_mask3(ptr %vp, <8 x i32> %mask) {
 define <16 x i32> @test_16xi32_perm_mask0(<16 x i32> %vec) {
 ; CHECK-LABEL: test_16xi32_perm_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[3,1,3,0,7,5,7,4,11,9,11,8,15,13,15,12]
+; CHECK-NEXT:    vshufps {{.*#+}} zmm0 = zmm0[3,1,3,0,7,5,7,4,11,9,11,8,15,13,15,12]
 ; CHECK-NEXT:    retq
   %res = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 3, i32 1, i32 3, i32 0, i32 7, i32 5, i32 7, i32 4, i32 11, i32 9, i32 11, i32 8, i32 15, i32 13, i32 15, i32 12>
   ret <16 x i32> %res
@@ -2639,7 +2639,7 @@ define <16 x i32> @test_masked_z_16xi32_perm_mask2(<16 x i32> %vec, <16 x i32> %
 define <16 x i32> @test_16xi32_perm_mask3(<16 x i32> %vec) {
 ; CHECK-LABEL: test_16xi32_perm_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[3,2,0,3,7,6,4,7,11,10,8,11,15,14,12,15]
+; CHECK-NEXT:    vshufps {{.*#+}} zmm0 = zmm0[3,2,0,3,7,6,4,7,11,10,8,11,15,14,12,15]
 ; CHECK-NEXT:    retq
   %res = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 3, i32 2, i32 0, i32 3, i32 7, i32 6, i32 4, i32 7, i32 11, i32 10, i32 8, i32 11, i32 15, i32 14, i32 12, i32 15>
   ret <16 x i32> %res

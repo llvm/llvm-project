@@ -140,6 +140,8 @@ define noundef i32 @select_cond_may_be_poison(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], 1
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[ADD]] to i1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[T]], i32 [[ADD]], i32 [[B:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+; CHECK-NEXT:    call void @__poison_checker_assert(i1 [[TMP3]])
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %add = add nuw i32 %a, 1

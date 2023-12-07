@@ -128,7 +128,7 @@ body:             |
   bb.0.entry:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
 
-    CMP64mi8 $rip, 1, $noreg, @c, $noreg, 0, implicit-def $eflags, debug-location !21 :: (dereferenceable load (s64) from @c)
+    CMP64mi32 $rip, 1, $noreg, @c, $noreg, 0, implicit-def $eflags, debug-location !21 :: (dereferenceable load (s64) from @c)
     JCC_1 %bb.2, 4, implicit killed $eflags, debug-location !27
 
   bb.1.if.then:

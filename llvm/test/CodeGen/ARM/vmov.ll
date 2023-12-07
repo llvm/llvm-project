@@ -228,31 +228,31 @@ define arm_aapcs_vfpcc <2 x i64> @v_movQi64() nounwind {
 
 ; Check for correct assembler printing for immediate values.
 %struct.int8x8_t = type { <8 x i8> }
-define arm_aapcs_vfpcc void @vdupn128(%struct.int8x8_t* noalias nocapture sret(%struct.int8x8_t) %agg.result) nounwind {
+define arm_aapcs_vfpcc void @vdupn128(ptr noalias nocapture sret(%struct.int8x8_t) %agg.result) nounwind {
 ; CHECK-LABEL: vdupn128:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i8 d16, #0x80
 ; CHECK-NEXT:    vstr d16, [r0]
 ; CHECK-NEXT:    mov pc, lr
 entry:
-  %0 = getelementptr inbounds %struct.int8x8_t, %struct.int8x8_t* %agg.result, i32 0, i32 0 ; <<8 x i8>*> [#uses=1]
-  store <8 x i8> <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>, <8 x i8>* %0, align 8
+  %0 = getelementptr inbounds %struct.int8x8_t, ptr %agg.result, i32 0, i32 0 ; <ptr> [#uses=1]
+  store <8 x i8> <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>, ptr %0, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vdupnneg75(%struct.int8x8_t* noalias nocapture sret(%struct.int8x8_t) %agg.result) nounwind {
+define arm_aapcs_vfpcc void @vdupnneg75(ptr noalias nocapture sret(%struct.int8x8_t) %agg.result) nounwind {
 ; CHECK-LABEL: vdupnneg75:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i8 d16, #0xb5
 ; CHECK-NEXT:    vstr d16, [r0]
 ; CHECK-NEXT:    mov pc, lr
 entry:
-  %0 = getelementptr inbounds %struct.int8x8_t, %struct.int8x8_t* %agg.result, i32 0, i32 0 ; <<8 x i8>*> [#uses=1]
-  store <8 x i8> <i8 -75, i8 -75, i8 -75, i8 -75, i8 -75, i8 -75, i8 -75, i8 -75>, <8 x i8>* %0, align 8
+  %0 = getelementptr inbounds %struct.int8x8_t, ptr %agg.result, i32 0, i32 0 ; <ptr> [#uses=1]
+  store <8 x i8> <i8 -75, i8 -75, i8 -75, i8 -75, i8 -75, i8 -75, i8 -75, i8 -75>, ptr %0, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc <8 x i16> @vmovls8(<8 x i8>* %A) nounwind {
+define arm_aapcs_vfpcc <8 x i16> @vmovls8(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vmovls8:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.8 {d16}, [r0:64]
@@ -265,12 +265,12 @@ define arm_aapcs_vfpcc <8 x i16> @vmovls8(<8 x i8>* %A) nounwind {
 ; CHECK-BE-NEXT:    vmovl.s8 q8, d16
 ; CHECK-BE-NEXT:    vrev64.16 q0, q8
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = sext <8 x i8> %tmp1 to <8 x i16>
 	ret <8 x i16> %tmp2
 }
 
-define arm_aapcs_vfpcc <4 x i32> @vmovls16(<4 x i16>* %A) nounwind {
+define arm_aapcs_vfpcc <4 x i32> @vmovls16(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vmovls16:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.16 {d16}, [r0:64]
@@ -283,23 +283,23 @@ define arm_aapcs_vfpcc <4 x i32> @vmovls16(<4 x i16>* %A) nounwind {
 ; CHECK-BE-NEXT:    vmovl.s16 q8, d16
 ; CHECK-BE-NEXT:    vrev64.32 q0, q8
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i16>, <4 x i16>* %A
+	%tmp1 = load <4 x i16>, ptr %A
 	%tmp2 = sext <4 x i16> %tmp1 to <4 x i32>
 	ret <4 x i32> %tmp2
 }
 
-define arm_aapcs_vfpcc <2 x i64> @vmovls32(<2 x i32>* %A) nounwind {
+define arm_aapcs_vfpcc <2 x i64> @vmovls32(ptr %A) nounwind {
 ; CHECK-LABEL: vmovls32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.32 {d16}, [r0:64]
 ; CHECK-NEXT:    vmovl.s32 q0, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i32>, <2 x i32>* %A
+	%tmp1 = load <2 x i32>, ptr %A
 	%tmp2 = sext <2 x i32> %tmp1 to <2 x i64>
 	ret <2 x i64> %tmp2
 }
 
-define arm_aapcs_vfpcc <8 x i16> @vmovlu8(<8 x i8>* %A) nounwind {
+define arm_aapcs_vfpcc <8 x i16> @vmovlu8(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vmovlu8:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.8 {d16}, [r0:64]
@@ -312,12 +312,12 @@ define arm_aapcs_vfpcc <8 x i16> @vmovlu8(<8 x i8>* %A) nounwind {
 ; CHECK-BE-NEXT:    vmovl.u8 q8, d16
 ; CHECK-BE-NEXT:    vrev64.16 q0, q8
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = zext <8 x i8> %tmp1 to <8 x i16>
 	ret <8 x i16> %tmp2
 }
 
-define arm_aapcs_vfpcc <4 x i32> @vmovlu16(<4 x i16>* %A) nounwind {
+define arm_aapcs_vfpcc <4 x i32> @vmovlu16(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vmovlu16:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.16 {d16}, [r0:64]
@@ -330,23 +330,23 @@ define arm_aapcs_vfpcc <4 x i32> @vmovlu16(<4 x i16>* %A) nounwind {
 ; CHECK-BE-NEXT:    vmovl.u16 q8, d16
 ; CHECK-BE-NEXT:    vrev64.32 q0, q8
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i16>, <4 x i16>* %A
+	%tmp1 = load <4 x i16>, ptr %A
 	%tmp2 = zext <4 x i16> %tmp1 to <4 x i32>
 	ret <4 x i32> %tmp2
 }
 
-define arm_aapcs_vfpcc <2 x i64> @vmovlu32(<2 x i32>* %A) nounwind {
+define arm_aapcs_vfpcc <2 x i64> @vmovlu32(ptr %A) nounwind {
 ; CHECK-LABEL: vmovlu32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.32 {d16}, [r0:64]
 ; CHECK-NEXT:    vmovl.u32 q0, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i32>, <2 x i32>* %A
+	%tmp1 = load <2 x i32>, ptr %A
 	%tmp2 = zext <2 x i32> %tmp1 to <2 x i64>
 	ret <2 x i64> %tmp2
 }
 
-define arm_aapcs_vfpcc <8 x i8> @vmovni16(<8 x i16>* %A) nounwind {
+define arm_aapcs_vfpcc <8 x i8> @vmovni16(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vmovni16:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -360,12 +360,12 @@ define arm_aapcs_vfpcc <8 x i8> @vmovni16(<8 x i16>* %A) nounwind {
 ; CHECK-BE-NEXT:    vmovn.i16 d16, q8
 ; CHECK-BE-NEXT:    vrev64.8 d0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i16>, <8 x i16>* %A
+	%tmp1 = load <8 x i16>, ptr %A
 	%tmp2 = trunc <8 x i16> %tmp1 to <8 x i8>
 	ret <8 x i8> %tmp2
 }
 
-define arm_aapcs_vfpcc <4 x i16> @vmovni32(<4 x i32>* %A) nounwind {
+define arm_aapcs_vfpcc <4 x i16> @vmovni32(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vmovni32:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -379,12 +379,12 @@ define arm_aapcs_vfpcc <4 x i16> @vmovni32(<4 x i32>* %A) nounwind {
 ; CHECK-BE-NEXT:    vmovn.i32 d16, q8
 ; CHECK-BE-NEXT:    vrev64.16 d0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i32>, <4 x i32>* %A
+	%tmp1 = load <4 x i32>, ptr %A
 	%tmp2 = trunc <4 x i32> %tmp1 to <4 x i16>
 	ret <4 x i16> %tmp2
 }
 
-define arm_aapcs_vfpcc <2 x i32> @vmovni64(<2 x i64>* %A) nounwind {
+define arm_aapcs_vfpcc <2 x i32> @vmovni64(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vmovni64:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -397,12 +397,12 @@ define arm_aapcs_vfpcc <2 x i32> @vmovni64(<2 x i64>* %A) nounwind {
 ; CHECK-BE-NEXT:    vmovn.i64 d16, q8
 ; CHECK-BE-NEXT:    vrev64.32 d0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i64>, <2 x i64>* %A
+	%tmp1 = load <2 x i64>, ptr %A
 	%tmp2 = trunc <2 x i64> %tmp1 to <2 x i32>
 	ret <2 x i32> %tmp2
 }
 
-define arm_aapcs_vfpcc <8 x i8> @vqmovns16(<8 x i16>* %A) nounwind {
+define arm_aapcs_vfpcc <8 x i8> @vqmovns16(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vqmovns16:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -416,12 +416,12 @@ define arm_aapcs_vfpcc <8 x i8> @vqmovns16(<8 x i16>* %A) nounwind {
 ; CHECK-BE-NEXT:    vqmovn.s16 d16, q8
 ; CHECK-BE-NEXT:    vrev64.8 d0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i16>, <8 x i16>* %A
+	%tmp1 = load <8 x i16>, ptr %A
 	%tmp2 = call <8 x i8> @llvm.arm.neon.vqmovns.v8i8(<8 x i16> %tmp1)
 	ret <8 x i8> %tmp2
 }
 
-define arm_aapcs_vfpcc <4 x i16> @vqmovns32(<4 x i32>* %A) nounwind {
+define arm_aapcs_vfpcc <4 x i16> @vqmovns32(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vqmovns32:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -435,12 +435,12 @@ define arm_aapcs_vfpcc <4 x i16> @vqmovns32(<4 x i32>* %A) nounwind {
 ; CHECK-BE-NEXT:    vqmovn.s32 d16, q8
 ; CHECK-BE-NEXT:    vrev64.16 d0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i32>, <4 x i32>* %A
+	%tmp1 = load <4 x i32>, ptr %A
 	%tmp2 = call <4 x i16> @llvm.arm.neon.vqmovns.v4i16(<4 x i32> %tmp1)
 	ret <4 x i16> %tmp2
 }
 
-define arm_aapcs_vfpcc <2 x i32> @vqmovns64(<2 x i64>* %A) nounwind {
+define arm_aapcs_vfpcc <2 x i32> @vqmovns64(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vqmovns64:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -453,12 +453,12 @@ define arm_aapcs_vfpcc <2 x i32> @vqmovns64(<2 x i64>* %A) nounwind {
 ; CHECK-BE-NEXT:    vqmovn.s64 d16, q8
 ; CHECK-BE-NEXT:    vrev64.32 d0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i64>, <2 x i64>* %A
+	%tmp1 = load <2 x i64>, ptr %A
 	%tmp2 = call <2 x i32> @llvm.arm.neon.vqmovns.v2i32(<2 x i64> %tmp1)
 	ret <2 x i32> %tmp2
 }
 
-define arm_aapcs_vfpcc <8 x i8> @vqmovnu16(<8 x i16>* %A) nounwind {
+define arm_aapcs_vfpcc <8 x i8> @vqmovnu16(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vqmovnu16:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -472,12 +472,12 @@ define arm_aapcs_vfpcc <8 x i8> @vqmovnu16(<8 x i16>* %A) nounwind {
 ; CHECK-BE-NEXT:    vqmovn.u16 d16, q8
 ; CHECK-BE-NEXT:    vrev64.8 d0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i16>, <8 x i16>* %A
+	%tmp1 = load <8 x i16>, ptr %A
 	%tmp2 = call <8 x i8> @llvm.arm.neon.vqmovnu.v8i8(<8 x i16> %tmp1)
 	ret <8 x i8> %tmp2
 }
 
-define arm_aapcs_vfpcc <4 x i16> @vqmovnu32(<4 x i32>* %A) nounwind {
+define arm_aapcs_vfpcc <4 x i16> @vqmovnu32(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vqmovnu32:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -491,12 +491,12 @@ define arm_aapcs_vfpcc <4 x i16> @vqmovnu32(<4 x i32>* %A) nounwind {
 ; CHECK-BE-NEXT:    vqmovn.u32 d16, q8
 ; CHECK-BE-NEXT:    vrev64.16 d0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i32>, <4 x i32>* %A
+	%tmp1 = load <4 x i32>, ptr %A
 	%tmp2 = call <4 x i16> @llvm.arm.neon.vqmovnu.v4i16(<4 x i32> %tmp1)
 	ret <4 x i16> %tmp2
 }
 
-define arm_aapcs_vfpcc <2 x i32> @vqmovnu64(<2 x i64>* %A) nounwind {
+define arm_aapcs_vfpcc <2 x i32> @vqmovnu64(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vqmovnu64:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -509,12 +509,12 @@ define arm_aapcs_vfpcc <2 x i32> @vqmovnu64(<2 x i64>* %A) nounwind {
 ; CHECK-BE-NEXT:    vqmovn.u64 d16, q8
 ; CHECK-BE-NEXT:    vrev64.32 d0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i64>, <2 x i64>* %A
+	%tmp1 = load <2 x i64>, ptr %A
 	%tmp2 = call <2 x i32> @llvm.arm.neon.vqmovnu.v2i32(<2 x i64> %tmp1)
 	ret <2 x i32> %tmp2
 }
 
-define arm_aapcs_vfpcc <8 x i8> @vqmovuns16(<8 x i16>* %A) nounwind {
+define arm_aapcs_vfpcc <8 x i8> @vqmovuns16(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vqmovuns16:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -528,12 +528,12 @@ define arm_aapcs_vfpcc <8 x i8> @vqmovuns16(<8 x i16>* %A) nounwind {
 ; CHECK-BE-NEXT:    vqmovun.s16 d16, q8
 ; CHECK-BE-NEXT:    vrev64.8 d0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i16>, <8 x i16>* %A
+	%tmp1 = load <8 x i16>, ptr %A
 	%tmp2 = call <8 x i8> @llvm.arm.neon.vqmovnsu.v8i8(<8 x i16> %tmp1)
 	ret <8 x i8> %tmp2
 }
 
-define arm_aapcs_vfpcc <4 x i16> @vqmovuns32(<4 x i32>* %A) nounwind {
+define arm_aapcs_vfpcc <4 x i16> @vqmovuns32(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vqmovuns32:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -547,12 +547,12 @@ define arm_aapcs_vfpcc <4 x i16> @vqmovuns32(<4 x i32>* %A) nounwind {
 ; CHECK-BE-NEXT:    vqmovun.s32 d16, q8
 ; CHECK-BE-NEXT:    vrev64.16 d0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i32>, <4 x i32>* %A
+	%tmp1 = load <4 x i32>, ptr %A
 	%tmp2 = call <4 x i16> @llvm.arm.neon.vqmovnsu.v4i16(<4 x i32> %tmp1)
 	ret <4 x i16> %tmp2
 }
 
-define arm_aapcs_vfpcc <2 x i32> @vqmovuns64(<2 x i64>* %A) nounwind {
+define arm_aapcs_vfpcc <2 x i32> @vqmovuns64(ptr %A) nounwind {
 ; CHECK-LE-LABEL: vqmovuns64:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -565,7 +565,7 @@ define arm_aapcs_vfpcc <2 x i32> @vqmovuns64(<2 x i64>* %A) nounwind {
 ; CHECK-BE-NEXT:    vqmovun.s64 d16, q8
 ; CHECK-BE-NEXT:    vrev64.32 d0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i64>, <2 x i64>* %A
+	%tmp1 = load <2 x i64>, ptr %A
 	%tmp2 = call <2 x i32> @llvm.arm.neon.vqmovnsu.v2i32(<2 x i64> %tmp1)
 	ret <2 x i32> %tmp2
 }
@@ -584,7 +584,7 @@ declare <2 x i32> @llvm.arm.neon.vqmovnsu.v2i32(<2 x i64>) nounwind readnone
 
 ; Truncating vector stores are not supported.  The following should not crash.
 ; Radar 8598391.
-define arm_aapcs_vfpcc void @noTruncStore(<4 x i32>* %a, <4 x i16>* %b) nounwind {
+define arm_aapcs_vfpcc void @noTruncStore(ptr %a, ptr %b) nounwind {
 ; CHECK-LE-LABEL: noTruncStore:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0:128]
@@ -600,26 +600,26 @@ define arm_aapcs_vfpcc void @noTruncStore(<4 x i32>* %a, <4 x i16>* %b) nounwind
 ; CHECK-BE-NEXT:    vrev64.16 d16, d16
 ; CHECK-BE-NEXT:    vstr d16, [r1]
 ; CHECK-BE-NEXT:    mov pc, lr
-  %tmp1 = load <4 x i32>, <4 x i32>* %a, align 16
+  %tmp1 = load <4 x i32>, ptr %a, align 16
   %tmp2 = trunc <4 x i32> %tmp1 to <4 x i16>
-  store <4 x i16> %tmp2, <4 x i16>* %b, align 8
+  store <4 x i16> %tmp2, ptr %b, align 8
   ret void
 }
 
 ; Use vmov.f32 to materialize f32 immediate splats
 ; rdar://10437054
-define arm_aapcs_vfpcc void @v_mov_v2f32(<2 x float>* nocapture %p) nounwind {
+define arm_aapcs_vfpcc void @v_mov_v2f32(ptr nocapture %p) nounwind {
 ; CHECK-LABEL: v_mov_v2f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 d16, #-1.600000e+01
 ; CHECK-NEXT:    vstr d16, [r0]
 ; CHECK-NEXT:    mov pc, lr
 entry:
-  store <2 x float> <float -1.600000e+01, float -1.600000e+01>, <2 x float>* %p, align 4
+  store <2 x float> <float -1.600000e+01, float -1.600000e+01>, ptr %p, align 4
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mov_v4f32(<4 x float>* nocapture %p) nounwind {
+define arm_aapcs_vfpcc void @v_mov_v4f32(ptr nocapture %p) nounwind {
 ; CHECK-LE-LABEL: v_mov_v4f32:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmov.f32 q8, #3.100000e+01
@@ -632,11 +632,11 @@ define arm_aapcs_vfpcc void @v_mov_v4f32(<4 x float>* nocapture %p) nounwind {
 ; CHECK-BE-NEXT:    vstmia r0, {d16, d17}
 ; CHECK-BE-NEXT:    mov pc, lr
 entry:
-  store <4 x float> <float 3.100000e+01, float 3.100000e+01, float 3.100000e+01, float 3.100000e+01>, <4 x float>* %p, align 4
+  store <4 x float> <float 3.100000e+01, float 3.100000e+01, float 3.100000e+01, float 3.100000e+01>, ptr %p, align 4
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mov_v4f32_undef(<4 x float> * nocapture %p) nounwind {
+define arm_aapcs_vfpcc void @v_mov_v4f32_undef(ptr nocapture %p) nounwind {
 ; CHECK-LE-LABEL: v_mov_v4f32_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmov.f32 q8, #1.000000e+00
@@ -655,9 +655,9 @@ define arm_aapcs_vfpcc void @v_mov_v4f32_undef(<4 x float> * nocapture %p) nounw
 ; CHECK-BE-NEXT:    vst1.64 {d16, d17}, [r0]
 ; CHECK-BE-NEXT:    mov pc, lr
 entry:
-  %a = load <4 x float> , <4 x float> *%p
+  %a = load <4 x float> , ptr %p
   %b = fadd <4 x float> %a, <float undef, float 1.0, float 1.0, float 1.0>
-  store <4 x float> %b, <4 x float> *%p
+  store <4 x float> %b, ptr %p
   ret void
 }
 
@@ -689,172 +689,172 @@ entry:
   %sub.i = sub <4 x i32> %add.i185, zeroinitializer
   %add.i = add <4 x i32> %sub.i, zeroinitializer
   %vmovn.i = trunc <4 x i32> %add.i to <4 x i16>
-  tail call void @llvm.arm.neon.vst1.p0i8.v4i16(i8* undef, <4 x i16> %vmovn.i, i32 2)
+  tail call void @llvm.arm.neon.vst1.p0.v4i16(ptr undef, <4 x i16> %vmovn.i, i32 2)
   unreachable
 }
 
-define arm_aapcs_vfpcc void @v_movi8_sti8(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi8_sti8(ptr %p) {
 ; CHECK-LABEL: v_movi8_sti8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i8 d16, #0x1
 ; CHECK-NEXT:    vst1.8 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v8i8(i8* %p, <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, i32 1)
+  call void @llvm.arm.neon.vst1.p0.v8i8(ptr %p, <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, i32 1)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi8_sti16(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi8_sti16(ptr %p) {
 ; CHECK-LABEL: v_movi8_sti16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i8 d16, #0x1
 ; CHECK-NEXT:    vst1.16 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1> to <4 x i16>
-  call void @llvm.arm.neon.vst1.p0i8.v4i16(i8* %p, <4 x i16> %val, i32 2)
+  call void @llvm.arm.neon.vst1.p0.v4i16(ptr %p, <4 x i16> %val, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi8_stf16(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi8_stf16(ptr %p) {
 ; CHECK-LABEL: v_movi8_stf16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i8 d16, #0x1
 ; CHECK-NEXT:    vst1.16 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1> to <4 x half>
-  call void @llvm.arm.neon.vst1.p0i8.v4f16(i8* %p, <4 x half> %val, i32 2)
+  call void @llvm.arm.neon.vst1.p0.v4f16(ptr %p, <4 x half> %val, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi8_sti32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi8_sti32(ptr %p) {
 ; CHECK-LABEL: v_movi8_sti32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i8 d16, #0x1
 ; CHECK-NEXT:    vst1.32 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1> to <2 x i32>
-  call void @llvm.arm.neon.vst1.p0i8.v2i32(i8* %p, <2 x i32> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v2i32(ptr %p, <2 x i32> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi8_stf32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi8_stf32(ptr %p) {
 ; CHECK-LABEL: v_movi8_stf32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i8 d16, #0x1
 ; CHECK-NEXT:    vst1.32 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1> to <2 x float>
-  call void @llvm.arm.neon.vst1.p0i8.v2f32(i8* %p, <2 x float> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v2f32(ptr %p, <2 x float> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi8_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi8_sti64(ptr %p) {
 ; CHECK-LABEL: v_movi8_sti64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i8 d16, #0x1
 ; CHECK-NEXT:    vst1.64 {d16}, [r0:64]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1> to <1 x i64>
-  call void @llvm.arm.neon.vst1.p0i8.v1i64(i8* %p, <1 x i64> %val, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v1i64(ptr %p, <1 x i64> %val, i32 8)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi16_sti16(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi16_sti16(ptr %p) {
 ; CHECK-LABEL: v_movi16_sti16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i16 d16, #0x1
 ; CHECK-NEXT:    vst1.16 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v4i16(i8* %p, <4 x i16> <i16 1, i16 1, i16 1, i16 1>, i32 2)
+  call void @llvm.arm.neon.vst1.p0.v4i16(ptr %p, <4 x i16> <i16 1, i16 1, i16 1, i16 1>, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi16_stf16(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi16_stf16(ptr %p) {
 ; CHECK-LABEL: v_movi16_stf16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i16 d16, #0x1
 ; CHECK-NEXT:    vst1.16 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <4 x i16> <i16 1, i16 1, i16 1, i16 1> to <4 x half>
-  call void @llvm.arm.neon.vst1.p0i8.v4f16(i8* %p, <4 x half> %val, i32 2)
+  call void @llvm.arm.neon.vst1.p0.v4f16(ptr %p, <4 x half> %val, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi16_sti32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi16_sti32(ptr %p) {
 ; CHECK-LABEL: v_movi16_sti32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i16 d16, #0x1
 ; CHECK-NEXT:    vst1.32 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <4 x i16> <i16 1, i16 1, i16 1, i16 1> to <2 x i32>
-  call void @llvm.arm.neon.vst1.p0i8.v2i32(i8* %p, <2 x i32> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v2i32(ptr %p, <2 x i32> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi16_stf32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi16_stf32(ptr %p) {
 ; CHECK-LABEL: v_movi16_stf32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i16 d16, #0x1
 ; CHECK-NEXT:    vst1.32 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <4 x i16> <i16 1, i16 1, i16 1, i16 1> to <2 x float>
-  call void @llvm.arm.neon.vst1.p0i8.v2f32(i8* %p, <2 x float> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v2f32(ptr %p, <2 x float> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi16_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi16_sti64(ptr %p) {
 ; CHECK-LABEL: v_movi16_sti64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i16 d16, #0x1
 ; CHECK-NEXT:    vst1.64 {d16}, [r0:64]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <4 x i16> <i16 1, i16 1, i16 1, i16 1> to <1 x i64>
-  call void @llvm.arm.neon.vst1.p0i8.v1i64(i8* %p, <1 x i64> %val, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v1i64(ptr %p, <1 x i64> %val, i32 8)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi32_sti32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi32_sti32(ptr %p) {
 ; CHECK-LABEL: v_movi32_sti32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 d16, #0x1
 ; CHECK-NEXT:    vst1.32 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v2i32(i8* %p, <2 x i32> <i32 1, i32 1>, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v2i32(ptr %p, <2 x i32> <i32 1, i32 1>, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi32_stf32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi32_stf32(ptr %p) {
 ; CHECK-LABEL: v_movi32_stf32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 d16, #0x1
 ; CHECK-NEXT:    vst1.32 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <2 x i32> <i32 1, i32 1> to <2 x float>
-  call void @llvm.arm.neon.vst1.p0i8.v2f32(i8* %p, <2 x float> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v2f32(ptr %p, <2 x float> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi32_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi32_sti64(ptr %p) {
 ; CHECK-LABEL: v_movi32_sti64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 d16, #0x1
 ; CHECK-NEXT:    vst1.64 {d16}, [r0:64]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <2 x i32> <i32 1, i32 1> to <1 x i64>
-  call void @llvm.arm.neon.vst1.p0i8.v1i64(i8* %p, <1 x i64> %val, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v1i64(ptr %p, <1 x i64> %val, i32 8)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movf32_stf32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movf32_stf32(ptr %p) {
 ; CHECK-LABEL: v_movf32_stf32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.f32 d16, #1.000000e+00
 ; CHECK-NEXT:    vst1.32 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v2f32(i8* %p, <2 x float> <float 1.0, float 1.0>, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v2f32(ptr %p, <2 x float> <float 1.0, float 1.0>, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void@v_movf32_sti32(i8* %p) {
+define arm_aapcs_vfpcc void@v_movf32_sti32(ptr %p) {
 ; FIXME: We should use vmov.f32 instead of mov then vdup
 ; CHECK-LABEL: v_movf32_sti32:
 ; CHECK:       @ %bb.0:
@@ -863,11 +863,11 @@ define arm_aapcs_vfpcc void@v_movf32_sti32(i8* %p) {
 ; CHECK-NEXT:    vst1.32 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <2 x float> <float 1.0, float 1.0> to <2 x i32>
-  call void @llvm.arm.neon.vst1.p0i8.v2i32(i8* %p, <2 x i32> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v2i32(ptr %p, <2 x i32> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movf32_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_movf32_sti64(ptr %p) {
 ; CHECK-LE-LABEL: v_movf32_sti64:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    mov r1, #1065353216
@@ -884,182 +884,182 @@ define arm_aapcs_vfpcc void @v_movf32_sti64(i8* %p) {
 ; CHECK-BE-NEXT:    vst1.64 {d16}, [r0:64]
 ; CHECK-BE-NEXT:    mov pc, lr
   %val = bitcast <2 x float> <float 1.0, float 1.0> to <1 x i64>
-  call void @llvm.arm.neon.vst1.p0i8.v1i64(i8* %p, <1 x i64> %val, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v1i64(ptr %p, <1 x i64> %val, i32 8)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movi64_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_movi64_sti64(ptr %p) {
 ; CHECK-LABEL: v_movi64_sti64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i64 d16, #0xff
 ; CHECK-NEXT:    vst1.64 {d16}, [r0:64]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v1i64(i8* %p, <1 x i64> <i64 255>, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v1i64(ptr %p, <1 x i64> <i64 255>, i32 8)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi8_sti8(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi8_sti8(ptr %p) {
 ; CHECK-LABEL: v_movQi8_sti8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i8 q8, #0x1
 ; CHECK-NEXT:    vst1.8 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v16i8(i8* %p, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, i32 1)
+  call void @llvm.arm.neon.vst1.p0.v16i8(ptr %p, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, i32 1)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi8_sti16(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi8_sti16(ptr %p) {
 ; CHECK-LABEL: v_movQi8_sti16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i8 q8, #0x1
 ; CHECK-NEXT:    vst1.16 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1> to <8 x i16>
-  call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %p, <8 x i16> %val, i32 2)
+  call void @llvm.arm.neon.vst1.p0.v8i16(ptr %p, <8 x i16> %val, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi8_stf16(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi8_stf16(ptr %p) {
 ; CHECK-LABEL: v_movQi8_stf16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i8 q8, #0x1
 ; CHECK-NEXT:    vst1.16 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1> to <8 x half>
-  call void @llvm.arm.neon.vst1.p0i8.v8f16(i8* %p, <8 x half> %val, i32 2)
+  call void @llvm.arm.neon.vst1.p0.v8f16(ptr %p, <8 x half> %val, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi8_sti32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi8_sti32(ptr %p) {
 ; CHECK-LABEL: v_movQi8_sti32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i8 q8, #0x1
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1> to <4 x i32>
-  call void @llvm.arm.neon.vst1.p0i8.v4i32(i8* %p, <4 x i32> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v4i32(ptr %p, <4 x i32> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi8_stf32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi8_stf32(ptr %p) {
 ; CHECK-LABEL: v_movQi8_stf32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i8 q8, #0x1
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1> to <4 x float>
-  call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* %p, <4 x float> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v4f32(ptr %p, <4 x float> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi8_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi8_sti64(ptr %p) {
 ; CHECK-LABEL: v_movQi8_sti64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i8 q8, #0x1
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:64]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1> to <2 x i64>
-  call void @llvm.arm.neon.vst1.p0i8.v2i64(i8* %p, <2 x i64> %val, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v2i64(ptr %p, <2 x i64> %val, i32 8)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi16_sti16(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi16_sti16(ptr %p) {
 ; CHECK-LABEL: v_movQi16_sti16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i16 q8, #0x1
 ; CHECK-NEXT:    vst1.16 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %p, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, i32 2)
+  call void @llvm.arm.neon.vst1.p0.v8i16(ptr %p, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi16_stf16(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi16_stf16(ptr %p) {
 ; CHECK-LABEL: v_movQi16_stf16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i16 q8, #0x1
 ; CHECK-NEXT:    vst1.16 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1> to <8 x half>
-  call void @llvm.arm.neon.vst1.p0i8.v8f16(i8* %p, <8 x half> %val, i32 2)
+  call void @llvm.arm.neon.vst1.p0.v8f16(ptr %p, <8 x half> %val, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi16_sti32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi16_sti32(ptr %p) {
 ; CHECK-LABEL: v_movQi16_sti32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i16 q8, #0x1
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1> to <4 x i32>
-  call void @llvm.arm.neon.vst1.p0i8.v4i32(i8* %p, <4 x i32> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v4i32(ptr %p, <4 x i32> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi16_stf32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi16_stf32(ptr %p) {
 ; CHECK-LABEL: v_movQi16_stf32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i16 q8, #0x1
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1> to <4 x float>
-  call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* %p, <4 x float> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v4f32(ptr %p, <4 x float> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi16_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi16_sti64(ptr %p) {
 ; CHECK-LABEL: v_movQi16_sti64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i16 q8, #0x1
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:64]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1> to <2 x i64>
-  call void @llvm.arm.neon.vst1.p0i8.v2i64(i8* %p, <2 x i64> %val, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v2i64(ptr %p, <2 x i64> %val, i32 8)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi32_sti32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi32_sti32(ptr %p) {
 ; CHECK-LABEL: v_movQi32_sti32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 q8, #0x1
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v4i32(i8* %p, <4 x i32> <i32 1, i32 1, i32 1, i32 1>, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v4i32(ptr %p, <4 x i32> <i32 1, i32 1, i32 1, i32 1>, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi32_stf32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi32_stf32(ptr %p) {
 ; CHECK-LABEL: v_movQi32_stf32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 q8, #0x1
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <4 x i32> <i32 1, i32 1, i32 1, i32 1> to <4 x float>
-  call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* %p, <4 x float> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v4f32(ptr %p, <4 x float> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi32_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi32_sti64(ptr %p) {
 ; CHECK-LABEL: v_movQi32_sti64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 q8, #0x1
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:64]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <4 x i32> <i32 1, i32 1, i32 1, i32 1> to <2 x i64>
-  call void @llvm.arm.neon.vst1.p0i8.v2i64(i8* %p, <2 x i64> %val, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v2i64(ptr %p, <2 x i64> %val, i32 8)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQf32_stf32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQf32_stf32(ptr %p) {
 ; CHECK-LABEL: v_movQf32_stf32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.f32 q8, #1.000000e+00
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* %p, <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v4f32(ptr %p, <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQf32_sti32(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQf32_sti32(ptr %p) {
 ; FIXME: We should use vmov.f32 instead of mov then vdup
 ; CHECK-LABEL: v_movQf32_sti32:
 ; CHECK:       @ %bb.0:
@@ -1068,11 +1068,11 @@ define arm_aapcs_vfpcc void @v_movQf32_sti32(i8* %p) {
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0> to <4 x i32>
-  call void @llvm.arm.neon.vst1.p0i8.v4i32(i8* %p, <4 x i32> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v4i32(ptr %p, <4 x i32> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQf32_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQf32_sti64(ptr %p) {
 ; CHECK-LE-LABEL: v_movQf32_sti64:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    mov r1, #1065353216
@@ -1089,203 +1089,203 @@ define arm_aapcs_vfpcc void @v_movQf32_sti64(i8* %p) {
 ; CHECK-BE-NEXT:    vst1.64 {d16, d17}, [r0:64]
 ; CHECK-BE-NEXT:    mov pc, lr
   %val = bitcast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0> to <2 x i64>
-  call void @llvm.arm.neon.vst1.p0i8.v2i64(i8* %p, <2 x i64> %val, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v2i64(ptr %p, <2 x i64> %val, i32 8)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_movQi64_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_movQi64_sti64(ptr %p) {
 ; CHECK-LABEL: v_movQi64_sti64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i64 q8, #0xff
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:64]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v2i64(i8* %p, <2 x i64> <i64 255, i64 255>, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v2i64(ptr %p, <2 x i64> <i64 255, i64 255>, i32 8)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvni16_sti16(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvni16_sti16(ptr %p) {
 ; CHECK-LABEL: v_mvni16_sti16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i16 d16, #0xfe
 ; CHECK-NEXT:    vst1.16 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v4i16(i8* %p, <4 x i16> <i16 65281, i16 65281, i16 65281, i16 65281>, i32 2)
+  call void @llvm.arm.neon.vst1.p0.v4i16(ptr %p, <4 x i16> <i16 65281, i16 65281, i16 65281, i16 65281>, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvni16_stf16(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvni16_stf16(ptr %p) {
 ; CHECK-LABEL: v_mvni16_stf16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i16 d16, #0xfe
 ; CHECK-NEXT:    vst1.16 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <4 x i16> <i16 65281, i16 65281, i16 65281, i16 65281> to <4 x half>
-  call void @llvm.arm.neon.vst1.p0i8.v4f16(i8* %p, <4 x half> %val, i32 2)
+  call void @llvm.arm.neon.vst1.p0.v4f16(ptr %p, <4 x half> %val, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvni16_sti32(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvni16_sti32(ptr %p) {
 ; CHECK-LABEL: v_mvni16_sti32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i16 d16, #0xfe
 ; CHECK-NEXT:    vst1.32 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <4 x i16> <i16 65281, i16 65281, i16 65281, i16 65281> to <2 x i32>
-  call void @llvm.arm.neon.vst1.p0i8.v2i32(i8* %p, <2 x i32> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v2i32(ptr %p, <2 x i32> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvni16_stf32(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvni16_stf32(ptr %p) {
 ; CHECK-LABEL: v_mvni16_stf32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i16 d16, #0xfe
 ; CHECK-NEXT:    vst1.32 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <4 x i16> <i16 65281, i16 65281, i16 65281, i16 65281> to <2 x float>
-  call void @llvm.arm.neon.vst1.p0i8.v2f32(i8* %p, <2 x float> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v2f32(ptr %p, <2 x float> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvni16_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvni16_sti64(ptr %p) {
 ; CHECK-LABEL: v_mvni16_sti64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i16 d16, #0xfe
 ; CHECK-NEXT:    vst1.64 {d16}, [r0:64]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <4 x i16> <i16 65281, i16 65281, i16 65281, i16 65281> to <1 x i64>
-  call void @llvm.arm.neon.vst1.p0i8.v1i64(i8* %p, <1 x i64> %val, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v1i64(ptr %p, <1 x i64> %val, i32 8)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvni32_sti32(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvni32_sti32(ptr %p) {
 ; CHECK-LABEL: v_mvni32_sti32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i32 d16, #0xfe
 ; CHECK-NEXT:    vst1.32 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v2i32(i8* %p, <2 x i32> <i32 4294967041, i32 4294967041>, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v2i32(ptr %p, <2 x i32> <i32 4294967041, i32 4294967041>, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvni32_stf32(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvni32_stf32(ptr %p) {
 ; CHECK-LABEL: v_mvni32_stf32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i32 d16, #0xfe
 ; CHECK-NEXT:    vst1.32 {d16}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <2 x i32> <i32 4294967041, i32 4294967041> to <2 x float>
-  call void @llvm.arm.neon.vst1.p0i8.v2f32(i8* %p, <2 x float> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v2f32(ptr %p, <2 x float> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvni32_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvni32_sti64(ptr %p) {
 ; CHECK-LABEL: v_mvni32_sti64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i32 d16, #0xfe
 ; CHECK-NEXT:    vst1.64 {d16}, [r0:64]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <2 x i32> <i32 4294967041, i32 4294967041> to <1 x i64>
-  call void @llvm.arm.neon.vst1.p0i8.v1i64(i8* %p, <1 x i64> %val, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v1i64(ptr %p, <1 x i64> %val, i32 8)
   ret void
 }
 
 
-define arm_aapcs_vfpcc void @v_mvnQi16_sti16(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvnQi16_sti16(ptr %p) {
 ; CHECK-LABEL: v_mvnQi16_sti16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i16 q8, #0xfe
 ; CHECK-NEXT:    vst1.16 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %p, <8 x i16> <i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281>, i32 2)
+  call void @llvm.arm.neon.vst1.p0.v8i16(ptr %p, <8 x i16> <i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281>, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvnQi16_stf16(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvnQi16_stf16(ptr %p) {
 ; CHECK-LABEL: v_mvnQi16_stf16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i16 q8, #0xfe
 ; CHECK-NEXT:    vst1.16 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <8 x i16> <i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281> to <8 x half>
-  call void @llvm.arm.neon.vst1.p0i8.v8f16(i8* %p, <8 x half> %val, i32 2)
+  call void @llvm.arm.neon.vst1.p0.v8f16(ptr %p, <8 x half> %val, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvnQi16_sti32(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvnQi16_sti32(ptr %p) {
 ; CHECK-LABEL: v_mvnQi16_sti32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i16 q8, #0xfe
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <8 x i16> <i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281> to <4 x i32>
-  call void @llvm.arm.neon.vst1.p0i8.v4i32(i8* %p, <4 x i32> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v4i32(ptr %p, <4 x i32> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvnQi16_stf32(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvnQi16_stf32(ptr %p) {
 ; CHECK-LABEL: v_mvnQi16_stf32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i16 q8, #0xfe
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <8 x i16> <i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281> to <4 x float>
-  call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* %p, <4 x float> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v4f32(ptr %p, <4 x float> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvnQi16_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvnQi16_sti64(ptr %p) {
 ; CHECK-LABEL: v_mvnQi16_sti64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i16 q8, #0xfe
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:64]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <8 x i16> <i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281, i16 65281> to <2 x i64>
-  call void @llvm.arm.neon.vst1.p0i8.v2i64(i8* %p, <2 x i64> %val, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v2i64(ptr %p, <2 x i64> %val, i32 8)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvnQi32_sti32(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvnQi32_sti32(ptr %p) {
 ; CHECK-LABEL: v_mvnQi32_sti32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i32 q8, #0xfe
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
-  call void @llvm.arm.neon.vst1.p0i8.v4i32(i8* %p, <4 x i32> <i32 4294967041, i32 4294967041, i32 4294967041, i32 4294967041>, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v4i32(ptr %p, <4 x i32> <i32 4294967041, i32 4294967041, i32 4294967041, i32 4294967041>, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvnQi32_stf32(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvnQi32_stf32(ptr %p) {
 ; CHECK-LABEL: v_mvnQi32_stf32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i32 q8, #0xfe
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <4 x i32> <i32 4294967041, i32 4294967041, i32 4294967041, i32 4294967041> to <4 x float>
-  call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* %p, <4 x float> %val, i32 4)
+  call void @llvm.arm.neon.vst1.p0.v4f32(ptr %p, <4 x float> %val, i32 4)
   ret void
 }
 
-define arm_aapcs_vfpcc void @v_mvnQi32_sti64(i8* %p) {
+define arm_aapcs_vfpcc void @v_mvnQi32_sti64(ptr %p) {
 ; CHECK-LABEL: v_mvnQi32_sti64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmvn.i32 q8, #0xfe
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:64]
 ; CHECK-NEXT:    mov pc, lr
   %val = bitcast <4 x i32> <i32 4294967041, i32 4294967041, i32 4294967041, i32 4294967041> to <2 x i64>
-  call void @llvm.arm.neon.vst1.p0i8.v2i64(i8* %p, <2 x i64> %val, i32 8)
+  call void @llvm.arm.neon.vst1.p0.v2i64(ptr %p, <2 x i64> %val, i32 8)
   ret void
 }
 
-declare void @llvm.arm.neon.vst1.p0i8.v8i8(i8*, <8 x i8>, i32) nounwind
-declare void @llvm.arm.neon.vst1.p0i8.v4i16(i8*, <4 x i16>, i32) nounwind
-declare void @llvm.arm.neon.vst1.p0i8.v4f16(i8*, <4 x half>, i32) nounwind
-declare void @llvm.arm.neon.vst1.p0i8.v2i32(i8*, <2 x i32>, i32) nounwind
-declare void @llvm.arm.neon.vst1.p0i8.v2f32(i8*, <2 x float>, i32) nounwind
-declare void @llvm.arm.neon.vst1.p0i8.v1i64(i8*, <1 x i64>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v8i8(ptr, <8 x i8>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v4i16(ptr, <4 x i16>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v4f16(ptr, <4 x half>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v2i32(ptr, <2 x i32>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v2f32(ptr, <2 x float>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v1i64(ptr, <1 x i64>, i32) nounwind
 
-declare void @llvm.arm.neon.vst1.p0i8.v16i8(i8*, <16 x i8>, i32) nounwind
-declare void @llvm.arm.neon.vst1.p0i8.v8i16(i8*, <8 x i16>, i32) nounwind
-declare void @llvm.arm.neon.vst1.p0i8.v8f16(i8*, <8 x half>, i32) nounwind
-declare void @llvm.arm.neon.vst1.p0i8.v4i32(i8*, <4 x i32>, i32) nounwind
-declare void @llvm.arm.neon.vst1.p0i8.v4f32(i8*, <4 x float>, i32) nounwind
-declare void @llvm.arm.neon.vst1.p0i8.v2i64(i8*, <2 x i64>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v16i8(ptr, <16 x i8>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v8i16(ptr, <8 x i16>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v8f16(ptr, <8 x half>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v4i32(ptr, <4 x i32>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v4f32(ptr, <4 x float>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v2i64(ptr, <2 x i64>, i32) nounwind

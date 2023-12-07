@@ -6,19 +6,19 @@
 import common_lint
 import sys
 
-class GenericCodeLint(common_lint.BaseLint):
-  MAX_LINE_LENGTH = 80
 
-  def RunOnFile(self, filename, lines):
-    common_lint.VerifyLineLength(filename, lines,
-                                 GenericCodeLint.MAX_LINE_LENGTH)
-    common_lint.VerifyTrailingWhitespace(filename, lines)
+class GenericCodeLint(common_lint.BaseLint):
+    MAX_LINE_LENGTH = 80
+
+    def RunOnFile(self, filename, lines):
+        common_lint.VerifyLineLength(filename, lines, GenericCodeLint.MAX_LINE_LENGTH)
+        common_lint.VerifyTrailingWhitespace(filename, lines)
 
 
 def GenericCodeLintMain(filenames):
-  common_lint.RunLintOverAllFiles(GenericCodeLint(), filenames)
-  return 0
+    common_lint.RunLintOverAllFiles(GenericCodeLint(), filenames)
+    return 0
 
 
-if __name__ == '__main__':
-  sys.exit(GenericCodeLintMain(sys.argv[1:]))
+if __name__ == "__main__":
+    sys.exit(GenericCodeLintMain(sys.argv[1:]))

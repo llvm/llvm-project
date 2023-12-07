@@ -5,11 +5,12 @@ include_directories(
 
 set(LLVM_LINK_COMPONENTS
   AArch64CodeGen
-  AArch64Utils
   AArch64Desc
   AArch64Info
+  AArch64Utils
   AsmParser
   CodeGen
+  CodeGenTypes
   Core
   GlobalISel
   MC
@@ -17,14 +18,17 @@ set(LLVM_LINK_COMPONENTS
   SelectionDAG
   Support
   Target
+  TargetParser
   )
 
 add_llvm_target_unittest(AArch64Tests
   AArch64InstPrinterTest.cpp
+  AddressingModes.cpp
   DecomposeStackOffsetTest.cpp
   InstSizes.cpp
   MatrixRegisterAliasing.cpp
   SMEAttributesTest.cpp
+  AArch64SVESchedPseudoTest.cpp
   )
 
 set_property(TARGET AArch64Tests PROPERTY FOLDER "Tests/UnitTests/TargetTests")

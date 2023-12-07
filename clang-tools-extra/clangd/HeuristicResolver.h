@@ -16,6 +16,7 @@ namespace clang {
 
 class ASTContext;
 class CallExpr;
+class CXXBasePath;
 class CXXDependentScopeMemberExpr;
 class DeclarationName;
 class DependentScopeDeclRefExpr;
@@ -94,6 +95,25 @@ private:
   // `E`.
   const Type *resolveExprToType(const Expr *E) const;
   std::vector<const NamedDecl *> resolveExprToDecls(const Expr *E) const;
+
+  // Helper function for HeuristicResolver::resolveDependentMember()
+  // which takes a possibly-dependent type `T` and heuristically
+  // resolves it to a CXXRecordDecl in which we can try name lookup.
+  CXXRecordDecl *resolveTypeToRecordDecl(const Type *T) const;
+
+  // This is a reimplementation of CXXRecordDecl::lookupDependentName()
+  // so that the implementation can call into other HeuristicResolver helpers.
+  // FIXME: Once HeuristicResolver is upstreamed to the clang libraries
+  // (https://github.com/clangd/clangd/discussions/1662),
+  // CXXRecordDecl::lookupDepenedentName() can be removed, and its call sites
+  // can be modified to benefit from the more comprehensive heuristics offered
+  // by HeuristicResolver instead.
+  std::vector<const NamedDecl *> lookupDependentName(
+      CXXRecordDecl *RD, DeclarationName Name,
+      llvm::function_ref<bool(const NamedDecl *ND)> Filter) const;
+  bool findOrdinaryMemberInDependentClasses(const CXXBaseSpecifier *Specifier,
+                                            CXXBasePath &Path,
+                                            DeclarationName Name) const;
 };
 
 } // namespace clangd

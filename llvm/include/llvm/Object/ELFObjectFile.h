@@ -16,10 +16,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
@@ -34,6 +32,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
 
@@ -48,6 +48,12 @@ extern const llvm::EnumEntry<unsigned> ElfSymbolTypes[NumElfSymbolTypes];
 
 class elf_symbol_iterator;
 
+struct ELFPltEntry {
+  StringRef Section;
+  std::optional<DataRefImpl> Symbol;
+  uint64_t Address;
+};
+
 class ELFObjectFileBase : public ObjectFile {
   friend class ELFRelocationRef;
   friend class ELFSectionRef;
@@ -55,7 +61,7 @@ class ELFObjectFileBase : public ObjectFile {
 
   SubtargetFeatures getMIPSFeatures() const;
   SubtargetFeatures getARMFeatures() const;
-  SubtargetFeatures getRISCVFeatures() const;
+  Expected<SubtargetFeatures> getRISCVFeatures() const;
   SubtargetFeatures getLoongArchFeatures() const;
 
   StringRef getAMDGPUCPUName() const;
@@ -87,7 +93,7 @@ public:
 
   static bool classof(const Binary *v) { return v->isELF(); }
 
-  SubtargetFeatures getFeatures() const override;
+  Expected<SubtargetFeatures> getFeatures() const override;
 
   std::optional<StringRef> tryGetCPUName() const override;
 
@@ -97,8 +103,7 @@ public:
 
   virtual uint16_t getEMachine() const = 0;
 
-  std::vector<std::pair<std::optional<DataRefImpl>, uint64_t>>
-  getPltAddresses() const;
+  std::vector<ELFPltEntry> getPltEntries() const;
 
   /// Returns a vector containing a symbol version for each dynamic symbol.
   /// Returns an empty vector if version sections do not exist.
@@ -402,7 +407,7 @@ protected:
   // This flag is used for classof, to distinguish ELFObjectFile from
   // its subclass. If more subclasses will be created, this flag will
   // have to become an enum.
-  bool isDyldELFObject;
+  bool isDyldELFObject = false;
 
 public:
   ELFObjectFile(ELFObjectFile<ELFT> &&Other);
@@ -431,6 +436,8 @@ public:
 
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
+
+  bool is64Bit() const override { return getBytesInAddress() == 8; }
 
   elf_symbol_iterator dynamic_symbol_begin() const;
   elf_symbol_iterator dynamic_symbol_end() const;
@@ -523,10 +530,10 @@ Expected<StringRef> ELFObjectFile<ELFT>::getSymbolName(DataRefImpl Sym) const {
 
   // If the symbol name is empty use the section name.
   if ((*SymOrErr)->getType() == ELF::STT_SECTION) {
-    if (Expected<section_iterator> SecOrErr = getSymbolSection(Sym)) {
-      consumeError(Name.takeError());
+    Expected<section_iterator> SecOrErr = getSymbolSection(Sym);
+    if (SecOrErr)
       return (*SecOrErr)->getName();
-    }
+    return SecOrErr.takeError();
   }
   return Name;
 }
@@ -754,10 +761,21 @@ Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
     }
     if (ESym->getType() == ELF::STT_FUNC && (ESym->st_value & 1) == 1)
       Result |= SymbolRef::SF_Thumb;
+  } else if (EF.getHeader().e_machine == ELF::EM_CSKY) {
+    if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
+      StringRef Name = *NameOrErr;
+      if (Name.startswith("$d") || Name.startswith("$t"))
+        Result |= SymbolRef::SF_FormatSpecific;
+    } else {
+      // TODO: Actually report errors helpfully.
+      consumeError(NameOrErr.takeError());
+    }
   } else if (EF.getHeader().e_machine == ELF::EM_RISCV) {
     if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
-      // Mark empty name symbols used for label differences.
-      if (NameOrErr->empty())
+      StringRef Name = *NameOrErr;
+      // Mark empty name symbols (used for label differences) and mapping
+      // symbols.
+      if (Name.empty() || Name.startswith("$d") || Name.startswith("$x"))
         Result |= SymbolRef::SF_FormatSpecific;
     } else {
       // TODO: Actually report errors helpfully.
@@ -860,13 +878,12 @@ Expected<ArrayRef<uint8_t>>
 ELFObjectFile<ELFT>::getSectionContents(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
   if (EShdr->sh_type == ELF::SHT_NOBITS)
-    return makeArrayRef((const uint8_t *)base(), 0);
+    return ArrayRef((const uint8_t *)base(), (size_t)0);
   if (Error E =
           checkOffset(getMemoryBufferRef(),
                       (uintptr_t)base() + EShdr->sh_offset, EShdr->sh_size))
     return std::move(E);
-  return makeArrayRef((const uint8_t *)base() + EShdr->sh_offset,
-                      EShdr->sh_size);
+  return ArrayRef((const uint8_t *)base() + EShdr->sh_offset, EShdr->sh_size);
 }
 
 template <class ELFT>
@@ -1217,6 +1234,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "elf32-amdgpu";
     case ELF::EM_LOONGARCH:
       return "elf32-loongarch";
+    case ELF::EM_XTENSA:
+      return "elf32-xtensa";
     default:
       return "elf32-unknown";
     }
@@ -1340,6 +1359,9 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
     default:
       report_fatal_error("Invalid ELFCLASS!");
     }
+
+  case ELF::EM_XTENSA:
+    return Triple::xtensa;
 
   default:
     return Triple::UnknownArch;

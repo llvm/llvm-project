@@ -13,12 +13,12 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     main_spec = lldb.SBFileSpec("main.cpp", False)
 
-    @skipIfWindows # This test is flaky on Windows
+    @skipIfWindows  # This test is flaky on Windows
     def test_watchpoint_before_thread_start(self):
         """Test that we can hit a watchpoint we set before starting another thread"""
         self.do_watchpoint_test("Before running the thread")
 
-    @skipIfWindows # This test is flaky on Windows
+    @skipIfWindows  # This test is flaky on Windows
     def test_watchpoint_after_thread_launch(self):
         """Test that we can hit a watchpoint we set after launching another thread"""
         self.do_watchpoint_test("After launching the thread")
@@ -35,15 +35,12 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
         self.expect(
             "watchpoint set variable -w write g_val",
             WATCHPOINT_CREATED,
-            substrs=[
-                'Watchpoint created',
-                'size = 4',
-                'type = w'])
+            substrs=["Watchpoint created", "size = 4", "type = w"],
+        )
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should be 0 initially.
-        self.expect("watchpoint list -v",
-                    substrs=['hit_count = 0'])
+        self.expect("watchpoint list -v", substrs=["hit_count = 0"])
 
         self.runCmd("process continue")
 
@@ -56,29 +53,27 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should now be 1.
-        self.expect("watchpoint list -v",
-                    substrs=['hit_count = 1'])
+        self.expect("watchpoint list -v", substrs=["hit_count = 1"])
 
     def test_watchpoint_multiple_threads_wp_set_and_then_delete(self):
         """Test that lldb watchpoint works for multiple threads, and after the watchpoint is deleted, the watchpoint event should no longer fires."""
         self.build()
         self.setTearDownCleanup()
 
-        lldbutil.run_to_source_breakpoint(self, "After running the thread", self.main_spec)
+        lldbutil.run_to_source_breakpoint(
+            self, "After running the thread", self.main_spec
+        )
 
         # Now let's set a write-type watchpoint for variable 'g_val'.
         self.expect(
             "watchpoint set variable -w write g_val",
             WATCHPOINT_CREATED,
-            substrs=[
-                'Watchpoint created',
-                'size = 4',
-                'type = w'])
+            substrs=["Watchpoint created", "size = 4", "type = w"],
+        )
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should be 0 initially.
-        self.expect("watchpoint list -v",
-                    substrs=['hit_count = 0'])
+        self.expect("watchpoint list -v", substrs=["hit_count = 0"])
 
         watchpoint_stops = 0
         while True:
@@ -93,17 +88,18 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
                 self.runCmd("thread backtrace all")
                 watchpoint_stops += 1
                 if watchpoint_stops > 1:
-                    self.fail(
-                        "Watchpoint hits not supposed to exceed 1 by design!")
+                    self.fail("Watchpoint hits not supposed to exceed 1 by design!")
                 # Good, we verified that the watchpoint works!  Now delete the
                 # watchpoint.
                 if self.TraceOn():
                     print(
-                        "watchpoint_stops=%d at the moment we delete the watchpoint" %
-                        watchpoint_stops)
+                        "watchpoint_stops=%d at the moment we delete the watchpoint"
+                        % watchpoint_stops
+                    )
                 self.runCmd("watchpoint delete 1")
-                self.expect("watchpoint list -v",
-                            substrs=['No watchpoints currently set.'])
+                self.expect(
+                    "watchpoint list -v", substrs=["No watchpoints currently set."]
+                )
                 continue
             else:
                 self.fail("The stop reason should be either break or watchpoint")

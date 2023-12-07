@@ -54,5 +54,23 @@ Symbol::targets(ArchitectureSet Architectures) const {
   return make_filter_range(Targets, FN);
 }
 
+bool Symbol::operator==(const Symbol &O) const {
+  // Older Tapi files do not express all these symbol flags. In those
+  // cases, ignore those differences.
+  auto RemoveFlag = [](const Symbol &Sym, SymbolFlags &Flag) {
+    if (Sym.isData())
+      Flag &= ~SymbolFlags::Data;
+    if (Sym.isText())
+      Flag &= ~SymbolFlags::Text;
+  };
+  SymbolFlags LHSFlags = Flags;
+  SymbolFlags RHSFlags = O.Flags;
+  // Ignore Text and Data for now.
+  RemoveFlag(*this, LHSFlags);
+  RemoveFlag(O, RHSFlags);
+  return std::tie(Name, Kind, Targets, LHSFlags) ==
+         std::tie(O.Name, O.Kind, O.Targets, RHSFlags);
+}
+
 } // end namespace MachO.
 } // end namespace llvm.

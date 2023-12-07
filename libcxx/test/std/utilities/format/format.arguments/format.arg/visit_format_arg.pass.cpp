@@ -6,16 +6,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
-
-// This test requires the dylib support introduced in D92214.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // <format>
 
 // template<class Visitor, class Context>
 //   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg);
 
+#include <algorithm>
 #include <format>
 #include <cassert>
 #include <type_traits>

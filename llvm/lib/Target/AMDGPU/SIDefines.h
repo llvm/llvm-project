@@ -16,11 +16,36 @@ namespace llvm {
 
 // This needs to be kept in sync with the field bits in SIRegisterClass.
 enum SIRCFlags : uint8_t {
-  // For vector registers.
-  HasVGPR = 1 << 0,
-  HasAGPR = 1 << 1,
-  HasSGPR = 1 << 2
-}; // enum SIRCFlags
+  RegTupleAlignUnitsWidth = 2,
+  HasVGPRBit = RegTupleAlignUnitsWidth,
+  HasAGPRBit,
+  HasSGPRbit,
+
+  HasVGPR = 1 << HasVGPRBit,
+  HasAGPR = 1 << HasAGPRBit,
+  HasSGPR = 1 << HasSGPRbit,
+
+  RegTupleAlignUnitsMask = (1 << RegTupleAlignUnitsWidth) - 1,
+  RegKindMask = (HasVGPR | HasAGPR | HasSGPR)
+}; // enum SIRCFlagsr
+
+namespace SIEncodingFamily {
+// This must be kept in sync with the SIEncodingFamily class in SIInstrInfo.td
+// and the columns of the getMCOpcodeGen table.
+enum {
+  SI = 0,
+  VI = 1,
+  SDWA = 2,
+  SDWA9 = 3,
+  GFX80 = 4,
+  GFX9 = 5,
+  GFX10 = 6,
+  SDWA10 = 7,
+  GFX90A = 8,
+  GFX940 = 9,
+  GFX11 = 10,
+};
+}
 
 namespace SIInstrFlags {
 // This needs to be kept in sync with the field bits in InstSI.
@@ -130,6 +155,15 @@ enum : uint64_t {
 
   // Is a WMMA instruction.
   IsWMMA = UINT64_C(1) << 59,
+
+  // Whether tied sources will be read.
+  TiedSourceNotRead = UINT64_C(1) << 60,
+
+  // Is never uniform.
+  IsNeverUniform = UINT64_C(1) << 61,
+
+  // ds_gws_* instructions.
+  GWS = UINT64_C(1) << 62,
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
@@ -191,6 +225,12 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_AC_V2INT32,
   OPERAND_REG_INLINE_AC_V2FP32,
 
+  // Operand for source modifiers for VOP instructions
+  OPERAND_INPUT_MODS,
+
+  // Operand for SDWA instructions
+  OPERAND_SDWA_VOPC_DST,
+
   OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
 
@@ -204,13 +244,7 @@ enum OperandType : unsigned {
   OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
 
   OPERAND_KIMM_FIRST = OPERAND_KIMM32,
-  OPERAND_KIMM_LAST = OPERAND_KIMM16,
-
-  // Operand for source modifiers for VOP instructions
-  OPERAND_INPUT_MODS,
-
-  // Operand for SDWA instructions
-  OPERAND_SDWA_VOPC_DST
+  OPERAND_KIMM_LAST = OPERAND_KIMM16
 
 };
 }
@@ -219,6 +253,7 @@ enum OperandType : unsigned {
 // NEG and SEXT share same bit-mask because they can't be set simultaneously.
 namespace SISrcMods {
   enum : unsigned {
+   NONE = 0,
    NEG = 1 << 0,   // Floating-point negate modifier
    ABS = 1 << 1,   // Floating-point absolute modifier
    SEXT = 1 << 0,  // Integer sign-extend modifier
@@ -330,7 +365,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_SAVEWAVE = 4,           // added in GFX8, removed in GFX11
   ID_STALL_WAVE_GEN = 5,     // added in GFX9
   ID_HALT_WAVES = 6,         // added in GFX9
-  ID_ORDERED_PS_DONE = 7,    // added in GFX9
+  ID_ORDERED_PS_DONE = 7,    // added in GFX9, removed in GFX11
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
   ID_GET_DOORBELL = 10,      // added in GFX9, removed in GFX11
@@ -398,18 +433,25 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_TBA_HI = 17,
   ID_TMA_LO = 18,
   ID_TMA_HI = 19,
-  ID_XCC_ID = 20,
-  ID_SQ_PERF_SNAPSHOT_DATA = 21,
-  ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
-  ID_SQ_PERF_SNAPSHOT_PC_LO = 23,
-  ID_SQ_PERF_SNAPSHOT_PC_HI = 24,
   ID_FLAT_SCR_LO = 20,
   ID_FLAT_SCR_HI = 21,
   ID_XNACK_MASK = 22,
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
+  ID_PERF_SNAPSHOT_DATA = 27,
   ID_SHADER_CYCLES = 29,
+
+  // Register numbers reused in GFX11+
+  ID_PERF_SNAPSHOT_PC_LO = 18,
+  ID_PERF_SNAPSHOT_PC_HI = 19,
+
+  // GFX940 specific registers
+  ID_XCC_ID = 20,
+  ID_SQ_PERF_SNAPSHOT_DATA = 21,
+  ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
+  ID_SQ_PERF_SNAPSHOT_PC_LO = 23,
+  ID_SQ_PERF_SNAPSHOT_PC_HI = 24,
 
   ID_SHIFT_ = 0,
   ID_WIDTH_ = 6,
@@ -896,6 +938,10 @@ enum Offset_COV5 : unsigned {
   HOSTCALL_PTR_OFFSET = 80,
   MULTIGRID_SYNC_ARG_OFFSET = 88,
   HEAP_PTR_OFFSET = 96,
+
+  DEFAULT_QUEUE_OFFSET = 104,
+  COMPLETION_ACTION_OFFSET = 112,
+
   PRIVATE_BASE_OFFSET = 192,
   SHARED_BASE_OFFSET = 196,
   QUEUE_PTR_OFFSET = 200,
@@ -904,8 +950,12 @@ enum Offset_COV5 : unsigned {
 } // namespace ImplicitArg
 
 namespace VirtRegFlag {
-// Virtual Register Flags.
-enum Register_Flag : uint8_t { WWM_REG = 0 };
+// Virtual register flags used for various target specific handlings during
+// codegen.
+enum Register_Flag : uint8_t {
+  // Register operand in a whole-wave mode operation.
+  WWM_REG = 1 << 0,
+};
 
 } // namespace VirtRegFlag
 

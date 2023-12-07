@@ -7,14 +7,14 @@
 define <2 x float> @callee_v2f32(<2 x float> %x, <2 x float> %y) {
 ; RV64-LABEL: callee_v2f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fmv.w.x ft0, a2
-; RV64-NEXT:    fmv.w.x ft1, a0
-; RV64-NEXT:    fmv.w.x ft2, a3
-; RV64-NEXT:    fmv.w.x ft3, a1
-; RV64-NEXT:    fadd.s ft2, ft3, ft2
-; RV64-NEXT:    fadd.s ft0, ft1, ft0
-; RV64-NEXT:    fmv.x.w a0, ft0
-; RV64-NEXT:    fmv.x.w a1, ft2
+; RV64-NEXT:    fmv.w.x fa5, a2
+; RV64-NEXT:    fmv.w.x fa4, a0
+; RV64-NEXT:    fmv.w.x fa3, a3
+; RV64-NEXT:    fmv.w.x fa2, a1
+; RV64-NEXT:    fadd.s fa3, fa2, fa3
+; RV64-NEXT:    fadd.s fa5, fa4, fa5
+; RV64-NEXT:    fmv.x.w a0, fa5
+; RV64-NEXT:    fmv.x.w a1, fa3
 ; RV64-NEXT:    ret
 ;
 ; RV64LP64F-LABEL: callee_v2f32:
@@ -29,34 +29,34 @@ define <2 x float> @callee_v2f32(<2 x float> %x, <2 x float> %y) {
 define <4 x float> @callee_v4f32(<4 x float> %x, <4 x float> %y) {
 ; RV64-LABEL: callee_v4f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fmv.w.x ft0, a4
-; RV64-NEXT:    fmv.w.x ft1, a7
-; RV64-NEXT:    fmv.w.x ft2, a3
-; RV64-NEXT:    fmv.w.x ft3, a6
-; RV64-NEXT:    fmv.w.x ft4, a2
-; RV64-NEXT:    fmv.w.x ft5, a5
-; RV64-NEXT:    fmv.w.x ft6, a1
-; RV64-NEXT:    flw ft7, 0(sp)
-; RV64-NEXT:    fadd.s ft5, ft6, ft5
-; RV64-NEXT:    fadd.s ft3, ft4, ft3
-; RV64-NEXT:    fadd.s ft1, ft2, ft1
-; RV64-NEXT:    fadd.s ft0, ft0, ft7
-; RV64-NEXT:    fsw ft0, 12(a0)
-; RV64-NEXT:    fsw ft1, 8(a0)
-; RV64-NEXT:    fsw ft3, 4(a0)
-; RV64-NEXT:    fsw ft5, 0(a0)
+; RV64-NEXT:    fmv.w.x fa5, a4
+; RV64-NEXT:    fmv.w.x fa4, a7
+; RV64-NEXT:    fmv.w.x fa3, a3
+; RV64-NEXT:    fmv.w.x fa2, a6
+; RV64-NEXT:    fmv.w.x fa1, a2
+; RV64-NEXT:    fmv.w.x fa0, a5
+; RV64-NEXT:    fmv.w.x ft0, a1
+; RV64-NEXT:    flw ft1, 0(sp)
+; RV64-NEXT:    fadd.s fa0, ft0, fa0
+; RV64-NEXT:    fadd.s fa2, fa1, fa2
+; RV64-NEXT:    fadd.s fa4, fa3, fa4
+; RV64-NEXT:    fadd.s fa5, fa5, ft1
+; RV64-NEXT:    fsw fa5, 12(a0)
+; RV64-NEXT:    fsw fa4, 8(a0)
+; RV64-NEXT:    fsw fa2, 4(a0)
+; RV64-NEXT:    fsw fa0, 0(a0)
 ; RV64-NEXT:    ret
 ;
 ; RV64LP64F-LABEL: callee_v4f32:
 ; RV64LP64F:       # %bb.0:
-; RV64LP64F-NEXT:    fadd.s ft0, fa0, fa4
-; RV64LP64F-NEXT:    fadd.s ft1, fa1, fa5
-; RV64LP64F-NEXT:    fadd.s ft2, fa2, fa6
-; RV64LP64F-NEXT:    fadd.s ft3, fa3, fa7
-; RV64LP64F-NEXT:    fsw ft3, 12(a0)
-; RV64LP64F-NEXT:    fsw ft2, 8(a0)
-; RV64LP64F-NEXT:    fsw ft1, 4(a0)
-; RV64LP64F-NEXT:    fsw ft0, 0(a0)
+; RV64LP64F-NEXT:    fadd.s fa4, fa0, fa4
+; RV64LP64F-NEXT:    fadd.s fa5, fa1, fa5
+; RV64LP64F-NEXT:    fadd.s fa2, fa2, fa6
+; RV64LP64F-NEXT:    fadd.s fa3, fa3, fa7
+; RV64LP64F-NEXT:    fsw fa3, 12(a0)
+; RV64LP64F-NEXT:    fsw fa2, 8(a0)
+; RV64LP64F-NEXT:    fsw fa5, 4(a0)
+; RV64LP64F-NEXT:    fsw fa4, 0(a0)
 ; RV64LP64F-NEXT:    ret
   %z = fadd <4 x float> %x, %y
   ret <4 x float> %z

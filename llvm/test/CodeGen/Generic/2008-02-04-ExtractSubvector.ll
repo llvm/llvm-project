@@ -9,6 +9,6 @@ bb15:		; preds = %bb15, %entry
 	br i1 false, label %bb30, label %bb15
 
 bb30:		; preds = %bb15
-	store <8 x double> %tmp21, <8 x double>* null, align 64
+	store <8 x double> %tmp21, ptr null, align 64
 	ret i32 0
 }

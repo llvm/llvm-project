@@ -148,7 +148,7 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
   pthread_attr_t attr;
   pthread_attr_init(&attr);
   CHECK_EQ(pthread_getattr_np(pthread_self(), &attr), 0);
-  my_pthread_attr_getstack(&attr, &stackaddr, &stacksize);
+  internal_pthread_attr_getstack(&attr, &stackaddr, &stacksize);
   pthread_attr_destroy(&attr);
 #endif  // SANITIZER_SOLARIS
 
@@ -507,8 +507,13 @@ static void GetTls(uptr *addr, uptr *size) {
           ThreadDescriptorSize();
   *size = g_tls_size + ThreadDescriptorSize();
 #elif SANITIZER_GLIBC && defined(__loongarch__)
+#  ifdef __clang__
   *addr = reinterpret_cast<uptr>(__builtin_thread_pointer()) -
           ThreadDescriptorSize();
+#  else
+  asm("or %0,$tp,$zero" : "=r"(*addr));
+  *addr -= ThreadDescriptorSize();
+#  endif
   *size = g_tls_size + ThreadDescriptorSize();
 #elif SANITIZER_GLIBC && defined(__powerpc64__)
   // Workaround for glibc<2.25(?). 2.27 is known to not need this.
@@ -578,6 +583,7 @@ static void GetTls(uptr *addr, uptr *size) {
       *addr = (uptr)tcb->tcb_dtv[1];
     }
   }
+#else
 #error "Unknown OS"
 #endif
 }

@@ -10,6 +10,7 @@
 #include "tests/scudo_unit_test.h"
 
 #include "common.h"
+#include "mem_map.h"
 #include <algorithm>
 #include <fstream>
 
@@ -34,58 +35,41 @@ TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
   const uptr Size = 1ull << 30;
   const uptr Threshold = Size >> 3;
 
-  MapPlatformData Data = {};
-  void *P = map(nullptr, Size, "ResidentMemorySize", 0, &Data);
-  ASSERT_NE(nullptr, P);
+  MemMapT MemMap;
+  ASSERT_TRUE(MemMap.map(/*Addr=*/0U, Size, "ResidentMemorySize"));
+  ASSERT_NE(MemMap.getBase(), 0U);
+  void *P = reinterpret_cast<void *>(MemMap.getBase());
   EXPECT_LT(getResidentMemorySize(), OnStart + Threshold);
 
   memset(P, 1, Size);
   EXPECT_GT(getResidentMemorySize(), OnStart + Size - Threshold);
 
-  releasePagesToOS((uptr)P, 0, Size, &Data);
+  MemMap.releasePagesToOS(MemMap.getBase(), Size);
   EXPECT_LT(getResidentMemorySize(), OnStart + Threshold);
 
   memset(P, 1, Size);
   EXPECT_GT(getResidentMemorySize(), OnStart + Size - Threshold);
 
-  unmap(P, Size, 0, &Data);
+  MemMap.unmap(MemMap.getBase(), Size);
 }
 
 TEST(ScudoCommonTest, Zeros) {
   const uptr Size = 1ull << 20;
 
-  MapPlatformData Data = {};
-  uptr *P = reinterpret_cast<uptr *>(map(nullptr, Size, "Zeros", 0, &Data));
-  const ptrdiff_t N = Size / sizeof(*P);
-  ASSERT_NE(nullptr, P);
+  MemMapT MemMap;
+  ASSERT_TRUE(MemMap.map(/*Addr=*/0U, Size, "Zeros"));
+  ASSERT_NE(MemMap.getBase(), 0U);
+  uptr *P = reinterpret_cast<uptr *>(MemMap.getBase());
+  const ptrdiff_t N = Size / sizeof(uptr);
   EXPECT_EQ(std::count(P, P + N, 0), N);
 
   memset(P, 1, Size);
   EXPECT_EQ(std::count(P, P + N, 0), 0);
 
-  releasePagesToOS((uptr)P, 0, Size, &Data);
+  MemMap.releasePagesToOS(MemMap.getBase(), Size);
   EXPECT_EQ(std::count(P, P + N, 0), N);
 
-  unmap(P, Size, 0, &Data);
+  MemMap.unmap(MemMap.getBase(), Size);
 }
-
-#if SCUDO_LINUX
-TEST(ScudoCommonTest, GetRssFromBuffer) {
-  constexpr int64_t AllocSize = 10000000;
-  constexpr int64_t Error = 3000000;
-  constexpr size_t Runs = 10;
-
-  int64_t Rss = scudo::GetRSS();
-  EXPECT_GT(Rss, 0);
-
-  std::vector<std::unique_ptr<char[]>> Allocs(Runs);
-  for (auto &Alloc : Allocs) {
-    Alloc.reset(new char[AllocSize]());
-    int64_t Prev = Rss;
-    Rss = scudo::GetRSS();
-    EXPECT_LE(std::abs(Rss - AllocSize - Prev), Error);
-  }
-}
-#endif // SCUDO_LINUX
 
 } // namespace scudo

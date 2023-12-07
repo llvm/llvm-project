@@ -29,12 +29,12 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -71,8 +71,8 @@ const ElementRegion *StoreManager::GetElementZeroRegion(const SubRegion *R,
   return MRMgr.getElementRegion(T, idx, R, Ctx);
 }
 
-Optional<const MemRegion *> StoreManager::castRegion(const MemRegion *R,
-                                                     QualType CastToTy) {
+std::optional<const MemRegion *> StoreManager::castRegion(const MemRegion *R,
+                                                          QualType CastToTy) {
   ASTContext &Ctx = StateMgr.getContext();
 
   // Handle casts to Objective-C objects.
@@ -144,6 +144,7 @@ Optional<const MemRegion *> StoreManager::castRegion(const MemRegion *R,
     case MemRegion::NonParamVarRegionKind:
     case MemRegion::ParamVarRegionKind:
     case MemRegion::CXXTempObjectRegionKind:
+    case MemRegion::CXXLifetimeExtendedObjectRegionKind:
     case MemRegion::CXXBaseObjectRegionKind:
     case MemRegion::CXXDerivedObjectRegionKind:
       return MakeElementRegion(cast<SubRegion>(R), PointeeTy);
@@ -256,10 +257,8 @@ SVal StoreManager::evalDerivedToBase(SVal Derived, const CastExpr *Cast) {
 
   // Walk through the cast path to create nested CXXBaseRegions.
   SVal Result = Derived;
-  for (CastExpr::path_const_iterator I = Cast->path_begin(),
-                                     E = Cast->path_end();
-       I != E; ++I) {
-    Result = evalDerivedToBase(Result, (*I)->getType(), (*I)->isVirtual());
+  for (const CXXBaseSpecifier *Base : Cast->path()) {
+    Result = evalDerivedToBase(Result, Base->getType(), Base->isVirtual());
   }
   return Result;
 }
@@ -314,7 +313,8 @@ static const CXXRecordDecl *getCXXRecordType(const MemRegion *MR) {
   return nullptr;
 }
 
-Optional<SVal> StoreManager::evalBaseToDerived(SVal Base, QualType TargetType) {
+std::optional<SVal> StoreManager::evalBaseToDerived(SVal Base,
+                                                    QualType TargetType) {
   const MemRegion *MR = Base.getAsRegion();
   if (!MR)
     return UnknownVal();

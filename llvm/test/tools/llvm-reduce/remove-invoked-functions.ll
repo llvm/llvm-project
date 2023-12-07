@@ -1,12 +1,12 @@
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
-; RUN: cat %t | FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL %s
+; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=instructions --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL %s < %t
 
 ; CHECK-INTERESTINGNESS: define i32 @maybe_throwing_callee(
-; CHECK-FINAL: define i32 @maybe_throwing_callee()
+; CHECK-FINAL: define i32 @maybe_throwing_callee(i32 %arg)
 define i32 @maybe_throwing_callee(i32 %arg) {
 ; CHECK-ALL: call void @thrown()
 ; CHECK-INTERESTINGNESS: ret i32
-; CHECK-FINAL: ret i32 0
+; CHECK-FINAL: ret i32 %arg
   call void @thrown()
   ret i32 %arg
 }
@@ -18,7 +18,7 @@ declare void @did_not_throw(i32)
 declare void @thrown()
 
 ; CHECK-INTERESTINGNESS: define void @caller(
-; CHECK-FINAL: define void @caller()
+; CHECK-FINAL: define void @caller(i32 %arg)
 define void @caller(i32 %arg) personality ptr @__gxx_personality_v0 {
 ; CHECK-ALL: bb:
 bb:

@@ -2,10 +2,11 @@
 // calculations. Emulate i16 ops with i8 ops.
 
 // RUN: mlir-opt %s --test-arith-emulate-wide-int="widest-int-supported=8" \
-// RUN:             --convert-scf-to-cf --convert-cf-to-llvm --convert-vector-to-llvm \
-// RUN:             --convert-func-to-llvm --convert-arith-to-llvm | \
+// RUN:             --convert-vector-to-scf --convert-scf-to-cf --convert-cf-to-llvm \
+// RUN:             --convert-vector-to-llvm --convert-func-to-llvm --convert-arith-to-llvm \
+// RUN:             --reconcile-unrealized-casts | \
 // RUN:   mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:      --shared-libs="%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext" | \
+// RUN:      --shared-libs="%mlir_c_runner_utils,%mlir_runner_utils" | \
 // RUN:   FileCheck %s
 
 // CHECK-NOT: Mismatch

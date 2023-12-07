@@ -23,7 +23,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
@@ -242,7 +241,7 @@ MemoryEffects GlobalsAAResult::getMemoryEffects(const Function *F) {
   if (FunctionInfo *FI = getFunctionInfo(F))
     return MemoryEffects(FI->getModRefInfo());
 
-  return AAResultBase::getMemoryEffects(F);
+  return MemoryEffects::unknown();
 }
 
 /// Returns the function info for the function, or null if we don't have
@@ -593,20 +592,8 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
 
         // We handle calls specially because the graph-relevant aspects are
         // handled above.
-        if (auto *Call = dyn_cast<CallBase>(&I)) {
-          if (Function *Callee = Call->getCalledFunction()) {
-            // The callgraph doesn't include intrinsic calls.
-            if (Callee->isIntrinsic()) {
-              if (isa<DbgInfoIntrinsic>(Call))
-                // Don't let dbg intrinsics affect alias info.
-                continue;
-
-              MemoryEffects Behaviour = AAResultBase::getMemoryEffects(Callee);
-              FI.addModRefInfo(Behaviour.getModRef());
-            }
-          }
+        if (isa<CallBase>(&I))
           continue;
-        }
 
         // All non-call instructions we use the primary predicates for whether
         // they read or write memory.
@@ -804,10 +791,7 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
 
     // FIXME: It would be good to handle other obvious no-alias cases here, but
     // it isn't clear how to do so reasonably without building a small version
-    // of BasicAA into this code. We could recurse into AAResultBase::alias
-    // here but that seems likely to go poorly as we're inside the
-    // implementation of such a query. Until then, just conservatively return
-    // false.
+    // of BasicAA into this code.
     return false;
   } while (!Inputs.empty());
 
@@ -905,7 +889,7 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
     if ((GV1 || GV2) && GV1 != GV2)
       return AliasResult::NoAlias;
 
-  return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
+  return AliasResult::MayAlias;
 }
 
 ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,

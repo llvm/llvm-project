@@ -33,7 +33,7 @@
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 extern "C" {
 extern char **environ;

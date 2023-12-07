@@ -9,9 +9,9 @@
 
 %T0_30 = type <4 x i1>
 %T1_30 = type <4 x i32>
-define void @func30(%T0_30 %v0, %T1_30* %p1) {
+define void @func30(%T0_30 %v0, ptr %p1) {
   %r = zext %T0_30 %v0 to %T1_30
-  store %T1_30 %r, %T1_30* %p1
+  store %T1_30 %r, ptr %p1
   ret void
 }
 

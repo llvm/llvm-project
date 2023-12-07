@@ -17,7 +17,6 @@
 
 
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -175,6 +174,8 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
     return false;
   }
 }
+
+char ClangUtilityFunction::ClangUtilityFunctionHelper::ID;
 
 void ClangUtilityFunction::ClangUtilityFunctionHelper::ResetDeclMap(
     ExecutionContext &exe_ctx, bool keep_result_in_memory) {

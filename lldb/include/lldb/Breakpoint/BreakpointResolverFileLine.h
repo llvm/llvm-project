@@ -11,6 +11,7 @@
 
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Core/SourceLocationSpec.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -24,7 +25,7 @@ public:
   BreakpointResolverFileLine(
       const lldb::BreakpointSP &bkpt, lldb::addr_t offset, bool skip_prologue,
       const SourceLocationSpec &location_spec,
-      llvm::Optional<llvm::StringRef> removed_prefix_opt = std::nullopt);
+      std::optional<llvm::StringRef> removed_prefix_opt = std::nullopt);
 
   static BreakpointResolver *
   CreateFromStructuredData(const lldb::BreakpointSP &bkpt,
@@ -58,14 +59,14 @@ public:
 
 protected:
   void FilterContexts(SymbolContextList &sc_list);
-  void DeduceSourceMapping(SymbolContextList &sc_list);
+  void DeduceSourceMapping(const SymbolContextList &sc_list);
 
   friend class Breakpoint;
   SourceLocationSpec m_location_spec;
   bool m_skip_prologue;
   // Any previously removed file path prefix by reverse source mapping.
   // This is used to auto deduce source map if needed.
-  llvm::Optional<llvm::StringRef> m_removed_prefix_opt;
+  std::optional<llvm::StringRef> m_removed_prefix_opt;
 
 private:
   BreakpointResolverFileLine(const BreakpointResolverFileLine &) = delete;

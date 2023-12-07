@@ -148,6 +148,14 @@ adcw $0, 64(%edx,%eax)
 // CHECK: encoding: [0x66,0x83,0x12,0x00]        
 adcw $0, (%edx) 
 
+// CHECK: adcxl	%edx, %eax
+// CHECK: encoding: [0x66,0x0f,0x38,0xf6,0xc2]
+adcxl	%edx, %eax
+
+// CHECK: adcxl	(%edx), %eax
+// CHECK: encoding: [0x66,0x0f,0x38,0xf6,0x02]
+adcxl	(%edx), %eax
+
 // CHECK: addb $0, -485498096(%edx,%eax,4) 
 // CHECK: encoding: [0x80,0x84,0x82,0x10,0xe3,0x0f,0xe3,0x00]        
 addb $0, -485498096(%edx,%eax,4) 
@@ -279,6 +287,14 @@ addw $0, 64(%edx,%eax)
 // CHECK: addw $0, (%edx) 
 // CHECK: encoding: [0x66,0x83,0x02,0x00]        
 addw $0, (%edx) 
+
+// CHECK: adoxl	%edx, %eax
+// CHECK: encoding: [0xf3,0x0f,0x38,0xf6,0xc2]
+adoxl	%edx, %eax
+
+// CHECK: adoxl	(%edx), %eax
+// CHECK: encoding: [0xf3,0x0f,0x38,0xf6,0x02]
+adoxl	(%edx), %eax
 
 // CHECK: andb $0, -485498096(%edx,%eax,4) 
 // CHECK: encoding: [0x80,0xa4,0x82,0x10,0xe3,0x0f,0xe3,0x00]        

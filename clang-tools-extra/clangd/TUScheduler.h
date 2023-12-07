@@ -13,15 +13,16 @@
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
-#include "index/CanonicalIncludes.h"
+#include "clang-include-cleaner/Record.h"
 #include "support/Function.h"
 #include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "support/Threading.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <chrono>
+#include <memory>
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -161,10 +162,9 @@ public:
   /// Called on the AST that was built for emitting the preamble. The built AST
   /// contains only AST nodes from the #include directives at the start of the
   /// file. AST node in the current file should be observed on onMainAST call.
-  virtual void onPreambleAST(PathRef Path, llvm::StringRef Version,
-                             const CompilerInvocation &CI, ASTContext &Ctx,
-                             Preprocessor &PP, const CanonicalIncludes &) {}
-
+  virtual void
+  onPreambleAST(PathRef Path, llvm::StringRef Version, CapturedASTCtx Ctx,
+                std::shared_ptr<const include_cleaner::PragmaIncludes>) {}
   /// The argument function is run under the critical section guarding against
   /// races when closing the files.
   using PublishFn = llvm::function_ref<void(llvm::function_ref<void()>)>;
@@ -352,7 +352,7 @@ public:
   // FIXME: remove this when there is proper index support via build system
   // integration.
   // FIXME: move to ClangdServer via createProcessingContext.
-  static llvm::Optional<llvm::StringRef> getFileBeingProcessedInContext();
+  static std::optional<llvm::StringRef> getFileBeingProcessedInContext();
 
   void profile(MemoryTree &MT) const;
 
@@ -368,10 +368,10 @@ private:
   llvm::StringMap<std::unique_ptr<FileData>> Files;
   std::unique_ptr<ASTCache> IdleASTs;
   std::unique_ptr<HeaderIncluderCache> HeaderIncluders;
-  // None when running tasks synchronously and non-None when running tasks
-  // asynchronously.
-  llvm::Optional<AsyncTaskRunner> PreambleTasks;
-  llvm::Optional<AsyncTaskRunner> WorkerThreads;
+  // std::nullopt when running tasks synchronously and non-std::nullopt when
+  // running tasks asynchronously.
+  std::optional<AsyncTaskRunner> PreambleTasks;
+  std::optional<AsyncTaskRunner> WorkerThreads;
   // Used to create contexts for operations that are not bound to a particular
   // file (e.g. index queries).
   std::string LastActiveFile;

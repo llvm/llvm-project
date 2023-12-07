@@ -1,7 +1,7 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t
 
 // Data race randomly triggered.
-// UNSUPPORTED: netbsd
+// UNSUPPORTED: target={{.*netbsd.*}}
 
 // Make sure TSan doesn't deadlock on a file stream lock at program shutdown.
 // See https://github.com/google/sanitizers/issues/454

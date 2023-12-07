@@ -30,14 +30,14 @@ void test(const C& c)
     assert(c.count(4) == 1);
 }
 
-void reserve_invariant(size_t n) // LWG #2156
+void reserve_invariant(std::size_t n) // LWG #2156
 {
-    for (size_t i = 0; i < n; ++i)
+    for (std::size_t i = 0; i < n; ++i)
     {
-        std::unordered_set<size_t> c;
+        std::unordered_set<std::size_t> c;
         c.reserve(n);
-        size_t buckets = c.bucket_count();
-        for (size_t j = 0; j < i; ++j)
+        std::size_t buckets = c.bucket_count();
+        for (std::size_t j = 0; j < i; ++j)
         {
             c.insert(i);
             assert(buckets == c.bucket_count());

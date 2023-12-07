@@ -10,7 +10,7 @@ target triple = "hexagon"
 
 declare dso_local void @f0() #0
 
-declare dso_local void @f1(i8*, ...) #0
+declare dso_local void @f1(ptr, ...) #0
 
 ; Function Attrs: nounwind readnone
 declare <32 x i32> @llvm.hexagon.V6.vandqrt.128B(<128 x i1>, i32) #1
@@ -168,37 +168,37 @@ b0:
   %v1 = call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1)
   %v2 = call <128 x i1> @llvm.hexagon.V6.vandvrt.128B(<32 x i32> %v1, i32 16843009)
   %v3 = call <32 x i32> @llvm.hexagon.V6.vandqrt.128B(<128 x i1> %v2, i32 -1)
-  store <32 x i32> %v3, <32 x i32>* %v0, align 128
+  store <32 x i32> %v3, ptr %v0, align 128
   %v4 = call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 2)
   %v5 = call <64 x i32> @llvm.hexagon.V6.vaddubh.128B(<32 x i32> undef, <32 x i32> %v4)
   %v6 = call <64 x i32> @llvm.hexagon.V6.vrmpyubi.128B(<64 x i32> %v5, i32 -2147483648, i32 0)
-  store <64 x i32> %v6, <64 x i32>* @g0, align 128
-  call void (i8*, ...) @f1(i8* getelementptr inbounds ([110 x i8], [110 x i8]* @g1, i32 0, i32 0)) #2
+  store <64 x i32> %v6, ptr @g0, align 128
+  call void (ptr, ...) @f1(ptr @g1) #2
   %v7 = call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1)
   %v8 = call <64 x i32> @llvm.hexagon.V6.vaddubh.128B(<32 x i32> %v7, <32 x i32> undef)
   %v9 = call <64 x i32> @llvm.hexagon.V6.vrmpyubi.128B(<64 x i32> %v8, i32 -1, i32 0)
-  store <64 x i32> %v9, <64 x i32>* @g0, align 128
-  call void (i8*, ...) @f1(i8* getelementptr inbounds ([102 x i8], [102 x i8]* @g2, i32 0, i32 0)) #2
+  store <64 x i32> %v9, ptr @g0, align 128
+  call void (ptr, ...) @f1(ptr @g2) #2
   %v10 = call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1)
   %v11 = call <64 x i32> @llvm.hexagon.V6.vaddubh.128B(<32 x i32> %v10, <32 x i32> undef)
   %v12 = call <64 x i32> @llvm.hexagon.V6.vrmpyubi.128B(<64 x i32> %v11, i32 2147483647, i32 1)
-  store <64 x i32> %v12, <64 x i32>* @g0, align 128
-  call void (i8*, ...) @f1(i8* getelementptr inbounds ([110 x i8], [110 x i8]* @g3, i32 0, i32 0)) #2
+  store <64 x i32> %v12, ptr @g0, align 128
+  call void (ptr, ...) @f1(ptr @g3) #2
   %v13 = call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 2)
   %v14 = call <64 x i32> @llvm.hexagon.V6.vaddubh.128B(<32 x i32> undef, <32 x i32> %v13)
   %v15 = call <64 x i32> @llvm.hexagon.V6.vrmpyubi.128B(<64 x i32> %v14, i32 -2147483648, i32 1)
-  store <64 x i32> %v15, <64 x i32>* @g0, align 128
+  store <64 x i32> %v15, ptr @g0, align 128
   call void @f0() #2
   %v16 = call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 2)
   %v17 = call <64 x i32> @llvm.hexagon.V6.vaddubh.128B(<32 x i32> undef, <32 x i32> %v16)
   %v18 = call <64 x i32> @llvm.hexagon.V6.vrmpyubi.128B(<64 x i32> %v17, i32 0, i32 1)
-  store <64 x i32> %v18, <64 x i32>* @g0, align 128
+  store <64 x i32> %v18, ptr @g0, align 128
   call void @f0() #2
   %v19 = call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1)
   %v20 = call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 2)
   %v21 = call <64 x i32> @llvm.hexagon.V6.vaddubh.128B(<32 x i32> %v19, <32 x i32> %v20)
   %v22 = call <64 x i32> @llvm.hexagon.V6.vrmpyubi.128B(<64 x i32> %v21, i32 1, i32 1)
-  store <64 x i32> %v22, <64 x i32>* @g0, align 128
+  store <64 x i32> %v22, ptr @g0, align 128
   ret void
 }
 

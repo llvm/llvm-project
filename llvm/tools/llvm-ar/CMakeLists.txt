@@ -8,7 +8,7 @@ set(LLVM_LINK_COMPONENTS
   LibDriver
   Object
   Support
-  TextAPI
+  TargetParser
   )
 
 add_llvm_tool(llvm-ar

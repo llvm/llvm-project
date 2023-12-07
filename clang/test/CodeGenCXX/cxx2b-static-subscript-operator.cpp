@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2b %s -emit-llvm -triple x86_64-linux -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c++2b %s -emit-llvm -triple x86_64-windows-msvc -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 %s -emit-llvm -triple x86_64-linux -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 %s -emit-llvm -triple x86_64-windows-msvc -o - | FileCheck %s
 
 struct Functor {
   static int operator[](int x, int y) {

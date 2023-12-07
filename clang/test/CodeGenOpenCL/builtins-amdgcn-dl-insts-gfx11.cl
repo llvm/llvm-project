@@ -14,14 +14,10 @@ typedef unsigned short __attribute__((ext_vector_type(2))) ushort2;
 // CHECK: call i16 @llvm.amdgcn.fdot2.bf16.bf16(<2 x i16> %v2ssA, <2 x i16> %v2ssB, i16 %sC)
 // CHECK: call float @llvm.amdgcn.fdot2.f32.bf16(<2 x i16> %v2ssA, <2 x i16> %v2ssB, float %fC, i1 false)
 // CHECK: call float @llvm.amdgcn.fdot2.f32.bf16(<2 x i16> %v2ssA, <2 x i16> %v2ssB, float %fC, i1 true)
-// CHECK: call i32 @llvm.amdgcn.sdot4(i32 %siA, i32 %siB, i32 %siC, i1 false)
-// CHECK: call i32 @llvm.amdgcn.sdot4(i32 %siA, i32 %siB, i32 %siC, i1 true)
 // CHECK: call i32 @llvm.amdgcn.udot4(i32 %uiA, i32 %uiB, i32 %uiC, i1 false)
 // CHECK: call i32 @llvm.amdgcn.udot4(i32 %uiA, i32 %uiB, i32 %uiC, i1 true)
 // CHECK: call i32 @llvm.amdgcn.sudot4(i1 true, i32 %A, i1 false, i32 %B, i32 %C, i1 false)
 // CHECK: call i32 @llvm.amdgcn.sudot4(i1 false, i32 %A, i1 true, i32 %B, i32 %C, i1 true)
-// CHECK: call i32 @llvm.amdgcn.sdot8(i32 %siA, i32 %siB, i32 %siC, i1 false)
-// CHECK: call i32 @llvm.amdgcn.sdot8(i32 %siA, i32 %siB, i32 %siC, i1 true)
 // CHECK: call i32 @llvm.amdgcn.udot8(i32 %uiA, i32 %uiB, i32 %uiC, i1 false)
 // CHECK: call i32 @llvm.amdgcn.udot8(i32 %uiA, i32 %uiB, i32 %uiC, i1 true)
 // CHECK: call i32 @llvm.amdgcn.sudot8(i1 false, i32 %A, i1 true, i32 %B, i32 %C, i1 false)
@@ -44,17 +40,11 @@ kernel void builtins_amdgcn_dl_insts_err(
   fOut[3] = __builtin_amdgcn_fdot2_f32_bf16(v2ssA, v2ssB, fC, false);
   fOut[4] = __builtin_amdgcn_fdot2_f32_bf16(v2ssA, v2ssB, fC, true);
 
-  siOut[2] = __builtin_amdgcn_sdot4(siA, siB, siC, false);
-  siOut[3] = __builtin_amdgcn_sdot4(siA, siB, siC, true);
-
   uiOut[2] = __builtin_amdgcn_udot4(uiA, uiB, uiC, false);
   uiOut[3] = __builtin_amdgcn_udot4(uiA, uiB, uiC, true);
 
   iOut[0] = __builtin_amdgcn_sudot4(true, A, false, B, C, false);
   iOut[1] = __builtin_amdgcn_sudot4(false, A, true, B, C, true);
-
-  siOut[4] = __builtin_amdgcn_sdot8(siA, siB, siC, false);
-  siOut[5] = __builtin_amdgcn_sdot8(siA, siB, siC, true);
 
   uiOut[4] = __builtin_amdgcn_udot8(uiA, uiB, uiC, false);
   uiOut[5] = __builtin_amdgcn_udot8(uiA, uiB, uiC, true);

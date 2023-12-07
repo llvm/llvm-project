@@ -362,8 +362,8 @@ CAST_OPERATION(IntToOCLSampler)
 
 //===- Binary Operations  -------------------------------------------------===//
 // Operators listed in order of precedence.
-// Note that additions to this should also update the StmtVisitor class and
-// BinaryOperator::getOverloadedOperator.
+// Note that additions to this should also update the StmtVisitor class,
+// BinaryOperator::getOverloadedOperator and CXBinaryOperatorKind enum.
 
 // [C++ 5.5] Pointer-to-member operators.
 BINARY_OPERATION(PtrMemD, ".*")
@@ -415,8 +415,8 @@ BINARY_OPERATION(Comma, ",")
 
 
 //===- Unary Operations ---------------------------------------------------===//
-// Note that additions to this should also update the StmtVisitor class and
-// UnaryOperator::getOverloadedOperator.
+// Note that additions to this should also update the StmtVisitor class,
+// UnaryOperator::getOverloadedOperator and CXUnaryOperatorKind enum.
 
 // [C99 6.5.2.4] Postfix increment and decrement
 UNARY_OPERATION(PostInc, "++")

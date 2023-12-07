@@ -18,8 +18,7 @@
 #include "PreferRegisterOverUnsignedCheck.h"
 #include "TwineLocalCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace llvm_check {
 
 class LLVMModule : public ClangTidyModule {
@@ -60,5 +59,4 @@ static ClangTidyModuleRegistry::Add<LLVMModule> X("llvm-module",
 // and thus register the LLVMModule.
 volatile int LLVMModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

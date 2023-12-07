@@ -12,7 +12,6 @@ import inspect
 
 
 class TimeMetrics:
-
     @staticmethod
     def generate(label=None):
         return TimeMetrics(label)
@@ -28,13 +27,17 @@ class TimeMetrics:
 
     def __exit__(self, a, b, c):
         self.exit_time = time.clock()
-        print("It took " + str(self.exit_time - self.enter_time) +
-              " time units to run through " + self.function + self.label)
+        print(
+            "It took "
+            + str(self.exit_time - self.enter_time)
+            + " time units to run through "
+            + self.function
+            + self.label
+        )
         return False
 
 
 class Counter:
-
     def __init__(self):
         self.count = 0
         self.list = []
@@ -53,7 +56,6 @@ class Counter:
 
 
 class MetricsPrinter_Verbose:
-
     def __init__(self, metrics):
         self.metrics = metrics
 
@@ -65,20 +67,24 @@ class MetricsPrinter_Verbose:
 
 
 class MetricsPrinter_Compact:
-
     def __init__(self, metrics):
         self.metrics = metrics
 
     def __str__(self):
         string = ""
         for key, value in self.metrics.metrics.items():
-            string = string + "metric " + \
-                str(key) + " was hit " + str(value.count) + " times\n"
+            string = (
+                string
+                + "metric "
+                + str(key)
+                + " was hit "
+                + str(value.count)
+                + " times\n"
+            )
         return string
 
 
 class Metrics:
-
     def __init__(self):
         self.metrics = {}
 
@@ -92,12 +98,13 @@ class Metrics:
         return self.metrics[key]
 
     def __getattr__(self, name):
-        if name == 'compact':
+        if name == "compact":
             return MetricsPrinter_Compact(self)
-        if name == 'verbose':
+        if name == "verbose":
             return MetricsPrinter_Verbose(self)
-        raise AttributeError("%r object has no attribute %r" %
-                             (type(self).__name__, name))
+        raise AttributeError(
+            "%r object has no attribute %r" % (type(self).__name__, name)
+        )
 
     def __str__(self):
         return str(self.verbose)

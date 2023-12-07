@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=aarch64-arm-none-eabi -o - %s \
-# RUN: -run-pass simple-register-coalescing | FileCheck %s
+# RUN: llc -mtriple=aarch64 -o - %s \
+# RUN: -run-pass register-coalescer | FileCheck %s
 
 # In this test case, the 32-bit copy implements a 32 to 64 bit zero extension
 # and relies on the upper 32 bits being zeroed.

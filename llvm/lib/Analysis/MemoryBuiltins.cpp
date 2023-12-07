@@ -115,17 +115,25 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
     {LibFunc_ZnwjSt11align_val_t,               {OpNewLike,        2,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned int, align_val_t)
     {LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned int, align_val_t, nothrow)
     {LibFunc_Znwm,                              {OpNewLike,        1,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned long)
+    {LibFunc_Znwm12__hot_cold_t,                  {OpNewLike,        2, 0,  -1, -1, MallocFamily::CPPNew}},             // new(unsigned long, __hot_cold_t)
     {LibFunc_ZnwmRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned long, nothrow)
+    {LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t,      {MallocLike,       3, 0,  -1, -1, MallocFamily::CPPNew}},             // new(unsigned long, nothrow, __hot_cold_t)
     {LibFunc_ZnwmSt11align_val_t,               {OpNewLike,        2,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned long, align_val_t)
+    {LibFunc_ZnwmSt11align_val_t12__hot_cold_t,   {OpNewLike,        3, 0,  -1, 1, MallocFamily::CPPNewAligned}},       // new(unsigned long, align_val_t, __hot_cold_t)
     {LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned long, align_val_t, nothrow)
+    {LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, {MallocLike,  4, 0,  -1, 1, MallocFamily::CPPNewAligned}},            // new(unsigned long, align_val_t, nothrow, __hot_cold_t)
     {LibFunc_Znaj,                              {OpNewLike,        1,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned int)
     {LibFunc_ZnajRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned int, nothrow)
     {LibFunc_ZnajSt11align_val_t,               {OpNewLike,        2,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned int, align_val_t)
     {LibFunc_ZnajSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned int, align_val_t, nothrow)
     {LibFunc_Znam,                              {OpNewLike,        1,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned long)
+    {LibFunc_Znam12__hot_cold_t,                  {OpNewLike,        2, 0,  -1, -1, MallocFamily::CPPNew}},             // new[](unsigned long, __hot_cold_t)
     {LibFunc_ZnamRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned long, nothrow)
+    {LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t,      {MallocLike,       3, 0,  -1, -1, MallocFamily::CPPNew}},             // new[](unsigned long, nothrow, __hot_cold_t)
     {LibFunc_ZnamSt11align_val_t,               {OpNewLike,        2,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned long, align_val_t)
+    {LibFunc_ZnamSt11align_val_t12__hot_cold_t,   {OpNewLike,        3, 0,  -1, 1, MallocFamily::CPPNewAligned}},       // new[](unsigned long, align_val_t, __hot_cold_t)
     {LibFunc_ZnamSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned long, align_val_t, nothrow)
+    {LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, {MallocLike,  4, 0,  -1, 1, MallocFamily::CPPNewAligned}},            // new[](unsigned long, align_val_t, nothrow, __hot_cold_t)
     {LibFunc_msvc_new_int,                      {OpNewLike,        1,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned int)
     {LibFunc_msvc_new_int_nothrow,              {MallocLike,       2,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned int, nothrow)
     {LibFunc_msvc_new_longlong,                 {OpNewLike,        1,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned long long)
@@ -594,10 +602,10 @@ Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
                              MustSucceed);
 }
 
-Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
-                                 const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI, AAResults *AA,
-                                 bool MustSucceed) {
+Value *llvm::lowerObjectSizeCall(
+    IntrinsicInst *ObjectSize, const DataLayout &DL,
+    const TargetLibraryInfo *TLI, AAResults *AA, bool MustSucceed,
+    SmallVectorImpl<Instruction *> *InsertedInstructions) {
   assert(ObjectSize->getIntrinsicID() == Intrinsic::objectsize &&
          "ObjectSize must be a call to llvm.objectsize!");
 
@@ -632,7 +640,11 @@ Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
         Eval.compute(ObjectSize->getArgOperand(0));
 
     if (SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown()) {
-      IRBuilder<TargetFolder> Builder(Ctx, TargetFolder(DL));
+      IRBuilder<TargetFolder, IRBuilderCallbackInserter> Builder(
+          Ctx, TargetFolder(DL), IRBuilderCallbackInserter([&](Instruction *I) {
+            if (InsertedInstructions)
+              InsertedInstructions->push_back(I);
+          }));
       Builder.SetInsertPoint(ObjectSize);
 
       // If we've outside the end of the object, then we can always access
@@ -750,7 +762,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
   TypeSize ElemSize = DL.getTypeAllocSize(I.getAllocatedType());
   if (ElemSize.isScalable() && Options.EvalMode != ObjectSizeOpts::Mode::Min)
     return unknown();
-  APInt Size(IntTyBits, ElemSize.getKnownMinSize());
+  APInt Size(IntTyBits, ElemSize.getKnownMinValue());
   if (!I.isArrayAllocation())
     return std::make_pair(align(Size, I.getAlign()), Zero);
 
@@ -818,7 +830,9 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitGlobalAlias(GlobalAlias &GA) {
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitGlobalVariable(GlobalVariable &GV){
-  if (!GV.hasDefinitiveInitializer())
+  if (!GV.getValueType()->isSized() || GV.hasExternalWeakLinkage() ||
+      ((!GV.hasInitializer() || GV.isInterposable()) &&
+       Options.EvalMode != ObjectSizeOpts::Mode::Min))
     return unknown();
 
   APInt Size(IntTyBits, DL.getTypeAllocSize(GV.getValueType()));
@@ -976,6 +990,8 @@ SizeOffsetType ObjectSizeOffsetVisitor::combineSizeOffset(SizeOffsetType LHS,
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitPHINode(PHINode &PN) {
+  if (PN.getNumIncomingValues() == 0)
+    return unknown();
   auto IncomingValues = PN.incoming_values();
   return std::accumulate(IncomingValues.begin() + 1, IncomingValues.end(),
                          compute(*IncomingValues.begin()),
@@ -1099,12 +1115,13 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
   // must be a VLA
   assert(I.isArrayAllocation());
 
-  // If needed, adjust the alloca's operand size to match the pointer size.
-  // Subsequent math operations expect the types to match.
+  // If needed, adjust the alloca's operand size to match the pointer indexing
+  // size. Subsequent math operations expect the types to match.
   Value *ArraySize = Builder.CreateZExtOrTrunc(
-      I.getArraySize(), DL.getIntPtrType(I.getContext()));
+      I.getArraySize(),
+      DL.getIndexType(I.getContext(), DL.getAllocaAddrSpace()));
   assert(ArraySize->getType() == Zero->getType() &&
-         "Expected zero constant to have pointer type");
+         "Expected zero constant to have pointer index type");
 
   Value *Size = ConstantInt::get(ArraySize->getType(),
                                  DL.getTypeAllocSize(I.getAllocatedType()));
@@ -1150,7 +1167,7 @@ ObjectSizeOffsetEvaluator::visitGEPOperator(GEPOperator &GEP) {
   if (!bothKnown(PtrData))
     return unknown();
 
-  Value *Offset = EmitGEPOffset(&Builder, DL, &GEP, /*NoAssumptions=*/true);
+  Value *Offset = emitGEPOffset(&Builder, DL, &GEP, /*NoAssumptions=*/true);
   Offset = Builder.CreateAdd(PtrData.second, Offset);
   return std::make_pair(PtrData.first, Offset);
 }

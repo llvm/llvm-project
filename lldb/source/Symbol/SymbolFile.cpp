@@ -164,16 +164,15 @@ SymbolFile::RegisterInfoResolver::~RegisterInfoResolver() = default;
 
 Symtab *SymbolFileCommon::GetSymtab() {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  if (m_symtab)
-    return m_symtab;
-
   // Fetch the symtab from the main object file.
-  m_symtab = GetMainObjectFile()->GetSymtab();
+  auto *symtab = GetMainObjectFile()->GetSymtab();
+  if (m_symtab != symtab) {
+    m_symtab = symtab;
 
-  // Then add our symbols to it.
-  if (m_symtab)
-    AddSymbols(*m_symtab);
-
+    // Then add our symbols to it.
+    if (m_symtab)
+      AddSymbols(*m_symtab);
+  }
   return m_symtab;
 }
 
@@ -186,8 +185,8 @@ void SymbolFileCommon::SectionFileAddressesChanged() {
   ObjectFile *symfile_objfile = GetObjectFile();
   if (symfile_objfile != module_objfile)
     symfile_objfile->SectionFileAddressesChanged();
-  if (m_symtab)
-    m_symtab->SectionFileAddressesChanged();
+  if (auto *symtab = GetSymtab())
+    symtab->SectionFileAddressesChanged();
 }
 
 uint32_t SymbolFileCommon::GetNumCompileUnits() {

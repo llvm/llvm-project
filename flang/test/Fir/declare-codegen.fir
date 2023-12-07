@@ -18,3 +18,13 @@ func.func private @bar(%arg0: !fir.ref<!fir.array<12x23xi32>>)
 // CHECK-LABEL: func.func @test(
 // CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.array<12x23xi32>>) {
 // CHECK-NEXT: fir.call @bar(%[[arg0]]) : (!fir.ref<!fir.array<12x23xi32>>) -> ()
+
+func.func @useless_shape_with_duplicate_extent_operand(%arg0: !fir.ref<!fir.array<3x3xf32>>) {
+  %c3 = arith.constant 3 : index
+  %1 = fir.shape %c3, %c3 : (index, index) -> !fir.shape<2>
+  %2 = fir.declare %arg0(%1) {uniq_name = "u"} : (!fir.ref<!fir.array<3x3xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<3x3xf32>>
+  return
+}
+
+// CHECK-LABEL: func.func @useless_shape_with_duplicate_extent_operand(
+// CHECK-NEXT: return

@@ -100,6 +100,7 @@ protected:
   Log *getLog() { return m_log; }
   llvm::StringRef takeOutput();
   llvm::StringRef logAndTakeOutput(llvm::StringRef Message);
+  llvm::StringRef logAndTakeOutputf(llvm::StringRef Message);
 
 public:
   void SetUp() override;
@@ -133,6 +134,12 @@ llvm::StringRef LogChannelEnabledTest::takeOutput() {
 llvm::StringRef
 LogChannelEnabledTest::logAndTakeOutput(llvm::StringRef Message) {
   LLDB_LOG(m_log, "{0}", Message);
+  return takeOutput();
+}
+
+llvm::StringRef
+LogChannelEnabledTest::logAndTakeOutputf(llvm::StringRef Message) {
+  LLDB_LOGF(m_log, "%s", Message.str().c_str());
   return takeOutput();
 }
 
@@ -294,6 +301,21 @@ TEST_F(LogChannelEnabledTest, log_options) {
            Function);
     EXPECT_STRCASEEQ("LogTest.cpp", File);
     EXPECT_STREQ("logAndTakeOutput", Function);
+  }
+
+  {
+    EXPECT_TRUE(EnableChannel(getLogHandler(),
+                              LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION, "chan", {},
+                              Err));
+    llvm::StringRef Msg = logAndTakeOutputf("Hello World");
+    char File[12];
+    char Function[18];
+
+    sscanf(Msg.str().c_str(),
+           "%[^:]:%s                                 Hello World", File,
+           Function);
+    EXPECT_STRCASEEQ("LogTest.cpp", File);
+    EXPECT_STREQ("logAndTakeOutputf", Function);
   }
 
   EXPECT_TRUE(EnableChannel(getLogHandler(),

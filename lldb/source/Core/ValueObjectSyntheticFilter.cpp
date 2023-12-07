@@ -12,11 +12,13 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 
 namespace lldb_private {
 class Declaration;
@@ -32,7 +34,7 @@ public:
   size_t CalculateNumChildren() override { return m_backend.GetNumChildren(); }
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
-    return m_backend.GetChildAtIndex(idx, true);
+    return m_backend.GetChildAtIndex(idx);
   }
 
   size_t GetIndexOfChildWithName(ConstString name) override {
@@ -121,7 +123,7 @@ bool ValueObjectSynthetic::MightHaveChildren() {
   return (m_might_have_children != eLazyBoolNo);
 }
 
-llvm::Optional<uint64_t> ValueObjectSynthetic::GetByteSize() {
+std::optional<uint64_t> ValueObjectSynthetic::GetByteSize() {
   return m_parent->GetByteSize();
 }
 
@@ -161,8 +163,8 @@ bool ValueObjectSynthetic::UpdateValue() {
     return false;
   }
 
-  // regenerate the synthetic filter if our typename changes
-  // <rdar://problem/12424824>
+  // Regenerate the synthetic filter if our typename changes. When the (dynamic)
+  // type of an object changes, so does their synthetic filter of choice.
   ConstString new_parent_type_name = m_parent->GetTypeName();
   if (new_parent_type_name != m_parent_type_name) {
     LLDB_LOGF(log,
@@ -305,7 +307,7 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(size_t idx,
 }
 
 lldb::ValueObjectSP
-ValueObjectSynthetic::GetChildMemberWithName(ConstString name,
+ValueObjectSynthetic::GetChildMemberWithName(llvm::StringRef name,
                                              bool can_create) {
   UpdateValueIfNeeded();
 
@@ -317,8 +319,10 @@ ValueObjectSynthetic::GetChildMemberWithName(ConstString name,
   return GetChildAtIndex(index, can_create);
 }
 
-size_t ValueObjectSynthetic::GetIndexOfChildWithName(ConstString name) {
+size_t ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
   UpdateValueIfNeeded();
+
+  ConstString name(name_ref);
 
   uint32_t found_index = UINT32_MAX;
   bool did_find;

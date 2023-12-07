@@ -7,7 +7,7 @@ target triple = "thumbv7-apple-darwin10.0.0"
 define void @_Z8TestCasev() nounwind ssp {
 entry:
   %a = alloca float, align 4
-  %tmp = load float, float* %a, align 4
+  %tmp = load float, ptr %a, align 4
   call void asm sideeffect "", "w,~{s0},~{s16}"(float %tmp) nounwind, !srcloc !0
   ret void
 }

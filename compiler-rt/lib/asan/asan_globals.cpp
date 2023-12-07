@@ -36,7 +36,6 @@ struct ListOfGlobals {
 };
 
 static Mutex mu_for_globals;
-static LowLevelAllocator allocator_for_globals;
 static ListOfGlobals *list_of_all_globals;
 
 static const int kDynamicInitGlobalsInitialCapacity = 512;
@@ -91,6 +90,10 @@ static void ReportGlobal(const Global &g, const char *prefix) {
   Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info);
   if (info.line != 0) {
     Report("  location: name=%s, %d\n", info.file, static_cast<int>(info.line));
+  }
+  else if (g.gcc_location != 0) {
+    // Fallback to Global::gcc_location
+    Report("  location: name=%s, %d\n", g.gcc_location->filename, g.gcc_location->line_no);
   }
 }
 
@@ -221,13 +224,13 @@ static void RegisterGlobal(const Global *g) {
   }
   if (CanPoisonMemory())
     PoisonRedZones(*g);
-  ListOfGlobals *l = new(allocator_for_globals) ListOfGlobals;
+  ListOfGlobals *l = new (GetGlobalLowLevelAllocator()) ListOfGlobals;
   l->g = g;
   l->next = list_of_all_globals;
   list_of_all_globals = l;
   if (g->has_dynamic_init) {
     if (!dynamic_init_globals) {
-      dynamic_init_globals = new (allocator_for_globals) VectorOfGlobals;
+      dynamic_init_globals = new (GetGlobalLowLevelAllocator()) VectorOfGlobals;
       dynamic_init_globals->reserve(kDynamicInitGlobalsInitialCapacity);
     }
     DynInitGlobal dyn_global = { *g, false };
@@ -302,6 +305,11 @@ void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g) {
 
   if (info.line != 0) {
     str->append("%s:%d", info.file, static_cast<int>(info.line));
+  } else if (g.gcc_location != 0) {
+    // Fallback to Global::gcc_location
+    str->append("%s", g.gcc_location->filename ? g.gcc_location->filename : g.module_name);
+    if (g.gcc_location->line_no) str->append(":%d", g.gcc_location->line_no);
+    if (g.gcc_location->column_no) str->append(":%d", g.gcc_location->column_no);
   } else {
     str->append("%s", g.module_name);
   }
@@ -358,7 +366,7 @@ void __asan_register_globals(__asan_global *globals, uptr n) {
   Lock lock(&mu_for_globals);
   if (!global_registration_site_vector) {
     global_registration_site_vector =
-        new (allocator_for_globals) GlobalRegistrationSiteVector;
+        new (GetGlobalLowLevelAllocator()) GlobalRegistrationSiteVector;
     global_registration_site_vector->reserve(128);
   }
   GlobalRegistrationSite site = {stack_id, &globals[0], &globals[n - 1]};

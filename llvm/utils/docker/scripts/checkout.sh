@@ -83,7 +83,7 @@ function apply_cherrypicks() {
   # This function is always called on a sorted list of cherrypicks.
   for CHERRY_REV in $CHERRYPICKS; do
     echo "Cherry-picking $CHERRY_REV into $CHECKOUT_DIR"
-    git cherry-pick $CHERRY_REV
+    EMAIL="someone@somewhere.net" git cherry-pick $CHERRY_REV
   done
 
   popd

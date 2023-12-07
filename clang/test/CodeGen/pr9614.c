@@ -32,7 +32,7 @@ void f(void) {
 
 // CHECK-LABEL: define{{.*}} void @f()
 // CHECK: call void @foo()
-// CHECK: call i32 @abs(i32 noundef 0)
+// CHECK: call i32 @abs(i32 noundef %0)
 // CHECK: call ptr @strrchr(
 // CHECK: call void @llvm.prefetch.p0(
 // CHECK: call ptr @memchr(

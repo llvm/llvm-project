@@ -21,10 +21,6 @@ public:
 
   ~NVPTXTargetObjectFile() override;
 
-  void Initialize(MCContext &ctx, const TargetMachine &TM) override {
-    TargetLoweringObjectFile::Initialize(ctx, TM);
-  }
-
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
                                    Align &Alignment) const override {

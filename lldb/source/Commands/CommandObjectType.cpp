@@ -39,9 +39,6 @@
 #include <functional>
 #include <memory>
 
-#define CHECK_FORMATTER_KIND_MASK(VAL)                                         \
-  ((m_formatter_kind_mask & (VAL)) == (VAL))
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -100,6 +97,22 @@ static bool WarnOnPotentialUnquotedUnsignedType(Args &command,
   return false;
 }
 
+const char *FormatCategoryToString(FormatCategoryItem item, bool long_name) {
+  switch (item) {
+  case eFormatCategoryItemSummary:
+    return "summary";
+  case eFormatCategoryItemFilter:
+    return "filter";
+  case eFormatCategoryItemSynth:
+    if (long_name)
+      return "synthetic child provider";
+    return "synthetic";
+  case eFormatCategoryItemFormat:
+    return "format";
+  }
+  llvm_unreachable("Fully covered switch above!");
+}
+
 #define LLDB_OPTIONS_type_summary_add
 #include "CommandOptions.inc"
 
@@ -118,7 +131,7 @@ private:
     void OptionParsingStarting(ExecutionContext *execution_context) override;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_type_summary_add_options);
+      return llvm::ArrayRef(g_type_summary_add_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -351,7 +364,7 @@ private:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_type_synth_add_options);
+      return llvm::ArrayRef(g_type_synth_add_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -508,7 +521,7 @@ private:
     ~CommandOptions() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_type_format_add_options);
+      return llvm::ArrayRef(g_type_format_add_options);
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
@@ -743,7 +756,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_type_formatter_delete_options);
+      return llvm::ArrayRef(g_type_formatter_delete_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -754,16 +767,25 @@ protected:
   };
 
   CommandOptions m_options;
-  uint32_t m_formatter_kind_mask;
+  FormatCategoryItem m_formatter_kind;
 
   Options *GetOptions() override { return &m_options; }
 
+  static constexpr const char *g_short_help_template =
+      "Delete an existing %s for a type.";
+
+  static constexpr const char *g_long_help_template =
+      "Delete an existing %s for a type.  Unless you specify a "
+      "specific category or all categories, only the "
+      "'default' category is searched.  The names must be exactly as "
+      "shown in the 'type %s list' output";
+
 public:
   CommandObjectTypeFormatterDelete(CommandInterpreter &interpreter,
-                                   uint32_t formatter_kind_mask,
-                                   const char *name, const char *help)
-      : CommandObjectParsed(interpreter, name, help, nullptr),
-        m_formatter_kind_mask(formatter_kind_mask) {
+                                   FormatCategoryItem formatter_kind)
+      : CommandObjectParsed(interpreter,
+                            FormatCategoryToString(formatter_kind, false)),
+        m_formatter_kind(formatter_kind) {
     CommandArgumentEntry type_arg;
     CommandArgumentData type_style_arg;
 
@@ -773,6 +795,19 @@ public:
     type_arg.push_back(type_style_arg);
 
     m_arguments.push_back(type_arg);
+
+    const char *kind = FormatCategoryToString(formatter_kind, true);
+    const char *short_kind = FormatCategoryToString(formatter_kind, false);
+
+    StreamString s;
+    s.Printf(g_short_help_template, kind);
+    SetHelp(s.GetData());
+    s.Clear();
+    s.Printf(g_long_help_template, kind, short_kind);
+    SetHelpLong(s.GetData());
+    s.Clear();
+    s.Printf("type %s delete", short_kind);
+    SetCommandName(s.GetData());
   }
 
   ~CommandObjectTypeFormatterDelete() override = default;
@@ -785,7 +820,7 @@ public:
 
     DataVisualization::Categories::ForEach(
         [this, &request](const lldb::TypeCategoryImplSP &category_sp) {
-          category_sp->AutoComplete(request, m_formatter_kind_mask);
+          category_sp->AutoComplete(request, m_formatter_kind);
           return true;
         });
   }
@@ -812,7 +847,7 @@ protected:
     if (m_options.m_delete_all) {
       DataVisualization::Categories::ForEach(
           [this, typeCS](const lldb::TypeCategoryImplSP &category_sp) -> bool {
-            category_sp->Delete(typeCS, m_formatter_kind_mask);
+            category_sp->Delete(typeCS, m_formatter_kind);
             return true;
           });
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -827,14 +862,14 @@ protected:
       DataVisualization::Categories::GetCategory(m_options.m_language,
                                                  category);
       if (category)
-        delete_category = category->Delete(typeCS, m_formatter_kind_mask);
+        delete_category = category->Delete(typeCS, m_formatter_kind);
       extra_deletion = FormatterSpecificDeletion(typeCS);
     } else {
       lldb::TypeCategoryImplSP category;
       DataVisualization::Categories::GetCategory(
           ConstString(m_options.m_category.c_str()), category);
       if (category)
-        delete_category = category->Delete(typeCS, m_formatter_kind_mask);
+        delete_category = category->Delete(typeCS, m_formatter_kind);
       extra_deletion = FormatterSpecificDeletion(typeCS);
     }
 
@@ -880,7 +915,7 @@ private:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_type_formatter_clear_options);
+      return llvm::ArrayRef(g_type_formatter_clear_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -888,16 +923,16 @@ private:
   };
 
   CommandOptions m_options;
-  uint32_t m_formatter_kind_mask;
+  FormatCategoryItem m_formatter_kind;
 
   Options *GetOptions() override { return &m_options; }
 
 public:
   CommandObjectTypeFormatterClear(CommandInterpreter &interpreter,
-                                  uint32_t formatter_kind_mask,
+                                  FormatCategoryItem formatter_kind,
                                   const char *name, const char *help)
       : CommandObjectParsed(interpreter, name, help, nullptr),
-        m_formatter_kind_mask(formatter_kind_mask) {
+        m_formatter_kind(formatter_kind) {
     CommandArgumentData category_arg{eArgTypeName, eArgRepeatOptional};
     m_arguments.push_back({category_arg});
   }
@@ -911,7 +946,7 @@ protected:
     if (m_options.m_delete_all) {
       DataVisualization::Categories::ForEach(
           [this](const TypeCategoryImplSP &category_sp) -> bool {
-            category_sp->Clear(m_formatter_kind_mask);
+            category_sp->Clear(m_formatter_kind);
             return true;
           });
     } else {
@@ -924,7 +959,7 @@ protected:
         DataVisualization::Categories::GetCategory(ConstString(nullptr),
                                                    category);
       }
-      category->Clear(m_formatter_kind_mask);
+      category->Clear(m_formatter_kind);
     }
 
     FormatterSpecificDeletion();
@@ -940,8 +975,7 @@ class CommandObjectTypeFormatDelete : public CommandObjectTypeFormatterDelete {
 public:
   CommandObjectTypeFormatDelete(CommandInterpreter &interpreter)
       : CommandObjectTypeFormatterDelete(
-            interpreter, eFormatCategoryItemFormat, "type format delete",
-            "Delete an existing formatting style for a type.") {}
+            interpreter, eFormatCategoryItemFormat) {}
 
   ~CommandObjectTypeFormatDelete() override = default;
 };
@@ -999,7 +1033,7 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed {
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_type_formatter_list_options);
+      return llvm::ArrayRef(g_type_formatter_list_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1609,8 +1643,7 @@ class CommandObjectTypeSummaryDelete : public CommandObjectTypeFormatterDelete {
 public:
   CommandObjectTypeSummaryDelete(CommandInterpreter &interpreter)
       : CommandObjectTypeFormatterDelete(
-            interpreter, eFormatCategoryItemSummary, "type summary delete",
-            "Delete an existing summary for a type.") {}
+            interpreter, eFormatCategoryItemSummary) {}
 
   ~CommandObjectTypeSummaryDelete() override = default;
 
@@ -1700,7 +1733,7 @@ class CommandObjectTypeCategoryDefine : public CommandObjectParsed {
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_type_category_define_options);
+      return llvm::ArrayRef(g_type_category_define_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1734,9 +1767,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(),
-        CommandCompletions::eTypeCategoryNameCompletion, request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eTypeCategoryNameCompletion, request,
+        nullptr);
   }
 
 protected:
@@ -1803,7 +1836,7 @@ class CommandObjectTypeCategoryEnable : public CommandObjectParsed {
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_type_category_enable_options);
+      return llvm::ArrayRef(g_type_category_enable_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1836,9 +1869,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(),
-        CommandCompletions::eTypeCategoryNameCompletion, request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eTypeCategoryNameCompletion, request,
+        nullptr);
   }
 
 protected:
@@ -1904,9 +1937,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(),
-        CommandCompletions::eTypeCategoryNameCompletion, request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eTypeCategoryNameCompletion, request,
+        nullptr);
   }
 
 protected:
@@ -1980,7 +2013,7 @@ class CommandObjectTypeCategoryDisable : public CommandObjectParsed {
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_type_category_disable_options);
+      return llvm::ArrayRef(g_type_category_disable_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -2013,9 +2046,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(),
-        CommandCompletions::eTypeCategoryNameCompletion, request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eTypeCategoryNameCompletion, request,
+        nullptr);
   }
 
 protected:
@@ -2078,9 +2111,9 @@ public:
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex())
       return;
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(),
-        CommandCompletions::eTypeCategoryNameCompletion, request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eTypeCategoryNameCompletion, request,
+        nullptr);
   }
 
 protected:
@@ -2138,8 +2171,6 @@ public:
                                        "Show a list of current filters.") {}
 };
 
-#if LLDB_ENABLE_PYTHON
-
 // CommandObjectTypeSynthList
 
 class CommandObjectTypeSynthList
@@ -2151,21 +2182,16 @@ public:
             "Show a list of current synthetic providers.") {}
 };
 
-#endif
-
 // CommandObjectTypeFilterDelete
 
 class CommandObjectTypeFilterDelete : public CommandObjectTypeFormatterDelete {
 public:
   CommandObjectTypeFilterDelete(CommandInterpreter &interpreter)
       : CommandObjectTypeFormatterDelete(
-            interpreter, eFormatCategoryItemFilter, "type filter delete",
-            "Delete an existing filter for a type.") {}
+            interpreter, eFormatCategoryItemFilter) {}
 
   ~CommandObjectTypeFilterDelete() override = default;
 };
-
-#if LLDB_ENABLE_PYTHON
 
 // CommandObjectTypeSynthDelete
 
@@ -2173,13 +2199,11 @@ class CommandObjectTypeSynthDelete : public CommandObjectTypeFormatterDelete {
 public:
   CommandObjectTypeSynthDelete(CommandInterpreter &interpreter)
       : CommandObjectTypeFormatterDelete(
-            interpreter, eFormatCategoryItemSynth, "type synthetic delete",
-            "Delete an existing synthetic provider for a type.") {}
+            interpreter, eFormatCategoryItemSynth) {}
 
   ~CommandObjectTypeSynthDelete() override = default;
 };
 
-#endif
 
 // CommandObjectTypeFilterClear
 
@@ -2191,7 +2215,6 @@ public:
                                         "Delete all existing filter.") {}
 };
 
-#if LLDB_ENABLE_PYTHON
 // CommandObjectTypeSynthClear
 
 class CommandObjectTypeSynthClear : public CommandObjectTypeFormatterClear {
@@ -2362,7 +2385,6 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
   return true;
 }
 
-#endif
 #define LLDB_OPTIONS_type_filter_add
 #include "CommandOptions.inc"
 
@@ -2423,7 +2445,7 @@ private:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_type_filter_add_options);
+      return llvm::ArrayRef(g_type_filter_add_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -2639,7 +2661,7 @@ protected:
     ~CommandOptions() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_type_lookup_options);
+      return llvm::ArrayRef(g_type_lookup_options);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
@@ -2845,7 +2867,8 @@ protected:
       return false;
     }
 
-    StackFrameSP frame_sp = thread->GetSelectedFrame();
+    StackFrameSP frame_sp =
+        thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
     ValueObjectSP result_valobj_sp;
     EvaluateExpressionOptions options;
     lldb::ExpressionResults expr_result = target_sp->EvaluateExpression(
@@ -2909,8 +2932,6 @@ public:
   ~CommandObjectTypeFormat() override = default;
 };
 
-#if LLDB_ENABLE_PYTHON
-
 class CommandObjectTypeSynth : public CommandObjectMultiword {
 public:
   CommandObjectTypeSynth(CommandInterpreter &interpreter)
@@ -2937,8 +2958,6 @@ public:
 
   ~CommandObjectTypeSynth() override = default;
 };
-
-#endif
 
 class CommandObjectTypeFilter : public CommandObjectMultiword {
 public:
@@ -3024,10 +3043,8 @@ CommandObjectType::CommandObjectType(CommandInterpreter &interpreter)
                  CommandObjectSP(new CommandObjectTypeFormat(interpreter)));
   LoadSubCommand("summary",
                  CommandObjectSP(new CommandObjectTypeSummary(interpreter)));
-#if LLDB_ENABLE_PYTHON
   LoadSubCommand("synthetic",
                  CommandObjectSP(new CommandObjectTypeSynth(interpreter)));
-#endif
   LoadSubCommand("lookup",
                  CommandObjectSP(new CommandObjectTypeLookup(interpreter)));
 }

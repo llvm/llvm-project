@@ -11,9 +11,7 @@
 
 #include "CloexecCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace android {
+namespace clang::tidy::android {
 
 /// fopen() is suggested to include "e" in their mode string; like "re" would be
 /// better than "r".
@@ -30,8 +28,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace android
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::android
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_FOPEN_H

@@ -4,19 +4,21 @@
 // its table.
 // expected-remark@below {{symbol_removable function successfully erased}}
 module attributes {sym.outside_use = @symbol_foo } {
-  // expected-remark@+1 {{symbol has 2 uses}}
+  // expected-remark@+1 {{symbol has 3 uses}}
   func.func private @symbol_foo()
 
   // expected-remark@below {{symbol has no uses}}
   // expected-remark@below {{found use of symbol : @symbol_foo}}
-  // expected-remark@below {{symbol contains 2 nested references}}
+  // expected-remark@below {{symbol contains 3 nested references}}
   func.func @symbol_bar() attributes {sym.use = @symbol_foo} {
     // expected-remark@+1 {{found use of symbol : @symbol_foo}}
     "foo.op"() {
       non_symbol_attr,
-      use = [{ nested_symbol = [@symbol_foo]}],
+      use = [{nested_symbol = [@symbol_foo]}],
       z_other_non_symbol_attr
     } : () -> ()
+    // expected-remark@+1 {{found use of symbol : @symbol_foo}}
+    "foo.op"() { use = distinct[0]<@symbol_foo> } : () -> ()
   }
 
   // expected-remark@below {{symbol has no uses}}

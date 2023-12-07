@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx803 -run-pass=simple-register-coalescing -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx803 -run-pass=register-coalescer -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN: {{^body}}
 

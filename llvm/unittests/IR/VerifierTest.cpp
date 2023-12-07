@@ -109,6 +109,41 @@ TEST(VerifierTest, InvalidRetAttribute) {
       "Attribute 'uwtable' does not apply to function return values"));
 }
 
+/// Test the verifier rejects invalid nofpclass values that the assembler may
+/// also choose to reject.
+TEST(VerifierTest, InvalidNoFPClassAttribute) {
+  LLVMContext C;
+
+  const unsigned InvalidMasks[] = {0, fcAllFlags + 1};
+
+  for (unsigned InvalidMask : InvalidMasks) {
+    Module M("M", C);
+    FunctionType *FTy =
+        FunctionType::get(Type::getFloatTy(C), /*isVarArg=*/false);
+    Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+    AttributeList AS = F->getAttributes();
+
+    // Don't use getWithNoFPClass to avoid using out of bounds enum values here.
+    F->setAttributes(AS.addRetAttribute(
+        C, Attribute::get(C, Attribute::NoFPClass, InvalidMask)));
+
+    std::string Error;
+    raw_string_ostream ErrorOS(Error);
+    EXPECT_TRUE(verifyModule(M, &ErrorOS));
+
+    StringRef ErrMsg(ErrorOS.str());
+
+    if (InvalidMask == 0) {
+      EXPECT_TRUE(ErrMsg.startswith(
+          "Attribute 'nofpclass' must have at least one test bit set"))
+          << ErrMsg;
+    } else {
+      EXPECT_TRUE(ErrMsg.startswith("Invalid value for 'nofpclass' test mask"))
+          << ErrMsg;
+    }
+  }
+}
+
 TEST(VerifierTest, CrossModuleRef) {
   LLVMContext C;
   Module M1("M1", C);

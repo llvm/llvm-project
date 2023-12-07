@@ -33,11 +33,11 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds  [1024 x float],  [1024 x float]* @B, i64 0, i64 %indvars.iv
-  %tmp = load float, float* %arrayidx, align 4, !tbaa !1
+  %arrayidx = getelementptr inbounds  [1024 x float],  ptr @B, i64 0, i64 %indvars.iv
+  %tmp = load float, ptr %arrayidx, align 4, !tbaa !1
   %conv = fptosi float %tmp to i32
-  %arrayidx2 = getelementptr inbounds [1024 x i32], [1024 x i32]* @A, i64 0, i64 %indvars.iv
-  store i32 %conv, i32* %arrayidx2, align 4, !tbaa !5
+  %arrayidx2 = getelementptr inbounds [1024 x i32], ptr @A, i64 0, i64 %indvars.iv
+  store i32 %conv, ptr %arrayidx2, align 4, !tbaa !5
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv1 = trunc i64 %indvars.iv.next to i32
   %exitcond2 = icmp eq i32 %lftr.wideiv1, %N

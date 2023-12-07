@@ -7,10 +7,10 @@ entry:
   br label %second, !dbg !21
 
 second:                                           ; preds = %entry
-  call void @llvm.dbg.declare(metadata i64* %as, metadata !22, metadata !DIExpression()), !dbg !25
-  call void @llvm.dbg.declare(metadata i64* %bs, metadata !26, metadata !DIExpression()), !dbg !25
-  store i64 36028797018972298, i64* %as, align 8, !dbg !28
-  store i64 85, i64* %bs, align 8, !dbg !29
+  call void @llvm.dbg.declare(metadata ptr %as, metadata !22, metadata !DIExpression()), !dbg !25
+  call void @llvm.dbg.declare(metadata ptr %bs, metadata !26, metadata !DIExpression()), !dbg !25
+  store i64 36028797018972298, ptr %as, align 8, !dbg !28
+  store i64 85, ptr %bs, align 8, !dbg !29
   ret void, !dbg !21
 }
 

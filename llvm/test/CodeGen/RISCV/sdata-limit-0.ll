@@ -6,7 +6,7 @@
 
 ; SmallDataLimit set to 0, so we expect no data will put in sbss and sdata.
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"SmallDataLimit", i32 0}
+!0 = !{i32 8, !"SmallDataLimit", i32 0}
 
 ; RV32-NOT:    .section        .sbss
 ; RV32-NOT:    .section        .sdata

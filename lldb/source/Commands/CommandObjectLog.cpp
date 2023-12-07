@@ -146,7 +146,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_log_enable_options);
+      return llvm::ArrayRef(g_log_enable_options);
     }
 
     FileSpec log_file;
@@ -174,6 +174,20 @@ protected:
         m_options.buffer_size.GetCurrentValue() == 0) {
       result.AppendError(
           "the circular buffer handler requires a non-zero buffer size.\n");
+      return false;
+    }
+
+    if ((m_options.handler != eLogHandlerCircular &&
+         m_options.handler != eLogHandlerStream) &&
+        m_options.buffer_size.GetCurrentValue() != 0) {
+      result.AppendError("a buffer size can only be specified for the circular "
+                         "and stream buffer handler.\n");
+      return false;
+    }
+
+    if (m_options.handler != eLogHandlerStream && m_options.log_file) {
+      result.AppendError(
+          "a file name can only be specified for the stream handler.\n");
       return false;
     }
 
@@ -371,7 +385,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_log_dump_options);
+      return llvm::ArrayRef(g_log_dump_options);
     }
 
     FileSpec log_file;
@@ -490,7 +504,7 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    Timer::DumpCategoryTimes(&result.GetOutputStream());
+    Timer::DumpCategoryTimes(result.GetOutputStream());
     Timer::SetDisplayDepth(0);
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
@@ -513,7 +527,7 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    Timer::DumpCategoryTimes(&result.GetOutputStream());
+    Timer::DumpCategoryTimes(result.GetOutputStream());
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
     if (!result.Succeeded()) {

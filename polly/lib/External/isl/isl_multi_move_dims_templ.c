@@ -20,10 +20,13 @@ __isl_give MULTI(BASE) *FN(MULTI(BASE),move_dims)(__isl_take MULTI(BASE) *multi,
 	enum isl_dim_type dst_type, unsigned dst_pos,
 	enum isl_dim_type src_type, unsigned src_pos, unsigned n)
 {
+	isl_space *space;
+	isl_size size;
 	int i;
 
-	if (!multi)
-		return NULL;
+	size = FN(MULTI(BASE),size)(multi);
+	if (size < 0)
+		return FN(MULTI(BASE),free)(multi);
 
 	if (n == 0 &&
 	    !isl_space_is_named_or_nested(multi->space, src_type) &&
@@ -45,26 +48,22 @@ __isl_give MULTI(BASE) *FN(MULTI(BASE),move_dims)(__isl_take MULTI(BASE) *multi,
 			"moving dims within the same type not supported",
 			return FN(MULTI(BASE),free)(multi));
 
-	multi = FN(MULTI(BASE),cow)(multi);
-	if (!multi)
-		return NULL;
-
-	multi->space = isl_space_move_dims(multi->space, dst_type, dst_pos,
+	space = FN(MULTI(BASE),take_space)(multi);
+	space = isl_space_move_dims(space, dst_type, dst_pos,
 						src_type, src_pos, n);
-	if (!multi->space)
-		return FN(MULTI(BASE),free)(multi);
+	multi = FN(MULTI(BASE),restore_space)(multi, space);
+
 	if (FN(MULTI(BASE),has_explicit_domain)(multi))
 		multi = FN(MULTI(BASE),move_explicit_domain_dims)(multi,
 				dst_type, dst_pos, src_type, src_pos, n);
-	if (!multi)
-		return NULL;
 
-	for (i = 0; i < multi->n; ++i) {
-		multi->u.p[i] = FN(EL,move_dims)(multi->u.p[i],
-						dst_type, dst_pos,
+	for (i = 0; i < size; ++i) {
+		EL *el;
+
+		el = FN(MULTI(BASE),take_at)(multi, i);
+		el = FN(EL,move_dims)(el, dst_type, dst_pos,
 						src_type, src_pos, n);
-		if (!multi->u.p[i])
-			return FN(MULTI(BASE),free)(multi);
+		multi = FN(MULTI(BASE),restore_at)(multi, i, el);
 	}
 
 	return multi;

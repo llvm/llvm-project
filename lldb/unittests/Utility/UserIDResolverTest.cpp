@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/UserIDResolver.h"
 #include "gmock/gmock.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace testing;
@@ -15,8 +16,8 @@ using namespace testing;
 namespace {
 class TestUserIDResolver : public UserIDResolver {
 public:
-  MOCK_METHOD1(DoGetUserName, llvm::Optional<std::string>(id_t uid));
-  MOCK_METHOD1(DoGetGroupName, llvm::Optional<std::string>(id_t gid));
+  MOCK_METHOD1(DoGetUserName, std::optional<std::string>(id_t uid));
+  MOCK_METHOD1(DoGetGroupName, std::optional<std::string>(id_t gid));
 };
 } // namespace
 

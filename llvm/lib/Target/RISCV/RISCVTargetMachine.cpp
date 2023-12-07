@@ -1,4 +1,4 @@
-//===-- RISCVTargetMachine.cpp - Define TargetMachine for RISCV -----------===//
+//===-- RISCVTargetMachine.cpp - Define TargetMachine for RISC-V ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements the info about RISCV target spec.
+// Implements the info about RISC-V target spec.
 //
 //===----------------------------------------------------------------------===//
 
@@ -29,7 +29,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FormattedStream.h"
@@ -53,19 +52,44 @@ static cl::opt<bool>
                           cl::desc("Enable the machine combiner pass"),
                           cl::init(true), cl::Hidden);
 
+static cl::opt<unsigned> RVVVectorBitsMaxOpt(
+    "riscv-v-vector-bits-max",
+    cl::desc("Assume V extension vector registers are at most this big, "
+             "with zero meaning no maximum size is assumed."),
+    cl::init(0), cl::Hidden);
+
+static cl::opt<int> RVVVectorBitsMinOpt(
+    "riscv-v-vector-bits-min",
+    cl::desc("Assume V extension vector registers are at least this big, "
+             "with zero meaning no minimum size is assumed. A value of -1 "
+             "means use Zvl*b extension. This is primarily used to enable "
+             "autovectorization with fixed width vectors."),
+    cl::init(-1), cl::Hidden);
+
+static cl::opt<bool> EnableRISCVCopyPropagation(
+    "riscv-enable-copy-propagation",
+    cl::desc("Enable the copy propagation with RISC-V copy instr"),
+    cl::init(true), cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
+  initializeKCFIPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
   initializeRISCVCodeGenPreparePass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
-  initializeRISCVSExtWRemovalPass(*PR);
+  initializeRISCVOptWInstrsPass(*PR);
   initializeRISCVPreRAExpandPseudoPass(*PR);
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
+  initializeRISCVInsertReadWriteCSRPass(*PR);
+  initializeRISCVDAGToDAGISelPass(*PR);
+  initializeRISCVInitUndefPass(*PR);
+  initializeRISCVMoveMergePass(*PR);
+  initializeRISCVPushPopOptPass(*PR);
 }
 
 static StringRef computeDataLayout(const Triple &TT) {
@@ -95,6 +119,9 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
   // RISC-V supports the MachineOutliner.
   setMachineOutliner(true);
   setSupportsDefaultOutlining(true);
+
+  if (TT.isOSFuchsia() && !TT.isArch64Bit())
+    report_fatal_error("Fuchsia is only supported for 64-bit");
 }
 
 const RISCVSubtarget *
@@ -109,7 +136,54 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
       TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
-  std::string Key = CPU + TuneCPU + FS;
+
+  unsigned RVVBitsMin = RVVVectorBitsMinOpt;
+  unsigned RVVBitsMax = RVVVectorBitsMaxOpt;
+
+  Attribute VScaleRangeAttr = F.getFnAttribute(Attribute::VScaleRange);
+  if (VScaleRangeAttr.isValid()) {
+    if (!RVVVectorBitsMinOpt.getNumOccurrences())
+      RVVBitsMin = VScaleRangeAttr.getVScaleRangeMin() * RISCV::RVVBitsPerBlock;
+    std::optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
+    if (VScaleMax.has_value() && !RVVVectorBitsMaxOpt.getNumOccurrences())
+      RVVBitsMax = *VScaleMax * RISCV::RVVBitsPerBlock;
+  }
+
+  if (RVVBitsMin != -1U) {
+    // FIXME: Change to >= 32 when VLEN = 32 is supported.
+    assert((RVVBitsMin == 0 || (RVVBitsMin >= 64 && RVVBitsMin <= 65536 &&
+                                isPowerOf2_32(RVVBitsMin))) &&
+           "V or Zve* extension requires vector length to be in the range of "
+           "64 to 65536 and a power 2!");
+    assert((RVVBitsMax >= RVVBitsMin || RVVBitsMax == 0) &&
+           "Minimum V extension vector length should not be larger than its "
+           "maximum!");
+  }
+  assert((RVVBitsMax == 0 || (RVVBitsMax >= 64 && RVVBitsMax <= 65536 &&
+                              isPowerOf2_32(RVVBitsMax))) &&
+         "V or Zve* extension requires vector length to be in the range of "
+         "64 to 65536 and a power 2!");
+
+  if (RVVBitsMin != -1U) {
+    if (RVVBitsMax != 0) {
+      RVVBitsMin = std::min(RVVBitsMin, RVVBitsMax);
+      RVVBitsMax = std::max(RVVBitsMin, RVVBitsMax);
+    }
+
+    RVVBitsMin = llvm::bit_floor(
+        (RVVBitsMin < 64 || RVVBitsMin > 65536) ? 0 : RVVBitsMin);
+  }
+  RVVBitsMax =
+      llvm::bit_floor((RVVBitsMax < 64 || RVVBitsMax > 65536) ? 0 : RVVBitsMax);
+
+  SmallString<512> Key;
+  Key += "RVVMin";
+  Key += std::to_string(RVVBitsMin);
+  Key += "RVVMax";
+  Key += std::to_string(RVVBitsMax);
+  Key += CPU;
+  Key += TuneCPU;
+  Key += FS;
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
@@ -126,9 +200,17 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
       }
       ABIName = ModuleTargetABI->getString();
     }
-    I = std::make_unique<RISCVSubtarget>(TargetTriple, CPU, TuneCPU, FS, ABIName, *this);
+    I = std::make_unique<RISCVSubtarget>(
+        TargetTriple, CPU, TuneCPU, FS, ABIName, RVVBitsMin, RVVBitsMax, *this);
   }
   return I.get();
+}
+
+MachineFunctionInfo *RISCVTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return RISCVMachineFunctionInfo::create<RISCVMachineFunctionInfo>(Allocator,
+                                                                    F, STI);
 }
 
 TargetTransformInfo
@@ -190,6 +272,8 @@ public:
   void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
+  void addOptimizedRegAlloc() override;
+  void addFastRegAlloc() override;
 };
 } // namespace
 
@@ -200,11 +284,11 @@ TargetPassConfig *RISCVTargetMachine::createPassConfig(PassManagerBase &PM) {
 void RISCVPassConfig::addIRPasses() {
   addPass(createAtomicExpandPass());
 
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOpt::None) {
     addPass(createRISCVGatherScatterLoweringPass());
-
-  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createInterleavedAccessPass());
     addPass(createRISCVCodeGenPreparePass());
+  }
 
   TargetPassConfig::addIRPasses();
 }
@@ -252,19 +336,42 @@ bool RISCVPassConfig::addGlobalInstructionSelect() {
   return false;
 }
 
-void RISCVPassConfig::addPreSched2() {}
+void RISCVPassConfig::addPreSched2() {
+  // Emit KCFI checks for indirect calls.
+  addPass(createKCFIPass());
+}
 
 void RISCVPassConfig::addPreEmitPass() {
   addPass(&BranchRelaxationPassID);
   addPass(createRISCVMakeCompressibleOptPass());
+
+  // TODO: It would potentially be better to schedule copy propagation after
+  // expanding pseudos (in addPreEmitPass2). However, performing copy
+  // propagation after the machine outliner (which runs after addPreEmitPass)
+  // currently leads to incorrect code-gen, where copies to registers within
+  // outlined functions are removed erroneously.
+  if (TM->getOptLevel() >= CodeGenOpt::Default && EnableRISCVCopyPropagation)
+    addPass(createMachineCopyPropagationPass(true));
 }
 
 void RISCVPassConfig::addPreEmitPass2() {
+  if (TM->getOptLevel() != CodeGenOpt::None) {
+    addPass(createRISCVMoveMergePass());
+    // Schedule PushPop Optimization before expansion of Pseudo instruction,
+    // ensuring return instruction is detected correctly.
+    addPass(createRISCVPushPopOptimizationPass());
+  }
   addPass(createRISCVExpandPseudoPass());
+
   // Schedule the expansion of AMOs at the last possible moment, avoiding the
   // possibility for other passes to break the requirements for forward
   // progress in the LR/SC block.
   addPass(createRISCVExpandAtomicPseudoPass());
+
+  // KCFI indirect call checks are lowered to a bundle.
+  addPass(createUnpackMachineBundles([&](const MachineFunction &MF) {
+    return MF.getFunction().getParent()->getModuleFlag("kcfi");
+  }));
 }
 
 void RISCVPassConfig::addMachineSSAOptimization() {
@@ -272,8 +379,9 @@ void RISCVPassConfig::addMachineSSAOptimization() {
   if (EnableMachineCombiner)
     addPass(&MachineCombinerID);
 
-  if (TM->getTargetTriple().getArch() == Triple::riscv64)
-    addPass(createRISCVSExtWRemovalPass());
+  if (TM->getTargetTriple().getArch() == Triple::riscv64) {
+    addPass(createRISCVOptWInstrsPass());
+  }
 }
 
 void RISCVPassConfig::addPreRegAlloc() {
@@ -281,7 +389,20 @@ void RISCVPassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() != CodeGenOpt::None)
     addPass(createRISCVMergeBaseOffsetOptPass());
   addPass(createRISCVInsertVSETVLIPass());
+  addPass(createRISCVInsertReadWriteCSRPass());
 }
+
+void RISCVPassConfig::addOptimizedRegAlloc() {
+  insertPass(&DetectDeadLanesID, &RISCVInitUndefID);
+
+  TargetPassConfig::addOptimizedRegAlloc();
+}
+
+void RISCVPassConfig::addFastRegAlloc() {
+  addPass(createRISCVInitUndefPass());
+  TargetPassConfig::addFastRegAlloc();
+}
+
 
 void RISCVPassConfig::addPostRegAlloc() {
   if (TM->getOptLevel() != CodeGenOpt::None && EnableRedundantCopyElimination)

@@ -28,6 +28,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include <memory>
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -165,7 +166,7 @@ static void printCoverage(const PathDiagnostic *D,
                           FIDMap &FM,
                           llvm::raw_fd_ostream &o);
 
-static Optional<StringRef> getExpandedMacro(
+static std::optional<StringRef> getExpandedMacro(
     SourceLocation MacroLoc, const cross_tu::CrossTranslationUnitContext &CTU,
     const MacroExpansionContext &MacroExpansions, const SourceManager &SM);
 
@@ -366,10 +367,8 @@ void PlistPrinter::ReportMacroSubPieces(raw_ostream &o,
                                         unsigned indent, unsigned depth) {
   MacroPieces.push_back(&P);
 
-  for (PathPieces::const_iterator I = P.subPieces.begin(),
-                                  E = P.subPieces.end();
-       I != E; ++I) {
-    ReportPiece(o, **I, indent, depth, /*includeControlFlow*/ false);
+  for (const auto &SubPiece : P.subPieces) {
+    ReportPiece(o, *SubPiece, indent, depth, /*includeControlFlow*/ false);
   }
 
   assert(P.getFixits().size() == 0 &&
@@ -384,9 +383,9 @@ void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent) {
     SourceLocation MacroExpansionLoc =
         P->getLocation().asLocation().getExpansionLoc();
 
-    const Optional<StringRef> MacroName =
+    const std::optional<StringRef> MacroName =
         MacroExpansions.getOriginalText(MacroExpansionLoc);
-    const Optional<StringRef> ExpansionText =
+    const std::optional<StringRef> ExpansionText =
         getExpandedMacro(MacroExpansionLoc, CTU, MacroExpansions, SM);
 
     if (!MacroName || !ExpansionText)
@@ -499,12 +498,12 @@ static void printCoverage(const PathDiagnostic *D,
 
   // Mapping from file IDs to executed lines.
   const FilesToLineNumsMap &ExecutedLines = D->getExecutedLines();
-  for (auto I = ExecutedLines.begin(), E = ExecutedLines.end(); I != E; ++I) {
-    unsigned FileKey = AddFID(FM, Fids, I->first);
+  for (const auto &[FID, Lines] : ExecutedLines) {
+    unsigned FileKey = AddFID(FM, Fids, FID);
     Indent(o, IndentLevel) << "<key>" << FileKey << "</key>\n";
     Indent(o, IndentLevel) << "<array>\n";
     IndentLevel++;
-    for (unsigned LineNo : I->second) {
+    for (unsigned LineNo : Lines) {
       Indent(o, IndentLevel);
       EmitInteger(o, LineNo) << "\n";
     }
@@ -596,8 +595,8 @@ void PlistDiagnostics::printBugPath(llvm::raw_ostream &o, const FIDMap &FM,
 
   o << "   <array>\n";
 
-  for (PathPieces::const_iterator E = Path.end(); I != E; ++I)
-    Printer.ReportDiag(o, **I);
+  for (const auto &Piece : llvm::make_range(I, Path.end()))
+    Printer.ReportDiag(o, *Piece);
 
   o << "   </array>\n";
 
@@ -825,7 +824,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
 // Definitions of helper functions and methods for expanding macros.
 //===----------------------------------------------------------------------===//
 
-static Optional<StringRef>
+static std::optional<StringRef>
 getExpandedMacro(SourceLocation MacroExpansionLoc,
                  const cross_tu::CrossTranslationUnitContext &CTU,
                  const MacroExpansionContext &MacroExpansions,

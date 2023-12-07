@@ -6,7 +6,7 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false -enable-misched=0 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false -enable-misched=0 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
-define amdgpu_kernel void @frem_f16(half addrspace(1)* %out, half addrspace(1)* %in1,
+define amdgpu_kernel void @frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: frem_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -125,13 +125,10 @@ define amdgpu_kernel void @frem_f16(half addrspace(1)* %out, half addrspace(1)* 
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ushort v1, v0, s[6:7]
 ; GFX9-NEXT:    global_load_ushort v2, v0, s[2:3] offset:8
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v4, v2
-; GFX9-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX9-NEXT:    v_mul_f32_e32 v3, v3, v4
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX9-NEXT:    v_cvt_f32_f16_e32 v3, v2
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v3
+; GFX9-NEXT:    v_mad_mixlo_f16 v3, v1, v3, 0 op_sel_hi:[1,0,0]
 ; GFX9-NEXT:    v_div_fixup_f16 v3, v3, v2, v1
 ; GFX9-NEXT:    v_trunc_f16_e32 v3, v3
 ; GFX9-NEXT:    v_fma_f16 v1, -v3, v2, v1
@@ -148,13 +145,10 @@ define amdgpu_kernel void @frem_f16(half addrspace(1)* %out, half addrspace(1)* 
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_ushort v1, v0, s[6:7]
 ; GFX10-NEXT:    global_load_ushort v2, v0, s[2:3] offset:8
-; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v4, v2
-; GFX10-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX10-NEXT:    v_mul_f32_e32 v3, v3, v4
-; GFX10-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX10-NEXT:    v_cvt_f32_f16_e32 v3, v2
+; GFX10-NEXT:    v_rcp_f32_e32 v3, v3
+; GFX10-NEXT:    v_fma_mixlo_f16 v3, v1, v3, 0 op_sel_hi:[1,0,0]
 ; GFX10-NEXT:    v_div_fixup_f16 v3, v3, v2, v1
 ; GFX10-NEXT:    v_trunc_f16_e32 v3, v3
 ; GFX10-NEXT:    v_fma_f16 v1, -v3, v2, v1
@@ -171,33 +165,30 @@ define amdgpu_kernel void @frem_f16(half addrspace(1)* %out, half addrspace(1)* 
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_u16 v1, v0, s[6:7]
 ; GFX11-NEXT:    global_load_u16 v2, v0, s[0:1] offset:8
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v4, v2
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_rcp_f32_e32 v4, v4
+; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-NEXT:    v_mul_f32_e32 v3, v3, v4
-; GFX11-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_fma_mixlo_f16 v3, v1, v3, 0 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_div_fixup_f16 v3, v3, v2, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_trunc_f16_e32 v3, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_fma_f16 v1, -v3, v2, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                      half addrspace(1)* %in2) #0 {
-   %gep2 = getelementptr half, half addrspace(1)* %in2, i32 4
-   %r0 = load half, half addrspace(1)* %in1, align 4
-   %r1 = load half, half addrspace(1)* %gep2, align 4
+                      ptr addrspace(1) %in2) #0 {
+   %gep2 = getelementptr half, ptr addrspace(1) %in2, i32 4
+   %r0 = load half, ptr addrspace(1) %in1, align 4
+   %r1 = load half, ptr addrspace(1) %gep2, align 4
    %r2 = frem half %r0, %r1
-   store half %r2, half addrspace(1)* %out, align 4
+   store half %r2, ptr addrspace(1) %out, align 4
    ret void
 }
 
-define amdgpu_kernel void @fast_frem_f16(half addrspace(1)* %out, half addrspace(1)* %in1,
+define amdgpu_kernel void @fast_frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: fast_frem_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -331,18 +322,19 @@ define amdgpu_kernel void @fast_frem_f16(half addrspace(1)* %out, half addrspace
 ; GFX11-NEXT:    v_trunc_f16_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f16 v1, -v3, v2, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                      half addrspace(1)* %in2) #0 {
-   %gep2 = getelementptr half, half addrspace(1)* %in2, i32 4
-   %r0 = load half, half addrspace(1)* %in1, align 4
-   %r1 = load half, half addrspace(1)* %gep2, align 4
+                      ptr addrspace(1) %in2) #0 {
+   %gep2 = getelementptr half, ptr addrspace(1) %in2, i32 4
+   %r0 = load half, ptr addrspace(1) %in1, align 4
+   %r1 = load half, ptr addrspace(1) %gep2, align 4
    %r2 = frem fast half %r0, %r1
-   store half %r2, half addrspace(1)* %out, align 4
+   store half %r2, ptr addrspace(1) %out, align 4
    ret void
 }
 
-define amdgpu_kernel void @unsafe_frem_f16(half addrspace(1)* %out, half addrspace(1)* %in1,
+define amdgpu_kernel void @unsafe_frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: unsafe_frem_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -476,18 +468,19 @@ define amdgpu_kernel void @unsafe_frem_f16(half addrspace(1)* %out, half addrspa
 ; GFX11-NEXT:    v_trunc_f16_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f16 v1, -v3, v2, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                             half addrspace(1)* %in2) #1 {
-   %gep2 = getelementptr half, half addrspace(1)* %in2, i32 4
-   %r0 = load half, half addrspace(1)* %in1, align 4
-   %r1 = load half, half addrspace(1)* %gep2, align 4
+                             ptr addrspace(1) %in2) #1 {
+   %gep2 = getelementptr half, ptr addrspace(1) %in2, i32 4
+   %r0 = load half, ptr addrspace(1) %in1, align 4
+   %r1 = load half, ptr addrspace(1) %gep2, align 4
    %r2 = frem afn half %r0, %r1
-   store half %r2, half addrspace(1)* %out, align 4
+   store half %r2, ptr addrspace(1) %out, align 4
    ret void
 }
 
-define amdgpu_kernel void @frem_f32(float addrspace(1)* %out, float addrspace(1)* %in1,
+define amdgpu_kernel void @frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: frem_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -683,18 +676,19 @@ define amdgpu_kernel void @frem_f32(float addrspace(1)* %out, float addrspace(1)
 ; GFX11-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f32 v1, -v3, v2, v1
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                      float addrspace(1)* %in2) #0 {
-   %gep2 = getelementptr float, float addrspace(1)* %in2, i32 4
-   %r0 = load float, float addrspace(1)* %in1, align 4
-   %r1 = load float, float addrspace(1)* %gep2, align 4
+                      ptr addrspace(1) %in2) #0 {
+   %gep2 = getelementptr float, ptr addrspace(1) %in2, i32 4
+   %r0 = load float, ptr addrspace(1) %in1, align 4
+   %r1 = load float, ptr addrspace(1) %gep2, align 4
    %r2 = frem float %r0, %r1
-   store float %r2, float addrspace(1)* %out, align 4
+   store float %r2, ptr addrspace(1) %out, align 4
    ret void
 }
 
-define amdgpu_kernel void @fast_frem_f32(float addrspace(1)* %out, float addrspace(1)* %in1,
+define amdgpu_kernel void @fast_frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: fast_frem_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -820,18 +814,19 @@ define amdgpu_kernel void @fast_frem_f32(float addrspace(1)* %out, float addrspa
 ; GFX11-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f32 v1, -v3, v2, v1
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                      float addrspace(1)* %in2) #0 {
-   %gep2 = getelementptr float, float addrspace(1)* %in2, i32 4
-   %r0 = load float, float addrspace(1)* %in1, align 4
-   %r1 = load float, float addrspace(1)* %gep2, align 4
+                      ptr addrspace(1) %in2) #0 {
+   %gep2 = getelementptr float, ptr addrspace(1) %in2, i32 4
+   %r0 = load float, ptr addrspace(1) %in1, align 4
+   %r1 = load float, ptr addrspace(1) %gep2, align 4
    %r2 = frem fast float %r0, %r1
-   store float %r2, float addrspace(1)* %out, align 4
+   store float %r2, ptr addrspace(1) %out, align 4
    ret void
 }
 
-define amdgpu_kernel void @unsafe_frem_f32(float addrspace(1)* %out, float addrspace(1)* %in1,
+define amdgpu_kernel void @unsafe_frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: unsafe_frem_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -957,18 +952,19 @@ define amdgpu_kernel void @unsafe_frem_f32(float addrspace(1)* %out, float addrs
 ; GFX11-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f32 v1, -v3, v2, v1
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                             float addrspace(1)* %in2) #1 {
-   %gep2 = getelementptr float, float addrspace(1)* %in2, i32 4
-   %r0 = load float, float addrspace(1)* %in1, align 4
-   %r1 = load float, float addrspace(1)* %gep2, align 4
+                             ptr addrspace(1) %in2) #1 {
+   %gep2 = getelementptr float, ptr addrspace(1) %in2, i32 4
+   %r0 = load float, ptr addrspace(1) %in1, align 4
+   %r1 = load float, ptr addrspace(1) %gep2, align 4
    %r2 = frem afn float %r0, %r1
-   store float %r2, float addrspace(1)* %out, align 4
+   store float %r2, ptr addrspace(1) %out, align 4
    ret void
 }
 
-define amdgpu_kernel void @frem_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
+define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: frem_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
@@ -1177,17 +1173,18 @@ define amdgpu_kernel void @frem_f64(double addrspace(1)* %out, double addrspace(
 ; GFX11-NEXT:    v_trunc_f64_e32 v[4:5], v[4:5]
 ; GFX11-NEXT:    v_fma_f64 v[0:1], -v[4:5], v[2:3], v[0:1]
 ; GFX11-NEXT:    global_store_b64 v12, v[0:1], s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                      double addrspace(1)* %in2) #0 {
-   %r0 = load double, double addrspace(1)* %in1, align 8
-   %r1 = load double, double addrspace(1)* %in2, align 8
+                      ptr addrspace(1) %in2) #0 {
+   %r0 = load double, ptr addrspace(1) %in1, align 8
+   %r1 = load double, ptr addrspace(1) %in2, align 8
    %r2 = frem double %r0, %r1
-   store double %r2, double addrspace(1)* %out, align 8
+   store double %r2, ptr addrspace(1) %out, align 8
    ret void
 }
 
-define amdgpu_kernel void @fast_frem_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
+define amdgpu_kernel void @fast_frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: fast_frem_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1370,17 +1367,18 @@ define amdgpu_kernel void @fast_frem_f64(double addrspace(1)* %out, double addrs
 ; GFX11-NEXT:    v_trunc_f64_e32 v[4:5], v[4:5]
 ; GFX11-NEXT:    v_fma_f64 v[0:1], -v[4:5], v[2:3], v[0:1]
 ; GFX11-NEXT:    global_store_b64 v10, v[0:1], s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                      double addrspace(1)* %in2) #0 {
-   %r0 = load double, double addrspace(1)* %in1, align 8
-   %r1 = load double, double addrspace(1)* %in2, align 8
+                      ptr addrspace(1) %in2) #0 {
+   %r0 = load double, ptr addrspace(1) %in1, align 8
+   %r1 = load double, ptr addrspace(1) %in2, align 8
    %r2 = frem fast double %r0, %r1
-   store double %r2, double addrspace(1)* %out, align 8
+   store double %r2, ptr addrspace(1) %out, align 8
    ret void
 }
 
-define amdgpu_kernel void @unsafe_frem_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
+define amdgpu_kernel void @unsafe_frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: unsafe_frem_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1563,17 +1561,18 @@ define amdgpu_kernel void @unsafe_frem_f64(double addrspace(1)* %out, double add
 ; GFX11-NEXT:    v_trunc_f64_e32 v[4:5], v[4:5]
 ; GFX11-NEXT:    v_fma_f64 v[0:1], -v[4:5], v[2:3], v[0:1]
 ; GFX11-NEXT:    global_store_b64 v10, v[0:1], s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                             double addrspace(1)* %in2) #1 {
-   %r0 = load double, double addrspace(1)* %in1, align 8
-   %r1 = load double, double addrspace(1)* %in2, align 8
+                             ptr addrspace(1) %in2) #1 {
+   %r0 = load double, ptr addrspace(1) %in1, align 8
+   %r1 = load double, ptr addrspace(1) %in2, align 8
    %r2 = frem afn double %r0, %r1
-   store double %r2, double addrspace(1)* %out, align 8
+   store double %r2, ptr addrspace(1) %out, align 8
    ret void
 }
 
-define amdgpu_kernel void @frem_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in1,
+define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: frem_v2f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1748,23 +1747,18 @@ define amdgpu_kernel void @frem_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v1, v0, s[6:7]
 ; GFX9-NEXT:    global_load_dword v2, v0, s[2:3] offset:16
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v4, v2
-; GFX9-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX9-NEXT:    v_mul_f32_e32 v3, v3, v4
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX9-NEXT:    v_cvt_f32_f16_e32 v3, v2
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v3
+; GFX9-NEXT:    v_mad_mixlo_f16 v3, v1, v3, 0 op_sel_hi:[1,0,0]
 ; GFX9-NEXT:    v_div_fixup_f16 v3, v3, v2, v1
 ; GFX9-NEXT:    v_trunc_f16_e32 v3, v3
 ; GFX9-NEXT:    v_fma_f16 v3, -v3, v2, v1
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v5, v2
+; GFX9-NEXT:    v_cvt_f32_f16_e32 v4, v2
+; GFX9-NEXT:    v_rcp_f32_e32 v4, v4
+; GFX9-NEXT:    v_mad_mixlo_f16 v4, v1, v4, 0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v4, v1
-; GFX9-NEXT:    v_rcp_f32_e32 v5, v5
-; GFX9-NEXT:    v_mul_f32_e32 v4, v4, v5
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX9-NEXT:    v_div_fixup_f16 v4, v4, v2, v1
 ; GFX9-NEXT:    v_trunc_f16_e32 v4, v4
 ; GFX9-NEXT:    v_fma_f16 v1, -v4, v2, v1
@@ -1782,23 +1776,18 @@ define amdgpu_kernel void @frem_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v1, v0, s[6:7]
 ; GFX10-NEXT:    global_load_dword v2, v0, s[2:3] offset:16
-; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v4, v2
-; GFX10-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX10-NEXT:    v_mul_f32_e32 v3, v3, v4
-; GFX10-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX10-NEXT:    v_cvt_f32_f16_e32 v3, v2
+; GFX10-NEXT:    v_rcp_f32_e32 v3, v3
+; GFX10-NEXT:    v_fma_mixlo_f16 v3, v1, v3, 0 op_sel_hi:[1,0,0]
 ; GFX10-NEXT:    v_div_fixup_f16 v3, v3, v2, v1
 ; GFX10-NEXT:    v_trunc_f16_e32 v3, v3
 ; GFX10-NEXT:    v_fma_f16 v3, -v3, v2, v1
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; GFX10-NEXT:    v_cvt_f32_f16_e32 v4, v2
+; GFX10-NEXT:    v_rcp_f32_e32 v4, v4
+; GFX10-NEXT:    v_fma_mixlo_f16 v4, v1, v4, 0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v5, v2
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v4, v1
-; GFX10-NEXT:    v_rcp_f32_e32 v5, v5
-; GFX10-NEXT:    v_mul_f32_e32 v4, v4, v5
-; GFX10-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX10-NEXT:    v_div_fixup_f16 v4, v4, v2, v1
 ; GFX10-NEXT:    v_trunc_f16_e32 v4, v4
 ; GFX10-NEXT:    v_fma_f16 v1, -v4, v2, v1
@@ -1816,49 +1805,43 @@ define amdgpu_kernel void @frem_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_b32 v1, v0, s[6:7]
 ; GFX11-NEXT:    global_load_b32 v2, v0, s[0:1] offset:16
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v4, v2
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_rcp_f32_e32 v4, v4
+; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-NEXT:    v_mul_f32_e32 v3, v3, v4
-; GFX11-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_fma_mixlo_f16 v3, v1, v3, 0 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_div_fixup_f16 v3, v3, v2, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_trunc_f16_e32 v3, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_fma_f16 v3, -v3, v2, v1
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v5, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v4, v1
-; GFX11-NEXT:    v_rcp_f32_e32 v5, v5
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v4, v2
+; GFX11-NEXT:    v_rcp_f32_e32 v4, v4
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-NEXT:    v_mul_f32_e32 v4, v4, v5
+; GFX11-NEXT:    v_fma_mixlo_f16 v4, v1, v4, 0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX11-NEXT:    v_div_fixup_f16 v4, v4, v2, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_trunc_f16_e32 v4, v4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_fma_f16 v1, -v4, v2, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pack_b32_f16 v1, v3, v1
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                        <2 x half> addrspace(1)* %in2) #0 {
-   %gep2 = getelementptr <2 x half>, <2 x half> addrspace(1)* %in2, i32 4
-   %r0 = load <2 x half>, <2 x half> addrspace(1)* %in1, align 8
-   %r1 = load <2 x half>, <2 x half> addrspace(1)* %gep2, align 8
+                        ptr addrspace(1) %in2) #0 {
+   %gep2 = getelementptr <2 x half>, ptr addrspace(1) %in2, i32 4
+   %r0 = load <2 x half>, ptr addrspace(1) %in1, align 8
+   %r1 = load <2 x half>, ptr addrspace(1) %gep2, align 8
    %r2 = frem <2 x half> %r0, %r1
-   store <2 x half> %r2, <2 x half> addrspace(1)* %out, align 8
+   store <2 x half> %r2, ptr addrspace(1) %out, align 8
    ret void
 }
 
-define amdgpu_kernel void @frem_v4f16(<4 x half> addrspace(1)* %out, <4 x half> addrspace(1)* %in1,
+define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: frem_v4f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -2133,42 +2116,33 @@ define amdgpu_kernel void @frem_v4f16(<4 x half> addrspace(1)* %out, <4 x half> 
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v4, s[6:7]
 ; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[2:3] offset:32
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v5, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v6, v3
-; GFX9-NEXT:    v_rcp_f32_e32 v6, v6
-; GFX9-NEXT:    v_mul_f32_e32 v5, v5, v6
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; GFX9-NEXT:    v_cvt_f32_f16_e32 v5, v3
+; GFX9-NEXT:    v_rcp_f32_e32 v5, v5
+; GFX9-NEXT:    v_mad_mixlo_f16 v5, v1, v5, 0 op_sel_hi:[1,0,0]
 ; GFX9-NEXT:    v_div_fixup_f16 v5, v5, v3, v1
 ; GFX9-NEXT:    v_trunc_f16_e32 v5, v5
 ; GFX9-NEXT:    v_fma_f16 v5, -v5, v3, v1
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v7, v3
+; GFX9-NEXT:    v_cvt_f32_f16_e32 v6, v3
+; GFX9-NEXT:    v_rcp_f32_e32 v6, v6
+; GFX9-NEXT:    v_mad_mixlo_f16 v6, v1, v6, 0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v6, v1
-; GFX9-NEXT:    v_rcp_f32_e32 v7, v7
-; GFX9-NEXT:    v_mul_f32_e32 v6, v6, v7
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v6, v6
 ; GFX9-NEXT:    v_div_fixup_f16 v6, v6, v3, v1
 ; GFX9-NEXT:    v_trunc_f16_e32 v6, v6
 ; GFX9-NEXT:    v_fma_f16 v1, -v6, v3, v1
+; GFX9-NEXT:    v_cvt_f32_f16_e32 v3, v2
 ; GFX9-NEXT:    v_pack_b32_f16 v1, v5, v1
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v5, v2
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v3, v0
-; GFX9-NEXT:    v_rcp_f32_e32 v5, v5
-; GFX9-NEXT:    v_mul_f32_e32 v3, v3, v5
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v3
+; GFX9-NEXT:    v_mad_mixlo_f16 v3, v0, v3, 0 op_sel_hi:[1,0,0]
 ; GFX9-NEXT:    v_div_fixup_f16 v3, v3, v2, v0
 ; GFX9-NEXT:    v_trunc_f16_e32 v3, v3
 ; GFX9-NEXT:    v_fma_f16 v3, -v3, v2, v0
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v6, v2
+; GFX9-NEXT:    v_cvt_f32_f16_e32 v5, v2
+; GFX9-NEXT:    v_rcp_f32_e32 v5, v5
+; GFX9-NEXT:    v_mad_mixlo_f16 v5, v0, v5, 0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v5, v0
-; GFX9-NEXT:    v_rcp_f32_e32 v6, v6
-; GFX9-NEXT:    v_mul_f32_e32 v5, v5, v6
-; GFX9-NEXT:    v_cvt_f16_f32_e32 v5, v5
 ; GFX9-NEXT:    v_div_fixup_f16 v5, v5, v2, v0
 ; GFX9-NEXT:    v_trunc_f16_e32 v5, v5
 ; GFX9-NEXT:    v_fma_f16 v0, -v5, v2, v0
@@ -2186,42 +2160,33 @@ define amdgpu_kernel void @frem_v4f16(<4 x half> addrspace(1)* %out, <4 x half> 
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v4, s[6:7]
 ; GFX10-NEXT:    global_load_dwordx2 v[2:3], v4, s[2:3] offset:32
-; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v5, v1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v6, v3
-; GFX10-NEXT:    v_rcp_f32_e32 v6, v6
-; GFX10-NEXT:    v_mul_f32_e32 v5, v5, v6
-; GFX10-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; GFX10-NEXT:    v_cvt_f32_f16_e32 v5, v3
+; GFX10-NEXT:    v_rcp_f32_e32 v5, v5
+; GFX10-NEXT:    v_fma_mixlo_f16 v5, v1, v5, 0 op_sel_hi:[1,0,0]
 ; GFX10-NEXT:    v_div_fixup_f16 v5, v5, v3, v1
 ; GFX10-NEXT:    v_trunc_f16_e32 v5, v5
 ; GFX10-NEXT:    v_fma_f16 v5, -v5, v3, v1
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; GFX10-NEXT:    v_cvt_f32_f16_e32 v6, v3
+; GFX10-NEXT:    v_rcp_f32_e32 v6, v6
+; GFX10-NEXT:    v_fma_mixlo_f16 v6, v1, v6, 0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v7, v3
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v6, v1
-; GFX10-NEXT:    v_rcp_f32_e32 v7, v7
-; GFX10-NEXT:    v_mul_f32_e32 v6, v6, v7
-; GFX10-NEXT:    v_cvt_f16_f32_e32 v6, v6
 ; GFX10-NEXT:    v_div_fixup_f16 v6, v6, v3, v1
 ; GFX10-NEXT:    v_trunc_f16_e32 v6, v6
 ; GFX10-NEXT:    v_fma_f16 v1, -v6, v3, v1
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v3, v0
+; GFX10-NEXT:    v_cvt_f32_f16_e32 v3, v2
 ; GFX10-NEXT:    v_pack_b32_f16 v1, v5, v1
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v5, v2
-; GFX10-NEXT:    v_rcp_f32_e32 v5, v5
-; GFX10-NEXT:    v_mul_f32_e32 v3, v3, v5
-; GFX10-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX10-NEXT:    v_rcp_f32_e32 v3, v3
+; GFX10-NEXT:    v_fma_mixlo_f16 v3, v0, v3, 0 op_sel_hi:[1,0,0]
 ; GFX10-NEXT:    v_div_fixup_f16 v3, v3, v2, v0
 ; GFX10-NEXT:    v_trunc_f16_e32 v3, v3
 ; GFX10-NEXT:    v_fma_f16 v3, -v3, v2, v0
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; GFX10-NEXT:    v_cvt_f32_f16_e32 v5, v2
+; GFX10-NEXT:    v_rcp_f32_e32 v5, v5
+; GFX10-NEXT:    v_fma_mixlo_f16 v5, v0, v5, 0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v6, v2
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v5, v0
-; GFX10-NEXT:    v_rcp_f32_e32 v6, v6
-; GFX10-NEXT:    v_mul_f32_e32 v5, v5, v6
-; GFX10-NEXT:    v_cvt_f16_f32_e32 v5, v5
 ; GFX10-NEXT:    v_div_fixup_f16 v5, v5, v2, v0
 ; GFX10-NEXT:    v_trunc_f16_e32 v5, v5
 ; GFX10-NEXT:    v_fma_f16 v0, -v5, v2, v0
@@ -2239,57 +2204,45 @@ define amdgpu_kernel void @frem_v4f16(<4 x half> addrspace(1)* %out, <4 x half> 
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_b64 v[0:1], v4, s[6:7]
 ; GFX11-NEXT:    global_load_b64 v[2:3], v4, s[0:1] offset:32
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v5, v1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v6, v3
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v5, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_rcp_f32_e32 v6, v6
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-NEXT:    v_mul_f32_e32 v5, v5, v6
-; GFX11-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_div_fixup_f16 v5, v5, v3, v1
-; GFX11-NEXT:    v_trunc_f16_e32 v5, v5
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_fma_f16 v5, -v5, v3, v1
-; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v7, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v6, v1
-; GFX11-NEXT:    v_rcp_f32_e32 v7, v7
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-NEXT:    v_mul_f32_e32 v6, v6, v7
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; GFX11-NEXT:    v_div_fixup_f16 v6, v6, v3, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_trunc_f16_e32 v6, v6
-; GFX11-NEXT:    v_fma_f16 v1, -v6, v3, v1
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_pack_b32_f16 v1, v5, v1
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v5, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v5, v5
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-NEXT:    v_mul_f32_e32 v3, v3, v5
+; GFX11-NEXT:    v_fma_mixlo_f16 v5, v1, v5, 0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_div_fixup_f16 v5, v5, v3, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX11-NEXT:    v_trunc_f16_e32 v5, v5
+; GFX11-NEXT:    v_fma_f16 v5, -v5, v3, v1
+; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v6, v3
+; GFX11-NEXT:    v_rcp_f32_e32 v6, v6
+; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    v_fma_mixlo_f16 v6, v1, v6, 0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_div_fixup_f16 v6, v6, v3, v1
+; GFX11-NEXT:    v_trunc_f16_e32 v6, v6
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_fma_f16 v1, -v6, v3, v1
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v2
+; GFX11-NEXT:    v_pack_b32_f16 v1, v5, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
+; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    v_fma_mixlo_f16 v3, v0, v3, 0 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_div_fixup_f16 v3, v3, v2, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_trunc_f16_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f16 v3, -v3, v2, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v6, v2
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v5, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_rcp_f32_e32 v6, v6
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v5, v2
+; GFX11-NEXT:    v_rcp_f32_e32 v5, v5
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-NEXT:    v_mul_f32_e32 v5, v5, v6
-; GFX11-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; GFX11-NEXT:    v_fma_mixlo_f16 v5, v0, v5, 0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_div_fixup_f16 v5, v5, v2, v0
 ; GFX11-NEXT:    v_trunc_f16_e32 v5, v5
@@ -2297,18 +2250,19 @@ define amdgpu_kernel void @frem_v4f16(<4 x half> addrspace(1)* %out, <4 x half> 
 ; GFX11-NEXT:    v_fma_f16 v0, -v5, v2, v0
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v3, v0
 ; GFX11-NEXT:    global_store_b64 v4, v[0:1], s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                        <4 x half> addrspace(1)* %in2) #0 {
-   %gep2 = getelementptr <4 x half>, <4 x half> addrspace(1)* %in2, i32 4
-   %r0 = load <4 x half>, <4 x half> addrspace(1)* %in1, align 16
-   %r1 = load <4 x half>, <4 x half> addrspace(1)* %gep2, align 16
+                        ptr addrspace(1) %in2) #0 {
+   %gep2 = getelementptr <4 x half>, ptr addrspace(1) %in2, i32 4
+   %r0 = load <4 x half>, ptr addrspace(1) %in1, align 16
+   %r1 = load <4 x half>, ptr addrspace(1) %gep2, align 16
    %r2 = frem <4 x half> %r0, %r1
-   store <4 x half> %r2, <4 x half> addrspace(1)* %out, align 16
+   store <4 x half> %r2, ptr addrspace(1) %out, align 16
    ret void
 }
 
-define amdgpu_kernel void @frem_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %in1,
+define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: frem_v2f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -2600,18 +2554,19 @@ define amdgpu_kernel void @frem_v2f32(<2 x float> addrspace(1)* %out, <2 x float
 ; GFX11-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f32 v0, -v3, v2, v0
 ; GFX11-NEXT:    global_store_b64 v4, v[0:1], s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                        <2 x float> addrspace(1)* %in2) #0 {
-   %gep2 = getelementptr <2 x float>, <2 x float> addrspace(1)* %in2, i32 4
-   %r0 = load <2 x float>, <2 x float> addrspace(1)* %in1, align 8
-   %r1 = load <2 x float>, <2 x float> addrspace(1)* %gep2, align 8
+                        ptr addrspace(1) %in2) #0 {
+   %gep2 = getelementptr <2 x float>, ptr addrspace(1) %in2, i32 4
+   %r0 = load <2 x float>, ptr addrspace(1) %in1, align 8
+   %r1 = load <2 x float>, ptr addrspace(1) %gep2, align 8
    %r2 = frem <2 x float> %r0, %r1
-   store <2 x float> %r2, <2 x float> addrspace(1)* %out, align 8
+   store <2 x float> %r2, ptr addrspace(1) %out, align 8
    ret void
 }
 
-define amdgpu_kernel void @frem_v4f32(<4 x float> addrspace(1)* %out, <4 x float> addrspace(1)* %in1,
+define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: frem_v4f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -3095,18 +3050,19 @@ define amdgpu_kernel void @frem_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 ; GFX11-NEXT:    v_trunc_f32_e32 v5, v5
 ; GFX11-NEXT:    v_fma_f32 v0, -v5, v4, v0
 ; GFX11-NEXT:    global_store_b128 v8, v[0:3], s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                        <4 x float> addrspace(1)* %in2) #0 {
-   %gep2 = getelementptr <4 x float>, <4 x float> addrspace(1)* %in2, i32 4
-   %r0 = load <4 x float>, <4 x float> addrspace(1)* %in1, align 16
-   %r1 = load <4 x float>, <4 x float> addrspace(1)* %gep2, align 16
+                        ptr addrspace(1) %in2) #0 {
+   %gep2 = getelementptr <4 x float>, ptr addrspace(1) %in2, i32 4
+   %r0 = load <4 x float>, ptr addrspace(1) %in1, align 16
+   %r1 = load <4 x float>, ptr addrspace(1) %gep2, align 16
    %r2 = frem <4 x float> %r0, %r1
-   store <4 x float> %r2, <4 x float> addrspace(1)* %out, align 16
+   store <4 x float> %r2, ptr addrspace(1) %out, align 16
    ret void
 }
 
-define amdgpu_kernel void @frem_v2f64(<2 x double> addrspace(1)* %out, <2 x double> addrspace(1)* %in1,
+define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; SI-LABEL: frem_v2f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
@@ -3425,14 +3381,15 @@ define amdgpu_kernel void @frem_v2f64(<2 x double> addrspace(1)* %out, <2 x doub
 ; GFX11-NEXT:    v_trunc_f64_e32 v[6:7], v[6:7]
 ; GFX11-NEXT:    v_fma_f64 v[0:1], -v[6:7], v[4:5], v[0:1]
 ; GFX11-NEXT:    global_store_b128 v16, v[0:3], s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-                        <2 x double> addrspace(1)* %in2) #0 {
-   %gep2 = getelementptr <2 x double>, <2 x double> addrspace(1)* %in2, i32 4
-   %r0 = load <2 x double>, <2 x double> addrspace(1)* %in1, align 16
-   %r1 = load <2 x double>, <2 x double> addrspace(1)* %gep2, align 16
+                        ptr addrspace(1) %in2) #0 {
+   %gep2 = getelementptr <2 x double>, ptr addrspace(1) %in2, i32 4
+   %r0 = load <2 x double>, ptr addrspace(1) %in1, align 16
+   %r1 = load <2 x double>, ptr addrspace(1) %gep2, align 16
    %r2 = frem <2 x double> %r0, %r1
-   store <2 x double> %r2, <2 x double> addrspace(1)* %out, align 16
+   store <2 x double> %r2, ptr addrspace(1) %out, align 16
    ret void
 }
 

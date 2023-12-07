@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Remarks.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkFormat.h"
@@ -338,16 +339,11 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
 
             bool Printed = false;
             if (!NoDemangle) {
-              int Status = 0;
-              char *Demangled =
-                itaniumDemangle(FuncName.c_str(), nullptr, nullptr, &Status);
-              if (Demangled && Status == 0) {
+              if (char *Demangled = itaniumDemangle(FuncName)) {
                 OS << Demangled;
                 Printed = true;
-              }
-
-              if (Demangled)
                 std::free(Demangled);
+              }
             }
 
             if (!Printed)

@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 namespace {
 // FIXME: This matcher exists in some other code-review as well.
@@ -85,11 +83,11 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   // Match local variables which could be 'const' if not modified later.
   // Example: `int i = 10` would match `int i`.
   const auto LocalValDecl = varDecl(
-      allOf(isLocal(), hasInitializer(anything()),
-            unless(anyOf(ConstType, ConstReference, TemplateType,
-                         hasInitializer(isInstantiationDependent()),
-                         AutoTemplateType, RValueReference, FunctionPointerRef,
-                         hasType(cxxRecordDecl(isLambda())), isImplicit()))));
+      isLocal(), hasInitializer(anything()),
+      unless(anyOf(ConstType, ConstReference, TemplateType,
+                   hasInitializer(isInstantiationDependent()), AutoTemplateType,
+                   RValueReference, FunctionPointerRef,
+                   hasType(cxxRecordDecl(isLambda())), isImplicit())));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
@@ -207,6 +205,4 @@ void ConstCorrectnessCheck::registerScope(const CompoundStmt *LocalScope,
     Analyzer = std::make_unique<ExprMutationAnalyzer>(*LocalScope, *Context);
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

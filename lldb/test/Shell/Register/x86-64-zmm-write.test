@@ -1,9 +1,3 @@
-# xfail with system debugserver until the fix for
-# https://reviews.llvm.org/D123269 in
-# lldb/tools/debugserver/source/MacOSX/x86_64/DNBArchImplX86_64.cpp
-# has made it into released tools.
-# XFAIL: system-debugserver
-
 # XFAIL: system-freebsd
 # XFAIL: system-linux
 # XFAIL: system-netbsd

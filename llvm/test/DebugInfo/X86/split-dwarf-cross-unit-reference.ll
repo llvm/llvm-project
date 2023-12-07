@@ -1,12 +1,12 @@
 ; RUN: llc -mtriple=x86_64-linux -split-dwarf-cross-cu-references -split-dwarf-file=foo.dwo -filetype=obj -o %t < %s
-; RUN: llvm-objdump -r %t | FileCheck %s
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=INFO --check-prefix=DWO --check-prefix=CROSS %s
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=INFO %s
+; RUN: llvm-objdump -r %t | FileCheck --check-prefix=CHECK --check-prefix=RELO_CROSS %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=DWO --check-prefix=CROSS %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL %s
 
 ; RUN: llc -mtriple=x86_64-linux -split-dwarf-file=foo.dwo -filetype=obj -o %t < %s
-; RUN: llvm-objdump -r %t | FileCheck %s
+; RUN: llvm-objdump -r %t | FileCheck --check-prefix=CHECK %s
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=DWO --check-prefix=NOCROSS %s
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=INFO %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL %s
 
 ; Testing cross-CU references for types, subprograms, and variables
 ; Built from code something like this:
@@ -48,8 +48,8 @@
 ; CHECK-NOT: RELOCATION RECORDS
 ; Expect one relocation in debug_info, from the inlined f1 in foo to its
 ; abstract origin in bar
-; CHECK: R_X86_64_32 .debug_info
-; CHECK-NOT: RELOCATION RECORDS
+; RELO_CROSS: R_X86_64_32 .debug_info
+; Expect no relocations in debug_info when disabling multiple CUs in Split DWARF
 ; CHECK-NOT: .debug_info
 ; CHECK: RELOCATION RECORDS
 ; CHECK-NOT: .rel{{a?}}.debug_info.dwo
@@ -75,29 +75,22 @@
 ; DWO:       DW_TAG_formal_parameter
 ; DWO:         DW_AT_abstract_origin [DW_FORM_ref4] {{.*}}{0x[[F1T]]}
 
-; ALL: Compile Unit
-; ALL: DW_TAG_compile_unit
-; DWO:   DW_AT_name {{.*}} "bar.cpp"
-; NOCROSS: 0x[[BAR_F1:.*]]: DW_TAG_subprogram
-; NOCROSS: DW_AT_name {{.*}} "f1"
-; NOCROSS: 0x[[BAR_F1T:.*]]: DW_TAG_formal_parameter
-; NOCROSS:   DW_AT_name {{.*}} "t"
-; NOCROSS:   DW_AT_type [DW_FORM_ref4] {{.*}}{0x[[BAR_T1:.*]]}
-; NOCROSS: NULL
-; NOCROSS: 0x[[BAR_T1]]: DW_TAG_structure_type
-; NOCROSS: DW_AT_name {{.*}} "t1"
+; NOCROSS-NOT: DW_TAG_compile_unit
+; CROSS: Compile Unit
+; CROSS: DW_TAG_compile_unit
+; CROSS:   DW_AT_name {{.*}} "bar.cpp"
 ; ALL:   DW_TAG_subprogram
 ; ALL:     DW_AT_name {{.*}} "bar"
 ; DWO:     DW_TAG_formal_parameter
 ; DWO:       DW_AT_name {{.*}} "t"
 ; CROSS:     DW_AT_type [DW_FORM_ref_addr] (0x00000000[[T1]]
-; NOCROSS:   DW_AT_type [DW_FORM_ref4] {{.*}}{0x[[BAR_T1]]}
+; NOCROSS:   DW_AT_type [DW_FORM_ref4] {{.*}}{0x[[T1]]}
 ; ALL:     DW_TAG_inlined_subroutine
-; INFO:     DW_AT_abstract_origin [DW_FORM_ref_addr] (0x00000000[[F1]]
-; NOCROSS:   DW_AT_abstract_origin [DW_FORM_ref4] {{.*}}{0x[[BAR_F1]]}
+; CROSS:     DW_AT_abstract_origin [DW_FORM_ref_addr] (0x00000000[[F1]]
+; NOCROSS:   DW_AT_abstract_origin [DW_FORM_ref4] {{.*}}{0x[[F1]]}
 ; DWO:       DW_TAG_formal_parameter
 ; CROSS:       DW_AT_abstract_origin [DW_FORM_ref_addr] (0x00000000[[F1T]]
-; NOCROSS:     DW_AT_abstract_origin [DW_FORM_ref4] {{.*}}{0x[[BAR_F1T]]
+; NOCROSS:     DW_AT_abstract_origin [DW_FORM_ref4] {{.*}}{0x[[F1T]]
 
 %struct.t1 = type { i32 }
 

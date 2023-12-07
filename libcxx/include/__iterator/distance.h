@@ -17,7 +17,8 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/size.h>
-#include <type_traits>
+#include <__type_traits/decay.h>
+#include <__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -52,7 +53,7 @@ distance(_InputIter __first, _InputIter __last)
     return _VSTD::__distance(__first, __last, typename iterator_traits<_InputIter>::iterator_category());
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [range.iter.op.distance]
 
@@ -100,7 +101,7 @@ inline namespace __cpo {
 } // namespace __cpo
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

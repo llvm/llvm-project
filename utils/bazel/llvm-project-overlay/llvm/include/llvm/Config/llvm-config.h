@@ -74,16 +74,16 @@
 #define LLVM_USE_PERF 0
 
 /* Major version of the LLVM API */
-#define LLVM_VERSION_MAJOR 16
+/* #undef LLVM_VERSION_MAJOR */
 
 /* Minor version of the LLVM API */
-#define LLVM_VERSION_MINOR 0
+/* #undef LLVM_VERSION_MINOR */
 
 /* Patch version of the LLVM API */
-#define LLVM_VERSION_PATCH 0
+/* #undef LLVM_VERSION_PATCH */
 
 /* LLVM version string */
-#define LLVM_VERSION_STRING "16.0.0git"
+/* #undef LLVM_VERSION_STRING */
 
 /* Whether LLVM records statistics for use with GetStatistics(),
  * PrintStatistics() or PrintStatisticsJSON()

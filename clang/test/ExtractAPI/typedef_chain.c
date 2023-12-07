@@ -68,6 +68,10 @@ typedef MyIntInt MyIntIntInt;
         {
           "kind": "identifier",
           "spelling": "MyInt"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -128,6 +132,10 @@ typedef MyIntInt MyIntIntInt;
         {
           "kind": "identifier",
           "spelling": "MyIntInt"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -188,6 +196,10 @@ typedef MyIntInt MyIntIntInt;
         {
           "kind": "identifier",
           "spelling": "MyIntIntInt"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

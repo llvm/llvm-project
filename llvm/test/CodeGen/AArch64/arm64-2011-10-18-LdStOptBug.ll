@@ -18,9 +18,9 @@ for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = shl nsw i64 %indvars.iv, 12
   %add = add nsw i64 %0, 34628173824
-  %1 = inttoptr i64 %add to i32*
-  %2 = load volatile i32, i32* %1, align 4096
-  store volatile i32 %2, i32* @test_data, align 4
+  %1 = inttoptr i64 %add to ptr
+  %2 = load volatile i32, ptr %1, align 4096
+  store volatile i32 %2, ptr @test_data, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, 200

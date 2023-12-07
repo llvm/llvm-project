@@ -19,6 +19,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/StorageUniquer.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeName.h"
 #include <queue>
 
@@ -181,7 +182,7 @@ class DataFlowAnalysis;
 /// The general data-flow analysis solver. This class is responsible for
 /// orchestrating child data-flow analyses, running the fixed-point iteration
 /// algorithm, managing analysis state and program point memory, and tracking
-/// dependencies beteen analyses, program points, and analysis states.
+/// dependencies between analyses, program points, and analysis states.
 ///
 /// Steps to run a data-flow analysis:
 ///
@@ -235,12 +236,6 @@ public:
   /// dependent work items to the back of the queue.
   void propagateIfChanged(AnalysisState *state, ChangeResult changed);
 
-  /// Add a dependency to an analysis state on a child analysis and program
-  /// point. If the state is updated, the child analysis must be invoked on the
-  /// given program point again.
-  void addDependency(AnalysisState *state, DataFlowAnalysis *analysis,
-                     ProgramPoint point);
-
 private:
   /// The solver's work queue. Work items can be inserted to the front of the
   /// queue to be processed greedily, speeding up computations that otherwise
@@ -288,19 +283,37 @@ public:
   /// Create the analysis state at the given program point.
   AnalysisState(ProgramPoint point) : point(point) {}
 
-  /// Returns the program point this static is located at.
+  /// Returns the program point this state is located at.
   ProgramPoint getPoint() const { return point; }
 
   /// Print the contents of the analysis state.
   virtual void print(raw_ostream &os) const = 0;
+  LLVM_DUMP_METHOD void dump() const;
+
+  /// Add a dependency to this analysis state on a program point and an
+  /// analysis. If this state is updated, the analysis will be invoked on the
+  /// given program point again (in onUpdate()).
+  void addDependency(ProgramPoint dependent, DataFlowAnalysis *analysis);
 
 protected:
   /// This function is called by the solver when the analysis state is updated
-  /// to optionally enqueue more work items. For example, if a state tracks
-  /// dependents through the IR (e.g. use-def chains), this function can be
-  /// implemented to push those dependents on the worklist.
-  virtual void onUpdate(DataFlowSolver *solver) const {}
+  /// to enqueue more work items. For example, if a state tracks dependents
+  /// through the IR (e.g. use-def chains), this function can be implemented to
+  /// push those dependents on the worklist.
+  virtual void onUpdate(DataFlowSolver *solver) const {
+    for (const DataFlowSolver::WorkItem &item : dependents)
+      solver->enqueue(item);
+  }
 
+  /// The program point to which the state belongs.
+  ProgramPoint point;
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  /// When compiling with debugging, keep a name for the analysis state.
+  StringRef debugName;
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+
+private:
   /// The dependency relations originating from this analysis state. An entry
   /// `state -> (analysis, point)` is created when `analysis` queries `state`
   /// when updating `point`.
@@ -311,14 +324,6 @@ protected:
   ///
   /// Store the dependents on the analysis state for efficiency.
   SetVector<DataFlowSolver::WorkItem> dependents;
-
-  /// The program point to which the state belongs.
-  ProgramPoint point;
-
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  /// When compiling with debugging, keep a name for the analysis state.
-  StringRef debugName;
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 
   /// Allow the framework to access the dependents.
   friend class DataFlowSolver;
@@ -375,7 +380,7 @@ public:
   /// dependents are placed on the worklist.
   ///
   /// The dependency graph does not need to be static. Each invocation of
-  /// `visit` can add new dependencies, but these dependecies will not be
+  /// `visit` can add new dependencies, but these dependencies will not be
   /// dynamically added to the worklist because the solver doesn't know what
   /// will provide a value for then.
   virtual LogicalResult visit(ProgramPoint point) = 0;
@@ -400,7 +405,7 @@ protected:
     return solver.getProgramPoint<PointT>(std::forward<Args>(args)...);
   }
 
-  /// Get the analysis state assiocated with the program point. The returned
+  /// Get the analysis state associated with the program point. The returned
   /// state is expected to be "write-only", and any updates need to be
   /// propagated by `propagateIfChanged`.
   template <typename StateT, typename PointT>
@@ -470,6 +475,16 @@ namespace llvm {
 template <>
 struct DenseMapInfo<mlir::ProgramPoint>
     : public DenseMapInfo<mlir::ProgramPoint::ParentTy> {};
+
+// Allow llvm::cast style functions.
+template <typename To>
+struct CastInfo<To, mlir::ProgramPoint>
+    : public CastInfo<To, mlir::ProgramPoint::PointerUnion> {};
+
+template <typename To>
+struct CastInfo<To, const mlir::ProgramPoint>
+    : public CastInfo<To, const mlir::ProgramPoint::PointerUnion> {};
+
 } // end namespace llvm
 
 #endif // MLIR_ANALYSIS_DATAFLOWFRAMEWORK_H

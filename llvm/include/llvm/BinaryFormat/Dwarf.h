@@ -24,16 +24,14 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadicDetails.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <limits>
 
 namespace llvm {
 class StringRef;
-template<typename T> class Optional;
 
 namespace dwarf {
-
 
 //===----------------------------------------------------------------------===//
 // DWARF constants as gleaned from the DWARF Debugging Information Format V.5
@@ -146,6 +144,11 @@ enum LocationAtom {
   DW_OP_LLVM_entry_value = 0x1003,      ///< Only used in LLVM metadata.
   DW_OP_LLVM_implicit_pointer = 0x1004, ///< Only used in LLVM metadata.
   DW_OP_LLVM_arg = 0x1005,              ///< Only used in LLVM metadata.
+};
+
+enum LlvmUserLocationAtom {
+#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME) DW_OP_LLVM_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
 };
 
 enum TypeKind : uint8_t {
@@ -265,6 +268,7 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_Fortran18:
   case DW_LANG_Ada2005:
   case DW_LANG_Ada2012:
+  case DW_LANG_Mojo:
     result = false;
     break;
   }
@@ -331,6 +335,7 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_C17:
   case DW_LANG_Ada2005:
   case DW_LANG_Ada2012:
+  case DW_LANG_Mojo:
     result = false;
     break;
   }
@@ -395,6 +400,7 @@ inline bool isC(SourceLanguage S) {
   case DW_LANG_Fortran18:
   case DW_LANG_Ada2005:
   case DW_LANG_Ada2012:
+  case DW_LANG_Mojo:
     return false;
   }
   llvm_unreachable("Unknown language kind.");
@@ -633,6 +639,8 @@ StringRef ChildrenString(unsigned Children);
 StringRef AttributeString(unsigned Attribute);
 StringRef FormEncodingString(unsigned Encoding);
 StringRef OperationEncodingString(unsigned Encoding);
+StringRef SubOperationEncodingString(unsigned OpEncoding,
+                                     unsigned SubOpEncoding);
 StringRef AttributeEncodingString(unsigned Encoding);
 StringRef DecimalSignString(unsigned Sign);
 StringRef EndianityString(unsigned Endian);
@@ -676,6 +684,8 @@ StringRef RLEString(unsigned RLE);
 /// @{
 unsigned getTag(StringRef TagString);
 unsigned getOperationEncoding(StringRef OperationEncodingString);
+unsigned getSubOperationEncoding(unsigned OpEncoding,
+                                 StringRef SubOperationEncodingString);
 unsigned getVirtuality(StringRef VirtualityString);
 unsigned getLanguage(StringRef LanguageString);
 unsigned getCallingConvention(StringRef LanguageString);

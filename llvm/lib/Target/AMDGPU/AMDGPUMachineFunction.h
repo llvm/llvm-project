@@ -19,6 +19,9 @@
 
 namespace llvm {
 
+class AMDGPUSubtarget;
+class GCNSubtarget;
+
 class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// A map to keep track of local memory objects and their offsets within the
   /// local memory space.
@@ -51,6 +54,9 @@ protected:
   // Entry points called by other functions instead of directly by the hardware.
   bool IsModuleEntryFunction = false;
 
+  // Functions with the amdgpu_cs_chain or amdgpu_cs_chain_preserve CC.
+  bool IsChainFunction = false;
+
   bool NoSignedZerosFPMath = false;
 
   // Function may be memory bound.
@@ -60,7 +66,7 @@ protected:
   bool WaveLimiter = false;
 
 public:
-  AMDGPUMachineFunction(const MachineFunction &MF);
+  AMDGPUMachineFunction(const Function &F, const AMDGPUSubtarget &ST);
 
   uint64_t getExplicitKernArgSize() const {
     return ExplicitKernArgSize;
@@ -82,6 +88,8 @@ public:
 
   bool isModuleEntryFunction() const { return IsModuleEntryFunction; }
 
+  bool isChainFunction() const { return IsChainFunction; }
+
   bool hasNoSignedZerosFPMath() const {
     return NoSignedZerosFPMath;
   }
@@ -101,26 +109,12 @@ public:
   unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV,
                              Align Trailing);
 
-  void allocateKnownAddressLDSGlobal(const Function &F);
-
-  // A kernel function may have an associated LDS allocation, and a kernel-scope
-  // LDS allocation must have an associated kernel function
-
-  // LDS allocation should have an associated kernel function
-  static const Function *
-  getKernelLDSFunctionFromGlobal(const GlobalVariable &GV);
-  static const GlobalVariable *
-  getKernelLDSGlobalFromFunction(const Function &F);
-
-  // Module or kernel scope LDS variable
-  static bool isKnownAddressLDSGlobal(const GlobalVariable &GV);
-  static unsigned calculateKnownAddressOfLDSGlobal(const GlobalVariable &GV);
-
   static std::optional<uint32_t> getLDSKernelIdMetadata(const Function &F);
+  static std::optional<uint32_t> getLDSAbsoluteAddress(const GlobalValue &GV);
 
   Align getDynLDSAlign() const { return DynLDSAlign; }
 
-  void setDynLDSAlign(const DataLayout &DL, const GlobalVariable &GV);
+  void setDynLDSAlign(const Function &F, const GlobalVariable &GV);
 };
 
 }

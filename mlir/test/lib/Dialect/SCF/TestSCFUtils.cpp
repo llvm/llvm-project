@@ -14,7 +14,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/SCF/Transforms/Transforms.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
@@ -36,7 +36,7 @@ struct TestSCFForUtilsPass
   Option<bool> testReplaceWithNewYields{
       *this, "test-replace-with-new-yields",
       llvm::cl::desc("Test replacing a loop with a new loop that returns new "
-                     "additional yeild values"),
+                     "additional yield values"),
       llvm::cl::init(false)};
 
   void runOnOperation() override {
@@ -140,6 +140,8 @@ struct TestSCFPipeliningPass
       auto attrCycle =
           op->getAttrOfType<IntegerAttr>(kTestPipeliningOpOrderMarker);
       if (attrCycle && attrStage) {
+        // TODO: Index can be out-of-bounds if ops of the loop body disappear
+        // due to folding.
         schedule[attrCycle.getInt()] =
             std::make_pair(op, unsigned(attrStage.getInt()));
       }
@@ -148,8 +150,8 @@ struct TestSCFPipeliningPass
 
   /// Helper to generate "predicated" version of `op`. For simplicity we just
   /// wrap the operation in a scf.ifOp operation.
-  static Operation *predicateOp(Operation *op, Value pred,
-                                PatternRewriter &rewriter) {
+  static Operation *predicateOp(RewriterBase &rewriter, Operation *op,
+                                Value pred) {
     Location loc = op->getLoc();
     auto ifOp =
         rewriter.create<scf::IfOp>(loc, op->getResultTypes(), pred, true);

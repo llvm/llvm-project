@@ -1,6 +1,5 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallString.h"
@@ -20,8 +19,8 @@ llvm::DenseMap<int, int> DenseMap = {{4, 5}, {6, 7}};
 llvm::StringMap<int> StringMap = {{"foo", 123}, {"bar", 456}};
 llvm::Expected<int> ExpectedValue(8);
 llvm::Expected<int> ExpectedError(llvm::createStringError({}, ""));
-llvm::Optional<int> OptionalValue(9);
-llvm::Optional<int> OptionalNone(std::nullopt);
+std::optional<int> OptionalValue(9);
+std::optional<int> OptionalNone(std::nullopt);
 llvm::SmallVector<int, 5> SmallVector = {10, 11, 12};
 llvm::SmallString<5> SmallString("foo");
 llvm::StringRef StringRef = "bar";

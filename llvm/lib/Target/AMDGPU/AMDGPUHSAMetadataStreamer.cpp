@@ -392,8 +392,8 @@ void MetadataStreamerYamlV2::emitHiddenKernelArgs(const Function &Func,
   if (HiddenArgNumBytes >= 24)
     emitKernelArg(DL, Int64Ty, Align(8), ValueKind::HiddenGlobalOffsetZ);
 
-  auto Int8PtrTy = Type::getInt8PtrTy(Func.getContext(),
-                                      AMDGPUAS::GLOBAL_ADDRESS);
+  auto Int8PtrTy =
+      PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
   if (HiddenArgNumBytes >= 32) {
     // We forbid the use of features requiring hostcall when compiling OpenCL
@@ -409,12 +409,18 @@ void MetadataStreamerYamlV2::emitHiddenKernelArgs(const Function &Func,
 
   // Emit "default queue" and "completion action" arguments if enqueue kernel is
   // used, otherwise emit dummy "none" arguments.
-  if (HiddenArgNumBytes >= 48) {
-    if (Func.hasFnAttribute("calls-enqueue-kernel")) {
+  if (HiddenArgNumBytes >= 40) {
+    if (!Func.hasFnAttribute("amdgpu-no-default-queue")) {
       emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenDefaultQueue);
-      emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenCompletionAction);
     } else {
       emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenNone);
+    }
+  }
+
+  if (HiddenArgNumBytes >= 48) {
+    if (!Func.hasFnAttribute("amdgpu-no-completion-action")) {
+      emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenCompletionAction);
+    } else {
       emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenNone);
     }
   }
@@ -708,15 +714,19 @@ void MetadataStreamerMsgPackV3::emitKernelArg(const Argument &Arg,
   if (Node && ArgNo < Node->getNumOperands())
     BaseTypeName = cast<MDString>(Node->getOperand(ArgNo))->getString();
 
-  StringRef AccQual;
-  if (Arg.getType()->isPointerTy() && Arg.onlyReadsMemory() &&
-      Arg.hasNoAliasAttr()) {
-    AccQual = "read_only";
-  } else {
-    Node = Func->getMetadata("kernel_arg_access_qual");
-    if (Node && ArgNo < Node->getNumOperands())
-      AccQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
+  StringRef ActAccQual;
+  // Do we really need NoAlias check here?
+  if (Arg.getType()->isPointerTy() && Arg.hasNoAliasAttr()) {
+    if (Arg.onlyReadsMemory())
+      ActAccQual = "read_only";
+    else if (Arg.hasAttribute(Attribute::WriteOnly))
+      ActAccQual = "write_only";
   }
+
+  StringRef AccQual;
+  Node = Func->getMetadata("kernel_arg_access_qual");
+  if (Node && ArgNo < Node->getNumOperands())
+    AccQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
 
   StringRef TypeQual;
   Node = Func->getMetadata("kernel_arg_type_qual");
@@ -741,14 +751,15 @@ void MetadataStreamerMsgPackV3::emitKernelArg(const Argument &Arg,
 
   emitKernelArg(DL, ArgTy, ArgAlign,
                 getValueKind(ArgTy, TypeQual, BaseTypeName), Offset, Args,
-                PointeeAlign, Name, TypeName, BaseTypeName, AccQual, TypeQual);
+                PointeeAlign, Name, TypeName, BaseTypeName, ActAccQual,
+                AccQual, TypeQual);
 }
 
 void MetadataStreamerMsgPackV3::emitKernelArg(
     const DataLayout &DL, Type *Ty, Align Alignment, StringRef ValueKind,
     unsigned &Offset, msgpack::ArrayDocNode Args, MaybeAlign PointeeAlign,
     StringRef Name, StringRef TypeName, StringRef BaseTypeName,
-    StringRef AccQual, StringRef TypeQual) {
+    StringRef ActAccQual, StringRef AccQual, StringRef TypeQual) {
   auto Arg = Args.getDocument()->getMapNode();
 
   if (!Name.empty())
@@ -774,7 +785,8 @@ void MetadataStreamerMsgPackV3::emitKernelArg(
   if (auto AQ = getAccessQualifier(AccQual))
     Arg[".access"] = Arg.getDocument()->getNode(*AQ, /*Copy=*/true);
 
-  // TODO: Emit Arg[".actual_access"].
+  if (auto AAQ = getAccessQualifier(ActAccQual))
+    Arg[".actual_access"] = Arg.getDocument()->getNode(*AAQ, /*Copy=*/true);
 
   SmallVector<StringRef, 1> SplitTypeQuals;
   TypeQual.split(SplitTypeQuals, " ", -1, false);
@@ -818,7 +830,7 @@ void MetadataStreamerMsgPackV3::emitHiddenKernelArgs(
                   Args);
 
   auto Int8PtrTy =
-      Type::getInt8PtrTy(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
+      PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
   if (HiddenArgNumBytes >= 32) {
     // We forbid the use of features requiring hostcall when compiling OpenCL
@@ -836,14 +848,20 @@ void MetadataStreamerMsgPackV3::emitHiddenKernelArgs(
 
   // Emit "default queue" and "completion action" arguments if enqueue kernel is
   // used, otherwise emit dummy "none" arguments.
-  if (HiddenArgNumBytes >= 48) {
-    if (Func.hasFnAttribute("calls-enqueue-kernel")) {
+  if (HiddenArgNumBytes >= 40) {
+    if (!Func.hasFnAttribute("amdgpu-no-default-queue")) {
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_default_queue", Offset,
-                    Args);
-      emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_completion_action", Offset,
                     Args);
     } else {
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_none", Offset, Args);
+    }
+  }
+
+  if (HiddenArgNumBytes >= 48) {
+    if (!Func.hasFnAttribute("amdgpu-no-completion-action")) {
+      emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_completion_action", Offset,
+                    Args);
+    } else {
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_none", Offset, Args);
     }
   }
@@ -860,7 +878,8 @@ void MetadataStreamerMsgPackV3::emitHiddenKernelArgs(
 }
 
 msgpack::MapDocNode MetadataStreamerMsgPackV3::getHSAKernelProps(
-    const MachineFunction &MF, const SIProgramInfo &ProgramInfo) const {
+    const MachineFunction &MF, const SIProgramInfo &ProgramInfo,
+    unsigned CodeObjectVersion) const {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   const Function &F = MF.getFunction();
@@ -874,10 +893,11 @@ msgpack::MapDocNode MetadataStreamerMsgPackV3::getHSAKernelProps(
       Kern.getDocument()->getNode(ProgramInfo.LDSSize);
   Kern[".private_segment_fixed_size"] =
       Kern.getDocument()->getNode(ProgramInfo.ScratchSize);
-  if (AMDGPU::getAmdhsaCodeObjectVersion() >= 5)
+  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5)
     Kern[".uses_dynamic_stack"] =
         Kern.getDocument()->getNode(ProgramInfo.DynamicCallStack);
-  if (AMDGPU::getAmdhsaCodeObjectVersion() >= 5 && STM.supportsWGP())
+
+  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5 && STM.supportsWGP())
     Kern[".workgroup_processor_mode"] =
         Kern.getDocument()->getNode(ProgramInfo.WgpMode);
 
@@ -929,10 +949,12 @@ void MetadataStreamerMsgPackV3::end() {
 void MetadataStreamerMsgPackV3::emitKernel(const MachineFunction &MF,
                                            const SIProgramInfo &ProgramInfo) {
   auto &Func = MF.getFunction();
-  auto Kern = getHSAKernelProps(MF, ProgramInfo);
+  if (Func.getCallingConv() != CallingConv::AMDGPU_KERNEL &&
+      Func.getCallingConv() != CallingConv::SPIR_KERNEL)
+    return;
 
-  assert(Func.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
-         Func.getCallingConv() == CallingConv::SPIR_KERNEL);
+  auto CodeObjectVersion = AMDGPU::getCodeObjectVersion(*Func.getParent());
+  auto Kern = getHSAKernelProps(MF, ProgramInfo, CodeObjectVersion);
 
   auto Kernels =
       getRootMetadata("amdhsa.kernels").getArray(/*Convert=*/true);
@@ -1028,7 +1050,7 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
 
   Offset += 6; // Reserved.
   auto Int8PtrTy =
-      Type::getInt8PtrTy(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
+      PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
   if (M->getNamedMetadata("llvm.printf.fmts")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_printf_buffer", Offset,
@@ -1056,13 +1078,18 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
   else
     Offset += 8; // Skipped.
 
-  if (Func.hasFnAttribute("calls-enqueue-kernel")) {
+  if (!Func.hasFnAttribute("amdgpu-no-default-queue")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_default_queue", Offset,
                   Args);
+  } else {
+    Offset += 8; // Skipped.
+  }
+
+  if (!Func.hasFnAttribute("amdgpu-no-completion-action")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_completion_action", Offset,
                   Args);
   } else {
-    Offset += 16; // Skipped.
+    Offset += 8; // Skipped.
   }
 
   Offset += 72; // Reserved.
@@ -1079,6 +1106,15 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
   if (MFI.hasQueuePtr())
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_queue_ptr", Offset, Args);
 }
+
+void MetadataStreamerMsgPackV5::emitKernelAttrs(const Function &Func,
+                                                msgpack::MapDocNode Kern) {
+  MetadataStreamerMsgPackV3::emitKernelAttrs(Func, Kern);
+
+  if (Func.getFnAttribute("uniform-work-group-size").getValueAsBool())
+    Kern[".uniform_work_group_size"] = Kern.getDocument()->getNode(1);
+}
+
 
 } // end namespace HSAMD
 } // end namespace AMDGPU

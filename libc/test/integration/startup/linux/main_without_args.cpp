@@ -6,6 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 TEST_MAIN() { return 0; }

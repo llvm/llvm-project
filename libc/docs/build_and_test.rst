@@ -4,6 +4,9 @@
 Building and Testing the libc
 =============================
 
+Build modes
+===========
+
 The libc can be built and tested in two different modes:
 
 #. **The overlay mode** - In this mode, one uses the static archive from LLVM's
@@ -41,3 +44,38 @@ The libc can be built and tested in two different modes:
       .. code-block:: sh
 
         $> ninja libc-api-test
+
+Building with VSCode
+====================
+
+As a quickstart to using VSCode for development, install the cmake extension
+and put the following in your settings.json file:
+
+.. code-block:: javascript
+
+   {
+     "cmake.sourceDirectory": "${workspaceFolder}/llvm",
+     "cmake.configureSettings": {
+         "LLVM_ENABLE_PROJECTS" : "libc",
+         "LLVM_LIBC_FULL_BUILD" : true,
+         "LLVM_ENABLE_SPHINX" : true,
+         "LIBC_INCLUDE_DOCS" : true
+     }
+   }
+
+Building with Bazel
+===================
+
+#. To build with Bazel, use the following command:
+
+  .. code-block:: sh
+
+    $> bazel build --config=generic_clang @llvm-project//libc/...
+
+#. To run the unit tests with bazel, use the following command:
+
+  .. code-block:: sh
+
+    $> bazel test --config=generic_clang @llvm-project//libc/...
+
+#. The bazel target layout of `libc` is located at: `utils/bazel/llvm-project-overlay/libc/BUILD.bazel <https://github.com/llvm/llvm-project/tree/main/utils/bazel/llvm-project-overlay/libc/BUILD.bazel>`_.

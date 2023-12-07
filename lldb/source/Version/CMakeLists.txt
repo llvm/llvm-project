@@ -36,7 +36,7 @@ set_source_files_properties("${version_inc}"
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-add_lldb_library(lldbVersion
+add_lldb_library(lldbVersion NO_PLUGIN_DEPENDENCIES
   Version.cpp
   ${vcs_version_inc}
   ${version_inc})

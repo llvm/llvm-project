@@ -17,13 +17,13 @@ b1:                                               ; preds = %b1, %b0
   %v7 = tail call i64 @llvm.hexagon.A2.combinew(i32 %v3, i32 %v3)
   %v8 = tail call i64 @llvm.hexagon.S2.valignib(i64 %v6, i64 undef, i32 2)
   %v9 = tail call i64 @llvm.hexagon.M2.vdmacs.s0(i64 undef, i64 %v7, i64 %v8)
-  %v10 = inttoptr i32 %v5 to i16*
-  %v11 = load i16, i16* %v10, align 2
+  %v10 = inttoptr i32 %v5 to ptr
+  %v11 = load i16, ptr %v10, align 2
   %v12 = sext i16 %v11 to i32
   %v13 = add nsw i32 %v5, -8
   %v14 = tail call i32 @llvm.hexagon.A2.combine.ll(i32 %v12, i32 %v1)
-  %v15 = inttoptr i32 %v13 to i16*
-  %v16 = load i16, i16* %v15, align 2
+  %v15 = inttoptr i32 %v13 to ptr
+  %v16 = load i16, ptr %v15, align 2
   %v17 = sext i16 %v16 to i32
   %v18 = add nsw i32 %v5, -16
   %v19 = add nsw i32 %v2, 1
@@ -33,8 +33,7 @@ b1:                                               ; preds = %b1, %b0
 b2:                                               ; preds = %b1
   %v21 = phi i64 [ %v9, %b1 ]
   %v22 = trunc i64 %v21 to i32
-  %v23 = bitcast i8* undef to i32*
-  store i32 %v22, i32* %v23, align 4
+  store i32 %v22, ptr undef, align 4
   call void @llvm.trap()
   unreachable
 }

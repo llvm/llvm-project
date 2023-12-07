@@ -26,6 +26,10 @@
 
 #include <vector>
 
+namespace llvm::CodeGenOpt {
+enum Level : int;
+} // namespace llvm::CodeGenOpt
+
 namespace lld {
 namespace macho {
 
@@ -38,7 +42,6 @@ using SegmentRenameMap = llvm::DenseMap<llvm::StringRef, llvm::StringRef>;
 
 struct PlatformInfo {
   llvm::MachO::Target target;
-  llvm::VersionTuple minimum;
   llvm::VersionTuple sdk;
 };
 
@@ -128,14 +131,16 @@ struct Configuration {
   bool saveTemps = false;
   bool adhocCodesign = false;
   bool emitFunctionStarts = false;
-  bool emitBitcodeBundle = false;
   bool emitDataInCodeInfo = false;
   bool emitEncryptionInfo = false;
   bool emitInitOffsets = false;
   bool emitChainedFixups = false;
+  bool thinLTOEmitImportsFiles;
+  bool thinLTOEmitIndexFiles;
+  bool thinLTOIndexOnly;
   bool timeTraceEnabled = false;
   bool dataConst = false;
-  bool dedupLiterals = true;
+  bool dedupStrings = true;
   bool deadStripDuplicates = false;
   bool omitDebugInfo = false;
   bool warnDylibInstallName = false;
@@ -162,8 +167,14 @@ struct Configuration {
   llvm::StringRef thinLTOJobs;
   llvm::StringRef umbrella;
   uint32_t ltoo = 2;
+  llvm::CodeGenOpt::Level ltoCgo;
   llvm::CachePruningPolicy thinLTOCachePolicy;
   llvm::StringRef thinLTOCacheDir;
+  llvm::StringRef thinLTOIndexOnlyArg;
+  std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
+  llvm::StringRef thinLTOPrefixReplaceOld;
+  llvm::StringRef thinLTOPrefixReplaceNew;
+  llvm::StringRef thinLTOPrefixReplaceNativeObject;
   bool deadStripDylibs = false;
   bool demangle = false;
   bool deadStrip = false;
@@ -174,6 +185,7 @@ struct Configuration {
   // exist. This allows users to ignore the specific invalid options in the case
   // they can't easily fix them.
   llvm::StringSet<> ignoreAutoLinkOptions;
+  bool strictAutoLink = false;
   PlatformInfo platformInfo;
   std::optional<PlatformInfo> secondaryPlatformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
@@ -193,6 +205,9 @@ struct Configuration {
   // so use a vector instead of a map.
   std::vector<SectionAlign> sectionAlignments;
   std::vector<SegmentProtection> segmentProtections;
+  bool ltoDebugPassManager = false;
+  bool csProfileGenerate = false;
+  llvm::StringRef csProfilePath;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;
@@ -212,6 +227,7 @@ struct Configuration {
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
 
   bool zeroModTime = true;
+  bool generateUuid = true;
 
   llvm::StringRef osoPrefix;
 

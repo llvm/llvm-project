@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2a -x c++ %s -verify
-// RUN: %clang_cc1 -std=c++2b -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++20 -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++23 -x c++ %s -verify
 
 // Test parsing of the optional requires-clause in a template-declaration.
 
@@ -166,5 +166,5 @@ auto lambda3 = []<auto> requires(sizeof(char) == 1){};
 
 auto lambda4 = [] requires(sizeof(char) == 1){}; // expected-error {{expected body of lambda expression}}
 #if __cplusplus <= 202002L
-// expected-warning@-2{{lambda without a parameter clause is a C++2b extension}}
+// expected-warning@-2{{lambda without a parameter clause is a C++23 extension}}
 #endif

@@ -142,7 +142,7 @@
 
 define double @test_ldc1() {
 entry:
-  %0 = load double, double* @g0, align 8
+  %0 = load double, ptr @g0, align 8
   ret double %0
 }
 
@@ -227,7 +227,7 @@ entry:
 
 define void @test_sdc1(double %a) {
 entry:
-  store double %a, double* @g0, align 8
+  store double %a, ptr @g0, align 8
   ret void
 }
 
@@ -278,10 +278,10 @@ entry:
 ; MM-STATIC-PIC: addu16  $[[R1:[0-9]+]], $4, $[[R0]]
 ; MM-STATIC-PIC: ldc1    $f0, 0($[[R1]])
 
-define double @test_ldxc1(double* nocapture readonly %a, i32 %i) {
+define double @test_ldxc1(ptr nocapture readonly %a, i32 %i) {
 entry:
-  %arrayidx = getelementptr inbounds double, double* %a, i32 %i
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %a, i32 %i
+  %0 = load double, ptr %arrayidx, align 8
   ret double %0
 }
 
@@ -326,9 +326,9 @@ entry:
 ; MM-STATIC-PIC: addu16  $[[R1:[0-9]+]], $6, $[[R0]]
 ; MM-STATIC-PIC: sdc1    $f12, 0($[[R1]])
 
-define void @test_sdxc1(double %b, double* nocapture %a, i32 %i) {
+define void @test_sdxc1(double %b, ptr nocapture %a, i32 %i) {
 entry:
-  %arrayidx = getelementptr inbounds double, double* %a, i32 %i
-  store double %b, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %a, i32 %i
+  store double %b, ptr %arrayidx, align 8
   ret void
 }

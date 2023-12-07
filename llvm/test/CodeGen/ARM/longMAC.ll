@@ -357,7 +357,7 @@ define i64 @MACLongTest14(i32 %a, i32 %b, i64 %c)  {
 ;CHECK-V7M-THUMB-NOT: smlaltb
 define i64 @MACLongTest15(i32 %t, i64 %acc) {
 entry:
-  %0 = load i16, i16* @global_b, align 2
+  %0 = load i16, ptr @global_b, align 2
   %conv = sext i16 %0 to i32
   %shr = ashr i32 %t, 16
   %mul = mul nsw i32 %shr, %conv
@@ -387,7 +387,7 @@ entry:
 ;CHECK-V7M-THUMB-NOT: smlalbt
 define i64 @MACLongTest16(i32 %t, i64 %acc) {
 entry:
-  %0 = load i16, i16* @global_b, align 2
+  %0 = load i16, ptr @global_b, align 2
   %conv = sext i16 %0 to i32
   %shr = ashr i32 %t, 16
   %mul = mul nsw i32 %conv, %shr

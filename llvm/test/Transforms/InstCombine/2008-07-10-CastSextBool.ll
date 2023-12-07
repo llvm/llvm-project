@@ -3,7 +3,7 @@
 
 define i1 @PR2539_A(i1 %A) {
 ; CHECK-LABEL: @PR2539_A(
-; CHECK-NEXT:    [[C:%.*]] = xor i1 %A, true
+; CHECK-NEXT:    [[C:%.*]] = xor i1 [[A:%.*]], true
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = zext i1 %A to i32

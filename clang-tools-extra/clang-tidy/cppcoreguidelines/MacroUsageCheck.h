@@ -15,8 +15,7 @@
 
 namespace clang {
 class MacroDirective;
-namespace tidy {
-namespace cppcoreguidelines {
+namespace tidy::cppcoreguidelines {
 
 /// Find macro usage that is considered problematic because better language
 /// constructs exist for the task.
@@ -48,8 +47,7 @@ private:
   bool IgnoreCommandLineMacros;
 };
 
-} // namespace cppcoreguidelines
-} // namespace tidy
+} // namespace tidy::cppcoreguidelines
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_MACROUSAGECHECK_H

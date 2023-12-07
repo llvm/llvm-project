@@ -736,7 +736,7 @@ void ThreadList::Update(ThreadList &rhs) {
   if (this != &rhs) {
     // Lock both mutexes to make sure neither side changes anyone on us while
     // the assignment occurs
-    std::lock_guard<std::recursive_mutex> guard(GetMutex());
+    std::scoped_lock<std::recursive_mutex, std::recursive_mutex> guard(GetMutex(), rhs.GetMutex());
 
     m_process = rhs.m_process;
     m_stop_id = rhs.m_stop_id;

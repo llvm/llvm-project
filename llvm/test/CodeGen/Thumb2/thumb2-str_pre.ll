@@ -1,21 +1,21 @@
 ; RUN: llc -mtriple=thumb-eabi -mcpu=arm1156t2-s -mattr=+thumb2 %s -o - | FileCheck %s
 
-define void @test1(i32* %X, i32* %A, i32** %dest) {
+define void @test1(ptr %X, ptr %A, ptr %dest) {
 ; CHECK: test1
 ; CHECK: str  r1, [r0, #16]!
-        %B = load i32, i32* %A               ; <i32> [#uses=1]
-        %Y = getelementptr i32, i32* %X, i32 4               ; <i32*> [#uses=2]
-        store i32 %B, i32* %Y
-        store i32* %Y, i32** %dest
+        %B = load i32, ptr %A               ; <i32> [#uses=1]
+        %Y = getelementptr i32, ptr %X, i32 4               ; <ptr> [#uses=2]
+        store i32 %B, ptr %Y
+        store ptr %Y, ptr %dest
         ret void
 }
 
-define i16* @test2(i16* %X, i32* %A) {
+define ptr @test2(ptr %X, ptr %A) {
 ; CHECK: test2
 ; CHECK: strh r1, [r0, #8]!
-        %B = load i32, i32* %A               ; <i32> [#uses=1]
-        %Y = getelementptr i16, i16* %X, i32 4               ; <i16*> [#uses=2]
+        %B = load i32, ptr %A               ; <i32> [#uses=1]
+        %Y = getelementptr i16, ptr %X, i32 4               ; <ptr> [#uses=2]
         %tmp = trunc i32 %B to i16              ; <i16> [#uses=1]
-        store i16 %tmp, i16* %Y
-        ret i16* %Y
+        store i16 %tmp, ptr %Y
+        ret ptr %Y
 }

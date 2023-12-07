@@ -436,8 +436,8 @@ HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
           continue;
         Register Reg = Op.getReg();
         if (Hexagon::DoubleRegsRegClass.contains(Reg)) {
-          for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs)
-            LastDef[*SubRegs] = &MI;
+          for (MCPhysReg SubReg : TRI->subregs(Reg))
+            LastDef[SubReg] = &MI;
         } else if (Hexagon::IntRegsRegClass.contains(Reg))
           LastDef[Reg] = &MI;
       } else if (Op.isRegMask()) {

@@ -8,7 +8,7 @@ define i32 @range_metadata_sext_i8_signed_range_i32(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %val = load volatile i32, ptr addrspace(1) %ptr, align 4, !range !0 ; [-127, 128)
+  %val = load volatile i32, ptr addrspace(1) %ptr, align 4, !range !0, !noundef !{} ; [-127, 128)
   %shl = shl i32 %val, 24
   %ashr = ashr i32 %shl, 24
   ret i32 %ashr
@@ -22,7 +22,7 @@ define i32 @range_metadata_sext_upper_range_limited_i32(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %val = load volatile i32, ptr addrspace(1) %ptr, align 4, !range !1 ; [-127, 256)
+  %val = load volatile i32, ptr addrspace(1) %ptr, align 4, !range !1, !noundef !{} ; [-127, 256)
   %shl = shl i32 %val, 24
   %ashr = ashr i32 %shl, 24
   ret i32 %ashr
@@ -50,7 +50,7 @@ define i32 @range_metadata_sext_i8_neg_neg_range_i32(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v0, 63, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %val = load volatile i32, ptr addrspace(1) %ptr, align 4, !range !3
+  %val = load volatile i32, ptr addrspace(1) %ptr, align 4, !range !3, !noundef !{}
   %shl = shl i32 %val, 25
   %ashr = ashr i32 %shl, 25
   ret i32 %ashr
@@ -63,7 +63,7 @@ define i32 @range_metadata_sextload_i8_signed_range_i4_i32(ptr addrspace(1) %ptr
 ; GCN-NEXT:    global_load_sbyte v0, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %load = load volatile i8, ptr addrspace(1) %ptr, align 1, !range !4
+  %load = load volatile i8, ptr addrspace(1) %ptr, align 1, !range !4, !noundef !{}
   %shl = shl i8 %load, 3
   %ashr = ashr i8 %shl, 3
   %ext = sext i8 %ashr to i32
@@ -78,7 +78,7 @@ define i25 @range_metadata_sext_i8_signed_range_i25(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %val = load volatile i25, ptr addrspace(1) %ptr, align 4, !range !5
+  %val = load volatile i25, ptr addrspace(1) %ptr, align 4, !range !5, !noundef !{}
   %shl = shl i25 %val, 23
   %ashr = ashr i25 %shl, 23
   ret i25 %ashr
@@ -91,7 +91,7 @@ define i32 @range_metadata_i32_neg1_to_1(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %val = load volatile i32, ptr addrspace(1) %ptr, align 4, !range !6
+  %val = load volatile i32, ptr addrspace(1) %ptr, align 4, !range !6, !noundef !{}
   %shl = shl i32 %val, 31
   %ashr = ashr i32 %shl, 31
   ret i32 %ashr
@@ -106,7 +106,7 @@ define i64 @range_metadata_sext_i8_signed_range_i64(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 23, v0
 ; GCN-NEXT:    v_ashrrev_i64 v[0:1], 55, v[0:1]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %val = load volatile i64, ptr addrspace(1) %ptr, align 4, !range !7
+  %val = load volatile i64, ptr addrspace(1) %ptr, align 4, !range !7, !noundef !{}
   %shl = shl i64 %val, 55
   %ashr = ashr i64 %shl, 55
   ret i64 %ashr
@@ -119,7 +119,7 @@ define i64 @range_metadata_sext_i32_signed_range_i64(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %val = load volatile i64, ptr addrspace(1) %ptr, align 4, !range !7
+  %val = load volatile i64, ptr addrspace(1) %ptr, align 4, !range !7, !noundef !{}
   %shl = shl i64 %val, 31
   %ashr = ashr i64 %shl, 31
   ret i64 %ashr
@@ -132,7 +132,7 @@ define i64 @range_metadata_sext_i33_signed_range_i64(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %val = load volatile i64, ptr addrspace(1) %ptr, align 4, !range !8
+  %val = load volatile i64, ptr addrspace(1) %ptr, align 4, !range !8, !noundef !{}
   %shl = shl i64 %val, 30
   %ashr = ashr i64 %shl, 30
   ret i64 %ashr

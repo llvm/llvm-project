@@ -43,9 +43,6 @@
 /* Default OpenMP runtime used by -fopenmp. */
 #define CLANG_DEFAULT_OPENMP_RUNTIME "libomp"
 
-/* Default architecture for OpenMP offloading to Nvidia GPUs. */
-#define CLANG_OPENMP_NVPTX_DEFAULT_ARCH "sm_35"
-
 /* Default architecture for SystemZ. */
 #define CLANG_SYSTEMZ_DEFAULT_ARCH "z10"
 

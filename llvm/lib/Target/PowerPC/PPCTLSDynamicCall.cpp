@@ -56,13 +56,16 @@ protected:
            I != IE;) {
         MachineInstr &MI = *I;
         IsPCREL = isPCREL(MI);
+        // There are a number of slight differences in code generation
+        // when we call .__get_tpointer (32-bit AIX TLS).
+        bool IsTLSTPRelMI = MI.getOpcode() == PPC::GETtlsTpointer32AIX;
 
         if (MI.getOpcode() != PPC::ADDItlsgdLADDR &&
             MI.getOpcode() != PPC::ADDItlsldLADDR &&
             MI.getOpcode() != PPC::ADDItlsgdLADDR32 &&
             MI.getOpcode() != PPC::ADDItlsldLADDR32 &&
             MI.getOpcode() != PPC::TLSGDAIX &&
-            MI.getOpcode() != PPC::TLSGDAIX8 && !IsPCREL) {
+            MI.getOpcode() != PPC::TLSGDAIX8 && !IsTLSTPRelMI && !IsPCREL) {
           // Although we create ADJCALLSTACKDOWN and ADJCALLSTACKUP
           // as scheduling fences, we skip creating fences if we already
           // have existing ADJCALLSTACKDOWN/UP to avoid nesting,
@@ -82,7 +85,7 @@ protected:
         Register InReg = PPC::NoRegister;
         Register GPR3 = Is64Bit ? PPC::X3 : PPC::R3;
         Register GPR4 = Is64Bit ? PPC::X4 : PPC::R4;
-        if (!IsPCREL)
+        if (!IsPCREL && !IsTLSTPRelMI)
           InReg = MI.getOperand(1).getReg();
         DebugLoc DL = MI.getDebugLoc();
 
@@ -116,6 +119,12 @@ protected:
           // set Opc2 here.
           Opc2 = PPC::GETtlsADDR32AIX;
           break;
+        case PPC::GETtlsTpointer32AIX:
+          // GETtlsTpointer32AIX is expanded to a call to GET_TPOINTER on AIX
+          // 32-bit mode within PPCAsmPrinter. This instruction does not need
+          // to change, so Opc2 is set to the same instruction opcode.
+          Opc2 = PPC::GETtlsTpointer32AIX;
+          break;
         case PPC::PADDI8pc:
           assert(IsPCREL && "Expecting General/Local Dynamic PCRel");
           Opc1 = PPC::PADDI8pc;
@@ -138,11 +147,17 @@ protected:
         if (IsAIX) {
           // The variable offset and region handle are copied in r4 and r3. The
           // copies are followed by GETtlsADDR32AIX/GETtlsADDR64AIX.
-          BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR4)
-              .addReg(MI.getOperand(1).getReg());
-          BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
-              .addReg(MI.getOperand(2).getReg());
-          BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3).addReg(GPR4);
+          if (!IsTLSTPRelMI) {
+            BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR4)
+                .addReg(MI.getOperand(1).getReg());
+            BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
+                .addReg(MI.getOperand(2).getReg());
+            BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3).addReg(GPR4);
+          } else
+            // The opcode of GETtlsTpointer32AIX does not change, because later
+            // this instruction will be expanded into a call to .__get_tpointer,
+            // which will return the thread pointer into r3.
+            BuildMI(MBB, I, DL, TII->get(Opc2), GPR3);
         } else {
           MachineInstr *Addi;
           if (IsPCREL) {

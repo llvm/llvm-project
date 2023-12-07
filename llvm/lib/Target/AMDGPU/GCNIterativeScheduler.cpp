@@ -367,9 +367,8 @@ void GCNIterativeScheduler::scheduleRegion(Region &R, Range &&Schedule,
     }
     if (!MI->isDebugInstr()) {
       // Reset read - undef flags and update them later.
-      for (auto &Op : MI->operands())
-        if (Op.isReg() && Op.isDef())
-          Op.setIsUndef(false);
+      for (auto &Op : MI->all_defs())
+        Op.setIsUndef(false);
 
       RegisterOperands RegOpers;
       RegOpers.collect(*MI, *TRI, MRI, /*ShouldTrackLaneMasks*/true,

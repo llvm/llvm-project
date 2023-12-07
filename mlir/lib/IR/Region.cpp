@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Region.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 using namespace mlir;
 
@@ -67,14 +67,14 @@ unsigned Region::getRegionNumber() {
 
 /// Clone the internal blocks from this region into `dest`. Any
 /// cloned blocks are appended to the back of dest.
-void Region::cloneInto(Region *dest, BlockAndValueMapping &mapper) {
+void Region::cloneInto(Region *dest, IRMapping &mapper) {
   assert(dest && "expected valid region to clone into");
   cloneInto(dest, dest->end(), mapper);
 }
 
 /// Clone this region into 'dest' before the given position in 'dest'.
 void Region::cloneInto(Region *dest, Region::iterator destPos,
-                       BlockAndValueMapping &mapper) {
+                       IRMapping &mapper) {
   assert(dest && "expected valid region to clone into");
   assert(this != dest && "cannot clone region into itself");
 
@@ -267,18 +267,18 @@ RegionRange::RegionRange(ArrayRef<Region *> regions)
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 RegionRange::OwnerT RegionRange::offset_base(const OwnerT &owner,
                                              ptrdiff_t index) {
-  if (auto *region = owner.dyn_cast<const std::unique_ptr<Region> *>())
+  if (auto *region = llvm::dyn_cast_if_present<const std::unique_ptr<Region> *>(owner))
     return region + index;
-  if (auto **region = owner.dyn_cast<Region **>())
+  if (auto **region = llvm::dyn_cast_if_present<Region **>(owner))
     return region + index;
   return &owner.get<Region *>()[index];
 }
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 Region *RegionRange::dereference_iterator(const OwnerT &owner,
                                           ptrdiff_t index) {
-  if (auto *region = owner.dyn_cast<const std::unique_ptr<Region> *>())
+  if (auto *region = llvm::dyn_cast_if_present<const std::unique_ptr<Region> *>(owner))
     return region[index].get();
-  if (auto **region = owner.dyn_cast<Region **>())
+  if (auto **region = llvm::dyn_cast_if_present<Region **>(owner))
     return region[index];
   return &owner.get<Region *>()[index];
 }

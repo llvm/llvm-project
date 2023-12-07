@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-linux         -S -o - %s | FileCheck %s --check-prefix=ASM
 // Actually, any ELF target would do
-// REQUIRES: x86_64-linux
+// REQUIRES: x86-registered-target
 
 #pragma clang section bss = "B$$" data = "d@t@" rodata = "r0d@t@"
 

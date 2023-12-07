@@ -455,7 +455,7 @@ TEST_CONSTEXPR Iter base(Iter i) { return i; }
 template <typename T>
 struct ThrowingIterator {
     typedef std::bidirectional_iterator_tag iterator_category;
-    typedef ptrdiff_t                       difference_type;
+    typedef std::ptrdiff_t                       difference_type;
     typedef const T                         value_type;
     typedef const T *                       pointer;
     typedef const T &                       reference;
@@ -566,7 +566,7 @@ private:
 template <typename T>
 struct NonThrowingIterator {
     typedef std::bidirectional_iterator_tag iterator_category;
-    typedef ptrdiff_t                       difference_type;
+    typedef std::ptrdiff_t                       difference_type;
     typedef const T                         value_type;
     typedef const T *                       pointer;
     typedef const T &                       reference;
@@ -696,6 +696,33 @@ template <class It>
 cpp20_output_iterator(It) -> cpp20_output_iterator<It>;
 
 static_assert(std::output_iterator<cpp20_output_iterator<int*>, int>);
+
+#  if TEST_STD_VER >= 20
+
+// An `input_iterator` that can be used in a `std::ranges::common_range`
+template <class Base>
+struct common_input_iterator {
+  Base it_;
+
+  using value_type       = std::iter_value_t<Base>;
+  using difference_type  = std::intptr_t;
+  using iterator_concept = std::input_iterator_tag;
+
+  constexpr common_input_iterator() = default;
+  constexpr explicit common_input_iterator(Base it) : it_(it) {}
+
+  constexpr common_input_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  constexpr void operator++(int) { ++it_; }
+
+  constexpr decltype(auto) operator*() const { return *it_; }
+
+  friend constexpr bool operator==(common_input_iterator const&, common_input_iterator const&) = default;
+};
+
+#  endif // TEST_STD_VER >= 20
 
 // Iterator adaptor that counts the number of times the iterator has had a successor/predecessor
 // operation called. Has two recorders:
@@ -889,7 +916,7 @@ class Iterator {
  public:
   using value_type = int;
   using reference = int&;
-  using difference_type = ptrdiff_t;
+  using difference_type = std::ptrdiff_t;
 
  private:
   value_type* ptr_ = nullptr;
@@ -977,6 +1004,84 @@ class Iterator {
 };
 
 } // namespace adl
+
+template <class T>
+class rvalue_iterator {
+public:
+  using iterator_category = std::input_iterator_tag;
+  using iterator_concept  = std::random_access_iterator_tag;
+  using difference_type   = std::ptrdiff_t;
+  using reference         = T&&;
+  using value_type        = T;
+
+  rvalue_iterator() = default;
+  constexpr rvalue_iterator(T* it) : it_(it) {}
+
+  constexpr reference operator*() const { return std::move(*it_); }
+
+  constexpr rvalue_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+
+  constexpr rvalue_iterator operator++(int) {
+    auto tmp = *this;
+    ++it_;
+    return tmp;
+  }
+
+  constexpr rvalue_iterator& operator--() {
+    --it_;
+    return *this;
+  }
+
+  constexpr rvalue_iterator operator--(int) {
+    auto tmp = *this;
+    --it_;
+    return tmp;
+  }
+
+  constexpr rvalue_iterator operator+(difference_type n) const {
+    auto tmp = *this;
+    tmp.it += n;
+    return tmp;
+  }
+
+  constexpr friend rvalue_iterator operator+(difference_type n, rvalue_iterator iter) {
+    iter += n;
+    return iter;
+  }
+
+  constexpr rvalue_iterator operator-(difference_type n) const {
+    auto tmp = *this;
+    tmp.it -= n;
+    return tmp;
+  }
+
+  constexpr difference_type operator-(const rvalue_iterator& other) const { return it_ - other.it_; }
+
+  constexpr rvalue_iterator& operator+=(difference_type n) {
+    it_ += n;
+    return *this;
+  }
+
+  constexpr rvalue_iterator& operator-=(difference_type n) {
+    it_ -= n;
+    return *this;
+  }
+
+  constexpr reference operator[](difference_type n) const { return std::move(it_[n]); }
+
+  auto operator<=>(const rvalue_iterator&) const noexcept = default;
+
+private:
+  T* it_;
+};
+
+template <class T>
+rvalue_iterator(T*) -> rvalue_iterator<T>;
+
+static_assert(std::random_access_iterator<rvalue_iterator<int*>>);
 
 // Proxy
 // ======================================================================
@@ -1258,6 +1363,21 @@ static_assert(std::indirectly_readable<ProxyIterator<int*>>);
 static_assert(std::indirectly_writable<ProxyIterator<int*>, Proxy<int>>);
 static_assert(std::indirectly_writable<ProxyIterator<int*>, Proxy<int&>>);
 
+template <class Iter>
+using Cpp20InputProxyIterator = ProxyIterator<cpp20_input_iterator<Iter>>;
+
+template <class Iter>
+using ForwardProxyIterator = ProxyIterator<forward_iterator<Iter>>;
+
+template <class Iter>
+using BidirectionalProxyIterator = ProxyIterator<bidirectional_iterator<Iter>>;
+
+template <class Iter>
+using RandomAccessProxyIterator = ProxyIterator<random_access_iterator<Iter>>;
+
+template <class Iter>
+using ContiguousProxyIterator = ProxyIterator<contiguous_iterator<Iter>>;
+
 template <class BaseSent>
 struct ProxySentinel {
   BaseSent base_;
@@ -1298,23 +1418,33 @@ template <std::ranges::input_range R>
   requires std::ranges::viewable_range<R&&>
 ProxyRange(R&&) -> ProxyRange<std::views::all_t<R&&>>;
 
-namespace meta {
+#endif // TEST_STD_VER > 17
+
+namespace types {
 template <class Ptr>
-using random_access_iterator_list = type_list<Ptr, contiguous_iterator<Ptr>, random_access_iterator<Ptr>>;
+using random_access_iterator_list =
+    type_list<Ptr,
+#if TEST_STD_VER >= 20
+              contiguous_iterator<Ptr>,
+#endif
+              random_access_iterator<Ptr> >;
 
 template <class Ptr>
 using bidirectional_iterator_list =
-    concatenate_t<random_access_iterator_list<Ptr>, type_list<bidirectional_iterator<Ptr>>>;
+    concatenate_t<random_access_iterator_list<Ptr>, type_list<bidirectional_iterator<Ptr> > >;
 
 template <class Ptr>
-using forward_iterator_list = concatenate_t<bidirectional_iterator_list<Ptr>, type_list<forward_iterator<Ptr>>>;
+using forward_iterator_list = concatenate_t<bidirectional_iterator_list<Ptr>, type_list<forward_iterator<Ptr> > >;
 
+template <class Ptr>
+using cpp17_input_iterator_list = concatenate_t<forward_iterator_list<Ptr>, type_list<cpp17_input_iterator<Ptr> > >;
+
+#if TEST_STD_VER >= 20
 template <class Ptr>
 using cpp20_input_iterator_list =
     concatenate_t<forward_iterator_list<Ptr>, type_list<cpp20_input_iterator<Ptr>, cpp17_input_iterator<Ptr>>>;
+#endif
+} // namespace types
 
-} // namespace meta
-
-#endif // TEST_STD_VER > 17
 
 #endif // SUPPORT_TEST_ITERATORS_H

@@ -1,8 +1,12 @@
 ; REQUIRES: asserts
-; RUN: llc -enable-fs-discriminator < %s | FileCheck %s
-; RUN: llvm-profdata merge --sample -profile-isfs -o %t.afdo %S/Inputs/fsloader.afdo
-; RUN: llc -enable-fs-discriminator -fs-profile-file=%t.afdo -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefix=LOADER
-;
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=false < %s | FileCheck %s --check-prefixes=V0,V01
+; RUN: llvm-profdata merge --sample -profile-isfs -o %t0.afdo %S/Inputs/fsloader.afdo
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=false -fs-profile-file=%t0.afdo -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefixes=LOADERV0,LOADER
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true < %s | FileCheck %s --check-prefixes=V1,V01
+; RUN: llvm-profdata merge --sample -profile-isfs -o %t1.afdo %S/Inputs/fsloader_v1.afdo
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true -fs-profile-file=%t1.afdo -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefixes=LOADERV1,LOADER
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true -fs-profile-file=%S/Inputs/fsloader_v1.afdo -profile-isfs -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefixes=LOADERV1,LOADER
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true -fs-profile-file=%S/Inputs/fsloader_v1.afdo -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefixes=NOLOAD
 ;;
 ;; C source code for the test (compiler at -O3):
 ;; // A test case for loop unroll.
@@ -41,18 +45,21 @@
 ;; }
 ;;
 ;; Check that fs-afdo discriminators are generated.
-; CHECK: .loc    1 23 9 is_stmt 0 discriminator 1 # unroll.c:23:9
-; CHECK: .loc    1 23 9 is_stmt 0 discriminator 3585 # unroll.c:23:9
-; CHECK: .loc    1 23 9 is_stmt 0 discriminator 8705 # unroll.c:23:9
-; CHECK: .loc    1 23 9 is_stmt 0 discriminator 4097 # unroll.c:23:9
+; V01: .loc    1 23 9 is_stmt 0 discriminator 1 # unroll.c:23:9
+; V0: .loc    1 23 9 is_stmt 0 discriminator 3585 # unroll.c:23:9
+; V0: .loc    1 23 9 is_stmt 0 discriminator 8705 # unroll.c:23:9
+; V0: .loc    1 23 9 is_stmt 0 discriminator 4097 # unroll.c:23:9
+; V1: .loc    1 23 9 is_stmt 0 discriminator 257 # unroll.c:23:9
+; V1: .loc    1 23 9 is_stmt 0 discriminator 513 # unroll.c:23:9
+; V1: .loc    1 23 9 is_stmt 0 discriminator 769 # unroll.c:23:9
 ;;
 ;; Check that variable __llvm_fs_discriminator__ is generated.
-; CHECK: .type   __llvm_fs_discriminator__,@object # @__llvm_fs_discriminator__
-; CHECK: .section        .rodata,"a",@progbits
-; CHECK: .weak   __llvm_fs_discriminator__
-; CHECK: __llvm_fs_discriminator__:
-; CHECK: .byte   1
-; CHECK: .size   __llvm_fs_discriminator__, 1
+; V01: .type   __llvm_fs_discriminator__,@object # @__llvm_fs_discriminator__
+; V01: .section        .rodata,"a",@progbits
+; V01: .weak   __llvm_fs_discriminator__
+; V01: __llvm_fs_discriminator__:
+; V01: .byte   1
+; V01: .size   __llvm_fs_discriminator__, 1
 
 ;; Check that new branch probs are generated.
 ; LOADER: Set branch fs prob: MBB (1 -> 3): unroll.c:22:11-->unroll.c:24:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x7aca7894 / 0x80000000 = 95.93%
@@ -63,15 +70,21 @@
 ; LOADER: Set branch fs prob: MBB (5 -> 7): unroll.c:22:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x7de3eed2 / 0x80000000 = 98.35%
 ; LOADER: Set branch fs prob: MBB (8 -> 10): unroll.c:24:11-->unroll.c:22:11 W=283590  0x30000000 / 0x80000000 = 37.50% --> 0x00000000 / 0x80000000 = 0.00%
 ; LOADER: Set branch fs prob: MBB (8 -> 9): unroll.c:24:11 W=283590  0x50000000 / 0x80000000 = 62.50% --> 0x80000000 / 0x80000000 = 100.00%
-; LOADER: Set branch fs prob: MBB (10 -> 12): unroll.c:22:11-->unroll.c:24:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x7aca7894 / 0x80000000 = 95.93%
-; LOADER: Set branch fs prob: MBB (10 -> 11): unroll.c:22:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x0535876c / 0x80000000 = 4.07%
+; LOADERV0: Set branch fs prob: MBB (10 -> 12): unroll.c:22:11-->unroll.c:24:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x7aca7894 / 0x80000000 = 95.93%
+; LOADERV1: Set branch fs prob: MBB (10 -> 12): unroll.c:22:11-->unroll.c:24:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x0a5856e1 / 0x80000000 = 8.08%
+; LOADERV0: Set branch fs prob: MBB (10 -> 11): unroll.c:22:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x0535876c / 0x80000000 = 4.07%
+; LOADERV1: Set branch fs prob: MBB (10 -> 11): unroll.c:22:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x75a7a91f / 0x80000000 = 91.92%
 ; LOADER: Set branch fs prob: MBB (12 -> 14): unroll.c:24:11-->unroll.c:22:11 W=283590  0x30000000 / 0x80000000 = 37.50% --> 0x02012507 / 0x80000000 = 1.57%
 ; LOADER: Set branch fs prob: MBB (12 -> 13): unroll.c:24:11 W=283590  0x50000000 / 0x80000000 = 62.50% --> 0x7dfedaf9 / 0x80000000 = 98.43%
-; LOADER: Set branch fs prob: MBB (14 -> 16): unroll.c:22:11-->unroll.c:24:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x0a5856e1 / 0x80000000 = 8.08%
-; LOADER: Set branch fs prob: MBB (14 -> 15): unroll.c:22:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x75a7a91f / 0x80000000 = 91.92%
+; LOADERV0: Set branch fs prob: MBB (14 -> 16): unroll.c:22:11-->unroll.c:24:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x0a5856e1 / 0x80000000 = 8.08%
+; LOADERV1: Set branch fs prob: MBB (14 -> 16): unroll.c:22:11-->unroll.c:24:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x7aca7894 / 0x80000000 = 95.93%
+; LOADERV0: Set branch fs prob: MBB (14 -> 15): unroll.c:22:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x75a7a91f / 0x80000000 = 91.92%
+; LOADERV1: Set branch fs prob: MBB (14 -> 15): unroll.c:22:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x0535876c / 0x80000000 = 4.07%
 ; LOADER: Set branch fs prob: MBB (16 -> 18): unroll.c:24:11-->unroll.c:19:3 W=283590  0x30000000 / 0x80000000 = 37.50% --> 0x16588166 / 0x80000000 = 17.46%
 ; LOADER: Set branch fs prob: MBB (16 -> 17): unroll.c:24:11 W=283590  0x50000000 / 0x80000000 = 62.50% --> 0x69a77e9a / 0x80000000 = 82.54%
 
+;; Check that the profile is not loaded since the reader doesn't know it is a FS profile.
+; NOLOAD-NOT: Set branch fs prob
 
 target triple = "x86_64-unknown-linux-gnu"
 

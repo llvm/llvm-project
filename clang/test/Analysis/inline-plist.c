@@ -2,7 +2,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-config eagerly-assume=false %s -analyzer-checker=core.NullDereference,core.DivideZero -fblocks -analyzer-output=plist -analyzer-config suppress-null-return-paths=false -o %t
 // RUN: %normalize_plist <%t | diff -ub %S/Inputs/expected-plists/inline-plist.c.plist -
 
-// <rdar://problem/10967815>
 void mmm(int y) {
   if (y != 0)
     y++;

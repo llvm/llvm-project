@@ -7,23 +7,22 @@ target triple = "hexagon-unknown--elf"
 
 @g0 = global %s.0 { i32 3 }, align 4 #0
 @g1 = global i32 0, align 4 #1
-@g2 = global %s.0* @g0, align 4 #2
+@g2 = global ptr @g0, align 4 #2
 @g3 = global i32 0, align 4 #3
 @g4 = global i32 0, align 4 #4
 
 ; Function Attrs: nounwind optsize
 define i32 @f0() #5 section ".text.main" {
 b0:
-  %v0 = load i32, i32* @g3, align 4, !tbaa !4
+  %v0 = load i32, ptr @g3, align 4, !tbaa !4
   %v1 = add nsw i32 %v0, 1
-  store i32 %v1, i32* @g3, align 4, !tbaa !4
-  %v2 = load i8*, i8** bitcast (%s.0** @g2 to i8**), align 4, !tbaa !8
-  %v3 = load i32, i32* @g1, align 4, !tbaa !10
-  %v4 = getelementptr inbounds i8, i8* %v2, i32 %v3
-  %v5 = bitcast i8* %v4 to i32*
-  %v6 = load i32, i32* %v5, align 4, !tbaa !4
-  store i32 %v6, i32* @g4, align 4, !tbaa !4
-  store i32 1, i32* @g3, align 4, !tbaa !4
+  store i32 %v1, ptr @g3, align 4, !tbaa !4
+  %v2 = load ptr, ptr @g2, align 4, !tbaa !8
+  %v3 = load i32, ptr @g1, align 4, !tbaa !10
+  %v4 = getelementptr inbounds i8, ptr %v2, i32 %v3
+  %v6 = load i32, ptr %v4, align 4, !tbaa !4
+  store i32 %v6, ptr @g4, align 4, !tbaa !4
+  store i32 1, ptr @g3, align 4, !tbaa !4
   ret i32 0
 }
 

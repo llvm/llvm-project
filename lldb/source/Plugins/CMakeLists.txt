@@ -15,6 +15,7 @@ add_subdirectory(OperatingSystem)
 add_subdirectory(Platform)
 add_subdirectory(Process)
 add_subdirectory(REPL)
+add_subdirectory(RegisterTypeBuilder)
 add_subdirectory(ScriptInterpreter)
 add_subdirectory(StructuredData)
 add_subdirectory(SymbolFile)
@@ -36,7 +37,7 @@ set(LLDB_PROCESS_WINDOWS_PLUGIN "")
 set(LLDB_PROCESS_GDB_PLUGIN "")
 
 foreach(p ${LLDB_ALL_PLUGINS})
-  # Strip lldbPlugin form the plugin name.
+  # Strip lldbPlugin from the plugin name.
   string(SUBSTRING ${p} 10 -1 pStripped)
   if(${pStripped} MATCHES "^ScriptInterpreter*")
     set(LLDB_ENUM_PLUGINS "${LLDB_ENUM_PLUGINS}LLDB_SCRIPT_PLUGIN(${pStripped})\n")

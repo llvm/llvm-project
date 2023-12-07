@@ -92,9 +92,9 @@ Loop, where going through a CGSCC is optional.
   MPM.addPass(createModuleToFunctionPassAdaptor(FunctionFooPass()));
 
   // loop -> function -> cgscc -> module
-  MPM.addPass(createModuleToCGSCCPassAdaptor(createCGSCCToFunctionPassAdaptor(createFunctionToLoopPassAdaptor(LoopFooPass()))));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(createCGSCCToFunctionPassAdaptor(createFunctionToLoopPassAdaptor(LoopFooPass()))));
   // function -> cgscc -> module
-  MPM.addPass(createModuleToCGSCCPassAdaptor(createCGSCCToFunctionPassAdaptor(FunctionFooPass())));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(createCGSCCToFunctionPassAdaptor(FunctionFooPass())));
 
 
 A pass manager of a specific IR unit is also a pass of that kind. For
@@ -386,7 +386,7 @@ checked if they are invalidated:
 .. code-block:: c++
 
   bool FooAnalysisResult::invalidate(Function &F, const PreservedAnalyses &PA,
-                                     FunctionAnalysisManager::Invalidator &) {
+                                     FunctionAnalysisManager::Invalidator &Inv) {
     auto PAC = PA.getChecker<FooAnalysis>();
     if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>())
       return true;
@@ -419,17 +419,6 @@ for more details.
 
 Invoking ``opt``
 ================
-
-To use the legacy pass manager:
-
-.. code-block:: shell
-
-  $ opt -enable-new-pm=0 -pass1 -pass2 /tmp/a.ll -S
-
-This will be removed once the legacy pass manager is deprecated and removed for
-the optimization pipeline.
-
-To use the new PM:
 
 .. code-block:: shell
 
@@ -506,13 +495,11 @@ Status of the New and Legacy Pass Managers
 ==========================================
 
 LLVM currently contains two pass managers, the legacy PM and the new PM. The
-optimization pipeline (aka the middle-end) works with both the legacy PM and
-the new PM, whereas the backend target-dependent code generation only works
-with the legacy PM.
+optimization pipeline (aka the middle-end) uses the new PM, whereas the backend
+target-dependent code generation uses the legacy PM.
 
-For the optimization pipeline, the new PM is the default PM. Using the legacy PM
-for the optimization pipeline is deprecated and there are ongoing efforts to
-remove its usage.
+The legacy PM somewhat works with the optimization pipeline, but this is
+deprecated and there are ongoing efforts to remove its usage.
 
 Some IR passes are considered part of the backend codegen pipeline even if
 they are LLVM IR passes (whereas all MIR passes are codegen passes). This

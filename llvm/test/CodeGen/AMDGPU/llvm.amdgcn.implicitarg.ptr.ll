@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,HSA %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=5 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,COV5 %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MESA %s
+; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck -check-prefixes=GCN,HSA %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck -check-prefixes=GCN,COV5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs | FileCheck -check-prefixes=GCN,MESA %s
 
 ; GCN-LABEL: {{^}}kernel_implicitarg_ptr_empty:
 ; HSA: enable_sgpr_kernarg_segment_ptr = 1
@@ -391,3 +391,6 @@ attributes #0 = { nounwind noinline }
 attributes #1 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="48" }
 attributes #2 = { nounwind readnone speculatable }
 attributes #3 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="0" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}

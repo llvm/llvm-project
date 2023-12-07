@@ -7,7 +7,7 @@
 ;     unsigned short lport;
 ;   };
 ;
-;   extern void test1(void *);
+;   extern void test1(ptr);
 ;   int test(int pid) {
 ;     struct ipv6_key_t ipv6_key = {.pid = pid};
 ;     test1(&ipv6_key);
@@ -22,13 +22,11 @@
 define dso_local i32 @test(i32 %pid) local_unnamed_addr #0 {
 entry:
   %ipv6_key = alloca %struct.ipv6_key_t, align 16
-  %0 = bitcast %struct.ipv6_key_t* %ipv6_key to i8*
-  call void @llvm.lifetime.start.p0i8(i64 48, i8* nonnull %0) #4
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 16 dereferenceable(48) %0, i8 0, i64 48, i1 false)
-  %pid1 = getelementptr inbounds %struct.ipv6_key_t, %struct.ipv6_key_t* %ipv6_key, i64 0, i32 0
-  store i32 %pid, i32* %pid1, align 16, !tbaa !2
-  call void @test1(i8* nonnull %0) #4
-  call void @llvm.lifetime.end.p0i8(i64 48, i8* nonnull %0) #4
+  call void @llvm.lifetime.start.p0(i64 48, ptr nonnull %ipv6_key) #4
+  call void @llvm.memset.p0.i64(ptr nonnull align 16 dereferenceable(48) %ipv6_key, i8 0, i64 48, i1 false)
+  store i32 %pid, ptr %ipv6_key, align 16, !tbaa !2
+  call void @test1(ptr nonnull %ipv6_key) #4
+  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %ipv6_key) #4
   ret i32 0
 }
 
@@ -37,15 +35,15 @@ entry:
 ; CHECK:       *(u32 *)(r10 - 48) = r{{[0-9]+}}
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: argmemonly nounwind willreturn writeonly
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #2
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
 
-declare dso_local void @test1(i8*) local_unnamed_addr #3
+declare dso_local void @test1(ptr) local_unnamed_addr #3
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind willreturn }

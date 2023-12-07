@@ -1,7 +1,7 @@
 ; RUN: opt -passes=licm %s -S | FileCheck %s
 
 ; CHECK: for.body:
-; CHECK-NEXT: llvm.dbg.value(metadata i8 undef
+; CHECK-NEXT: llvm.dbg.value(metadata i8 poison
 
 ; The load is loop invariant. Check that we leave an undef dbg.value behind
 ; when licm sinks the instruction.

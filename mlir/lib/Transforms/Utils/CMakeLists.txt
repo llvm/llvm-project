@@ -1,4 +1,5 @@
 add_mlir_library(MLIRTransformUtils
+  CFGToSCF.cpp
   CommutativityUtils.cpp
   ControlFlowSinkUtils.cpp
   DialectConversion.cpp
@@ -6,6 +7,7 @@ add_mlir_library(MLIRTransformUtils
   GreedyPatternRewriteDriver.cpp
   InliningUtils.cpp
   LoopInvariantCodeMotionUtils.cpp
+  OneToNTypeConversion.cpp
   RegionUtils.cpp
   TopologicalSortUtils.cpp
 
@@ -14,6 +16,8 @@ add_mlir_library(MLIRTransformUtils
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
+  MLIRControlFlowInterfaces
+  MLIRFunctionInterfaces
   MLIRLoopLikeInterface
   MLIRSideEffectInterfaces
   MLIRRewrite

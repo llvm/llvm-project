@@ -10,8 +10,10 @@
 // utils.
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/config.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Support/CommandLine.h"
@@ -100,6 +102,25 @@ std::optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
   SUPPORTED_TENSOR_TYPES(PARSE_TYPE)
 #undef PARSE_TYPE
   return std::nullopt;
+}
+
+std::string tensorValueToString(const char *Buffer, const TensorSpec &Spec) {
+  switch (Spec.type()) {
+#define _IMR_DBG_PRINTER(T, N)                                                 \
+  case TensorType::N: {                                                        \
+    const T *TypedBuff = reinterpret_cast<const T *>(Buffer);                  \
+    auto R = llvm::make_range(TypedBuff, TypedBuff + Spec.getElementCount());  \
+    return llvm::join(                                                         \
+        llvm::map_range(R, [](T V) { return std::to_string(V); }), ",");       \
+  }
+    SUPPORTED_TENSOR_TYPES(_IMR_DBG_PRINTER)
+#undef _IMR_DBG_PRINTER
+  case TensorType::Total:
+  case TensorType::Invalid:
+    llvm_unreachable("invalid tensor type");
+  }
+  // To appease warnings about not all control paths returning a value.
+  return "";
 }
 
 } // namespace llvm

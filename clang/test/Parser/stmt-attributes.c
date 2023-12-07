@@ -82,9 +82,11 @@ void foobar(void) {
   int x;
   __attribute__((nomerge)) x = 10; // expected-warning {{'nomerge' attribute is ignored because there exists no call expression inside the statement}}
 
-  __attribute__((nomerge)) label : bar(); // expected-error {{'nomerge' attribute only applies to functions and statements}}
+  __attribute__((nomerge)) label : bar(); // expected-error {{'nomerge' attribute only applies to functions, statements and variables}}
 }
 
 int f(void);
 
-__attribute__((nomerge)) static int i; // expected-error {{'nomerge' attribute only applies to functions and statements}}
+__attribute__((nomerge)) static int (*fptr)(void);
+__attribute__((nomerge)) static int i; // expected-warning {{'nomerge' attribute is ignored because 'i' is not a function pointer}}
+struct buz {} __attribute__((nomerge)); // expected-error {{'nomerge' attribute only applies to functions, statements and variables}}

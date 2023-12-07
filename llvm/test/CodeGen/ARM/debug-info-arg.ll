@@ -6,15 +6,15 @@ target triple = "thumbv7-apple-ios"
 
 %struct.tag_s = type { i32, i32, i32 }
 
-define void @foo(%struct.tag_s* nocapture %this, %struct.tag_s* %c, i64 %x, i64 %y, %struct.tag_s* nocapture %ptr1, %struct.tag_s* nocapture %ptr2) nounwind ssp "frame-pointer"="all" !dbg !1 {
-  tail call void @llvm.dbg.value(metadata %struct.tag_s* %this, metadata !5, metadata !DIExpression()), !dbg !20
-  tail call void @llvm.dbg.value(metadata %struct.tag_s* %c, metadata !13, metadata !DIExpression()), !dbg !21
+define void @foo(ptr nocapture %this, ptr %c, i64 %x, i64 %y, ptr nocapture %ptr1, ptr nocapture %ptr2) nounwind ssp "frame-pointer"="all" !dbg !1 {
+  tail call void @llvm.dbg.value(metadata ptr %this, metadata !5, metadata !DIExpression()), !dbg !20
+  tail call void @llvm.dbg.value(metadata ptr %c, metadata !13, metadata !DIExpression()), !dbg !21
   tail call void @llvm.dbg.value(metadata i64 %x, metadata !14, metadata !DIExpression()), !dbg !22
   tail call void @llvm.dbg.value(metadata i64 %y, metadata !17, metadata !DIExpression()), !dbg !23
 ;CHECK:	@DEBUG_VALUE: foo:y <- [DW_OP_plus_uconst 8] [$r7+0]
-  tail call void @llvm.dbg.value(metadata %struct.tag_s* %ptr1, metadata !18, metadata !DIExpression()), !dbg !24
-  tail call void @llvm.dbg.value(metadata %struct.tag_s* %ptr2, metadata !19, metadata !DIExpression()), !dbg !25
-  %1 = icmp eq %struct.tag_s* %c, null, !dbg !26
+  tail call void @llvm.dbg.value(metadata ptr %ptr1, metadata !18, metadata !DIExpression()), !dbg !24
+  tail call void @llvm.dbg.value(metadata ptr %ptr2, metadata !19, metadata !DIExpression()), !dbg !25
+  %1 = icmp eq ptr %c, null, !dbg !26
   br i1 %1, label %3, label %2, !dbg !26
 
 ; <label>:2                                       ; preds = %0

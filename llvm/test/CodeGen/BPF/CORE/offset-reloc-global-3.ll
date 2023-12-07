@@ -16,14 +16,14 @@ target triple = "bpf"
 
 %struct.v3 = type { i32, i32 }
 
-@g = dso_local local_unnamed_addr global %struct.v3* null, section "stats", align 8, !dbg !0
+@g = dso_local local_unnamed_addr global ptr null, section "stats", align 8, !dbg !0
 
 ; Function Attrs: nounwind
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !17 {
 entry:
-  %0 = load %struct.v3*, %struct.v3** @g, align 8, !dbg !20, !tbaa !21
-  %1 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v3s(%struct.v3* elementtype(%struct.v3) %0, i32 1, i32 1), !dbg !20, !llvm.preserve.access.index !8
-  %call = tail call i32 @get_value(i32* %1) #3, !dbg !25
+  %0 = load ptr, ptr @g, align 8, !dbg !20, !tbaa !21
+  %1 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.v3s(ptr elementtype(%struct.v3) %0, i32 1, i32 1), !dbg !20, !llvm.preserve.access.index !8
+  %call = tail call i32 @get_value(ptr %1) #3, !dbg !25
   ret i32 %call, !dbg !26
 }
 
@@ -45,10 +45,10 @@ entry:
 ; CHECK-NEXT:         .long   23
 ; CHECK-NEXT:         .long   0
 
-declare dso_local i32 @get_value(i32*) local_unnamed_addr #1
+declare dso_local i32 @get_value(ptr) local_unnamed_addr #1
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v3s(%struct.v3*, i32, i32) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0.v3s(ptr, i32, i32) #2
 
 attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

@@ -11,6 +11,7 @@
 #ifndef FORTRAN_RUNTIME_TERMINATOR_H_
 #define FORTRAN_RUNTIME_TERMINATOR_H_
 
+#include "flang/Runtime/api-attrs.h"
 #include <cstdarg>
 
 namespace Fortran::runtime {
@@ -21,7 +22,8 @@ class Terminator {
 public:
   Terminator() {}
   Terminator(const Terminator &) = default;
-  explicit Terminator(const char *sourceFileName, int sourceLine = 0)
+  explicit RT_API_ATTRS Terminator(
+      const char *sourceFileName, int sourceLine = 0)
       : sourceFileName_{sourceFileName}, sourceLine_{sourceLine} {}
 
   const char *sourceFileName() const { return sourceFileName_; }
@@ -31,11 +33,16 @@ public:
     sourceFileName_ = sourceFileName;
     sourceLine_ = sourceLine;
   }
-  [[noreturn]] void Crash(const char *message, ...) const;
-  [[noreturn]] void CrashArgs(const char *message, va_list &) const;
-  [[noreturn]] void CheckFailed(
+
+  // CUDA_TODO: Clang for CUDA does not support varargs, though
+  // it compiles it with -fcuda-allow-variadic-functions.
+  // We can try to replace varargs functions with variadic templates.
+  [[noreturn]] RT_API_ATTRS void Crash(const char *message, ...) const;
+  [[noreturn]] RT_API_ATTRS void CrashArgs(
+      const char *message, va_list &) const;
+  [[noreturn]] RT_API_ATTRS void CheckFailed(
       const char *predicate, const char *file, int line) const;
-  [[noreturn]] void CheckFailed(const char *predicate) const;
+  [[noreturn]] RT_API_ATTRS void CheckFailed(const char *predicate) const;
 
   // For test harnessing - overrides CrashArgs().
   static void RegisterCrashHandler(void (*)(const char *sourceFile,

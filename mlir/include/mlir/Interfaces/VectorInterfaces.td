@@ -25,7 +25,7 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
     InterfaceMethod<
       /*desc=*/[{
         Return the shape ratio of unrolling to the target vector shape
-        `targetShape`. Return `None` if the op cannot be unrolled to the target
+        `targetShape`. Return `std::nullopt` if the op cannot be unrolled to the target
         vector shape.
       }],
       /*retTy=*/"::std::optional<::llvm::SmallVector<int64_t, 4>>",
@@ -34,8 +34,7 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         assert($_op->getNumResults() == 1);
-        auto vt = $_op.getResult().getType().
-          template dyn_cast<::mlir::VectorType>();
+        auto vt = ::llvm::dyn_cast<::mlir::VectorType>($_op.getResult().getType());
         if (!vt)
           return ::std::nullopt;
         ::llvm::SmallVector<int64_t, 4> res(vt.getShape().begin(), vt.getShape().end());
@@ -78,8 +77,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*defaultImplementation=*/[{
         return $_op.isBroadcastDim(dim)
             || ($_op.getInBounds()
-                && $_op.getInBounds()->template cast<::mlir::ArrayAttr>()[dim]
-                                    .template cast<::mlir::BoolAttr>().getValue());
+                && cast<::mlir::BoolAttr>(cast<::mlir::ArrayAttr>(*$_op.getInBounds())[dim]).getValue());
       }]
     >,
     InterfaceMethod<
@@ -109,7 +107,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     InterfaceMethod<
       /*desc=*/"Return the permutation map.",
       /*retTy=*/"::mlir::AffineMap",
-      /*methodName=*/"permutation_map",
+      /*methodName=*/"getPermutationMap",
       /*args=*/(ins),
       /*methodBody=*/"return $_op.getPermutationMap();"
       /*defaultImplementation=*/
@@ -142,12 +140,17 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return the `in_bounds` boolean ArrayAttr.",
-      /*retTy=*/"::std::optional<::mlir::ArrayAttr>",
-      /*methodName=*/"in_bounds",
+      /*desc=*/"Return a vector of all in_bounds values as booleans.",
+      /*retTy=*/"::llvm::SmallVector<bool>",
+      /*methodName=*/"getInBoundsValues",
       /*args=*/(ins),
-      /*methodBody=*/"return $_op.getInBounds();"
-      /*defaultImplementation=*/
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        ::llvm::SmallVector<bool> inBounds;
+        for (int64_t i = 0, e = $_op.getTransferRank(); i < e; ++i)
+          inBounds.push_back($_op.isDimInBounds(i));
+        return inBounds;
+      }]
     >,
     InterfaceMethod<
       /*desc=*/"Return the ShapedType.",
@@ -156,7 +159,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/
-        "return $_op.getSource().getType().template cast<::mlir::ShapedType>();"
+        "return ::llvm::cast<::mlir::ShapedType>($_op.getSource().getType());"
     >,
     InterfaceMethod<
       /*desc=*/"Return the VectorType.",
@@ -165,7 +168,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.getVector().getType().template dyn_cast<::mlir::VectorType>();
+        return ::llvm::dyn_cast<::mlir::VectorType>($_op.getVector().getType());
         }]
     >,
     InterfaceMethod<

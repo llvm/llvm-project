@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
@@ -37,11 +38,45 @@ void transform::TransformDialect::initializeTypes() {
       >();
 }
 
+//===----------------------------------------------------------------------===//
+// transform::AffineMapParamType
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::AffineMapParamType::checkPayload(Location loc,
+                                            ArrayRef<Attribute> payload) const {
+  for (Attribute attr : payload) {
+    if (!attr.isa<AffineMapAttr>()) {
+      return emitSilenceableError(loc)
+             << "expected affine map attribute, got " << attr;
+    }
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// transform::AnyOpType
+//===----------------------------------------------------------------------===//
+
 DiagnosedSilenceableFailure
 transform::AnyOpType::checkPayload(Location loc,
                                    ArrayRef<Operation *> payload) const {
   return DiagnosedSilenceableFailure::success();
 }
+
+//===----------------------------------------------------------------------===//
+// transform::AnyValueType
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::AnyValueType::checkPayload(Location loc,
+                                      ArrayRef<Value> payload) const {
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// transform::OperationType
+//===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
 transform::OperationType::checkPayload(Location loc,
@@ -50,11 +85,71 @@ transform::OperationType::checkPayload(Location loc,
   for (Operation *op : payload) {
     if (opName != op->getName()) {
       DiagnosedSilenceableFailure diag =
-          emitSilenceableError(loc) << "incompatible payload operation name";
+          emitSilenceableError(loc)
+          << "incompatible payload operation name expected " << opName << " vs "
+          << op->getName() << " -> " << *op;
       diag.attachNote(op->getLoc()) << "payload operation";
       return diag;
     }
   }
 
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// transform::AnyParamType
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::AnyParamType::checkPayload(Location loc,
+                                      ArrayRef<Attribute> payload) const {
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// transform::ParamType
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+transform::ParamType::verify(function_ref<InFlightDiagnostic()> emitError,
+                             Type type) {
+  IntegerType intType = llvm::dyn_cast<IntegerType>(type);
+  if (!intType || intType.getWidth() > 64)
+    return emitError() << "only supports integer types with width <=64";
+  return success();
+}
+
+DiagnosedSilenceableFailure
+transform::ParamType::checkPayload(Location loc,
+                                   ArrayRef<Attribute> payload) const {
+  for (Attribute attr : payload) {
+    auto integerAttr = llvm::dyn_cast<IntegerAttr>(attr);
+    if (!integerAttr) {
+      return emitSilenceableError(loc)
+             << "expected parameter to be an integer attribute, got " << attr;
+    }
+    if (integerAttr.getType() != getType()) {
+      return emitSilenceableError(loc)
+             << "expected the type of the parameter attribute ("
+             << integerAttr.getType() << ") to match the parameter type ("
+             << getType() << ")";
+    }
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// transform::TypeParamType
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::TypeParamType::checkPayload(Location loc,
+                                       ArrayRef<Attribute> payload) const {
+  for (Attribute attr : payload) {
+    if (!attr.isa<TypeAttr>()) {
+      return emitSilenceableError(loc)
+             << "expected type attribute, got " << attr;
+    }
+  }
   return DiagnosedSilenceableFailure::success();
 }

@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 namespace {
 
 class FunctionASTVisitor : public RecursiveASTVisitor<FunctionASTVisitor> {
@@ -221,6 +219,4 @@ void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

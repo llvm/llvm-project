@@ -14,9 +14,7 @@
 #include <string>
 #include <vector>
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 /// Optimize calls to std::string::find() and friends when the needle passed is
 /// a single character string literal.
@@ -38,8 +36,6 @@ private:
   const std::vector<StringRef> StringLikeClasses;
 };
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_FASTER_STRING_FIND_H

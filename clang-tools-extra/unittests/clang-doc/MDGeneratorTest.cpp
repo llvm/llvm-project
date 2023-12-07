@@ -347,9 +347,9 @@ TEST(MDGeneratorTest, emitCommentMD) {
 
  The description continues.
 
-**I** [out]
+**I** [out] is a parameter.
 
-**J**
+**J** is a parameter.
 
 **return**void
 

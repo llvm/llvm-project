@@ -13,9 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 /// Replaces `assert()` with `static_assert()` if the condition is evaluatable
 /// at compile time.
@@ -36,8 +34,6 @@ private:
                                  SourceLocation AssertLoc);
 };
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_STATICASSERTCHECK_H

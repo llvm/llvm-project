@@ -21,12 +21,12 @@ attributes #1 = { nounwind readnone speculatable }
 !llvm.dbg.cu = !{!1}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DICompileUnit(language: DW_LANG_Fortran90, file: !2, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, retainedTypes: !3, globals: !3, imports: !4)
+!1 = distinct !DICompileUnit(language: DW_LANG_Fortran90, file: !2, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, retainedTypes: !3, globals: !3)
 !2 = !DIFile(filename: "input", directory: "/")
 !3 = !{}
 !4 = !{!5}
 !5 = !DIImportedEntity(tag: DW_TAG_imported_module, scope: !6, entity: !9, file: !2, line: 18)
-!6 = distinct !DISubprogram(name: "p", scope: !1, file: !2, line: 18, type: !7, isLocal: false, isDefinition: true, scopeLine: 18, isOptimized: false, unit: !1)
+!6 = distinct !DISubprogram(name: "p", scope: !1, file: !2, line: 18, type: !7, isLocal: false, isDefinition: true, scopeLine: 18, isOptimized: false, unit: !1, retainedNodes: !4)
 !7 = !DISubroutineType(cc: DW_CC_program, types: !8)
 !8 = !{null}
 !9 = !DIModule(scope: !1, name: "mod")

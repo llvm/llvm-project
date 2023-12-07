@@ -13,12 +13,12 @@
 
 ; C source
 ; --------
-; extern int setjmp(void*);
+; extern int setjmp(ptr);
 ; extern void notsetjmp(void);
 ;
 ; void bbb(void) {
 ;   setjmp(0);
-;   int (*fnptr)(void*) = setjmp;
+;   int (*fnptr)(ptr) = setjmp;
 ;   fnptr(0);
 ;   notsetjmp();
 ; }
@@ -33,16 +33,16 @@ define void @bbb() {
 ; NOBTI-NOT: hint #36
 
 entry:
-  %fnptr = alloca i32 (i8*)*, align 8
-  %call = call i32 @setjmp(i8* noundef null) #0
-  store i32 (i8*)* @setjmp, i32 (i8*)** %fnptr, align 8
-  %0 = load i32 (i8*)*, i32 (i8*)** %fnptr, align 8
-  %call1 = call i32 %0(i8* noundef null) #0
+  %fnptr = alloca ptr, align 8
+  %call = call i32 @setjmp(ptr noundef null) #0
+  store ptr @setjmp, ptr %fnptr, align 8
+  %0 = load ptr, ptr %fnptr, align 8
+  %call1 = call i32 %0(ptr noundef null) #0
   call void @notsetjmp()
   ret void
 }
 
-declare i32 @setjmp(i8* noundef) #0
+declare i32 @setjmp(ptr noundef) #0
 declare void @notsetjmp()
 
 attributes #0 = { returns_twice }

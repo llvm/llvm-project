@@ -1,6 +1,5 @@
 // RUN: %clang_cc1  -fsyntax-only -Werror -verify -Wno-objc-root-class -Wno-strict-prototypes %s
 // expected-no-diagnostics
-// rdar://10387088
 
 @interface MyClass
 - (void)someMethod;

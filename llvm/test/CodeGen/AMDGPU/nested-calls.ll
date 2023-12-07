@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=hawaii -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; Test calls when called by other callable functions rather than
 ; kernels.
@@ -15,9 +15,8 @@ declare void @external_void_func_i32(i32) #0
 ; GCN-NEXT: s_mov_b32 s33, s32
 ; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN-NEXT: buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; GCN-NEXT: buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
-; GCN-DAG: v_writelane_b32 v41, [[FP_SCRATCH_COPY]], 0
+; GCN-DAG: v_writelane_b32 v40, [[FP_SCRATCH_COPY]], 2
 ; GCN-DAG: v_writelane_b32 v40, s30, 0
 ; GCN-DAG: v_writelane_b32 v40, s31, 1
 
@@ -26,10 +25,9 @@ declare void @external_void_func_i32(i32) #0
 ; GCN: v_readlane_b32 s31, v40, 1
 ; GCN: v_readlane_b32 s30, v40, 0
 
-; GCN-NEXT: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], v41, 0
+; GCN-NEXT: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], v40, 2
 ; GCN: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
-; GCN-NEXT: buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
 ; GCN-NEXT: s_addk_i32 s32, 0xfc00
 ; GCN-NEXT: s_mov_b32 s33, [[FP_SCRATCH_COPY]]

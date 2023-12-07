@@ -4,7 +4,7 @@
   define void @test1() { ret void }
   define void @test2() { ret void }
 
-  define i16 @test3(i16* readonly %p) {
+  define i16 @test3(ptr readonly %p) {
   ; Keep original IR to show how the situation like this might happen
   ; due to preceding CG passes.
   ;
@@ -14,11 +14,11 @@
   ; the movw into movzwl because EAX is not live before the load (which
   ; can be seen by the fact that implicit EAX flag is missing).
   entry:
-    %tobool = icmp eq i16* %p, null
+    %tobool = icmp eq ptr %p, null
     br i1 %tobool, label %if.end, label %if.then
 
   if.then:                                          ; preds = %entry
-    %0 = load i16, i16* %p, align 2
+    %0 = load i16, ptr %p, align 2
     br label %if.end
 
   if.end:                                           ; preds = %if.then, %entry
@@ -139,7 +139,8 @@ name:            test5
 alignment:       16
 tracksRegLiveness: true
 liveins:
-  - { reg: '$ch', reg: '$bl' }
+  - { reg: '$ch' }
+  - { reg: '$bl' }
 body:             |
   bb.0:
     liveins: $ch, $bl

@@ -2290,9 +2290,8 @@ define <2 x double> @test69(<2 x i16> %a) {
 ; CHECK-LE-NEXT:    addis r3, r2, .LCPI63_1@toc@ha
 ; CHECK-LE-NEXT:    addi r3, r3, .LCPI63_1@toc@l
 ; CHECK-LE-NEXT:    xxswapd v3, vs0
-; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    vperm v2, v2, v2, v3
-; CHECK-LE-NEXT:    xxswapd v3, vs0
+; CHECK-LE-NEXT:    lxvd2x v3, 0, r3
 ; CHECK-LE-NEXT:    vsld v2, v2, v3
 ; CHECK-LE-NEXT:    vsrad v2, v2, v3
 ; CHECK-LE-NEXT:    xvcvsxddp v2, v2
@@ -2371,9 +2370,8 @@ define <2 x double> @test70(<2 x i8> %a) {
 ; CHECK-LE-NEXT:    addis r3, r2, .LCPI64_1@toc@ha
 ; CHECK-LE-NEXT:    addi r3, r3, .LCPI64_1@toc@l
 ; CHECK-LE-NEXT:    xxswapd v3, vs0
-; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    vperm v2, v2, v2, v3
-; CHECK-LE-NEXT:    xxswapd v3, vs0
+; CHECK-LE-NEXT:    lxvd2x v3, 0, r3
 ; CHECK-LE-NEXT:    vsld v2, v2, v3
 ; CHECK-LE-NEXT:    vsrad v2, v2, v3
 ; CHECK-LE-NEXT:    xvcvsxddp v2, v2

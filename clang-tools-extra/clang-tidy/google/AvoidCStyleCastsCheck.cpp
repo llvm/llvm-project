@@ -14,10 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
-namespace readability {
+namespace clang::tidy::google::readability {
 
 void AvoidCStyleCastsCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
@@ -61,15 +58,14 @@ static bool pointedUnqualifiedTypesAreEqual(QualType T1, QualType T2) {
 }
 
 static clang::CharSourceRange getReplaceRange(const ExplicitCastExpr *Expr) {
-  if (const auto *CastExpr = dyn_cast<CStyleCastExpr>(Expr)) {
+  if (const auto *CastExpr = dyn_cast<CStyleCastExpr>(Expr))
     return CharSourceRange::getCharRange(
         CastExpr->getLParenLoc(),
         CastExpr->getSubExprAsWritten()->getBeginLoc());
-  } else if (const auto *CastExpr = dyn_cast<CXXFunctionalCastExpr>(Expr)) {
+  if (const auto *CastExpr = dyn_cast<CXXFunctionalCastExpr>(Expr))
     return CharSourceRange::getCharRange(CastExpr->getBeginLoc(),
                                          CastExpr->getLParenLoc());
-  } else
-    llvm_unreachable("Unsupported CastExpr");
+  llvm_unreachable("Unsupported CastExpr");
 }
 
 static StringRef getDestTypeString(const SourceManager &SM,
@@ -258,7 +254,4 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << "static_cast/const_cast/reinterpret_cast";
 }
 
-} // namespace readability
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google::readability

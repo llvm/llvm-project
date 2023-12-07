@@ -8,7 +8,7 @@ target triple = "armv5e-none-linux-gnueabi"
 
 define hidden fastcc void @storeAtts() nounwind {
 entry:
-  %.SV116 = alloca i8**
+  %.SV116 = alloca ptr
   br i1 undef, label %meshBB520, label %meshBB464
 
 bb15:                                             ; preds = %meshBB424
@@ -39,22 +39,22 @@ bb134:                                            ; preds = %bb131
   unreachable
 
 bb135:                                            ; preds = %meshBB396
-  %uriHash.1.phi.load = load i32, i32* undef
-  %.load120 = load i8**, i8*** %.SV116
-  %.phi24 = load i8, i8* null
-  %.phi26 = load i8*, i8** null
-  store i8 %.phi24, i8* %.phi26, align 1
-  %0 = getelementptr inbounds i8, i8* %.phi26, i32 1
-  store i8* %0, i8** %.load120, align 4
+  %uriHash.1.phi.load = load i32, ptr undef
+  %.load120 = load ptr, ptr %.SV116
+  %.phi24 = load i8, ptr null
+  %.phi26 = load ptr, ptr null
+  store i8 %.phi24, ptr %.phi26, align 1
+  %0 = getelementptr inbounds i8, ptr %.phi26, i32 1
+  store ptr %0, ptr %.load120, align 4
   ; CHECK: mul [[REGISTER:lr|r[0-9]+]],
   ; CHECK-NOT: [[REGISTER]],
   ; CHECK: {{(lr|r[0-9]+)$}}
   %1 = mul i32 %uriHash.1.phi.load, 1000003
   %2 = xor i32 0, %1
-  store i32 %2, i32* null
-  %3 = load i8, i8* null, align 1
+  store i32 %2, ptr null
+  %3 = load i8, ptr null, align 1
   %4 = icmp eq i8 %3, 0
-  store i8* %0, i8** undef
+  store ptr %0, ptr undef
   br i1 %4, label %meshBB472, label %bb131
 
 bb212:                                            ; preds = %meshBB540

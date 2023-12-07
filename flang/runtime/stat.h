@@ -11,7 +11,7 @@
 
 #ifndef FORTRAN_RUNTIME_STAT_H_
 #define FORTRAN_RUNTIME_STAT_H_
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/magic-numbers.h"
 namespace Fortran::runtime {
 
@@ -48,6 +48,8 @@ enum Stat {
   StatInvalidArgumentNumber = FORTRAN_RUNTIME_STAT_INVALID_ARG_NUMBER,
   StatMissingArgument = FORTRAN_RUNTIME_STAT_MISSING_ARG,
   StatValueTooShort = FORTRAN_RUNTIME_STAT_VALUE_TOO_SHORT,
+  StatMoveAllocSameAllocatable =
+      FORTRAN_RUNTIME_STAT_MOVE_ALLOC_SAME_ALLOCATABLE,
 };
 
 const char *StatErrorString(int);

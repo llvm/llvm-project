@@ -13,6 +13,12 @@
 
 #include <cstdio>
 
+namespace lldb_private {
+namespace python {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 class SBFrame;
@@ -32,8 +38,6 @@ public:
   SBThread();
 
   SBThread(const lldb::SBThread &thread);
-
-  SBThread(const lldb::ThreadSP &lldb_object_sp);
 
   ~SBThread();
 
@@ -77,7 +81,7 @@ public:
   SBThreadCollection
   GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type);
 
-  size_t GetStopDescription(char *dst, size_t dst_len);
+  size_t GetStopDescription(char *dst_or_null, size_t dst_len);
 
   SBValue GetStopReturnValue();
 
@@ -221,8 +225,13 @@ private:
   friend class SBValue;
   friend class lldb_private::QueueImpl;
   friend class SBQueueItem;
+  friend class SBThreadCollection;
   friend class SBThreadPlan;
   friend class SBTrace;
+
+  friend class lldb_private::python::SWIGBridge;
+
+  SBThread(const lldb::ThreadSP &lldb_object_sp);
 
   void SetThread(const lldb::ThreadSP &lldb_object_sp);
 

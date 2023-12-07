@@ -29,8 +29,7 @@
 #include "TimeSubtractionCheck.h"
 #include "UpgradeDurationConversionsCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace abseil {
 
 class AbseilModule : public ClangTidyModule {
@@ -85,5 +84,4 @@ static ClangTidyModuleRegistry::Add<AbseilModule> X("abseil-module",
 // and thus register the AbseilModule.
 volatile int AbseilModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

@@ -1,9 +1,9 @@
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | FileCheck --check-prefix=HSA %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | FileCheck --check-prefix=HSA-CI %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=carrizo  | FileCheck --check-prefix=HSA %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=carrizo | FileCheck --check-prefix=HSA-VI %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -filetype=obj | llvm-readobj --symbols -S --sd - | FileCheck --check-prefix=ELF %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | llvm-readobj --symbols -S --sd - | FileCheck %s --check-prefix=ELF
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=HSA %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=HSA-CI %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo  | FileCheck --check-prefix=HSA %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo | FileCheck --check-prefix=HSA-VI %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -filetype=obj | llvm-readobj --symbols -S --sd - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | llvm-readobj --symbols -S --sd - | FileCheck %s --check-prefix=ELF
 
 ; The SHT_NOTE section contains the output from the .hsa_code_object_*
 ; directives.
@@ -67,3 +67,6 @@ entry:
   store i32 0, ptr addrspace(1) %out
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}

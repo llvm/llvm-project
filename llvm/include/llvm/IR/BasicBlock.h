@@ -213,6 +213,15 @@ public:
         .getNonConst();
   }
 
+  /// Returns the first potential AsynchEH faulty instruction
+  /// currently it checks for loads/stores (which may dereference a null
+  /// pointer) and calls/invokes (which may propagate exceptions)
+  const Instruction* getFirstMayFaultInst() const;
+  Instruction* getFirstMayFaultInst() {
+      return const_cast<Instruction*>(
+          static_cast<const BasicBlock*>(this)->getFirstMayFaultInst());
+  }
+
   /// Return a const iterator range over the instructions in the block, skipping
   /// any debug instructions. Skip any pseudo operations as well if \c
   /// SkipPseudoOp is true.
@@ -242,7 +251,10 @@ public:
 
   /// Unlink this basic block from its current function and insert it into
   /// the function that \p MovePos lives in, right before \p MovePos.
-  void moveBefore(BasicBlock *MovePos);
+  inline void moveBefore(BasicBlock *MovePos) {
+    moveBefore(MovePos->getIterator());
+  }
+  void moveBefore(SymbolTableList<BasicBlock>::iterator MovePos);
 
   /// Unlink this basic block from its current function and insert it
   /// right after \p MovePos in the function \p MovePos lives in.

@@ -16,14 +16,15 @@ namespace msf {
 enum class msf_error_code {
   unspecified = 1,
   insufficient_buffer,
+  not_writable,
+  no_stream,
+  invalid_format,
+  block_in_use,
   size_overflow_4096,
   size_overflow_8192,
   size_overflow_16384,
   size_overflow_32768,
-  not_writable,
-  no_stream,
-  invalid_format,
-  block_in_use
+  stream_directory_overflow,
 };
 } // namespace msf
 } // namespace llvm
@@ -46,6 +47,26 @@ class MSFError : public ErrorInfo<MSFError, StringError> {
 public:
   using ErrorInfo<MSFError, StringError>::ErrorInfo; // inherit constructors
   MSFError(const Twine &S) : ErrorInfo(S, msf_error_code::unspecified) {}
+
+  bool isPageOverflow() const {
+    switch (static_cast<msf_error_code>(convertToErrorCode().value())) {
+    case msf_error_code::unspecified:
+    case msf_error_code::insufficient_buffer:
+    case msf_error_code::not_writable:
+    case msf_error_code::no_stream:
+    case msf_error_code::invalid_format:
+    case msf_error_code::block_in_use:
+      return false;
+    case msf_error_code::size_overflow_4096:
+    case msf_error_code::size_overflow_8192:
+    case msf_error_code::size_overflow_16384:
+    case msf_error_code::size_overflow_32768:
+    case msf_error_code::stream_directory_overflow:
+      return true;
+    }
+    llvm_unreachable("msf error code not implemented");
+  }
+
   static char ID;
 };
 } // namespace msf

@@ -98,7 +98,6 @@ void foo4(void) {
   [X rect]; // expected-warning {{receiver type 'struct objc_object *' is not 'id' or interface pointer, consider casting it to 'id'}}
 }
 
-// rdar://13207886
 void foo5(id p) {
   p
   [(id)(p) bar]; // expected-error {{missing '['}} \
@@ -111,7 +110,6 @@ void foo5(id p) {
 -(void)unavail_meth  __attribute__((unavailable)); // expected-note {{marked unavailable here}}
 @end
 
-// rdar://13620447
 void foo6(I1 *p) {
   [p
     bar]; // expected-warning {{instance method '-bar' not found}}

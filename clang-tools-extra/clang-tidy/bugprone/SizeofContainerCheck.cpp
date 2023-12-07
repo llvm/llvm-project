@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 void SizeofContainerCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -43,6 +41,4 @@ void SizeofContainerCheck::check(const MatchFinder::MatchResult &Result) {
                                   "container; did you mean .size()?");
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

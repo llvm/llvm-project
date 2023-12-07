@@ -60,7 +60,7 @@ define i128 @ashr_mask(i128 %r, i128 %s) nounwind readnone {
 ; CHECK-NEXT:    and x10, x2, #0x3f
 ; CHECK-NEXT:    eor x10, x10, #0x3f
 ; CHECK-NEXT:    lsl x9, x9, x10
-; CHECK-NEXT:    orr x0, x8, x9
+; CHECK-NEXT:    orr x0, x9, x8
 ; CHECK-NEXT:    asr x1, x1, x2
 ; CHECK-NEXT:    ret
   %mask = and i128 %s, 63
@@ -93,7 +93,7 @@ define i128 @lshr_mask(i128 %r, i128 %s) nounwind readnone {
 ; CHECK-NEXT:    and x10, x2, #0x3f
 ; CHECK-NEXT:    eor x10, x10, #0x3f
 ; CHECK-NEXT:    lsl x9, x9, x10
-; CHECK-NEXT:    orr x0, x8, x9
+; CHECK-NEXT:    orr x0, x9, x8
 ; CHECK-NEXT:    lsr x1, x1, x2
 ; CHECK-NEXT:    ret
   %mask = and i128 %s, 63

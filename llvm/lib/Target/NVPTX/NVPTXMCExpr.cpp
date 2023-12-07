@@ -34,6 +34,11 @@ void NVPTXFloatMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     NumHex = 4;
     APF.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &Ignored);
     break;
+  case VK_NVPTX_BFLOAT_PREC_FLOAT:
+    OS << "0x";
+    NumHex = 4;
+    APF.convert(APFloat::BFloat(), APFloat::rmNearestTiesToEven, &Ignored);
+    break;
   case VK_NVPTX_SINGLE_PREC_FLOAT:
     OS << "0f";
     NumHex = 8;

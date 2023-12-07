@@ -16,9 +16,9 @@
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"
 #include "src/stdio/fwrite.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 
 TEST(LlvmLibcFILETest, SimpleFileOperations) {
@@ -33,8 +33,8 @@ TEST(LlvmLibcFILETest, SimpleFileOperations) {
   char read_data[sizeof(CONTENT)];
   ASSERT_EQ(__llvm_libc::fread(read_data, 1, sizeof(CONTENT), file), size_t(0));
   ASSERT_NE(__llvm_libc::ferror(file), 0);
-  EXPECT_NE(errno, 0);
-  errno = 0;
+  EXPECT_NE(libc_errno, 0);
+  libc_errno = 0;
 
   __llvm_libc::clearerr(file);
   ASSERT_EQ(__llvm_libc::ferror(file), 0);
@@ -64,24 +64,24 @@ TEST(LlvmLibcFILETest, SimpleFileOperations) {
   // Should be an error to write.
   ASSERT_EQ(size_t(0), __llvm_libc::fwrite(CONTENT, 1, sizeof(CONTENT), file));
   ASSERT_NE(__llvm_libc::ferror(file), 0);
-  ASSERT_NE(errno, 0);
-  errno = 0;
+  ASSERT_NE(libc_errno, 0);
+  libc_errno = 0;
 
   __llvm_libc::clearerr(file);
 
   // Should be an error to puts.
   ASSERT_EQ(EOF, __llvm_libc::fputs(CONTENT, file));
   ASSERT_NE(__llvm_libc::ferror(file), 0);
-  ASSERT_NE(errno, 0);
-  errno = 0;
+  ASSERT_NE(libc_errno, 0);
+  libc_errno = 0;
 
   __llvm_libc::clearerr(file);
   ASSERT_EQ(__llvm_libc::ferror(file), 0);
 
-  errno = 0;
+  libc_errno = 0;
   ASSERT_EQ(__llvm_libc::fwrite("nothing", 1, 1, file), size_t(0));
-  ASSERT_NE(errno, 0);
-  errno = 0;
+  ASSERT_NE(libc_errno, 0);
+  libc_errno = 0;
 
   ASSERT_EQ(__llvm_libc::fclose(file), 0);
 
@@ -96,10 +96,10 @@ TEST(LlvmLibcFILETest, SimpleFileOperations) {
   ASSERT_EQ(__llvm_libc::ferror(file), 0);
 
   // This is not a readable file.
-  errno = 0;
+  libc_errno = 0;
   ASSERT_EQ(__llvm_libc::fread(data, 1, 1, file), size_t(0));
-  ASSERT_NE(errno, 0);
-  errno = 0;
+  ASSERT_NE(libc_errno, 0);
+  libc_errno = 0;
 
   ASSERT_EQ(0, __llvm_libc::fclose(file));
 
@@ -112,20 +112,20 @@ TEST(LlvmLibcFILETest, SimpleFileOperations) {
   ASSERT_STREQ(read_data, CONTENT);
   ASSERT_EQ(__llvm_libc::fclose(file), 0);
 
-  // Check that the other functions correctly set errno.
+  // Check that the other functions correctly set libc_errno.
 
-  // errno = 0;
+  // libc_errno = 0;
   // ASSERT_NE(__llvm_libc::fseek(file, 0, SEEK_SET), 0);
-  // EXPECT_NE(errno, 0);
+  // EXPECT_NE(libc_errno, 0);
 
-  // errno = 0;
+  // libc_errno = 0;
   // ASSERT_NE(__llvm_libc::fclose(file), 0);
-  // EXPECT_NE(errno, 0);
+  // EXPECT_NE(libc_errno, 0);
 
-  // errno = 0;
+  // libc_errno = 0;
   // ASSERT_EQ(__llvm_libc::fopen("INVALID FILE NAME", "r"),
   //           static_cast<FILE *>(nullptr));
-  // EXPECT_NE(errno, 0);
+  // EXPECT_NE(libc_errno, 0);
 }
 
 TEST(LlvmLibcFILETest, FFlush) {
@@ -158,13 +158,13 @@ TEST(LlvmLibcFILETest, FOpenFWriteSizeGreaterThanOne) {
   constexpr size_t WRITE_NMEMB = sizeof(WRITE_DATA) / sizeof(MyStruct);
   constexpr char FILENAME[] = "testdata/fread_fwrite.test";
 
-  errno = 0;
+  libc_errno = 0;
   FILE *file = __llvm_libc::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(size_t(0), __llvm_libc::fwrite(WRITE_DATA, 0, 1, file));
   ASSERT_EQ(WRITE_NMEMB, __llvm_libc::fwrite(WRITE_DATA, sizeof(MyStruct),
                                              WRITE_NMEMB, file));
-  EXPECT_EQ(errno, 0);
+  EXPECT_EQ(libc_errno, 0);
   ASSERT_EQ(__llvm_libc::fclose(file), 0);
 
   file = __llvm_libc::fopen(FILENAME, "r");
@@ -173,11 +173,11 @@ TEST(LlvmLibcFILETest, FOpenFWriteSizeGreaterThanOne) {
   ASSERT_EQ(size_t(0), __llvm_libc::fread(read_data, 0, 1, file));
   ASSERT_EQ(WRITE_NMEMB,
             __llvm_libc::fread(read_data, sizeof(MyStruct), WRITE_NMEMB, file));
-  EXPECT_EQ(errno, 0);
+  EXPECT_EQ(libc_errno, 0);
   // Trying to read more should fetch nothing.
   ASSERT_EQ(size_t(0),
             __llvm_libc::fread(read_data, sizeof(MyStruct), WRITE_NMEMB, file));
-  EXPECT_EQ(errno, 0);
+  EXPECT_EQ(libc_errno, 0);
   EXPECT_NE(__llvm_libc::feof(file), 0);
   EXPECT_EQ(__llvm_libc::ferror(file), 0);
   ASSERT_EQ(__llvm_libc::fclose(file), 0);

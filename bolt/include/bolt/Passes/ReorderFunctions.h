@@ -23,12 +23,16 @@ class ReorderFunctions : public BinaryFunctionPass {
   void reorder(std::vector<Cluster> &&Clusters,
                std::map<uint64_t, BinaryFunction> &BFs);
 
+  void printStats(const std::vector<Cluster> &Clusters,
+                  const std::vector<uint64_t> &FuncAddr);
+
 public:
   enum ReorderType : char {
     RT_NONE = 0,
     RT_EXEC_COUNT,
     RT_HFSORT,
     RT_HFSORT_PLUS,
+    RT_CDS,
     RT_PETTIS_HANSEN,
     RT_RANDOM,
     RT_USER
@@ -39,6 +43,8 @@ public:
 
   const char *getName() const override { return "reorder-functions"; }
   void runOnFunctions(BinaryContext &BC) override;
+
+  static std::vector<std::string> readFunctionOrderFile();
 };
 
 } // namespace bolt

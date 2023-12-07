@@ -10,6 +10,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Options.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -173,11 +174,6 @@ bool CommandObjectMultiword::Execute(const char *args_string,
     return result.Succeeded();
   }
 
-  if (sub_command.equals_insensitive("help")) {
-    this->CommandObject::GenerateHelpText(result);
-    return result.Succeeded();
-  }
-
   if (m_subcommand_dict.empty()) {
     result.AppendErrorWithFormat("'%s' does not have any subcommands.\n",
                                  GetCommandName().str().c_str());
@@ -278,10 +274,10 @@ void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
 
   StringList new_matches;
   CommandObject *sub_command_object = GetSubcommandObject(arg0, &new_matches);
-  if (sub_command_object == nullptr) {
-    request.AddCompletions(new_matches);
+
+  // The subcommand is ambiguous. The completion isn't meaningful.
+  if (!sub_command_object)
     return;
-  }
 
   // Remove the one match that we got from calling GetSubcommandObject.
   new_matches.DeleteStringAtIndex(0);
@@ -290,7 +286,7 @@ void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
   sub_command_object->HandleCompletion(request);
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 CommandObjectMultiword::GetRepeatCommand(Args &current_command_args,
                                          uint32_t index) {
   index++;
@@ -420,7 +416,7 @@ void CommandObjectProxy::HandleArgumentCompletion(
     proxy_command->HandleArgumentCompletion(request, opt_element_vector);
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 CommandObjectProxy::GetRepeatCommand(Args &current_command_args,
                                      uint32_t index) {
   CommandObject *proxy_command = GetProxyCommandObject();

@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace objc {
+namespace clang::tidy::objc {
 
 // Mapping from `XCTAssert*Equal` to `XCTAssert*EqualObjects` name.
 static const std::map<std::string, std::string> &NameMap() {
@@ -60,6 +58,4 @@ void AssertEquals::check(const ast_matchers::MatchFinder::MatchResult &result) {
   }
 }
 
-} // namespace objc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::objc

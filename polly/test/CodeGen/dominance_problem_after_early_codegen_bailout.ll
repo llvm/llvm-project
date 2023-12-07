@@ -10,19 +10,19 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @hashheader = external global %struct.hashheader.0.5.10.165.180.185, align 4
 
 ; Function Attrs: nounwind uwtable
-define void @strtoichar(i8* %in) #0 {
+define void @strtoichar(ptr %in) #0 {
 entry:
   br i1 undef, label %land.rhs, label %for.end
 
 land.rhs:                                         ; preds = %for.inc, %entry
-  %in.addr.012 = phi i8* [ undef, %for.inc ], [ %in, %entry ]
-  %0 = load i8, i8* %in.addr.012, align 1
+  %in.addr.012 = phi ptr [ undef, %for.inc ], [ %in, %entry ]
+  %0 = load i8, ptr %in.addr.012, align 1
   br i1 undef, label %for.end, label %for.body
 
 for.body:                                         ; preds = %land.rhs
   %idxprom = zext i8 %0 to i64
-  %arrayidx = getelementptr inbounds %struct.hashheader.0.5.10.165.180.185, %struct.hashheader.0.5.10.165.180.185* @hashheader, i64 0, i32 27, i64 %idxprom
-  %1 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds %struct.hashheader.0.5.10.165.180.185, ptr @hashheader, i64 0, i32 27, i64 %idxprom
+  %1 = load i8, ptr %arrayidx, align 1
   %tobool = icmp eq i8 %1, 0
   br i1 %tobool, label %if.else, label %land.rhs.7
 
@@ -34,7 +34,7 @@ if.then:                                          ; preds = %land.rhs.7
   br label %for.inc
 
 if.else:                                          ; preds = %land.rhs.7, %for.body
-  %2 = load i8, i8* %in.addr.012, align 1
+  %2 = load i8, ptr %in.addr.012, align 1
   br label %for.inc
 
 for.inc:                                          ; preds = %if.else, %if.then

@@ -6129,7 +6129,7 @@ define amdgpu_kernel void @byref_align_constant_i32_arg(ptr addrspace(1) nocaptu
   ret void
 }
 
-define amdgpu_kernel void @byref_natural_align_constant_v16i32_arg(ptr addrspace(1) nocapture %out, i8, ptr addrspace(4) byref(<16 x i32>) %in.byref, i32 %after.offset) {
+define amdgpu_kernel void @byref_natural_align_constant_v16i32_arg(ptr addrspace(1) nocapture %out, i8, ptr addrspace(4) byref(<16 x i32>) align(64) %in.byref, i32 %after.offset) {
 ; SI-LABEL: byref_natural_align_constant_v16i32_arg:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx16 s[4:19], s[0:1], 0x19

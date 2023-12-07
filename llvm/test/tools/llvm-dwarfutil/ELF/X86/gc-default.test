@@ -5,13 +5,21 @@
 
 # RUN: llvm-dwarfutil %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
 
+# RUN: llvm-dwarfutil --linker apple %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
+
+# RUN: llvm-dwarfutil --linker llvm %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
+
 # RUN: llvm-dwarfutil --garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
 
 # RUN: llvm-dwarfutil --no-garbage-collection --garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
 
 # RUN: llvm-dwarfutil --garbage-collection --no-garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-NOGC
 
+# RUN: llvm-dwarfutil --linker llvm --garbage-collection --no-garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-NOGC
+
 # RUN: llvm-dwarfutil %t.o --tombstone=universal - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
+
+# RUN: llvm-dwarfutil --linker llvm %t.o --tombstone=universal - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
 
 # CHECK: DW_TAG_compile_unit
 # CHECK: DW_AT_name{{.*}}"CU1"

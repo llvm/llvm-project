@@ -18,6 +18,7 @@
 
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_platform.h"
+#include "sanitizer_mallinfo.h"
 
 #if SANITIZER_APPLE
 #include <sys/cdefs.h>
@@ -28,8 +29,7 @@
 #define SANITIZER_HAS_STAT64 0
 #define SANITIZER_HAS_STATFS64 0
 #endif
-#else
-// Must be SANITIZER_LINUX then
+#elif SANITIZER_GLIBC || SANITIZER_ANDROID
 #define SANITIZER_HAS_STAT64 1
 #define SANITIZER_HAS_STATFS64 1
 #endif
@@ -136,7 +136,7 @@ struct __sanitizer_perf_event_attr {
 extern unsigned struct_epoll_event_sz;
 extern unsigned struct_sysinfo_sz;
 extern unsigned __user_cap_header_struct_sz;
-extern unsigned __user_cap_data_struct_sz;
+extern unsigned __user_cap_data_struct_sz(void *hdrp);
 extern unsigned struct_new_utsname_sz;
 extern unsigned struct_old_utsname_sz;
 extern unsigned struct_oldold_utsname_sz;
@@ -205,17 +205,7 @@ struct __sanitizer_sem_t {
 };
 #endif // SANITIZER_LINUX
 
-#if SANITIZER_ANDROID
-struct __sanitizer_struct_mallinfo {
-  uptr v[10];
-};
-#endif
-
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
-struct __sanitizer_struct_mallinfo {
-  int v[10];
-};
-
 extern unsigned struct_ustat_sz;
 extern unsigned struct_rlimit64_sz;
 extern unsigned struct_statvfs64_sz;
@@ -319,7 +309,6 @@ extern unsigned struct_msqid_ds_sz;
 extern unsigned struct_mq_attr_sz;
 extern unsigned struct_timex_sz;
 extern unsigned struct_statvfs_sz;
-extern unsigned struct_crypt_data_sz;
 #endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
 
 struct __sanitizer_iovec {
@@ -517,7 +506,7 @@ struct __sanitizer_dirent {
 };
 #  endif
 
-#  if SANITIZER_LINUX && !SANITIZER_ANDROID
+#  if SANITIZER_GLIBC
 struct __sanitizer_dirent64 {
   unsigned long long d_ino;
   unsigned long long d_off;
@@ -587,10 +576,35 @@ struct __sanitizer_sigset_t {
 };
 #endif
 
-struct __sanitizer_siginfo {
-  // The size is determined by looking at sizeof of real siginfo_t on linux.
-  u64 opaque[128 / sizeof(u64)];
+struct __sanitizer_siginfo_pad {
+#if SANITIZER_X32
+  // x32 siginfo_t is aligned to 8 bytes.
+  u64 pad[128 / sizeof(u64)];
+#else
+  // Require uptr, because siginfo_t is always pointer-size aligned on Linux.
+  uptr pad[128 / sizeof(uptr)];
+#endif
 };
+
+#if SANITIZER_LINUX
+# define SANITIZER_HAS_SIGINFO 1
+union __sanitizer_siginfo {
+  struct {
+    int si_signo;
+# if SANITIZER_MIPS
+    int si_code;
+    int si_errno;
+# else
+    int si_errno;
+    int si_code;
+# endif
+  };
+  __sanitizer_siginfo_pad pad;
+};
+#else
+# define SANITIZER_HAS_SIGINFO 0
+typedef __sanitizer_siginfo_pad __sanitizer_siginfo;
+#endif
 
 using __sanitizer_sighandler_ptr = void (*)(int sig);
 using __sanitizer_sigactionhandler_ptr = void (*)(int sig,

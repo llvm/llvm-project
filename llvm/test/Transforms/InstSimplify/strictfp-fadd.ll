@@ -370,6 +370,75 @@ define float @fold_fadd_qnan_qnan_ebstrict() #0 {
   ret float %add
 }
 
+; Exceptions are ignored, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
+
+define float @fold_fadd_snan_variable_ebignore(float %x) #0 {
+; CHECK-LABEL: @fold_fadd_snan_variable_ebignore(
+; CHECK-NEXT:    ret float 0x7FFC000000000000
+;
+  %add = call float @llvm.experimental.constrained.fadd.f32(float 0x7ff4000000000000, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  ret float %add
+}
+
+; Exceptions may (not) trap, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
+
+define float @fold_fadd_snan_variable_ebmaytrap(float %x) #0 {
+; CHECK-LABEL: @fold_fadd_snan_variable_ebmaytrap(
+; CHECK-NEXT:    ret float 0x7FFC000000000000
+;
+  %add = call float @llvm.experimental.constrained.fadd.f32(float 0x7ff4000000000000, float %x, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  ret float %add
+}
+
+; Exceptions are ignored, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
+
+define <2 x float> @fold_fadd_vec_snan_variable_ebignore(<2 x float> %x) #0 {
+; CHECK-LABEL: @fold_fadd_vec_snan_variable_ebignore(
+; CHECK-NEXT:    ret <2 x float> <float 0x7FFC000000000000, float 0xFFFC000000000000>
+;
+  %add = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float><float 0x7ff4000000000000, float 0xfff4000000000000>, <2 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  ret <2 x float> %add
+}
+
+; Exceptions may (not) trap, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
+
+define <2 x float> @fold_fadd_vec_snan_variable_ebmaytrap(<2 x float> %x) #0 {
+; CHECK-LABEL: @fold_fadd_vec_snan_variable_ebmaytrap(
+; CHECK-NEXT:    ret <2 x float> <float 0xFFFC000000000000, float 0x7FFC000000000000>
+;
+  %add = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float><float 0xfff4000000000000, float 0x7ff4000000000000>, <2 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  ret <2 x float> %add
+}
+
+; Exceptions are ignored, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
+
+define <2 x float> @fold_fadd_vec_partial_snan_variable_ebignore(<2 x float> %x) #0 {
+; CHECK-LABEL: @fold_fadd_vec_partial_snan_variable_ebignore(
+; CHECK-NEXT:    ret <2 x float> <float 0x7FFC000000000000, float 0xFFFF000000000000>
+;
+  %add = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float><float 0x7ff4000000000000, float 0xffff000000000000>, <2 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  ret <2 x float> %add
+}
+
+; Exceptions may (not) trap, so this can be folded, but constrained math requires that SNaN is quieted per IEEE-754 spec.
+
+define <2 x float> @fold_fadd_vec_partial_snan_variable_ebmaytrap(<2 x float> %x) #0 {
+; CHECK-LABEL: @fold_fadd_vec_partial_snan_variable_ebmaytrap(
+; CHECK-NEXT:    ret <2 x float> <float 0xFFF8000000000000, float 0x7FFC000000000000>
+;
+  %add = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float><float 0xfff8000000000000, float 0x7ff4000000000000>, <2 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  ret <2 x float> %add
+}
+
+define float @fold_fadd_snan_variable_ebstrict(float %x) #0 {
+; CHECK-LABEL: @fold_fadd_snan_variable_ebstrict(
+; CHECK-NEXT:    [[ADD:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float 0x7FF4000000000000, float [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = call float @llvm.experimental.constrained.fadd.f32(float 0x7ff4000000000000, float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %add
+}
+
 define float @fold_fadd_snan_qnan_ebmaytrap() #0 {
 ; CHECK-LABEL: @fold_fadd_snan_qnan_ebmaytrap(
 ; CHECK-NEXT:    ret float 0x7FFC000000000000

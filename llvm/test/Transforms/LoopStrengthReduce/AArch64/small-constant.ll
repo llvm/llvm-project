@@ -14,27 +14,26 @@
 ;   }
 ;   return -7;
 ; }
-define float @test1(float* nocapture readonly %arr, i64 %start, float %threshold) {
+define float @test1(ptr nocapture readonly %arr, i64 %start, float %threshold) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cbz x1, .LBB0_4
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    add x8, x0, #28
-; CHECK-NEXT:    fmov s2, #-7.00000000
 ; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr s1, [x8, x1, lsl #2]
-; CHECK-NEXT:    adds x1, x1, #1
-; CHECK-NEXT:    cset w9, hs
 ; CHECK-NEXT:    fcmp s1, s0
-; CHECK-NEXT:    fcsel s1, s1, s2, gt
-; CHECK-NEXT:    ccmp w9, #0, #0, le
-; CHECK-NEXT:    b.eq .LBB0_2
-; CHECK-NEXT:  // %bb.3: // %cleanup2
-; CHECK-NEXT:    fmov s0, s1
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b.gt .LBB0_5
+; CHECK-NEXT:  // %bb.3: // %for.cond
+; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    add x1, x1, #1
+; CHECK-NEXT:    cbnz x1, .LBB0_2
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    fmov s0, #-7.00000000
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB0_5: // %cleanup2
+; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    ret
 entry:
   %cmp11 = icmp eq i64 %start, 0
@@ -47,8 +46,8 @@ for.cond:                                         ; preds = %for.body
 for.body:                                         ; preds = %entry, %for.cond
   %i.012 = phi i64 [ %inc, %for.cond ], [ %start, %entry ]
   %add = add nsw i64 %i.012, 7
-  %arrayidx = getelementptr inbounds float, float* %arr, i64 %add
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %arr, i64 %add
+  %0 = load float, ptr %arrayidx, align 4
   %cmp1 = fcmp ogt float %0, %threshold
   %inc = add nsw i64 %i.012, 1
   br i1 %cmp1, label %cleanup2, label %for.cond
@@ -60,29 +59,28 @@ cleanup2:                                         ; preds = %for.cond, %for.body
 
 ; Same as test1, except i has another use:
 ;     if (x > threshold) ---> if (x > threshold + i)
-define float @test2(float* nocapture readonly %arr, i64 %start, float %threshold) {
+define float @test2(ptr nocapture readonly %arr, i64 %start, float %threshold) {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cbz x1, .LBB1_4
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    add x8, x0, #28
-; CHECK-NEXT:    fmov s2, #-7.00000000
 ; CHECK-NEXT:  .LBB1_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    scvtf s1, x1
-; CHECK-NEXT:    ldr s3, [x8, x1, lsl #2]
-; CHECK-NEXT:    adds x1, x1, #1
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    fadd s1, s1, s0
-; CHECK-NEXT:    fcmp s3, s1
-; CHECK-NEXT:    fcsel s1, s3, s2, gt
-; CHECK-NEXT:    ccmp w9, #0, #0, le
-; CHECK-NEXT:    b.eq .LBB1_2
-; CHECK-NEXT:  // %bb.3: // %cleanup4
-; CHECK-NEXT:    fmov s0, s1
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    fadd s2, s1, s0
+; CHECK-NEXT:    ldr s1, [x8, x1, lsl #2]
+; CHECK-NEXT:    fcmp s1, s2
+; CHECK-NEXT:    b.gt .LBB1_5
+; CHECK-NEXT:  // %bb.3: // %for.cond
+; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    add x1, x1, #1
+; CHECK-NEXT:    cbnz x1, .LBB1_2
 ; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    fmov s0, #-7.00000000
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_5: // %cleanup4
+; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    ret
 entry:
   %cmp14 = icmp eq i64 %start, 0
@@ -95,8 +93,8 @@ for.cond:                                         ; preds = %for.body
 for.body:                                         ; preds = %entry, %for.cond
   %i.015 = phi i64 [ %inc, %for.cond ], [ %start, %entry ]
   %add = add nsw i64 %i.015, 7
-  %arrayidx = getelementptr inbounds float, float* %arr, i64 %add
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %arr, i64 %add
+  %0 = load float, ptr %arrayidx, align 4
   %conv = sitofp i64 %i.015 to float
   %add1 = fadd float %conv, %threshold
   %cmp2 = fcmp ogt float %0, %add1

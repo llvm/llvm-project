@@ -18,7 +18,7 @@ define i32 @srl_and()  {
 ; CHECK-NEXT:    and w0, w8, w8, lsr #16
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i16, i16* @g, align 4
+  %0 = load i16, ptr @g, align 4
   %1 = xor i16 %0, 50
   %tobool = icmp ne i16 %1, 0
   %lor.ext = zext i1 %tobool to i32

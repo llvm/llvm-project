@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=5 -o - %s | FileCheck -check-prefix=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - | FileCheck -check-prefix=GCN %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - | FileCheck -check-prefix=GCN-V5 %s
 
 ; Make sure there's no assertion when trying to report the resource
 ; usage for a function which becomes dead during codegen.
@@ -34,3 +34,6 @@ bb1:
 bb2:
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}

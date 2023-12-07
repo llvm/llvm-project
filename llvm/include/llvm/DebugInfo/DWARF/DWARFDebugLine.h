@@ -167,6 +167,10 @@ public:
     /// An unsigned integer whose value encodes the applicable instruction set
     /// architecture for the current instruction.
     uint8_t Isa;
+    /// An unsigned integer representing the index of an operation within a
+    /// VLIW instruction. The index of the first operation is 0.
+    /// For non-VLIW architectures, this register will always be 0.
+    uint8_t OpIndex;
     /// A boolean indicating that the current instruction is the beginning of a
     /// statement.
     uint8_t IsStmt : 1,
@@ -355,6 +359,7 @@ public:
   private:
     DWARFUnit *prepareToParse(uint64_t Offset);
     void moveToNextTable(uint64_t OldOffset, const Prologue &P);
+    bool hasValidVersion(uint64_t Offset);
 
     LineToUnitMap LineToUnit;
 
@@ -372,29 +377,37 @@ private:
     void resetRowAndSequence();
     void appendRowToMatrix();
 
-    /// Advance the address by the \p OperationAdvance value. \returns the
-    /// amount advanced by.
-    uint64_t advanceAddr(uint64_t OperationAdvance, uint8_t Opcode,
-                         uint64_t OpcodeOffset);
+    struct AddrOpIndexDelta {
+      uint64_t AddrOffset;
+      int16_t OpIndexDelta;
+    };
 
-    struct AddrAndAdjustedOpcode {
+    /// Advance the address and op-index by the \p OperationAdvance value.
+    /// \returns the amount advanced by.
+    AddrOpIndexDelta advanceAddrOpIndex(uint64_t OperationAdvance,
+                                        uint8_t Opcode, uint64_t OpcodeOffset);
+
+    struct OpcodeAdvanceResults {
       uint64_t AddrDelta;
+      int16_t OpIndexDelta;
       uint8_t AdjustedOpcode;
     };
 
-    /// Advance the address as required by the specified \p Opcode.
+    /// Advance the address and op-index as required by the specified \p Opcode.
     /// \returns the amount advanced by and the calculated adjusted opcode.
-    AddrAndAdjustedOpcode advanceAddrForOpcode(uint8_t Opcode,
-                                               uint64_t OpcodeOffset);
+    OpcodeAdvanceResults advanceForOpcode(uint8_t Opcode,
+                                          uint64_t OpcodeOffset);
 
-    struct AddrAndLineDelta {
+    struct SpecialOpcodeDelta {
       uint64_t Address;
       int32_t Line;
+      int16_t OpIndex;
     };
 
-    /// Advance the line and address as required by the specified special \p
-    /// Opcode. \returns the address and line delta.
-    AddrAndLineDelta handleSpecialOpcode(uint8_t Opcode, uint64_t OpcodeOffset);
+    /// Advance the line, address and op-index as required by the specified
+    /// special \p Opcode. \returns the address, op-index and line delta.
+    SpecialOpcodeDelta handleSpecialOpcode(uint8_t Opcode,
+                                           uint64_t OpcodeOffset);
 
     /// Line table we're currently parsing.
     struct LineTable *LineTable;

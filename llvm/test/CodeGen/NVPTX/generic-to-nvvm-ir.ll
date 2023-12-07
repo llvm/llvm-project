@@ -1,6 +1,7 @@
 ; Verify functionality of NVPTXGenericToNVVM.cpp pass.
 ;
 ; RUN: opt < %s -march nvptx64 -S -generic-to-nvvm | FileCheck %s
+; RUN: opt < %s -march nvptx64 -S -passes='generic-to-nvvm' | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
@@ -18,11 +19,11 @@ define void @func() !dbg !8 {
 ;CHECK-SAME: !dbg [[FUNCNODE:![0-9]+]]
 entry:
 ; References to the variables must be converted back to generic address space.
-; CHECK-DAG: addrspacecast ([4 x i8] addrspace(1)* @.str to [4 x i8]*)
-  %0 = load i8, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), align 1
+; CHECK-DAG: addrspacecast (ptr addrspace(1) @.str to ptr)
+  %0 = load i8, ptr @.str, align 1
   call void @extfunc(i8 signext %0)
-; CHECK-DAG: addrspacecast (i8 addrspace(1)* @static_var to i8*)
-  %1 = load i8, i8* @static_var, align 1
+; CHECK-DAG: addrspacecast (ptr addrspace(1) @static_var to ptr)
+  %1 = load i8, ptr @static_var, align 1
   call void @extfunc(i8 signext %1)
   ret void
 ; CHECK: ret void

@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -41,13 +40,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   RegisterTargetMachine<BPFTargetMachine> Z(getTheBPFTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeBPFAbstractMemberAccessLegacyPassPass(PR);
-  initializeBPFPreserveDITypePass(PR);
-  initializeBPFIRPeepholePass(PR);
-  initializeBPFAdjustOptPass(PR);
   initializeBPFCheckAndAdjustIRPass(PR);
   initializeBPFMIPeepholePass(PR);
-  initializeBPFMIPeepholeTruncElimPass(PR);
+  initializeBPFDAGToDAGISelPass(PR);
 }
 
 // DataLayout: little or big endian
@@ -103,6 +98,15 @@ TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+  PB.registerPipelineParsingCallback(
+      [](StringRef PassName, FunctionPassManager &FPM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (PassName == "bpf-ir-peephole") {
+          FPM.addPass(BPFIRPeepholePass());
+          return true;
+        }
+        return false;
+      });
   PB.registerPipelineStartEPCallback(
       [=](ModulePassManager &MPM, OptimizationLevel) {
         FunctionPassManager FPM;
@@ -150,7 +154,6 @@ void BPFPassConfig::addMachineSSAOptimization() {
   if (!DisableMIPeephole) {
     if (Subtarget->getHasAlu32())
       addPass(createBPFMIPeepholePass());
-    addPass(createBPFMIPeepholeTruncElimPass());
   }
 }
 

@@ -1,4 +1,4 @@
-; RUN: opt -S %s -passes=sroa -o - -experimental-assignment-tracking | FileCheck %s
+; RUN: opt -S %s -passes=sroa -o - | FileCheck %s
 
 ;; $ cat test.cpp
 ;; #include <cstddef>
@@ -7,7 +7,7 @@
 ;; Check that migrateDebugInfo doesn't crash when encountering an alloca for a
 ;; variable with a type of unspecified size (e.g. DW_TAG_unspecified_type).
 
-; CHECK: @llvm.dbg.assign(metadata ptr %0,{{.+}}, metadata !DIExpression(),{{.+}}, metadata ptr undef, {{.+}})
+; CHECK: @llvm.dbg.value(metadata ptr %0,{{.+}}, metadata !DIExpression())
 ;; There should be no new fragment and the value component should remain as %0.
 
 define dso_local void @_Z3funDn(ptr %0) #0 !dbg !14 {
@@ -23,7 +23,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #1
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!10, !11, !12}
+!llvm.module.flags = !{!10, !11, !12, !1000}
 !llvm.ident = !{!13}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 12.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, imports: !3, splitDebugInlining: false, nameTableKind: None)
@@ -52,3 +52,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !23 = !DILocation(line: 0, scope: !14)
 !28 = distinct !DIAssignID()
 !29 = !DILocation(line: 20, column: 27, scope: !14)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

@@ -71,6 +71,10 @@ v_pk_fma_f32 v[8:9], v[0:1], s[0:1], v[4:5] clamp
 v_pk_fma_f32 v[0:1], v[4:5], v[8:9], v[16:17]
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX90A: v_pk_fma_f32 v[0:1], v[2:3], v[4:5], 1.0 ; encoding: [0x00,0x40,0xb0,0xd3,0x02,0x09,0xca,0x1b]
+v_pk_fma_f32 v[0:1], v[2:3], v[4:5], 1.0
+
+// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: v_pk_mul_f32 v[254:255], v[8:9], v[16:17] ; encoding: [0xfe,0x40,0xb1,0xd3,0x08,0x21,0x02,0x18]
 v_pk_mul_f32 v[254:255], v[8:9], v[16:17]
 
@@ -181,6 +185,10 @@ v_pk_mul_f32 v[4:5], v[8:9], v[16:17] neg_hi:[1,1]
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: v_pk_mul_f32 v[4:5], v[8:9], v[16:17] clamp ; encoding: [0x04,0xc0,0xb1,0xd3,0x08,0x21,0x02,0x18]
 v_pk_mul_f32 v[4:5], v[8:9], v[16:17] clamp
+
+// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX90A: v_pk_mul_f32 v[0:1], v[2:3], 1.0        ; encoding: [0x00,0x40,0xb1,0xd3,0x02,0xe5,0x01,0x18]
+v_pk_mul_f32 v[0:1], v[2:3], 1.0
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: v_pk_add_f32 v[254:255], v[8:9], v[16:17] ; encoding: [0xfe,0x40,0xb2,0xd3,0x08,0x21,0x02,0x18]
@@ -295,6 +303,10 @@ v_pk_add_f32 v[4:5], v[8:9], v[16:17] neg_hi:[1,1]
 v_pk_add_f32 v[4:5], v[8:9], v[16:17] clamp
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX90A: v_pk_add_f32 v[0:1], v[2:3], 1.0 ; encoding: [0x00,0x40,0xb2,0xd3,0x02,0xe5,0x01,0x18]
+v_pk_add_f32 v[0:1], v[2:3], 1.0
+
+// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: v_pk_mov_b32 v[0:1], v[2:3], v[4:5] ; encoding: [0x00,0x40,0xb3,0xd3,0x02,0x09,0x02,0x18]
 v_pk_mov_b32 v[0:1], v[2:3], v[4:5]
 
@@ -321,6 +333,14 @@ v_pk_mov_b32 v[0:1], v[2:3], v[4:5] op_sel:[1,0]
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: v_pk_mov_b32 v[0:1], v[2:3], v[4:5] op_sel:[1,1] ; encoding: [0x00,0x58,0xb3,0xd3,0x02,0x09,0x02,0x18]
 v_pk_mov_b32 v[0:1], v[2:3], v[4:5] op_sel:[1,1]
+
+// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX90A: v_pk_mov_b32 v[0:1], v[2:3], 4 ; encoding: [0x00,0x40,0xb3,0xd3,0x02,0x09,0x01,0x18]
+v_pk_mov_b32 v[0:1], v[2:3], 4
+
+// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX90A: v_pk_mov_b32 v[0:1], v[2:3], 2.0 ; encoding: [0x00,0x40,0xb3,0xd3,0x02,0xe9,0x01,0x18]
+v_pk_mov_b32 v[0:1], v[2:3], 2.0
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: buffer_wbl2 ; encoding: [0x00,0x00,0xa0,0xe0,0x00,0x00,0x00,0x00]
@@ -511,10 +531,6 @@ ds_add_f64 v1, v[2:3]
 ds_add_f64 v1, v[2:3] offset:4
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// GFX90A: ds_add_f64 v1, v[2:3] offset:65535 gds ; encoding: [0xff,0xff,0xb9,0xd8,0x01,0x02,0x00,0x00]
-ds_add_f64 v1, v[2:3] offset:65535 gds
-
-// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:65535 ; encoding: [0xff,0xff,0xf8,0xd8,0x01,0x02,0x00,0x04]
 ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:65535
 
@@ -541,10 +557,6 @@ ds_add_rtn_f64 v[4:5], v1, v[2:3]
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:4 ; encoding: [0x04,0x00,0xf8,0xd8,0x01,0x02,0x00,0x04]
 ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:4
-
-// NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// GFX90A: ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:65535 gds ; encoding: [0xff,0xff,0xf9,0xd8,0x01,0x02,0x00,0x04]
-ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:65535 gds
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX90A: flat_atomic_add_f64 v[0:1], v[2:3] offset:4095 ; encoding: [0xff,0x0f,0x3c,0xdd,0x00,0x02,0x00,0x00]

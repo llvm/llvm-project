@@ -31,7 +31,7 @@
                                           lldb_kind,                           \
                                           LLDB_INVALID_REGNUM,                 \
                                           gpr_##reg##_ppc64 },                 \
-                                          NULL, NULL,                          \
+                                          NULL, NULL, NULL,                    \
   }
 #define DEFINE_FPR_PPC64(reg, alt, lldb_kind)                                  \
   {                                                                            \
@@ -40,7 +40,7 @@
         {ppc64_dwarf::dwarf_##reg##_ppc64,                                     \
          ppc64_dwarf::dwarf_##reg##_ppc64, lldb_kind, LLDB_INVALID_REGNUM,     \
          fpr_##reg##_ppc64 },                                                  \
-         NULL, NULL,                                                           \
+         NULL, NULL, NULL,                                                     \
   }
 #define DEFINE_VMX_PPC64(reg, lldb_kind)                                       \
   {                                                                            \
@@ -49,7 +49,7 @@
         {ppc64_dwarf::dwarf_##reg##_ppc64,                                     \
          ppc64_dwarf::dwarf_##reg##_ppc64, lldb_kind, LLDB_INVALID_REGNUM,     \
          vmx_##reg##_ppc64 },                                                  \
-         NULL, NULL,                                                           \
+         NULL, NULL, NULL,                                                     \
   }
 
 // General purpose registers.
@@ -136,6 +136,7 @@
         LLDB_INVALID_REGNUM, fpr_fpscr_ppc64},                                 \
        NULL,                                                                   \
        NULL,                                                                   \
+       NULL,                                                                   \
        },                                                                      \
       DEFINE_VMX_PPC64(vr0, LLDB_INVALID_REGNUM),                              \
       DEFINE_VMX_PPC64(vr1, LLDB_INVALID_REGNUM),                              \
@@ -179,6 +180,7 @@
         LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, vmx_vscr_ppc64},             \
        NULL,                                                                   \
        NULL,                                                                   \
+       NULL,                                                                   \
        },                                                                      \
       {"vrsave",                                                               \
        NULL,                                                                   \
@@ -189,6 +191,7 @@
        {ppc64_dwarf::dwarf_vrsave_ppc64,                                       \
         ppc64_dwarf::dwarf_vrsave_ppc64, LLDB_INVALID_REGNUM,                  \
         LLDB_INVALID_REGNUM, vmx_vrsave_ppc64},                                \
+       NULL,                                                                   \
        NULL,                                                                   \
        NULL,                                                                   \
        },  /* */

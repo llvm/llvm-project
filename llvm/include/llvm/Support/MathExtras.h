@@ -22,29 +22,7 @@
 #include <limits>
 #include <type_traits>
 
-#ifdef _MSC_VER
-// Declare these intrinsics manually rather including intrin.h. It's very
-// expensive, and MathExtras.h is popular.
-// #include <intrin.h>
-extern "C" {
-unsigned char _BitScanForward(unsigned long *_Index, unsigned long _Mask);
-unsigned char _BitScanForward64(unsigned long *_Index, unsigned __int64 _Mask);
-unsigned char _BitScanReverse(unsigned long *_Index, unsigned long _Mask);
-unsigned char _BitScanReverse64(unsigned long *_Index, unsigned __int64 _Mask);
-}
-#endif
-
 namespace llvm {
-
-/// The behavior an operation has on an input of 0.
-enum ZeroBehavior {
-  /// The returned value is undefined.
-  ZB_Undefined,
-  /// The returned value is numeric_limits<T>::max()
-  ZB_Max,
-  /// The returned value is numeric_limits<T>::digits
-  ZB_Width
-};
 
 /// Mathematical constants.
 namespace numbers {
@@ -82,165 +60,10 @@ constexpr float ef          = 2.71828183F, // (0x1.5bf0a8P+1) https://oeis.org/A
                 phif        = 1.61803399F; // (0x1.9e377aP+0) https://oeis.org/A001622
 } // namespace numbers
 
-namespace detail {
-template <typename T, std::size_t SizeOfT> struct TrailingZerosCounter {
-  static unsigned count(T Val, ZeroBehavior) {
-    if (!Val)
-      return std::numeric_limits<T>::digits;
-    if (Val & 0x1)
-      return 0;
-
-    // Bisection method.
-    unsigned ZeroBits = 0;
-    T Shift = std::numeric_limits<T>::digits >> 1;
-    T Mask = std::numeric_limits<T>::max() >> Shift;
-    while (Shift) {
-      if ((Val & Mask) == 0) {
-        Val >>= Shift;
-        ZeroBits |= Shift;
-      }
-      Shift >>= 1;
-      Mask >>= Shift;
-    }
-    return ZeroBits;
-  }
-};
-
-#if defined(__GNUC__) || defined(_MSC_VER)
-template <typename T> struct TrailingZerosCounter<T, 4> {
-  static unsigned count(T Val, ZeroBehavior ZB) {
-    if (ZB != ZB_Undefined && Val == 0)
-      return 32;
-
-#if __has_builtin(__builtin_ctz) || defined(__GNUC__)
-    return __builtin_ctz(Val);
-#elif defined(_MSC_VER)
-    unsigned long Index;
-    _BitScanForward(&Index, Val);
-    return Index;
-#endif
-  }
-};
-
-#if !defined(_MSC_VER) || defined(_M_X64)
-template <typename T> struct TrailingZerosCounter<T, 8> {
-  static unsigned count(T Val, ZeroBehavior ZB) {
-    if (ZB != ZB_Undefined && Val == 0)
-      return 64;
-
-#if __has_builtin(__builtin_ctzll) || defined(__GNUC__)
-    return __builtin_ctzll(Val);
-#elif defined(_MSC_VER)
-    unsigned long Index;
-    _BitScanForward64(&Index, Val);
-    return Index;
-#endif
-  }
-};
-#endif
-#endif
-} // namespace detail
-
-/// Count number of 0's from the least significant bit to the most
-///   stopping at the first 1.
-///
-/// Only unsigned integral types are allowed.
-///
-/// \param ZB the behavior on an input of 0. Only ZB_Width and ZB_Undefined are
-///   valid arguments.
-template <typename T>
-unsigned countTrailingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
-  static_assert(std::is_unsigned_v<T>,
-                "Only unsigned integral types are allowed.");
-  return llvm::detail::TrailingZerosCounter<T, sizeof(T)>::count(Val, ZB);
-}
-
-namespace detail {
-template <typename T, std::size_t SizeOfT> struct LeadingZerosCounter {
-  static unsigned count(T Val, ZeroBehavior) {
-    if (!Val)
-      return std::numeric_limits<T>::digits;
-
-    // Bisection method.
-    unsigned ZeroBits = 0;
-    for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
-      T Tmp = Val >> Shift;
-      if (Tmp)
-        Val = Tmp;
-      else
-        ZeroBits |= Shift;
-    }
-    return ZeroBits;
-  }
-};
-
-#if defined(__GNUC__) || defined(_MSC_VER)
-template <typename T> struct LeadingZerosCounter<T, 4> {
-  static unsigned count(T Val, ZeroBehavior ZB) {
-    if (ZB != ZB_Undefined && Val == 0)
-      return 32;
-
-#if __has_builtin(__builtin_clz) || defined(__GNUC__)
-    return __builtin_clz(Val);
-#elif defined(_MSC_VER)
-    unsigned long Index;
-    _BitScanReverse(&Index, Val);
-    return Index ^ 31;
-#endif
-  }
-};
-
-#if !defined(_MSC_VER) || defined(_M_X64)
-template <typename T> struct LeadingZerosCounter<T, 8> {
-  static unsigned count(T Val, ZeroBehavior ZB) {
-    if (ZB != ZB_Undefined && Val == 0)
-      return 64;
-
-#if __has_builtin(__builtin_clzll) || defined(__GNUC__)
-    return __builtin_clzll(Val);
-#elif defined(_MSC_VER)
-    unsigned long Index;
-    _BitScanReverse64(&Index, Val);
-    return Index ^ 63;
-#endif
-  }
-};
-#endif
-#endif
-} // namespace detail
-
-/// Count number of 0's from the most significant bit to the least
-///   stopping at the first 1.
-///
-/// Only unsigned integral types are allowed.
-///
-/// \param ZB the behavior on an input of 0. Only ZB_Width and ZB_Undefined are
-///   valid arguments.
-template <typename T>
-unsigned countLeadingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
-  static_assert(std::is_unsigned_v<T>,
-                "Only unsigned integral types are allowed.");
-  return llvm::detail::LeadingZerosCounter<T, sizeof(T)>::count(Val, ZB);
-}
-
-/// Get the index of the first set bit starting from the least
-///   significant bit.
-///
-/// Only unsigned integral types are allowed.
-///
-/// \param ZB the behavior on an input of 0. Only ZB_Max and ZB_Undefined are
-///   valid arguments.
-template <typename T> T findFirstSet(T Val, ZeroBehavior ZB = ZB_Max) {
-  if (ZB == ZB_Max && Val == 0)
-    return std::numeric_limits<T>::max();
-
-  return countTrailingZeros(Val, ZB_Undefined);
-}
-
 /// Create a bitmask with the N right-most bits set to 1, and all other
 /// bits set to 0.  Only unsigned types are allowed.
 template <typename T> T maskTrailingOnes(unsigned N) {
-  static_assert(std::is_unsigned<T>::value, "Invalid type!");
+  static_assert(std::is_unsigned_v<T>, "Invalid type!");
   const unsigned Bits = CHAR_BIT * sizeof(T);
   assert(N <= Bits && "Invalid bit index");
   return N == 0 ? 0 : (T(-1) >> (Bits - N));
@@ -262,23 +85,6 @@ template <typename T> T maskTrailingZeros(unsigned N) {
 /// bits set to 1.  Only unsigned types are allowed.
 template <typename T> T maskLeadingZeros(unsigned N) {
   return maskTrailingOnes<T>(CHAR_BIT * sizeof(T) - N);
-}
-
-/// Get the index of the last set bit starting from the least
-///   significant bit.
-///
-/// Only unsigned integral types are allowed.
-///
-/// \param ZB the behavior on an input of 0. Only ZB_Max and ZB_Undefined are
-///   valid arguments.
-template <typename T> T findLastSet(T Val, ZeroBehavior ZB = ZB_Max) {
-  if (ZB == ZB_Max && Val == 0)
-    return std::numeric_limits<T>::max();
-
-  // Use ^ instead of - because both gcc and llvm can remove the associated ^
-  // in the __builtin_clz intrinsic on x86.
-  return countLeadingZeros(Val, ZB_Undefined) ^
-         (std::numeric_limits<T>::digits - 1);
 }
 
 /// Macro compressed bit reversal table for 256 bits.
@@ -464,46 +270,6 @@ constexpr inline bool isPowerOf2_64(uint64_t Value) {
   return llvm::has_single_bit(Value);
 }
 
-/// Count the number of ones from the most significant bit to the first
-/// zero bit.
-///
-/// Ex. countLeadingOnes(0xFF0FFF00) == 8.
-/// Only unsigned integral types are allowed.
-///
-/// \param ZB the behavior on an input of all ones. Only ZB_Width and
-/// ZB_Undefined are valid arguments.
-template <typename T>
-unsigned countLeadingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
-  static_assert(std::is_unsigned_v<T>,
-                "Only unsigned integral types are allowed.");
-  return countLeadingZeros<T>(~Value, ZB);
-}
-
-/// Count the number of ones from the least significant bit to the first
-/// zero bit.
-///
-/// Ex. countTrailingOnes(0x00FF00FF) == 8.
-/// Only unsigned integral types are allowed.
-///
-/// \param ZB the behavior on an input of all ones. Only ZB_Width and
-/// ZB_Undefined are valid arguments.
-template <typename T>
-unsigned countTrailingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
-  static_assert(std::is_unsigned_v<T>,
-                "Only unsigned integral types are allowed.");
-  return countTrailingZeros<T>(~Value, ZB);
-}
-
-/// Count the number of set bits in a value.
-/// Ex. countPopulation(0xF000F000) = 8
-/// Returns 0 if the word is zero.
-template <typename T>
-inline unsigned countPopulation(T Value) {
-  static_assert(std::is_unsigned_v<T>,
-                "Only unsigned integral types are allowed.");
-  return (unsigned)llvm::popcount(Value);
-}
-
 /// Return true if the argument contains a non-empty sequence of ones with the
 /// remainder zero (32 bit version.) Ex. isShiftedMask_32(0x0000FF00U) == true.
 /// If true, \p MaskIdx will specify the index of the lowest set bit and \p
@@ -513,8 +279,8 @@ inline bool isShiftedMask_32(uint32_t Value, unsigned &MaskIdx,
                              unsigned &MaskLen) {
   if (!isShiftedMask_32(Value))
     return false;
-  MaskIdx = countTrailingZeros(Value);
-  MaskLen = countPopulation(Value);
+  MaskIdx = llvm::countr_zero(Value);
+  MaskLen = llvm::popcount(Value);
   return true;
 }
 
@@ -526,8 +292,8 @@ inline bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
                              unsigned &MaskLen) {
   if (!isShiftedMask_64(Value))
     return false;
-  MaskIdx = countTrailingZeros(Value);
-  MaskLen = countPopulation(Value);
+  MaskIdx = llvm::countr_zero(Value);
+  MaskLen = llvm::popcount(Value);
   return true;
 }
 
@@ -545,54 +311,26 @@ template <> constexpr inline size_t CTLog2<1>() { return 0; }
 /// (32 bit edition.)
 /// Ex. Log2_32(32) == 5, Log2_32(1) == 0, Log2_32(0) == -1, Log2_32(6) == 2
 inline unsigned Log2_32(uint32_t Value) {
-  return 31 - countLeadingZeros(Value);
+  return 31 - llvm::countl_zero(Value);
 }
 
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (64 bit edition.)
 inline unsigned Log2_64(uint64_t Value) {
-  return 63 - countLeadingZeros(Value);
+  return 63 - llvm::countl_zero(Value);
 }
 
 /// Return the ceil log base 2 of the specified value, 32 if the value is zero.
 /// (32 bit edition).
 /// Ex. Log2_32_Ceil(32) == 5, Log2_32_Ceil(1) == 0, Log2_32_Ceil(6) == 3
 inline unsigned Log2_32_Ceil(uint32_t Value) {
-  return 32 - countLeadingZeros(Value - 1);
+  return 32 - llvm::countl_zero(Value - 1);
 }
 
 /// Return the ceil log base 2 of the specified value, 64 if the value is zero.
 /// (64 bit edition.)
 inline unsigned Log2_64_Ceil(uint64_t Value) {
-  return 64 - countLeadingZeros(Value - 1);
-}
-
-/// This function takes a 64-bit integer and returns the bit equivalent double.
-inline double BitsToDouble(uint64_t Bits) {
-  static_assert(sizeof(uint64_t) == sizeof(double), "Unexpected type sizes");
-  return llvm::bit_cast<double>(Bits);
-}
-
-/// This function takes a 32-bit integer and returns the bit equivalent float.
-inline float BitsToFloat(uint32_t Bits) {
-  static_assert(sizeof(uint32_t) == sizeof(float), "Unexpected type sizes");
-  return llvm::bit_cast<float>(Bits);
-}
-
-/// This function takes a double and returns the bit equivalent 64-bit integer.
-/// Note that copying doubles around changes the bits of NaNs on some hosts,
-/// notably x86, so this routine cannot be used if these bits are needed.
-inline uint64_t DoubleToBits(double Double) {
-  static_assert(sizeof(uint64_t) == sizeof(double), "Unexpected type sizes");
-  return llvm::bit_cast<uint64_t>(Double);
-}
-
-/// This function takes a float and returns the bit equivalent 32-bit integer.
-/// Note that copying floats around changes the bits of NaNs on some hosts,
-/// notably x86, so this routine cannot be used if these bits are needed.
-inline uint32_t FloatToBits(float Float) {
-  static_assert(sizeof(uint32_t) == sizeof(float), "Unexpected type sizes");
-  return llvm::bit_cast<uint32_t>(Float);
+  return 64 - llvm::countl_zero(Value - 1);
 }
 
 /// A and B are either alignments or offsets. Return the minimum alignment that
@@ -616,13 +354,6 @@ constexpr inline uint64_t NextPowerOf2(uint64_t A) {
   A |= (A >> 16);
   A |= (A >> 32);
   return A + 1;
-}
-
-/// Returns the power of two which is less than or equal to the given value.
-/// Essentially, it is a floor operation across the domain of powers of two.
-inline uint64_t PowerOf2Floor(uint64_t A) {
-  if (!A) return 0;
-  return 1ull << (63 - countLeadingZeros(A, ZB_Undefined));
 }
 
 /// Returns the power of two which is greater than or equal to the given value.
@@ -732,7 +463,7 @@ inline int64_t SignExtend64(uint64_t X, unsigned B) {
 /// Subtract two unsigned integers, X and Y, of type T and return the absolute
 /// value of the result.
 template <typename T>
-std::enable_if_t<std::is_unsigned<T>::value, T> AbsoluteDifference(T X, T Y) {
+std::enable_if_t<std::is_unsigned_v<T>, T> AbsoluteDifference(T X, T Y) {
   return X > Y ? (X - Y) : (Y - X);
 }
 
@@ -740,7 +471,7 @@ std::enable_if_t<std::is_unsigned<T>::value, T> AbsoluteDifference(T X, T Y) {
 /// maximum representable value of T on overflow.  ResultOverflowed indicates if
 /// the result is larger than the maximum representable value of type T.
 template <typename T>
-std::enable_if_t<std::is_unsigned<T>::value, T>
+std::enable_if_t<std::is_unsigned_v<T>, T>
 SaturatingAdd(T X, T Y, bool *ResultOverflowed = nullptr) {
   bool Dummy;
   bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
@@ -769,7 +500,7 @@ std::enable_if_t<std::is_unsigned_v<T>, T> SaturatingAdd(T X, T Y, T Z,
 /// maximum representable value of T on overflow.  ResultOverflowed indicates if
 /// the result is larger than the maximum representable value of type T.
 template <typename T>
-std::enable_if_t<std::is_unsigned<T>::value, T>
+std::enable_if_t<std::is_unsigned_v<T>, T>
 SaturatingMultiply(T X, T Y, bool *ResultOverflowed = nullptr) {
   bool Dummy;
   bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
@@ -815,7 +546,7 @@ SaturatingMultiply(T X, T Y, bool *ResultOverflowed = nullptr) {
 /// overflow. ResultOverflowed indicates if the result is larger than the
 /// maximum representable value of type T.
 template <typename T>
-std::enable_if_t<std::is_unsigned<T>::value, T>
+std::enable_if_t<std::is_unsigned_v<T>, T>
 SaturatingMultiplyAdd(T X, T Y, T A, bool *ResultOverflowed = nullptr) {
   bool Dummy;
   bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
@@ -834,7 +565,7 @@ extern const float huge_valf;
 /// Add two signed integers, computing the two's complement truncated result,
 /// returning true if overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed<T>::value, T> AddOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, T> AddOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_add_overflow)
   return __builtin_add_overflow(X, Y, &Result);
 #else
@@ -860,7 +591,7 @@ std::enable_if_t<std::is_signed<T>::value, T> AddOverflow(T X, T Y, T &Result) {
 /// Subtract two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow ocurred.
 template <typename T>
-std::enable_if_t<std::is_signed<T>::value, T> SubOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_sub_overflow)
   return __builtin_sub_overflow(X, Y, &Result);
 #else
@@ -886,7 +617,7 @@ std::enable_if_t<std::is_signed<T>::value, T> SubOverflow(T X, T Y, T &Result) {
 /// Multiply two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow ocurred.
 template <typename T>
-std::enable_if_t<std::is_signed<T>::value, T> MulOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
   // Perform the unsigned multiplication on absolute values.
   using U = std::make_unsigned_t<T>;
   const U UX = X < 0 ? (0 - static_cast<U>(X)) : static_cast<U>(X);

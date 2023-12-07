@@ -59,6 +59,10 @@ public:
   /// the specified block.
   void insertBefore(Block *block);
 
+  /// Insert this block (which must not already be in a region) right after
+  /// the specified block.
+  void insertAfter(Block *block);
+
   /// Unlink this block from its current region and insert it right before the
   /// specific block.
   void moveBefore(Block *block);
@@ -258,42 +262,47 @@ public:
 
   /// Walk the operations in this block. The callback method is called for each
   /// nested region, block or operation, depending on the callback provided.
-  /// Regions, blocks and operations at the same nesting level are visited in
-  /// lexicographical order. The walk order for enclosing regions, blocks and
-  /// operations with respect to their nested ones is specified by 'Order'
+  /// The order in which regions, blocks and operations at the same nesting
+  /// level are visited (e.g., lexicographical or reverse lexicographical order)
+  /// is determined by 'Iterator'. The walk order for enclosing regions, blocks
+  /// and operations with respect to their nested ones is specified by 'Order'
   /// (post-order by default). A callback on a block or operation is allowed to
   /// erase that block or operation if either:
   ///   * the walk is in post-order, or
   ///   * the walk is in pre-order and the walk is skipped after the erasure.
   /// See Operation::walk for more details.
-  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+  template <WalkOrder Order = WalkOrder::PostOrder,
+            typename Iterator = ForwardIterator, typename FnT,
             typename RetT = detail::walkResultType<FnT>>
   RetT walk(FnT &&callback) {
-    return walk<Order>(begin(), end(), std::forward<FnT>(callback));
+    return walk<Order, Iterator>(begin(), end(), std::forward<FnT>(callback));
   }
 
   /// Walk the operations in the specified [begin, end) range of this block. The
   /// callback method is called for each nested region, block or operation,
-  /// depending on the callback provided. Regions, blocks and operations at the
-  /// same nesting level are visited in lexicographical order. The walk order
+  /// depending on the callback provided. The order in which regions, blocks and
+  /// operations at the same nesting level are visited (e.g., lexicographical or
+  /// reverse lexicographical order) is determined by 'Iterator'. The walk order
   /// for enclosing regions, blocks and operations with respect to their nested
   /// ones is specified by 'Order' (post-order by default). This method is
   /// invoked for void-returning callbacks. A callback on a block or operation
   /// is allowed to erase that block or operation only if the walk is in
   /// post-order. See non-void method for pre-order erasure.
   /// See Operation::walk for more details.
-  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+  template <WalkOrder Order = WalkOrder::PostOrder,
+            typename Iterator = ForwardIterator, typename FnT,
             typename RetT = detail::walkResultType<FnT>>
   std::enable_if_t<std::is_same<RetT, void>::value, RetT>
   walk(Block::iterator begin, Block::iterator end, FnT &&callback) {
     for (auto &op : llvm::make_early_inc_range(llvm::make_range(begin, end)))
-      detail::walk<Order>(&op, callback);
+      detail::walk<Order, Iterator>(&op, callback);
   }
 
   /// Walk the operations in the specified [begin, end) range of this block. The
   /// callback method is called for each nested region, block or operation,
-  /// depending on the callback provided. Regions, blocks and operations at the
-  /// same nesting level are visited in lexicographical order. The walk order
+  /// depending on the callback provided. The order in which regions, blocks and
+  /// operations at the same nesting level are visited (e.g., lexicographical or
+  /// reverse lexicographical order) is determined by 'Iterator'. The walk order
   /// for enclosing regions, blocks and operations with respect to their nested
   /// ones is specified by 'Order' (post-order by default). This method is
   /// invoked for skippable or interruptible callbacks. A callback on a block or
@@ -301,12 +310,13 @@ public:
   ///   * the walk is in post-order, or
   ///   * the walk is in pre-order and the walk is skipped after the erasure.
   /// See Operation::walk for more details.
-  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+  template <WalkOrder Order = WalkOrder::PostOrder,
+            typename Iterator = ForwardIterator, typename FnT,
             typename RetT = detail::walkResultType<FnT>>
   std::enable_if_t<std::is_same<RetT, WalkResult>::value, RetT>
   walk(Block::iterator begin, Block::iterator end, FnT &&callback) {
     for (auto &op : llvm::make_early_inc_range(llvm::make_range(begin, end)))
-      if (detail::walk<Order>(&op, callback).wasInterrupted())
+      if (detail::walk<Order, Iterator>(&op, callback).wasInterrupted())
         return WalkResult::interrupt();
     return WalkResult::advance();
   }

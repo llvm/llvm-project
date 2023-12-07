@@ -18,7 +18,7 @@
 
 namespace mlir {
 class Operation;
-class PatternRewriter;
+class RewriterBase;
 class TilingInterface;
 } // namespace mlir
 
@@ -88,6 +88,75 @@ struct SCFTileAndFuseOptions {
     return *this;
   }
 };
+
+/// Fuse the producer of the source of `candidateSliceOp` by computing the
+/// required slice of the producer in-place.  Note that the method
+/// replaces the uses of `candidateSliceOp` with the tiled and fused producer
+/// value but does not delete the slice operation.
+struct SCFFuseProducerOfSliceResult {
+  OpResult origProducer;       // Original untiled producer.
+  Value tiledAndFusedProducer; // Tile and fused producer value.
+  SmallVector<Operation *> tiledOps;
+};
+std::optional<SCFFuseProducerOfSliceResult>
+tileAndFuseProducerOfSlice(RewriterBase &rewriter,
+                           tensor::ExtractSliceOp candidateSliceOp,
+                           MutableArrayRef<scf::ForOp> loops);
+
+/// Reconstruct the fused producer from within the tiled-and-fused code. Based
+/// on the slice of the producer computed in place it is possible that within
+/// the loop nest same slice of the producer is computed multiple times. It is
+/// in general not possible to recompute the value of the fused producer from
+/// the tiled loop code in such cases. For the cases where no slice of the
+/// producer is computed in a redundant fashion it is possible to reconstruct
+/// the value of the original producer from within the tiled loop. It is upto
+/// the caller to ensure that the producer is not computed redundantly within
+/// the tiled loop nest. For example, consider
+///
+/// ```mlir
+/// %0 = linalg.matmul ins(...) outs(...) -> tensor<?x?xf32>
+/// %1 = linalg.matmul ins(%0, ..) outs(...) -> tensor<?x?x?f32>
+/// ```
+///
+/// If `%1` is tiled in a 2D fashion and `%0` is fused with it, the resulting IR
+/// is,
+///
+/// ```mlir
+/// %t1_0 = scf.for .... iter_args(%arg0 = ...) {
+///   %t1_1 = scf.for ... iter_args(%arg1 = %arg0) {
+///     ...
+///     %t1_2 = linalg.matmul ins(...) outs(...) -> tensor<?x?xf32>
+///     %t1_3 = linalg.matmul ins(%t1_2, ...)
+///     %t1_4 = tensor.insert_slice %t1_3 into %arg1 ...
+///     scf.yield %t1_4
+///   }
+///   scf.yield %t1_1
+/// }
+/// ```
+///
+/// Here `%t1_2` is the same for all iterations of the inner `scf.for`. Instead
+/// if `%1` were tiled only along the rows, the resultant code would be
+///
+/// ```mlir
+/// %t2_0 = scf.for .... iter_args(%arg0 = ...) {
+///   ...
+///   %t2_1 = linalg.matmul ins(...) outs(...) -> tensor<?x?xf32>
+///   %t2_2 = linalg.matmul ins(%t2_1, ...)
+///   %t2_3 = tensor.insert_slice %t2_2 into %arg0 ...
+///   scf.yield %t2_3
+/// }
+/// ```
+///
+/// Here there is no intersection in the different slices of `%t2_1` computed
+/// across iterations of the `scf.for`. In such cases, the value of the original
+/// `%0` can be reconstructed from within the loop body. This is useful in cases
+/// where `%0` had other uses as well. If not reconstructed from within the loop
+/// body, uses of `%0` could not be replaced, making it still live and the
+/// fusion immaterial.
+void yieldReplacementForFusedProducer(
+    RewriterBase &rewriter, tensor::ExtractSliceOp sliceOp,
+    scf::SCFFuseProducerOfSliceResult fusedProducerInfo,
+    MutableArrayRef<scf::ForOp> loops);
 
 /// Transformation information returned after tile and fuse.
 struct SCFTileAndFuseResult {
@@ -175,7 +244,7 @@ struct SCFReductionTilingResult {
 ///   : tensor<7x4xf32> -> tensor<7xf32>
 /// ```
 FailureOr<scf::SCFReductionTilingResult>
-tileReductionUsingScf(PatternRewriter &b, PartialReductionOpInterface op,
+tileReductionUsingScf(RewriterBase &b, PartialReductionOpInterface op,
                       ArrayRef<OpFoldResult> tileSize);
 
 } // namespace scf

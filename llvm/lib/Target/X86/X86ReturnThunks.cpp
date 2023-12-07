@@ -28,7 +28,6 @@
 #include "X86Subtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -37,18 +36,21 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
 #define PASS_KEY "x86-return-thunks"
 #define DEBUG_TYPE PASS_KEY
 
+namespace {
 struct X86ReturnThunks final : public MachineFunctionPass {
   static char ID;
   X86ReturnThunks() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return "X86 Return Thunks"; }
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
+} // namespace
 
 char X86ReturnThunks::ID = 0;
 

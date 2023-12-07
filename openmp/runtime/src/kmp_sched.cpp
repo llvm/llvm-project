@@ -61,11 +61,13 @@ char const *traits_t<long>::spec = "ld";
 #define KMP_STATS_LOOP_END(stat) /* Nothing */
 #endif
 
+#if USE_ITT_BUILD || defined KMP_DEBUG
 static ident_t loc_stub = {0, KMP_IDENT_KMPC, 0, 0, ";unknown;unknown;0;0;;"};
 static inline void check_loc(ident_t *&loc) {
   if (loc == NULL)
     loc = &loc_stub; // may need to report location info to ittnotify
 }
+#endif
 
 template <typename T>
 static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,

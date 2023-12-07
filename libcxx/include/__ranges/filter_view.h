@@ -11,12 +11,12 @@
 #define _LIBCPP___RANGES_FILTER_VIEW_H
 
 #include <__algorithm/ranges_find_if.h>
+#include <__assert>
 #include <__concepts/constructible.h>
 #include <__concepts/copyable.h>
 #include <__concepts/derived_from.h>
 #include <__concepts/equality_comparable.h>
 #include <__config>
-#include <__debug>
 #include <__functional/bind_back.h>
 #include <__functional/invoke.h>
 #include <__functional/reference_wrapper.h>
@@ -28,14 +28,17 @@
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
-#include <__ranges/copyable_box.h>
+#include <__ranges/movable_box.h>
 #include <__ranges/non_propagating_cache.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_object.h>
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -43,23 +46,14 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace ranges {
-
-  template <input_range _View, indirect_unary_predicate<iterator_t<_View>> _Pred>
-    requires view<_View> && is_object_v<_Pred>
-  class __filter_view_iterator;
-
-  template <input_range _View, indirect_unary_predicate<iterator_t<_View>> _Pred>
-    requires view<_View> && is_object_v<_Pred>
-  class __filter_view_sentinel;
-
   template<input_range _View, indirect_unary_predicate<iterator_t<_View>> _Pred>
     requires view<_View> && is_object_v<_Pred>
   class filter_view : public view_interface<filter_view<_View, _Pred>> {
     _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
-    _LIBCPP_NO_UNIQUE_ADDRESS __copyable_box<_Pred> __pred_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
     // We cache the result of begin() to allow providing an amortized O(1) begin() whenever
     // the underlying range is at least a forward_range.
@@ -67,20 +61,15 @@ namespace ranges {
     using _Cache = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
     _LIBCPP_NO_UNIQUE_ADDRESS _Cache __cached_begin_ = _Cache();
 
-    using __iterator = __filter_view_iterator<_View, _Pred>;
-    using __sentinel = __filter_view_sentinel<_View, _Pred>;
-
-    friend __iterator;
-    friend __sentinel;
+    class __iterator;
+    class __sentinel;
 
   public:
     _LIBCPP_HIDE_FROM_ABI
     filter_view() requires default_initializable<_View> && default_initializable<_Pred> = default;
 
-    _LIBCPP_HIDE_FROM_ABI
-    constexpr filter_view(_View __base, _Pred __pred)
-      : __base_(std::move(__base)), __pred_(in_place, std::move(__pred))
-    { }
+    _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 filter_view(_View __base, _Pred __pred)
+        : __base_(std::move(__base)), __pred_(in_place, std::move(__pred)) {}
 
     template<class _Vp = _View>
     _LIBCPP_HIDE_FROM_ABI
@@ -93,7 +82,9 @@ namespace ranges {
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr __iterator begin() {
-      _LIBCPP_ASSERT(__pred_.__has_value(), "Trying to call begin() on a filter_view that does not have a valid predicate.");
+      _LIBCPP_ASSERT_UNCATEGORIZED(
+          __pred_.__has_value(),
+          "Trying to call begin() on a filter_view that does not have a valid predicate.");
       if constexpr (_UseCache) {
         if (!__cached_begin_.__has_value()) {
           __cached_begin_.__emplace(ranges::find_if(__base_, std::ref(*__pred_)));
@@ -131,13 +122,11 @@ namespace ranges {
 
   template<input_range _View, indirect_unary_predicate<iterator_t<_View>> _Pred>
     requires view<_View> && is_object_v<_Pred>
-  class __filter_view_iterator : public __filter_iterator_category<_View> {
-
-    using __filter_view = filter_view<_View, _Pred>;
+  class filter_view<_View, _Pred>::__iterator : public __filter_iterator_category<_View> {
 
   public:
     _LIBCPP_NO_UNIQUE_ADDRESS iterator_t<_View> __current_ = iterator_t<_View>();
-    _LIBCPP_NO_UNIQUE_ADDRESS __filter_view* __parent_ = nullptr;
+    _LIBCPP_NO_UNIQUE_ADDRESS filter_view* __parent_ = nullptr;
 
     using iterator_concept =
       _If<bidirectional_range<_View>, bidirectional_iterator_tag,
@@ -149,10 +138,10 @@ namespace ranges {
     using difference_type = range_difference_t<_View>;
 
     _LIBCPP_HIDE_FROM_ABI
-    __filter_view_iterator() requires default_initializable<iterator_t<_View>> = default;
+    __iterator() requires default_initializable<iterator_t<_View>> = default;
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr __filter_view_iterator(__filter_view& __parent, iterator_t<_View> __current)
+    constexpr __iterator(filter_view& __parent, iterator_t<_View> __current)
       : __current_(std::move(__current)), __parent_(std::addressof(__parent))
     { }
 
@@ -171,7 +160,7 @@ namespace ranges {
     }
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr __filter_view_iterator& operator++() {
+    constexpr __iterator& operator++() {
       __current_ = ranges::find_if(std::move(++__current_), ranges::end(__parent_->__base_),
                                    std::ref(*__parent_->__pred_));
       return *this;
@@ -179,42 +168,42 @@ namespace ranges {
     _LIBCPP_HIDE_FROM_ABI
     constexpr void operator++(int) { ++*this; }
     _LIBCPP_HIDE_FROM_ABI
-    constexpr __filter_view_iterator operator++(int) requires forward_range<_View> {
+    constexpr __iterator operator++(int) requires forward_range<_View> {
       auto __tmp = *this;
       ++*this;
       return __tmp;
     }
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr __filter_view_iterator& operator--() requires bidirectional_range<_View> {
+    constexpr __iterator& operator--() requires bidirectional_range<_View> {
       do {
         --__current_;
       } while (!std::invoke(*__parent_->__pred_, *__current_));
       return *this;
     }
     _LIBCPP_HIDE_FROM_ABI
-    constexpr __filter_view_iterator operator--(int) requires bidirectional_range<_View> {
-      auto tmp = *this;
+    constexpr __iterator operator--(int) requires bidirectional_range<_View> {
+      auto __tmp = *this;
       --*this;
-      return tmp;
+      return __tmp;
     }
 
     _LIBCPP_HIDE_FROM_ABI
-    friend constexpr bool operator==(__filter_view_iterator const& __x, __filter_view_iterator const& __y)
+    friend constexpr bool operator==(__iterator const& __x, __iterator const& __y)
       requires equality_comparable<iterator_t<_View>>
     {
       return __x.__current_ == __y.__current_;
     }
 
     _LIBCPP_HIDE_FROM_ABI
-    friend constexpr range_rvalue_reference_t<_View> iter_move(__filter_view_iterator const& __it)
+    friend constexpr range_rvalue_reference_t<_View> iter_move(__iterator const& __it)
       noexcept(noexcept(ranges::iter_move(__it.__current_)))
     {
       return ranges::iter_move(__it.__current_);
     }
 
     _LIBCPP_HIDE_FROM_ABI
-    friend constexpr void iter_swap(__filter_view_iterator const& __x, __filter_view_iterator const& __y)
+    friend constexpr void iter_swap(__iterator const& __x, __iterator const& __y)
       noexcept(noexcept(ranges::iter_swap(__x.__current_, __y.__current_)))
       requires indirectly_swappable<iterator_t<_View>>
     {
@@ -224,17 +213,15 @@ namespace ranges {
 
   template<input_range _View, indirect_unary_predicate<iterator_t<_View>> _Pred>
     requires view<_View> && is_object_v<_Pred>
-  class __filter_view_sentinel {
-    using __filter_view = filter_view<_View, _Pred>;
-
+  class filter_view<_View, _Pred>::__sentinel {
   public:
     sentinel_t<_View> __end_ = sentinel_t<_View>();
 
     _LIBCPP_HIDE_FROM_ABI
-    __filter_view_sentinel() = default;
+    __sentinel() = default;
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr explicit __filter_view_sentinel(__filter_view& __parent)
+    constexpr explicit __sentinel(filter_view& __parent)
       : __end_(ranges::end(__parent.__base_))
     { }
 
@@ -242,7 +229,7 @@ namespace ranges {
     constexpr sentinel_t<_View> base() const { return __end_; }
 
     _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-    operator==(__filter_view_iterator<_View, _Pred> const& __x, __filter_view_sentinel const& __y) {
+    operator==(__iterator const& __x, __sentinel const& __y) {
       return __x.__current_ == __y.__end_;
     }
   };
@@ -273,7 +260,7 @@ inline namespace __cpo {
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

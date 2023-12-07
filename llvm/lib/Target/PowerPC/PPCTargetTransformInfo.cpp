@@ -27,6 +27,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppctti"
 
+static cl::opt<bool> VecMaskCost("ppc-vec-mask-cost",
+cl::desc("add masking cost for i1 vectors"), cl::init(true), cl::Hidden);
+
 static cl::opt<bool> DisablePPCConstHoist("disable-ppc-constant-hoisting",
 cl::desc("disable constant hoisting on PPC"), cl::init(false), cl::Hidden);
 
@@ -339,29 +342,6 @@ InstructionCost PPCTTIImpl::getInstructionCost(const User *U,
   return BaseT::getInstructionCost(U, Operands, CostKind);
 }
 
-// Determining the address of a TLS variable results in a function call in
-// certain TLS models.
-static bool memAddrUsesCTR(const Value *MemAddr, const PPCTargetMachine &TM,
-                           SmallPtrSetImpl<const Value *> &Visited) {
-  // No need to traverse again if we already checked this operand.
-  if (!Visited.insert(MemAddr).second)
-    return false;
-  const auto *GV = dyn_cast<GlobalValue>(MemAddr);
-  if (!GV) {
-    // Recurse to check for constants that refer to TLS global variables.
-    if (const auto *CV = dyn_cast<Constant>(MemAddr))
-      for (const auto &CO : CV->operands())
-        if (memAddrUsesCTR(CO, TM, Visited))
-          return true;
-    return false;
-  }
-
-  if (!GV->isThreadLocal())
-    return false;
-  TLSModel::Model Model = TM.getTLSModel(GV);
-  return Model == TLSModel::GeneralDynamic || Model == TLSModel::LocalDynamic;
-}
-
 bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                           AssumptionCache &AC,
                                           TargetLibraryInfo *LibInfo,
@@ -382,6 +362,14 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
     if (Metrics.NumInsts <= (6 * SchedModel.getIssueWidth()))
       return false;
   }
+
+  // Check that there is no hardware loop related intrinsics in the loop.
+  for (auto *BB : L->getBlocks())
+    for (auto &I : *BB)
+      if (auto *Call = dyn_cast<IntrinsicInst>(&I))
+        if (Call->getIntrinsicID() == Intrinsic::set_loop_iterations ||
+            Call->getIntrinsicID() == Intrinsic::loop_decrement)
+          return false;
 
   SmallVector<BasicBlock*, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
@@ -404,25 +392,6 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
       if (( TrueIsExit && FalseWeight < TrueWeight) ||
           (!TrueIsExit && FalseWeight > TrueWeight))
         return false;
-    }
-  }
-
-  // If an exit block has a PHI that accesses a TLS variable as one of the
-  // incoming values from the loop, we cannot produce a CTR loop because the
-  // address for that value will be computed in the loop.
-  SmallVector<BasicBlock *, 4> ExitBlocks;
-  L->getExitBlocks(ExitBlocks);
-  SmallPtrSet<const Value *, 4> Visited;
-  for (auto &BB : ExitBlocks) {
-    for (auto &PHI : BB->phis()) {
-      for (int Idx = 0, EndIdx = PHI.getNumIncomingValues(); Idx < EndIdx;
-           Idx++) {
-        const BasicBlock *IncomingBB = PHI.getIncomingBlock(Idx);
-        const Value *IncomingValue = PHI.getIncomingValue(Idx);
-        if (L->contains(IncomingBB) &&
-            memAddrUsesCTR(IncomingValue, TM, Visited))
-          return false;
-      }
     }
   }
 
@@ -551,7 +520,7 @@ unsigned PPCTTIImpl::getPrefetchDistance() const {
   return 300;
 }
 
-unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
+unsigned PPCTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
   unsigned Directive = ST->getCPUDirective();
   // The 440 has no SIMD support, but floating-point instructions
   // have a 5-cycle latency, so unroll by 5x for latency hiding.
@@ -709,7 +678,9 @@ InstructionCost PPCTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 }
 
 InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                               unsigned Index) {
+                                               TTI::TargetCostKind CostKind,
+                                               unsigned Index, Value *Op0,
+                                               Value *Op1) {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -719,7 +690,8 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   if (!CostFactor.isValid())
     return InstructionCost::getMax();
 
-  InstructionCost Cost = BaseT::getVectorInstrCost(Opcode, Val, Index);
+  InstructionCost Cost =
+      BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
   Cost *= CostFactor;
 
   if (ST->hasVSX() && Val->getScalarType()->isDoubleTy()) {
@@ -731,6 +703,9 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     return Cost;
 
   } else if (Val->getScalarType()->isIntegerTy() && Index != -1U) {
+    unsigned EltSize = Val->getScalarSizeInBits();
+    // Computing on 1 bit values requires extra mask or compare operations.
+    unsigned MaskCost = VecMaskCost && EltSize == 1 ? 1 : 0;
     if (ST->hasP9Altivec()) {
       if (ISD == ISD::INSERT_VECTOR_ELT)
         // A move-to VSR and a permute/insert.  Assume vector operation cost
@@ -752,12 +727,15 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       // We need a vector extract (or mfvsrld).  Assume vector operation cost.
       // The cost of the load constant for a vector extract is disregarded
       // (invariant, easily schedulable).
-      return CostFactor;
+      return CostFactor + MaskCost;
 
-    } else if (ST->hasDirectMove())
+    } else if (ST->hasDirectMove()) {
       // Assume permute has standard cost.
       // Assume move-to/move-from VSR have 2x standard cost.
-      return 3;
+      if (ISD == ISD::INSERT_VECTOR_ELT)
+        return 3;
+      return 3 + MaskCost;
+    }
   }
 
   // Estimated cost of a load-hit-store delay.  This was obtained
@@ -861,7 +839,8 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (Src->isVectorTy() && Opcode == Instruction::Store)
     for (int i = 0, e = cast<FixedVectorType>(Src)->getNumElements(); i < e;
          ++i)
-      Cost += getVectorInstrCost(Instruction::ExtractElement, Src, i);
+      Cost += getVectorInstrCost(Instruction::ExtractElement, Src, CostKind, i,
+                                 nullptr, nullptr);
 
   return Cost;
 }
@@ -1109,17 +1088,5 @@ InstructionCost PPCTTIImpl::getVPMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 bool PPCTTIImpl::supportsTailCallFor(const CallBase *CB) const {
-  // Subtargets using PC-Relative addressing supported.
-  if (ST->isUsingPCRelativeCalls())
-    return true;
-
-  const Function *Callee = CB->getCalledFunction();
-  // Indirect calls and variadic argument functions not supported.
-  if (!Callee || Callee->isVarArg())
-    return false;
-
-  const Function *Caller = CB->getCaller();
-  // Support if we can share TOC base.
-  return ST->getTargetMachine().shouldAssumeDSOLocal(*Caller->getParent(),
-                                                     Callee);
+  return TLI->supportsTailCallFor(CB);
 }

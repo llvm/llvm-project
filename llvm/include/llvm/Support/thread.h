@@ -36,18 +36,13 @@ namespace llvm {
 /// LLVM thread following std::thread interface with added constructor to
 /// specify stack size.
 class thread {
-  template <typename FPtr, typename... Args, size_t... Indices>
-  static void Apply(std::tuple<FPtr, Args...> &Callee,
-                    std::index_sequence<Indices...>) {
-    std::move(std::get<0>(Callee))(std::move(std::get<Indices + 1>(Callee))...);
-  }
-
   template <typename CalleeTuple> static void GenericThreadProxy(void *Ptr) {
     std::unique_ptr<CalleeTuple> Callee(static_cast<CalleeTuple *>(Ptr));
-
-    // FIXME: use std::apply when C++17 is allowed.
-    std::make_index_sequence<std::tuple_size<CalleeTuple>() - 1> Indices{};
-    Apply(*Callee.get(), Indices);
+    std::apply(
+        [](auto &&F, auto &&...Args) {
+          std::forward<decltype(F)>(F)(std::forward<decltype(Args)>(Args)...);
+        },
+        *Callee);
   }
 
 public:

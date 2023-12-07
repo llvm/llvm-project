@@ -22,35 +22,38 @@ OpOperandVector::operator SmallVector<Value>() {
   return result;
 }
 
+namespace {
+size_t getNumTensorResults(Operation *op) {
+  size_t numTensorResults = 0;
+  for (auto t : op->getResultTypes()) {
+    if (isa<TensorType>(t)) {
+      ++numTensorResults;
+    }
+  }
+  return numTensorResults;
+}
+} // namespace
+
 LogicalResult detail::verifyDestinationStyleOpInterface(Operation *op) {
   DestinationStyleOpInterface dstStyleOp =
       cast<DestinationStyleOpInterface>(op);
 
-  SmallVector<OpOperand *> outputBufferOperands, outputTensorOperands;
+  SmallVector<OpOperand *> outputTensorOperands;
   for (OpOperand *operand : dstStyleOp.getDpsInitOperands()) {
     Type type = operand->get().getType();
-    if (type.isa<MemRefType>()) {
-      outputBufferOperands.push_back(operand);
-    } else if (type.isa<RankedTensorType>()) {
+    if (isa<RankedTensorType>(type)) {
       outputTensorOperands.push_back(operand);
-    } else {
+    } else if (!isa<MemRefType>(type)) {
       return op->emitOpError("expected that operand #")
              << operand->getOperandNumber()
              << " is a ranked tensor or a ranked memref";
     }
   }
 
-  // Expect at least one output operand.
-  int64_t numInputs = dstStyleOp.getNumDpsInputs();
-  int64_t numInits = dstStyleOp.getNumDpsInits();
-  if (numInits == 0)
-    return op->emitOpError("expected at least one output operand");
-  if (failed(OpTrait::impl::verifyNOperands(op, numInputs + numInits)))
-    return failure();
-  // Verify the number of results matches the number of output tensors.
-  if (op->getNumResults() != outputTensorOperands.size())
-    return op->emitOpError("expected the number of results (")
-           << op->getNumResults()
+  // Verify the number of tensor results matches the number of output tensors.
+  if (getNumTensorResults(op) != outputTensorOperands.size())
+    return op->emitOpError("expected the number of tensor results (")
+           << getNumTensorResults(op)
            << ") to be equal to the number of output tensors ("
            << outputTensorOperands.size() << ")";
 

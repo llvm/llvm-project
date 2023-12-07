@@ -18,10 +18,7 @@ include(VersionFromVCS)
 # Handle strange terminals
 set(ENV{TERM} "dumb")
 
-function(append_info name path)
-  if(path)
-    get_source_info("${path}" revision repository)
-  endif()
+function(append_info name revision repository)
   if(revision)
     file(APPEND "${HEADER_FILE}.tmp"
       "#define ${name}_REVISION \"${revision}\"\n")
@@ -39,10 +36,17 @@ function(append_info name path)
 endfunction()
 
 foreach(name IN LISTS NAMES)
-  if(NOT DEFINED ${name}_SOURCE_DIR)
+  if(${name}_VC_REPOSITORY AND ${name}_VC_REVISION)
+    set(revision ${${name}_VC_REVISION})
+    set(repository ${${name}_VC_REPOSITORY})
+  elseif(DEFINED ${name}_SOURCE_DIR)
+    if (${name}_SOURCE_DIR)
+      get_source_info("${${name}_SOURCE_DIR}" revision repository)
+    endif()
+  else()
     message(FATAL_ERROR "${name}_SOURCE_DIR is not defined")
   endif()
-  append_info(${name} "${${name}_SOURCE_DIR}")
+  append_info(${name} "${revision}" "${repository}")
 endforeach()
 
 # Copy the file only if it has changed.

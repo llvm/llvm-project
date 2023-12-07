@@ -1,4 +1,6 @@
 function(collect_object_file_deps target result)
+  # NOTE: This function does add entrypoint targets to |result|.
+  # It is expected that the caller adds them separately.
   set(all_deps "")
   get_target_property(target_type ${target} "TARGET_TYPE")
   if(NOT target_type)
@@ -12,6 +14,7 @@ function(collect_object_file_deps target result)
       collect_object_file_deps(${dep} dep_targets)
       list(APPEND all_deps ${dep_targets})
     endforeach(dep)
+    list(REMOVE_DUPLICATES all_deps)
     set(${result} ${all_deps} PARENT_SCOPE)
     return()
   endif()
@@ -27,12 +30,12 @@ function(collect_object_file_deps target result)
       endif()
       set(entrypoint_target ${aliasee})
     endif()
-    list(APPEND all_deps ${entrypoint_target})
     get_target_property(deps ${target} "DEPS")
     foreach(dep IN LISTS deps)
       collect_object_file_deps(${dep} dep_targets)
       list(APPEND all_deps ${dep_targets})
     endforeach(dep)
+    list(REMOVE_DUPLICATES all_deps)
     set(${result} ${all_deps} PARENT_SCOPE)
     return()
   endif()
@@ -72,12 +75,29 @@ function(add_entrypoint_library target_name)
   set(all_deps "")
   foreach(dep IN LISTS fq_deps_list)
     get_target_property(dep_type ${dep} "TARGET_TYPE")
-    if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE})))
+    if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR
+            (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE}) OR
+            (${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})))
       message(FATAL_ERROR "Dependency '${dep}' of 'add_entrypoint_collection' is "
                           "not an 'add_entrypoint_object' or 'add_entrypoint_external' target.")
     endif()
     collect_object_file_deps(${dep} recursive_deps)
     list(APPEND all_deps ${recursive_deps})
+    # Add the entrypoint object target explicitly as collect_object_file_deps
+    # only collects object files from non-entrypoint targets.
+    if(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
+      set(entrypoint_target ${dep})
+      get_target_property(is_alias ${entrypoint_target} "IS_ALIAS")
+      if(is_alias)
+        get_target_property(aliasee ${entrypoint_target} "DEPS")
+        if(NOT aliasee)
+          message(FATAL_ERROR
+                  "Entrypoint alias ${entrypoint_target} does not have an aliasee.")
+        endif()
+        set(entrypoint_target ${aliasee})
+      endif()
+    endif()
+    list(APPEND all_deps ${entrypoint_target})
   endforeach(dep)
   list(REMOVE_DUPLICATES all_deps)
   set(objects "")
@@ -90,7 +110,7 @@ function(add_entrypoint_library target_name)
     STATIC
     ${objects}
   )
-  set_target_properties(${target_name}  PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  set_target_properties(${target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
 endfunction(add_entrypoint_library)
 
 # Rule to build a shared library of redirector objects.
@@ -117,7 +137,7 @@ function(add_redirector_library target_name)
     SHARED
     ${obj_files}
   )
-  set_target_properties(${target_name}  PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  set_target_properties(${target_name}  PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
   target_link_libraries(${target_name}  -nostdlib -lc -lm)
   set_target_properties(${target_name}  PROPERTIES LINKER_LANGUAGE "C")
 endfunction(add_redirector_library)

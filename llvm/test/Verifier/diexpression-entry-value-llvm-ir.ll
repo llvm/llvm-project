@@ -1,14 +1,18 @@
 ; RUN: llvm-as -disable-output <%s 2>&1| FileCheck %s
 
-; The DW_OP_LLVM_entry_value operation can only be used in MIR.
-
-; CHECK: Entry values are only allowed in MIR
+; CHECK-NOT: llvm.dbg.value
+; CHECK: Entry values are only allowed in MIR unless they target a swiftasync Argument
 ; CHECK: call void @llvm.dbg.value(metadata i32 %param, metadata !{{.*}}, metadata !DIExpression(DW_OP_LLVM_entry_value, 1))
+; CHECK-NOT: llvm.dbg.value
+; CHECK-NOT: Entry values are only allowed
 ; CHECK: warning: ignoring invalid debug info
 
-define void @foo(i32 %param) !dbg !4 {
+define void @foo(i32 %param, ptr swiftasync %ok_param) !dbg !4 {
 entry:
   call void @llvm.dbg.value(metadata i32 %param, metadata !8, metadata !DIExpression(DW_OP_LLVM_entry_value, 1)), !dbg !9
+  call void @llvm.dbg.value(metadata ptr %ok_param, metadata !8, metadata !DIExpression(DW_OP_LLVM_entry_value, 1)), !dbg !9
+  call void @llvm.dbg.value(metadata ptr poison, metadata !8, metadata !DIExpression(DW_OP_LLVM_entry_value, 1)), !dbg !9
+  call void @llvm.dbg.value(metadata ptr undef, metadata !8, metadata !DIExpression(DW_OP_LLVM_entry_value, 1)), !dbg !9
   ret void
 }
 

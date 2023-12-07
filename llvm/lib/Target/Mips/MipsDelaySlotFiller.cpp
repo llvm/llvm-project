@@ -321,8 +321,7 @@ static void insertDelayFiller(Iter Filler, const BB2BrMap &BrMap) {
 
 /// This function adds registers Filler defines to MBB's live-in register list.
 static void addLiveInRegs(Iter Filler, MachineBasicBlock &MBB) {
-  for (unsigned I = 0, E = Filler->getNumOperands(); I != E; ++I) {
-    const MachineOperand &MO = Filler->getOperand(I);
+  for (const MachineOperand &MO : Filler->operands()) {
     unsigned R;
 
     if (!MO.isReg() || !MO.isDef() || !(R = MO.getReg()))

@@ -28,3 +28,9 @@
 #define H5C(X) H5B(X)
 5: H5C(H5A())
 // CHECK: 5: ab
+
+namespace GH60268 {
+#define H6(X, ...) __VA_OPT__(a ## X) ## b
+6: H6(, 1);
+// CHECK: 6: ab
+}

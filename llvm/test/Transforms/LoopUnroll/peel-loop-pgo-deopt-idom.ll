@@ -7,7 +7,7 @@
 ; CHECK: Loop Unroll: F[basic]
 ; CHECK: PEELING loop %for.body with iteration count 2!
 
-define i32 @basic(i32* %p, i32 %k, i1 %c1, i1 %c2) #0 !prof !3 {
+define i32 @basic(ptr %p, i32 %k, i1 %c1, i1 %c2) #0 !prof !3 {
 entry:
   %cmp3 = icmp slt i32 0, %k
   br i1 %cmp3, label %for.body.lr.ph, label %for.end
@@ -17,9 +17,9 @@ for.body.lr.ph:                                   ; preds = %entry
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %i.05 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %latch ]
-  %p.addr.04 = phi i32* [ %p, %for.body.lr.ph ], [ %incdec.ptr, %latch ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %p.addr.04, i32 1
-  store i32 %i.05, i32* %p.addr.04, align 4
+  %p.addr.04 = phi ptr [ %p, %for.body.lr.ph ], [ %incdec.ptr, %latch ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %p.addr.04, i32 1
+  store i32 %i.05, ptr %p.addr.04, align 4
   %inc = add nsw i32 %i.05, 1
   %cmp = icmp slt i32 %inc, %k
   br i1 %c1, label %continue, label %to_side_exit

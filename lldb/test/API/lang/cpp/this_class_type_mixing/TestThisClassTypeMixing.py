@@ -13,20 +13,22 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestCase(TestBase):
 
+class TestCase(TestBase):
     @no_debug_info_test
     def test(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break in member function",
-                                          lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break in member function", lldb.SBFileSpec("main.cpp")
+        )
 
         # Evaluate an expression in a member function. Store the type of the
         # 'this' pointer in a persistent variable.
         self.expect_expr("A $p = *this; $p", result_type="A")
 
         breakpoint = self.target().BreakpointCreateBySourceRegex(
-            "// break in main", lldb.SBFileSpec("main.cpp"))
+            "// break in main", lldb.SBFileSpec("main.cpp")
+        )
         self.assertNotEqual(breakpoint.GetNumResolvedLocations(), 0)
         threads = lldbutil.continue_to_breakpoint(self.process(), breakpoint)
         self.assertEqual(len(threads), 1)

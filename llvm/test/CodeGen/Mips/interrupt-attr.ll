@@ -34,7 +34,7 @@ define void @isr_sw0() #0 {
 ; CHECK: sw      $26, [[R3:[0-9]+]]($sp)
 ; CHECK: mfhi    $26
 ; CHECK: sw      $26, [[R4:[0-9]+]]($sp)
-  call void bitcast (void (...)* @write to void ()*)()
+  call void @write()
 ; CHECK: lw      $26, [[R4:[0-9]+]]($sp)
 ; CHECK: mthi    $26
 ; CHECK: lw      $26, [[R3:[0-9]+]]($sp)

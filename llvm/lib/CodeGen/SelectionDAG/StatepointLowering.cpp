@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -42,7 +43,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cassert>
@@ -258,8 +258,7 @@ static bool willLowerDirectly(SDValue Incoming) {
   if (Incoming.getValueType().getSizeInBits() > 64)
     return false;
 
-  return (isa<ConstantSDNode>(Incoming) || isa<ConstantFPSDNode>(Incoming) ||
-          Incoming.isUndef());
+  return isIntOrFPConstant(Incoming) || Incoming.isUndef();
 }
 
 /// Try to find existing copies of the incoming values in stack slots used for
@@ -490,7 +489,7 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
     Ops.push_back(std::get<0>(Res));
     if (auto *MMO = std::get<2>(Res))
       MemRefs.push_back(MMO);
-    Chain = std::get<1>(Res);;
+    Chain = std::get<1>(Res);
     Builder.DAG.setRoot(Chain);
   }
 
@@ -524,35 +523,9 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
                         SelectionDAGBuilder &Builder) {
   // Lower the deopt and gc arguments for this statepoint.  Layout will be:
   // deopt argument length, deopt arguments.., gc arguments...
-#ifndef NDEBUG
-  if (auto *GFI = Builder.GFI) {
-    // Check that each of the gc pointer and bases we've gotten out of the
-    // safepoint is something the strategy thinks might be a pointer (or vector
-    // of pointers) into the GC heap.  This is basically just here to help catch
-    // errors during statepoint insertion. TODO: This should actually be in the
-    // Verifier, but we can't get to the GCStrategy from there (yet).
-    GCStrategy &S = GFI->getStrategy();
-    for (const Value *V : SI.Bases) {
-      auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
-      if (Opt) {
-        assert(*Opt && "non gc managed base pointer found in statepoint");
-      }
-    }
-    for (const Value *V : SI.Ptrs) {
-      auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
-      if (Opt) {
-        assert(*Opt && "non gc managed derived pointer found in statepoint");
-      }
-    }
-    assert(SI.Bases.size() == SI.Ptrs.size() && "Pointer without base!");
-  } else {
-    assert(SI.Bases.empty() && "No gc specified, so cannot relocate pointers!");
-    assert(SI.Ptrs.empty() && "No gc specified, so cannot relocate pointers!");
-  }
-#endif
 
   // Figure out what lowering strategy we're going to use for each part
-  // Note: Is is conservatively correct to lower both "live-in" and "live-out"
+  // Note: It is conservatively correct to lower both "live-in" and "live-out"
   // as "live-through". A "live-through" variable is one which is "live-in",
   // "live-out", and live throughout the lifetime of the call (i.e. we can find
   // it from any PC within the transitive callee of the statepoint).  In
@@ -738,9 +711,12 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   NumOfStatepoints++;
   // Clear state
   StatepointLowering.startNewStatepoint(*this);
-  assert(SI.Bases.size() == SI.Ptrs.size());
+  assert(SI.Bases.size() == SI.Ptrs.size() && "Pointer without base!");
+  assert((GFI || SI.Bases.empty()) &&
+         "No gc specified, so cannot relocate pointers!");
 
-  LLVM_DEBUG(dbgs() << "Lowering statepoint " << *SI.StatepointInstr << "\n");
+  LLVM_DEBUG(if (SI.StatepointInstr) dbgs()
+             << "Lowering statepoint " << *SI.StatepointInstr << "\n");
 #ifndef NDEBUG
   for (const auto *Reloc : SI.GCRelocates)
     if (Reloc->getParent() == SI.StatepointInstr->getParent())
@@ -1181,6 +1157,7 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
 
   // NB! The GC arguments are deliberately left empty.
 
+  LLVM_DEBUG(dbgs() << "Lowering call with deopt bundle " << *Call << "\n");
   if (SDValue ReturnVal = LowerAsSTATEPOINT(SI)) {
     ReturnVal = lowerRangeToAssertZExt(DAG, *Call, ReturnVal);
     setValue(Call, ReturnVal);
@@ -1234,10 +1211,6 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 
   if (cast<GCStatepointInst>(Statepoint)->getParent() == Relocate.getParent())
     StatepointLowering.relocCallVisited(Relocate);
-
-  auto *Ty = Relocate.getType()->getScalarType();
-  if (auto IsManaged = GFI->getStrategy().isGCManagedPointer(Ty))
-    assert(*IsManaged && "Non gc managed pointer relocated!");
 #endif
 
   const Value *DerivedPtr = Relocate.getDerivedPtr();
@@ -1278,7 +1251,7 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 
     // All the reloads are independent and are reading memory only modified by
     // statepoints (i.e. no other aliasing stores); informing SelectionDAG of
-    // this this let's CSE kick in for free and allows reordering of
+    // this lets CSE kick in for free and allows reordering of
     // instructions if possible.  The lowering for statepoint sets the root,
     // so this is ordering all reloads with the either
     // a) the statepoint node itself, or

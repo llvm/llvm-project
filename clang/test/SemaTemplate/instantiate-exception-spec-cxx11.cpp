@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -triple %itanium_abi_triple -std=c++11 -ftemplate-depth 16 -fcxx-exceptions -fexceptions %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple %itanium_abi_triple -std=c++11 -ftemplate-depth=16 -fcxx-exceptions -fexceptions %s
 
 // DR1330: an exception specification for a function template is only
 // instantiated when it is needed.
@@ -160,7 +160,7 @@ namespace Variadic {
     consume([]() noexcept(sizeof(T) == 4) {} ...);
   }
   template<bool ...B> void j() {
-    consume([](void (*p)() noexcept(B)) {
+    consume([](void (*p)() noexcept(B)) { // expected-note {{substituting into a lambda}}
       void (*q)() noexcept = p; // expected-error {{not superset of source}}
     } ...);
   }

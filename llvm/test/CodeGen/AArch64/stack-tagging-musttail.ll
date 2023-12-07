@@ -4,22 +4,22 @@
 ; RUN: opt -S -aarch64-stack-tagging -stack-tagging-use-stack-safety=0 %s -o - | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-arm-unknown-eabi"
+target triple = "aarch64"
 
 define dso_local noundef i32 @_Z3bari(i32 noundef %0) sanitize_memtag {
   %2 = alloca i32, align 4
-  store i32 %0, i32* %2, align 4
-  %3 = load i32, i32* %2, align 4
+  store i32 %0, ptr %2, align 4
+  %3 = load i32, ptr %2, align 4
   ret i32 %3
 }
 
 define dso_local noundef i32 @_Z3fooi(i32 noundef %0) sanitize_memtag {
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
-  store i32 %0, i32* %2, align 4
-  store volatile i32 5, i32* %3, align 4
-  %4 = load i32, i32* %2, align 4
-  %5 = load volatile i32, i32* %3, align 4
+  store i32 %0, ptr %2, align 4
+  store volatile i32 5, ptr %3, align 4
+  %4 = load i32, ptr %2, align 4
+  %5 = load volatile i32, ptr %3, align 4
   %6 = add nsw i32 %4, %5
   ; CHECK: call void @llvm.aarch64.settag
   ; CHECK: musttail call

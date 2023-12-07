@@ -32,45 +32,6 @@ namespace __memprof {
     __memprof_record_access_range(offset, size);                               \
   } while (0)
 
-// memcpy is called during __memprof_init() from the internals of printf(...).
-// We do not treat memcpy with to==from as a bug.
-// See http://llvm.org/bugs/show_bug.cgi?id=11763.
-#define MEMPROF_MEMCPY_IMPL(to, from, size)                                    \
-  do {                                                                         \
-    if (UNLIKELY(!memprof_inited))                                             \
-      return internal_memcpy(to, from, size);                                  \
-    if (memprof_init_is_running) {                                             \
-      return REAL(memcpy)(to, from, size);                                     \
-    }                                                                          \
-    ENSURE_MEMPROF_INITED();                                                   \
-    MEMPROF_READ_RANGE(from, size);                                            \
-    MEMPROF_WRITE_RANGE(to, size);                                             \
-    return REAL(memcpy)(to, from, size);                                       \
-  } while (0)
-
-// memset is called inside Printf.
-#define MEMPROF_MEMSET_IMPL(block, c, size)                                    \
-  do {                                                                         \
-    if (UNLIKELY(!memprof_inited))                                             \
-      return internal_memset(block, c, size);                                  \
-    if (memprof_init_is_running) {                                             \
-      return REAL(memset)(block, c, size);                                     \
-    }                                                                          \
-    ENSURE_MEMPROF_INITED();                                                   \
-    MEMPROF_WRITE_RANGE(block, size);                                          \
-    return REAL(memset)(block, c, size);                                       \
-  } while (0)
-
-#define MEMPROF_MEMMOVE_IMPL(to, from, size)                                   \
-  do {                                                                         \
-    if (UNLIKELY(!memprof_inited))                                             \
-      return internal_memmove(to, from, size);                                 \
-    ENSURE_MEMPROF_INITED();                                                   \
-    MEMPROF_READ_RANGE(from, size);                                            \
-    MEMPROF_WRITE_RANGE(to, size);                                             \
-    return internal_memmove(to, from, size);                                   \
-  } while (0)
-
 #define MEMPROF_READ_RANGE(offset, size) ACCESS_MEMORY_RANGE(offset, size)
 #define MEMPROF_WRITE_RANGE(offset, size) ACCESS_MEMORY_RANGE(offset, size)
 

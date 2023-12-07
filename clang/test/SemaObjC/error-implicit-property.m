@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -Wno-objc-root-class -verify %s
-// rdar://11273060
 
 @interface I
 - (void) setP : (int)arg;

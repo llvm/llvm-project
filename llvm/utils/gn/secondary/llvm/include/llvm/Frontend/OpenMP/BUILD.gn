@@ -5,11 +5,13 @@ tablegen("OMPh") {
   args = [ "-gen-directive-decl" ]
   output_name = "OMP.h.inc"
   td_file = "OMP.td"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 
 tablegen("OMP") {
   visibility = [ ":public_tablegen" ]
   args = [ "-gen-directive-impl" ]
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 
 # Groups all tablegen() calls that create .inc files that are included in

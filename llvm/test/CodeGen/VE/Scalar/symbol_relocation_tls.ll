@@ -12,7 +12,7 @@
 @y = internal thread_local global i32 0, align 4
 
 ; Function Attrs: norecurse nounwind readnone
-define nonnull i32* @get_global() {
+define nonnull ptr @get_global() {
 ; GENDYN:         lea %s0, (-24)
 ; GENDYN-NEXT:    R_VE_TLS_GD_LO32 x
 ; GENDYN-NEXT:    and %s0, %s0, (32)0
@@ -47,11 +47,11 @@ define nonnull i32* @get_global() {
 ; GENDYNPIC-NEXT:    bsic %s10, (, %s12)
 ; GENDYNPIC-NEXT:    or %s11, 0, %s9
 entry:
-  ret i32* @x
+  ret ptr @x
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define nonnull i32* @get_local() {
+define nonnull ptr @get_local() {
 ; GENDYN:         lea %s0, (-24)
 ; GENDYN-NEXT:    R_VE_TLS_GD_LO32 y
 ; GENDYN-NEXT:    and %s0, %s0, (32)0
@@ -86,7 +86,7 @@ define nonnull i32* @get_local() {
 ; GENDYNPIC-NEXT:    bsic %s10, (, %s12)
 ; GENDYNPIC-NEXT:    or %s11, 0, %s9
 entry:
-  ret i32* @y
+  ret ptr @y
 }
 
 ; Function Attrs: norecurse nounwind
@@ -129,7 +129,7 @@ define void @set_global(i32 %v) {
 ; GENDYNPIC-NEXT:    ld %s18, 288(, %s11)
 ; GENDYNPIC-NEXT:    or %s11, 0, %s9
 entry:
-  store i32 %v, i32* @x, align 4
+  store i32 %v, ptr @x, align 4
   ret void
 }
 
@@ -173,6 +173,6 @@ define void @set_local(i32 %v) {
 ; GENDYNPIC-NEXT:    ld %s18, 288(, %s11)
 ; GENDYNPIC-NEXT:    or %s11, 0, %s9
 entry:
-  store i32 %v, i32* @y, align 4
+  store i32 %v, ptr @y, align 4
   ret void
 }

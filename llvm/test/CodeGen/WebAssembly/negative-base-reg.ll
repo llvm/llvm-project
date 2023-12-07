@@ -20,8 +20,8 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK: i32.const $push{{[0-9]+}}=, args+128
 ; CHECK: i32.add   $push[[L1:[0-9]+]]=,
 ; CHECK: i32.store 0($pop[[L1]])
-  %arrayidx = getelementptr inbounds [32 x i32], [32 x i32]* @args, i32 0, i32 %i.04
-  store i32 1, i32* %arrayidx, align 4, !tbaa !1
+  %arrayidx = getelementptr inbounds [32 x i32], ptr @args, i32 0, i32 %i.04
+  store i32 1, ptr %arrayidx, align 4, !tbaa !1
   %inc = add nuw nsw i32 %i.04, 1
   %exitcond = icmp eq i32 %inc, 32
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !5

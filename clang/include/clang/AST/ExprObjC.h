@@ -27,7 +27,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
@@ -40,6 +39,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 namespace clang {
 
@@ -271,7 +271,7 @@ struct ObjCDictionaryElement {
 
   /// The number of elements this pack expansion will expand to, if
   /// this is a pack expansion and is known.
-  Optional<unsigned> NumExpansions;
+  std::optional<unsigned> NumExpansions;
 
   /// Determines whether this dictionary element is a pack expansion.
   bool isPackExpansion() const { return EllipsisLoc.isValid(); }
@@ -1415,11 +1415,10 @@ public:
   SourceLocation getSelectorLoc(unsigned Index) const {
     assert(Index < getNumSelectorLocs() && "Index out of range!");
     if (hasStandardSelLocs())
-      return getStandardSelectorLoc(Index, getSelector(),
-                                   getSelLocsKind() == SelLoc_StandardWithSpace,
-                               llvm::makeArrayRef(const_cast<Expr**>(getArgs()),
-                                                  getNumArgs()),
-                                   RBracLoc);
+      return getStandardSelectorLoc(
+          Index, getSelector(), getSelLocsKind() == SelLoc_StandardWithSpace,
+          llvm::ArrayRef(const_cast<Expr **>(getArgs()), getNumArgs()),
+          RBracLoc);
     return getStoredSelLocs()[Index];
   }
 

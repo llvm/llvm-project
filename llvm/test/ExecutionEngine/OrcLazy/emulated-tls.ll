@@ -1,5 +1,8 @@
-; RUN: not lli -no-process-syms -emulated-tls -jit-kind=orc-lazy %s 2>&1 \
-; RUN:   | FileCheck %s
+; LoongArch does not support emulated tls.
+; UNSUPPORTED: target=loongarch{{.*}}
+
+; RUN: not lli -no-process-syms -lljit-platform=Inactive -emulated-tls \
+; RUN:   -jit-kind=orc-lazy %s 2>&1 | FileCheck %s
 ;
 ; Test that emulated-tls does not generate any unexpected errors.
 ;

@@ -32,6 +32,10 @@ __isl_give isl_multi_val *isl_union_set_min_multi_union_pw_aff(
 	__isl_keep isl_union_set *uset, __isl_keep isl_multi_union_pw_aff *obj);
 
 __isl_export
+__isl_give isl_val *isl_pw_aff_min_val(__isl_take isl_pw_aff *pa);
+__isl_export
+__isl_give isl_val *isl_pw_aff_max_val(__isl_take isl_pw_aff *pa);
+__isl_export
 __isl_give isl_multi_val *isl_pw_multi_aff_min_multi_val(
 	__isl_take isl_pw_multi_aff *pma);
 __isl_export

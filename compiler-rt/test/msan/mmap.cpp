@@ -18,6 +18,10 @@ bool AddrIsApp(void *p) {
   return (addr >= 0x000000000000ULL && addr < 0x010000000000ULL) ||
          (addr >= 0x510000000000ULL && addr < 0x600000000000ULL) ||
          (addr >= 0x700000000000ULL && addr < 0x800000000000ULL);
+#elif defined(__loongarch_lp64)
+  return (addr >= 0x000000000000ULL && addr < 0x010000000000ULL) ||
+         (addr >= 0x510000000000ULL && addr < 0x600000000000ULL) ||
+         (addr >= 0x700000000000ULL && addr < 0x800000000000ULL);
 #elif defined(__mips64)
   return (addr >= 0x0000000000ULL && addr <= 0x0200000000ULL) ||
          (addr >= 0xa200000000ULL && addr <= 0xc000000000ULL) ||

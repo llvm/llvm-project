@@ -107,7 +107,7 @@ define amdgpu_kernel void @s_trunc_srl_i64_16_to_i16(i64 %x) {
   %shift = lshr i64 %x, 16
   %trunc = trunc i64 %shift to i16
   %add = or i16 %trunc, 4
-  store i16 %add, i16 addrspace(1)* undef
+  store i16 %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -155,7 +155,7 @@ define i32 @trunc_srl_i64_25_to_i26(i64 %x) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v0, 0xa000000, v0
-; GCN-NEXT:    v_alignbit_b32 v0, 0, v0, 25
+; GCN-NEXT:    v_lshrrev_b32_e32 v0, 25, v0
 ; GCN-NEXT:    v_add_u32_e32 v0, 55, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %value.knownbits2 = and i64 %x, 167772160 ; 0xA000000

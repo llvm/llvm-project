@@ -32,7 +32,7 @@ define void @foo1() {
 ; CHECK-NEXT:    br label [[L2_HEADER]]
 ; CHECK:       L3_body:
 ; CHECK-NEXT:    [[Y1_LCSSA:%.*]] = phi i64 [ [[Y1]], [[L3_HEADER]] ]
-; CHECK-NEXT:    store i64 [[Y1_LCSSA]], i64* undef, align 8
+; CHECK-NEXT:    store i64 [[Y1_LCSSA]], ptr undef, align 8
 ; CHECK-NEXT:    br i1 false, label [[L3_LATCH:%.*]], label [[L1_LATCH:%.*]]
 ; CHECK:       L3_latch:
 ; CHECK-NEXT:    ret void
@@ -60,7 +60,7 @@ L2_latch:
   br label %L2_header
 
 L3_body:
-  store i64 %y1, i64* undef
+  store i64 %y1, ptr undef
   br i1 false, label %L3_latch, label %L1_latch
 
 L3_latch:
@@ -132,29 +132,29 @@ define void @foo3() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[L1_HEADER:%.*]]
 ; CHECK:       L1_header:
-; CHECK-NEXT:    [[A:%.*]] = phi i8* [ [[B:%.*]], [[L1_LATCH:%.*]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi ptr [ [[B:%.*]], [[L1_LATCH:%.*]] ], [ null, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br i1 undef, label [[L2_HEADER_PREHEADER:%.*]], label [[L1_LATCH]]
 ; CHECK:       L2_header.preheader:
 ; CHECK-NEXT:    br label [[L2_HEADER:%.*]]
 ; CHECK:       L2_header:
 ; CHECK-NEXT:    br i1 false, label [[L2_LATCH:%.*]], label [[L1_LATCH_LOOPEXIT:%.*]]
 ; CHECK:       L2_latch:
-; CHECK-NEXT:    [[A_LCSSA:%.*]] = phi i8* [ [[A]], [[L2_HEADER]] ]
+; CHECK-NEXT:    [[A_LCSSA:%.*]] = phi ptr [ [[A]], [[L2_HEADER]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       L1_latch.loopexit:
 ; CHECK-NEXT:    br label [[L1_LATCH]]
 ; CHECK:       L1_latch:
-; CHECK-NEXT:    [[B]] = phi i8* [ undef, [[L1_HEADER]] ], [ null, [[L1_LATCH_LOOPEXIT]] ]
+; CHECK-NEXT:    [[B]] = phi ptr [ undef, [[L1_HEADER]] ], [ null, [[L1_LATCH_LOOPEXIT]] ]
 ; CHECK-NEXT:    br label [[L1_HEADER]]
 ; CHECK:       Exit:
-; CHECK-NEXT:    [[A_LCSSA2:%.*]] = phi i8* [ [[A_LCSSA]], [[L2_LATCH]] ]
+; CHECK-NEXT:    [[A_LCSSA2:%.*]] = phi ptr [ [[A_LCSSA]], [[L2_LATCH]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   br label %L1_header
 
 L1_header:
-  %a = phi i8* [ %b, %L1_latch ], [ null, %entry ]
+  %a = phi ptr [ %b, %L1_latch ], [ null, %entry ]
   br i1 undef, label %L2_header, label %L1_latch
 
 L2_header:
@@ -164,15 +164,15 @@ L2_latch:
   br i1 true, label %L2_exit, label %L2_header
 
 L1_latch:
-  %b = phi i8* [ undef, %L1_header ], [ null, %L2_header ]
+  %b = phi ptr [ undef, %L1_header ], [ null, %L2_header ]
   br label %L1_header
 
 L2_exit:
-  %a_lcssa1 = phi i8* [ %a, %L2_latch ]
+  %a_lcssa1 = phi ptr [ %a, %L2_latch ]
   br label %Exit
 
 Exit:
-  %a_lcssa2 = phi i8* [ %a_lcssa1, %L2_exit ]
+  %a_lcssa2 = phi ptr [ %a_lcssa1, %L2_exit ]
   ret void
 }
 
@@ -238,9 +238,9 @@ define void @foo5() {
 ; CHECK-NEXT:    br label [[INNER2_INDIRECT_EXIT:%.*]]
 ; CHECK:       inner2_indirect_exit:
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ [[B:%.*]], [[INNER2_LATCH:%.*]] ], [ undef, [[INNER1]] ]
-; CHECK-NEXT:    indirectbr i8* undef, [label [[INNER2_LATCH]], label [[INNER3:%.*]], label %outer_latch]
+; CHECK-NEXT:    indirectbr ptr undef, [label [[INNER2_LATCH]], label [[INNER3:%.*]], label %outer_latch]
 ; CHECK:       inner2_latch:
-; CHECK-NEXT:    [[B]] = load i32, i32* undef, align 8
+; CHECK-NEXT:    [[B]] = load i32, ptr undef, align 8
 ; CHECK-NEXT:    br label [[INNER2_INDIRECT_EXIT]]
 ; CHECK:       inner3:
 ; CHECK-NEXT:    [[A_LCSSA:%.*]] = phi i32 [ [[A_LCSSA]], [[INNER3]] ], [ [[A]], [[INNER2_INDIRECT_EXIT]] ]
@@ -266,10 +266,10 @@ inner2_indirect_exit.preheader:
 
 inner2_indirect_exit:
   %a = phi i32 [ %b, %inner2_latch ], [ undef, %inner2_indirect_exit.preheader ]
-  indirectbr i8* undef, [label %inner2_latch, label %inner3, label %outer_latch]
+  indirectbr ptr undef, [label %inner2_latch, label %inner3, label %outer_latch]
 
 inner2_latch:
-  %b = load i32, i32* undef, align 8
+  %b = load i32, ptr undef, align 8
   br label %inner2_indirect_exit
 
 inner3:

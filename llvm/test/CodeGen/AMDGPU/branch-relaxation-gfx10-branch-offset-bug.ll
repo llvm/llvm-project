@@ -23,7 +23,7 @@
 
 ; GCN: [[ENDBB]]:
 ; GCN: global_store_{{dword|b32}}
-define amdgpu_kernel void @long_forward_scc_branch_3f_offset_bug(i32 addrspace(1)* %arg, i32 %cnd0) #0 {
+define amdgpu_kernel void @long_forward_scc_branch_3f_offset_bug(ptr addrspace(1) %arg, i32 %cnd0) #0 {
 bb0:
   %cmp0 = icmp eq i32 %cnd0, 0
   br i1 %cmp0, label %bb2, label %bb3
@@ -47,7 +47,7 @@ bb2:
   br i1 %cmp1, label %bb2, label %bb3   ; +4 (gfx1030), +8 with workaround (gfx1010)
 
 bb3:
-  store volatile i32 %cnd0, i32 addrspace(1)* %arg
+  store volatile i32 %cnd0, ptr addrspace(1) %arg
   ret void
 }
 
@@ -72,7 +72,7 @@ bb3:
 
 ; GCN: [[ENDBB]]:
 ; GCN: global_store_{{dword|b32}}
-define void @long_forward_exec_branch_3f_offset_bug(i32 addrspace(1)* %arg, i32 %cnd0) #0 {
+define void @long_forward_exec_branch_3f_offset_bug(ptr addrspace(1) %arg, i32 %cnd0) #0 {
 bb0:
   %cmp0 = icmp eq i32 %cnd0, 0
   br i1 %cmp0, label %bb2, label %bb3
@@ -96,7 +96,7 @@ bb2:
   br i1 %cmp1, label %bb2, label %bb3   ; +4 (gfx1030), +8 with workaround (gfx1010)
 
 bb3:
-  store volatile i32 %cnd0, i32 addrspace(1)* %arg
+  store volatile i32 %cnd0, ptr addrspace(1) %arg
   ret void
 }
 

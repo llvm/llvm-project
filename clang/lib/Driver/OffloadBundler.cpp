@@ -23,19 +23,17 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -43,6 +41,8 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -72,12 +72,22 @@ OffloadTargetInfo::OffloadTargetInfo(const StringRef Target,
   if (clang::StringToCudaArch(TripleOrGPU.second) != clang::CudaArch::UNKNOWN) {
     auto KindTriple = TripleOrGPU.first.split('-');
     this->OffloadKind = KindTriple.first;
-    this->Triple = llvm::Triple(KindTriple.second);
+
+    // Enforce optional env field to standardize bundles
+    llvm::Triple t = llvm::Triple(KindTriple.second);
+    this->Triple = llvm::Triple(t.getArchName(), t.getVendorName(),
+                                t.getOSName(), t.getEnvironmentName());
+
     this->TargetID = Target.substr(Target.find(TripleOrGPU.second));
   } else {
     auto KindTriple = TargetFeatures.first.split('-');
     this->OffloadKind = KindTriple.first;
-    this->Triple = llvm::Triple(KindTriple.second);
+
+    // Enforce optional env field to standardize bundles
+    llvm::Triple t = llvm::Triple(KindTriple.second);
+    this->Triple = llvm::Triple(t.getArchName(), t.getVendorName(),
+                                t.getOSName(), t.getEnvironmentName());
+
     this->TargetID = "";
   }
 }
@@ -96,11 +106,11 @@ bool OffloadTargetInfo::isOffloadKindCompatible(
   if (OffloadKind == TargetOffloadKind)
     return true;
   if (BundlerConfig.HipOpenmpCompatible) {
-    bool HIPCompatibleWithOpenMP = OffloadKind.startswith_insensitive("hip") &&
+    bool HIPCompatibleWithOpenMP = OffloadKind.starts_with_insensitive("hip") &&
                                    TargetOffloadKind == "openmp";
     bool OpenMPCompatibleWithHIP =
         OffloadKind == "openmp" &&
-        TargetOffloadKind.startswith_insensitive("hip");
+        TargetOffloadKind.starts_with_insensitive("hip");
     return HIPCompatibleWithOpenMP || OpenMPCompatibleWithHIP;
   }
   return false;
@@ -184,6 +194,7 @@ bool isCodeObjectCompatible(const OffloadTargetInfo &CodeObjectInfo,
   return true;
 }
 
+namespace {
 /// Generic file handler interface.
 class FileHandler {
 public:
@@ -296,24 +307,12 @@ protected:
 
 /// Read 8-byte integers from a buffer in little-endian format.
 static uint64_t Read8byteIntegerFromBuffer(StringRef Buffer, size_t pos) {
-  uint64_t Res = 0;
-  const char *Data = Buffer.data();
-
-  for (unsigned i = 0; i < 8; ++i) {
-    Res <<= 8;
-    uint64_t Char = (uint64_t)Data[pos + 7 - i];
-    Res |= 0xffu & Char;
-  }
-  return Res;
+  return llvm::support::endian::read64le(Buffer.data() + pos);
 }
 
 /// Write 8-byte integers to a buffer in little-endian format.
 static void Write8byteIntegerToBuffer(raw_fd_ostream &OS, uint64_t Val) {
-  for (unsigned i = 0; i < 8; ++i) {
-    char Char = (char)(Val & 0xffu);
-    OS.write(&Char, 1);
-    Val >>= 8;
-  }
+  llvm::support::endian::write(OS, Val, llvm::support::little);
 }
 
 class BinaryFileHandler final : public FileHandler {
@@ -406,8 +405,7 @@ public:
       if (!Offset || Offset + Size > FC.size())
         return Error::success();
 
-      assert(BundlesInfo.find(Triple) == BundlesInfo.end() &&
-             "Triple is duplicated??");
+      assert(!BundlesInfo.contains(Triple) && "Triple is duplicated??");
       BundlesInfo[Triple] = BinaryBundleInfo(Size, Offset);
     }
     // Set the iterator to where we will start to read.
@@ -491,8 +489,6 @@ public:
   }
 };
 
-namespace {
-
 // This class implements a list of temporary files that are removed upon
 // object destruction.
 class TempFileHandlerRAII {
@@ -523,8 +519,6 @@ public:
 private:
   std::forward_list<SmallString<128u>> Files;
 };
-
-} // end anonymous namespace
 
 /// Handler for object files. The bundles are organized by sections with a
 /// designated name.
@@ -827,6 +821,7 @@ public:
     return Error::success();
   }
 };
+} // namespace
 
 /// Return an appropriate object file handler. We use the specific object
 /// handler if we know how to deal with that format, otherwise we use a default
@@ -860,6 +855,8 @@ CreateFileHandler(MemoryBuffer &FirstInput,
   if (FilesType == "ii")
     return std::make_unique<TextFileHandler>(/*Comment=*/"//");
   if (FilesType == "cui")
+    return std::make_unique<TextFileHandler>(/*Comment=*/"//");
+  if (FilesType == "hipi")
     return std::make_unique<TextFileHandler>(/*Comment=*/"//");
   // TODO: `.d` should be eventually removed once `-M` and its variants are
   // handled properly in offload compilation.
@@ -1072,7 +1069,8 @@ Error OffloadBundler::UnbundleFiles() {
 
   // If we found elements, we emit an error if none of those were for the host
   // in case host bundle name was provided in command line.
-  if (!FoundHostBundle && BundlerConfig.HostInputIndex != ~0u)
+  if (!(FoundHostBundle || BundlerConfig.HostInputIndex == ~0u ||
+        BundlerConfig.AllowMissingBundles))
     return createStringError(inconvertibleErrorCode(),
                              "Can't find bundle for the host target");
 
@@ -1233,8 +1231,7 @@ Error OffloadBundler::UnbundleArchive() {
 
           // For inserting <CompatibleTarget, list<CodeObject>> entry in
           // OutputArchivesMap.
-          if (OutputArchivesMap.find(CompatibleTarget) ==
-              OutputArchivesMap.end()) {
+          if (!OutputArchivesMap.contains(CompatibleTarget)) {
 
             std::vector<NewArchiveMember> ArchiveMembers;
             ArchiveMembers.push_back(NewArchiveMember(MemBufRef));
@@ -1268,8 +1265,9 @@ Error OffloadBundler::UnbundleArchive() {
         OutputArchivesMap.find(Target);
     if (CurArchiveMembers != OutputArchivesMap.end()) {
       if (Error WriteErr = writeArchive(FileName, CurArchiveMembers->getValue(),
-                                        true, getDefaultArchiveKindForHost(),
-                                        true, false, nullptr))
+                                        SymtabWritingMode::NormalSymtab,
+                                        getDefaultArchiveKindForHost(), true,
+                                        false, nullptr))
         return WriteErr;
     } else if (!BundlerConfig.AllowMissingBundles) {
       std::string ErrMsg =
@@ -1283,9 +1281,9 @@ Error OffloadBundler::UnbundleArchive() {
              // the missing input file.
       std::vector<llvm::NewArchiveMember> EmptyArchive;
       EmptyArchive.clear();
-      if (Error WriteErr = writeArchive(FileName, EmptyArchive, true,
-                                        getDefaultArchiveKindForHost(), true,
-                                        false, nullptr))
+      if (Error WriteErr = writeArchive(
+              FileName, EmptyArchive, SymtabWritingMode::NormalSymtab,
+              getDefaultArchiveKindForHost(), true, false, nullptr))
         return WriteErr;
     }
   }

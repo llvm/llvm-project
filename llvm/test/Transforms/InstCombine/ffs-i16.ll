@@ -18,8 +18,8 @@ define void @fold_ffs(i16 %x) {
 ; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i16 [[CTTZ]], 1
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[DOTNOT]], i16 0, i16 [[TMP1]]
-; CHECK-NEXT:    call void @sink(i16 [[TMP2]])
+; CHECK-NEXT:    [[NX:%.*]] = select i1 [[DOTNOT]], i16 0, i16 [[TMP1]]
+; CHECK-NEXT:    call void @sink(i16 [[NX]])
 ; CHECK-NEXT:    ret void
 ;
   %n0 = call i16 @ffs(i16 0)

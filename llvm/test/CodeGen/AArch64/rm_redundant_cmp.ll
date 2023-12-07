@@ -23,13 +23,13 @@ define void @test_i16_2cmp_signed_1() {
 ; CHECK-NEXT:  .LBB0_2: // %if.end8
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i16, i16* getelementptr inbounds (%struct.s_signed_i16, %struct.s_signed_i16* @cost_s_i8_i16, i64 0, i32 1), align 2
-  %1 = load i16, i16* getelementptr inbounds (%struct.s_signed_i16, %struct.s_signed_i16* @cost_s_i8_i16, i64 0, i32 2), align 2
+  %0 = load i16, ptr getelementptr inbounds (%struct.s_signed_i16, ptr @cost_s_i8_i16, i64 0, i32 1), align 2
+  %1 = load i16, ptr getelementptr inbounds (%struct.s_signed_i16, ptr @cost_s_i8_i16, i64 0, i32 2), align 2
   %cmp = icmp sgt i16 %0, %1
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i16 %0, i16* getelementptr inbounds (%struct.s_signed_i16, %struct.s_signed_i16* @cost_s_i8_i16, i64 0, i32 0), align 2
+  store i16 %0, ptr @cost_s_i8_i16, align 2
   br label %if.end8
 
 if.else:                                          ; preds = %entry
@@ -37,7 +37,7 @@ if.else:                                          ; preds = %entry
   br i1 %cmp5, label %if.then7, label %if.end8
 
 if.then7:                                         ; preds = %if.else
-  store i16 %0, i16* getelementptr inbounds (%struct.s_signed_i16, %struct.s_signed_i16* @cost_s_i8_i16, i64 0, i32 0), align 2
+  store i16 %0, ptr @cost_s_i8_i16, align 2
   br label %if.end8
 
 if.end8:                                          ; preds = %if.else, %if.then7, %if.then
@@ -49,25 +49,25 @@ define void @test_i16_2cmp_signed_2() {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:cost_s_i8_i16
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:cost_s_i8_i16]
-; CHECK-NEXT:    ldrh w10, [x8, #2]
-; CHECK-NEXT:    ldrh w11, [x8, #4]
-; CHECK-NEXT:    sxth w9, w10
-; CHECK-NEXT:    cmp w9, w11, sxth
-; CHECK-NEXT:    csel w9, w10, w11, gt
-; CHECK-NEXT:    cmp w10, w11
-; CHECK-NEXT:    b.eq .LBB1_2
-; CHECK-NEXT:  // %bb.1: // %if.end8.sink.split
+; CHECK-NEXT:    ldrsh w9, [x8, #2]
+; CHECK-NEXT:    ldrsh w10, [x8, #4]
+; CHECK-NEXT:    cmp w9, w10
+; CHECK-NEXT:    b.gt .LBB1_2
+; CHECK-NEXT:  // %bb.1: // %if.else
+; CHECK-NEXT:    mov w9, w10
+; CHECK-NEXT:    b.ge .LBB1_3
+; CHECK-NEXT:  .LBB1_2: // %if.end8.sink.split
 ; CHECK-NEXT:    strh w9, [x8]
-; CHECK-NEXT:  .LBB1_2: // %if.end8
+; CHECK-NEXT:  .LBB1_3: // %if.end8
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i16, i16* getelementptr inbounds (%struct.s_signed_i16, %struct.s_signed_i16* @cost_s_i8_i16, i64 0, i32 1), align 2
-  %1 = load i16, i16* getelementptr inbounds (%struct.s_signed_i16, %struct.s_signed_i16* @cost_s_i8_i16, i64 0, i32 2), align 2
+  %0 = load i16, ptr getelementptr inbounds (%struct.s_signed_i16, ptr @cost_s_i8_i16, i64 0, i32 1), align 2
+  %1 = load i16, ptr getelementptr inbounds (%struct.s_signed_i16, ptr @cost_s_i8_i16, i64 0, i32 2), align 2
   %cmp = icmp sgt i16 %0, %1
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i16 %0, i16* getelementptr inbounds (%struct.s_signed_i16, %struct.s_signed_i16* @cost_s_i8_i16, i64 0, i32 0), align 2
+  store i16 %0, ptr @cost_s_i8_i16, align 2
   br label %if.end8
 
 if.else:                                          ; preds = %entry
@@ -75,7 +75,7 @@ if.else:                                          ; preds = %entry
   br i1 %cmp5, label %if.then7, label %if.end8
 
 if.then7:                                         ; preds = %if.else
-  store i16 %1, i16* getelementptr inbounds (%struct.s_signed_i16, %struct.s_signed_i16* @cost_s_i8_i16, i64 0, i32 0), align 2
+  store i16 %1, ptr @cost_s_i8_i16, align 2
   br label %if.end8
 
 if.end8:                                          ; preds = %if.else, %if.then7, %if.then
@@ -96,13 +96,13 @@ define void @test_i16_2cmp_unsigned_1() {
 ; CHECK-NEXT:  .LBB2_2: // %if.end8
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i16, i16* getelementptr inbounds (%struct.s_unsigned_i16, %struct.s_unsigned_i16* @cost_u_i16, i64 0, i32 1), align 2
-  %1 = load i16, i16* getelementptr inbounds (%struct.s_unsigned_i16, %struct.s_unsigned_i16* @cost_u_i16, i64 0, i32 2), align 2
+  %0 = load i16, ptr getelementptr inbounds (%struct.s_unsigned_i16, ptr @cost_u_i16, i64 0, i32 1), align 2
+  %1 = load i16, ptr getelementptr inbounds (%struct.s_unsigned_i16, ptr @cost_u_i16, i64 0, i32 2), align 2
   %cmp = icmp ugt i16 %0, %1
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i16 %0, i16* getelementptr inbounds (%struct.s_unsigned_i16, %struct.s_unsigned_i16* @cost_u_i16, i64 0, i32 0), align 2
+  store i16 %0, ptr @cost_u_i16, align 2
   br label %if.end8
 
 if.else:                                          ; preds = %entry
@@ -110,7 +110,7 @@ if.else:                                          ; preds = %entry
   br i1 %cmp5, label %if.then7, label %if.end8
 
 if.then7:                                         ; preds = %if.else
-  store i16 %0, i16* getelementptr inbounds (%struct.s_unsigned_i16, %struct.s_unsigned_i16* @cost_u_i16, i64 0, i32 0), align 2
+  store i16 %0, ptr @cost_u_i16, align 2
   br label %if.end8
 
 if.end8:                                          ; preds = %if.else, %if.then7, %if.then
@@ -125,20 +125,22 @@ define void @test_i16_2cmp_unsigned_2() {
 ; CHECK-NEXT:    ldrh w9, [x8, #2]
 ; CHECK-NEXT:    ldrh w10, [x8, #4]
 ; CHECK-NEXT:    cmp w9, w10
-; CHECK-NEXT:    csel w9, w9, w10, hi
-; CHECK-NEXT:    b.eq .LBB3_2
-; CHECK-NEXT:  // %bb.1: // %if.end8.sink.split
+; CHECK-NEXT:    b.hi .LBB3_2
+; CHECK-NEXT:  // %bb.1: // %if.else
+; CHECK-NEXT:    mov w9, w10
+; CHECK-NEXT:    b.hs .LBB3_3
+; CHECK-NEXT:  .LBB3_2: // %if.end8.sink.split
 ; CHECK-NEXT:    strh w9, [x8]
-; CHECK-NEXT:  .LBB3_2: // %if.end8
+; CHECK-NEXT:  .LBB3_3: // %if.end8
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i16, i16* getelementptr inbounds (%struct.s_unsigned_i16, %struct.s_unsigned_i16* @cost_u_i16, i64 0, i32 1), align 2
-  %1 = load i16, i16* getelementptr inbounds (%struct.s_unsigned_i16, %struct.s_unsigned_i16* @cost_u_i16, i64 0, i32 2), align 2
+  %0 = load i16, ptr getelementptr inbounds (%struct.s_unsigned_i16, ptr @cost_u_i16, i64 0, i32 1), align 2
+  %1 = load i16, ptr getelementptr inbounds (%struct.s_unsigned_i16, ptr @cost_u_i16, i64 0, i32 2), align 2
   %cmp = icmp ugt i16 %0, %1
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i16 %0, i16* getelementptr inbounds (%struct.s_unsigned_i16, %struct.s_unsigned_i16* @cost_u_i16, i64 0, i32 0), align 2
+  store i16 %0, ptr @cost_u_i16, align 2
   br label %if.end8
 
 if.else:                                          ; preds = %entry
@@ -146,7 +148,7 @@ if.else:                                          ; preds = %entry
   br i1 %cmp5, label %if.then7, label %if.end8
 
 if.then7:                                         ; preds = %if.else
-  store i16 %1, i16* getelementptr inbounds (%struct.s_unsigned_i16, %struct.s_unsigned_i16* @cost_u_i16, i64 0, i32 0), align 2
+  store i16 %1, ptr @cost_u_i16, align 2
   br label %if.end8
 
 if.end8:                                          ; preds = %if.else, %if.then7, %if.then
@@ -176,13 +178,13 @@ define void @test_i8_2cmp_signed_1() {
 ; CHECK-NEXT:  .LBB4_2: // %if.end8
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i8, i8* getelementptr inbounds (%struct.s_signed_i8, %struct.s_signed_i8* @cost_s, i64 0, i32 1), align 2
-  %1 = load i8, i8* getelementptr inbounds (%struct.s_signed_i8, %struct.s_signed_i8* @cost_s, i64 0, i32 2), align 2
+  %0 = load i8, ptr getelementptr inbounds (%struct.s_signed_i8, ptr @cost_s, i64 0, i32 1), align 2
+  %1 = load i8, ptr getelementptr inbounds (%struct.s_signed_i8, ptr @cost_s, i64 0, i32 2), align 2
   %cmp = icmp sgt i8 %0, %1
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i8 %0, i8* getelementptr inbounds (%struct.s_signed_i8, %struct.s_signed_i8* @cost_s, i64 0, i32 0), align 2
+  store i8 %0, ptr @cost_s, align 2
   br label %if.end8
 
 if.else:                                          ; preds = %entry
@@ -190,7 +192,7 @@ if.else:                                          ; preds = %entry
   br i1 %cmp5, label %if.then7, label %if.end8
 
 if.then7:                                         ; preds = %if.else
-  store i8 %0, i8* getelementptr inbounds (%struct.s_signed_i8, %struct.s_signed_i8* @cost_s, i64 0, i32 0), align 2
+  store i8 %0, ptr @cost_s, align 2
   br label %if.end8
 
 if.end8:                                          ; preds = %if.else, %if.then7, %if.then
@@ -202,25 +204,25 @@ define void @test_i8_2cmp_signed_2() {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:cost_s
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:cost_s]
-; CHECK-NEXT:    ldrb w10, [x8, #1]
-; CHECK-NEXT:    ldrb w11, [x8, #2]
-; CHECK-NEXT:    sxtb w9, w10
-; CHECK-NEXT:    cmp w9, w11, sxtb
-; CHECK-NEXT:    csel w9, w10, w11, gt
-; CHECK-NEXT:    cmp w10, w11
-; CHECK-NEXT:    b.eq .LBB5_2
-; CHECK-NEXT:  // %bb.1: // %if.end8.sink.split
+; CHECK-NEXT:    ldrsb w9, [x8, #1]
+; CHECK-NEXT:    ldrsb w10, [x8, #2]
+; CHECK-NEXT:    cmp w9, w10
+; CHECK-NEXT:    b.gt .LBB5_2
+; CHECK-NEXT:  // %bb.1: // %if.else
+; CHECK-NEXT:    mov w9, w10
+; CHECK-NEXT:    b.ge .LBB5_3
+; CHECK-NEXT:  .LBB5_2: // %if.end8.sink.split
 ; CHECK-NEXT:    strb w9, [x8]
-; CHECK-NEXT:  .LBB5_2: // %if.end8
+; CHECK-NEXT:  .LBB5_3: // %if.end8
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i8, i8* getelementptr inbounds (%struct.s_signed_i8, %struct.s_signed_i8* @cost_s, i64 0, i32 1), align 2
-  %1 = load i8, i8* getelementptr inbounds (%struct.s_signed_i8, %struct.s_signed_i8* @cost_s, i64 0, i32 2), align 2
+  %0 = load i8, ptr getelementptr inbounds (%struct.s_signed_i8, ptr @cost_s, i64 0, i32 1), align 2
+  %1 = load i8, ptr getelementptr inbounds (%struct.s_signed_i8, ptr @cost_s, i64 0, i32 2), align 2
   %cmp = icmp sgt i8 %0, %1
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i8 %0, i8* getelementptr inbounds (%struct.s_signed_i8, %struct.s_signed_i8* @cost_s, i64 0, i32 0), align 2
+  store i8 %0, ptr @cost_s, align 2
   br label %if.end8
 
 if.else:                                          ; preds = %entry
@@ -228,7 +230,7 @@ if.else:                                          ; preds = %entry
   br i1 %cmp5, label %if.then7, label %if.end8
 
 if.then7:                                         ; preds = %if.else
-  store i8 %1, i8* getelementptr inbounds (%struct.s_signed_i8, %struct.s_signed_i8* @cost_s, i64 0, i32 0), align 2
+  store i8 %1, ptr @cost_s, align 2
   br label %if.end8
 
 if.end8:                                          ; preds = %if.else, %if.then7, %if.then
@@ -249,13 +251,13 @@ define void @test_i8_2cmp_unsigned_1() {
 ; CHECK-NEXT:  .LBB6_2: // %if.end8
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i8, i8* getelementptr inbounds (%struct.s_unsigned_i8, %struct.s_unsigned_i8* @cost_u_i8, i64 0, i32 1), align 2
-  %1 = load i8, i8* getelementptr inbounds (%struct.s_unsigned_i8, %struct.s_unsigned_i8* @cost_u_i8, i64 0, i32 2), align 2
+  %0 = load i8, ptr getelementptr inbounds (%struct.s_unsigned_i8, ptr @cost_u_i8, i64 0, i32 1), align 2
+  %1 = load i8, ptr getelementptr inbounds (%struct.s_unsigned_i8, ptr @cost_u_i8, i64 0, i32 2), align 2
   %cmp = icmp ugt i8 %0, %1
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i8 %0, i8* getelementptr inbounds (%struct.s_unsigned_i8, %struct.s_unsigned_i8* @cost_u_i8, i64 0, i32 0), align 2
+  store i8 %0, ptr @cost_u_i8, align 2
   br label %if.end8
 
 if.else:                                          ; preds = %entry
@@ -263,7 +265,7 @@ if.else:                                          ; preds = %entry
   br i1 %cmp5, label %if.then7, label %if.end8
 
 if.then7:                                         ; preds = %if.else
-  store i8 %0, i8* getelementptr inbounds (%struct.s_unsigned_i8, %struct.s_unsigned_i8* @cost_u_i8, i64 0, i32 0), align 2
+  store i8 %0, ptr @cost_u_i8, align 2
   br label %if.end8
 
 if.end8:                                          ; preds = %if.else, %if.then7, %if.then
@@ -278,20 +280,22 @@ define void @test_i8_2cmp_unsigned_2() {
 ; CHECK-NEXT:    ldrb w9, [x8, #1]
 ; CHECK-NEXT:    ldrb w10, [x8, #2]
 ; CHECK-NEXT:    cmp w9, w10
-; CHECK-NEXT:    csel w9, w9, w10, hi
-; CHECK-NEXT:    b.eq .LBB7_2
-; CHECK-NEXT:  // %bb.1: // %if.end8.sink.split
+; CHECK-NEXT:    b.hi .LBB7_2
+; CHECK-NEXT:  // %bb.1: // %if.else
+; CHECK-NEXT:    mov w9, w10
+; CHECK-NEXT:    b.hs .LBB7_3
+; CHECK-NEXT:  .LBB7_2: // %if.end8.sink.split
 ; CHECK-NEXT:    strb w9, [x8]
-; CHECK-NEXT:  .LBB7_2: // %if.end8
+; CHECK-NEXT:  .LBB7_3: // %if.end8
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i8, i8* getelementptr inbounds (%struct.s_unsigned_i8, %struct.s_unsigned_i8* @cost_u_i8, i64 0, i32 1), align 2
-  %1 = load i8, i8* getelementptr inbounds (%struct.s_unsigned_i8, %struct.s_unsigned_i8* @cost_u_i8, i64 0, i32 2), align 2
+  %0 = load i8, ptr getelementptr inbounds (%struct.s_unsigned_i8, ptr @cost_u_i8, i64 0, i32 1), align 2
+  %1 = load i8, ptr getelementptr inbounds (%struct.s_unsigned_i8, ptr @cost_u_i8, i64 0, i32 2), align 2
   %cmp = icmp ugt i8 %0, %1
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i8 %0, i8* getelementptr inbounds (%struct.s_unsigned_i8, %struct.s_unsigned_i8* @cost_u_i8, i64 0, i32 0), align 2
+  store i8 %0, ptr @cost_u_i8, align 2
   br label %if.end8
 
 if.else:                                          ; preds = %entry
@@ -299,7 +303,7 @@ if.else:                                          ; preds = %entry
   br i1 %cmp5, label %if.then7, label %if.end8
 
 if.then7:                                         ; preds = %if.else
-  store i8 %1, i8* getelementptr inbounds (%struct.s_unsigned_i8, %struct.s_unsigned_i8* @cost_u_i8, i64 0, i32 0), align 2
+  store i8 %1, ptr @cost_u_i8, align 2
   br label %if.end8
 
 if.end8:                                          ; preds = %if.else, %if.then7, %if.then

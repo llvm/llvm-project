@@ -6590,11 +6590,11 @@ static unsigned getPerfectShuffleCost(llvm::ArrayRef<int> M) {
   assert(M.size() == 4 && "Expected a 4 entry perfect shuffle");
 
   // Special case zero-cost nop copies, from either LHS or RHS.
-  if (llvm::all_of(llvm::enumerate(M), [](auto &E) {
+  if (llvm::all_of(llvm::enumerate(M), [](const auto &E) {
         return E.value() < 0 || E.value() == (int)E.index();
       }))
     return 0;
-  if (llvm::all_of(llvm::enumerate(M), [](auto &E) {
+  if (llvm::all_of(llvm::enumerate(M), [](const auto &E) {
         return E.value() < 0 || E.value() == (int)E.index() + 4;
       }))
     return 0;

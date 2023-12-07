@@ -28,7 +28,6 @@ class COFFLinkerContext;
 class Defined;
 class DefinedAbsolute;
 class DefinedRegular;
-class DefinedRelative;
 class LazyArchive;
 class SectionChunk;
 class Symbol;
@@ -47,7 +46,7 @@ class Symbol;
 // There is one add* function per symbol type.
 class SymbolTable {
 public:
-  SymbolTable(COFFLinkerContext &ctx) : ctx(ctx) {}
+  SymbolTable(COFFLinkerContext &c) : ctx(c) {}
 
   void addFile(InputFile *file);
 

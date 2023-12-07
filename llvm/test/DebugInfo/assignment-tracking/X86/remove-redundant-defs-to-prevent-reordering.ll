@@ -1,9 +1,7 @@
 ; RUN: llc %s -stop-before finalize-isel -o - \
-; RUN:    -experimental-assignment-tracking \
 ; RUN:    -experimental-debug-variable-locations=false \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE --implicit-check-not="DBG_VALUE \$noreg"
 ; RUN: llc %s -stop-before finalize-isel -o - \
-; RUN:    -experimental-assignment-tracking \
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF --implicit-check-not="DBG_VALUE \$noreg"
 
@@ -72,7 +70,7 @@ declare !dbg !32 dso_local void @_Z3extv() local_unnamed_addr #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #2
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!7, !8, !9}
+!llvm.module.flags = !{!7, !8, !9, !1000}
 !llvm.ident = !{!10}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -106,3 +104,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !32 = !DISubprogram(name: "ext", linkageName: "_Z3extv", scope: !3, file: !3, line: 2, type: !33, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !4)
 !33 = !DISubroutineType(types: !34)
 !34 = !{null}
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

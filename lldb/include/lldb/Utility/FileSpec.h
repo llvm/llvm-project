@@ -10,6 +10,7 @@
 #define LLDB_UTILITY_FILESPEC_H
 
 #include <functional>
+#include <optional>
 #include <string>
 
 #include "lldb/Utility/ConstString.h"
@@ -194,7 +195,7 @@ public:
   /// The guess will be correct if the input path was a valid absolute path on
   /// the system which produced it. On other paths the result of this function
   /// is unreliable (e.g. "c:\foo.txt" is a valid relative posix path).
-  static llvm::Optional<Style> GuessPathStyle(llvm::StringRef absolute_path);
+  static std::optional<Style> GuessPathStyle(llvm::StringRef absolute_path);
 
   /// Case sensitivity of path.
   ///
@@ -252,7 +253,7 @@ public:
   /// (files with a ".c", ".cpp", ".m", ".mm" (many more) extension).
   ///
   /// \return
-  ///     \b true if the filespec represents an implementation source
+  ///     \b true if the FileSpec represents an implementation source
   ///     file, \b false otherwise.
   bool IsSourceImplementationFile() const;
 
@@ -326,10 +327,10 @@ public:
   /// Returns a ConstString that represents the extension of the filename for
   /// this FileSpec object. If this object does not represent a file, or the
   /// filename has no extension, ConstString(nullptr) is returned. The dot
-  /// ('.') character is not returned as part of the extension
+  /// ('.') character is the first character in the returned string.
   ///
-  /// \return Returns the extension of the file as a ConstString object.
-  ConstString GetFileNameExtension() const;
+  /// \return Returns the extension of the file as a StringRef.
+  llvm::StringRef GetFileNameExtension() const;
 
   /// Return the filename without the extension part
   ///
@@ -407,7 +408,17 @@ public:
   ///     A boolean value indicating whether the path was updated.
   bool RemoveLastPathComponent();
 
-  ConstString GetLastPathComponent() const;
+  /// Gets the components of the FileSpec's path.
+  /// For example, given the path:
+  ///   /System/Library/PrivateFrameworks/UIFoundation.framework/UIFoundation
+  ///
+  /// This function returns:
+  ///   {"System", "Library", "PrivateFrameworks", "UIFoundation.framework",
+  ///   "UIFoundation"}
+  /// \return
+  ///   A std::vector of llvm::StringRefs for each path component.
+  ///   The lifetime of the StringRefs is tied to the lifetime of the FileSpec.
+  std::vector<llvm::StringRef> GetComponents() const;
 
 protected:
   // Convenience method for setting the file without changing the style.

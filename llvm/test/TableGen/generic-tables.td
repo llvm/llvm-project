@@ -56,25 +56,29 @@ def ATable : GenericTable {
 
 // CHECK-LABEL: GET_BTable_IMPL
 // CHECK: constexpr BTypeName BTable[] = {
-// CHECK:   { "BAlice", 0xAC,  },
-// CHECK:   { "BBob", 0x14, Bob == 13 },
-// CHECK:   { "BCharlie", 0x80, Charlie == 42 },
-// CHECK:   { "BEve", 0x4C, Eve == 108 },
+// CHECK:   { "BAlice", 0xAC, false,  },
+// CHECK:   { "BBob", 0x14, false, Bob == 13 },
+// CHECK:   { "BCharlie", 0x80, true, Charlie == 42 },
+// CHECK:   { "BEve", 0x4C, true, Eve == 108 },
 // CHECK:  };
 // CHECK: const BTypeName *lookupBTableByName(StringRef Name) {
 // CHECK:   return &BTable[Idx->_index];
 // CHECK: }
+// CHECK: const BTypeName *lookupBTableByNameAndFlag(StringRef Name, bool Flag) {
+// CHECK:   return &BTable[Idx->_index];
+// CHECK: }
 
-class BEntry<bits<16> enc, code test = [{}]> {
+class BEntry<bits<16> enc, bit flag = 0, code test = [{}]> {
   string Name = NAME;
   bits<16> Encoding = enc;
+  bit Flag = flag;
   code Test = test;
 }
 
 def BAlice   : BEntry<0xac>;
-def BBob     : BEntry<0x14, [{Bob == 13}]>;
-def BCharlie : BEntry<0x80, "Charlie == 42">;
-def BEve     : BEntry<0x4c, [{Eve == }] # 108>;
+def BBob     : BEntry<0x14, 0, [{Bob == 13}]>;
+def BCharlie : BEntry<0x80, 1, "Charlie == 42">;
+def BEve     : BEntry<0x4c, 1, [{Eve == }] # 108>;
 
 def BValues : GenericEnum {
   let FilterClass = "BEntry";
@@ -85,7 +89,7 @@ def BValues : GenericEnum {
 def BTable : GenericTable {
   let FilterClass = "BEntry";
   string CppTypeName = "BTypeName";
-  let Fields = ["Name", "Encoding", "Test"];
+  let Fields = ["Name", "Encoding", "Flag", "Test"];
   string TypeOf_Test = "code";
 }
 
@@ -94,6 +98,10 @@ def lookupBTableByName : SearchIndex {
   let Key = ["Name"];
 }
 
+def lookupBTableByNameAndFlag : SearchIndex {
+  let Table = BTable;
+  let Key = ["Name", "Flag"];
+}
 
 // CHECK-LABEL: GET_CTable_DECL
 // CHECK: const CEntry *lookupCEntryByEncoding(uint16_t Encoding);

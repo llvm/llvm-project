@@ -56,8 +56,8 @@
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <cctype>
 #include <cinttypes>
@@ -605,7 +605,7 @@ static bool DumpRegister(Stream &s, StackFrame *frame, RegisterKind reg_kind,
         if (reg_info) {
           RegisterValue reg_value;
           if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-            DumpRegisterValue(reg_value, &s, reg_info, false, false, format);
+            DumpRegisterValue(reg_value, s, *reg_info, false, false, format);
             return true;
           }
         }
@@ -618,11 +618,8 @@ static bool DumpRegister(Stream &s, StackFrame *frame, RegisterKind reg_kind,
 static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
                                              bool deref_pointer) {
   Log *log = GetLog(LLDBLog::DataFormatters);
-  const char *ptr_deref_format = "[%d]";
-  std::string ptr_deref_buffer(10, 0);
-  ::sprintf(&ptr_deref_buffer[0], ptr_deref_format, index);
-  LLDB_LOGF(log, "[ExpandIndexedExpression] name to deref: %s",
-            ptr_deref_buffer.c_str());
+  std::string name_to_deref = llvm::formatv("[{0}]", index);
+  LLDB_LOG(log, "[ExpandIndexedExpression] name to deref: {0}", name_to_deref);
   ValueObject::GetValueForExpressionPathOptions options;
   ValueObject::ExpressionPathEndResultType final_value_type;
   ValueObject::ExpressionPathScanEndReason reason_to_stop;
@@ -630,8 +627,7 @@ static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
       (deref_pointer ? ValueObject::eExpressionPathAftermathDereference
                      : ValueObject::eExpressionPathAftermathNothing);
   ValueObjectSP item = valobj->GetValueForExpressionPath(
-      ptr_deref_buffer.c_str(), &reason_to_stop, &final_value_type, options,
-      &what_next);
+      name_to_deref, &reason_to_stop, &final_value_type, options, &what_next);
   if (!item) {
     LLDB_LOGF(log,
               "[ExpandIndexedExpression] ERROR: why stopping = %d,"
@@ -989,7 +985,7 @@ static bool DumpRegister(Stream &s, StackFrame *frame, const char *reg_name,
       if (reg_info) {
         RegisterValue reg_value;
         if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-          DumpRegisterValue(reg_value, &s, reg_info, false, false, format);
+          DumpRegisterValue(reg_value, s, *reg_info, false, false, format);
           return true;
         }
       }
@@ -1012,7 +1008,7 @@ static bool FormatThreadExtendedInfoRecurse(
       const char *token_format = "0x%4.4" PRIx64;
       if (!entry.printf_format.empty())
         token_format = entry.printf_format.c_str();
-      s.Printf(token_format, value->GetAsInteger()->GetValue());
+      s.Printf(token_format, value->GetUnsignedIntegerValue());
       return true;
     } else if (value->GetType() == eStructuredDataTypeFloat) {
       s.Printf("%f", value->GetAsFloat()->GetValue());

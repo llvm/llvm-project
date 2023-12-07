@@ -25,32 +25,42 @@ def parse_args(command_line):
         action="append",
         type=int,
         default=[],
-        help="ignore the given signal number (if possible)")
+        help="ignore the given signal number (if possible)",
+    )
     parser.add_argument(
         "--launch-child-share-handles",
         action="store_true",
-        help=("launch a child inferior.py that shares stdout/stderr/stdio and "
-              "never returns"))
+        help=(
+            "launch a child inferior.py that shares stdout/stderr/stdio and "
+            "never returns"
+        ),
+    )
     parser.add_argument(
         "--never-return",
         action="store_true",
-        help="run in an infinite loop, never return")
+        help="run in an infinite loop, never return",
+    )
     parser.add_argument(
         "--return-code",
         "-r",
         type=int,
         default=0,
-        help="specify the return code for the inferior upon exit")
+        help="specify the return code for the inferior upon exit",
+    )
     parser.add_argument(
         "--sleep",
         "-s",
         metavar="SECONDS",
         dest="sleep_seconds",
         type=float,
-        help="sleep for SECONDS seconds before returning")
+        help="sleep for SECONDS seconds before returning",
+    )
     parser.add_argument(
-        "--verbose", "-v", action="store_true",
-        help="log verbose operation details to stdout")
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="log verbose operation details to stdout",
+    )
     return parser.parse_args(command_line)
 
 
@@ -139,6 +149,7 @@ def main(command_line):
     handle_never_return(options)
 
     return options.return_code
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

@@ -45,7 +45,7 @@ public:
   /// The ORC runtime requires access to a number of symbols in libc++, and
   /// requires access to symbols in libobjc, and libswiftCore to support
   /// Objective-C and Swift code. It is up to the caller to ensure that the
-  /// requried symbols can be referenced by code added to PlatformJD. The
+  /// required symbols can be referenced by code added to PlatformJD. The
   /// standard way to achieve this is to first attach dynamic library search
   /// generators for either the given process, or for the specific required
   /// libraries, to PlatformJD, then to create the platform instance:
@@ -79,6 +79,12 @@ public:
   /// setting up all aliases (including the required ones).
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
+         JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
+         std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
+
+  /// Construct using a path to the ORC runtime.
+  static Expected<std::unique_ptr<MachOPlatform>>
+  Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, const char *OrcRuntimePath,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
@@ -103,10 +109,16 @@ public:
   static ArrayRef<std::pair<const char *, const char *>>
   standardRuntimeUtilityAliases();
 
-  /// Returns true if the given section name is an initializer section.
-  static bool isInitializerSection(StringRef SegName, StringRef SectName);
-
 private:
+  // Data needed for bootstrap only.
+  struct BootstrapInfo {
+    std::mutex Mutex;
+    std::condition_variable CV;
+    size_t ActiveGraphs = 0;
+    shared::AllocActions DeferredAAs;
+    ExecutorAddr MachOHeaderAddr;
+  };
+
   // The MachOPlatformPlugin scans/modifies LinkGraphs to support MachO
   // platform features including initializers, exceptions, TLV, and language
   // runtime registration.
@@ -127,38 +139,58 @@ private:
       return Error::success();
     }
 
-    Error notifyRemovingResources(ResourceKey K) override {
+    Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
       return Error::success();
     }
 
-    void notifyTransferringResources(ResourceKey DstKey,
+    void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                      ResourceKey SrcKey) override {}
 
   private:
     using InitSymbolDepMap =
         DenseMap<MaterializationResponsibility *, JITLinkSymbolSet>;
 
+    struct UnwindSections {
+      SmallVector<ExecutorAddrRange> CodeRanges;
+      ExecutorAddrRange DwarfSection;
+      ExecutorAddrRange CompactUnwindSection;
+    };
+
+    struct ObjCImageInfo {
+      uint32_t Version = 0;
+      uint32_t Flags = 0;
+    };
+
+    Error bootstrapPipelineStart(jitlink::LinkGraph &G);
+    Error bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G);
+    Error bootstrapPipelineEnd(jitlink::LinkGraph &G);
+
     Error associateJITDylibHeaderSymbol(jitlink::LinkGraph &G,
                                         MaterializationResponsibility &MR);
 
-    Error preserveInitSections(jitlink::LinkGraph &G,
-                               MaterializationResponsibility &MR);
+    Error preserveImportantSections(jitlink::LinkGraph &G,
+                                    MaterializationResponsibility &MR);
 
     Error processObjCImageInfo(jitlink::LinkGraph &G,
                                MaterializationResponsibility &MR);
 
     Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
 
-    Error registerObjectPlatformSections(jitlink::LinkGraph &G, JITDylib &JD);
+    std::optional<UnwindSections> findUnwindSectionInfo(jitlink::LinkGraph &G);
 
-    Error registerEHSectionsPhase1(jitlink::LinkGraph &G);
+    Error registerObjectPlatformSections(jitlink::LinkGraph &G, JITDylib &JD,
+                                         bool InBootstrapPhase);
+
+    Error createObjCRuntimeObject(jitlink::LinkGraph &G);
+    Error populateObjCRuntimeObject(jitlink::LinkGraph &G,
+                                    MaterializationResponsibility &MR);
 
     std::mutex PluginMutex;
     MachOPlatform &MP;
 
     // FIXME: ObjCImageInfos and HeaderAddrs need to be cleared when
     // JITDylibs are removed.
-    DenseMap<JITDylib *, std::pair<uint32_t, uint32_t>> ObjCImageInfos;
+    DenseMap<JITDylib *, ObjCImageInfo> ObjCImageInfos;
     DenseMap<JITDylib *, ExecutorAddr> HeaderAddrs;
     InitSymbolDepMap InitSymbolDeps;
   };
@@ -179,7 +211,7 @@ private:
                 Error &Err);
 
   // Associate MachOPlatform JIT-side runtime support functions with handlers.
-  Error associateRuntimeSupportFunctions(JITDylib &PlatformJD);
+  Error associateRuntimeSupportFunctions();
 
   // Implements rt_pushInitializers by making repeat async lookups for
   // initializer symbols (each lookup may spawn more initializer symbols if
@@ -195,29 +227,43 @@ private:
   void rt_lookupSymbol(SendSymbolAddressFn SendResult, ExecutorAddr Handle,
                        StringRef SymbolName);
 
-  // Records the addresses of runtime symbols used by the platform.
-  Error bootstrapMachORuntime(JITDylib &PlatformJD);
-
   // Call the ORC runtime to create a pthread key.
   Expected<uint64_t> createPThreadKey();
 
-  enum PlatformState { BootstrapPhase1, BootstrapPhase2, Initialized };
-
   ExecutionSession &ES;
+  JITDylib &PlatformJD;
   ObjectLinkingLayer &ObjLinkingLayer;
 
-  SymbolStringPtr MachOHeaderStartSymbol;
-  std::atomic<PlatformState> State{BootstrapPhase1};
+  SymbolStringPtr MachOHeaderStartSymbol = ES.intern("___dso_handle");
 
-  ExecutorAddr orc_rt_macho_platform_bootstrap;
-  ExecutorAddr orc_rt_macho_platform_shutdown;
-  ExecutorAddr orc_rt_macho_register_ehframe_section;
-  ExecutorAddr orc_rt_macho_deregister_ehframe_section;
-  ExecutorAddr orc_rt_macho_register_jitdylib;
-  ExecutorAddr orc_rt_macho_deregister_jitdylib;
-  ExecutorAddr orc_rt_macho_register_object_platform_sections;
-  ExecutorAddr orc_rt_macho_deregister_object_platform_sections;
-  ExecutorAddr orc_rt_macho_create_pthread_key;
+  struct RuntimeFunction {
+    RuntimeFunction(SymbolStringPtr Name) : Name(std::move(Name)) {}
+    SymbolStringPtr Name;
+    ExecutorAddr Addr;
+  };
+
+  RuntimeFunction PlatformBootstrap{
+      ES.intern("___orc_rt_macho_platform_bootstrap")};
+  RuntimeFunction PlatformShutdown{
+      ES.intern("___orc_rt_macho_platform_shutdown")};
+  RuntimeFunction RegisterEHFrameSection{
+      ES.intern("___orc_rt_macho_register_ehframe_section")};
+  RuntimeFunction DeregisterEHFrameSection{
+      ES.intern("___orc_rt_macho_deregister_ehframe_section")};
+  RuntimeFunction RegisterJITDylib{
+      ES.intern("___orc_rt_macho_register_jitdylib")};
+  RuntimeFunction DeregisterJITDylib{
+      ES.intern("___orc_rt_macho_deregister_jitdylib")};
+  RuntimeFunction RegisterObjectPlatformSections{
+      ES.intern("___orc_rt_macho_register_object_platform_sections")};
+  RuntimeFunction DeregisterObjectPlatformSections{
+      ES.intern("___orc_rt_macho_deregister_object_platform_sections")};
+  RuntimeFunction CreatePThreadKey{
+      ES.intern("___orc_rt_macho_create_pthread_key")};
+  RuntimeFunction RegisterObjCRuntimeObject{
+      ES.intern("___orc_rt_macho_register_objc_runtime_object")};
+  RuntimeFunction DeregisterObjCRuntimeObject{
+      ES.intern("___orc_rt_macho_deregister_objc_runtime_object")};
 
   DenseMap<JITDylib *, SymbolLookupSet> RegisteredInitSymbols;
 
@@ -225,6 +271,8 @@ private:
   DenseMap<JITDylib *, ExecutorAddr> JITDylibToHeaderAddr;
   DenseMap<ExecutorAddr, JITDylib *> HeaderAddrToJITDylib;
   DenseMap<JITDylib *, uint64_t> JITDylibToPThreadKey;
+
+  std::atomic<BootstrapInfo *> Bootstrap;
 };
 
 namespace shared {

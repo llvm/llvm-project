@@ -1,4 +1,4 @@
-# RUN: SUPPORTLIB=%mlir_lib_dir/libmlir_c_runner_utils%shlibext %PYTHON %s | FileCheck %s
+# RUN: env SUPPORTLIB=%mlir_c_runner_utils %PYTHON %s | FileCheck %s
 
 import filecmp
 import numpy as np
@@ -26,10 +26,10 @@ C[i, j] = A[i, k] * B[k, j]
 
 # Force evaluation of the kernel by writing out C.
 with tempfile.TemporaryDirectory() as test_dir:
-  golden_file = os.path.join(_SCRIPT_PATH, "data/gold_C.tns")
-  out_file = os.path.join(test_dir, "C.tns")
-  pt.write(out_file, C)
-  #
-  # CHECK: Compare result True
-  #
-  print(f"Compare result {utils.compare_sparse_tns(golden_file, out_file)}")
+    golden_file = os.path.join(_SCRIPT_PATH, "data/gold_C.tns")
+    out_file = os.path.join(test_dir, "C.tns")
+    pt.write(out_file, C)
+    #
+    # CHECK: Compare result True
+    #
+    print(f"Compare result {utils.compare_sparse_tns(golden_file, out_file)}")

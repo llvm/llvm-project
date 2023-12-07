@@ -6,7 +6,7 @@
 ;; Emit an object file so that verifyPredicates is called (it is not used for ASM output).
 ; RUN: llc -mtriple=aarch64 -mattr=-neon,+fullfp16 -o /dev/null %s --asm-show-inst -filetype=obj
 
-define double @ui8_to_double(i8* %i, float* %f) {
+define double @ui8_to_double(ptr %i, ptr %f) {
 ; NEON-ENABLED-LABEL: ui8_to_double:
 ; NEON-ENABLED:       // %bb.0: // %entry
 ; NEON-ENABLED-NEXT:    ldr b0, [x0]
@@ -19,12 +19,12 @@ define double @ui8_to_double(i8* %i, float* %f) {
 ; NEON-DISABLED-NEXT:    ucvtf d0, w8
 ; NEON-DISABLED-NEXT:    ret
 entry:
-  %ld = load i8, i8* %i, align 1
+  %ld = load i8, ptr %i, align 1
   %conv = uitofp i8 %ld to double
   ret double %conv
 }
 
-define float @ui8_to_float(i8* %i, float* %f) {
+define float @ui8_to_float(ptr %i, ptr %f) {
 ; NEON-ENABLED-LABEL: ui8_to_float:
 ; NEON-ENABLED:       // %bb.0: // %entry
 ; NEON-ENABLED-NEXT:    ldr b0, [x0]
@@ -37,24 +37,24 @@ define float @ui8_to_float(i8* %i, float* %f) {
 ; NEON-DISABLED-NEXT:    ucvtf s0, w8
 ; NEON-DISABLED-NEXT:    ret
 entry:
-  %ld = load i8, i8* %i, align 1
+  %ld = load i8, ptr %i, align 1
   %conv = uitofp i8 %ld to float
   ret float %conv
 }
 
-define half @ui8_to_half(i8* %i, half* %f) {
+define half @ui8_to_half(ptr %i, ptr %f) {
 ; CHECK-LABEL: ui8_to_half:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrb w8, [x0]
 ; CHECK-NEXT:    ucvtf h0, w8
 ; CHECK-NEXT:    ret
 entry:
-  %ld = load i8, i8* %i, align 1
+  %ld = load i8, ptr %i, align 1
   %conv = uitofp i8 %ld to half
   ret half %conv
 }
 
-define double @ui16_to_double(i16* %i, float* %f) {
+define double @ui16_to_double(ptr %i, ptr %f) {
 ; NEON-ENABLED-LABEL: ui16_to_double:
 ; NEON-ENABLED:       // %bb.0: // %entry
 ; NEON-ENABLED-NEXT:    ldr h0, [x0]
@@ -67,12 +67,12 @@ define double @ui16_to_double(i16* %i, float* %f) {
 ; NEON-DISABLED-NEXT:    ucvtf d0, w8
 ; NEON-DISABLED-NEXT:    ret
 entry:
-  %ld = load i16, i16* %i, align 1
+  %ld = load i16, ptr %i, align 1
   %conv = uitofp i16 %ld to double
   ret double %conv
 }
 
-define float @ui16_to_float(i16* %i, float* %f) {
+define float @ui16_to_float(ptr %i, ptr %f) {
 ; NEON-ENABLED-LABEL: ui16_to_float:
 ; NEON-ENABLED:       // %bb.0: // %entry
 ; NEON-ENABLED-NEXT:    ldr h0, [x0]
@@ -85,24 +85,24 @@ define float @ui16_to_float(i16* %i, float* %f) {
 ; NEON-DISABLED-NEXT:    ucvtf s0, w8
 ; NEON-DISABLED-NEXT:    ret
 entry:
-  %ld = load i16, i16* %i, align 1
+  %ld = load i16, ptr %i, align 1
   %conv = uitofp i16 %ld to float
   ret float %conv
 }
 
-define half @ui16_to_half(i16* %i, half* %f) {
+define half @ui16_to_half(ptr %i, ptr %f) {
 ; CHECK-LABEL: ui16_to_half:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrh w8, [x0]
 ; CHECK-NEXT:    ucvtf h0, w8
 ; CHECK-NEXT:    ret
 entry:
-  %ld = load i16, i16* %i, align 1
+  %ld = load i16, ptr %i, align 1
   %conv = uitofp i16 %ld to half
   ret half %conv
 }
 
-define double @ui32_to_double(i32* %i, float* %f) {
+define double @ui32_to_double(ptr %i, ptr %f) {
 ; NEON-ENABLED-LABEL: ui32_to_double:
 ; NEON-ENABLED:       // %bb.0: // %entry
 ; NEON-ENABLED-NEXT:    ldr s0, [x0]
@@ -115,12 +115,12 @@ define double @ui32_to_double(i32* %i, float* %f) {
 ; NEON-DISABLED-NEXT:    ucvtf d0, w8
 ; NEON-DISABLED-NEXT:    ret
 entry:
-  %ld = load i32, i32* %i, align 1
+  %ld = load i32, ptr %i, align 1
   %conv = uitofp i32 %ld to double
   ret double %conv
 }
 
-define float @ui32_to_float(i32* %i, float* %f) {
+define float @ui32_to_float(ptr %i, ptr %f) {
 ; NEON-ENABLED-LABEL: ui32_to_float:
 ; NEON-ENABLED:       // %bb.0: // %entry
 ; NEON-ENABLED-NEXT:    ldr s0, [x0]
@@ -133,24 +133,24 @@ define float @ui32_to_float(i32* %i, float* %f) {
 ; NEON-DISABLED-NEXT:    ucvtf s0, w8
 ; NEON-DISABLED-NEXT:    ret
 entry:
-  %ld = load i32, i32* %i, align 1
+  %ld = load i32, ptr %i, align 1
   %conv = uitofp i32 %ld to float
   ret float %conv
 }
 
-define half @ui32_to_half(i32* %i, half* %f) {
+define half @ui32_to_half(ptr %i, ptr %f) {
 ; CHECK-LABEL: ui32_to_half:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    ucvtf h0, w8
 ; CHECK-NEXT:    ret
 entry:
-  %ld = load i32, i32* %i, align 1
+  %ld = load i32, ptr %i, align 1
   %conv = uitofp i32 %ld to half
   ret half %conv
 }
 
-define double @ui64_to_double(i64* %i, float* %f) {
+define double @ui64_to_double(ptr %i, ptr %f) {
 ; NEON-ENABLED-LABEL: ui64_to_double:
 ; NEON-ENABLED:       // %bb.0: // %entry
 ; NEON-ENABLED-NEXT:    ldr d0, [x0]
@@ -163,49 +163,49 @@ define double @ui64_to_double(i64* %i, float* %f) {
 ; NEON-DISABLED-NEXT:    ucvtf d0, x8
 ; NEON-DISABLED-NEXT:    ret
 entry:
-  %ld = load i64, i64* %i, align 1
+  %ld = load i64, ptr %i, align 1
   %conv = uitofp i64 %ld to double
   ret double %conv
 }
 
-define float @ui64_to_float(i64* %i, float* %f) {
+define float @ui64_to_float(ptr %i, ptr %f) {
 ; CHECK-LABEL: ui64_to_float:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    ucvtf s0, x8
 ; CHECK-NEXT:    ret
 entry:
-  %ld = load i64, i64* %i, align 1
+  %ld = load i64, ptr %i, align 1
   %conv = uitofp i64 %ld to float
   ret float %conv
 }
 
-define half @ui64_to_half(i64* %i, half* %f) {
+define half @ui64_to_half(ptr %i, ptr %f) {
 ; CHECK-LABEL: ui64_to_half:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    ucvtf h0, x8
 ; CHECK-NEXT:    ret
 entry:
-  %ld = load i64, i64* %i, align 1
+  %ld = load i64, ptr %i, align 1
   %conv = uitofp i64 %ld to half
   ret half %conv
 }
 
 
-define double @si8_to_double(i8* %i, float* %f) {
+define double @si8_to_double(ptr %i, ptr %f) {
 ; CHECK-LABEL: si8_to_double:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrsb w8, [x0]
 ; CHECK-NEXT:    scvtf d0, w8
 ; CHECK-NEXT:    ret
 entry:
-  %ld = load i8, i8* %i, align 1
+  %ld = load i8, ptr %i, align 1
   %conv = sitofp i8 %ld to double
   ret double %conv
 }
 
-define float @si8_to_float(i8* %i, float* %f) {
+define float @si8_to_float(ptr %i, ptr %f) {
 ; NEON-ENABLED-LABEL: si8_to_float:
 ; NEON-ENABLED:       // %bb.0: // %entry
 ; NEON-ENABLED-NEXT:    ldr b0, [x0]
@@ -220,24 +220,24 @@ define float @si8_to_float(i8* %i, float* %f) {
 ; NEON-DISABLED-NEXT:    scvtf s0, w8
 ; NEON-DISABLED-NEXT:    ret
 entry:
-  %ld = load i8, i8* %i, align 1
+  %ld = load i8, ptr %i, align 1
   %conv = sitofp i8 %ld to float
   ret float %conv
 }
 
-define half @si8_to_half(i8* %i, half* %f) {
+define half @si8_to_half(ptr %i, ptr %f) {
 ; CHECK-LABEL: si8_to_half:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrsb w8, [x0]
 ; CHECK-NEXT:    scvtf h0, w8
 ; CHECK-NEXT:    ret
 entry:
-  %ld = load i8, i8* %i, align 1
+  %ld = load i8, ptr %i, align 1
   %conv = sitofp i8 %ld to half
   ret half %conv
 }
 
-define double @si16_to_double(i16* %i, float* %f) {
+define double @si16_to_double(ptr %i, ptr %f) {
 ; NEON-ENABLED-LABEL: si16_to_double:
 ; NEON-ENABLED:       // %bb.0: // %entry
 ; NEON-ENABLED-NEXT:    ldr h0, [x0]
@@ -252,12 +252,12 @@ define double @si16_to_double(i16* %i, float* %f) {
 ; NEON-DISABLED-NEXT:    scvtf d0, w8
 ; NEON-DISABLED-NEXT:    ret
 entry:
-  %ld = load i16, i16* %i, align 1
+  %ld = load i16, ptr %i, align 1
   %conv = sitofp i16 %ld to double
   ret double %conv
 }
 
-define float @si16_to_float(i16* %i, float* %f) {
+define float @si16_to_float(ptr %i, ptr %f) {
 ; NEON-ENABLED-LABEL: si16_to_float:
 ; NEON-ENABLED:       // %bb.0: // %entry
 ; NEON-ENABLED-NEXT:    ldr h0, [x0]
@@ -271,24 +271,24 @@ define float @si16_to_float(i16* %i, float* %f) {
 ; NEON-DISABLED-NEXT:    scvtf s0, w8
 ; NEON-DISABLED-NEXT:    ret
 entry:
-  %ld = load i16, i16* %i, align 1
+  %ld = load i16, ptr %i, align 1
   %conv = sitofp i16 %ld to float
   ret float %conv
 }
 
-define half @si16_to_half(i16* %i, half* %f) {
+define half @si16_to_half(ptr %i, ptr %f) {
 ; CHECK-LABEL: si16_to_half:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrsh w8, [x0]
 ; CHECK-NEXT:    scvtf h0, w8
 ; CHECK-NEXT:    ret
 entry:
-  %ld = load i16, i16* %i, align 1
+  %ld = load i16, ptr %i, align 1
   %conv = sitofp i16 %ld to half
   ret half %conv
 }
 
-define double @si32_to_double(i32* %i, float* %f) {
+define double @si32_to_double(ptr %i, ptr %f) {
 ; NEON-ENABLED-LABEL: si32_to_double:
 ; NEON-ENABLED:       // %bb.0: // %entry
 ; NEON-ENABLED-NEXT:    ldr s0, [x0]
@@ -302,12 +302,12 @@ define double @si32_to_double(i32* %i, float* %f) {
 ; NEON-DISABLED-NEXT:    scvtf d0, w8
 ; NEON-DISABLED-NEXT:    ret
 entry:
-  %ld = load i32, i32* %i, align 1
+  %ld = load i32, ptr %i, align 1
   %conv = sitofp i32 %ld to double
   ret double %conv
 }
 
-define float @si32_to_float(i32* %i, float* %f) {
+define float @si32_to_float(ptr %i, ptr %f) {
 ; NEON-ENABLED-LABEL: si32_to_float:
 ; NEON-ENABLED:       // %bb.0: // %entry
 ; NEON-ENABLED-NEXT:    ldr s0, [x0]
@@ -320,24 +320,24 @@ define float @si32_to_float(i32* %i, float* %f) {
 ; NEON-DISABLED-NEXT:    scvtf s0, w8
 ; NEON-DISABLED-NEXT:    ret
 entry:
-  %ld = load i32, i32* %i, align 1
+  %ld = load i32, ptr %i, align 1
   %conv = sitofp i32 %ld to float
   ret float %conv
 }
 
-define half @si32_to_half(i32* %i, half* %f) {
+define half @si32_to_half(ptr %i, ptr %f) {
 ; CHECK-LABEL: si32_to_half:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    scvtf h0, w8
 ; CHECK-NEXT:    ret
 entry:
-  %ld = load i32, i32* %i, align 1
+  %ld = load i32, ptr %i, align 1
   %conv = sitofp i32 %ld to half
   ret half %conv
 }
 
-define double @si64_to_double(i64* %i, float* %f) {
+define double @si64_to_double(ptr %i, ptr %f) {
 ; NEON-ENABLED-LABEL: si64_to_double:
 ; NEON-ENABLED:       // %bb.0: // %entry
 ; NEON-ENABLED-NEXT:    ldr d0, [x0]
@@ -350,31 +350,31 @@ define double @si64_to_double(i64* %i, float* %f) {
 ; NEON-DISABLED-NEXT:    scvtf d0, x8
 ; NEON-DISABLED-NEXT:    ret
 entry:
-  %ld = load i64, i64* %i, align 1
+  %ld = load i64, ptr %i, align 1
   %conv = sitofp i64 %ld to double
   ret double %conv
 }
 
-define float @si64_to_float(i64* %i, float* %f) {
+define float @si64_to_float(ptr %i, ptr %f) {
 ; CHECK-LABEL: si64_to_float:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    scvtf s0, x8
 ; CHECK-NEXT:    ret
 entry:
-  %ld = load i64, i64* %i, align 1
+  %ld = load i64, ptr %i, align 1
   %conv = sitofp i64 %ld to float
   ret float %conv
 }
 
-define half @si64_to_half(i64* %i, half* %f) {
+define half @si64_to_half(ptr %i, ptr %f) {
 ; CHECK-LABEL: si64_to_half:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    scvtf h0, x8
 ; CHECK-NEXT:    ret
 entry:
-  %ld = load i64, i64* %i, align 1
+  %ld = load i64, ptr %i, align 1
   %conv = sitofp i64 %ld to half
   ret half %conv
 }

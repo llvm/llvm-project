@@ -281,6 +281,15 @@ class OMPExecutableDirective : public Stmt {
     return Data->getClauses();
   }
 
+  /// Was this directive mapped from an another directive?
+  /// e.g. 1) omp loop bind(parallel) is mapped to OMPD_for
+  ///      2) omp loop bind(teams) is mapped to OMPD_distribute
+  ///      3) omp loop bind(thread) is mapped to OMPD_simd
+  /// It was necessary to note it down in the Directive because of
+  /// clang::TreeTransform::TransformOMPExecutableDirective() pass in
+  /// the frontend.
+  OpenMPDirectiveKind PrevMappedDirective = llvm::omp::OMPD_unknown;
+
 protected:
   /// Data, associated with the directive.
   OMPChildren *Data = nullptr;
@@ -345,6 +354,10 @@ protected:
     return Inst;
   }
 
+  void setMappedDirective(OpenMPDirectiveKind MappedDirective) {
+    PrevMappedDirective = MappedDirective;
+  }
+
 public:
   /// Iterates over expressions/statements used in the construct.
   class used_clauses_child_iterator
@@ -399,8 +412,9 @@ public:
 
   static llvm::iterator_range<used_clauses_child_iterator>
   used_clauses_children(ArrayRef<OMPClause *> Clauses) {
-    return {used_clauses_child_iterator(Clauses),
-            used_clauses_child_iterator(llvm::makeArrayRef(Clauses.end(), 0))};
+    return {
+        used_clauses_child_iterator(Clauses),
+        used_clauses_child_iterator(llvm::ArrayRef(Clauses.end(), (size_t)0))};
   }
 
   /// Iterates over a filtered subrange of clauses applied to a
@@ -445,7 +459,7 @@ public:
   getClausesOfKind(ArrayRef<OMPClause *> Clauses) {
     return {specific_clause_iterator<SpecificClause>(Clauses),
             specific_clause_iterator<SpecificClause>(
-                llvm::makeArrayRef(Clauses.end(), 0))};
+                llvm::ArrayRef(Clauses.end(), (size_t)0))};
   }
 
   template <typename SpecificClause>
@@ -597,6 +611,8 @@ public:
            "Expected directive with the associated statement.");
     return Data->getRawStmt();
   }
+
+  OpenMPDirectiveKind getMappedDirective() const { return PrevMappedDirective; }
 };
 
 /// This represents '#pragma omp parallel' directive.
@@ -1066,7 +1082,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
   MutableArrayRef<Expr *> getCounters() {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind())]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the private counters storage.
@@ -1074,7 +1090,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the updates storage.
@@ -1082,7 +1098,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              2 * getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the updates storage.
@@ -1090,7 +1106,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              3 * getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the final counter updates storage.
@@ -1098,7 +1114,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              4 * getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the dependent counters storage.
@@ -1106,7 +1122,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              5 * getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the dependent inits storage.
@@ -1114,7 +1130,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              6 * getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the finals conditions storage.
@@ -1122,7 +1138,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              7 * getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
 protected:
@@ -1603,7 +1619,8 @@ public:
                                   SourceLocation EndLoc, unsigned CollapsedNum,
                                   ArrayRef<OMPClause *> Clauses,
                                   Stmt *AssociatedStmt,
-                                  const HelperExprs &Exprs);
+                                  const HelperExprs &Exprs,
+                                  OpenMPDirectiveKind ParamPrevMappedDirective);
 
   /// Creates an empty directive with the place
   /// for \a NumClauses clauses.
@@ -1681,7 +1698,8 @@ public:
                                  SourceLocation EndLoc, unsigned CollapsedNum,
                                  ArrayRef<OMPClause *> Clauses,
                                  Stmt *AssociatedStmt, const HelperExprs &Exprs,
-                                 Expr *TaskRedRef, bool HasCancel);
+                                 Expr *TaskRedRef, bool HasCancel,
+                                 OpenMPDirectiveKind ParamPrevMappedDirective);
 
   /// Creates an empty directive with the place
   /// for \a NumClauses clauses.
@@ -1910,6 +1928,57 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPSectionDirectiveClass;
+  }
+};
+
+/// This represents '#pragma omp scope' directive.
+/// \code
+/// #pragma omp scope private(a,b) nowait
+/// \endcode
+/// In this example directive '#pragma omp scope' has clauses 'private' with
+/// the variables 'a' and 'b' and nowait.
+///
+class OMPScopeDirective final : public OMPExecutableDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  ///
+  OMPScopeDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPExecutableDirective(OMPScopeDirectiveClass, llvm::omp::OMPD_scope,
+                               StartLoc, EndLoc) {}
+
+  /// Build an empty directive.
+  ///
+  explicit OMPScopeDirective()
+      : OMPExecutableDirective(OMPScopeDirectiveClass, llvm::omp::OMPD_scope,
+                               SourceLocation(), SourceLocation()) {}
+
+public:
+  /// Creates directive.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param AssociatedStmt Statement, associated with the directive.
+  ///
+  static OMPScopeDirective *Create(const ASTContext &C, SourceLocation StartLoc,
+                                   SourceLocation EndLoc,
+                                   ArrayRef<OMPClause *> Clauses,
+                                   Stmt *AssociatedStmt);
+
+  /// Creates an empty directive.
+  ///
+  /// \param C AST context.
+  ///
+  static OMPScopeDirective *CreateEmpty(const ASTContext &C,
+                                        unsigned NumClauses, EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPScopeDirectiveClass;
   }
 };
 
@@ -4405,7 +4474,8 @@ public:
   static OMPDistributeDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses,
-         Stmt *AssociatedStmt, const HelperExprs &Exprs);
+         Stmt *AssociatedStmt, const HelperExprs &Exprs,
+         OpenMPDirectiveKind ParamPrevMappedDirective);
 
   /// Creates an empty directive with the place
   /// for \a NumClauses clauses.

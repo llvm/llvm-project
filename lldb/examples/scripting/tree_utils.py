@@ -47,7 +47,7 @@ def DFS(root, word, cur_path):
     if root_word[0] == '"' and root_word[end] == '"':
         root_word = root_word[1:end]
     end = len(root_word) - 1
-    if root_word[0] == '\'' and root_word[end] == '\'':
+    if root_word[0] == "'" and root_word[end] == "'":
         root_word = root_word[1:end]
 
     # Main depth first search
@@ -55,7 +55,6 @@ def DFS(root, word, cur_path):
     if root_word == word:
         return cur_path
     elif word < root_word:
-
         # Check to see if left child is NULL
 
         if left_child_ptr.GetValue() is None:
@@ -64,7 +63,6 @@ def DFS(root, word, cur_path):
             cur_path = cur_path + "L"
             return DFS(left_child_ptr, word, cur_path)
     else:
-
         # Check to see if right child is NULL
 
         if right_child_ptr.GetValue() is None:
@@ -83,10 +81,10 @@ def tree_size(root):
     the one defined in dictionary.c  It uses LLDB API
     functions to examine and traverse the tree nodes.
     """
-    if (root.GetValue is None):
+    if root.GetValue is None:
         return 0
 
-    if (int(root.GetValue(), 16) == 0):
+    if int(root.GetValue(), 16) == 0:
         return 0
 
     left_size = tree_size(root.GetChildAtIndex(1))
@@ -107,11 +105,13 @@ def print_tree(root):
     functions to examine and traverse the tree nodes.
     """
     if (root.GetChildAtIndex(1).GetValue() is not None) and (
-            int(root.GetChildAtIndex(1).GetValue(), 16) != 0):
+        int(root.GetChildAtIndex(1).GetValue(), 16) != 0
+    ):
         print_tree(root.GetChildAtIndex(1))
 
     print(root.GetChildAtIndex(0).GetSummary())
 
     if (root.GetChildAtIndex(2).GetValue() is not None) and (
-            int(root.GetChildAtIndex(2).GetValue(), 16) != 0):
+        int(root.GetChildAtIndex(2).GetValue(), 16) != 0
+    ):
         print_tree(root.GetChildAtIndex(2))

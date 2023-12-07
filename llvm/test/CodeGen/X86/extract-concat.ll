@@ -11,14 +11,14 @@ define void @foo(<4 x float> %in, ptr %out) {
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
 ; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
 ; SSE2-NEXT:    shll $8, %ecx
 ; SSE2-NEXT:    orl %eax, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm0
-; SSE2-NEXT:    movl $65280, %eax # imm = 0xFF00
-; SSE2-NEXT:    orl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    pinsrw $1, %eax, %xmm0
-; SSE2-NEXT:    movd %xmm0, (%rdi)
+; SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    shll $16, %eax
+; SSE2-NEXT:    orl %ecx, %eax
+; SSE2-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
+; SSE2-NEXT:    movl %eax, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: foo:
@@ -68,13 +68,13 @@ define <16 x i64> @catcat(<4 x i64> %x) {
 ;
 ; AVX1-LABEL: catcat:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm4
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX1-NEXT:    vmovddup {{.*#+}} ymm2 = ymm0[0,0,2,2]
-; AVX1-NEXT:    vpermilpd {{.*#+}} ymm3 = ymm0[1,1,3,3]
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm3 = ymm0[1,1,3,3]
 ; AVX1-NEXT:    vmovaps %ymm4, %ymm0
 ; AVX1-NEXT:    retq
 ;

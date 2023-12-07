@@ -25,6 +25,7 @@ add_lld_library(lldELF
   Arch/ARM.cpp
   Arch/AVR.cpp
   Arch/Hexagon.cpp
+  Arch/LoongArch.cpp
   Arch/Mips.cpp
   Arch/MipsArchTree.cpp
   Arch/MSP430.cpp
@@ -71,6 +72,7 @@ add_lld_library(lldELF
   Option
   Passes
   Support
+  TargetParser
 
   LINK_LIBS
   lldCommon

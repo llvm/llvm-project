@@ -37,18 +37,18 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A, i32 %n) !dbg !4 {
+define void @f(ptr %A, i32 %n) !dbg !4 {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  tail call void @llvm.dbg.value(metadata i32* %A, i64 0, metadata !13, metadata !DIExpression()), !dbg !14
-  tail call void @llvm.dbg.value(metadata i32* %A, i64 0, metadata !13, metadata !DIExpression()), !dbg !14
+  tail call void @llvm.dbg.value(metadata ptr %A, i64 0, metadata !13, metadata !DIExpression()), !dbg !14
+  tail call void @llvm.dbg.value(metadata ptr %A, i64 0, metadata !13, metadata !DIExpression()), !dbg !14
   tail call void @llvm.dbg.value(metadata i32 %n, i64 0, metadata !15, metadata !DIExpression()), !dbg !16
   tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !18, metadata !DIExpression()), !dbg !20
   %idxprom = sext i32 %n to i64, !dbg !21
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom, !dbg !21
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !21
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom, !dbg !21
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !21
   %cmp3 = icmp sgt i32 %0, 0, !dbg !21
   br i1 %cmp3, label %for.body.lr.ph, label %for.end, !dbg !21
 
@@ -57,13 +57,13 @@ for.body.lr.ph:                                   ; preds = %entry.split
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %indvar = phi i64 [ 0, %for.body.lr.ph ], [ %indvar.next, %for.body ]
-  %arrayidx2 = getelementptr i32, i32* %A, i64 %indvar, !dbg !24
+  %arrayidx2 = getelementptr i32, ptr %A, i64 %indvar, !dbg !24
   %1 = add i64 %indvar, 1, !dbg !24
   %inc = trunc i64 %1 to i32, !dbg !21
-  store i32 0, i32* %arrayidx2, align 4, !dbg !24
+  store i32 0, ptr %arrayidx2, align 4, !dbg !24
   tail call void @llvm.dbg.value(metadata !{null}, i64 0, metadata !18, metadata !DIExpression()), !dbg !20
-  %arrayidx3 = getelementptr inbounds i32, i32* %arrayidx, i64 %indvar, !dbg !21
-  %2 = load i32, i32* %arrayidx3, align 4, !dbg !21
+  %arrayidx3 = getelementptr inbounds i32, ptr %arrayidx, i64 %indvar, !dbg !21
+  %2 = load i32, ptr %arrayidx3, align 4, !dbg !21
   %cmp = icmp slt i32 %inc, %2, !dbg !21
   %indvar.next = add i64 %indvar, 1, !dbg !21
   br i1 %cmp, label %for.body, label %for.cond.for.end_crit_edge, !dbg !21

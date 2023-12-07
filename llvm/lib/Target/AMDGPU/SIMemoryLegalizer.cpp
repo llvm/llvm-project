@@ -22,7 +22,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -351,6 +351,10 @@ public:
   /// Virtual destructor to allow derivations to be deleted.
   virtual ~SICacheControl() = default;
 
+  virtual bool tryForceStoreSC0SC1(const SIMemOpInfo &MOI,
+                                   MachineBasicBlock::iterator &MI) const {
+    return false;
+  }
 };
 
 class SIGfx6CacheControl : public SICacheControl {
@@ -509,6 +513,20 @@ public:
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
                      Position Pos) const override;
+
+  bool tryForceStoreSC0SC1(const SIMemOpInfo &MOI,
+                           MachineBasicBlock::iterator &MI) const override {
+    bool Changed = false;
+    if (ST.hasForceStoreSC0SC1() &&
+        (MOI.getInstrAddrSpace() & (SIAtomicAddrSpace::SCRATCH |
+                                    SIAtomicAddrSpace::GLOBAL |
+                                    SIAtomicAddrSpace::OTHER)) !=
+         SIAtomicAddrSpace::NONE) {
+      Changed |= enableSC0Bit(MI);
+      Changed |= enableSC1Bit(MI);
+    }
+    return Changed;
+  }
 };
 
 class SIGfx10CacheControl : public SIGfx7CacheControl {
@@ -2209,8 +2227,13 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
   bool Changed = false;
 
   if (MOI.isAtomic()) {
-    if (MOI.getOrdering() == AtomicOrdering::Acquire ||
-        MOI.getOrdering() == AtomicOrdering::Release ||
+    if (MOI.getOrdering() == AtomicOrdering::Acquire)
+      Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
+                                SIMemOp::LOAD | SIMemOp::STORE,
+                                MOI.getIsCrossAddressSpaceOrdering(),
+                                Position::BEFORE);
+
+    if (MOI.getOrdering() == AtomicOrdering::Release ||
         MOI.getOrdering() == AtomicOrdering::AcquireRelease ||
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
       /// TODO: This relies on a barrier always generating a waitcnt
@@ -2319,9 +2342,10 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
 
       if (const auto &MOI = MOA.getLoadInfo(MI))
         Changed |= expandLoad(*MOI, MI);
-      else if (const auto &MOI = MOA.getStoreInfo(MI))
+      else if (const auto &MOI = MOA.getStoreInfo(MI)) {
         Changed |= expandStore(*MOI, MI);
-      else if (const auto &MOI = MOA.getAtomicFenceInfo(MI))
+        Changed |= CC->tryForceStoreSC0SC1(*MOI, MI);
+      } else if (const auto &MOI = MOA.getAtomicFenceInfo(MI))
         Changed |= expandAtomicFence(*MOI, MI);
       else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI))
         Changed |= expandAtomicCmpxchgOrRmw(*MOI, MI);

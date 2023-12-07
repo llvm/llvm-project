@@ -15,34 +15,26 @@
 #ifndef LLVM_IR_SSACONTEXT_H
 #define LLVM_IR_SSACONTEXT_H
 
-#include "llvm/Support/Printable.h"
+#include "llvm/ADT/GenericSSAContext.h"
+#include "llvm/IR/BasicBlock.h"
 
 namespace llvm {
 class BasicBlock;
 class Function;
 class Instruction;
 class Value;
-template <typename, bool> class DominatorTreeBase;
-template <typename _FunctionT> class GenericSSAContext;
 
-template <> class GenericSSAContext<Function> {
-  Function *F;
+inline auto instrs(const BasicBlock &BB) {
+  return llvm::make_range(BB.begin(), BB.end());
+}
 
-public:
+template <> struct GenericSSATraits<Function> {
   using BlockT = BasicBlock;
   using FunctionT = Function;
   using InstructionT = Instruction;
   using ValueRefT = Value *;
-  using DominatorTreeT = DominatorTreeBase<BlockT, false>;
-
-  static BasicBlock *getEntryBlock(Function &F);
-
-  void setFunction(Function &Fn);
-  Function *getFunction() const { return F; }
-
-  Printable print(BasicBlock *Block) const;
-  Printable print(Instruction *Inst) const;
-  Printable print(Value *Value) const;
+  using ConstValueRefT = const Value *;
+  using UseT = Use;
 };
 
 using SSAContext = GenericSSAContext<Function>;

@@ -7,10 +7,10 @@ define i32 @test0(i32 %a, i32 %b) nounwind {
 entry:
   %a.addr = alloca i32, align 4
   %b.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr
-  store i32 %b, i32* %b.addr
-  %tmp = load i32, i32* %a.addr
-  %tmp1 = load i32, i32* %b.addr
+  store i32 %a, ptr %a.addr
+  store i32 %b, ptr %b.addr
+  %tmp = load i32, ptr %a.addr
+  %tmp1 = load i32, ptr %b.addr
   %add = add nsw i32 %tmp, %tmp1
   ret i32 %add
 }
@@ -34,13 +34,13 @@ ret void
 }
 
 ; Check some simple operations with immediates
-define void @test2(i32 %tmp, i32* %ptr) nounwind {
+define void @test2(i32 %tmp, ptr %ptr) nounwind {
 ; THUMB-LABEL: test2:
 ; ARM-LABEL: test2:
 
 b1:
   %a = add i32 %tmp, 4096
-  store i32 %a, i32* %ptr
+  store i32 %a, ptr %ptr
   br label %b2
 
 ; THUMB: add.w {{.*}} #4096
@@ -48,7 +48,7 @@ b1:
 
 b2:
   %b = add i32 %tmp, 4095
-  store i32 %b, i32* %ptr
+  store i32 %b, ptr %ptr
   br label %b3
 ; THUMB: addw {{.*}} #4095
 ; ARM: movw {{.*}} #4095
@@ -56,14 +56,14 @@ b2:
 
 b3:
   %c = or i32 %tmp, 4
-  store i32 %c, i32* %ptr
+  store i32 %c, ptr %ptr
   ret void
 
 ; THUMB: orr {{.*}} #4
 ; ARM: orr {{.*}} #4
 }
 
-define void @test3(i32 %tmp, i32* %ptr1, i16* %ptr2, i8* %ptr3) nounwind {
+define void @test3(i32 %tmp, ptr %ptr1, ptr %ptr2, ptr %ptr3) nounwind {
 ; THUMB-LABEL: test3:
 ; ARM-LABEL: test3:
 
@@ -72,11 +72,11 @@ bb1:
   %a2 = trunc i16 %a1 to i8
   %a3 = trunc i8 %a2 to i1
   %a4 = zext i1 %a3 to i8
-  store i8 %a4, i8* %ptr3
+  store i8 %a4, ptr %ptr3
   %a5 = zext i8 %a4 to i16
-  store i16 %a5, i16* %ptr2
+  store i16 %a5, ptr %ptr2
   %a6 = zext i16 %a5 to i32
-  store i32 %a6, i32* %ptr1
+  store i32 %a6, ptr %ptr1
   br label %bb2
 
 ; THUMB: and
@@ -93,11 +93,11 @@ bb1:
 bb2:
   %b1 = trunc i32 %tmp to i16
   %b2 = trunc i16 %b1 to i8
-  store i8 %b2, i8* %ptr3
+  store i8 %b2, ptr %ptr3
   %b3 = sext i8 %b2 to i16
-  store i16 %b3, i16* %ptr2
+  store i16 %b3, ptr %ptr2
   %b4 = sext i16 %b3 to i32
-  store i32 %b4, i32* %ptr1
+  store i32 %b4, ptr %ptr1
   br label %bb3
 
 ; THUMB: strb
@@ -110,14 +110,14 @@ bb2:
 ; ARM: sxth
 
 bb3:
-  %c1 = load i8, i8* %ptr3
-  %c2 = load i16, i16* %ptr2
-  %c3 = load i32, i32* %ptr1
+  %c1 = load i8, ptr %ptr3
+  %c2 = load i16, ptr %ptr2
+  %c3 = load i32, ptr %ptr1
   %c4 = zext i8 %c1 to i32
   %c5 = sext i16 %c2 to i32
   %c6 = add i32 %c4, %c5
   %c7 = sub i32 %c3, %c6
-  store i32 %c7, i32* %ptr1
+  store i32 %c7, ptr %ptr1
   ret void
 
 ; THUMB: ldrb
@@ -138,9 +138,9 @@ bb3:
 @test4g = external global i32
 
 define void @test4() {
-  %a = load i32, i32* @test4g
+  %a = load i32, ptr @test4g
   %b = add i32 %a, 1
-  store i32 %b, i32* @test4g
+  store i32 %b, ptr @test4g
   ret void
 
 

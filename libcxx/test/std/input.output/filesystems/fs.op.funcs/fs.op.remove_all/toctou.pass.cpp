@@ -9,6 +9,8 @@
 // UNSUPPORTED: c++03
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: no-threads
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -29,9 +31,9 @@
 
 // This test requires a dylib containing the fix shipped in https://reviews.llvm.org/D118134.
 // We use UNSUPPORTED instead of XFAIL because the test might not fail reliably.
-// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx11.0
-// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx12.{{0|1|2}}
+// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx11.0
+// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx12.{{0|1|2}}
 
 // Windows doesn't support the necessary APIs to mitigate this issue.
 // UNSUPPORTED: target={{.+}}-windows-{{.+}}

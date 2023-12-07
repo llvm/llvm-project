@@ -13,6 +13,6 @@ define void @foo() {
 ; CHECK:        sw      $[[T0]], 8($[[ARR]])
 
 entry:
-  store i32 12345, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @ARR, i32 0, i32 2), align 4
+  store i32 12345, ptr getelementptr inbounds ([10 x i32], ptr @ARR, i32 0, i32 2), align 4
   ret void
 }

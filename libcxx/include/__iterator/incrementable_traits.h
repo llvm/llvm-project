@@ -12,9 +12,13 @@
 
 #include <__concepts/arithmetic.h>
 #include <__config>
+#include <__type_traits/conditional.h>
+#include <__type_traits/is_object.h>
 #include <__type_traits/is_primary_template.h>
+#include <__type_traits/make_signed.h>
+#include <__type_traits/remove_cvref.h>
+#include <__utility/declval.h>
 #include <cstddef>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -22,7 +26,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [incrementable.traits]
 template<class> struct incrementable_traits {};
@@ -53,7 +57,7 @@ concept __has_integral_minus =
 template<__has_integral_minus _Tp>
 requires (!__has_member_difference_type<_Tp>)
 struct incrementable_traits<_Tp> {
-  using difference_type = make_signed_t<decltype(declval<_Tp>() - declval<_Tp>())>;
+  using difference_type = make_signed_t<decltype(std::declval<_Tp>() - std::declval<_Tp>())>;
 };
 
 template <class>
@@ -67,7 +71,7 @@ using iter_difference_t = typename conditional_t<__is_primary_template<iterator_
                                                  incrementable_traits<remove_cvref_t<_Ip> >,
                                                  iterator_traits<remove_cvref_t<_Ip> > >::difference_type;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

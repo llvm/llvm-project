@@ -1,11 +1,14 @@
 // RUN: %clang_cc1 %s -triple=x86_64-pc-linuxs -emit-llvm -std=c++98 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
 // RUN: %clang_cc1 %s -triple=x86_64-pc-linuxs -emit-llvm -std=c++11 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
+// RUN: %clang_cc1 %s -triple=x86_64-pc-linuxs -emit-llvm -std=c++20 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK20 %s
 
 // CHECK: @_ZZ1hvE1i = internal global i32 0, align 4
 // CHECK: @base_req ={{.*}} global [4 x i8] c"foo\00", align 1
 // CHECK: @base_req_uchar ={{.*}} global [4 x i8] c"bar\00", align 1
 
 // CHECK: @_ZZN5test31BC1EvE1u = internal global { i8, [3 x i8] } { i8 97, [3 x i8] undef }, align 4
+
+// CHECK20: @_ZZN5test51fEvE1a = internal constant %"struct.test5::A" { i32 42 }
 
 // CHECK: @_ZZ2h2vE1i = linkonce_odr global i32 0, comdat, align 4
 // CHECK: @_ZGVZ2h2vE1i = linkonce_odr global i64 0, comdat, align 8{{$}}
@@ -88,7 +91,6 @@ namespace union_static_local {
   }
 }
 
-// rdar://problem/11091093
 //   Static variables should be consistent across constructor
 //   or destructor variants.
 namespace test2 {
@@ -173,3 +175,18 @@ void useit() {
 // CHECK: define linkonce_odr noundef nonnull align 8 dereferenceable(8) ptr @_ZN5test414useStaticLocalEv()
 // CHECK: ret ptr{{.*}} @_ZZN5test414useStaticLocalEvE3obj
 }
+
+#if __cplusplus >= 202002L
+// A const object with constexpr destructor can be emitted as a constant.
+namespace test5 {
+  struct A {
+    constexpr A(int x) : x_(x) {}
+    constexpr ~A() {}
+    int x_;
+  };
+  const int *f() {
+    static const A a{42};
+    return &a.x_;
+  }
+}
+#endif

@@ -55,11 +55,11 @@ class DiagCategory<string Name> {
 }
 
 // Diagnostic Groups.
-class DiagGroup<string Name, list<DiagGroup> subgroups = []> {
+class DiagGroup<string Name, list<DiagGroup> subgroups = [], code docs = [{}]> {
   string GroupName = Name;
   list<DiagGroup> SubGroups = subgroups;
   string CategoryName = "";
-  code Documentation = [{}];
+  code Documentation = docs;
 }
 class InGroup<DiagGroup G> { DiagGroup Group = G; }
 //class IsGroup<string Name> { DiagGroup Group = DiagGroup<Name>; }
@@ -157,7 +157,6 @@ class DefaultRemark { Severity DefaultSeverity = SEV_Remark; }
 
 // Definitions for Diagnostics.
 include "DiagnosticASTKinds.td"
-include "DiagnosticAnalysisKinds.td"
 include "DiagnosticCommentKinds.td"
 include "DiagnosticCommonKinds.td"
 include "DiagnosticCrossTUKinds.td"

@@ -84,11 +84,17 @@ define <4 x i8> @vsel_4xi8(<4 x i8> %v1, <4 x i8> %v2) {
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: vsel_4xi8:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = <255,255,0,255,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: vsel_4xi8:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [255,255,0,255,255,255,0,255,255,255,0,255,255,255,0,255]
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: vsel_4xi8:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [255,255,0,255,255,255,0,255,255,255,0,255,255,255,0,255]
+; AVX2-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    retq
 entry:
   %vsel = select <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i8> %v1, <4 x i8> %v2
   ret <4 x i8> %vsel
@@ -262,11 +268,17 @@ define <16 x i8> @vsel_i8(<16 x i8> %v1, <16 x i8> %v2) {
 ; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: vsel_i8:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,0,255,255,255,0,255,255,255,0,255,255,255]
-; AVX-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: vsel_i8:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [0,255,255,255,0,255,255,255,0,255,255,255,0,255,255,255]
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: vsel_i8:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [0,255,255,255,0,255,255,255,0,255,255,255,0,255,255,255]
+; AVX2-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
 entry:
   %vsel = select <16 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false>, <16 x i8> %v1, <16 x i8> %v2
   ret <16 x i8> %vsel
@@ -619,7 +631,7 @@ define <32 x i8> @constant_pblendvb_avx2(<32 x i8> %xyzw, <32 x i8> %abcd) {
 ;
 ; AVX1-LABEL: constant_pblendvb_avx2:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [18374686483949879295,18374686483949879295,18374686483949879295,18374686483949879295]
+; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
 ; AVX1-NEXT:    vandnps %ymm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
@@ -627,7 +639,7 @@ define <32 x i8> @constant_pblendvb_avx2(<32 x i8> %xyzw, <32 x i8> %abcd) {
 ;
 ; AVX2-LABEL: constant_pblendvb_avx2:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
 ; AVX2-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 entry:

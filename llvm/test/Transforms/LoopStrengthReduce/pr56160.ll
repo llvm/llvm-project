@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; CHECK-LABEL: @test(
 bb:
-  %tmp = load atomic i64, i64 addrspace(1)* undef unordered, align 8
+  %tmp = load atomic i64, ptr addrspace(1) undef unordered, align 8
   %tmp1 = sub i64 4294967294, undef
   br label %bb5
 

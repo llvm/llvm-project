@@ -10,8 +10,12 @@
 #define _LIBCPP___RANDOM_IS_VALID_H
 
 #include <__config>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/integral_constant.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/is_unsigned.h>
+#include <__utility/declval.h>
 #include <cstdint>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -53,7 +57,7 @@ template<> struct __libcpp_random_is_valid_inttype<__uint128_t> : true_type {}; 
 template<class, class = void> struct __libcpp_random_is_valid_urng : false_type {};
 template<class _Gp> struct __libcpp_random_is_valid_urng<_Gp, __enable_if_t<
     is_unsigned<typename _Gp::result_type>::value &&
-    _IsSame<decltype(declval<_Gp&>()()), typename _Gp::result_type>::value
+    _IsSame<decltype(std::declval<_Gp&>()()), typename _Gp::result_type>::value
 > > : true_type {};
 
 _LIBCPP_END_NAMESPACE_STD

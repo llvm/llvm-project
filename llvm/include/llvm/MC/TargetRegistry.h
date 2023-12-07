@@ -20,12 +20,12 @@
 
 #include "llvm-c/DisassemblerTypes.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -564,7 +564,8 @@ public:
     case Triple::UnknownObjectFormat:
       llvm_unreachable("Unknown object format");
     case Triple::COFF:
-      assert(T.isOSWindows() && "only Windows COFF is supported");
+      assert((T.isOSWindows() || T.isUEFI()) &&
+             "only Windows and UEFI COFF are supported");
       S = COFFStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
                              std::move(Emitter), RelaxAll,
                              IncrementalLinkerCompatible);
@@ -791,8 +792,7 @@ struct TargetRegistry {
   /// \param Triple - The triple to use for finding a target.
   /// \param Error - On failure, an error string describing why no target was
   /// found.
-  static const Target *lookupTarget(const std::string &Triple,
-                                    std::string &Error);
+  static const Target *lookupTarget(StringRef Triple, std::string &Error);
 
   /// lookupTarget - Lookup a target based on an architecture name
   /// and a target triple.  If the architecture name is non-empty,
@@ -805,8 +805,8 @@ struct TargetRegistry {
   /// by architecture is done.
   /// \param Error - On failure, an error string describing why no target was
   /// found.
-  static const Target *lookupTarget(const std::string &ArchName,
-                                    Triple &TheTriple, std::string &Error);
+  static const Target *lookupTarget(StringRef ArchName, Triple &TheTriple,
+                                    std::string &Error);
 
   /// @}
   /// @name Target Registration

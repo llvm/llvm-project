@@ -8,16 +8,16 @@
 
 #include "src/signal/sigfillset.h"
 #include "src/__support/common.h"
+#include "src/errno/libc_errno.h"
 #include "src/signal/linux/signal_utils.h"
 
-#include <errno.h>
 #include <signal.h>
 
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, sigfillset, (sigset_t * set)) {
   if (!set) {
-    errno = EINVAL;
+    libc_errno = EINVAL;
     return -1;
   }
   *set = full_set();

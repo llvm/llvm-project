@@ -14,16 +14,18 @@
 #endif
 
 #include <cassert>
+#include <cerrno>
 #include <chrono>
 #include <cstdint>
 #include <cstdio> // for printf
 #include <string>
 #include <system_error>
+#include <type_traits>
 #include <vector>
 
+#include "assert_macros.h"
 #include "make_string.h"
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "format_string.h"
 
 // For creating socket files
@@ -101,7 +103,7 @@ namespace utils {
     // N.B. libc might define some of the foo[64] identifiers using macros from
     // foo64 -> foo or vice versa.
 #if defined(_WIN32)
-    using off64_t = int64_t;
+    using off64_t = std::int64_t;
 #elif defined(__MVS__) || defined(__LP64__)
     using off64_t = ::off_t;
 #else
@@ -214,7 +216,7 @@ struct scoped_test_env
     // but the caller is not (std::filesystem also uses uintmax_t rather than
     // off_t). On a 32-bit system this allows us to create a file larger than
     // 2GB.
-    std::string create_file(fs::path filename_path, uintmax_t size = 0) {
+    std::string create_file(fs::path filename_path, std::uintmax_t size = 0) {
         std::string filename = sanitize_path(filename_path.string());
 
         if (size >
@@ -335,7 +337,7 @@ private:
         fs::path const cwd = utils::getcwd();
         fs::path const tmp = fs::temp_directory_path();
         std::string base = cwd.filename().string();
-        size_t i = std::hash<std::string>()(cwd.string());
+        std::size_t i = std::hash<std::string>()(cwd.string());
         fs::path p = tmp / (base + "-static_env." + std::to_string(i));
         while (utils::exists(p.string())) {
             p = tmp / (base + "-static_env." + std::to_string(++i));
@@ -464,111 +466,6 @@ struct CWDGuard {
   CWDGuard& operator=(CWDGuard const&) = delete;
 };
 
-// Misc test types
-
-const MultiStringType PathList[] = {
-        MKSTR(""),
-        MKSTR(" "),
-        MKSTR("//"),
-        MKSTR("."),
-        MKSTR(".."),
-        MKSTR("foo"),
-        MKSTR("/"),
-        MKSTR("/foo"),
-        MKSTR("foo/"),
-        MKSTR("/foo/"),
-        MKSTR("foo/bar"),
-        MKSTR("/foo/bar"),
-        MKSTR("//net"),
-        MKSTR("//net/foo"),
-        MKSTR("///foo///"),
-        MKSTR("///foo///bar"),
-        MKSTR("/."),
-        MKSTR("./"),
-        MKSTR("/.."),
-        MKSTR("../"),
-        MKSTR("foo/."),
-        MKSTR("foo/.."),
-        MKSTR("foo/./"),
-        MKSTR("foo/./bar"),
-        MKSTR("foo/../"),
-        MKSTR("foo/../bar"),
-        MKSTR("c:"),
-        MKSTR("c:/"),
-        MKSTR("c:foo"),
-        MKSTR("c:/foo"),
-        MKSTR("c:foo/"),
-        MKSTR("c:/foo/"),
-        MKSTR("c:/foo/bar"),
-        MKSTR("prn:"),
-        MKSTR("c:\\"),
-        MKSTR("c:\\foo"),
-        MKSTR("c:foo\\"),
-        MKSTR("c:\\foo\\"),
-        MKSTR("c:\\foo/"),
-        MKSTR("c:/foo\\bar"),
-        MKSTR("//"),
-        MKSTR("/finally/we/need/one/really/really/really/really/really/really/really/long/string")
-};
-const unsigned PathListSize = sizeof(PathList) / sizeof(MultiStringType);
-
-template <class Iter>
-Iter IterEnd(Iter B) {
-  using VT = typename std::iterator_traits<Iter>::value_type;
-  for (; *B != VT{}; ++B)
-    ;
-  return B;
-}
-
-template <class CharT>
-const CharT* StrEnd(CharT const* P) {
-    return IterEnd(P);
-}
-
-template <class CharT>
-std::size_t StrLen(CharT const* P) {
-    return StrEnd(P) - P;
-}
-
-// Testing the allocation behavior of the code_cvt functions requires
-// *knowing* that the allocation was not done by "path::__str_".
-// This hack forces path to allocate enough memory.
-inline void PathReserve(fs::path& p, std::size_t N) {
-  auto const& native_ref = p.native();
-  const_cast<fs::path::string_type&>(native_ref).reserve(N);
-}
-
-template <class Iter1, class Iter2>
-bool checkCollectionsEqual(
-    Iter1 start1, Iter1 const end1
-  , Iter2 start2, Iter2 const end2
-  )
-{
-    while (start1 != end1 && start2 != end2) {
-        if (*start1 != *start2) {
-            return false;
-        }
-        ++start1; ++start2;
-    }
-    return (start1 == end1 && start2 == end2);
-}
-
-
-template <class Iter1, class Iter2>
-bool checkCollectionsEqualBackwards(
-    Iter1 const start1, Iter1 end1
-  , Iter2 const start2, Iter2 end2
-  )
-{
-    while (start1 != end1 && start2 != end2) {
-        --end1; --end2;
-        if (*end1 != *end2) {
-            return false;
-        }
-    }
-    return (start1 == end1 && start2 == end2);
-}
-
 // We often need to test that the error_code was cleared if no error occurs
 // this function returns an error_code which is set to an error that will
 // never be returned by the filesystem functions.
@@ -622,16 +519,6 @@ template <class Dur> void SleepFor(Dur dur) {
         ;
 }
 
-inline bool PathEq(fs::path const& LHS, fs::path const& RHS) {
-  return LHS.native() == RHS.native();
-}
-
-inline bool PathEqIgnoreSep(fs::path LHS, fs::path RHS) {
-  LHS.make_preferred();
-  RHS.make_preferred();
-  return LHS.native() == RHS.native();
-}
-
 inline fs::perms NormalizeExpectedPerms(fs::perms P) {
 #ifdef _WIN32
   // On Windows, fs::perms only maps down to one bit stored in the filesystem,
@@ -672,9 +559,9 @@ struct ExceptionChecker {
         num_paths(2), func_name(fun_name), opt_message(opt_msg) {}
 
   void operator()(fs::filesystem_error const& Err) {
-    TEST_CHECK(ErrorIsImp(Err.code(), {expected_err}));
-    TEST_CHECK(Err.path1() == expected_path1);
-    TEST_CHECK(Err.path2() == expected_path2);
+    assert(ErrorIsImp(Err.code(), {expected_err}));
+    assert(Err.path1() == expected_path1);
+    assert(Err.path2() == expected_path2);
     LIBCPP_ONLY(check_libcxx_string(Err));
   }
 
@@ -703,11 +590,11 @@ struct ExceptionChecker {
                              transform_path(expected_path1).c_str(),
                              transform_path(expected_path2).c_str());
       default:
-        TEST_CHECK(false && "unexpected case");
+        TEST_FAIL("unexpected case");
         return "";
       }
     }();
-    TEST_CHECK(format == Err.what());
+    assert(format == Err.what());
     if (format != Err.what()) {
       fprintf(stderr,
               "filesystem_error::what() does not match expected output:\n");

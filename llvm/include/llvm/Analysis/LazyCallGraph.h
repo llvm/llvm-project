@@ -255,7 +255,7 @@ public:
     iterator end() { return iterator(Edges.end(), Edges.end()); }
 
     Edge &operator[](Node &N) {
-      assert(EdgeIndexMap.find(&N) != EdgeIndexMap.end() && "No such edge!");
+      assert(EdgeIndexMap.contains(&N) && "No such edge!");
       auto &E = Edges[EdgeIndexMap.find(&N)->second];
       assert(E && "Dead or null edge!");
       return E;

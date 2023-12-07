@@ -97,8 +97,7 @@ const llvm::APSInt& BasicValueFactory::getValue(const llvm::APSInt& X) {
   FoldNodeTy* P = APSIntSet.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!P) {
-    P = (FoldNodeTy*) BPAlloc.Allocate<FoldNodeTy>();
-    new (P) FoldNodeTy(X);
+    P = new (BPAlloc) FoldNodeTy(X);
     APSIntSet.InsertNode(P, InsertPos);
   }
 
@@ -132,8 +131,7 @@ BasicValueFactory::getCompoundValData(QualType T,
   CompoundValData* D = CompoundValDataSet.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!D) {
-    D = (CompoundValData*) BPAlloc.Allocate<CompoundValData>();
-    new (D) CompoundValData(T, Vals);
+    D = new (BPAlloc) CompoundValData(T, Vals);
     CompoundValDataSet.InsertNode(D, InsertPos);
   }
 
@@ -151,8 +149,7 @@ BasicValueFactory::getLazyCompoundValData(const StoreRef &store,
     LazyCompoundValDataSet.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!D) {
-    D = (LazyCompoundValData*) BPAlloc.Allocate<LazyCompoundValData>();
-    new (D) LazyCompoundValData(store, region);
+    D = new (BPAlloc) LazyCompoundValData(store, region);
     LazyCompoundValDataSet.InsertNode(D, InsertPos);
   }
 
@@ -169,8 +166,7 @@ const PointerToMemberData *BasicValueFactory::getPointerToMemberData(
       PointerToMemberDataSet.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!D) {
-    D = (PointerToMemberData *)BPAlloc.Allocate<PointerToMemberData>();
-    new (D) PointerToMemberData(ND, L);
+    D = new (BPAlloc) PointerToMemberData(ND, L);
     PointerToMemberDataSet.InsertNode(D, InsertPos);
   }
 
@@ -288,7 +284,7 @@ BasicValueFactory::evalAPSInt(BinaryOperator::Opcode Op,
         if (V1.isSigned() && V1.isNegative())
           return nullptr;
 
-        if (V1.isSigned() && Amt > V1.countLeadingZeros())
+        if (V1.isSigned() && Amt > V1.countl_zero())
           return nullptr;
       }
 
@@ -358,8 +354,7 @@ BasicValueFactory::getPersistentSValWithData(const SVal& V, uintptr_t Data) {
   FoldNodeTy* P = Map.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!P) {
-    P = (FoldNodeTy*) BPAlloc.Allocate<FoldNodeTy>();
-    new (P) FoldNodeTy(std::make_pair(V, Data));
+    P = new (BPAlloc) FoldNodeTy(std::make_pair(V, Data));
     Map.InsertNode(P, InsertPos);
   }
 
@@ -383,8 +378,7 @@ BasicValueFactory::getPersistentSValPair(const SVal& V1, const SVal& V2) {
   FoldNodeTy* P = Map.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!P) {
-    P = (FoldNodeTy*) BPAlloc.Allocate<FoldNodeTy>();
-    new (P) FoldNodeTy(std::make_pair(V1, V2));
+    P = new (BPAlloc) FoldNodeTy(std::make_pair(V1, V2));
     Map.InsertNode(P, InsertPos);
   }
 

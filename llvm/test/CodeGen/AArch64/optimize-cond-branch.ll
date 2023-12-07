@@ -13,25 +13,20 @@ target triple = "arm64--"
 define void @func() uwtable {
 ; CHECK-LABEL: func:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cbnz w8, .LBB0_3
 ; CHECK-NEXT:  // %bb.1: // %b1
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    cbz wzr, .LBB0_4
 ; CHECK-NEXT:  // %bb.2: // %b3
 ; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    and w0, w8, #0x100
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    cbz w0, .LBB0_5
 ; CHECK-NEXT:  .LBB0_3: // %common.ret.sink.split
 ; CHECK-NEXT:    b extfunc
 ; CHECK-NEXT:  .LBB0_4: // %b2
-; CHECK-NEXT:    .cfi_restore_state
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl extfunc
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
@@ -50,7 +45,7 @@ b2:
   br label %b5
 
 b3:
-  %v1 = load i32, i32* undef, align 4
+  %v1 = load i32, ptr undef, align 4
   %v2 = and i32 %v1, 256
   br label %b5
 

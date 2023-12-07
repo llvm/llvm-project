@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
 // CHECK1:       arrayctor.cont:
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-// CHECK1-NEXT:    [[TMP3:%.*]] = call ptr @llvm.stacksave()
+// CHECK1-NEXT:    [[TMP3:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK1-NEXT:    store ptr [[TMP3]], ptr [[SAVED_STACK]], align 8
 // CHECK1-NEXT:    [[VLA:%.*]] = alloca i16, i64 [[TMP2]], align 16
 // CHECK1-NEXT:    store i64 [[TMP2]], ptr [[__VLA_EXPR0]], align 8
@@ -172,12 +172,12 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    store i32 1, ptr [[TMP41]], align 8
 // CHECK1-NEXT:    [[TMP42:%.*]] = call ptr @__kmpc_taskred_init(i32 [[TMP0]], i32 2, ptr [[DOTRD_INPUT_3]])
 // CHECK1-NEXT:    store ptr [[TMP42]], ptr [[DOTTASK_RED_6]], align 8
-// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 5, ptr @.omp_outlined., ptr [[A]], i64 [[TMP2]], ptr [[VLA]], ptr [[DOTTASK_RED_]], ptr [[DOTTASK_RED_6]])
+// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 5, ptr @main.omp_outlined, ptr [[A]], i64 [[TMP2]], ptr [[VLA]], ptr [[DOTTASK_RED_]], ptr [[DOTTASK_RED_6]])
 // CHECK1-NEXT:    call void @__kmpc_end_taskgroup(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    call void @__kmpc_end_taskgroup(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], ptr [[AGG_CAPTURED]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[A]], ptr [[TMP43]], align 8
-// CHECK1-NEXT:    [[TMP44:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i64 40, i64 8, ptr @.omp_task_entry..11)
+// CHECK1-NEXT:    [[TMP44:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i64 40, i64 8, ptr @.omp_task_entry..10)
 // CHECK1-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2:%.*]], ptr [[TMP44]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP45]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP47:%.*]] = load ptr, ptr [[TMP46]], align 8
@@ -185,7 +185,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP48:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP44]])
 // CHECK1-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    [[TMP49:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// CHECK1-NEXT:    call void @llvm.stackrestore(ptr [[TMP49]])
+// CHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP49]])
 // CHECK1-NEXT:    [[ARRAY_BEGIN7:%.*]] = getelementptr inbounds [5 x %struct.S], ptr [[C]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN7]], i64 5
 // CHECK1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
@@ -454,7 +454,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
+// CHECK1-LABEL: define {{[^@]+}}@main.omp_outlined
 // CHECK1-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(4) [[A:%.*]], i64 [[VLA:%.*]], ptr nonnull align 2 dereferenceable(2) [[D:%.*]], ptr nonnull align 8 dereferenceable(8) [[DOTTASK_RED_:%.*]], ptr nonnull align 8 dereferenceable(8) [[DOTTASK_RED_1:%.*]]) #[[ATTR8:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -587,7 +587,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    ret i32 0
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..11
+// CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..10
 // CHECK1-SAME: (i32 [[TMP0:%.*]], ptr noalias [[TMP1:%.*]]) #[[ATTR5]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4

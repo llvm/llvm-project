@@ -43,6 +43,8 @@ public:
       return "The data is in an unexpected format.";
     case msf_error_code::block_in_use:
       return "The block is already in use.";
+    case msf_error_code::stream_directory_overflow:
+      return "PDB stream directory too large.";
     }
     llvm_unreachable("Unrecognized msf_error_code");
   }

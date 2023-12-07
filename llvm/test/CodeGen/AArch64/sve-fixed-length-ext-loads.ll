@@ -73,13 +73,10 @@ define <32 x i32> @load_zext_v32i16i32(ptr %ap) vscale_range(8,0) #0 {
 define <64 x i32> @load_zext_v64i16i32(ptr %ap) #0 {
 ; VBITS_GE_1024-LABEL: load_zext_v64i16i32:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT:    ptrue p0.h, vl64
-; VBITS_GE_1024-NEXT:    mov x9, #32
-; VBITS_GE_1024-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
-; VBITS_GE_1024-NEXT:    uunpklo z1.s, z0.h
-; VBITS_GE_1024-NEXT:    ext z0.b, z0.b, z0.b, #64
-; VBITS_GE_1024-NEXT:    uunpklo z0.s, z0.h
+; VBITS_GE_1024-NEXT:    mov x9, #32 // =0x20
+; VBITS_GE_1024-NEXT:    ld1h { z0.s }, p0/z, [x0, x9, lsl #1]
+; VBITS_GE_1024-NEXT:    ld1h { z1.s }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x8, x9, lsl #2]
 ; VBITS_GE_1024-NEXT:    st1w { z1.s }, p0, [x8]
 ; VBITS_GE_1024-NEXT:    ret
@@ -145,13 +142,10 @@ define <32 x i32> @load_sext_v32i16i32(ptr %ap) vscale_range(8,0) #0 {
 define <64 x i32> @load_sext_v64i16i32(ptr %ap) #0 {
 ; VBITS_GE_1024-LABEL: load_sext_v64i16i32:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT:    ptrue p0.h, vl64
-; VBITS_GE_1024-NEXT:    mov x9, #32
-; VBITS_GE_1024-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
-; VBITS_GE_1024-NEXT:    sunpklo z1.s, z0.h
-; VBITS_GE_1024-NEXT:    ext z0.b, z0.b, z0.b, #64
-; VBITS_GE_1024-NEXT:    sunpklo z0.s, z0.h
+; VBITS_GE_1024-NEXT:    mov x9, #32 // =0x20
+; VBITS_GE_1024-NEXT:    ld1sh { z0.s }, p0/z, [x0, x9, lsl #1]
+; VBITS_GE_1024-NEXT:    ld1sh { z1.s }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x8, x9, lsl #2]
 ; VBITS_GE_1024-NEXT:    st1w { z1.s }, p0, [x8]
 ; VBITS_GE_1024-NEXT:    ret
@@ -170,17 +164,11 @@ define <64 x i32> @load_sext_v64i16i32(ptr %ap) #0 {
 define <32 x i64> @load_zext_v32i8i64(ptr %ap) #0 {
 ; VBITS_GE_1024-LABEL: load_zext_v32i8i64:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT:    ptrue p0.b, vl32
-; VBITS_GE_1024-NEXT:    mov x9, #16
-; VBITS_GE_1024-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    uunpklo z1.h, z0.b
-; VBITS_GE_1024-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_GE_1024-NEXT:    uunpklo z0.h, z0.b
-; VBITS_GE_1024-NEXT:    uunpklo z1.s, z1.h
-; VBITS_GE_1024-NEXT:    uunpklo z0.s, z0.h
-; VBITS_GE_1024-NEXT:    uunpklo z1.d, z1.s
-; VBITS_GE_1024-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_1024-NEXT:    mov w9, #16 // =0x10
+; VBITS_GE_1024-NEXT:    ld1b { z0.d }, p0/z, [x0, x9]
+; VBITS_GE_1024-NEXT:    ld1b { z1.d }, p0/z, [x0]
+; VBITS_GE_1024-NEXT:    mov x9, #16 // =0x10
 ; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x8, x9, lsl #3]
 ; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x8]
 ; VBITS_GE_1024-NEXT:    ret
@@ -199,17 +187,11 @@ define <32 x i64> @load_zext_v32i8i64(ptr %ap) #0 {
 define <32 x i64> @load_sext_v32i8i64(ptr %ap) #0 {
 ; VBITS_GE_1024-LABEL: load_sext_v32i8i64:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT:    ptrue p0.b, vl32
-; VBITS_GE_1024-NEXT:    mov x9, #16
-; VBITS_GE_1024-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    sunpklo z1.h, z0.b
-; VBITS_GE_1024-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_GE_1024-NEXT:    sunpklo z0.h, z0.b
-; VBITS_GE_1024-NEXT:    sunpklo z1.s, z1.h
-; VBITS_GE_1024-NEXT:    sunpklo z0.s, z0.h
-; VBITS_GE_1024-NEXT:    sunpklo z1.d, z1.s
-; VBITS_GE_1024-NEXT:    sunpklo z0.d, z0.s
+; VBITS_GE_1024-NEXT:    mov w9, #16 // =0x10
+; VBITS_GE_1024-NEXT:    ld1sb { z0.d }, p0/z, [x0, x9]
+; VBITS_GE_1024-NEXT:    ld1sb { z1.d }, p0/z, [x0]
+; VBITS_GE_1024-NEXT:    mov x9, #16 // =0x10
 ; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x8, x9, lsl #3]
 ; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x8]
 ; VBITS_GE_1024-NEXT:    ret
@@ -228,15 +210,10 @@ define <32 x i64> @load_sext_v32i8i64(ptr %ap) #0 {
 define <32 x i64> @load_zext_v32i16i64(ptr %ap) #0 {
 ; VBITS_GE_1024-LABEL: load_zext_v32i16i64:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT:    ptrue p0.h, vl32
-; VBITS_GE_1024-NEXT:    mov x9, #16
-; VBITS_GE_1024-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    uunpklo z1.s, z0.h
-; VBITS_GE_1024-NEXT:    ext z0.b, z0.b, z0.b, #32
-; VBITS_GE_1024-NEXT:    uunpklo z0.s, z0.h
-; VBITS_GE_1024-NEXT:    uunpklo z1.d, z1.s
-; VBITS_GE_1024-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_1024-NEXT:    mov x9, #16 // =0x10
+; VBITS_GE_1024-NEXT:    ld1h { z0.d }, p0/z, [x0, x9, lsl #1]
+; VBITS_GE_1024-NEXT:    ld1h { z1.d }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x8, x9, lsl #3]
 ; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x8]
 ; VBITS_GE_1024-NEXT:    ret
@@ -255,15 +232,10 @@ define <32 x i64> @load_zext_v32i16i64(ptr %ap) #0 {
 define <32 x i64> @load_sext_v32i16i64(ptr %ap) #0 {
 ; VBITS_GE_1024-LABEL: load_sext_v32i16i64:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT:    ptrue p0.h, vl32
-; VBITS_GE_1024-NEXT:    mov x9, #16
-; VBITS_GE_1024-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    sunpklo z1.s, z0.h
-; VBITS_GE_1024-NEXT:    ext z0.b, z0.b, z0.b, #32
-; VBITS_GE_1024-NEXT:    sunpklo z0.s, z0.h
-; VBITS_GE_1024-NEXT:    sunpklo z1.d, z1.s
-; VBITS_GE_1024-NEXT:    sunpklo z0.d, z0.s
+; VBITS_GE_1024-NEXT:    mov x9, #16 // =0x10
+; VBITS_GE_1024-NEXT:    ld1sh { z0.d }, p0/z, [x0, x9, lsl #1]
+; VBITS_GE_1024-NEXT:    ld1sh { z1.d }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x8, x9, lsl #3]
 ; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x8]
 ; VBITS_GE_1024-NEXT:    ret
@@ -282,13 +254,10 @@ define <32 x i64> @load_sext_v32i16i64(ptr %ap) #0 {
 define <32 x i64> @load_zext_v32i32i64(ptr %ap) #0 {
 ; VBITS_GE_1024-LABEL: load_zext_v32i32i64:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
-; VBITS_GE_1024-NEXT:    mov x9, #16
-; VBITS_GE_1024-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    uunpklo z1.d, z0.s
-; VBITS_GE_1024-NEXT:    ext z0.b, z0.b, z0.b, #64
-; VBITS_GE_1024-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_1024-NEXT:    mov x9, #16 // =0x10
+; VBITS_GE_1024-NEXT:    ld1w { z0.d }, p0/z, [x0, x9, lsl #2]
+; VBITS_GE_1024-NEXT:    ld1w { z1.d }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x8, x9, lsl #3]
 ; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x8]
 ; VBITS_GE_1024-NEXT:    ret
@@ -307,13 +276,10 @@ define <32 x i64> @load_zext_v32i32i64(ptr %ap) #0 {
 define <32 x i64> @load_sext_v32i32i64(ptr %ap) #0 {
 ; VBITS_GE_1024-LABEL: load_sext_v32i32i64:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
-; VBITS_GE_1024-NEXT:    mov x9, #16
-; VBITS_GE_1024-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    sunpklo z1.d, z0.s
-; VBITS_GE_1024-NEXT:    ext z0.b, z0.b, z0.b, #64
-; VBITS_GE_1024-NEXT:    sunpklo z0.d, z0.s
+; VBITS_GE_1024-NEXT:    mov x9, #16 // =0x10
+; VBITS_GE_1024-NEXT:    ld1sw { z0.d }, p0/z, [x0, x9, lsl #2]
+; VBITS_GE_1024-NEXT:    ld1sw { z1.d }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x8, x9, lsl #3]
 ; VBITS_GE_1024-NEXT:    st1d { z1.d }, p0, [x8]
 ; VBITS_GE_1024-NEXT:    ret

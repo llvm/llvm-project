@@ -34,7 +34,7 @@ tablegen("MipsGenPostLegalizeGICombiner") {
   visibility = [ ":LLVMMipsCodeGen" ]
   args = [
     "-gen-global-isel-combiner",
-    "-combiners=MipsPostLegalizerCombinerHelper",
+    "-combiners=MipsPostLegalizerCombiner",
   ]
   td_file = "Mips.td"
 }
@@ -66,6 +66,7 @@ static_library("LLVMMipsCodeGen") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ "." ]
   sources = [

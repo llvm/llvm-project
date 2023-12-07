@@ -10,8 +10,8 @@
 #include "gtest/gtest.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InitFIR.h"
-#include "flang/Optimizer/Support/KindMapping.h"
 
 struct HLFIRToolsTest : public testing::Test {
 public:
@@ -37,7 +37,8 @@ public:
 
   mlir::Value createDeclare(fir::ExtendedValue exv) {
     return hlfir::genDeclare(getLoc(), *firBuilder, exv,
-        "x" + std::to_string(varCounter++), fir::FortranVariableFlagsAttr{});
+        "x" + std::to_string(varCounter++), fir::FortranVariableFlagsAttr{})
+        .getBase();
   }
 
   mlir::Value createConstant(std::int64_t cst) {

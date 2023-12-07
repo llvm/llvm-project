@@ -1,0 +1,25 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-cross-reference-different-abbrev-dst.s -o %t.o
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-cross-reference-different-abbrev-src.s -o %t1.o
+# RUN: %clang %cflags -gdwarf-4 %t.o %t1.o -o %t.exe
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
+
+# This test checks that BOLT handles backward cross CU references for dwarf4
+# when CUs are have different abbrev tables.
+
+# PRECHECK: DW_TAG_compile_unit
+# PRECHECK: DW_TAG_compile_unit
+# PRECHECK: DW_AT_abstract_origin [DW_FORM_ref_addr]
+# PRECHECK-SAME: "inlined"
+# PRECHECK: DW_AT_abstract_origin [DW_FORM_ref_addr]
+# PRECHECK-SAME: "var"
+
+# POSTCHECK: DW_TAG_compile_unit
+# POSTCHECK: DW_AT_abstract_origin [DW_FORM_ref_addr]
+# POSTCHECK-SAME: "inlined"
+# POSTCHECK: DW_AT_abstract_origin [DW_FORM_ref_addr]
+# POSTCHECK-SAME: "var"
+# POSTCHECK: DW_TAG_compile_unit

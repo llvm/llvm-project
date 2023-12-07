@@ -14,7 +14,7 @@ define <9 x i32> @strided_load_3x3(ptr %in, i64 %stride) {
 ; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr i32, ptr [[IN]], i64 [[VEC_START5]]
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <3 x i32>, ptr [[VEC_GEP6]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <3 x i32> [[COL_LOAD]], <3 x i32> [[COL_LOAD4]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[COL_LOAD8]], <3 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[COL_LOAD8]], <3 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <6 x i32> [[TMP0]], <6 x i32> [[TMP1]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    ret <9 x i32> [[TMP2]]
 ;

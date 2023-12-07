@@ -10,7 +10,7 @@
 
 // type_traits
 
-// is_scoped_enum // C++2b
+// is_scoped_enum // C++23
 
 #include <type_traits>
 #include <cstddef> // for std::nullptr_t

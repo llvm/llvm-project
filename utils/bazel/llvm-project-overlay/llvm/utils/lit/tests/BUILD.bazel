@@ -25,9 +25,9 @@ expand_template(
         srcs = [src],
         args = ["--path %s" % package_path("//llvm:BUILD")],
         data = [
+            "check-tested-lit-timeout-ability",
             "lit.cfg",
             "lit.site.cfg",
-            "check-tested-lit-timeout-ability",
             "//llvm:FileCheck",
             "//llvm:count",
             "//llvm:not",

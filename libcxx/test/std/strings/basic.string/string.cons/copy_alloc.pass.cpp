@@ -19,73 +19,70 @@
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
 struct alloc_imp {
-    bool active;
+  bool active;
 
-    TEST_CONSTEXPR alloc_imp() : active(true) {}
+  TEST_CONSTEXPR alloc_imp() : active(true) {}
 
-    template <class T>
-    T* allocate(std::size_t n)
-    {
-        if (active)
-            return static_cast<T*>(std::malloc(n * sizeof(T)));
-        else
-            throw std::bad_alloc();
-    }
+  template <class T>
+  T* allocate(std::size_t n) {
+    if (active)
+      return static_cast<T*>(std::malloc(n * sizeof(T)));
+    else
+      throw std::bad_alloc();
+  }
 
-    template <class T>
-    void deallocate(T* p, std::size_t) { std::free(p); }
-    void activate  ()                  { active = true; }
-    void deactivate()                  { active = false; }
+  template <class T>
+  void deallocate(T* p, std::size_t) {
+    std::free(p);
+  }
+  void activate() { active = true; }
+  void deactivate() { active = false; }
 };
 
 template <class T>
 struct poca_alloc {
-    typedef T value_type;
-    typedef std::true_type propagate_on_container_copy_assignment;
+  typedef T value_type;
+  typedef std::true_type propagate_on_container_copy_assignment;
 
-    alloc_imp *imp;
+  alloc_imp* imp;
 
-    TEST_CONSTEXPR poca_alloc(alloc_imp *imp_) : imp (imp_) {}
+  TEST_CONSTEXPR poca_alloc(alloc_imp* imp_) : imp(imp_) {}
 
-    template <class U>
-    TEST_CONSTEXPR poca_alloc(const poca_alloc<U>& other) : imp(other.imp) {}
+  template <class U>
+  TEST_CONSTEXPR poca_alloc(const poca_alloc<U>& other) : imp(other.imp) {}
 
-    T*   allocate  (std::size_t n)       { return imp->allocate<T>(n);}
-    void deallocate(T* p, std::size_t n) { imp->deallocate(p, n); }
+  T* allocate(std::size_t n) { return imp->allocate<T>(n); }
+  void deallocate(T* p, std::size_t n) { imp->deallocate(p, n); }
 };
 
 template <typename T, typename U>
-bool operator==(const poca_alloc<T>& lhs, const poca_alloc<U>& rhs)
-{
-    return lhs.imp == rhs.imp;
+bool operator==(const poca_alloc<T>& lhs, const poca_alloc<U>& rhs) {
+  return lhs.imp == rhs.imp;
 }
 
 template <typename T, typename U>
-bool operator!=(const poca_alloc<T>& lhs, const poca_alloc<U>& rhs)
-{
-    return lhs.imp != rhs.imp;
+bool operator!=(const poca_alloc<T>& lhs, const poca_alloc<U>& rhs) {
+  return lhs.imp != rhs.imp;
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test_assign(S &s1, const S& s2)
-{
-    try { s1 = s2; }
-    catch ( std::bad_alloc &) { return; }
-    assert(false);
+TEST_CONSTEXPR_CXX20 void test_assign(S& s1, const S& s2) {
+  try {
+    s1 = s2;
+  } catch (std::bad_alloc&) {
+    return;
+  }
+  assert(false);
 }
 #endif
 
-
-
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S s1, const typename S::allocator_type& a)
-{
-    S s2(s1, a);
-    LIBCPP_ASSERT(s2.__invariants());
-    assert(s2 == s1);
-    assert(s2.capacity() >= s2.size());
-    assert(s2.get_allocator() == a);
+TEST_CONSTEXPR_CXX20 void test(S s1, const typename S::allocator_type& a) {
+  S s2(s1, a);
+  LIBCPP_ASSERT(s2.__invariants());
+  assert(s2 == s1);
+  assert(s2.capacity() >= s2.size());
+  assert(s2.get_allocator() == a);
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -105,12 +102,12 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), A());
   }
 
-#ifndef TEST_HAS_NO_EXCEPTIONS
+#  ifndef TEST_HAS_NO_EXCEPTIONS
   if (!TEST_IS_CONSTANT_EVALUATED) {
     typedef poca_alloc<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
-    const char * p1 = "This is my first string";
-    const char * p2 = "This is my second string";
+    const char* p1 = "This is my first string";
+    const char* p2 = "This is my second string";
 
     alloc_imp imp1;
     alloc_imp imp2;
@@ -125,14 +122,13 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(s1 == p1);
     assert(s2 == p2);
   }
-#endif
+#  endif
 #endif
 
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

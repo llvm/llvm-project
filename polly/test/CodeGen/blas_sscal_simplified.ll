@@ -14,7 +14,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define i32 @sscal(i32 %n, float %sa, float* %sx) {
+define i32 @sscal(i32 %n, float %sa, ptr %sx) {
 entry:
   br label %entry.split
 
@@ -28,10 +28,10 @@ for.body.lr.ph:                                   ; preds = %entry.split
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %indvar = phi i64 [ 0, %for.body.lr.ph ], [ %indvar.next, %for.body ]
-  %sx.addr.02 = getelementptr float, float* %sx, i64 %indvar
-  %tmp = load float, float* %sx.addr.02, align 4
+  %sx.addr.02 = getelementptr float, ptr %sx, i64 %indvar
+  %tmp = load float, ptr %sx.addr.02, align 4
   %mul = fmul float %tmp, %sa
-  store float %mul, float* %sx.addr.02, align 4
+  store float %mul, ptr %sx.addr.02, align 4
   %indvar.next = add i64 %indvar, 1
   %exitcond = icmp ne i64 %indvar.next, %0
   br i1 %exitcond, label %for.body, label %for.cond.for.end_crit_edge

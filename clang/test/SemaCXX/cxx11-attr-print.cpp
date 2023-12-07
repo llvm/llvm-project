@@ -28,7 +28,7 @@ int e __attribute__((deprecated("warning", "fixit")));
 // CHECK: int cxx11_alignas alignas(4);
 alignas(4) int cxx11_alignas;
 
-// CHECK: int c11_alignas _Alignas(alignof(int));
+// CHECK: int c11_alignas _Alignas(int);
 _Alignas(int) int c11_alignas;
 
 // CHECK: void foo() __attribute__((const));
@@ -65,11 +65,13 @@ void f8 (void *, const char *, ...) __attribute__ ((format (printf, 2, 3)));
 
 // CHECK: int m __attribute__((aligned(4
 // CHECK: int n alignas(4
+// CHECK: int p alignas(int
 // CHECK: static int f() __attribute__((pure))
 // CHECK: static int g() {{\[}}[gnu::pure]]
 template <typename T> struct S {
   __attribute__((aligned(4))) int m;
   alignas(4) int n;
+  alignas(int) int p;
   __attribute__((pure)) static int f() {
     return 0;
   }

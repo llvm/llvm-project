@@ -1,4 +1,4 @@
-// Simply marking this as "#pragma clang system_header" didn't tickle the bug, rdar://problem/21134250.
+// Simply marking this as "#pragma clang system_header" didn't tickle the bug
 
 void system1(int *ptr);
 #if WARN_IN_SYSTEM_HEADERS

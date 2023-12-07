@@ -32,17 +32,16 @@ name: nonoverlapping_copy_kill
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr30_sgpr31, $sgpr3_sgpr4_sgpr5
+    liveins: $sgpr30_sgpr31, $sgpr4_sgpr5_sgpr6
 
     ; CHECK-LABEL: name: nonoverlapping_copy_kill
-    ; CHECK: liveins: $sgpr30_sgpr31, $sgpr3_sgpr4_sgpr5
+    ; CHECK: liveins: $sgpr30_sgpr31, $sgpr4_sgpr5_sgpr6
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $sgpr0 = S_MOV_B32 $sgpr3, implicit $sgpr3_sgpr4_sgpr5, implicit-def $sgpr0_sgpr1_sgpr2
-    ; CHECK-NEXT: $sgpr1 = S_MOV_B32 $sgpr4, implicit $sgpr3_sgpr4_sgpr5
-    ; CHECK-NEXT: $sgpr2 = S_MOV_B32 $sgpr5, implicit killed $sgpr3_sgpr4_sgpr5
+    ; CHECK-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $sgpr4_sgpr5, implicit $sgpr4_sgpr5_sgpr6, implicit-def $sgpr0_sgpr1_sgpr2
+    ; CHECK-NEXT: $sgpr2 = S_MOV_B32 $sgpr6, implicit killed $sgpr4_sgpr5_sgpr6
     ; CHECK-NEXT: renamable $sgpr1 = S_ADD_I32 0, $sgpr1, implicit-def $scc
     ; CHECK-NEXT: S_SETPC_B64 $sgpr30_sgpr31, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2
-    renamable $sgpr0_sgpr1_sgpr2 = COPY killed renamable $sgpr3_sgpr4_sgpr5
+    renamable $sgpr0_sgpr1_sgpr2 = COPY killed renamable $sgpr4_sgpr5_sgpr6
     renamable $sgpr1 = S_ADD_I32 0, $sgpr1, implicit-def $scc
     S_SETPC_B64 $sgpr30_sgpr31, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2
 

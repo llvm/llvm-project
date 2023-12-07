@@ -1,5 +1,5 @@
 // Note: Default is function-boundary-type-conversion=infer-layout-map
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs" -drop-equivalent-buffer-results -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs" -canonicalize -drop-equivalent-buffer-results -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
@@ -606,4 +606,68 @@ func.func @transfer_read(
 
 //       CHECK: return %[[RES]] : vector<4xf32>
   return %0 : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @main(
+func.func @main() {
+  // CHECK: %[[const:.*]] = memref.get_global
+  %t = arith.constant dense<[1.0, 2.0, 3.0]> : tensor<3xf32>
+  // CHECK: %[[alloc:.*]] = memref.alloc
+  // CHECK: memref.copy %[[const]], %[[alloc]]
+  // CHECK: %[[casted:.*]] = memref.cast %[[alloc]] : memref<3xf32> to memref<*xf32>
+  %unranked = tensor.cast %t : tensor<3xf32> to tensor<*xf32>
+  // CHECK: call @maybe_writing_func(%[[casted]])
+  func.call @maybe_writing_func(%unranked) : (tensor<*xf32>) -> ()
+  return
+}
+
+// This function may write to buffer(%ptr).
+func.func private @maybe_writing_func(%ptr : tensor<*xf32>)
+
+// -----
+
+// Test if other callables are left intact and don't cause trouble.
+
+llvm.func @llvm_func()
+
+func.func @call_llvm_func() {
+  llvm.call @llvm_func() : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @to_memref_op_unsupported(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32,
+func.func @to_memref_op_unsupported(
+    %t1: tensor<?xf32> {bufferization.writable = true}, %idx1: index,
+    %idx2: index, %idx3: index, %v1: vector<5xf32>) -> (vector<5xf32>) {
+
+  // Insert a copy because we cannot analyze what happens with the result of a
+  // to_memref op.
+  // CHECK: %[[alloc:.*]] = memref.alloc
+  // CHECK: memref.copy %[[arg0]], %[[alloc]]
+  %0 = bufferization.to_memref %t1 : memref<?xf32>
+  // CHECK: "test.foo"(%[[alloc]])
+  "test.foo"(%0) : (memref<?xf32>) -> ()
+
+  // CHECK: vector.transfer_read %[[arg0]]
+  %cst = arith.constant 0.0 : f32
+  %r1 = vector.transfer_read %t1[%idx3], %cst : tensor<?xf32>, vector<5xf32>
+
+  return %r1 : vector<5xf32>
+}
+
+// -----
+
+// Note: The cf.br canonicalizes away, so there's nothing to check here. There
+// is a detailed test in ControlFlow/bufferize.mlir.
+
+// CHECK-LABEL: func @br_in_func(
+func.func @br_in_func(%t: tensor<5xf32>) -> tensor<5xf32> {
+  cf.br ^bb1(%t : tensor<5xf32>)
+^bb1(%arg1 : tensor<5xf32>):
+  func.return %arg1 : tensor<5xf32>
 }

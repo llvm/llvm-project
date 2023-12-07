@@ -24,15 +24,7 @@
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.cache
 
 // CHECKYAML:      'type': 'directory',
-// CHECKYAML:      'name': "/[[PATH:.*]]/i/Frameworks/A.framework/Frameworks/B.framework/Headers",
-// CHECKYAML-NEXT:      'contents': [
-// CHECKYAML-NEXT:        {
-// CHECKYAML-NEXT:          'type': 'file',
-// CHECKYAML-NEXT:          'name': "B.h",
-// CHECKYAML-NEXT:          'external-contents': "/[[PATH]]/i/Frameworks/B.framework/Headers/B.h"
-
-// CHECKYAML:      'type': 'directory',
-// CHECKYAML:      'name': "/[[PATH]]/i/Frameworks/B.framework/Headers",
+// CHECKYAML:      'name': "/[[PATH:.*]]/i/Frameworks/B.framework/Headers",
 // CHECKYAML-NEXT:      'contents': [
 // CHECKYAML-NEXT:        {
 // CHECKYAML-NEXT:          'type': 'file',

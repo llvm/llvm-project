@@ -84,7 +84,8 @@ public:
     DefaultTemplateBacktraceLimit = 10,
     DefaultConstexprBacktraceLimit = 10,
     DefaultSpellCheckingLimit = 50,
-    DefaultSnippetLineLimit = 1,
+    DefaultSnippetLineLimit = 16,
+    DefaultShowLineNumbers = 1,
   };
 
   // Define simple diagnostic options (with no accessors).
@@ -121,6 +122,10 @@ public:
   /// The prefixes for comment directives sought by -verify ("expected" by
   /// default).
   std::vector<std::string> VerifyPrefixes;
+
+  /// The list of -Wsystem-header-in-module=... options used to override
+  /// whether -Wsystem-headers is enabled on a per-module basis.
+  std::vector<std::string> SystemHeaderWarningsModules;
 
 public:
   // Define accessors/mutators for diagnostic options of enumeration type.

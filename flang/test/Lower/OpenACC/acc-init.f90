@@ -6,7 +6,7 @@ subroutine acc_init
   logical :: ifCondition = .TRUE.
 
   !$acc init
-!CHECK: acc.init{{$}}
+!CHECK: acc.init{{ *}}{{$}}
 
   !$acc init if(.true.)
 !CHECK: [[IF1:%.*]] = arith.constant true

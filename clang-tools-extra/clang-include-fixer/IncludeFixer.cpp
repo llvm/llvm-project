@@ -314,11 +314,11 @@ std::string IncludeFixerSemaSource::minimizeInclude(
   if (!Entry)
     return std::string(Include);
 
-  bool IsSystem = false;
+  bool IsAngled = false;
   std::string Suggestion =
-      HeaderSearch.suggestPathToFileForDiagnostics(*Entry, "", &IsSystem);
+      HeaderSearch.suggestPathToFileForDiagnostics(*Entry, "", &IsAngled);
 
-  return IsSystem ? '<' + Suggestion + '>' : '"' + Suggestion + '"';
+  return IsAngled ? '<' + Suggestion + '>' : '"' + Suggestion + '"';
 }
 
 /// Get the include fixer context for the queried symbol.

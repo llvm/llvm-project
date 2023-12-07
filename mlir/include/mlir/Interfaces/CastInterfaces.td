@@ -44,7 +44,7 @@ def CastOpInterface : OpInterface<"CastOpInterface"> {
     }
   }];
   let verify = [{
-    return impl::verifyCastInterfaceOp($_op, ConcreteOp::areCastCompatible);
+    return impl::verifyCastInterfaceOp($_op);
   }];
 }
 

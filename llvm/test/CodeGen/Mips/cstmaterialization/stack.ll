@@ -11,8 +11,7 @@
 define i32 @main() {
 entry:
   %z = alloca [1048576 x i8], align 1
-  %arraydecay = getelementptr inbounds [1048576 x i8], [1048576 x i8]* %z, i32 0, i32 0
-  %call = call i32 @foo(i8* %arraydecay)
+  %call = call i32 @foo(ptr %z)
   ret i32 0
 ; CHECK-LABEL: main
 
@@ -51,4 +50,4 @@ entry:
 
 }
 
-declare i32 @foo(i8*)
+declare i32 @foo(ptr)

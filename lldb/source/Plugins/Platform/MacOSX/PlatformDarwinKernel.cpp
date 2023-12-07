@@ -187,8 +187,8 @@ enum {
 
 class PlatformDarwinKernelProperties : public Properties {
 public:
-  static ConstString &GetSettingName() {
-    static ConstString g_setting_name("darwin-kernel");
+  static llvm::StringRef GetSettingName() {
+    static constexpr llvm::StringLiteral g_setting_name("darwin-kernel");
     return g_setting_name;
   }
 
@@ -201,11 +201,7 @@ public:
 
   FileSpecList GetKextDirectories() const {
     const uint32_t idx = ePropertyKextDirectories;
-    const OptionValueFileSpecList *option_value =
-        m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(
-            NULL, false, idx);
-    assert(option_value);
-    return option_value->GetCurrentValue();
+    return GetPropertyAtIndexAs<FileSpecList>(idx, {});
   }
 };
 
@@ -221,8 +217,7 @@ void PlatformDarwinKernel::DebuggerInitialize(
     const bool is_global_setting = true;
     PluginManager::CreateSettingForPlatformPlugin(
         debugger, GetGlobalProperties().GetValueProperties(),
-        ConstString("Properties for the PlatformDarwinKernel plug-in."),
-        is_global_setting);
+        "Properties for the PlatformDarwinKernel plug-in.", is_global_setting);
   }
 }
 
@@ -234,12 +229,8 @@ PlatformDarwinKernel::PlatformDarwinKernel(
       m_name_to_kext_path_map_without_dsyms(), m_search_directories(),
       m_search_directories_no_recursing(), m_kernel_binaries_with_dsyms(),
       m_kernel_binaries_without_dsyms(), m_kernel_dsyms_no_binaries(),
-      m_kernel_dsyms_yaas(), m_ios_debug_session(is_ios_debug_session)
-
-{
-  CollectKextAndKernelDirectories();
-  SearchForKextsAndKernelsRecursively();
-}
+      m_kernel_dsyms_yaas(), m_ios_debug_session(is_ios_debug_session),
+      m_kext_scan_flag() {}
 
 /// Destructor.
 ///
@@ -248,6 +239,7 @@ PlatformDarwinKernel::PlatformDarwinKernel(
 PlatformDarwinKernel::~PlatformDarwinKernel() = default;
 
 void PlatformDarwinKernel::GetStatus(Stream &strm) {
+  UpdateKextandKernelsLocalScan();
   Platform::GetStatus(strm);
   strm.Printf(" Debug session type: ");
   if (m_ios_debug_session == eLazyBoolYes)
@@ -419,11 +411,11 @@ void PlatformDarwinKernel::AddSDKSubdirsToSearchPaths(const std::string &dir) {
 FileSystem::EnumerateDirectoryResult
 PlatformDarwinKernel::FindKDKandSDKDirectoriesInDirectory(
     void *baton, llvm::sys::fs::file_type ft, llvm::StringRef path) {
-  static ConstString g_sdk_suffix = ConstString(".sdk");
-  static ConstString g_kdk_suffix = ConstString(".kdk");
+  static constexpr llvm::StringLiteral g_sdk_suffix = ".sdk";
+  static constexpr llvm::StringLiteral g_kdk_suffix = ".kdk";
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
-  FileSpec file_spec(path);
+  const FileSpec file_spec(path);
   if (ft == llvm::sys::fs::file_type::directory_file &&
       (file_spec.GetFileNameExtension() == g_sdk_suffix ||
        file_spec.GetFileNameExtension() == g_kdk_suffix)) {
@@ -481,12 +473,11 @@ FileSystem::EnumerateDirectoryResult
 PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
     void *baton, llvm::sys::fs::file_type ft, llvm::StringRef path,
     bool recurse) {
-  static ConstString g_kext_suffix = ConstString(".kext");
-  static ConstString g_dsym_suffix = ConstString(".dSYM");
-  static ConstString g_bundle_suffix = ConstString("Bundle");
+  static constexpr llvm::StringLiteral g_kext_suffix = ".kext";
+  static constexpr llvm::StringLiteral g_dsym_suffix = ".dSYM";
 
-  FileSpec file_spec(path);
-  ConstString file_spec_extension = file_spec.GetFileNameExtension();
+  const FileSpec file_spec(path);
+  llvm::StringRef file_spec_extension = file_spec.GetFileNameExtension();
 
   Log *log = GetLog(LLDBLog::Platform);
 
@@ -543,7 +534,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
         if (!search_here_too.empty()) {
           const bool find_directories = true;
           const bool find_files = false;
-          const bool find_other = false;
+          const bool find_other = true;
           FileSystem::Instance().EnumerateDirectory(
               search_here_too.c_str(), find_directories, find_files, find_other,
               recurse ? GetKernelsAndKextsInDirectoryWithRecursion
@@ -568,8 +559,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
 
   // Don't recurse into dSYM/kext/bundle directories
   if (recurse && file_spec_extension != g_dsym_suffix &&
-      file_spec_extension != g_kext_suffix &&
-      file_spec_extension != g_bundle_suffix) {
+      file_spec_extension != g_kext_suffix) {
     LLDB_LOGV(log, "PlatformDarwinKernel descending into directory '{0}'",
               file_spec);
     return FileSystem::eEnumerateDirectoryResultEnter;
@@ -667,7 +657,7 @@ bool PlatformDarwinKernel::KernelHasdSYMSibling(const FileSpec &kernel_binary) {
 //    /dir/dir/mach.development.t7004
 bool PlatformDarwinKernel::KerneldSYMHasNoSiblingBinary(
     const FileSpec &kernel_dsym) {
-  static ConstString g_dsym_suffix = ConstString(".dSYM");
+  static constexpr llvm::StringLiteral g_dsym_suffix = ".dSYM";
   std::string possible_path = kernel_dsym.GetPath();
   if (kernel_dsym.GetFileNameExtension() != g_dsym_suffix)
     return false;
@@ -695,9 +685,9 @@ bool PlatformDarwinKernel::KerneldSYMHasNoSiblingBinary(
 // it should iterate over every binary in the DWARF subdir
 // and return them all.
 std::vector<FileSpec>
-PlatformDarwinKernel::GetDWARFBinaryInDSYMBundle(FileSpec dsym_bundle) {
+PlatformDarwinKernel::GetDWARFBinaryInDSYMBundle(const FileSpec &dsym_bundle) {
   std::vector<FileSpec> results;
-  static ConstString g_dsym_suffix = ConstString(".dSYM");
+  static constexpr llvm::StringLiteral g_dsym_suffix = ".dSYM";
   if (dsym_bundle.GetFileNameExtension() != g_dsym_suffix) {
     return results;
   }
@@ -714,6 +704,13 @@ PlatformDarwinKernel::GetDWARFBinaryInDSYMBundle(FileSpec dsym_bundle) {
   if (FileSystem::Instance().Exists(binary_fspec))
     results.push_back(binary_fspec);
   return results;
+}
+
+void PlatformDarwinKernel::UpdateKextandKernelsLocalScan() {
+  std::call_once(m_kext_scan_flag, [this]() {
+    CollectKextAndKernelDirectories();
+    SearchForKextsAndKernelsRecursively();
+  });
 }
 
 Status PlatformDarwinKernel::GetSharedModule(
@@ -796,6 +793,7 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   Status error;
   module_sp.reset();
+  UpdateKextandKernelsLocalScan();
 
   // First try all kernel binaries that have a dSYM next to them
   for (auto possible_kernel : m_kernel_binaries_with_dsyms) {
@@ -954,13 +952,13 @@ bool PlatformDarwinKernel::LoadPlatformBinaryAndSetup(Process *process,
 
   addr_t actual_address = find_kernel_in_macho_fileset(process, input_addr);
 
+  if (actual_address == LLDB_INVALID_ADDRESS)
+    return false;
+
   LLDB_LOGF(log,
             "PlatformDarwinKernel::%s check address 0x%" PRIx64 " for "
             "a macho fileset, got back kernel address 0x%" PRIx64,
             __FUNCTION__, input_addr, actual_address);
-
-  if (actual_address == LLDB_INVALID_ADDRESS)
-    return false;
 
   // We have a xnu kernel binary, this is a kernel debug session.
   // Set the Target's Platform to be PlatformDarwinKernel, and the

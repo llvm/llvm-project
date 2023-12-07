@@ -16,15 +16,11 @@
 
 #include <functional>
 
-#include "test_macros.h"
-
 struct Predicate {
     typedef int argument_type;
     bool operator()(argument_type) const { return true; }
 };
 
-int main(int, char**) {
+void f() {
     std::not1(Predicate()); // expected-warning {{'not1<Predicate>' is deprecated}}
-
-    return 0;
 }

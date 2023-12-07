@@ -3,7 +3,7 @@
 
 declare i32 @llvm.cttz.i32(i32, i1) nounwind readnone
 declare i32 @llvm.amdgcn.sffbh.i32(i32) nounwind readnone speculatable
-define amdgpu_kernel void @select_constant_cttz(i32 addrspace(1)* noalias %out, i32 addrspace(1)* nocapture readonly %arrayidx) nounwind {
+define amdgpu_kernel void @select_constant_cttz(ptr addrspace(1) noalias %out, ptr addrspace(1) nocapture readonly %arrayidx) nounwind {
 ; GCN-LABEL: select_constant_cttz:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -28,7 +28,7 @@ define amdgpu_kernel void @select_constant_cttz(i32 addrspace(1)* noalias %out, 
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
-  %v    = load i32, i32 addrspace(1)* %arrayidx, align 4
+  %v    = load i32, ptr addrspace(1) %arrayidx, align 4
   %sr   = lshr i32 1, %v
   %cmp  = icmp ne i32 %v, 0
   %cttz = call i32 @llvm.cttz.i32(i32 %sr, i1 true), !range !0
@@ -38,7 +38,7 @@ define amdgpu_kernel void @select_constant_cttz(i32 addrspace(1)* noalias %out, 
   %cmp2 = icmp eq i32 %sel, 0
   %or   = or i1 %cmp, %cmp2
   %sel2 = select i1 %or, i32 -1, i32 %sub
-  store i32 %sel2, i32 addrspace(1)* %out
+  store i32 %sel2, ptr addrspace(1) %out
   ret void
 }
 

@@ -12,6 +12,12 @@ divs	#0, %d0
 ; CHECK:      divu  #-1, %d0
 ; CHECK-SAME: encoding: [0x80,0xfc,0xff,0xff]
 divu	#-1, %d0
+; CHECK:	divs.l	%d1, %d0
+; CHECK-SAME:	encoding: [0x4c,0x41,0x08,0x00]
+divs.l	%d1, %d0
+; CHECK:	divu.l	%d1, %d0
+; CHECK-SAME:	encoding: [0x4c,0x41,0x00,0x00]
+divu.l	%d1, %d0
 ; CHECK:      muls  %d1, %d0
 ; CHECK-SAME: encoding: [0xc1,0xc1]
 muls	%d1, %d0
@@ -24,3 +30,9 @@ muls	#0, %d0
 ; CHECK:      mulu  #-1, %d0
 ; CHECK-SAME: encoding: [0xc0,0xfc,0xff,0xff]
 mulu	#-1, %d0
+; CHECK:      muls.l  %d1, %d0
+; CHECK-SAME: encoding: [0x4c,0x01,0x08,0x00]
+muls.l	%d1, %d0
+; CHECK:      mulu.l  %d1, %d0
+; CHECK-SAME: encoding: [0x4c,0x01,0x00,0x00]
+mulu.l	%d1, %d0

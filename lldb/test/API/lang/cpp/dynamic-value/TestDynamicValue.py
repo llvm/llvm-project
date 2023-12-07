@@ -3,7 +3,6 @@ Use lldb Python API to test dynamic values in C++
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -11,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class DynamicValueTestCase(TestBase):
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -19,14 +17,17 @@ class DynamicValueTestCase(TestBase):
         # Find the line number to break for main.c.
 
         self.do_something_line = line_number(
-            'pass-to-base.cpp', '// Break here in doSomething.')
+            "pass-to-base.cpp", "// Break here in doSomething."
+        )
         self.main_first_call_line = line_number(
-            'pass-to-base.cpp',
-            '// Break here and get real addresses of myB and otherB.')
+            "pass-to-base.cpp",
+            "// Break here and get real addresses of myB and otherB.",
+        )
         self.main_second_call_line = line_number(
-            'pass-to-base.cpp', '// Break here and get real address of reallyA.')
+            "pass-to-base.cpp", "// Break here and get real address of reallyA."
+        )
 
-    @add_test_categories(['pyapi'])
+    @add_test_categories(["pyapi"])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
     def test_get_dynamic_vals(self):
         """Test fetching C++ dynamic values from pointers & references."""
@@ -41,29 +42,26 @@ class DynamicValueTestCase(TestBase):
         # Set up our breakpoints:
 
         do_something_bpt = target.BreakpointCreateByLocation(
-            'pass-to-base.cpp', self.do_something_line)
-        self.assertTrue(do_something_bpt,
-                        VALID_BREAKPOINT)
+            "pass-to-base.cpp", self.do_something_line
+        )
+        self.assertTrue(do_something_bpt, VALID_BREAKPOINT)
 
         first_call_bpt = target.BreakpointCreateByLocation(
-            'pass-to-base.cpp', self.main_first_call_line)
-        self.assertTrue(first_call_bpt,
-                        VALID_BREAKPOINT)
+            "pass-to-base.cpp", self.main_first_call_line
+        )
+        self.assertTrue(first_call_bpt, VALID_BREAKPOINT)
 
         second_call_bpt = target.BreakpointCreateByLocation(
-            'pass-to-base.cpp', self.main_second_call_line)
-        self.assertTrue(second_call_bpt,
-                        VALID_BREAKPOINT)
+            "pass-to-base.cpp", self.main_second_call_line
+        )
+        self.assertTrue(second_call_bpt, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
-        self.assertState(process.GetState(), lldb.eStateStopped,
-                         PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, first_call_bpt)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, first_call_bpt)
         self.assertEquals(len(threads), 1)
         thread = threads[0]
 
@@ -75,11 +73,11 @@ class DynamicValueTestCase(TestBase):
         use_dynamic = lldb.eDynamicCanRunTarget
         no_dynamic = lldb.eNoDynamicValues
 
-        myB = frame.FindVariable('myB', no_dynamic)
+        myB = frame.FindVariable("myB", no_dynamic)
         self.assertTrue(myB)
         myB_loc = int(myB.GetLocation(), 16)
 
-        otherB = frame.FindVariable('otherB', no_dynamic)
+        otherB = frame.FindVariable("otherB", no_dynamic)
         self.assertTrue(otherB)
         otherB_loc = int(otherB.GetLocation(), 16)
 
@@ -93,67 +91,71 @@ class DynamicValueTestCase(TestBase):
 
         # Get "this" using FindVariable:
 
-        this_static = frame.FindVariable('this', no_dynamic)
-        this_dynamic = frame.FindVariable('this', use_dynamic)
-        self.examine_value_object_of_this_ptr(
-            this_static, this_dynamic, myB_loc)
+        this_static = frame.FindVariable("this", no_dynamic)
+        this_dynamic = frame.FindVariable("this", use_dynamic)
+        self.examine_value_object_of_this_ptr(this_static, this_dynamic, myB_loc)
 
         # Now make sure that the "GetDynamicValue" works:
         # This doesn't work currently because we can't get dynamic values from
         # ConstResult objects.
         fetched_dynamic_value = this_static.GetDynamicValue(use_dynamic)
         self.examine_value_object_of_this_ptr(
-            this_static, fetched_dynamic_value, myB_loc)
+            this_static, fetched_dynamic_value, myB_loc
+        )
 
         # And conversely that the GetDynamicValue() interface also works:
         fetched_static_value = this_dynamic.GetStaticValue()
         self.examine_value_object_of_this_ptr(
-            fetched_static_value, this_dynamic, myB_loc)
+            fetched_static_value, this_dynamic, myB_loc
+        )
 
         # Get "this" using FindValue, make sure that works too:
         this_static = frame.FindValue(
-            'this', lldb.eValueTypeVariableArgument, no_dynamic)
+            "this", lldb.eValueTypeVariableArgument, no_dynamic
+        )
         this_dynamic = frame.FindValue(
-            'this', lldb.eValueTypeVariableArgument, use_dynamic)
-        self.examine_value_object_of_this_ptr(
-            this_static, this_dynamic, myB_loc)
+            "this", lldb.eValueTypeVariableArgument, use_dynamic
+        )
+        self.examine_value_object_of_this_ptr(this_static, this_dynamic, myB_loc)
 
         # Get "this" using the EvaluateExpression:
-        this_static = frame.EvaluateExpression('this', False)
-        this_dynamic = frame.EvaluateExpression('this', True)
-        self.examine_value_object_of_this_ptr(
-            this_static, this_dynamic, myB_loc)
+        this_static = frame.EvaluateExpression("this", False)
+        this_dynamic = frame.EvaluateExpression("this", True)
+        self.examine_value_object_of_this_ptr(this_static, this_dynamic, myB_loc)
 
         # The "frame var" code uses another path to get into children, so let's
         # make sure that works as well:
 
         self.expect(
-            'frame var -d run-target --ptr-depth=2 --show-types anotherA.m_client_A',
-            'frame var finds its way into a child member',
-            patterns=['\(B \*\)'])
+            "frame var -d run-target --ptr-depth=2 --show-types anotherA.m_client_A",
+            "frame var finds its way into a child member",
+            patterns=["\(B \*\)"],
+        )
 
         # Now make sure we also get it right for a reference as well:
 
-        anotherA_static = frame.FindVariable('anotherA', False)
+        anotherA_static = frame.FindVariable("anotherA", False)
         self.assertTrue(anotherA_static)
         anotherA_static_addr = int(anotherA_static.GetValue(), 16)
 
-        anotherA_dynamic = frame.FindVariable('anotherA', True)
+        anotherA_dynamic = frame.FindVariable("anotherA", True)
         self.assertTrue(anotherA_dynamic)
         anotherA_dynamic_addr = int(anotherA_dynamic.GetValue(), 16)
         anotherA_dynamic_typename = anotherA_dynamic.GetTypeName()
-        self.assertNotEqual(anotherA_dynamic_typename.find('B'), -1)
+        self.assertNotEqual(anotherA_dynamic_typename.find("B"), -1)
 
         self.assertTrue(anotherA_dynamic_addr < anotherA_static_addr)
 
         anotherA_m_b_value_dynamic = anotherA_dynamic.GetChildMemberWithName(
-            'm_b_value', True)
+            "m_b_value", True
+        )
         self.assertTrue(anotherA_m_b_value_dynamic)
         anotherA_m_b_val = int(anotherA_m_b_value_dynamic.GetValue(), 10)
         self.assertEquals(anotherA_m_b_val, 300)
 
         anotherA_m_b_value_static = anotherA_static.GetChildMemberWithName(
-            'm_b_value', True)
+            "m_b_value", True
+        )
         self.assertFalse(anotherA_m_b_value_static)
 
         # Okay, now continue again, and when we hit the second breakpoint in
@@ -164,7 +166,7 @@ class DynamicValueTestCase(TestBase):
         thread = threads[0]
 
         frame = thread.GetFrameAtIndex(0)
-        reallyA_value = frame.FindVariable('reallyA', False)
+        reallyA_value = frame.FindVariable("reallyA", False)
         self.assertTrue(reallyA_value)
         reallyA_loc = int(reallyA_value.GetLocation(), 16)
 
@@ -176,14 +178,15 @@ class DynamicValueTestCase(TestBase):
         thread = threads[0]
 
         frame = thread.GetFrameAtIndex(0)
-        anotherA_value = frame.FindVariable('anotherA', True)
+        anotherA_value = frame.FindVariable("anotherA", True)
         self.assertTrue(anotherA_value)
         anotherA_loc = int(anotherA_value.GetValue(), 16)
         self.assertEquals(anotherA_loc, reallyA_loc)
-        self.assertEquals(anotherA_value.GetTypeName().find('B'), -1)
+        self.assertEquals(anotherA_value.GetTypeName().find("B"), -1)
 
     def examine_value_object_of_this_ptr(
-            self, this_static, this_dynamic, dynamic_location):
+        self, this_static, this_dynamic, dynamic_location
+    ):
         # Get "this" as its static value
         self.assertTrue(this_static)
         this_static_loc = int(this_static.GetValue(), 16)
@@ -192,7 +195,7 @@ class DynamicValueTestCase(TestBase):
 
         self.assertTrue(this_dynamic)
         this_dynamic_typename = this_dynamic.GetTypeName()
-        self.assertNotEqual(this_dynamic_typename.find('B'), -1)
+        self.assertNotEqual(this_dynamic_typename.find("B"), -1)
         this_dynamic_loc = int(this_dynamic.GetValue(), 16)
 
         # Make sure we got the right address for "this"
@@ -209,7 +212,8 @@ class DynamicValueTestCase(TestBase):
         no_dynamic = lldb.eNoDynamicValues
 
         this_dynamic_m_b_value = this_dynamic.GetChildMemberWithName(
-            'm_b_value', use_dynamic)
+            "m_b_value", use_dynamic
+        )
         self.assertTrue(this_dynamic_m_b_value)
 
         m_b_value = int(this_dynamic_m_b_value.GetValue(), 0)
@@ -218,27 +222,31 @@ class DynamicValueTestCase(TestBase):
         # Make sure it is not in the static version
 
         this_static_m_b_value = this_static.GetChildMemberWithName(
-            'm_b_value', no_dynamic)
+            "m_b_value", no_dynamic
+        )
         self.assertFalse(this_static_m_b_value)
 
         # Okay, now let's make sure that we can get the dynamic type of a child
         # element:
 
         contained_auto_ptr = this_dynamic.GetChildMemberWithName(
-            'm_client_A', use_dynamic)
+            "m_client_A", use_dynamic
+        )
         self.assertTrue(contained_auto_ptr)
-        contained_b = contained_auto_ptr.GetChildMemberWithName(
-            '_M_ptr', use_dynamic)
+        contained_b = contained_auto_ptr.GetChildMemberWithName("_M_ptr", use_dynamic)
         if not contained_b:
             contained_b = contained_auto_ptr.GetChildMemberWithName(
-                '__ptr_', use_dynamic)
+                "__ptr_", use_dynamic
+            )
         self.assertTrue(contained_b)
 
         contained_b_static = contained_auto_ptr.GetChildMemberWithName(
-            '_M_ptr', no_dynamic)
+            "_M_ptr", no_dynamic
+        )
         if not contained_b_static:
             contained_b_static = contained_auto_ptr.GetChildMemberWithName(
-                '__ptr_', no_dynamic)
+                "__ptr_", no_dynamic
+            )
         self.assertTrue(contained_b_static)
 
         contained_b_addr = int(contained_b.GetValue(), 16)

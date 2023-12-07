@@ -9,11 +9,11 @@
 #include "posix_spawn_file_actions_addclose.h"
 
 #include "file_actions.h"
+#include "src/__support/CPP/new.h"
 #include "src/__support/common.h"
 
 #include <errno.h>
 #include <spawn.h>
-#include <stdlib.h> // For malloc
 
 namespace __llvm_libc {
 
@@ -24,14 +24,12 @@ LLVM_LIBC_FUNCTION(int, posix_spawn_file_actions_addclose,
   if (fd < 0)
     return EBADF;
 
-  auto *act = reinterpret_cast<SpawnFileCloseAction *>(
-      malloc(sizeof(SpawnFileCloseAction)));
-  if (act == nullptr)
+  AllocChecker ac;
+  auto *act = new (ac) SpawnFileCloseAction(fd);
+  if (!ac)
     return ENOMEM;
+  BaseSpawnFileAction::add_action(actions, act);
 
-  act->type = BaseSpawnFileAction::CLOSE;
-  act->fd = fd;
-  enque_spawn_action(actions, act);
   return 0;
 }
 

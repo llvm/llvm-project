@@ -24,15 +24,15 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     position [start, end). The positions are defined by getDpsInitsPositionRange
     method.
 
-    If the op has "tensor semantics", then the input operands are either scalars
-    or ranked tensors. The init operands are ranked tensors and every tensor
-    init is tied to a corresponding tensor OpResult in a 1-to-1 fashion.
-    The i-th init tensor is tied to the i-th OpResult. The op may not have any
-    additional OpResults. Init operands and their tied OpResults have the same
-    type.
+    If the op has "tensor semantics", then the input operands are either ranked
+    tensors or other non-tensor/memref types ("scalars"). The init operands are
+    ranked tensors and every tensor init is tied to a corresponding tensor
+    OpResult in a 1-to-1 fashion. The i-th init tensor is tied to the i-th
+    OpResult. The op may not have any additional OpResults. Init operands and
+    their tied OpResults have the same type.
 
     If the op has "buffer semantics", then the input operands are either ranked
-    memrefs or other non-tensor types, e.g. scalar types. Furthermore, the
+    memrefs or other non-tensor/memref types ("scalar" types). Furthermore, the
     init operands are ranked memrefs and the op has no results.
 
     Destination-passing style abstraction makes certain transformations easier.
@@ -85,14 +85,14 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/"Return the init operands.",
-      /*retTy=*/"OpOperandVector",
+      /*retTy=*/"::mlir::OpOperandVector",
       /*methodName=*/"getDpsInitOperands",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         auto [start, end] = $_op.getDpsInitsPositionRange();
 
-        OpOperandVector result;
+        ::mlir::OpOperandVector result;
         result.reserve(end - start);
         for (int i = start; i < end; ++i)
           result.push_back(&$_op->getOpOperand(i));
@@ -101,7 +101,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/"Return the `i`-th init operand.",
-      /*retTy=*/"OpOperand *",
+      /*retTy=*/"::mlir::OpOperand *",
       /*methodName=*/"getDpsInitOperand",
       /*args=*/(ins "int64_t":$i),
       /*methodBody=*/"",
@@ -115,7 +115,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       /*desc=*/"Set the `i`-th init operand.",
       /*retTy=*/"void",
       /*methodName=*/"setDpsInitOperand",
-      /*args=*/(ins "int64_t":$i, "Value":$value),
+      /*args=*/(ins "int64_t":$i, "::mlir::Value":$value),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         assert(i >= 0 && i < $_op.getNumDpsInits());
@@ -135,7 +135,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/"Return the input operands.",
-      /*retTy=*/"OpOperandVector",
+      /*retTy=*/"::mlir::OpOperandVector",
       /*methodName=*/"getDpsInputOperands",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -144,7 +144,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
         int64_t numInits = end - start;
         int64_t numOperands = $_op.getNumOperands();
 
-        OpOperandVector result;
+        ::mlir::OpOperandVector result;
         result.reserve(numOperands - numInits);
         for (int i = 0; i < start; ++i)
           result.push_back(&$_op->getOpOperand(i));
@@ -156,7 +156,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/[{ Return the `i`-th input operand.  }],
-      /*retTy=*/"OpOperand *",
+      /*retTy=*/"::mlir::OpOperand *",
       /*methodName=*/"getDpsInputOperand",
       /*args=*/(ins "int64_t":$i),
       /*methodBody=*/"",
@@ -173,7 +173,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       /*desc=*/"Return true if `opOperand` is an input.",
       /*retTy=*/"bool",
       /*methodName=*/"isDpsInput",
-      /*args=*/(ins "OpOperand *":$opOperand),
+      /*args=*/(ins "::mlir::OpOperand *":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         auto [start, end] = $_op.getDpsInitsPositionRange();
@@ -185,7 +185,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       /*desc=*/"Return true if `opOperand` is an init.",
       /*retTy=*/"bool",
       /*methodName=*/"isDpsInit",
-      /*args=*/(ins "OpOperand *":$opOperand),
+      /*args=*/(ins "::mlir::OpOperand *":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         auto [start, end] = $_op.getDpsInitsPositionRange();
@@ -194,21 +194,24 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return true if the `opOperand` is a scalar value.",
+      /*desc=*/[{
+        Return true if the `opOperand` is a scalar value. A scalar is defined
+        as neither a memref nor a tensor value.
+      }],
       /*retTy=*/"bool",
       /*methodName=*/"isScalar",
-      /*args=*/(ins "OpOperand *":$opOperand),
+      /*args=*/(ins "::mlir::OpOperand *":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         assert(opOperand->getOwner() == $_op.getOperation());
-        return !opOperand->get().getType().template isa<ShapedType>();
+        return !::llvm::isa<MemRefType, TensorType>(opOperand->get().getType());
       }]
     >,
     InterfaceMethod<
       /*desc=*/"Return the OpResult that is tied to the given OpOperand.",
-      /*retTy=*/"OpResult",
+      /*retTy=*/"::mlir::OpResult",
       /*methodName=*/"getTiedOpResult",
-      /*args=*/(ins "OpOperand *":$opOperand),
+      /*args=*/(ins "::mlir::OpOperand *":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         assert(opOperand->getOwner() == $_op.getOperation());
@@ -222,9 +225,9 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/"Return the OpOperand that is tied to the given OpResult.",
-      /*retTy=*/"OpOperand *",
+      /*retTy=*/"::mlir::OpOperand *",
       /*methodName=*/"getTiedOpOperand",
-      /*args=*/(ins "OpResult":$opResult),
+      /*args=*/(ins "::mlir::OpResult":$opResult),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         assert(opResult.getDefiningOp() == $_op.getOperation());
@@ -235,32 +238,49 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     // Other interface methods.
     //===------------------------------------------------------------------===//
     InterfaceMethod<
-      /*desc=*/"Return whether the op has only ranked MemRef input/inits.",
+      /*desc=*/[{
+        Return whether the op has buffer semantics. That is the case if the op
+        has no tensor operands and at least one memref operand.
+      }],
       /*retTy=*/"bool",
       /*methodName=*/"hasBufferSemantics",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op->getNumResults() == 0 &&
-          llvm::all_of($_op->getOpOperands(),
-            [&](OpOperand &opOperand) {
-              return isScalar(&opOperand) ||
-                     opOperand.get().getType().template isa<MemRefType>();
-            });
+        // No tensors.
+        auto isTensor = [](Value v){
+          return ::llvm::isa<::mlir::RankedTensorType>(v.getType());
+        };
+        if (::llvm::any_of($_op->getOperands(), isTensor))
+          return false;
+        // At least one memref.
+        auto isMemref = [](Value v){
+          return ::llvm::isa<::mlir::MemRefType>(v.getType());
+        };
+        return llvm::any_of($_op->getOperands(), isMemref);
       }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return whether the op has only ranked tensor inputs/inits.",
+      /*desc=*/[{
+        Return whether the op has tensor semantics. That is the case if the op
+        has no memref operands and at least one tensor operand.
+      }],
       /*retTy=*/"bool",
       /*methodName=*/"hasTensorSemantics",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::all_of($_op->getOpOperands(),
-          [&](OpOperand &opOperand) {
-            return isScalar(&opOperand) ||
-                   opOperand.get().getType().template isa<RankedTensorType>();
-          });
+        // No memrefs.
+        auto isMemref = [](Value v){
+          return ::llvm::isa<::mlir::MemRefType>(v.getType());
+        };
+        if (::llvm::any_of($_op->getOperands(), isMemref))
+          return false;
+        // At least one tensor.
+        auto isTensor = [](Value v){
+          return ::llvm::isa<::mlir::RankedTensorType>(v.getType());
+        };
+        return llvm::any_of($_op->getOperands(), isTensor);
       }]
     >
   ];

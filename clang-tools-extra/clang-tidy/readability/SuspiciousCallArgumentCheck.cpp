@@ -11,14 +11,13 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <optional>
 #include <sstream>
 
 using namespace clang::ast_matchers;
 namespace optutils = clang::tidy::utils::options;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 namespace {
 struct DefaultHeuristicConfiguration {
@@ -138,11 +137,11 @@ static bool applyEqualityHeuristic(StringRef Arg, StringRef Param) {
 static bool applyAbbreviationHeuristic(
     const llvm::StringMap<std::string> &AbbreviationDictionary, StringRef Arg,
     StringRef Param) {
-  if (AbbreviationDictionary.find(Arg) != AbbreviationDictionary.end() &&
+  if (AbbreviationDictionary.contains(Arg) &&
       Param.equals(AbbreviationDictionary.lookup(Arg)))
     return true;
 
-  if (AbbreviationDictionary.find(Param) != AbbreviationDictionary.end() &&
+  if (AbbreviationDictionary.contains(Param) &&
       Arg.equals(AbbreviationDictionary.lookup(Param)))
     return true;
 
@@ -155,7 +154,7 @@ static bool applyPrefixHeuristic(StringRef Arg, StringRef Param,
   StringRef Shorter = Arg.size() < Param.size() ? Arg : Param;
   StringRef Longer = Arg.size() >= Param.size() ? Arg : Param;
 
-  if (Longer.startswith_insensitive(Shorter))
+  if (Longer.starts_with_insensitive(Shorter))
     return percentage(Shorter.size(), Longer.size()) > Threshold;
 
   return false;
@@ -167,7 +166,7 @@ static bool applySuffixHeuristic(StringRef Arg, StringRef Param,
   StringRef Shorter = Arg.size() < Param.size() ? Arg : Param;
   StringRef Longer = Arg.size() >= Param.size() ? Arg : Param;
 
-  if (Longer.endswith_insensitive(Shorter))
+  if (Longer.ends_with_insensitive(Shorter))
     return percentage(Shorter.size(), Longer.size()) > Threshold;
 
   return false;
@@ -240,7 +239,7 @@ static bool applyJaroWinklerHeuristic(StringRef Arg, StringRef Param,
   std::ptrdiff_t L = 0;
   for (std::ptrdiff_t I = 0; I < ParamLen; ++I) {
     if (ParamFlags[I] == 1) {
-      std::ptrdiff_t J;
+      std::ptrdiff_t J = 0;
       for (J = L; J < ArgLen; ++J)
         if (ArgFlags[J] == 1) {
           L = J + 1;
@@ -581,8 +580,8 @@ bool SuspiciousCallArgumentCheck::isHeuristicEnabled(Heuristic H) const {
   return llvm::is_contained(AppliedHeuristics, H);
 }
 
-Optional<int8_t> SuspiciousCallArgumentCheck::getBound(Heuristic H,
-                                                       BoundKind BK) const {
+std::optional<int8_t>
+SuspiciousCallArgumentCheck::getBound(Heuristic H, BoundKind BK) const {
   auto Idx = static_cast<std::size_t>(H);
   assert(Idx < HeuristicCount);
 
@@ -782,7 +781,7 @@ bool SuspiciousCallArgumentCheck::areNamesSimilar(StringRef Arg,
                                                   StringRef Param, Heuristic H,
                                                   BoundKind BK) const {
   int8_t Threshold = -1;
-  if (Optional<int8_t> GotBound = getBound(H, BK))
+  if (std::optional<int8_t> GotBound = getBound(H, BK))
     Threshold = *GotBound;
 
   switch (H) {
@@ -806,6 +805,4 @@ bool SuspiciousCallArgumentCheck::areNamesSimilar(StringRef Arg,
   llvm_unreachable("Unhandled heuristic kind");
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

@@ -44,7 +44,7 @@ entry:
 define void @f_i16(i16 %a) #0 {
 ; CHECK: f_i16:
 ; CHECK: *(u16 *)(r2 + 0) = r1 # encoding: [0x6b,0x21,0x00,0x00,0x00,0x00,0x00,0x00]
-  store volatile i16 %a, i16* @g_i16, align 2
+  store volatile i16 %a, ptr @g_i16, align 2
   ret void
 }
 
@@ -52,7 +52,7 @@ define void @f_i32(i32 %a) #0 {
 ; CHECK: f_i32:
 ; CHECK: *(u16 *)(r2 + 2) = r1 # encoding: [0x6b,0x21,0x00,0x02,0x00,0x00,0x00,0x00]
 ; CHECK: *(u16 *)(r2 + 0) = r1 # encoding: [0x6b,0x21,0x00,0x00,0x00,0x00,0x00,0x00]
-  store volatile i32 %a, i32* @g_i32, align 2
+  store volatile i32 %a, ptr @g_i32, align 2
   ret void
 }
 
@@ -60,37 +60,37 @@ define void @f_i64(i64 %a) #0 {
 ; CHECK: f_i64:
 ; CHECK: *(u32 *)(r2 + 4) = r1 # encoding: [0x63,0x21,0x00,0x04,0x00,0x00,0x00,0x00]
 ; CHECK: *(u32 *)(r2 + 0) = r1
-  store volatile i64 %a, i64* @g_i64, align 2
+  store volatile i64 %a, ptr @g_i64, align 2
   ret void
 }
 
 define void @f_i32_i32(i32 %a, i32 %b) #0 {
 ; CHECK: f_i32_i32:
 ; CHECK: *(u32 *)(r3 + 0) = r1
-  store volatile i32 %a, i32* @g_i32, align 4
+  store volatile i32 %a, ptr @g_i32, align 4
 ; CHECK: *(u32 *)(r3 + 0) = r2
-  store volatile i32 %b, i32* @g_i32, align 4
+  store volatile i32 %b, ptr @g_i32, align 4
   ret void
 }
 
 define void @f_i16_i32_i16(i16 %a, i32 %b, i16 %c) #0 {
 ; CHECK: f_i16_i32_i16:
 ; CHECK: *(u16 *)(r4 + 0) = r1
-  store volatile i16 %a, i16* @g_i16, align 2
+  store volatile i16 %a, ptr @g_i16, align 2
 ; CHECK: *(u32 *)(r1 + 0) = r2
-  store volatile i32 %b, i32* @g_i32, align 4
+  store volatile i32 %b, ptr @g_i32, align 4
 ; CHECK: *(u16 *)(r4 + 0) = r3
-  store volatile i16 %c, i16* @g_i16, align 2
+  store volatile i16 %c, ptr @g_i16, align 2
   ret void
 }
 
 define void @f_i16_i64_i16(i16 %a, i64 %b, i16 %c) #0 {
 ; CHECK: f_i16_i64_i16:
 ; CHECK: *(u16 *)(r4 + 0) = r1
-  store volatile i16 %a, i16* @g_i16, align 2
+  store volatile i16 %a, ptr @g_i16, align 2
 ; CHECK: *(u64 *)(r1 + 0) = r2 # encoding: [0x7b,0x12,0x00,0x00,0x00,0x00,0x00,0x00]
-  store volatile i64 %b, i64* @g_i64, align 8
+  store volatile i64 %b, ptr @g_i64, align 8
 ; CHECK: *(u16 *)(r4 + 0) = r3
-  store volatile i16 %c, i16* @g_i16, align 2
+  store volatile i16 %c, ptr @g_i16, align 2
   ret void
 }

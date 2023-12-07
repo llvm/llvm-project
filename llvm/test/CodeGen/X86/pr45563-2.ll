@@ -28,22 +28,22 @@ define <9 x float> @mload_split9(<9 x i1> %mask, ptr %addr, <9 x float> %dst) {
 ; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm3
-; CHECK-NEXT:    vmovss {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
-; CHECK-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
-; CHECK-NEXT:    vpslld $31, %xmm2, %xmm2
-; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; CHECK-NEXT:    vmaskmovps (%rcx), %ymm1, %ymm2
-; CHECK-NEXT:    vblendvps %ymm1, %ymm2, %ymm0, %ymm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm1 = xmm3[8,u,u,u],zero,xmm3[u,u,u],zero,xmm3[u,u,u],zero,xmm3[u,u,u]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[1,1,1,1]
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm4 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero
+; CHECK-NEXT:    vpslld $31, %xmm4, %xmm4
+; CHECK-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
+; CHECK-NEXT:    vmaskmovps (%rcx), %ymm1, %ymm4
+; CHECK-NEXT:    vblendvps %ymm1, %ymm4, %ymm0, %ymm0
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm1 = xmm2[8,u,u,u],zero,xmm2[u,u,u],zero,xmm2[u,u,u],zero,xmm2[u,u,u]
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
 ; CHECK-NEXT:    vmaskmovps 32(%rcx), %ymm1, %ymm2
 ; CHECK-NEXT:    vmovaps %ymm0, (%rdi)
-; CHECK-NEXT:    vblendvps %xmm1, %xmm2, %xmm4, %xmm0
+; CHECK-NEXT:    vblendvps %xmm1, %xmm2, %xmm3, %xmm0
 ; CHECK-NEXT:    vmovss %xmm0, 32(%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -70,37 +70,37 @@ define <13 x float> @mload_split13(<13 x i1> %mask, ptr %addr, <13 x float> %dst
 ; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm3
-; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm3, %xmm4
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm3
+; CHECK-NEXT:    vmovss {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],mem[0],xmm4[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],mem[0],xmm4[3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],mem[0]
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm5 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0],mem[0],xmm5[2,3]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],mem[0],xmm5[3]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1,2],mem[0]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm6 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
-; CHECK-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
-; CHECK-NEXT:    vpslld $31, %xmm2, %xmm2
-; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; CHECK-NEXT:    vmaskmovps (%rcx), %ymm1, %ymm2
-; CHECK-NEXT:    vblendvps %ymm1, %ymm2, %ymm0, %ymm0
-; CHECK-NEXT:    vpunpckhbw {{.*#+}} xmm1 = xmm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm6 = xmm3[1,1,1,1]
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm6 = xmm6[0],zero,zero,zero,xmm6[1],zero,zero,zero,xmm6[2],zero,zero,zero,xmm6[3],zero,zero,zero
+; CHECK-NEXT:    vpslld $31, %xmm6, %xmm6
+; CHECK-NEXT:    vinsertf128 $1, %xmm6, %ymm1, %ymm1
+; CHECK-NEXT:    vmaskmovps (%rcx), %ymm1, %ymm6
+; CHECK-NEXT:    vblendvps %ymm1, %ymm6, %ymm0, %ymm0
+; CHECK-NEXT:    vpunpckhbw {{.*#+}} xmm1 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; CHECK-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm4[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm3[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpslld $31, %xmm2, %xmm2
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm3
 ; CHECK-NEXT:    vmaskmovps 32(%rcx), %ymm3, %ymm3
 ; CHECK-NEXT:    vmovaps %ymm0, (%rdi)
-; CHECK-NEXT:    vblendvps %xmm1, %xmm3, %xmm5, %xmm0
+; CHECK-NEXT:    vblendvps %xmm1, %xmm3, %xmm4, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, 32(%rdi)
 ; CHECK-NEXT:    vextractf128 $1, %ymm3, %xmm0
-; CHECK-NEXT:    vblendvps %xmm2, %xmm0, %xmm6, %xmm0
+; CHECK-NEXT:    vblendvps %xmm2, %xmm0, %xmm5, %xmm0
 ; CHECK-NEXT:    vmovss %xmm0, 48(%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -127,39 +127,39 @@ define <14 x float> @mload_split14(<14 x i1> %mask, ptr %addr, <14 x float> %dst
 ; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm3
-; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
+; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],mem[0],xmm3[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],mem[0],xmm3[3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1,2],mem[0]
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm4 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],mem[0],xmm4[2,3]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],mem[0],xmm4[3]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],mem[0]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm5 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0],mem[0],xmm5[2,3]
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
-; CHECK-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
-; CHECK-NEXT:    vpslld $31, %xmm2, %xmm2
-; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; CHECK-NEXT:    vmaskmovps (%rcx), %ymm1, %ymm2
-; CHECK-NEXT:    vblendvps %ymm1, %ymm2, %ymm0, %ymm0
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm1 = xmm3[8,u,9,u,10,u,11,u,12,u,13,u],zero,xmm3[u],zero,xmm3[u]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[1,1,1,1]
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm5 = xmm5[0],zero,zero,zero,xmm5[1],zero,zero,zero,xmm5[2],zero,zero,zero,xmm5[3],zero,zero,zero
+; CHECK-NEXT:    vpslld $31, %xmm5, %xmm5
+; CHECK-NEXT:    vinsertf128 $1, %xmm5, %ymm1, %ymm1
+; CHECK-NEXT:    vmaskmovps (%rcx), %ymm1, %ymm5
+; CHECK-NEXT:    vblendvps %ymm1, %ymm5, %ymm0, %ymm0
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm1 = xmm2[8,u,9,u,10,u,11,u,12,u,13,u],zero,xmm2[u],zero,xmm2[u]
 ; CHECK-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
 ; CHECK-NEXT:    vpslld $31, %xmm2, %xmm2
 ; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
-; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm3
-; CHECK-NEXT:    vmaskmovps 32(%rcx), %ymm3, %ymm3
+; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm5
+; CHECK-NEXT:    vmaskmovps 32(%rcx), %ymm5, %ymm5
 ; CHECK-NEXT:    vmovaps %ymm0, (%rdi)
-; CHECK-NEXT:    vextractf128 $1, %ymm3, %xmm0
-; CHECK-NEXT:    vblendvps %xmm1, %xmm0, %xmm5, %xmm0
+; CHECK-NEXT:    vextractf128 $1, %ymm5, %xmm0
+; CHECK-NEXT:    vblendvps %xmm1, %xmm0, %xmm4, %xmm0
 ; CHECK-NEXT:    vmovlps %xmm0, 48(%rdi)
-; CHECK-NEXT:    vblendvps %xmm2, %xmm3, %xmm4, %xmm0
+; CHECK-NEXT:    vblendvps %xmm2, %xmm5, %xmm3, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, 32(%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -191,16 +191,17 @@ define <17 x float> @mload_split17(<17 x i1> %mask, ptr %addr, <17 x float> %dst
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    vmovd %esi, %xmm3
-; CHECK-NEXT:    vpinsrb $2, %edx, %xmm3, %xmm3
-; CHECK-NEXT:    vpinsrb $4, %ecx, %xmm3, %xmm3
-; CHECK-NEXT:    vpinsrb $6, %r8d, %xmm3, %xmm3
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} xmm4 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero
+; CHECK-NEXT:    vpinsrb $1, %edx, %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $2, %ecx, %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $3, %r8d, %xmm3, %xmm3
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm4 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
 ; CHECK-NEXT:    vpslld $31, %xmm4, %xmm4
-; CHECK-NEXT:    vpinsrb $8, %r9d, %xmm3, %xmm3
-; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm3[4,4,5,5,6,6,7,7]
+; CHECK-NEXT:    vpinsrb $4, %r9d, %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,1,1]
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
 ; CHECK-NEXT:    vpslld $31, %xmm3, %xmm3
 ; CHECK-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
 ; CHECK-NEXT:    vmaskmovps (%rdi), %ymm3, %ymm4
@@ -221,7 +222,6 @@ define <17 x float> @mload_split17(<17 x i1> %mask, ptr %addr, <17 x float> %dst
 ; CHECK-NEXT:    vmaskmovps 32(%rdi), %ymm3, %ymm4
 ; CHECK-NEXT:    vblendvps %ymm3, %ymm4, %ymm1, %ymm1
 ; CHECK-NEXT:    vmovd %r10d, %xmm3
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero
 ; CHECK-NEXT:    vpslld $31, %xmm3, %xmm3
 ; CHECK-NEXT:    vmaskmovps 64(%rdi), %ymm3, %ymm4
 ; CHECK-NEXT:    vblendvps %xmm3, %xmm4, %xmm0, %xmm0
@@ -264,16 +264,17 @@ define <23 x float> @mload_split23(<23 x i1> %mask, ptr %addr, <23 x float> %dst
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    vmovd %esi, %xmm4
-; CHECK-NEXT:    vpinsrb $2, %edx, %xmm4, %xmm4
-; CHECK-NEXT:    vpinsrb $4, %ecx, %xmm4, %xmm4
-; CHECK-NEXT:    vpinsrb $6, %r8d, %xmm4, %xmm4
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} xmm5 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero
+; CHECK-NEXT:    vpinsrb $1, %edx, %xmm4, %xmm4
+; CHECK-NEXT:    vpinsrb $2, %ecx, %xmm4, %xmm4
+; CHECK-NEXT:    vpinsrb $3, %r8d, %xmm4, %xmm4
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm5 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero
 ; CHECK-NEXT:    vpslld $31, %xmm5, %xmm5
-; CHECK-NEXT:    vpinsrb $8, %r9d, %xmm4, %xmm4
-; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm4, %xmm4
-; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm4, %xmm4
-; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm4, %xmm4
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm4 = xmm4[4,4,5,5,6,6,7,7]
+; CHECK-NEXT:    vpinsrb $4, %r9d, %xmm4, %xmm4
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm4, %xmm4
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm4, %xmm4
+; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm4, %xmm4
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,1,1,1]
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm4 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero
 ; CHECK-NEXT:    vpslld $31, %xmm4, %xmm4
 ; CHECK-NEXT:    vinsertf128 $1, %xmm4, %ymm5, %ymm4
 ; CHECK-NEXT:    vmaskmovps (%rdi), %ymm4, %ymm5
@@ -294,15 +295,16 @@ define <23 x float> @mload_split23(<23 x i1> %mask, ptr %addr, <23 x float> %dst
 ; CHECK-NEXT:    vmaskmovps 32(%rdi), %ymm4, %ymm5
 ; CHECK-NEXT:    vblendvps %ymm4, %ymm5, %ymm2, %ymm2
 ; CHECK-NEXT:    vmovd %r10d, %xmm4
+; CHECK-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm4, %xmm4
 ; CHECK-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm4, %xmm4
-; CHECK-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm4, %xmm4
-; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm4, %xmm4
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} xmm5 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero
+; CHECK-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm4, %xmm4
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm5 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero
 ; CHECK-NEXT:    vpslld $31, %xmm5, %xmm5
-; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm4, %xmm4
-; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm4, %xmm4
-; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm4, %xmm4
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm4 = xmm4[4,4,5,5,6,6,7,7]
+; CHECK-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm4, %xmm4
+; CHECK-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm4, %xmm4
+; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm4, %xmm4
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,1,1,1]
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm4 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero
 ; CHECK-NEXT:    vpslld $31, %xmm4, %xmm4
 ; CHECK-NEXT:    vinsertf128 $1, %xmm4, %ymm5, %ymm6
 ; CHECK-NEXT:    vmaskmovps 64(%rdi), %ymm6, %ymm6

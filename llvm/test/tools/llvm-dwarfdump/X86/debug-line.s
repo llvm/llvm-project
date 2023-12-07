@@ -39,11 +39,11 @@
 # CHECK-NEXT:        mod_time: 0x12345678
 # CHECK-NEXT:          length: 0x00000010
 # CHECK-EMPTY:
-# CHECK-NEXT: Address            Line   Column File   ISA Discriminator Flags
-# CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-# CHECK-NEXT: 0x0000000000000002      1      0      1   0             0  is_stmt
-# CHECK-NEXT: 0x0000000000000002      1      4      3   0             0  is_stmt
-# CHECK-NEXT: 0x0000000000000024      1      4      3   5             6  basic_block prologue_end epilogue_begin end_sequence
+# CHECK-NEXT: Address            Line   Column File   ISA Discriminator OpIndex Flags
+# CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+# CHECK-NEXT: 0x0000000000000002      1      0      1   0             0       0  is_stmt
+# CHECK-NEXT: 0x0000000000000002      1      4      3   0             0       0  is_stmt
+# CHECK-NEXT: 0x0000000000000024      1      4      3   5             6       0  basic_block prologue_end epilogue_begin end_sequence
 # CHECK-EMPTY:
 # CHECK-NEXT: debug_line[0x0000006d]
 # CHECK-NEXT: Line table prologue:

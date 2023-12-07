@@ -73,7 +73,7 @@ test_blend() {
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_blend_epi16(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, <2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
 // CHECK: %[[TRUNC:[0-9a-zA-Z_.]+]] = trunc i32 %{{[0-9a-zA-Z_.]+}} to i8
-// CHECK: call <16 x i8> @vec_splats(signed char)(i8 noundef signext %[[TRUNC]])
+// CHECK: call <16 x i8> @vec_splats(unsigned char)(i8 noundef zeroext %[[TRUNC]])
 // CHECK: call <16 x i8> @llvm.ppc.altivec.vgbbd(<16 x i8> %{{[0-9a-zA-Z_.]+}})
 // CHECK: %[[PACK:[0-9a-zA-Z_.]+]] = call <8 x i16> @vec_unpackh(signed char vector[16])
 // CHECK: store <8 x i16> %[[PACK]], ptr %{{[0-9a-zA-Z_.]+}}, align 16
@@ -232,8 +232,8 @@ void __attribute__((noinline))
 test_round() {
   _mm_round_ps(mn1, 0);
   _mm_round_ss(mn1, mn2, 0);
-  _mm_round_pd(mn1, 0);
-  _mm_round_sd(mn1, mn2, 0);
+  _mm_round_pd(md1, 0);
+  _mm_round_sd(md1, md2, 0);
 }
 
 // CHECK-LABEL: @test_round

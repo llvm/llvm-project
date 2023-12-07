@@ -429,6 +429,13 @@ Error Section::accept(MutableSectionVisitor &Visitor) {
   return Visitor.visit(*this);
 }
 
+void Section::restoreSymTabLink(SymbolTableSection &SymTab) {
+  if (HasSymTabLink) {
+    assert(LinkSection == nullptr);
+    LinkSection = &SymTab;
+  }
+}
+
 Error SectionWriter::visit(const OwnedDataSection &Sec) {
   llvm::copy(Sec.Data, Out.getBufferStart() + Sec.Offset);
   return Error::success();
@@ -680,8 +687,11 @@ bool Symbol::isCommon() const { return getShndx() == SHN_COMMON; }
 
 void SymbolTableSection::assignIndices() {
   uint32_t Index = 0;
-  for (auto &Sym : Symbols)
+  for (auto &Sym : Symbols) {
+    if (Sym->Index != Index)
+      IndicesChanged = true;
     Sym->Index = Index++;
+  }
 }
 
 void SymbolTableSection::addSymbol(Twine Name, uint8_t Bind, uint8_t Type,
@@ -741,7 +751,10 @@ Error SymbolTableSection::removeSymbols(
       std::remove_if(std::begin(Symbols) + 1, std::end(Symbols),
                      [ToRemove](const SymPtr &Sym) { return ToRemove(*Sym); }),
       std::end(Symbols));
+  auto PrevSize = Size;
   Size = Symbols.size() * EntrySize;
+  if (Size < PrevSize)
+    IndicesChanged = true;
   assignIndices();
   return Error::success();
 }
@@ -1106,8 +1119,10 @@ Error Section::initialize(SectionTableRef SecTable) {
 
   LinkSection = *Sec;
 
-  if (LinkSection->Type == ELF::SHT_SYMTAB)
+  if (LinkSection->Type == ELF::SHT_SYMTAB) {
+    HasSymTabLink = true;
     LinkSection = nullptr;
+  }
 
   return Error::success();
 }
@@ -1704,6 +1719,10 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
     else
       return Data.takeError();
   case SHT_SYMTAB: {
+    // Multiple SHT_SYMTAB sections are forbidden by the ELF gABI.
+    if (Obj.SymbolTable != nullptr)
+      return createStringError(llvm::errc::invalid_argument,
+                               "found multiple SHT_SYMTAB sections");
     auto &SymTab = Obj.addSection<SymbolTableSection>();
     Obj.SymbolTable = &SymTab;
     return SymTab;
@@ -2298,7 +2317,7 @@ static uint64_t layoutSections(Range Sections, uint64_t Offset) {
   for (auto &Sec : Sections) {
     Sec.Index = Index++;
     if (Sec.ParentSegment != nullptr) {
-      auto Segment = *Sec.ParentSegment;
+      const Segment &Segment = *Sec.ParentSegment;
       Sec.Offset =
           Segment.Offset + (Sec.OriginalOffset - Segment.OriginalOffset);
     } else
@@ -2511,6 +2530,12 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
   if (Error E = removeUnneededSections(Obj))
     return E;
 
+  // If the .symtab indices have not been changed, restore the sh_link to
+  // .symtab for sections that were linked to .symtab.
+  if (Obj.SymbolTable && !Obj.SymbolTable->indicesChanged())
+    for (SectionBase &Sec : Obj.sections())
+      Sec.restoreSymTabLink(*Obj.SymbolTable);
+
   // We need to assign indexes before we perform layout because we need to know
   // if we need large indexes or not. We can assign indexes first and check as
   // we go to see if we will actully need large indexes.
@@ -2627,12 +2652,9 @@ Error BinaryWriter::finalize() {
   // MinAddr will be skipped.
   uint64_t MinAddr = UINT64_MAX;
   for (SectionBase &Sec : Obj.allocSections()) {
-    // If Sec's type is changed from SHT_NOBITS due to --set-section-flags,
-    // Offset may not be aligned. Align it to max(Align, 1).
     if (Sec.ParentSegment != nullptr)
-      Sec.Addr = alignTo(Sec.Offset - Sec.ParentSegment->Offset +
-                             Sec.ParentSegment->PAddr,
-                         std::max(Sec.Align, uint64_t(1)));
+      Sec.Addr =
+          Sec.Offset - Sec.ParentSegment->Offset + Sec.ParentSegment->PAddr;
     if (Sec.Type != SHT_NOBITS && Sec.Size > 0)
       MinAddr = std::min(MinAddr, Sec.Addr);
   }

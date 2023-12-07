@@ -27,7 +27,6 @@
 
 #ifndef LLDB_HOST_EDITLINE_H
 #define LLDB_HOST_EDITLINE_H
-#if defined(__cplusplus)
 
 #include "lldb/Host/Config.h"
 
@@ -46,6 +45,7 @@
 
 #include <csignal>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -98,7 +98,7 @@ using FixIndentationCallbackType =
     llvm::unique_function<int(Editline *, StringList &, int)>;
 
 using SuggestionCallbackType =
-    llvm::unique_function<llvm::Optional<std::string>(llvm::StringRef)>;
+    llvm::unique_function<std::optional<std::string>(llvm::StringRef)>;
 
 using CompleteCallbackType = llvm::unique_function<void(CompletionRequest &)>;
 
@@ -227,6 +227,9 @@ public:
 
   void PrintAsync(Stream *stream, const char *s, size_t len);
 
+  /// Convert the current input lines into a UTF8 StringList
+  StringList GetInputAsStringList(int line_count = UINT32_MAX);
+
 private:
   /// Sets the lowest line number for multi-line editing sessions.  A value of
   /// zero suppresses
@@ -281,9 +284,6 @@ private:
 
   /// Save the line currently being edited
   void SaveEditedLine();
-
-  /// Convert the current input lines into a UTF8 StringList
-  StringList GetInputAsStringList(int line_count = UINT32_MAX);
 
   /// Replaces the current multi-line session with the next entry from history.
   unsigned char RecallHistory(HistoryOperation op);
@@ -407,5 +407,4 @@ private:
 };
 }
 
-#endif // #if defined(__cplusplus)
 #endif // LLDB_HOST_EDITLINE_H

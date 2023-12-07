@@ -1,5 +1,5 @@
-# RUN: llvm-mc -triple aarch64-arm-none-eabi -mattr +rme -disassemble %s 2>&1 | FileCheck %s
-# RUN: llvm-mc -triple aarch64-arm-none-eabi -disassemble %s 2>&1 | FileCheck --check-prefix=CHECK-NO-RME %s
+# RUN: llvm-mc -triple aarch64 -mattr +rme -disassemble %s 2>&1 | FileCheck %s
+# RUN: llvm-mc -triple aarch64 -disassemble %s 2>&1 | FileCheck --check-prefix=CHECK-NO-RME %s
 
 [0xa0,0x60,0x3e,0xd5]
 [0xc0,0x21,0x3e,0xd5]

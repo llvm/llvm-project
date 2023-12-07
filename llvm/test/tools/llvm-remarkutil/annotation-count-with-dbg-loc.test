@@ -1,0 +1,7 @@
+RUN: llvm-remarkutil annotation-count --use-debug-loc --parser=yaml --annotation-type=remark %p/Inputs/annotation-count-with-dbg-loc.yaml | FileCheck %s
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/annotation-count-with-dbg-loc.yaml | llvm-remarkutil annotation-count --use-debug-loc --parser=bitstream --annotation-type=remark | FileCheck %s
+
+; CHECK-LABEL: Source,Function,Count
+; CHECK: path/to/anno.c:1:2,func1,1
+; CHECK: path/to/anno2.c:1:2,func2,2
+; CHECK: path/to/anno3.c:1:2,func3,3

@@ -206,6 +206,8 @@ public:
   bool isCK810V() const { return CSKYProcFamily == CK810V; }
   bool isCK860() const { return CSKYProcFamily == CK860; }
   bool isCK860V() const { return CSKYProcFamily == CK860V; }
+
+  const unsigned XLen = 32;
 };
 } // namespace llvm
 

@@ -11,7 +11,7 @@
 
 #include "lldb/lldb-types.h"
 #include <cstddef>
-#include <llvm/ADT/Optional.h>
+#include <optional>
 
 namespace lldb_private {
 namespace trace_intel_pt {
@@ -19,7 +19,7 @@ namespace trace_intel_pt {
 const size_t kDefaultIptTraceSize = 4 * 1024;                  // 4KB
 const size_t kDefaultProcessBufferSizeLimit = 5 * 1024 * 1024; // 500MB
 const bool kDefaultEnableTscValue = false;
-const llvm::Optional<size_t> kDefaultPsbPeriod = std::nullopt;
+const std::optional<size_t> kDefaultPsbPeriod;
 const bool kDefaultPerCpuTracing = false;
 const bool kDefaultDisableCgroupFiltering = false;
 

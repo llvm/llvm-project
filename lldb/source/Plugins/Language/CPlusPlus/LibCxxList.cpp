@@ -32,19 +32,15 @@ public:
       : m_entry_sp(entry ? entry->GetSP() : ValueObjectSP()) {}
 
   ListEntry next() {
-    static ConstString g_next("__next_");
-
     if (!m_entry_sp)
       return ListEntry();
-    return ListEntry(m_entry_sp->GetChildMemberWithName(g_next, true));
+    return ListEntry(m_entry_sp->GetChildMemberWithName("__next_"));
   }
 
   ListEntry prev() {
-    static ConstString g_prev("__prev_");
-
     if (!m_entry_sp)
       return ListEntry();
-    return ListEntry(m_entry_sp->GetChildMemberWithName(g_prev, true));
+    return ListEntry(m_entry_sp->GetChildMemberWithName("__prev_"));
   }
 
   uint64_t value() const {
@@ -271,7 +267,7 @@ ValueObjectSP ForwardListFrontEnd::GetChildAtIndex(size_t idx) {
   if (!current_sp)
     return nullptr;
 
-  current_sp = current_sp->GetChildAtIndex(1, true); // get the __value_ child
+  current_sp = current_sp->GetChildAtIndex(1); // get the __value_ child
   if (!current_sp)
     return nullptr;
 
@@ -296,14 +292,13 @@ bool ForwardListFrontEnd::Update() {
   if (err.Fail() || !backend_addr)
     return false;
 
-  ValueObjectSP impl_sp(
-      m_backend.GetChildMemberWithName(ConstString("__before_begin_"), true));
+  ValueObjectSP impl_sp(m_backend.GetChildMemberWithName("__before_begin_"));
   if (!impl_sp)
     return false;
-  impl_sp = GetValueOfLibCXXCompressedPair(*impl_sp);
+  impl_sp = GetFirstValueOfLibCXXCompressedPair(*impl_sp);
   if (!impl_sp)
     return false;
-  m_head = impl_sp->GetChildMemberWithName(ConstString("__next_"), true).get();
+  m_head = impl_sp->GetChildMemberWithName("__next_").get();
   return false;
 }
 
@@ -318,10 +313,9 @@ size_t ListFrontEnd::CalculateNumChildren() {
     return m_count;
   if (!m_head || !m_tail || m_node_address == 0)
     return 0;
-  ValueObjectSP size_alloc(
-      m_backend.GetChildMemberWithName(ConstString("__size_alloc_"), true));
+  ValueObjectSP size_alloc(m_backend.GetChildMemberWithName("__size_alloc_"));
   if (size_alloc) {
-    ValueObjectSP value = GetValueOfLibCXXCompressedPair(*size_alloc);
+    ValueObjectSP value = GetFirstValueOfLibCXXCompressedPair(*size_alloc);
     if (value) {
       m_count = value->GetValueAsUnsigned(UINT32_MAX);
     }
@@ -366,7 +360,7 @@ lldb::ValueObjectSP ListFrontEnd::GetChildAtIndex(size_t idx) {
   if (!current_sp)
     return lldb::ValueObjectSP();
 
-  current_sp = current_sp->GetChildAtIndex(1, true); // get the __value_ child
+  current_sp = current_sp->GetChildAtIndex(1); // get the __value_ child
   if (!current_sp)
     return lldb::ValueObjectSP();
 
@@ -412,12 +406,11 @@ bool ListFrontEnd::Update() {
   m_node_address = backend_addr->GetValueAsUnsigned(0);
   if (!m_node_address || m_node_address == LLDB_INVALID_ADDRESS)
     return false;
-  ValueObjectSP impl_sp(
-      m_backend.GetChildMemberWithName(ConstString("__end_"), true));
+  ValueObjectSP impl_sp(m_backend.GetChildMemberWithName("__end_"));
   if (!impl_sp)
     return false;
-  m_head = impl_sp->GetChildMemberWithName(ConstString("__next_"), true).get();
-  m_tail = impl_sp->GetChildMemberWithName(ConstString("__prev_"), true).get();
+  m_head = impl_sp->GetChildMemberWithName("__next_").get();
+  m_tail = impl_sp->GetChildMemberWithName("__prev_").get();
   return false;
 }
 

@@ -18,6 +18,7 @@
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Builder.h"
 #include "mlir/TableGen/Dialect.h"
+#include "mlir/TableGen/Property.h"
 #include "mlir/TableGen/Region.h"
 #include "mlir/TableGen/Successor.h"
 #include "mlir/TableGen/Trait.h"
@@ -36,6 +37,39 @@ class StringInit;
 
 namespace mlir {
 namespace tblgen {
+
+/// This class represents an inferred result type. The result type can be
+/// inferred from an argument or result type. If it is inferred from another
+/// result type, that type must be buildable or inferred from yet another type.
+class InferredResultType {
+public:
+  InferredResultType(int index, std::string transformer)
+      : index(index), transformer(std::move(transformer)) {}
+
+  /// Returns true if result type is inferred from an argument type.
+  bool isArg() const { return isArgIndex(index); }
+  /// Return the mapped argument or result index.
+  int getIndex() const { return index; }
+  /// If the type is inferred from a result, return the result index.
+  int getResultIndex() const { return unmapResultIndex(index); }
+
+  // Mapping from result index to combined argument and result index.
+  // Arguments are indexed to match getArg index, while the result indexes are
+  // mapped to avoid overlap.
+  static int mapResultIndex(int i) { return -1 - i; }
+  static int unmapResultIndex(int i) { return -i - 1; }
+  static bool isResultIndex(int i) { return i < 0; }
+  static bool isArgIndex(int i) { return i >= 0; }
+
+  StringRef getTransformer() const { return transformer; }
+
+private:
+  /// The index of the source argument or result.
+  int index;
+
+  /// The transfer to apply to the type to obtain the inferred type.
+  std::string transformer;
+};
 
 /// Wrapper class that contains a MLIR op's information (e.g., operands,
 /// attributes) defined in TableGen and provides helper methods for
@@ -63,6 +97,9 @@ public:
 
   /// Returns the name of op's adaptor C++ class.
   std::string getAdaptorName() const;
+
+  /// Returns the name of op's generic adaptor C++ class.
+  std::string getGenericAdaptorName() const;
 
   /// Check invariants (like no duplicated or conflicted names) and abort the
   /// process if any invariant is broken.
@@ -130,10 +167,14 @@ public:
   unsigned getNumVariableLengthResults() const;
 
   /// Op attribute iterators.
-  using attribute_iterator = const NamedAttribute *;
-  attribute_iterator attribute_begin() const;
-  attribute_iterator attribute_end() const;
-  llvm::iterator_range<attribute_iterator> getAttributes() const;
+  using const_attribute_iterator = const NamedAttribute *;
+  const_attribute_iterator attribute_begin() const;
+  const_attribute_iterator attribute_end() const;
+  llvm::iterator_range<const_attribute_iterator> getAttributes() const;
+  using attribute_iterator = NamedAttribute *;
+  attribute_iterator attribute_begin();
+  attribute_iterator attribute_end();
+  llvm::iterator_range<attribute_iterator> getAttributes();
 
   int getNumAttributes() const { return attributes.size(); }
   int getNumNativeAttributes() const { return numNativeAttributes; }
@@ -148,6 +189,27 @@ public:
   const_value_iterator operand_begin() const;
   const_value_iterator operand_end() const;
   const_value_range getOperands() const;
+
+  // Op properties iterators.
+  using const_property_iterator = const NamedProperty *;
+  const_property_iterator properties_begin() const {
+    return properties.begin();
+  }
+  const_property_iterator properties_end() const { return properties.end(); }
+  llvm::iterator_range<const_property_iterator> getProperties() const {
+    return properties;
+  }
+  using property_iterator = NamedProperty *;
+  property_iterator properties_begin() { return properties.begin(); }
+  property_iterator properties_end() { return properties.end(); }
+  llvm::iterator_range<property_iterator> getProperties() { return properties; }
+  int getNumCoreAttributes() const { return properties.size(); }
+
+  // Op properties accessors.
+  NamedProperty &getProperty(int index) { return properties[index]; }
+  const NamedProperty &getProperty(int index) const {
+    return properties[index];
+  }
 
   int getNumOperands() const { return operands.size(); }
   NamedTypeConstraint &getOperand(int index) { return operands[index]; }
@@ -256,32 +318,9 @@ public:
   /// Return whether all the result types are known.
   bool allResultTypesKnown() const { return allResultsHaveKnownTypes; };
 
-  /// Pair representing either a index to an argument or a type constraint. Only
-  /// one of these entries should have the non-default value.
-  struct ArgOrType {
-    explicit ArgOrType(int index) : index(index), constraint(std::nullopt) {}
-    explicit ArgOrType(TypeConstraint constraint)
-        : index(std::nullopt), constraint(constraint) {}
-    bool isArg() const {
-      assert(constraint.has_value() ^ index.has_value());
-      return index.has_value();
-    }
-    bool isType() const {
-      assert(constraint.has_value() ^ index.has_value());
-      return constraint.has_value();
-    }
-
-    int getArg() const { return *index; }
-    TypeConstraint getType() const { return *constraint; }
-
-  private:
-    std::optional<int> index;
-    std::optional<TypeConstraint> constraint;
-  };
-
-  /// Return all arguments or type constraints with same type as result[index].
+  ///  Return all arguments or type constraints with same type as result[index].
   /// Requires: all result types are known.
-  ArrayRef<ArgOrType> getSameTypeAsResult(int index) const;
+  const InferredResultType &getInferredResultType(int index) const;
 
   /// Pair consisting kind of argument and index into operands or attributes.
   struct OperandOrAttribute {
@@ -311,6 +350,12 @@ public:
   /// Returns the remove name for the accessor of `name`.
   std::string getRemoverName(StringRef name) const;
 
+  bool hasFolder() const;
+
+  /// Whether to generate the `readProperty`/`writeProperty` methods for
+  /// bytecode emission.
+  bool useCustomPropertiesEncoding() const;
+
 private:
   /// Populates the vectors containing operands, attributes, results and traits.
   void populateOpStructure();
@@ -338,6 +383,9 @@ private:
   /// computed upon request).
   SmallVector<NamedAttribute, 4> attributes;
 
+  /// The properties of the op.
+  SmallVector<NamedProperty> properties;
+
   /// The arguments of the op (operands and native attributes).
   SmallVector<Argument, 4> arguments;
 
@@ -354,7 +402,7 @@ private:
   SmallVector<NamedRegion, 1> regions;
 
   /// The argument with the same type as the result.
-  SmallVector<SmallVector<ArgOrType, 2>, 4> resultTypeMapping;
+  SmallVector<InferredResultType> resultTypeMapping;
 
   /// Map from argument to attribute or operand number.
   SmallVector<OperandOrAttribute, 4> attrOrOperandMapping;

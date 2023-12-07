@@ -103,31 +103,39 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/AbstractCallSite.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DOTGraphTraits.h"
+#include "llvm/Support/DebugCounter.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
+#include <limits>
 #include <map>
 #include <optional>
 
@@ -146,11 +154,22 @@ struct AAIsDead;
 struct AttributorCallGraph;
 struct IRPosition;
 
-class AAResults;
 class Function;
 
 /// Abstract Attribute helper functions.
 namespace AA {
+using InstExclusionSetTy = SmallPtrSet<Instruction *, 4>;
+
+enum class GPUAddressSpace : unsigned {
+  Generic = 0,
+  Global = 1,
+  Shared = 3,
+  Constant = 4,
+  Local = 5,
+};
+
+/// Return true iff \p M target a GPU (and we can use GPU AS reasoning).
+bool isGPU(const Module &M);
 
 /// Flags to distinguish intra-procedural queries from *potentially*
 /// inter-procedural queries. Not that information can be valid for both and
@@ -251,18 +270,24 @@ struct RangeTy {
   }
 
   RangeTy &operator&=(const RangeTy &R) {
-    if (Offset == Unassigned)
-      Offset = R.Offset;
-    else if (R.Offset != Unassigned && R.Offset != Offset)
+    if (R.isUnassigned())
+      return *this;
+    if (isUnassigned())
+      return *this = R;
+    if (Offset == Unknown || R.Offset == Unknown)
       Offset = Unknown;
-
-    if (Size == Unassigned)
-      Size = R.Size;
-    else if (Size == Unknown || R.Size == Unknown)
+    if (Size == Unknown || R.Size == Unknown)
       Size = Unknown;
-    else if (R.Size != Unassigned)
+    if (offsetAndSizeAreUnknown())
+      return *this;
+    if (Offset == Unknown) {
       Size = std::max(Size, R.Size);
-
+    } else if (Size == Unknown) {
+      Offset = std::min(Offset, R.Offset);
+    } else {
+      Offset = std::min(Offset, R.Offset);
+      Size = std::max(Offset + Size, R.Offset + R.Size) - Offset;
+    }
     return *this;
   }
 
@@ -274,11 +299,13 @@ struct RangeTy {
   }
 
   /// Constants used to represent special offsets or sizes.
-  /// - This assumes that Offset and Size are non-negative.
+  /// - We cannot assume that Offsets and Size are non-negative.
   /// - The constants should not clash with DenseMapInfo, such as EmptyKey
   ///   (INT64_MAX) and TombstoneKey (INT64_MIN).
-  static constexpr int64_t Unassigned = -1;
-  static constexpr int64_t Unknown = -2;
+  /// We use values "in the middle" of the 64 bit range to represent these
+  /// special cases.
+  static constexpr int64_t Unassigned = std::numeric_limits<int32_t>::min();
+  static constexpr int64_t Unknown = std::numeric_limits<int32_t>::max();
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const RangeTy &R) {
@@ -293,23 +320,11 @@ inline bool operator==(const RangeTy &A, const RangeTy &B) {
 inline bool operator!=(const RangeTy &A, const RangeTy &B) { return !(A == B); }
 
 /// Return the initial value of \p Obj with type \p Ty if that is a constant.
-Constant *getInitialValueForObj(Value &Obj, Type &Ty,
-                                const TargetLibraryInfo *TLI,
+Constant *getInitialValueForObj(Attributor &A,
+                                const AbstractAttribute &QueryingAA, Value &Obj,
+                                Type &Ty, const TargetLibraryInfo *TLI,
                                 const DataLayout &DL,
                                 RangeTy *RangePtr = nullptr);
-
-/// Collect all potential underlying objects of \p Ptr at position \p CtxI in
-/// \p Objects. Assumed information is used and dependences onto \p QueryingAA
-/// are added appropriately.
-///
-/// \returns True if \p Objects contains all assumed underlying objects, and
-///          false if something went wrong and the objects could not be
-///          determined.
-bool getAssumedUnderlyingObjects(
-    Attributor &A, const Value &Ptr, SmallSetVector<Value *, 8> &Objects,
-    const AbstractAttribute &QueryingAA, const Instruction *CtxI,
-    bool &UsedAssumedInformation, AA::ValueScope VS = AA::Interprocedural,
-    SmallPtrSetImpl<Value *> *SeenObjects = nullptr);
 
 /// Collect all potential values \p LI could read into \p PotentialValues. That
 /// is, the only values read by \p LI are assumed to be known and all are in
@@ -352,24 +367,37 @@ bool isAssumedReadOnly(Attributor &A, const IRPosition &IRP,
 bool isAssumedReadNone(Attributor &A, const IRPosition &IRP,
                        const AbstractAttribute &QueryingAA, bool &IsKnown);
 
-/// Return true if \p ToI is potentially reachable from \p FromI. The two
-/// instructions do not need to be in the same function. \p GoBackwardsCB
-/// can be provided to convey domain knowledge about the "lifespan" the user is
-/// interested in. By default, the callers of \p FromI are checked as well to
-/// determine if \p ToI can be reached. If the query is not interested in
-/// callers beyond a certain point, e.g., a GPU kernel entry or the function
-/// containing an alloca, the \p GoBackwardsCB should return false.
+/// Return true if \p ToI is potentially reachable from \p FromI without running
+/// into any instruction in \p ExclusionSet The two instructions do not need to
+/// be in the same function. \p GoBackwardsCB can be provided to convey domain
+/// knowledge about the "lifespan" the user is interested in. By default, the
+/// callers of \p FromI are checked as well to determine if \p ToI can be
+/// reached. If the query is not interested in callers beyond a certain point,
+/// e.g., a GPU kernel entry or the function containing an alloca, the
+/// \p GoBackwardsCB should return false.
 bool isPotentiallyReachable(
     Attributor &A, const Instruction &FromI, const Instruction &ToI,
     const AbstractAttribute &QueryingAA,
+    const AA::InstExclusionSetTy *ExclusionSet = nullptr,
     std::function<bool(const Function &F)> GoBackwardsCB = nullptr);
 
 /// Same as above but it is sufficient to reach any instruction in \p ToFn.
 bool isPotentiallyReachable(
     Attributor &A, const Instruction &FromI, const Function &ToFn,
     const AbstractAttribute &QueryingAA,
-    std::function<bool(const Function &F)> GoBackwardsCB);
+    const AA::InstExclusionSetTy *ExclusionSet = nullptr,
+    std::function<bool(const Function &F)> GoBackwardsCB = nullptr);
 
+/// Return true if \p Obj is assumed to be a thread local object.
+bool isAssumedThreadLocalObject(Attributor &A, Value &Obj,
+                                const AbstractAttribute &QueryingAA);
+
+/// Return true if \p I is potentially affected by a barrier.
+bool isPotentiallyAffectedByBarrier(Attributor &A, const Instruction &I,
+                                    const AbstractAttribute &QueryingAA);
+bool isPotentiallyAffectedByBarrier(Attributor &A, ArrayRef<const Value *> Ptrs,
+                                    const AbstractAttribute &QueryingAA,
+                                    const Instruction *CtxI);
 } // namespace AA
 
 template <>
@@ -410,6 +438,41 @@ struct DenseMapInfo<AA::ValueScope> : public DenseMapInfo<unsigned char> {
   }
 };
 
+template <>
+struct DenseMapInfo<const AA::InstExclusionSetTy *>
+    : public DenseMapInfo<void *> {
+  using super = DenseMapInfo<void *>;
+  static inline const AA::InstExclusionSetTy *getEmptyKey() {
+    return static_cast<const AA::InstExclusionSetTy *>(super::getEmptyKey());
+  }
+  static inline const AA::InstExclusionSetTy *getTombstoneKey() {
+    return static_cast<const AA::InstExclusionSetTy *>(
+        super::getTombstoneKey());
+  }
+  static unsigned getHashValue(const AA::InstExclusionSetTy *BES) {
+    unsigned H = 0;
+    if (BES)
+      for (const auto *II : *BES)
+        H += DenseMapInfo<const Instruction *>::getHashValue(II);
+    return H;
+  }
+  static bool isEqual(const AA::InstExclusionSetTy *LHS,
+                      const AA::InstExclusionSetTy *RHS) {
+    if (LHS == RHS)
+      return true;
+    if (LHS == getEmptyKey() || RHS == getEmptyKey() ||
+        LHS == getTombstoneKey() || RHS == getTombstoneKey())
+      return false;
+    auto SizeLHS = LHS ? LHS->size() : 0;
+    auto SizeRHS = RHS ? RHS->size() : 0;
+    if (SizeLHS != SizeRHS)
+      return false;
+    if (SizeRHS == 0)
+      return true;
+    return llvm::set_is_subset(*LHS, *RHS);
+  }
+};
+
 /// The value passed to the line option that defines the maximal initialization
 /// chain length.
 extern unsigned MaxInitializationChainLength;
@@ -437,32 +500,35 @@ struct AADepGraphNode {
 public:
   virtual ~AADepGraphNode() = default;
   using DepTy = PointerIntPair<AADepGraphNode *, 1>;
+  using DepSetTy = SmallSetVector<DepTy, 2>;
 
 protected:
   /// Set of dependency graph nodes which should be updated if this one
   /// is updated. The bit encodes if it is optional.
-  TinyPtrVector<DepTy> Deps;
+  DepSetTy Deps;
 
-  static AADepGraphNode *DepGetVal(DepTy &DT) { return DT.getPointer(); }
-  static AbstractAttribute *DepGetValAA(DepTy &DT) {
+  static AADepGraphNode *DepGetVal(const DepTy &DT) { return DT.getPointer(); }
+  static AbstractAttribute *DepGetValAA(const DepTy &DT) {
     return cast<AbstractAttribute>(DT.getPointer());
   }
 
   operator AbstractAttribute *() { return cast<AbstractAttribute>(this); }
 
 public:
-  using iterator =
-      mapped_iterator<TinyPtrVector<DepTy>::iterator, decltype(&DepGetVal)>;
+  using iterator = mapped_iterator<DepSetTy::iterator, decltype(&DepGetVal)>;
   using aaiterator =
-      mapped_iterator<TinyPtrVector<DepTy>::iterator, decltype(&DepGetValAA)>;
+      mapped_iterator<DepSetTy::iterator, decltype(&DepGetValAA)>;
 
   aaiterator begin() { return aaiterator(Deps.begin(), &DepGetValAA); }
   aaiterator end() { return aaiterator(Deps.end(), &DepGetValAA); }
   iterator child_begin() { return iterator(Deps.begin(), &DepGetVal); }
   iterator child_end() { return iterator(Deps.end(), &DepGetVal); }
 
-  virtual void print(raw_ostream &OS) const { OS << "AADepNode Impl\n"; }
-  TinyPtrVector<DepTy> &getDeps() { return Deps; }
+  void print(raw_ostream &OS) const { print(nullptr, OS); }
+  virtual void print(Attributor *, raw_ostream &OS) const {
+    OS << "AADepNode Impl\n";
+  }
+  DepSetTy &getDeps() { return Deps; }
 
   friend struct Attributor;
   friend struct AADepGraph;
@@ -478,9 +544,9 @@ struct AADepGraph {
   ~AADepGraph() = default;
 
   using DepTy = AADepGraphNode::DepTy;
-  static AADepGraphNode *DepGetVal(DepTy &DT) { return DT.getPointer(); }
+  static AADepGraphNode *DepGetVal(const DepTy &DT) { return DT.getPointer(); }
   using iterator =
-      mapped_iterator<TinyPtrVector<DepTy>::iterator, decltype(&DepGetVal)>;
+      mapped_iterator<AADepGraphNode::DepSetTy::iterator, decltype(&DepGetVal)>;
 
   /// There is no root node for the dependency graph. But the SCCIterator
   /// requires a single entry point, so we maintain a fake("synthetic") root
@@ -647,7 +713,8 @@ struct IRPosition {
       // function.
       if (Argument *Arg = getAssociatedArgument())
         return Arg->getParent();
-      return CB->getCalledFunction();
+      return dyn_cast_if_present<Function>(
+          CB->getCalledOperand()->stripPointerCasts());
     }
     return getAnchorScope();
   }
@@ -666,6 +733,17 @@ struct IRPosition {
     default:
       return false;
     }
+  }
+
+  /// Return true if this is a function or call site position.
+  bool isFunctionScope() const {
+    switch (getPositionKind()) {
+    case IRPosition::IRP_CALL_SITE:
+    case IRPosition::IRP_FUNCTION:
+      return true;
+    default:
+      return false;
+    };
   }
 
   /// Return the Function surrounding the anchor value.
@@ -741,11 +819,55 @@ struct IRPosition {
     case IRPosition::IRP_CALL_SITE_RETURNED:
       return AttributeList::ReturnIndex;
     case IRPosition::IRP_ARGUMENT:
+      return getCalleeArgNo() + AttributeList::FirstArgIndex;
     case IRPosition::IRP_CALL_SITE_ARGUMENT:
       return getCallSiteArgNo() + AttributeList::FirstArgIndex;
     }
     llvm_unreachable(
         "There is no attribute index for a floating or invalid position!");
+  }
+
+  /// Return the value attributes are attached to.
+  Value *getAttrListAnchor() const {
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB;
+    return getAssociatedFunction();
+  }
+
+  /// Return the attributes associated with this function or call site scope.
+  AttributeList getAttrList() const {
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB->getAttributes();
+    return getAssociatedFunction()->getAttributes();
+  }
+
+  /// Update the attributes associated with this function or call site scope.
+  void setAttrList(const AttributeList &AttrList) const {
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB->setAttributes(AttrList);
+    return getAssociatedFunction()->setAttributes(AttrList);
+  }
+
+  /// Return the number of arguments associated with this function or call site
+  /// scope.
+  unsigned getNumArgs() const {
+    assert((getPositionKind() == IRP_CALL_SITE ||
+            getPositionKind() == IRP_FUNCTION) &&
+           "Only valid for function/call site positions!");
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB->arg_size();
+    return getAssociatedFunction()->arg_size();
+  }
+
+  /// Return theargument \p ArgNo associated with this function or call site
+  /// scope.
+  Value *getArg(unsigned ArgNo) const {
+    assert((getPositionKind() == IRP_CALL_SITE ||
+            getPositionKind() == IRP_FUNCTION) &&
+           "Only valid for function/call site positions!");
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB->getArgOperand(ArgNo);
+    return getAssociatedFunction()->getArg(ArgNo);
   }
 
   /// Return the associated position kind.
@@ -767,53 +889,6 @@ struct IRPosition {
       return isReturnPosition(EncodingBits) ? IRP_CALL_SITE_RETURNED
                                             : IRP_CALL_SITE;
     return IRP_FLOAT;
-  }
-
-  /// TODO: Figure out if the attribute related helper functions should live
-  ///       here or somewhere else.
-
-  /// Return true if any kind in \p AKs existing in the IR at a position that
-  /// will affect this one. See also getAttrs(...).
-  /// \param IgnoreSubsumingPositions Flag to determine if subsuming positions,
-  ///                                 e.g., the function position if this is an
-  ///                                 argument position, should be ignored.
-  bool hasAttr(ArrayRef<Attribute::AttrKind> AKs,
-               bool IgnoreSubsumingPositions = false,
-               Attributor *A = nullptr) const;
-
-  /// Return the attributes of any kind in \p AKs existing in the IR at a
-  /// position that will affect this one. While each position can only have a
-  /// single attribute of any kind in \p AKs, there are "subsuming" positions
-  /// that could have an attribute as well. This method returns all attributes
-  /// found in \p Attrs.
-  /// \param IgnoreSubsumingPositions Flag to determine if subsuming positions,
-  ///                                 e.g., the function position if this is an
-  ///                                 argument position, should be ignored.
-  void getAttrs(ArrayRef<Attribute::AttrKind> AKs,
-                SmallVectorImpl<Attribute> &Attrs,
-                bool IgnoreSubsumingPositions = false,
-                Attributor *A = nullptr) const;
-
-  /// Remove the attribute of kind \p AKs existing in the IR at this position.
-  void removeAttrs(ArrayRef<Attribute::AttrKind> AKs) const {
-    if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
-      return;
-
-    AttributeList AttrList;
-    auto *CB = dyn_cast<CallBase>(&getAnchorValue());
-    if (CB)
-      AttrList = CB->getAttributes();
-    else
-      AttrList = getAssociatedFunction()->getAttributes();
-
-    LLVMContext &Ctx = getAnchorValue().getContext();
-    for (Attribute::AttrKind AK : AKs)
-      AttrList = AttrList.removeAttributeAtIndex(Ctx, getAttrIdx(), AK);
-
-    if (CB)
-      CB->setAttributes(AttrList);
-    else
-      getAssociatedFunction()->setAttributes(AttrList);
   }
 
   bool isAnyCallSitePosition() const {
@@ -934,16 +1009,6 @@ private:
   /// Verify internal invariants.
   void verify();
 
-  /// Return the attributes of kind \p AK existing in the IR as attribute.
-  bool getAttrsFromIRAttr(Attribute::AttrKind AK,
-                          SmallVectorImpl<Attribute> &Attrs) const;
-
-  /// Return the attributes of kind \p AK existing in the IR as operand bundles
-  /// of an llvm.assume.
-  bool getAttrsFromAssumes(Attribute::AttrKind AK,
-                           SmallVectorImpl<Attribute> &Attrs,
-                           Attributor &A) const;
-
   /// Return the underlying pointer as Value *, valid for all positions but
   /// IRP_CALL_SITE_ARGUMENT.
   Value *getAsValuePtr() const {
@@ -1063,33 +1128,51 @@ struct AnalysisGetter {
   // allow partial specialization, which is needed in this case. So instead, we
   // use a constexpr bool to perform the SFINAE, and then use this information
   // inside the function template.
-  template <typename, typename = void> static constexpr bool HasLegacyWrapper = false;
+  template <typename, typename = void>
+  static constexpr bool HasLegacyWrapper = false;
 
   template <typename Analysis>
-  typename Analysis::Result *getAnalysis(const Function &F) {
-    if (FAM)
+  typename Analysis::Result *getAnalysis(const Function &F,
+                                         bool RequestCachedOnly = false) {
+    if (!LegacyPass && !FAM)
+      return nullptr;
+    if (FAM) {
+      if (CachedOnly || RequestCachedOnly)
+        return FAM->getCachedResult<Analysis>(const_cast<Function &>(F));
       return &FAM->getResult<Analysis>(const_cast<Function &>(F));
-    if constexpr (HasLegacyWrapper<Analysis>)
-      if (LegacyPass)
+    }
+    if constexpr (HasLegacyWrapper<Analysis>) {
+      if (!CachedOnly && !RequestCachedOnly)
         return &LegacyPass
                     ->getAnalysis<typename Analysis::LegacyWrapper>(
                         const_cast<Function &>(F))
                     .getResult();
+      if (auto *P =
+              LegacyPass
+                  ->getAnalysisIfAvailable<typename Analysis::LegacyWrapper>())
+        return &P->getResult();
+    }
     return nullptr;
   }
 
-  AnalysisGetter(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
-  AnalysisGetter(Pass *P) : LegacyPass(P) {}
+  AnalysisGetter(FunctionAnalysisManager &FAM, bool CachedOnly = false)
+      : FAM(&FAM), CachedOnly(CachedOnly) {}
+  AnalysisGetter(Pass *P, bool CachedOnly = false)
+      : LegacyPass(P), CachedOnly(CachedOnly) {}
   AnalysisGetter() = default;
 
 private:
   FunctionAnalysisManager *FAM = nullptr;
   Pass *LegacyPass = nullptr;
+
+  /// If \p CachedOnly is true, no pass is created, just existing results are
+  /// used. Also available per request.
+  bool CachedOnly = false;
 };
 
 template <typename Analysis>
 constexpr bool AnalysisGetter::HasLegacyWrapper<
-      Analysis, std::void_t<typename Analysis::LegacyWrapper>> = true;
+    Analysis, std::void_t<typename Analysis::LegacyWrapper>> = true;
 
 /// Data structure to hold cached (LLVM-IR) information.
 ///
@@ -1105,24 +1188,24 @@ constexpr bool AnalysisGetter::HasLegacyWrapper<
 /// instance down in the abstract attributes.
 struct InformationCache {
   InformationCache(const Module &M, AnalysisGetter &AG,
-                   BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC)
-      : DL(M.getDataLayout()), Allocator(Allocator),
-        Explorer(
-            /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
-            /* ExploreCFGBackward */ true,
-            /* LIGetter */
-            [&](const Function &F) { return AG.getAnalysis<LoopAnalysis>(F); },
-            /* DTGetter */
-            [&](const Function &F) {
-              return AG.getAnalysis<DominatorTreeAnalysis>(F);
-            },
-            /* PDTGetter */
-            [&](const Function &F) {
-              return AG.getAnalysis<PostDominatorTreeAnalysis>(F);
-            }),
-        AG(AG), TargetTriple(M.getTargetTriple()) {
-    if (CGSCC)
-      initializeModuleSlice(*CGSCC);
+                   BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC,
+                   bool UseExplorer = true)
+      : CGSCC(CGSCC), DL(M.getDataLayout()), Allocator(Allocator), AG(AG),
+        TargetTriple(M.getTargetTriple()) {
+    if (UseExplorer)
+      Explorer = new (Allocator) MustBeExecutedContextExplorer(
+          /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
+          /* ExploreCFGBackward */ true,
+          /* LIGetter */
+          [&](const Function &F) { return AG.getAnalysis<LoopAnalysis>(F); },
+          /* DTGetter */
+          [&](const Function &F) {
+            return AG.getAnalysis<DominatorTreeAnalysis>(F);
+          },
+          /* PDTGetter */
+          [&](const Function &F) {
+            return AG.getAnalysis<PostDominatorTreeAnalysis>(F);
+          });
   }
 
   ~InformationCache() {
@@ -1130,6 +1213,12 @@ struct InformationCache {
     // the destructor manually.
     for (auto &It : FuncInfoMap)
       It.getSecond()->~FunctionInfo();
+    // Same is true for the instruction exclusions sets.
+    using AA::InstExclusionSetTy;
+    for (auto *BES : BESets)
+      BES->~InstExclusionSetTy();
+    if (Explorer)
+      Explorer->~MustBeExecutedContextExplorer();
   }
 
   /// Apply \p CB to all uses of \p F. If \p LookThroughConstantExprUses is
@@ -1154,45 +1243,8 @@ struct InformationCache {
     }
   }
 
-  /// Initialize the ModuleSlice member based on \p SCC. ModuleSlices contains
-  /// (a subset of) all functions that we can look at during this SCC traversal.
-  /// This includes functions (transitively) called from the SCC and the
-  /// (transitive) callers of SCC functions. We also can look at a function if
-  /// there is a "reference edge", i.a., if the function somehow uses (!=calls)
-  /// a function in the SCC or a caller of a function in the SCC.
-  void initializeModuleSlice(SetVector<Function *> &SCC) {
-    ModuleSlice.insert(SCC.begin(), SCC.end());
-
-    SmallPtrSet<Function *, 16> Seen;
-    SmallVector<Function *, 16> Worklist(SCC.begin(), SCC.end());
-    while (!Worklist.empty()) {
-      Function *F = Worklist.pop_back_val();
-      ModuleSlice.insert(F);
-
-      for (Instruction &I : instructions(*F))
-        if (auto *CB = dyn_cast<CallBase>(&I))
-          if (Function *Callee = CB->getCalledFunction())
-            if (Seen.insert(Callee).second)
-              Worklist.push_back(Callee);
-    }
-
-    Seen.clear();
-    Worklist.append(SCC.begin(), SCC.end());
-    while (!Worklist.empty()) {
-      Function *F = Worklist.pop_back_val();
-      ModuleSlice.insert(F);
-
-      // Traverse all transitive uses.
-      foreachUse(*F, [&](Use &U) {
-        if (auto *UsrI = dyn_cast<Instruction>(U.getUser()))
-          if (Seen.insert(UsrI->getFunction()).second)
-            Worklist.push_back(UsrI->getFunction());
-      });
-    }
-  }
-
-  /// The slice of the module we are allowed to look at.
-  SmallPtrSet<Function *, 8> ModuleSlice;
+  /// The CG-SCC the pass is run on, or nullptr if it is a module pass.
+  const SetVector<Function *> *const CGSCC = nullptr;
 
   /// A vector type to hold instructions.
   using InstructionVectorTy = SmallVector<Instruction *, 8>;
@@ -1212,7 +1264,7 @@ struct InformationCache {
   }
 
   /// Return MustBeExecutedContextExplorer
-  MustBeExecutedContextExplorer &getMustBeExecutedContextExplorer() {
+  MustBeExecutedContextExplorer *getMustBeExecutedContextExplorer() {
     return Explorer;
   }
 
@@ -1220,9 +1272,6 @@ struct InformationCache {
   TargetLibraryInfo *getTargetLibraryInfoForFunction(const Function &F) {
     return AG.getAnalysis<TargetLibraryAnalysis>(F);
   }
-
-  /// Return AliasAnalysis Result for function \p F.
-  AAResults *getAAResultsForFunction(const Function &F);
 
   /// Return true if \p Arg is involved in a must-tail call, thus the argument
   /// of the caller or callee.
@@ -1237,8 +1286,9 @@ struct InformationCache {
 
   /// Return the analysis result from a pass \p AP for function \p F.
   template <typename AP>
-  typename AP::Result *getAnalysisResultForFunction(const Function &F) {
-    return AG.getAnalysis<AP>(F);
+  typename AP::Result *getAnalysisResultForFunction(const Function &F,
+                                                    bool CachedOnly = false) {
+    return AG.getAnalysis<AP>(F, CachedOnly);
   }
 
   /// Return datalayout used in the module.
@@ -1247,26 +1297,17 @@ struct InformationCache {
   /// Return the map conaining all the knowledge we have from `llvm.assume`s.
   const RetainedKnowledgeMap &getKnowledgeMap() const { return KnowledgeMap; }
 
-  /// Return if \p To is potentially reachable form \p From or not
-  /// If the same query was answered, return cached result
-  bool getPotentiallyReachable(const Instruction &From, const Instruction &To) {
-    auto KeyPair = std::make_pair(&From, &To);
-    auto Iter = PotentiallyReachableMap.find(KeyPair);
-    if (Iter != PotentiallyReachableMap.end())
-      return Iter->second;
-    const Function &F = *From.getFunction();
-    bool Result = true;
-    if (From.getFunction() == To.getFunction())
-      Result = isPotentiallyReachable(&From, &To, nullptr,
-                                      AG.getAnalysis<DominatorTreeAnalysis>(F),
-                                      AG.getAnalysis<LoopAnalysis>(F));
-    PotentiallyReachableMap.insert(std::make_pair(KeyPair, Result));
-    return Result;
-  }
-
-  /// Check whether \p F is part of module slice.
-  bool isInModuleSlice(const Function &F) {
-    return ModuleSlice.empty() || ModuleSlice.count(const_cast<Function *>(&F));
+  /// Given \p BES, return a uniqued version.
+  const AA::InstExclusionSetTy *
+  getOrCreateUniqueBlockExecutionSet(const AA::InstExclusionSetTy *BES) {
+    auto It = BESets.find(BES);
+    if (It != BESets.end())
+      return *It;
+    auto *UniqueBES = new (Allocator) AA::InstExclusionSetTy(*BES);
+    bool Success = BESets.insert(UniqueBES).second;
+    (void)Success;
+    assert(Success && "Expected only new entries to be added");
+    return UniqueBES;
   }
 
   /// Return true if the stack (llvm::Alloca) can be accessed by other threads.
@@ -1276,6 +1317,11 @@ struct InformationCache {
   bool targetIsGPU() {
     return TargetTriple.isAMDGPU() || TargetTriple.isNVPTX();
   }
+
+  /// Return all functions that might be called indirectly, only valid for
+  /// closed world modules (see isClosedWorldModule).
+  const ArrayRef<Function *>
+  getIndirectlyCallableFunctions(Attributor &A) const;
 
 private:
   struct FunctionInfo {
@@ -1309,6 +1355,10 @@ private:
     return *FI;
   }
 
+  /// Vector of functions that might be callable indirectly, i.a., via a
+  /// function pointer.
+  SmallVector<Function *> IndirectlyCallableFunctions;
+
   /// Initialize the function information cache \p FI for the function \p F.
   ///
   /// This method needs to be called for all function that might be looked at
@@ -1322,7 +1372,7 @@ private:
   BumpPtrAllocator &Allocator;
 
   /// MustBeExecutedContextExplorer
-  MustBeExecutedContextExplorer Explorer;
+  MustBeExecutedContextExplorer *Explorer = nullptr;
 
   /// A map with knowledge retained in `llvm.assume` instructions.
   RetainedKnowledgeMap KnowledgeMap;
@@ -1330,15 +1380,14 @@ private:
   /// A container for all instructions that are only used by `llvm.assume`.
   SetVector<const Instruction *> AssumeOnlyValues;
 
+  /// Cache for block sets to allow reuse.
+  DenseSet<const AA::InstExclusionSetTy *> BESets;
+
   /// Getters for analysis.
   AnalysisGetter &AG;
 
   /// Set of inlineable functions
   SmallPtrSet<const Function *, 8> InlineableFunctions;
-
-  /// A map for caching results of queries for isPotentiallyReachable
-  DenseMap<std::pair<const Instruction *, const Instruction *>, bool>
-      PotentiallyReachableMap;
 
   /// The triple describing the target machine.
   Triple TargetTriple;
@@ -1369,11 +1418,25 @@ struct AttributorConfig {
   bool RewriteSignatures = true;
 
   /// Flag to determine if we want to initialize all default AAs for an internal
-  /// function marked live.
-  /// TODO: This should probably be a callback, or maybe
-  /// identifyDefaultAbstractAttributes should be virtual, something to allow
-  /// customizable lazy initialization for internal functions.
+  /// function marked live. See also: InitializationCallback>
   bool DefaultInitializeLiveInternals = true;
+
+  /// Flag to determine if we should skip all liveness checks early on.
+  bool UseLiveness = true;
+
+  /// Flag to indicate if the entire world is contained in this module, that
+  /// is, no outside functions exist.
+  bool IsClosedWorldModule = false;
+
+  /// Callback function to be invoked on internal functions marked live.
+  std::function<void(Attributor &A, const Function &F)> InitializationCallback =
+      nullptr;
+
+  /// Callback function to determine if an indirect call targets should be made
+  /// direct call targets (with an if-cascade).
+  std::function<bool(Attributor &A, const AbstractAttribute &AA, CallBase &CB,
+                     Function &AssummedCallee)>
+      IndirectCalleeSpecializationCallback = nullptr;
 
   /// Helper to update an underlying call graph and to delete functions.
   CallGraphUpdater &CGUpdater;
@@ -1382,7 +1445,7 @@ struct AttributorConfig {
   DenseSet<const char *> *Allowed = nullptr;
 
   /// Maximum number of iterations to run until fixpoint.
-  std::optional<unsigned> MaxFixpointIterations = std::nullopt;
+  std::optional<unsigned> MaxFixpointIterations;
 
   /// A callback function that returns an ORE object from a Function pointer.
   ///{
@@ -1393,7 +1456,14 @@ struct AttributorConfig {
 
   /// The name of the pass running the attributor, used to emit remarks.
   const char *PassName = nullptr;
+
+  using IPOAmendableCBTy = function_ref<bool(const Function &F)>;
+  IPOAmendableCBTy IPOAmendableCB;
 };
+
+/// A debug counter to limit the number of AAs created.
+DEBUG_COUNTER(NumAbstractAttributes, "num-abstract-attributes",
+              "How many AAs should be initialized");
 
 /// The fixpoint analysis framework that orchestrates the attribute deduction.
 ///
@@ -1432,9 +1502,7 @@ struct Attributor {
   /// \param Configuration The Attributor configuration which determines what
   ///                      generic features to use.
   Attributor(SetVector<Function *> &Functions, InformationCache &InfoCache,
-             AttributorConfig Configuration)
-      : Allocator(InfoCache.Allocator), Functions(Functions),
-        InfoCache(InfoCache), Configuration(Configuration) {}
+             AttributorConfig Configuration);
 
   ~Attributor();
 
@@ -1467,7 +1535,7 @@ struct Attributor {
   /// attribute is used for reasoning. To record the dependences explicitly use
   /// the `Attributor::recordDependence` method.
   template <typename AAType>
-  const AAType &getAAFor(const AbstractAttribute &QueryingAA,
+  const AAType *getAAFor(const AbstractAttribute &QueryingAA,
                          const IRPosition &IRP, DepClassTy DepClass) {
     return getOrCreateAAFor<AAType>(IRP, &QueryingAA, DepClass,
                                     /* ForceUpdate */ false);
@@ -1479,7 +1547,7 @@ struct Attributor {
   /// possible/useful that were not happening before as the abstract attribute
   /// was assumed dead.
   template <typename AAType>
-  const AAType &getAndUpdateAAFor(const AbstractAttribute &QueryingAA,
+  const AAType *getAndUpdateAAFor(const AbstractAttribute &QueryingAA,
                                   const IRPosition &IRP, DepClassTy DepClass) {
     return getOrCreateAAFor<AAType>(IRP, &QueryingAA, DepClass,
                                     /* ForceUpdate */ true);
@@ -1491,7 +1559,7 @@ struct Attributor {
   /// function.
   /// NOTE: ForceUpdate is ignored in any stage other than the update stage.
   template <typename AAType>
-  const AAType &getOrCreateAAFor(IRPosition IRP,
+  const AAType *getOrCreateAAFor(IRPosition IRP,
                                  const AbstractAttribute *QueryingAA,
                                  DepClassTy DepClass, bool ForceUpdate = false,
                                  bool UpdateAfterInit = true) {
@@ -1502,8 +1570,15 @@ struct Attributor {
                                             /* AllowInvalidState */ true)) {
       if (ForceUpdate && Phase == AttributorPhase::UPDATE)
         updateAA(*AAPtr);
-      return *AAPtr;
+      return AAPtr;
     }
+
+    bool ShouldUpdateAA;
+    if (!shouldInitialize<AAType>(IRP, ShouldUpdateAA))
+      return nullptr;
+
+    if (!DebugCounter::shouldExecute(NumAbstractAttributes))
+      return nullptr;
 
     // No matching attribute found, create one.
     // Use the static create method.
@@ -1516,51 +1591,24 @@ struct Attributor {
     // If we are currenty seeding attributes, enforce seeding rules.
     if (Phase == AttributorPhase::SEEDING && !shouldSeedAttribute(AA)) {
       AA.getState().indicatePessimisticFixpoint();
-      return AA;
+      return &AA;
     }
-
-    // For now we ignore naked and optnone functions.
-    bool Invalidate =
-        Configuration.Allowed && !Configuration.Allowed->count(&AAType::ID);
-    const Function *AnchorFn = IRP.getAnchorScope();
-    if (AnchorFn) {
-      Invalidate |=
-          AnchorFn->hasFnAttribute(Attribute::Naked) ||
-          AnchorFn->hasFnAttribute(Attribute::OptimizeNone) ||
-          (!isModulePass() && !getInfoCache().isInModuleSlice(*AnchorFn));
-    }
-
-    // Avoid too many nested initializations to prevent a stack overflow.
-    Invalidate |= InitializationChainLength > MaxInitializationChainLength;
 
     // Bootstrap the new attribute with an initial update to propagate
-    // information, e.g., function -> call site. If it is not on a given
-    // Allowed we will not perform updates at all.
-    if (Invalidate) {
-      AA.getState().indicatePessimisticFixpoint();
-      return AA;
-    }
-
+    // information, e.g., function -> call site.
     {
-      TimeTraceScope TimeScope(AA.getName() + "::initialize");
+      TimeTraceScope TimeScope("initialize", [&]() {
+        return AA.getName() +
+               std::to_string(AA.getIRPosition().getPositionKind());
+      });
       ++InitializationChainLength;
       AA.initialize(*this);
       --InitializationChainLength;
     }
 
-    // We update only AAs associated with functions in the Functions set or
-    // call sites of them.
-    if ((AnchorFn && !isRunOn(const_cast<Function *>(AnchorFn))) &&
-        !isRunOn(IRP.getAssociatedFunction())) {
+    if (!ShouldUpdateAA) {
       AA.getState().indicatePessimisticFixpoint();
-      return AA;
-    }
-
-    // If this is queried in the manifest stage, we force the AA to indicate
-    // pessimistic fixpoint immediately.
-    if (Phase == AttributorPhase::MANIFEST) {
-      AA.getState().indicatePessimisticFixpoint();
-      return AA;
+      return &AA;
     }
 
     // Allow seeded attributes to declare dependencies.
@@ -1577,10 +1625,11 @@ struct Attributor {
     if (QueryingAA && AA.getState().isValidState())
       recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA),
                        DepClass);
-    return AA;
+    return &AA;
   }
+
   template <typename AAType>
-  const AAType &getOrCreateAAFor(const IRPosition &IRP) {
+  const AAType *getOrCreateAAFor(const IRPosition &IRP) {
     return getOrCreateAAFor<AAType>(IRP, /* QueryingAA */ nullptr,
                                     DepClassTy::NONE);
   }
@@ -1653,7 +1702,7 @@ struct Attributor {
 
     // Register AA with the synthetic root only before the manifest stage.
     if (Phase == AttributorPhase::SEEDING || Phase == AttributorPhase::UPDATE)
-      DG.SyntheticRoot.Deps.push_back(
+      DG.SyntheticRoot.Deps.insert(
           AADepGraphNode::DepTy(&AA, unsigned(DepClassTy::REQUIRED)));
 
     return AA;
@@ -1665,10 +1714,82 @@ struct Attributor {
   /// Return true if this is a module pass, false otherwise.
   bool isModulePass() const { return Configuration.IsModulePass; }
 
+  /// Return true if we should specialize the call site \b CB for the potential
+  /// callee \p Fn.
+  bool shouldSpecializeCallSiteForCallee(const AbstractAttribute &AA,
+                                         CallBase &CB, Function &Callee) {
+    return Configuration.IndirectCalleeSpecializationCallback
+               ? Configuration.IndirectCalleeSpecializationCallback(*this, AA,
+                                                                    CB, Callee)
+               : true;
+  }
+
+  /// Return true if the module contains the whole world, thus, no outside
+  /// functions exist.
+  bool isClosedWorldModule() const;
+
   /// Return true if we derive attributes for \p Fn
   bool isRunOn(Function &Fn) const { return isRunOn(&Fn); }
   bool isRunOn(Function *Fn) const {
     return Functions.empty() || Functions.count(Fn);
+  }
+
+  template <typename AAType> bool shouldUpdateAA(const IRPosition &IRP) {
+    // If this is queried in the manifest stage, we force the AA to indicate
+    // pessimistic fixpoint immediately.
+    if (Phase == AttributorPhase::MANIFEST || Phase == AttributorPhase::CLEANUP)
+      return false;
+
+    Function *AssociatedFn = IRP.getAssociatedFunction();
+
+    if (IRP.isAnyCallSitePosition()) {
+      // Check if we require a callee but there is none.
+      if (!AssociatedFn && AAType::requiresCalleeForCallBase())
+        return false;
+
+      // Check if we require non-asm but it is inline asm.
+      if (AAType::requiresNonAsmForCallBase() &&
+          cast<CallBase>(IRP.getAnchorValue()).isInlineAsm())
+        return false;
+    }
+
+    // Check if we require a calles but we can't see all.
+    if (AAType::requiresCallersForArgOrFunction())
+      if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION ||
+          IRP.getPositionKind() == IRPosition::IRP_ARGUMENT)
+        if (!AssociatedFn->hasLocalLinkage())
+          return false;
+
+    if (!AAType::isValidIRPositionForUpdate(*this, IRP))
+      return false;
+
+    // We update only AAs associated with functions in the Functions set or
+    // call sites of them.
+    return (!AssociatedFn || isModulePass() || isRunOn(AssociatedFn) ||
+            isRunOn(IRP.getAnchorScope()));
+  }
+
+  template <typename AAType>
+  bool shouldInitialize(const IRPosition &IRP, bool &ShouldUpdateAA) {
+    if (!AAType::isValidIRPositionForInit(*this, IRP))
+      return false;
+
+    if (Configuration.Allowed && !Configuration.Allowed->count(&AAType::ID))
+      return false;
+
+    // For now we skip anything in naked and optnone functions.
+    const Function *AnchorFn = IRP.getAnchorScope();
+    if (AnchorFn && (AnchorFn->hasFnAttribute(Attribute::Naked) ||
+                     AnchorFn->hasFnAttribute(Attribute::OptimizeNone)))
+      return false;
+
+    // Avoid too many nested initializations to prevent a stack overflow.
+    if (InitializationChainLength > MaxInitializationChainLength)
+      return false;
+
+    ShouldUpdateAA = shouldUpdateAA<AAType>(IRP);
+
+    return !AAType::hasTrivialInitializer() || ShouldUpdateAA;
   }
 
   /// Determine opportunities to derive 'default' attributes in \p F and create
@@ -1688,7 +1809,8 @@ struct Attributor {
   /// If a function is exactly defined or it has alwaysinline attribute
   /// and is viable to be inlined, we say it is IPO amendable
   bool isFunctionIPOAmendable(const Function &F) {
-    return F.hasExactDefinition() || InfoCache.InlineableFunctions.count(&F);
+    return F.hasExactDefinition() || InfoCache.InlineableFunctions.count(&F) ||
+           (Configuration.IPOAmendableCB && Configuration.IPOAmendableCB(F));
   }
 
   /// Mark the internal function \p F as live.
@@ -1701,6 +1823,8 @@ struct Attributor {
 
     if (Configuration.DefaultInitializeLiveInternals)
       identifyDefaultAbstractAttributes(const_cast<Function &>(F));
+    if (Configuration.InitializationCallback)
+      Configuration.InitializationCallback(*this, F);
   }
 
   /// Helper function to remove callsite.
@@ -1779,6 +1903,60 @@ struct Attributor {
       ToBeDeletedFunctions.insert(&F);
   }
 
+  /// Return the attributes of kind \p AK existing in the IR as operand bundles
+  /// of an llvm.assume.
+  bool getAttrsFromAssumes(const IRPosition &IRP, Attribute::AttrKind AK,
+                           SmallVectorImpl<Attribute> &Attrs);
+
+  /// Return true if any kind in \p AKs existing in the IR at a position that
+  /// will affect this one. See also getAttrs(...).
+  /// \param IgnoreSubsumingPositions Flag to determine if subsuming positions,
+  ///                                 e.g., the function position if this is an
+  ///                                 argument position, should be ignored.
+  bool hasAttr(const IRPosition &IRP, ArrayRef<Attribute::AttrKind> AKs,
+               bool IgnoreSubsumingPositions = false,
+               Attribute::AttrKind ImpliedAttributeKind = Attribute::None);
+
+  /// Return the attributes of any kind in \p AKs existing in the IR at a
+  /// position that will affect this one. While each position can only have a
+  /// single attribute of any kind in \p AKs, there are "subsuming" positions
+  /// that could have an attribute as well. This method returns all attributes
+  /// found in \p Attrs.
+  /// \param IgnoreSubsumingPositions Flag to determine if subsuming positions,
+  ///                                 e.g., the function position if this is an
+  ///                                 argument position, should be ignored.
+  void getAttrs(const IRPosition &IRP, ArrayRef<Attribute::AttrKind> AKs,
+                SmallVectorImpl<Attribute> &Attrs,
+                bool IgnoreSubsumingPositions = false);
+
+  /// Remove all \p AttrKinds attached to \p IRP.
+  ChangeStatus removeAttrs(const IRPosition &IRP,
+                           ArrayRef<Attribute::AttrKind> AttrKinds);
+  ChangeStatus removeAttrs(const IRPosition &IRP, ArrayRef<StringRef> Attrs);
+
+  /// Attach \p DeducedAttrs to \p IRP, if \p ForceReplace is set we do this
+  /// even if the same attribute kind was already present.
+  ChangeStatus manifestAttrs(const IRPosition &IRP,
+                             ArrayRef<Attribute> DeducedAttrs,
+                             bool ForceReplace = false);
+
+private:
+  /// Helper to check \p Attrs for \p AK, if not found, check if \p
+  /// AAType::isImpliedByIR is true, and if not, create AAType for \p IRP.
+  template <Attribute::AttrKind AK, typename AAType>
+  void checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs);
+
+  /// Helper to apply \p CB on all attributes of type \p AttrDescs of \p IRP.
+  template <typename DescTy>
+  ChangeStatus updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
+                             function_ref<bool(const DescTy &, AttributeSet,
+                                               AttributeMask &, AttrBuilder &)>
+                                 CB);
+
+  /// Mapping from functions/call sites to their attributes.
+  DenseMap<Value *, AttributeList> AttrsMap;
+
+public:
   /// If \p IRP is assumed to be a constant, return it, if it is unclear yet,
   /// return std::nullopt, otherwise return `nullptr`.
   std::optional<Constant *> getAssumedConstant(const IRPosition &IRP,
@@ -1825,7 +2003,8 @@ struct Attributor {
                                   const AbstractAttribute *AA,
                                   SmallVectorImpl<AA::ValueAndContext> &Values,
                                   AA::ValueScope S,
-                                  bool &UsedAssumedInformation);
+                                  bool &UsedAssumedInformation,
+                                  bool RecurseForSelectAndPHI = true);
 
   /// Register \p CB as a simplification callback.
   /// `Attributor::getAssumedSimplified` will use these callbacks before
@@ -1844,10 +2023,60 @@ struct Attributor {
     return SimplificationCallbacks.count(IRP);
   }
 
+  /// Register \p CB as a simplification callback.
+  /// Similar to \p registerSimplificationCallback, the call back will be called
+  /// first when we simplify a global variable \p GV.
+  using GlobalVariableSimplifictionCallbackTy =
+      std::function<std::optional<Constant *>(
+          const GlobalVariable &, const AbstractAttribute *, bool &)>;
+  void registerGlobalVariableSimplificationCallback(
+      const GlobalVariable &GV,
+      const GlobalVariableSimplifictionCallbackTy &CB) {
+    GlobalVariableSimplificationCallbacks[&GV].emplace_back(CB);
+  }
+
+  /// Return true if there is a simplification callback for \p GV.
+  bool hasGlobalVariableSimplificationCallback(const GlobalVariable &GV) {
+    return GlobalVariableSimplificationCallbacks.count(&GV);
+  }
+
+  /// Return \p std::nullopt if there is no call back registered for \p GV or
+  /// the call back is still not sure if \p GV can be simplified. Return \p
+  /// nullptr if \p GV can't be simplified.
+  std::optional<Constant *>
+  getAssumedInitializerFromCallBack(const GlobalVariable &GV,
+                                    const AbstractAttribute *AA,
+                                    bool &UsedAssumedInformation) {
+    assert(GlobalVariableSimplificationCallbacks.contains(&GV));
+    for (auto &CB : GlobalVariableSimplificationCallbacks.lookup(&GV)) {
+      auto SimplifiedGV = CB(GV, AA, UsedAssumedInformation);
+      // For now we assume the call back will not return a std::nullopt.
+      assert(SimplifiedGV.has_value() && "SimplifiedGV has not value");
+      return *SimplifiedGV;
+    }
+    llvm_unreachable("there must be a callback registered");
+  }
+
+  using VirtualUseCallbackTy =
+      std::function<bool(Attributor &, const AbstractAttribute *)>;
+  void registerVirtualUseCallback(const Value &V,
+                                  const VirtualUseCallbackTy &CB) {
+    VirtualUseCallbacks[&V].emplace_back(CB);
+  }
+
 private:
   /// The vector with all simplification callbacks registered by outside AAs.
   DenseMap<IRPosition, SmallVector<SimplifictionCallbackTy, 1>>
       SimplificationCallbacks;
+
+  /// The vector with all simplification callbacks for global variables
+  /// registered by outside AAs.
+  DenseMap<const GlobalVariable *,
+           SmallVector<GlobalVariableSimplifictionCallbackTy, 1>>
+      GlobalVariableSimplificationCallbacks;
+
+  DenseMap<const Value *, SmallVector<VirtualUseCallbackTy, 1>>
+      VirtualUseCallbacks;
 
 public:
   /// Translate \p V from the callee context into the call site context.
@@ -1870,7 +2099,8 @@ public:
   bool isAssumedDead(const Instruction &I, const AbstractAttribute *QueryingAA,
                      const AAIsDead *LivenessAA, bool &UsedAssumedInformation,
                      bool CheckBBLivenessOnly = false,
-                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+                     DepClassTy DepClass = DepClassTy::OPTIONAL,
+                     bool CheckForDeadStore = false);
 
   /// Return true if \p U is assumed dead.
   ///
@@ -2086,24 +2316,18 @@ public:
   bool checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                             const Function &Fn, bool RequireAllCallSites,
                             const AbstractAttribute *QueryingAA,
-                            bool &UsedAssumedInformation);
-
-  /// Check \p Pred on all values potentially returned by \p F.
-  ///
-  /// This method will evaluate \p Pred on all values potentially returned by
-  /// the function associated with \p QueryingAA. The returned values are
-  /// matched with their respective return instructions. Returns true if \p Pred
-  /// holds on all of them.
-  bool checkForAllReturnedValuesAndReturnInsts(
-      function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred,
-      const AbstractAttribute &QueryingAA);
+                            bool &UsedAssumedInformation,
+                            bool CheckPotentiallyDead = false);
 
   /// Check \p Pred on all values potentially returned by the function
   /// associated with \p QueryingAA.
   ///
   /// This is the context insensitive version of the method above.
-  bool checkForAllReturnedValues(function_ref<bool(Value &)> Pred,
-                                 const AbstractAttribute &QueryingAA);
+  bool
+  checkForAllReturnedValues(function_ref<bool(Value &)> Pred,
+                            const AbstractAttribute &QueryingAA,
+                            AA::ValueScope S = AA::ValueScope::Intraprocedural,
+                            bool RecurseForSelectAndPHI = true);
 
   /// Check \p Pred on all instructions in \p Fn with an opcode present in
   /// \p Opcodes.
@@ -2112,8 +2336,8 @@ public:
   /// present in \p Opcode and return true if \p Pred holds on all of them.
   bool checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                const Function *Fn,
-                               const AbstractAttribute &QueryingAA,
-                               const ArrayRef<unsigned> &Opcodes,
+                               const AbstractAttribute *QueryingAA,
+                               ArrayRef<unsigned> Opcodes,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly = false,
                                bool CheckPotentiallyDead = false);
@@ -2124,7 +2348,7 @@ public:
   /// present in \p Opcode and return true if \p Pred holds on all of them.
   bool checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                const AbstractAttribute &QueryingAA,
-                               const ArrayRef<unsigned> &Opcodes,
+                               ArrayRef<unsigned> Opcodes,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly = false,
                                bool CheckPotentiallyDead = false);
@@ -2209,6 +2433,10 @@ public:
 
   /// The allocator used to allocate memory, e.g. for `AbstractAttribute`s.
   BumpPtrAllocator &Allocator;
+
+  const SmallSetVector<Function *, 8> &getModifiedFunctions() {
+    return CGModifiedFunctions;
+  }
 
 private:
   /// This method will do fixpoint iteration until fixpoint or the
@@ -2394,8 +2622,8 @@ struct AbstractState {
 ///
 /// The interface ensures that the assumed bits are always a subset of the known
 /// bits. Users can only add known bits and, except through adding known bits,
-/// they can only remove assumed bits. This should guarantee monotoniticy and
-/// thereby the existence of a fixpoint (if used corretly). The fixpoint is
+/// they can only remove assumed bits. This should guarantee monotonicity and
+/// thereby the existence of a fixpoint (if used correctly). The fixpoint is
 /// reached when the assumed and known state/bits are equal. Users can
 /// force/inidicate a fixpoint. If an optimistic one is indicated, the known
 /// state will catch up with the assumed one, for a pessimistic fixpoint it is
@@ -2504,15 +2732,18 @@ template <typename base_ty = uint32_t, base_ty BestState = ~base_ty(0),
           base_ty WorstState = 0>
 struct BitIntegerState
     : public IntegerStateBase<base_ty, BestState, WorstState> {
+  using super = IntegerStateBase<base_ty, BestState, WorstState>;
   using base_t = base_ty;
+  BitIntegerState() = default;
+  BitIntegerState(base_t Assumed) : super(Assumed) {}
 
   /// Return true if the bits set in \p BitsEncoding are "known bits".
-  bool isKnown(base_t BitsEncoding) const {
+  bool isKnown(base_t BitsEncoding = BestState) const {
     return (this->Known & BitsEncoding) == BitsEncoding;
   }
 
   /// Return true if the bits set in \p BitsEncoding are "assumed bits".
-  bool isAssumed(base_t BitsEncoding) const {
+  bool isAssumed(base_t BitsEncoding = BestState) const {
     return (this->Assumed & BitsEncoding) == BitsEncoding;
   }
 
@@ -2537,7 +2768,7 @@ struct BitIntegerState
 
   /// Keep only "assumed bits" also set in \p BitsEncoding but all known ones.
   BitIntegerState &intersectAssumedBits(base_t BitsEncoding) {
-    // Make sure we never loose any "known bits".
+    // Make sure we never lose any "known bits".
     this->Assumed = (this->Assumed & BitsEncoding) | this->Known;
     return *this;
   }
@@ -2578,14 +2809,14 @@ struct IncIntegerState
 
   /// Take minimum of assumed and \p Value.
   IncIntegerState &takeAssumedMinimum(base_t Value) {
-    // Make sure we never loose "known value".
+    // Make sure we never lose "known value".
     this->Assumed = std::max(std::min(this->Assumed, Value), this->Known);
     return *this;
   }
 
   /// Take maximum of known and \p Value.
   IncIntegerState &takeKnownMaximum(base_t Value) {
-    // Make sure we never loose "known value".
+    // Make sure we never lose "known value".
     this->Assumed = std::max(Value, this->Assumed);
     this->Known = std::max(Value, this->Known);
     return *this;
@@ -2614,14 +2845,14 @@ struct DecIntegerState : public IntegerStateBase<base_ty, 0, ~base_ty(0)> {
 
   /// Take maximum of assumed and \p Value.
   DecIntegerState &takeAssumedMaximum(base_t Value) {
-    // Make sure we never loose "known value".
+    // Make sure we never lose "known value".
     this->Assumed = std::min(std::max(this->Assumed, Value), this->Known);
     return *this;
   }
 
   /// Take minimum of known and \p Value.
   DecIntegerState &takeKnownMinimum(base_t Value) {
-    // Make sure we never loose "known value".
+    // Make sure we never lose "known value".
     this->Assumed = std::min(Value, this->Assumed);
     this->Known = std::min(Value, this->Known);
     return *this;
@@ -2748,7 +2979,7 @@ struct IntegerRangeState : public AbstractState {
 
   /// Unite assumed range with the passed state.
   void unionAssumed(const ConstantRange &R) {
-    // Don't loose a known range.
+    // Don't lose a known range.
     Assumed = Assumed.unionWith(R).intersectWith(Known);
   }
 
@@ -2900,6 +3131,7 @@ template <typename BaseTy> struct SetState : public AbstractState {
   /// Performs the set intersection between this set and \p RHS. Returns true if
   /// changes were made.
   bool getIntersection(const SetContents &RHS) {
+    bool IsUniversal = Assumed.isUniversal();
     unsigned SizeBefore = Assumed.getSet().size();
 
     // Get intersection and make sure that the known set is still a proper
@@ -2907,7 +3139,8 @@ template <typename BaseTy> struct SetState : public AbstractState {
     Assumed.getIntersection(RHS);
     Assumed.getUnion(Known);
 
-    return SizeBefore != Assumed.getSet().size();
+    return SizeBefore != Assumed.getSet().size() ||
+           IsUniversal != Assumed.isUniversal();
   }
 
   /// Performs the set union between this set and \p RHS. Returns true if
@@ -2922,14 +3155,6 @@ private:
   SetContents Assumed;
 
   bool IsAtFixedpoint;
-};
-
-/// Helper struct necessary as the modular build fails if the virtual method
-/// IRAttribute::manifest is defined in the Attributor.cpp.
-struct IRAttributeManifest {
-  static ChangeStatus manifestAttrs(Attributor &A, const IRPosition &IRP,
-                                    const ArrayRef<Attribute> &DeducedAttrs,
-                                    bool ForceReplace = false);
 };
 
 /// Helper to tie a abstract state implementation to an abstract attribute.
@@ -2949,31 +3174,36 @@ struct StateWrapper : public BaseType, public StateTy {
 };
 
 /// Helper class that provides common functionality to manifest IR attributes.
-template <Attribute::AttrKind AK, typename BaseType>
+template <Attribute::AttrKind AK, typename BaseType, typename AAType>
 struct IRAttribute : public BaseType {
   IRAttribute(const IRPosition &IRP) : BaseType(IRP) {}
 
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    const IRPosition &IRP = this->getIRPosition();
-    if (isa<UndefValue>(IRP.getAssociatedValue()) ||
-        this->hasAttr(getAttrKind(), /* IgnoreSubsumingPositions */ false,
-                      &A)) {
-      this->getState().indicateOptimisticFixpoint();
-      return;
-    }
+  /// Most boolean IRAttribute AAs don't do anything non-trivial
+  /// in their initializers while non-boolean ones often do. Subclasses can
+  /// change this.
+  static bool hasTrivialInitializer() { return Attribute::isEnumAttrKind(AK); }
 
-    bool IsFnInterface = IRP.isFnInterfaceKind();
-    const Function *FnScope = IRP.getAnchorScope();
-    // TODO: Not all attributes require an exact definition. Find a way to
-    //       enable deduction for some but not all attributes in case the
-    //       definition might be changed at runtime, see also
-    //       http://lists.llvm.org/pipermail/llvm-dev/2018-February/121275.html.
-    // TODO: We could always determine abstract attributes and if sufficient
-    //       information was found we could duplicate the functions that do not
-    //       have an exact definition.
-    if (IsFnInterface && (!FnScope || !A.isFunctionIPOAmendable(*FnScope)))
-      this->getState().indicatePessimisticFixpoint();
+  /// Compile time access to the IR attribute kind.
+  static constexpr Attribute::AttrKind IRAttributeKind = AK;
+
+  /// Return true if the IR attribute(s) associated with this AA are implied for
+  /// an undef value.
+  static bool isImpliedByUndef() { return true; }
+
+  /// Return true if the IR attribute(s) associated with this AA are implied for
+  /// an poison value.
+  static bool isImpliedByPoison() { return true; }
+
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            Attribute::AttrKind ImpliedAttributeKind = AK,
+                            bool IgnoreSubsumingPositions = false) {
+    if (AAType::isImpliedByUndef() && isa<UndefValue>(IRP.getAssociatedValue()))
+      return true;
+    if (AAType::isImpliedByPoison() &&
+        isa<PoisonValue>(IRP.getAssociatedValue()))
+      return true;
+    return A.hasAttr(IRP, {ImpliedAttributeKind}, IgnoreSubsumingPositions,
+                     ImpliedAttributeKind);
   }
 
   /// See AbstractAttribute::manifest(...).
@@ -2981,16 +3211,17 @@ struct IRAttribute : public BaseType {
     if (isa<UndefValue>(this->getIRPosition().getAssociatedValue()))
       return ChangeStatus::UNCHANGED;
     SmallVector<Attribute, 4> DeducedAttrs;
-    getDeducedAttributes(this->getAnchorValue().getContext(), DeducedAttrs);
-    return IRAttributeManifest::manifestAttrs(A, this->getIRPosition(),
-                                              DeducedAttrs);
+    getDeducedAttributes(A, this->getAnchorValue().getContext(), DeducedAttrs);
+    if (DeducedAttrs.empty())
+      return ChangeStatus::UNCHANGED;
+    return A.manifestAttrs(this->getIRPosition(), DeducedAttrs);
   }
 
   /// Return the kind that identifies the abstract attribute implementation.
   Attribute::AttrKind getAttrKind() const { return AK; }
 
   /// Return the deduced attributes in \p Attrs.
-  virtual void getDeducedAttributes(LLVMContext &Ctx,
+  virtual void getDeducedAttributes(Attributor &A, LLVMContext &Ctx,
                                     SmallVectorImpl<Attribute> &Attrs) const {
     Attrs.emplace_back(Attribute::get(Ctx, getAttrKind()));
   }
@@ -3047,6 +3278,9 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// Virtual destructor.
   virtual ~AbstractAttribute() = default;
 
+  /// Compile time access to the IR attribute kind.
+  static constexpr Attribute::AttrKind IRAttributeKind = Attribute::None;
+
   /// This function is used to identify if an \p DGN is of type
   /// AbstractAttribute so that the dyn_cast and cast can use such information
   /// to cast an AADepGraphNode to an AbstractAttribute.
@@ -3054,6 +3288,43 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// We eagerly return true here because all AADepGraphNodes except for the
   /// Synthethis Node are of type AbstractAttribute
   static bool classof(const AADepGraphNode *DGN) { return true; }
+
+  /// Return false if this AA does anything non-trivial (hence not done by
+  /// default) in its initializer.
+  static bool hasTrivialInitializer() { return false; }
+
+  /// Return true if this AA requires a "callee" (or an associted function) for
+  /// a call site positon. Default is optimistic to minimize AAs.
+  static bool requiresCalleeForCallBase() { return true; }
+
+  /// Return true if this AA requires non-asm "callee" for a call site positon.
+  static bool requiresNonAsmForCallBase() { return true; }
+
+  /// Return true if this AA requires all callees for an argument or function
+  /// positon.
+  static bool requiresCallersForArgOrFunction() { return false; }
+
+  /// Return false if an AA should not be created for \p IRP.
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    return true;
+  }
+
+  /// Return false if an AA should not be updated for \p IRP.
+  static bool isValidIRPositionForUpdate(Attributor &A, const IRPosition &IRP) {
+    Function *AssociatedFn = IRP.getAssociatedFunction();
+    bool IsFnInterface = IRP.isFnInterfaceKind();
+    assert((!IsFnInterface || AssociatedFn) &&
+           "Function interface without a function?");
+
+    // TODO: Not all attributes require an exact definition. Find a way to
+    //       enable deduction for some but not all attributes in case the
+    //       definition might be changed at runtime, see also
+    //       http://lists.llvm.org/pipermail/llvm-dev/2018-February/121275.html.
+    // TODO: We could always determine abstract attributes and if sufficient
+    //       information was found we could duplicate the functions that do not
+    //       have an exact definition.
+    return !IsFnInterface || A.isFunctionIPOAmendable(*AssociatedFn);
+  }
 
   /// Initialize the state with the information in the Attributor \p A.
   ///
@@ -3083,12 +3354,13 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
 
   /// Helper functions, for debug purposes only.
   ///{
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS) const { print(nullptr, OS); }
+  void print(Attributor *, raw_ostream &OS) const override;
   virtual void printWithDeps(raw_ostream &OS) const;
-  void dump() const { print(dbgs()); }
+  void dump() const { this->print(dbgs()); }
 
   /// This function should return the "summarized" assumed state as string.
-  virtual const std::string getAsStr() const = 0;
+  virtual const std::string getAsStr(Attributor *A) const = 0;
 
   /// This function should return the name of the AbstractAttribute
   virtual const std::string getName() const = 0;
@@ -3160,8 +3432,19 @@ struct AttributorCGSCCPass : public PassInfoMixin<AttributorCGSCCPass> {
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 };
 
-Pass *createAttributorLegacyPass();
-Pass *createAttributorCGSCCLegacyPass();
+/// A more lightweight version of the Attributor which only runs attribute
+/// inference but no simplifications.
+struct AttributorLightPass : public PassInfoMixin<AttributorLightPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+/// A more lightweight version of the Attributor which only runs attribute
+/// inference but no simplifications.
+struct AttributorLightCGSCCPass
+    : public PassInfoMixin<AttributorLightCGSCCPass> {
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+};
 
 /// Helper function to clamp a state \p S of type \p StateType with the
 /// information in \p R and indicate/return if \p S did change (as-in update is
@@ -3178,55 +3461,10 @@ ChangeStatus clampStateAndIndicateChange(StateType &S, const StateType &R) {
 ///                       Abstract Attribute Classes
 /// ----------------------------------------------------------------------------
 
-/// An abstract attribute for the returned values of a function.
-struct AAReturnedValues
-    : public IRAttribute<Attribute::Returned, AbstractAttribute> {
-  AAReturnedValues(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
-
-  /// Check \p Pred on all returned values.
-  ///
-  /// This method will evaluate \p Pred on returned values and return
-  /// true if (1) all returned values are known, and (2) \p Pred returned true
-  /// for all returned values.
-  ///
-  /// Note: Unlike the Attributor::checkForAllReturnedValuesAndReturnInsts
-  /// method, this one will not filter dead return instructions.
-  virtual bool checkForAllReturnedValuesAndReturnInsts(
-      function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred)
-      const = 0;
-
-  using iterator =
-      MapVector<Value *, SmallSetVector<ReturnInst *, 4>>::iterator;
-  using const_iterator =
-      MapVector<Value *, SmallSetVector<ReturnInst *, 4>>::const_iterator;
-  virtual llvm::iterator_range<iterator> returned_values() = 0;
-  virtual llvm::iterator_range<const_iterator> returned_values() const = 0;
-
-  virtual size_t getNumReturnValues() const = 0;
-
-  /// Create an abstract attribute view for the position \p IRP.
-  static AAReturnedValues &createForPosition(const IRPosition &IRP,
-                                             Attributor &A);
-
-  /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAReturnedValues"; }
-
-  /// See AbstractAttribute::getIdAddr()
-  const char *getIdAddr() const override { return &ID; }
-
-  /// This function should return true if the type of the \p AA is
-  /// AAReturnedValues
-  static bool classof(const AbstractAttribute *AA) {
-    return (AA->getIdAddr() == &ID);
-  }
-
-  /// Unique ID (due to the unique address)
-  static const char ID;
-};
-
 struct AANoUnwind
     : public IRAttribute<Attribute::NoUnwind,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoUnwind> {
   AANoUnwind(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Returns true if nounwind is assumed.
@@ -3255,8 +3493,47 @@ struct AANoUnwind
 
 struct AANoSync
     : public IRAttribute<Attribute::NoSync,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoSync> {
   AANoSync(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            Attribute::AttrKind ImpliedAttributeKind,
+                            bool IgnoreSubsumingPositions = false) {
+    // Note: This is also run for non-IPO amendable functions.
+    assert(ImpliedAttributeKind == Attribute::NoSync);
+    if (A.hasAttr(IRP, {Attribute::NoSync}, IgnoreSubsumingPositions,
+                  Attribute::NoSync))
+      return true;
+
+    // Check for readonly + non-convergent.
+    // TODO: We should be able to use hasAttr for Attributes, not only
+    // AttrKinds.
+    Function *F = IRP.getAssociatedFunction();
+    if (!F || F->isConvergent())
+      return false;
+
+    SmallVector<Attribute, 2> Attrs;
+    A.getAttrs(IRP, {Attribute::Memory}, Attrs, IgnoreSubsumingPositions);
+
+    MemoryEffects ME = MemoryEffects::unknown();
+    for (const Attribute &Attr : Attrs)
+      ME &= Attr.getMemoryEffects();
+
+    if (!ME.onlyReadsMemory())
+      return false;
+
+    A.manifestAttrs(IRP, Attribute::get(F->getContext(), Attribute::NoSync));
+    return true;
+  }
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFunctionScope() &&
+        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Returns true if "nosync" is assumed.
   bool isAssumedNoSync() const { return getAssumed(); }
@@ -3271,6 +3548,13 @@ struct AANoSync
 
   /// Helper function specific for intrinsics which are potentially volatile.
   static bool isNoSyncIntrinsic(const Instruction *I);
+
+  /// Helper function to determine if \p CB is an aligned (GPU) barrier. Aligned
+  /// barriers have to be executed by all threads. The flag \p ExecutedAligned
+  /// indicates if the call is executed by all threads in a (thread) block in an
+  /// aligned way. If that is the case, non-aligned barriers are effectively
+  /// aligned barriers.
+  static bool isAlignedBarrier(const CallBase &CB, bool ExecutedAligned);
 
   /// Create an abstract attribute view for the position \p IRP.
   static AANoSync &createForPosition(const IRPosition &IRP, Attributor &A);
@@ -3291,10 +3575,73 @@ struct AANoSync
 };
 
 /// An abstract interface for all nonnull attributes.
+struct AAMustProgress
+    : public IRAttribute<Attribute::MustProgress,
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AAMustProgress> {
+  AAMustProgress(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            Attribute::AttrKind ImpliedAttributeKind,
+                            bool IgnoreSubsumingPositions = false) {
+    // Note: This is also run for non-IPO amendable functions.
+    assert(ImpliedAttributeKind == Attribute::MustProgress);
+    return A.hasAttr(IRP, {Attribute::MustProgress, Attribute::WillReturn},
+                     IgnoreSubsumingPositions, Attribute::MustProgress);
+  }
+
+  /// Return true if we assume that the underlying value is nonnull.
+  bool isAssumedMustProgress() const { return getAssumed(); }
+
+  /// Return true if we know that underlying value is nonnull.
+  bool isKnownMustProgress() const { return getKnown(); }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAMustProgress &createForPosition(const IRPosition &IRP,
+                                           Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAMustProgress"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAMustProgress
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract interface for all nonnull attributes.
 struct AANonNull
     : public IRAttribute<Attribute::NonNull,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANonNull> {
   AANonNull(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::hasTrivialInitializer.
+  static bool hasTrivialInitializer() { return false; }
+
+  /// See IRAttribute::isImpliedByUndef.
+  /// Undef is not necessarily nonnull as nonnull + noundef would cause poison.
+  /// Poison implies nonnull though.
+  static bool isImpliedByUndef() { return false; }
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
+  /// See AbstractAttribute::isImpliedByIR(...).
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            Attribute::AttrKind ImpliedAttributeKind,
+                            bool IgnoreSubsumingPositions = false);
 
   /// Return true if we assume that the underlying value is nonnull.
   bool isAssumedNonNull() const { return getAssumed(); }
@@ -3323,7 +3670,8 @@ struct AANonNull
 /// An abstract attribute for norecurse.
 struct AANoRecurse
     : public IRAttribute<Attribute::NoRecurse,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoRecurse> {
   AANoRecurse(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if "norecurse" is assumed.
@@ -3353,8 +3701,42 @@ struct AANoRecurse
 /// An abstract attribute for willreturn.
 struct AAWillReturn
     : public IRAttribute<Attribute::WillReturn,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AAWillReturn> {
   AAWillReturn(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            Attribute::AttrKind ImpliedAttributeKind,
+                            bool IgnoreSubsumingPositions = false) {
+    // Note: This is also run for non-IPO amendable functions.
+    assert(ImpliedAttributeKind == Attribute::WillReturn);
+    if (IRAttribute::isImpliedByIR(A, IRP, ImpliedAttributeKind,
+                                   IgnoreSubsumingPositions))
+      return true;
+    if (!isImpliedByMustprogressAndReadonly(A, IRP))
+      return false;
+    A.manifestAttrs(IRP, Attribute::get(IRP.getAnchorValue().getContext(),
+                                        Attribute::WillReturn));
+    return true;
+  }
+
+  /// Check for `mustprogress` and `readonly` as they imply `willreturn`.
+  static bool isImpliedByMustprogressAndReadonly(Attributor &A,
+                                                 const IRPosition &IRP) {
+    // Check for `mustprogress` in the scope and the associated function which
+    // might be different if this is a call site.
+    if (!A.hasAttr(IRP, {Attribute::MustProgress}))
+      return false;
+
+    SmallVector<Attribute, 2> Attrs;
+    A.getAttrs(IRP, {Attribute::Memory}, Attrs,
+               /* IgnoreSubsumingPositions */ false);
+
+    MemoryEffects ME = MemoryEffects::unknown();
+    for (const Attribute &Attr : Attrs)
+      ME &= Attr.getMemoryEffects();
+    return ME.onlyReadsMemory();
+  }
 
   /// Return true if "willreturn" is assumed.
   bool isAssumedWillReturn() const { return getAssumed(); }
@@ -3419,42 +3801,30 @@ struct AAUndefinedBehavior
 };
 
 /// An abstract interface to determine reachability of point A to B.
-struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute> {
+struct AAIntraFnReachability
+    : public StateWrapper<BooleanState, AbstractAttribute> {
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AAReachability(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+  AAIntraFnReachability(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
   /// Returns true if 'From' instruction is assumed to reach, 'To' instruction.
   /// Users should provide two positions they are interested in, and the class
   /// determines (and caches) reachability.
-  bool isAssumedReachable(Attributor &A, const Instruction &From,
-                          const Instruction &To) const {
-    if (!getState().isValidState())
-      return true;
-    return A.getInfoCache().getPotentiallyReachable(From, To);
-  }
-
-  /// Returns true if 'From' instruction is known to reach, 'To' instruction.
-  /// Users should provide two positions they are interested in, and the class
-  /// determines (and caches) reachability.
-  bool isKnownReachable(Attributor &A, const Instruction &From,
-                        const Instruction &To) const {
-    if (!getState().isValidState())
-      return false;
-    return A.getInfoCache().getPotentiallyReachable(From, To);
-  }
+  virtual bool isAssumedReachable(
+      Attributor &A, const Instruction &From, const Instruction &To,
+      const AA::InstExclusionSetTy *ExclusionSet = nullptr) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
-  static AAReachability &createForPosition(const IRPosition &IRP,
-                                           Attributor &A);
+  static AAIntraFnReachability &createForPosition(const IRPosition &IRP,
+                                                  Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAReachability"; }
+  const std::string getName() const override { return "AAIntraFnReachability"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
-  /// AAReachability
+  /// AAIntraFnReachability
   static bool classof(const AbstractAttribute *AA) {
     return (AA->getIdAddr() == &ID);
   }
@@ -3466,8 +3836,27 @@ struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute> {
 /// An abstract interface for all noalias attributes.
 struct AANoAlias
     : public IRAttribute<Attribute::NoAlias,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoAlias> {
   AANoAlias(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
+  /// See IRAttribute::isImpliedByIR
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            Attribute::AttrKind ImpliedAttributeKind,
+                            bool IgnoreSubsumingPositions = false);
+
+  /// See AbstractAttribute::requiresCalleeForCallBase
+  static bool requiresCalleeForCallBase() { return false; }
+
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
 
   /// Return true if we assume that the underlying value is alias.
   bool isAssumedNoAlias() const { return getAssumed(); }
@@ -3496,8 +3885,28 @@ struct AANoAlias
 /// An AbstractAttribute for nofree.
 struct AANoFree
     : public IRAttribute<Attribute::NoFree,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoFree> {
   AANoFree(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See IRAttribute::isImpliedByIR
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            Attribute::AttrKind ImpliedAttributeKind,
+                            bool IgnoreSubsumingPositions = false) {
+    // Note: This is also run for non-IPO amendable functions.
+    assert(ImpliedAttributeKind == Attribute::NoFree);
+    return A.hasAttr(
+        IRP, {Attribute::ReadNone, Attribute::ReadOnly, Attribute::NoFree},
+        IgnoreSubsumingPositions, Attribute::NoFree);
+  }
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFunctionScope() &&
+        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Return true if "nofree" is assumed.
   bool isAssumedNoFree() const { return getAssumed(); }
@@ -3526,7 +3935,8 @@ struct AANoFree
 /// An AbstractAttribute for noreturn.
 struct AANoReturn
     : public IRAttribute<Attribute::NoReturn,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoReturn> {
   AANoReturn(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if the underlying object is assumed to never return.
@@ -3559,6 +3969,14 @@ struct AAIsDead
   using Base = StateWrapper<BitIntegerState<uint8_t, 3, 0>, AbstractAttribute>;
   AAIsDead(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
+      return isa<Function>(IRP.getAnchorValue()) &&
+             !cast<Function>(IRP.getAnchorValue()).isDeclaration();
+    return true;
+  }
+
   /// State encoding bits. A set bit in the state means the property holds.
   enum {
     HAS_NO_EFFECT = 1 << 0,
@@ -3577,9 +3995,6 @@ protected:
 
   /// Returns true if the underlying value is known dead.
   virtual bool isKnownDead() const = 0;
-
-  /// Returns true if \p BB is assumed dead.
-  virtual bool isAssumedDead(const BasicBlock *BB) const = 0;
 
   /// Returns true if \p BB is known dead.
   virtual bool isKnownDead(const BasicBlock *BB) const = 0;
@@ -3618,6 +4033,9 @@ public:
   static bool mayCatchAsynchronousExceptions(const Function &F) {
     return F.hasPersonalityFn() && !canSimplifyInvokeNoUnwind(&F);
   }
+
+  /// Returns true if \p BB is assumed dead.
+  virtual bool isAssumedDead(const BasicBlock *BB) const = 0;
 
   /// Return if the edge from \p From BB to \p To BB is assumed dead.
   /// This is specifically useful in AAReachability.
@@ -3783,25 +4201,20 @@ struct DerefState : AbstractState {
     GlobalState |= R.GlobalState;
     return *this;
   }
-
-protected:
-  const AANonNull *NonNullAA = nullptr;
 };
 
 /// An abstract interface for all dereferenceable attribute.
 struct AADereferenceable
     : public IRAttribute<Attribute::Dereferenceable,
-                         StateWrapper<DerefState, AbstractAttribute>> {
+                         StateWrapper<DerefState, AbstractAttribute>,
+                         AADereferenceable> {
   AADereferenceable(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
-  /// Return true if we assume that the underlying value is nonnull.
-  bool isAssumedNonNull() const {
-    return NonNullAA && NonNullAA->isAssumedNonNull();
-  }
-
-  /// Return true if we know that the underlying value is nonnull.
-  bool isKnownNonNull() const {
-    return NonNullAA && NonNullAA->isKnownNonNull();
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
 
   /// Return true if we assume that underlying value is
@@ -3845,10 +4258,18 @@ struct AADereferenceable
 using AAAlignmentStateType =
     IncIntegerState<uint64_t, Value::MaximumAlignment, 1>;
 /// An abstract interface for all align attributes.
-struct AAAlign : public IRAttribute<
-                     Attribute::Alignment,
-                     StateWrapper<AAAlignmentStateType, AbstractAttribute>> {
+struct AAAlign
+    : public IRAttribute<Attribute::Alignment,
+                         StateWrapper<AAAlignmentStateType, AbstractAttribute>,
+                         AAAlign> {
   AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Return assumed alignment.
   Align getAssumedAlign() const { return Align(getAssumed()); }
@@ -3918,8 +4339,27 @@ struct AAInstanceInfo : public StateWrapper<BooleanState, AbstractAttribute> {
 struct AANoCapture
     : public IRAttribute<
           Attribute::NoCapture,
-          StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>> {
+          StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>,
+          AANoCapture> {
   AANoCapture(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See IRAttribute::isImpliedByIR
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            Attribute::AttrKind ImpliedAttributeKind,
+                            bool IgnoreSubsumingPositions = false);
+
+  /// Update \p State according to the capture capabilities of \p F for position
+  /// \p IRP.
+  static void determineFunctionCaptureCapabilities(const IRPosition &IRP,
+                                                   const Function &F,
+                                                   BitIntegerState &State);
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// State encoding bits. A set bit in the state means the property holds.
   /// NO_CAPTURE is the best possible state, 0 the worst possible state.
@@ -4132,11 +4572,21 @@ struct AAPrivatizablePtr
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
   AAPrivatizablePtr(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
   /// Returns true if pointer privatization is assumed to be possible.
   bool isAssumedPrivatizablePtr() const { return getAssumed(); }
 
   /// Returns true if pointer privatization is known to be possible.
   bool isKnownPrivatizablePtr() const { return getKnown(); }
+
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
 
   /// Return the type we can choose for a private copy of the underlying
   /// value. std::nullopt means it is not clear yet, nullptr means there is
@@ -4167,9 +4617,21 @@ struct AAPrivatizablePtr
 /// (readnone/readonly/writeonly).
 struct AAMemoryBehavior
     : public IRAttribute<
-          Attribute::ReadNone,
-          StateWrapper<BitIntegerState<uint8_t, 3>, AbstractAttribute>> {
+          Attribute::None,
+          StateWrapper<BitIntegerState<uint8_t, 3>, AbstractAttribute>,
+          AAMemoryBehavior> {
   AAMemoryBehavior(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::hasTrivialInitializer.
+  static bool hasTrivialInitializer() { return false; }
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFunctionScope() &&
+        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// State encoding bits. A set bit in the state means the property holds.
   /// BEST_STATE is the best possible state, 0 the worst possible state.
@@ -4230,11 +4692,23 @@ struct AAMemoryBehavior
 /// (readnone/argmemonly/inaccessiblememonly/inaccessibleorargmemonly).
 struct AAMemoryLocation
     : public IRAttribute<
-          Attribute::ReadNone,
-          StateWrapper<BitIntegerState<uint32_t, 511>, AbstractAttribute>> {
+          Attribute::None,
+          StateWrapper<BitIntegerState<uint32_t, 511>, AbstractAttribute>,
+          AAMemoryLocation> {
   using MemoryLocationsKind = StateType::base_t;
 
   AAMemoryLocation(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::hasTrivialInitializer.
+  static bool hasTrivialInitializer() { return false; }
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFunctionScope() &&
+        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Encoding of different locations that could be accessed by a memory
   /// access.
@@ -4375,8 +4849,8 @@ struct AAMemoryLocation
   static AAMemoryLocation &createForPosition(const IRPosition &IRP,
                                              Attributor &A);
 
-  /// See AbstractState::getAsStr().
-  const std::string getAsStr() const override {
+  /// See AbstractState::getAsStr(Attributor).
+  const std::string getAsStr(Attributor *A) const override {
     return getMemoryLocationsAsStr(getAssumedNotAccessedLocation());
   }
 
@@ -4402,6 +4876,16 @@ struct AAValueConstantRange
   using Base = StateWrapper<IntegerRangeState, AbstractAttribute, uint32_t>;
   AAValueConstantRange(const IRPosition &IRP, Attributor &A)
       : Base(IRP, IRP.getAssociatedType()->getIntegerBitWidth()) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isIntegerTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
 
   /// See AbstractAttribute::getState(...).
   IntegerRangeState &getState() override { return *this; }
@@ -4637,6 +5121,98 @@ private:
   bool UndefIsContained;
 };
 
+struct DenormalFPMathState : public AbstractState {
+  struct DenormalState {
+    DenormalMode Mode = DenormalMode::getInvalid();
+    DenormalMode ModeF32 = DenormalMode::getInvalid();
+
+    bool operator==(const DenormalState Other) const {
+      return Mode == Other.Mode && ModeF32 == Other.ModeF32;
+    }
+
+    bool operator!=(const DenormalState Other) const {
+      return Mode != Other.Mode || ModeF32 != Other.ModeF32;
+    }
+
+    bool isValid() const {
+      return Mode.isValid() && ModeF32.isValid();
+    }
+
+    static DenormalMode::DenormalModeKind
+    unionDenormalKind(DenormalMode::DenormalModeKind Callee,
+                      DenormalMode::DenormalModeKind Caller) {
+      if (Caller == Callee)
+        return Caller;
+      if (Callee == DenormalMode::Dynamic)
+        return Caller;
+      if (Caller == DenormalMode::Dynamic)
+        return Callee;
+      return DenormalMode::Invalid;
+    }
+
+    static DenormalMode unionAssumed(DenormalMode Callee, DenormalMode Caller) {
+      return DenormalMode{unionDenormalKind(Callee.Output, Caller.Output),
+                          unionDenormalKind(Callee.Input, Caller.Input)};
+    }
+
+    DenormalState unionWith(DenormalState Caller) const {
+      DenormalState Callee(*this);
+      Callee.Mode = unionAssumed(Callee.Mode, Caller.Mode);
+      Callee.ModeF32 = unionAssumed(Callee.ModeF32, Caller.ModeF32);
+      return Callee;
+    }
+  };
+
+  DenormalState Known;
+
+  /// Explicitly track whether we've hit a fixed point.
+  bool IsAtFixedpoint = false;
+
+  DenormalFPMathState() = default;
+
+  DenormalState getKnown() const { return Known; }
+
+  // There's only really known or unknown, there's no speculatively assumable
+  // state.
+  DenormalState getAssumed() const { return Known; }
+
+  bool isValidState() const override {
+    return Known.isValid();
+  }
+
+  /// Return true if there are no dynamic components to the denormal mode worth
+  /// specializing.
+  bool isModeFixed() const {
+    return Known.Mode.Input != DenormalMode::Dynamic &&
+           Known.Mode.Output != DenormalMode::Dynamic &&
+           Known.ModeF32.Input != DenormalMode::Dynamic &&
+           Known.ModeF32.Output != DenormalMode::Dynamic;
+  }
+
+  bool isAtFixpoint() const override {
+    return IsAtFixedpoint;
+  }
+
+  ChangeStatus indicateFixpoint() {
+    bool Changed = !IsAtFixedpoint;
+    IsAtFixedpoint = true;
+    return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
+  }
+
+  ChangeStatus indicateOptimisticFixpoint() override {
+    return indicateFixpoint();
+  }
+
+  ChangeStatus indicatePessimisticFixpoint() override {
+    return indicateFixpoint();
+  }
+
+  DenormalFPMathState operator^=(const DenormalFPMathState &Caller) {
+    Known = Known.unionWith(Caller.getKnown());
+    return *this;
+  }
+};
+
 using PotentialConstantIntValuesState = PotentialValuesState<APInt>;
 using PotentialLLVMValuesState =
     PotentialValuesState<std::pair<AA::ValueAndContext, AA::ValueScope>>;
@@ -4664,6 +5240,16 @@ struct AAPotentialConstantValues
     : public StateWrapper<PotentialConstantIntValuesState, AbstractAttribute> {
   using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute>;
   AAPotentialConstantValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isIntegerTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
 
   /// See AbstractAttribute::getState(...).
   PotentialConstantIntValuesState &getState() override { return *this; }
@@ -4718,6 +5304,9 @@ struct AAPotentialValues
   using Base = StateWrapper<PotentialLLVMValuesState, AbstractAttribute>;
   AAPotentialValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
+
   /// See AbstractAttribute::getState(...).
   PotentialLLVMValuesState &getState() override { return *this; }
   const PotentialLLVMValuesState &getState() const override { return *this; }
@@ -4747,10 +5336,9 @@ struct AAPotentialValues
   static const char ID;
 
 private:
-  virtual bool
-  getAssumedSimplifiedValues(Attributor &A,
-                             SmallVectorImpl<AA::ValueAndContext> &Values,
-                             AA::ValueScope) const = 0;
+  virtual bool getAssumedSimplifiedValues(
+      Attributor &A, SmallVectorImpl<AA::ValueAndContext> &Values,
+      AA::ValueScope, bool RecurseForSelectAndPHI = false) const = 0;
 
   friend struct Attributor;
 };
@@ -4758,8 +5346,20 @@ private:
 /// An abstract interface for all noundef attributes.
 struct AANoUndef
     : public IRAttribute<Attribute::NoUndef,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoUndef> {
   AANoUndef(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See IRAttribute::isImpliedByUndef
+  static bool isImpliedByUndef() { return false; }
+
+  /// See IRAttribute::isImpliedByPoison
+  static bool isImpliedByPoison() { return false; }
+
+  /// See IRAttribute::isImpliedByIR
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            Attribute::AttrKind ImpliedAttributeKind,
+                            bool IgnoreSubsumingPositions = false);
 
   /// Return true if we assume that the underlying value is noundef.
   bool isAssumedNoUndef() const { return getAssumed(); }
@@ -4777,6 +5377,53 @@ struct AANoUndef
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is AANoUndef
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+struct AANoFPClass
+    : public IRAttribute<
+          Attribute::NoFPClass,
+          StateWrapper<BitIntegerState<uint32_t, fcAllFlags, fcNone>,
+                       AbstractAttribute>,
+          AANoFPClass> {
+  using Base = StateWrapper<BitIntegerState<uint32_t, fcAllFlags, fcNone>,
+                            AbstractAttribute>;
+
+  AANoFPClass(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    Type *Ty = IRP.getAssociatedType();
+    do {
+      if (Ty->isFPOrFPVectorTy())
+        return IRAttribute::isValidIRPositionForInit(A, IRP);
+      if (!Ty->isArrayTy())
+        break;
+      Ty = Ty->getArrayElementType();
+    } while (true);
+    return false;
+  }
+
+  /// Return true if we assume that the underlying value is nofpclass.
+  FPClassTest getAssumedNoFPClass() const {
+    return static_cast<FPClassTest>(getAssumed());
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoFPClass &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoFPClass"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is AANoFPClass
   static bool classof(const AbstractAttribute *AA) {
     return (AA->getIdAddr() == &ID);
   }
@@ -4833,6 +5480,13 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
 
   AACallEdges(const IRPosition &IRP, Attributor &A)
       : Base(IRP), AACallGraphNode(A) {}
+
+  /// The callee value is tracked beyond a simple stripPointerCasts, so we allow
+  /// unknown callees.
+  static bool requiresCalleeForCallBase() { return false; }
+
+  /// See AbstractAttribute::requiresNonAsmForCallBase.
+  static bool requiresNonAsmForCallBase() { return false; }
 
   /// Get the optimistic edges.
   virtual const SetVector<Function *> &getOptimisticEdges() const = 0;
@@ -4948,6 +5602,32 @@ struct AAExecutionDomain
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
   AAExecutionDomain(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
+  /// Summary about the execution domain of a block or instruction.
+  struct ExecutionDomainTy {
+    using BarriersSetTy = SmallPtrSet<CallBase *, 2>;
+    using AssumesSetTy = SmallPtrSet<AssumeInst *, 4>;
+
+    void addAssumeInst(Attributor &A, AssumeInst &AI) {
+      EncounteredAssumes.insert(&AI);
+    }
+
+    void addAlignedBarrier(Attributor &A, CallBase &CB) {
+      AlignedBarriers.insert(&CB);
+    }
+
+    void clearAssumeInstAndAlignedBarriers() {
+      EncounteredAssumes.clear();
+      AlignedBarriers.clear();
+    }
+
+    bool IsExecutedByInitialThreadOnly = true;
+    bool IsReachedFromAlignedBarrierOnly = true;
+    bool IsReachingAlignedBarrierOnly = true;
+    bool EncounteredNonLocalSideEffect = false;
+    BarriersSetTy AlignedBarriers;
+    AssumesSetTy EncounteredAssumes;
+  };
+
   /// Create an abstract attribute view for the position \p IRP.
   static AAExecutionDomain &createForPosition(const IRPosition &IRP,
                                               Attributor &A);
@@ -4959,10 +5639,29 @@ struct AAExecutionDomain
   const char *getIdAddr() const override { return &ID; }
 
   /// Check if an instruction is executed only by the initial thread.
-  virtual bool isExecutedByInitialThreadOnly(const Instruction &) const = 0;
+  bool isExecutedByInitialThreadOnly(const Instruction &I) const {
+    return isExecutedByInitialThreadOnly(*I.getParent());
+  }
 
   /// Check if a basic block is executed only by the initial thread.
   virtual bool isExecutedByInitialThreadOnly(const BasicBlock &) const = 0;
+
+  /// Check if the instruction \p I is executed in an aligned region, that is,
+  /// the synchronizing effects before and after \p I are both aligned barriers.
+  /// This effectively means all threads execute \p I together.
+  virtual bool isExecutedInAlignedRegion(Attributor &A,
+                                         const Instruction &I) const = 0;
+
+  virtual ExecutionDomainTy getExecutionDomain(const BasicBlock &) const = 0;
+  /// Return the execution domain with which the call \p CB is entered and the
+  /// one with which it is left.
+  virtual std::pair<ExecutionDomainTy, ExecutionDomainTy>
+  getExecutionDomain(const CallBase &CB) const = 0;
+  virtual ExecutionDomainTy getFunctionExecutionDomain() const = 0;
+
+  /// Helper function to determine if \p FI is a no-op given the information
+  /// about its execution from \p ExecDomainAA.
+  virtual bool isNoOpFence(const FenceInst &FI) const = 0;
 
   /// This function should return true if the type of the \p AA is
   /// AAExecutionDomain.
@@ -4975,35 +5674,32 @@ struct AAExecutionDomain
 };
 
 /// An abstract Attribute for computing reachability between functions.
-struct AAFunctionReachability
+struct AAInterFnReachability
     : public StateWrapper<BooleanState, AbstractAttribute> {
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
 
-  AAFunctionReachability(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
-
-  /// See AbstractAttribute::isQueryAA.
-  bool isQueryAA() const override { return true; }
+  AAInterFnReachability(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
   /// If the function represented by this possition can reach \p Fn.
-  virtual bool canReach(Attributor &A, const Function &Fn) const = 0;
-
-  /// Can \p CB reach \p Fn.
-  virtual bool canReach(Attributor &A, CallBase &CB,
-                        const Function &Fn) const = 0;
+  bool canReach(Attributor &A, const Function &Fn) const {
+    Function *Scope = getAnchorScope();
+    if (!Scope || Scope->isDeclaration())
+      return true;
+    return instructionCanReach(A, Scope->getEntryBlock().front(), Fn);
+  }
 
   /// Can  \p Inst reach \p Fn.
   /// See also AA::isPotentiallyReachable.
-  virtual bool instructionCanReach(Attributor &A, const Instruction &Inst,
-                                   const Function &Fn) const = 0;
+  virtual bool instructionCanReach(
+      Attributor &A, const Instruction &Inst, const Function &Fn,
+      const AA::InstExclusionSetTy *ExclusionSet = nullptr) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
-  static AAFunctionReachability &createForPosition(const IRPosition &IRP,
-                                                   Attributor &A);
+  static AAInterFnReachability &createForPosition(const IRPosition &IRP,
+                                                  Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override {
-    return "AAFunctionReachability";
-  }
+  const std::string getName() const override { return "AAInterFnReachability"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -5015,15 +5711,51 @@ struct AAFunctionReachability
 
   /// Unique ID (due to the unique address)
   static const char ID;
+};
 
-private:
-  /// Can this function reach a call with unknown calee.
-  virtual bool canReachUnknownCallee() const = 0;
+/// An abstract Attribute for determining the necessity of the convergent
+/// attribute.
+struct AANonConvergent : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+
+  AANonConvergent(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANonConvergent &createForPosition(const IRPosition &IRP,
+                                            Attributor &A);
+
+  /// Return true if "non-convergent" is assumed.
+  bool isAssumedNotConvergent() const { return getAssumed(); }
+
+  /// Return true if "non-convergent" is known.
+  bool isKnownNotConvergent() const { return getKnown(); }
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANonConvergent"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AANonConvergent.
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
 };
 
 /// An abstract interface for struct information.
 struct AAPointerInfo : public AbstractAttribute {
   AAPointerInfo(const IRPosition &IRP) : AbstractAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   enum AccessKind {
     // First two bits to distinguish may and must accesses.
@@ -5356,8 +6088,8 @@ struct AAPointerInfo : public AbstractAttribute {
     /// The instruction responsible for the access.
     Instruction *RemoteI;
 
-    /// The value written, if any. `llvm::none` means "not known yet", `nullptr`
-    /// cannot be determined.
+    /// The value written, if any. `std::nullopt` means "not known yet",
+    /// `nullptr` cannot be determined.
     std::optional<Value *> Content;
 
     /// Set of potential ranges accessed from the base pointer.
@@ -5393,11 +6125,15 @@ struct AAPointerInfo : public AbstractAttribute {
   /// this function will perform reasoning to exclude write accesses that cannot
   /// affect the load even if they on the surface look as if they would. The
   /// flag \p HasBeenWrittenTo will be set to true if we know that \p I does not
-  /// read the intial value of the underlying memory.
+  /// read the initial value of the underlying memory. If \p SkipCB is given and
+  /// returns false for a potentially interfering access, that access is not
+  /// checked for actual interference.
   virtual bool forallInterferingAccesses(
       Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
+      bool FindInterferingWrites, bool FindInterferingReads,
       function_ref<bool(const Access &, bool)> CB, bool &HasBeenWrittenTo,
-      AA::RangeTy &Range) const = 0;
+      AA::RangeTy &Range,
+      function_ref<bool(const Access &)> SkipCB = nullptr) const = 0;
 
   /// This function should return true if the type of the \p AA is AAPointerInfo
   static bool classof(const AbstractAttribute *AA) {
@@ -5407,6 +6143,8 @@ struct AAPointerInfo : public AbstractAttribute {
   /// Unique ID (due to the unique address)
   static const char ID;
 };
+
+raw_ostream &operator<<(raw_ostream &, const AAPointerInfo::Access &);
 
 /// An abstract attribute for getting assumption information.
 struct AAAssumptionInfo
@@ -5442,6 +6180,202 @@ struct AAAssumptionInfo
   static const char ID;
 };
 
+/// An abstract attribute for getting all assumption underlying objects.
+struct AAUnderlyingObjects : AbstractAttribute {
+  AAUnderlyingObjects(const IRPosition &IRP) : AbstractAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
+
+  /// Create an abstract attribute biew for the position \p IRP.
+  static AAUnderlyingObjects &createForPosition(const IRPosition &IRP,
+                                                Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAUnderlyingObjects"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAUnderlyingObjects.
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+
+  /// Check \p Pred on all underlying objects in \p Scope collected so far.
+  ///
+  /// This method will evaluate \p Pred on all underlying objects in \p Scope
+  /// collected so far and return true if \p Pred holds on all of them.
+  virtual bool
+  forallUnderlyingObjects(function_ref<bool(Value &)> Pred,
+                          AA::ValueScope Scope = AA::Interprocedural) const = 0;
+};
+
+/// An abstract interface for address space information.
+struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
+  AAAddressSpace(const IRPosition &IRP, Attributor &A)
+      : StateWrapper<BooleanState, AbstractAttribute>(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
+
+  /// Return the address space of the associated value. \p NoAddressSpace is
+  /// returned if the associated value is dead. This functions is not supposed
+  /// to be called if the AA is invalid.
+  virtual int32_t getAddressSpace() const = 0;
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAAddressSpace &createForPosition(const IRPosition &IRP,
+                                           Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAAddressSpace"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAssumptionInfo
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  // No address space which indicates the associated value is dead.
+  static const int32_t NoAddressSpace = -1;
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract interface for llvm::GlobalValue information interference.
+struct AAGlobalValueInfo
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  AAGlobalValueInfo(const IRPosition &IRP, Attributor &A)
+      : StateWrapper<BooleanState, AbstractAttribute>(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (IRP.getPositionKind() != IRPosition::IRP_FLOAT)
+      return false;
+    auto *GV = dyn_cast<GlobalValue>(&IRP.getAnchorValue());
+    if (!GV)
+      return false;
+    return GV->hasLocalLinkage();
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAGlobalValueInfo &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
+
+  /// Return true iff \p U is a potential use of the associated global value.
+  virtual bool isPotentialUse(const Use &U) const = 0;
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAGlobalValueInfo"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAGlobalValueInfo
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract interface for indirect call information interference.
+struct AAIndirectCallInfo
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  AAIndirectCallInfo(const IRPosition &IRP, Attributor &A)
+      : StateWrapper<BooleanState, AbstractAttribute>(IRP) {}
+
+  /// The point is to derive callees, after all.
+  static bool requiresCalleeForCallBase() { return false; }
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (IRP.getPositionKind() != IRPosition::IRP_CALL_SITE)
+      return false;
+    auto *CB = cast<CallBase>(IRP.getCtxI());
+    return CB->getOpcode() == Instruction::Call && CB->isIndirectCall() &&
+           !CB->isMustTailCall();
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAIndirectCallInfo &createForPosition(const IRPosition &IRP,
+                                               Attributor &A);
+
+  /// Call \CB on each potential callee value and return true if all were known
+  /// and \p CB returned true on all of them. Otherwise, return false.
+  virtual bool foreachCallee(function_ref<bool(Function *)> CB) const = 0;
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAIndirectCallInfo"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAIndirectCallInfo
+  /// This function should return true if the type of the \p AA is
+  /// AADenormalFPMath.
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract Attribute for specializing "dynamic" components of
+/// "denormal-fp-math" and "denormal-fp-math-f32" to a known denormal mode.
+struct AADenormalFPMath
+    : public StateWrapper<DenormalFPMathState, AbstractAttribute> {
+  using Base = StateWrapper<DenormalFPMathState, AbstractAttribute>;
+
+  AADenormalFPMath(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AADenormalFPMath &createForPosition(const IRPosition &IRP,
+                                             Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AADenormalFPMath"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AADenormalFPMath.
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
 raw_ostream &operator<<(raw_ostream &, const AAPointerInfo::Access &);
 
 /// Run options, used by the pass manager.
@@ -5451,6 +6385,50 @@ enum AttributorRunOption {
   CGSCC = 1 << 1,
   ALL = MODULE | CGSCC
 };
+
+namespace AA {
+/// Helper to avoid creating an AA for IR Attributes that might already be set.
+template <Attribute::AttrKind AK, typename AAType = AbstractAttribute>
+bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
+                      const IRPosition &IRP, DepClassTy DepClass, bool &IsKnown,
+                      bool IgnoreSubsumingPositions = false,
+                      const AAType **AAPtr = nullptr) {
+  IsKnown = false;
+  switch (AK) {
+#define CASE(ATTRNAME, AANAME, ...)                                            \
+  case Attribute::ATTRNAME: {                                                  \
+    if (AANAME::isImpliedByIR(A, IRP, AK, IgnoreSubsumingPositions))           \
+      return IsKnown = true;                                                   \
+    if (!QueryingAA)                                                           \
+      return false;                                                            \
+    const auto *AA = A.getAAFor<AANAME>(*QueryingAA, IRP, DepClass);           \
+    if (AAPtr)                                                                 \
+      *AAPtr = reinterpret_cast<const AAType *>(AA);                           \
+    if (!AA || !AA->isAssumed(__VA_ARGS__))                                    \
+      return false;                                                            \
+    IsKnown = AA->isKnown(__VA_ARGS__);                                        \
+    return true;                                                               \
+  }
+    CASE(NoUnwind, AANoUnwind, );
+    CASE(WillReturn, AAWillReturn, );
+    CASE(NoFree, AANoFree, );
+    CASE(NoCapture, AANoCapture, );
+    CASE(NoRecurse, AANoRecurse, );
+    CASE(NoReturn, AANoReturn, );
+    CASE(NoSync, AANoSync, );
+    CASE(NoAlias, AANoAlias, );
+    CASE(NonNull, AANonNull, );
+    CASE(MustProgress, AAMustProgress, );
+    CASE(NoUndef, AANoUndef, );
+    CASE(ReadNone, AAMemoryBehavior, AAMemoryBehavior::NO_ACCESSES);
+    CASE(ReadOnly, AAMemoryBehavior, AAMemoryBehavior::NO_WRITES);
+    CASE(WriteOnly, AAMemoryBehavior, AAMemoryBehavior::NO_READS);
+#undef CASE
+  default:
+    llvm_unreachable("hasAssumedIRAttr not available for this attribute kind");
+  };
+}
+} // namespace AA
 
 } // end namespace llvm
 

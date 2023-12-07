@@ -15,9 +15,9 @@
 
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/OptionalDiagnostic.h"
 
 namespace clang {
+class OptionalDiagnostic;
 
 /// Kinds of access we can perform on an object, for diagnostics. Note that
 /// we consider a member function call to be a kind of access, even though
@@ -36,7 +36,7 @@ enum AccessKinds {
   AK_Destroy,
 };
 
-// The order of this enum is important for diagnostics.
+/// The order of this enum is important for diagnostics.
 enum CheckSubobjectKind {
   CSK_Base,
   CSK_Derived,
@@ -71,7 +71,8 @@ public:
   virtual unsigned getCallStackDepth() = 0;
 
 public:
-  // Diagnose that the evaluation could not be folded (FF => FoldFailure)
+  State() = default;
+  /// Diagnose that the evaluation could not be folded (FF => FoldFailure)
   OptionalDiagnostic
   FFDiag(SourceLocation Loc,
          diag::kind DiagId = diag::note_invalid_subexpr_in_const_expr,
@@ -117,6 +118,10 @@ public:
   DiagnosticBuilder report(SourceLocation Loc, diag::kind DiagId);
 
   const LangOptions &getLangOpts() const;
+
+  /// Whether or not we're in a context where the front end requires a
+  /// constant value.
+  bool InConstantContext = false;
 
 private:
   void addCallStack(unsigned Limit);

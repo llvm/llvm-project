@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 static StringRef getFunctionSpelling(const MatchFinder::MatchResult &Result,
                                      const char *BindingStr) {
@@ -82,6 +80,4 @@ void PosixReturnCheck::check(const MatchFinder::MatchResult &Result) {
       << getFunctionSpelling(Result, "binop");
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

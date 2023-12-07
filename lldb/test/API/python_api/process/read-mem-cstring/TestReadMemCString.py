@@ -17,13 +17,13 @@ class TestReadMemCString(TestBase):
         self.dbg.SetAsync(False)
 
         self.main_source = "main.c"
-        self.main_source_path = os.path.join(self.getSourceDir(),
-                                             self.main_source)
+        self.main_source_path = os.path.join(self.getSourceDir(), self.main_source)
         self.main_source_spec = lldb.SBFileSpec(self.main_source_path)
         self.exe = self.getBuildArtifact("read-mem-cstring")
 
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, 'breakpoint here', self.main_source_spec, None, self.exe)
+            self, "breakpoint here", self.main_source_spec, None, self.exe
+        )
 
         frame = thread.GetFrameAtIndex(0)
 
@@ -33,11 +33,15 @@ class TestReadMemCString(TestBase):
         self.assertSuccess(err)
         self.assertNotEqual(empty_str_addr, lldb.LLDB_INVALID_ADDRESS)
 
-        one_letter_str_addr = frame.FindVariable("one_letter_string").GetValueAsUnsigned(err)
+        one_letter_str_addr = frame.FindVariable(
+            "one_letter_string"
+        ).GetValueAsUnsigned(err)
         self.assertSuccess(err)
         self.assertNotEqual(one_letter_str_addr, lldb.LLDB_INVALID_ADDRESS)
 
-        invalid_memory_str_addr = frame.FindVariable("invalid_memory_string").GetValueAsUnsigned(err)
+        invalid_memory_str_addr = frame.FindVariable(
+            "invalid_memory_string"
+        ).GetValueAsUnsigned(err)
         self.assertSuccess(err)
         self.assertNotEqual(invalid_memory_str_addr, lldb.LLDB_INVALID_ADDRESS)
 
@@ -47,10 +51,14 @@ class TestReadMemCString(TestBase):
         self.assertSuccess(err)
         self.assertEqual(empty_str, "")
 
-        one_letter_string = process.ReadCStringFromMemory(one_letter_str_addr, 2048, err)
+        one_letter_string = process.ReadCStringFromMemory(
+            one_letter_str_addr, 2048, err
+        )
         self.assertSuccess(err)
         self.assertEqual(one_letter_string, "1")
 
-        invalid_memory_string = process.ReadCStringFromMemory(invalid_memory_str_addr, 2048, err)
+        invalid_memory_string = process.ReadCStringFromMemory(
+            invalid_memory_str_addr, 2048, err
+        )
         self.assertTrue(err.Fail())
         self.assertTrue(invalid_memory_string == "" or invalid_memory_string == None)

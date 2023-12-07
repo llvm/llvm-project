@@ -734,7 +734,7 @@ public:
                           const clang::Token &IncludeTok,
                           llvm::StringRef FileName, bool IsAngled,
                           clang::CharSourceRange FilenameRange,
-                          llvm::Optional<clang::FileEntryRef> File,
+                          clang::OptionalFileEntryRef File,
                           llvm::StringRef SearchPath,
                           llvm::StringRef RelativePath,
                           const clang::Module *Imported,
@@ -987,11 +987,7 @@ public:
 
   // Check for presence of header handle in the header stack.
   bool isHeaderHandleInStack(HeaderHandle H) const {
-    for (auto I = HeaderStack.begin(), E = HeaderStack.end(); I != E; ++I) {
-      if (*I == H)
-        return true;
-    }
-    return false;
+    return llvm::is_contained(HeaderStack, H);
   }
 
   // Get the handle of a header inclusion path entry.
@@ -1277,10 +1273,9 @@ PreprocessorTracker *PreprocessorTracker::create(
 void PreprocessorCallbacks::InclusionDirective(
     clang::SourceLocation HashLoc, const clang::Token &IncludeTok,
     llvm::StringRef FileName, bool IsAngled,
-    clang::CharSourceRange FilenameRange,
-    llvm::Optional<clang::FileEntryRef> File, llvm::StringRef SearchPath,
-    llvm::StringRef RelativePath, const clang::Module *Imported,
-    clang::SrcMgr::CharacteristicKind FileType) {
+    clang::CharSourceRange FilenameRange, clang::OptionalFileEntryRef File,
+    llvm::StringRef SearchPath, llvm::StringRef RelativePath,
+    const clang::Module *Imported, clang::SrcMgr::CharacteristicKind FileType) {
   int DirectiveLine, DirectiveColumn;
   std::string HeaderPath = getSourceLocationFile(PP, HashLoc);
   getSourceLocationLineAndColumn(PP, HashLoc, DirectiveLine, DirectiveColumn);

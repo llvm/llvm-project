@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/inttypes/imaxabs.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcImaxAbsTest, Zero) {
   EXPECT_EQ(__llvm_libc::imaxabs(0), intmax_t(0));

@@ -670,12 +670,6 @@ include "PPCCallingConv.td"
 
 def PPCInstrInfo : InstrInfo {
   let isLittleEndianEncoding = 1;
-
-  // FIXME: Unset this when no longer needed!
-  let decodePositionallyEncodedOperands = 1;
-
-  let noNamedPositionallyEncodedOperands = 1;
-  let useDeprecatedPositionallyEncodedOperands = 1;
 }
 
 def PPCAsmWriter : AsmWriter {

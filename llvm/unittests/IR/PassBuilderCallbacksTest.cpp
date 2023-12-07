@@ -236,7 +236,7 @@ struct MockAnalysisHandle<Loop>
   MOCK_METHOD3_T(invalidate, bool(Loop &, const PreservedAnalyses &,
                                   LoopAnalysisManager::Invalidator &));
 
-  MockAnalysisHandle<Loop>() { this->setDefaults(); }
+  MockAnalysisHandle() { this->setDefaults(); }
 };
 
 template <>
@@ -247,7 +247,7 @@ struct MockAnalysisHandle<Function>
   MOCK_METHOD3(invalidate, bool(Function &, const PreservedAnalyses &,
                                 FunctionAnalysisManager::Invalidator &));
 
-  MockAnalysisHandle<Function>() { setDefaults(); }
+  MockAnalysisHandle() { setDefaults(); }
 };
 
 template <>
@@ -261,7 +261,7 @@ struct MockAnalysisHandle<LazyCallGraph::SCC>
   MOCK_METHOD3(invalidate, bool(LazyCallGraph::SCC &, const PreservedAnalyses &,
                                 CGSCCAnalysisManager::Invalidator &));
 
-  MockAnalysisHandle<LazyCallGraph::SCC>() { setDefaults(); }
+  MockAnalysisHandle() { setDefaults(); }
 };
 
 template <>
@@ -272,7 +272,7 @@ struct MockAnalysisHandle<Module>
   MOCK_METHOD3(invalidate, bool(Module &, const PreservedAnalyses &,
                                 ModuleAnalysisManager::Invalidator &));
 
-  MockAnalysisHandle<Module>() { setDefaults(); }
+  MockAnalysisHandle() { setDefaults(); }
 };
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
@@ -290,17 +290,17 @@ template <> std::string getName(const StringRef &name) {
   return std::string(name);
 }
 
-template <> std::string getName(const llvm::Any &WrappedIR) {
-  if (any_isa<const Module *>(WrappedIR))
-    return any_cast<const Module *>(WrappedIR)->getName().str();
-  if (any_isa<const Function *>(WrappedIR))
-    return any_cast<const Function *>(WrappedIR)->getName().str();
-  if (any_isa<const Loop *>(WrappedIR))
-    return any_cast<const Loop *>(WrappedIR)->getName().str();
-  if (any_isa<const LoopNest *>(WrappedIR))
-    return any_cast<const LoopNest *>(WrappedIR)->getName().str();
-  if (any_isa<const LazyCallGraph::SCC *>(WrappedIR))
-    return any_cast<const LazyCallGraph::SCC *>(WrappedIR)->getName();
+template <> std::string getName(const Any &WrappedIR) {
+  if (const auto *const *M = any_cast<const Module *>(&WrappedIR))
+    return (*M)->getName().str();
+  if (const auto *const *F = any_cast<const Function *>(&WrappedIR))
+    return (*F)->getName().str();
+  if (const auto *const *L = any_cast<const Loop *>(&WrappedIR))
+    return (*L)->getName().str();
+  if (const auto *const *L = any_cast<const LoopNest *>(&WrappedIR))
+    return (*L)->getName().str();
+  if (const auto *const *C = any_cast<const LazyCallGraph::SCC *>(&WrappedIR))
+    return (*C)->getName();
   return "<UNKNOWN>";
 }
 /// Define a custom matcher for objects which support a 'getName' method.

@@ -80,11 +80,11 @@ MachineInstrBuilder MachineIRBuilder::buildFIDbgValue(int FI,
   assert(
       cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(getDL()) &&
       "Expected inlined-at fields to agree");
-  return buildInstr(TargetOpcode::DBG_VALUE)
-      .addFrameIndex(FI)
-      .addImm(0)
-      .addMetadata(Variable)
-      .addMetadata(Expr);
+  return insertInstr(buildInstrNoInsert(TargetOpcode::DBG_VALUE)
+                         .addFrameIndex(FI)
+                         .addImm(0)
+                         .addMetadata(Variable)
+                         .addMetadata(Expr));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
@@ -164,6 +164,15 @@ MachineInstrBuilder MachineIRBuilder::buildGlobalValue(const DstOp &Res,
   return MIB;
 }
 
+MachineInstrBuilder MachineIRBuilder::buildConstantPool(const DstOp &Res,
+                                                        unsigned Idx) {
+  assert(Res.getLLTTy(*getMRI()).isPointer() && "invalid operand type");
+  auto MIB = buildInstr(TargetOpcode::G_CONSTANT_POOL);
+  Res.addDefToMIB(*getMRI(), MIB);
+  MIB.addConstantPoolIndex(Idx);
+  return MIB;
+}
+
 MachineInstrBuilder MachineIRBuilder::buildJumpTable(const LLT PtrTy,
                                                      unsigned JTI) {
   return buildInstr(TargetOpcode::G_JUMP_TABLE, {PtrTy}, {})
@@ -229,21 +238,29 @@ MachineIRBuilder::buildPadVectorWithUndefElements(const DstOp &Res,
   LLT ResTy = Res.getLLTTy(*getMRI());
   LLT Op0Ty = Op0.getLLTTy(*getMRI());
 
-  assert((ResTy.isVector() && Op0Ty.isVector()) && "Non vector type");
-  assert((ResTy.getElementType() == Op0Ty.getElementType()) &&
-         "Different vector element types");
-  assert((ResTy.getNumElements() > Op0Ty.getNumElements()) &&
-         "Op0 has more elements");
+  assert(ResTy.isVector() && "Res non vector type");
 
-  auto Unmerge = buildUnmerge(Op0Ty.getElementType(), Op0);
   SmallVector<Register, 8> Regs;
-  for (auto Op : Unmerge.getInstr()->defs())
-    Regs.push_back(Op.getReg());
-  Register Undef = buildUndef(Op0Ty.getElementType()).getReg(0);
+  if (Op0Ty.isVector()) {
+    assert((ResTy.getElementType() == Op0Ty.getElementType()) &&
+           "Different vector element types");
+    assert((ResTy.getNumElements() > Op0Ty.getNumElements()) &&
+           "Op0 has more elements");
+    auto Unmerge = buildUnmerge(Op0Ty.getElementType(), Op0);
+
+    for (auto Op : Unmerge.getInstr()->defs())
+      Regs.push_back(Op.getReg());
+  } else {
+    assert((ResTy.getSizeInBits() > Op0Ty.getSizeInBits()) &&
+           "Op0 has more size");
+    Regs.push_back(Op0.getReg());
+  }
+  Register Undef =
+      buildUndef(Op0Ty.isVector() ? Op0Ty.getElementType() : Op0Ty).getReg(0);
   unsigned NumberOfPadElts = ResTy.getNumElements() - Regs.size();
   for (unsigned i = 0; i < NumberOfPadElts; ++i)
     Regs.push_back(Undef);
-  return buildMerge(Res, Regs);
+  return buildMergeLikeInstr(Res, Regs);
 }
 
 MachineInstrBuilder
@@ -262,7 +279,7 @@ MachineIRBuilder::buildDeleteTrailingVectorElements(const DstOp &Res,
   auto Unmerge = buildUnmerge(Op0Ty.getElementType(), Op0);
   for (unsigned i = 0; i < ResTy.getNumElements(); ++i)
     Regs.push_back(Unmerge.getReg(i));
-  return buildMerge(Res, Regs);
+  return buildMergeLikeInstr(Res, Regs);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildBr(MachineBasicBlock &Dest) {
@@ -597,8 +614,8 @@ MachineInstrBuilder MachineIRBuilder::buildUndef(const DstOp &Res) {
   return buildInstr(TargetOpcode::G_IMPLICIT_DEF, {Res}, {});
 }
 
-MachineInstrBuilder MachineIRBuilder::buildMerge(const DstOp &Res,
-                                                 ArrayRef<Register> Ops) {
+MachineInstrBuilder MachineIRBuilder::buildMergeValues(const DstOp &Res,
+                                                       ArrayRef<Register> Ops) {
   // Unfortunately to convert from ArrayRef<LLT> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
@@ -608,10 +625,32 @@ MachineInstrBuilder MachineIRBuilder::buildMerge(const DstOp &Res,
 }
 
 MachineInstrBuilder
-MachineIRBuilder::buildMerge(const DstOp &Res,
-                             std::initializer_list<SrcOp> Ops) {
+MachineIRBuilder::buildMergeLikeInstr(const DstOp &Res,
+                                      ArrayRef<Register> Ops) {
+  // Unfortunately to convert from ArrayRef<LLT> to ArrayRef<SrcOp>,
+  // we need some temporary storage for the DstOp objects. Here we use a
+  // sufficiently large SmallVector to not go through the heap.
+  SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  assert(TmpVec.size() > 1);
+  return buildInstr(getOpcodeForMerge(Res, TmpVec), Res, TmpVec);
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildMergeLikeInstr(const DstOp &Res,
+                                      std::initializer_list<SrcOp> Ops) {
   assert(Ops.size() > 1);
-  return buildInstr(TargetOpcode::G_MERGE_VALUES, Res, Ops);
+  return buildInstr(getOpcodeForMerge(Res, Ops), Res, Ops);
+}
+
+unsigned MachineIRBuilder::getOpcodeForMerge(const DstOp &DstOp,
+                                             ArrayRef<SrcOp> SrcOps) const {
+  if (DstOp.getLLTTy(*getMRI()).isVector()) {
+    if (SrcOps[0].getLLTTy(*getMRI()).isVector())
+      return TargetOpcode::G_CONCAT_VECTORS;
+    return TargetOpcode::G_BUILD_VECTOR;
+  }
+
+  return TargetOpcode::G_MERGE_VALUES;
 }
 
 MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<LLT> Res,
@@ -674,6 +713,9 @@ MachineIRBuilder::buildBuildVectorTrunc(const DstOp &Res,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
   SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  if (TmpVec[0].getLLTTy(*getMRI()).getSizeInBits() ==
+      Res.getLLTTy(*getMRI()).getElementType().getSizeInBits())
+    return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
   return buildInstr(TargetOpcode::G_BUILD_VECTOR_TRUNC, Res, TmpVec);
 }
 
@@ -733,28 +775,53 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
   return buildInstr(TargetOpcode::G_INSERT, Res, {Src, Op, uint64_t(Index)});
 }
 
-MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
-                                                     ArrayRef<Register> ResultRegs,
-                                                     bool HasSideEffects) {
-  auto MIB =
-      buildInstr(HasSideEffects ? TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS
-                                : TargetOpcode::G_INTRINSIC);
+static unsigned getIntrinsicOpcode(bool HasSideEffects, bool IsConvergent) {
+  if (HasSideEffects && IsConvergent)
+    return TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS;
+  if (HasSideEffects)
+    return TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS;
+  if (IsConvergent)
+    return TargetOpcode::G_INTRINSIC_CONVERGENT;
+  return TargetOpcode::G_INTRINSIC;
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
+                                 ArrayRef<Register> ResultRegs,
+                                 bool HasSideEffects, bool isConvergent) {
+  auto MIB = buildInstr(getIntrinsicOpcode(HasSideEffects, isConvergent));
   for (unsigned ResultReg : ResultRegs)
     MIB.addDef(ResultReg);
   MIB.addIntrinsicID(ID);
   return MIB;
 }
 
+MachineInstrBuilder
+MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
+                                 ArrayRef<Register> ResultRegs) {
+  auto Attrs = Intrinsic::getAttributes(getContext(), ID);
+  bool HasSideEffects = !Attrs.getMemoryEffects().doesNotAccessMemory();
+  bool isConvergent = Attrs.hasFnAttr(Attribute::Convergent);
+  return buildIntrinsic(ID, ResultRegs, HasSideEffects, isConvergent);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
                                                      ArrayRef<DstOp> Results,
-                                                     bool HasSideEffects) {
-  auto MIB =
-      buildInstr(HasSideEffects ? TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS
-                                : TargetOpcode::G_INTRINSIC);
+                                                     bool HasSideEffects,
+                                                     bool isConvergent) {
+  auto MIB = buildInstr(getIntrinsicOpcode(HasSideEffects, isConvergent));
   for (DstOp Result : Results)
     Result.addDefToMIB(*getMRI(), MIB);
   MIB.addIntrinsicID(ID);
   return MIB;
+}
+
+MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
+                                                     ArrayRef<DstOp> Results) {
+  auto Attrs = Intrinsic::getAttributes(getContext(), ID);
+  bool HasSideEffects = !Attrs.getMemoryEffects().doesNotAccessMemory();
+  bool isConvergent = Attrs.hasFnAttr(Attribute::Convergent);
+  return buildIntrinsic(ID, Results, HasSideEffects, isConvergent);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildTrunc(const DstOp &Res,
@@ -1159,7 +1226,7 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
     break;
   }
   case TargetOpcode::G_MERGE_VALUES: {
-    assert(!SrcOps.empty() && "invalid trivial sequence");
+    assert(SrcOps.size() >= 2 && "invalid trivial sequence");
     assert(DstOps.size() == 1 && "Invalid Dst");
     assert(llvm::all_of(SrcOps,
                         [&, this](const SrcOp &Op) {
@@ -1171,13 +1238,8 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                    SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
                DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
            "input operands do not cover output register");
-    if (SrcOps.size() == 1)
-      return buildCast(DstOps[0], SrcOps[0]);
-    if (DstOps[0].getLLTTy(*getMRI()).isVector()) {
-      if (SrcOps[0].getLLTTy(*getMRI()).isVector())
-        return buildInstr(TargetOpcode::G_CONCAT_VECTORS, DstOps, SrcOps);
-      return buildInstr(TargetOpcode::G_BUILD_VECTOR, DstOps, SrcOps);
-    }
+    assert(!DstOps[0].getLLTTy(*getMRI()).isVector() &&
+           "vectors should be built with G_CONCAT_VECTOR or G_BUILD_VECTOR");
     break;
   }
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
@@ -1237,9 +1299,6 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                  SrcOps[0].getLLTTy(*getMRI());
                         }) &&
            "type mismatch in input list");
-    if (SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
-        DstOps[0].getLLTTy(*getMRI()).getElementType().getSizeInBits())
-      return buildInstr(TargetOpcode::G_BUILD_VECTOR, DstOps, SrcOps);
     break;
   }
   case TargetOpcode::G_CONCAT_VECTORS: {

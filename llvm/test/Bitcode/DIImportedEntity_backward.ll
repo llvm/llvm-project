@@ -4,11 +4,11 @@
 ; RUN: llvm-dis -o - %s.bc | FileCheck %s
 
 ;Test whether DIImportedEntity are generated correctly.
-; CHECK: distinct !DICompileUnit(language: DW_LANG_Fortran90
-; CHECK-SAME:  imports: [[IMPORTS:![0-9]+]]
+; CHECK: [[SP:![0-9]+]] = distinct !DISubprogram(name: "use_renamed"
+; CHECK-SAME:  retainedNodes: [[IMPORTS:![0-9]+]]
 ; CHECK: [[IMPORTS]] = !{[[IMPORT1:![0-9]+]], [[IMPORT2:![0-9]+]]}
-; CHECK: [[IMPORT1]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: {{![0-9]+}}, entity: {{![0-9]+}}, file: {{![0-9]+}}, line: {{[0-9]+}})
-; CHECK: [[IMPORT2]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, name: "var4", scope: {{![0-9]+}}, entity: {{![0-9]+}}, file: {{![0-9]+}}, line: {{[0-9]+}})
+; CHECK: [[IMPORT1]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: [[SP]], entity: {{![0-9]+}}, file: {{![0-9]+}}, line: {{[0-9]+}})
+; CHECK: [[IMPORT2]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, name: "var4", scope: [[SP]], entity: {{![0-9]+}}, file: {{![0-9]+}}, line: {{[0-9]+}})
 
 ; ModuleID = 'DIImportedEntity_backward.bc'
 source_filename = "/tmp/usemodulealias.ll"
@@ -58,7 +58,7 @@ declare void @fort_init(...)
 !1 = distinct !DIGlobalVariable(name: "var1", scope: !2, file: !3, line: 2, type: !9, isLocal: false, isDefinition: true)
 !2 = !DIModule(scope: !4, name: "mymod", file: !3, line: 1)
 !3 = !DIFile(filename: "DIImportedEntity_backward.f90", directory: "/tmp")
-!4 = distinct !DICompileUnit(language: DW_LANG_Fortran90, file: !3, producer: " F90 Flang - 1.5 2017-05-01", isOptimized: false, flags: "'+flang usemodulealias.f90 -g -S -emit-llvm'", runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !6, imports: !12, nameTableKind: None)
+!4 = distinct !DICompileUnit(language: DW_LANG_Fortran90, file: !3, producer: " F90 Flang - 1.5 2017-05-01", isOptimized: false, flags: "'+flang usemodulealias.f90 -g -S -emit-llvm'", runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !6, imports: !5, nameTableKind: None)
 !5 = !{}
 !6 = !{!0, !7, !10}
 !7 = !DIGlobalVariableExpression(var: !8, expr: !DIExpression(DW_OP_plus_uconst, 4))
@@ -68,7 +68,7 @@ declare void @fort_init(...)
 !11 = distinct !DIGlobalVariable(name: "var3", scope: !2, file: !3, line: 4, type: !9, isLocal: false, isDefinition: true)
 !12 = !{!13, !19}
 !13 = !DIImportedEntity(tag: DW_TAG_imported_module, scope: !14, entity: !2, file: !3, line: 10)
-!14 = distinct !DISubprogram(name: "use_renamed", scope: !15, file: !3, line: 10, type: !18, scopeLine: 10, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !4)
+!14 = distinct !DISubprogram(name: "use_renamed", scope: !15, file: !3, line: 10, type: !18, scopeLine: 10, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !4, retainedNodes: !12)
 !15 = distinct !DISubprogram(name: "main", scope: !4, file: !3, line: 7, type: !16, scopeLine: 7, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagMainSubprogram, unit: !4)
 !16 = !DISubroutineType(cc: DW_CC_program, types: !17)
 !17 = !{null}

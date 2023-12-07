@@ -32,6 +32,7 @@ void NORETURN reportSanityCheckError(const char *Field);
 void NORETURN reportAlignmentTooBig(uptr Alignment, uptr MaxAlignment);
 void NORETURN reportAllocationSizeTooBig(uptr UserSize, uptr TotalSize,
                                          uptr MaxSize);
+void NORETURN reportOutOfBatchClass();
 void NORETURN reportOutOfMemory(uptr RequestedSize);
 enum class AllocatorAction : u8 {
   Recycling,

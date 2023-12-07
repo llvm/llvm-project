@@ -9,7 +9,7 @@
 #include "src/stdio/putchar.h"
 #include "src/__support/File/file.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 
 namespace __llvm_libc {
@@ -19,7 +19,7 @@ LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
 
   auto result = __llvm_libc::stdout->write(&uc, 1);
   if (result.has_error())
-    errno = result.error;
+    libc_errno = result.error;
   size_t written = result.value;
 
   if (1 != written) {

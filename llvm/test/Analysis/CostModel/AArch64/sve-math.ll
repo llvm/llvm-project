@@ -10,7 +10,7 @@ declare <vscale x 2 x double> @llvm.sqrt.v2f64(<vscale x 2 x double>)
 
 define <vscale x 2 x double> @fadd_v2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; THRU-LABEL: 'fadd_v2f64'
-; THRU-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r = fadd <vscale x 2 x double> %a, %b
+; THRU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = fadd <vscale x 2 x double> %a, %b
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <vscale x 2 x double> %r
 ;
 ; LATE-LABEL: 'fadd_v2f64'

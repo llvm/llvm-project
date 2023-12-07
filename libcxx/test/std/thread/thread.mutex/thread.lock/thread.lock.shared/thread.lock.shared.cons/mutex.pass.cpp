@@ -10,8 +10,7 @@
 // UNSUPPORTED: c++03, c++11
 // ALLOW_RETRIES: 2
 
-// dylib support for shared_mutex was added in macosx10.12
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
+// XFAIL: availability-shared_mutex-missing
 
 // <shared_mutex>
 
@@ -22,11 +21,12 @@
 // template<class _Mutex> shared_lock(shared_lock<_Mutex>)
 //     -> shared_lock<_Mutex>;  // C++17
 
+#include <cassert>
+#include <chrono>
+#include <cstdlib>
 #include <shared_mutex>
 #include <thread>
 #include <vector>
-#include <cstdlib>
-#include <cassert>
 
 #include "make_test_thread.h"
 #include "test_macros.h"

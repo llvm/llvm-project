@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
@@ -97,7 +98,7 @@ class DXILPrepareModule : public ModulePass {
     PointerType *PtrTy = cast<PointerType>(Operand->getType());
     return Builder.Insert(
         CastInst::Create(Instruction::BitCast, Operand,
-                         Builder.getInt8PtrTy(PtrTy->getAddressSpace())));
+                         Builder.getPtrTy(PtrTy->getAddressSpace())));
   }
 
 public:
@@ -126,9 +127,6 @@ public:
             I.eraseFromParent();
             continue;
           }
-          // Only insert bitcasts if the IR is using opaque pointers.
-          if (M.getContext().supportsTypedPointers())
-            continue;
 
           // Emtting NoOp bitcast instructions allows the ValueEnumerator to be
           // unmodified as it reserves instruction IDs during contruction.
@@ -156,7 +154,7 @@ public:
           if (auto GEP = dyn_cast<GetElementPtrInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, GEP->getPointerOperand(),
-                    GEP->getResultElementType()))
+                    GEP->getSourceElementType()))
               GEP->setOperand(0, NoOpBitcast);
             continue;
           }

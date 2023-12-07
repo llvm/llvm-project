@@ -2,44 +2,62 @@ from intelpt_testcase import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
-class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
 
+class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
     def testErrorMessages(self):
         # We first check the output when there are no targets
-        self.expect("thread trace dump instructions",
-            substrs=["error: invalid target, create a target using the 'target create' command"],
-            error=True)
+        self.expect(
+            "thread trace dump instructions",
+            substrs=[
+                "error: invalid target, create a target using the 'target create' command"
+            ],
+            error=True,
+        )
 
         # We now check the output when there's a non-running target
-        self.expect("target create " +
-            os.path.join(self.getSourceDir(), "intelpt-trace", "a.out"))
+        self.expect(
+            "target create "
+            + os.path.join(self.getSourceDir(), "intelpt-trace", "a.out")
+        )
 
-        self.expect("thread trace dump instructions",
+        self.expect(
+            "thread trace dump instructions",
             substrs=["error: Command requires a current process."],
-            error=True)
+            error=True,
+        )
 
         # Now we check the output when there's a running target without a trace
         self.expect("b main")
         self.expect("run")
 
-        self.expect("thread trace dump instructions",
+        self.expect(
+            "thread trace dump instructions",
             substrs=["error: Process is not being traced"],
-            error=True)
+            error=True,
+        )
 
     def testRawDumpInstructionsInJSON(self):
-        self.expect("trace load -v " +
-            os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
-            substrs=["intel-pt"])
+        self.expect(
+            "trace load -v "
+            + os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
+            substrs=["intel-pt"],
+        )
 
-        self.expect("thread trace dump instructions --raw --count 5 --forwards --json",
-            substrs=['''[{"id":3,"loadAddress":"0x400511"}''',
-                     '''{"id":7,"loadAddress":"0x400518"}''',
-                     '''{"id":8,"loadAddress":"0x40051f"}''',
-                     '''{"id":9,"loadAddress":"0x400529"}''',
-                     '''{"id":10,"loadAddress":"0x40052d"}'''])
+        self.expect(
+            "thread trace dump instructions --raw --count 5 --forwards --json",
+            substrs=[
+                """[{"id":3,"loadAddress":"0x400511"}""",
+                """{"id":7,"loadAddress":"0x400518"}""",
+                """{"id":8,"loadAddress":"0x40051f"}""",
+                """{"id":9,"loadAddress":"0x400529"}""",
+                """{"id":10,"loadAddress":"0x40052d"}""",
+            ],
+        )
 
-        self.expect("thread trace dump instructions --raw --count 5 --forwards --pretty-json",
-            substrs=['''[
+        self.expect(
+            "thread trace dump instructions --raw --count 5 --forwards --pretty-json",
+            substrs=[
+                """[
   {
     "id": 3,
     "loadAddress": "0x400511"
@@ -60,19 +78,28 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
     "id": 10,
     "loadAddress": "0x40052d"
   }
-]'''])
+]"""
+            ],
+        )
 
     def testRawDumpInstructionsInJSONToFile(self):
-        self.expect("trace load -v " +
-            os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
-            substrs=["intel-pt"])
+        self.expect(
+            "trace load -v "
+            + os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
+            substrs=["intel-pt"],
+        )
 
         outfile = os.path.join(self.getBuildDir(), "output.json")
 
-        self.expect("thread trace dump instructions --raw --count 5 --forwards --pretty-json --file " + outfile)
+        self.expect(
+            "thread trace dump instructions --raw --count 5 --forwards --pretty-json --file "
+            + outfile
+        )
 
         with open(outfile, "r") as out:
-            self.assertEqual(out.read(), '''[
+            self.assertEqual(
+                out.read(),
+                """[
   {
     "id": 3,
     "loadAddress": "0x400511"
@@ -93,15 +120,20 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
     "id": 10,
     "loadAddress": "0x40052d"
   }
-]''')
+]""",
+            )
 
     def testRawDumpInstructions(self):
-        self.expect("trace load -v " +
-            os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
-            substrs=["intel-pt"])
+        self.expect(
+            "trace load -v "
+            + os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
+            substrs=["intel-pt"],
+        )
 
-        self.expect("thread trace dump instructions --raw --count 21 --forwards",
-            substrs=['''thread #1: tid = 3842849
+        self.expect(
+            "thread trace dump instructions --raw --count 21 --forwards",
+            substrs=[
+                """thread #1: tid = 3842849
     3: 0x0000000000400511
     7: 0x0000000000400518
     8: 0x000000000040051f
@@ -122,125 +154,193 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
     23: 0x0000000000400521
     24: 0x0000000000400525
     25: 0x0000000000400529
-    26: 0x000000000040052'''])
+    26: 0x000000000040052"""
+            ],
+        )
 
         # We check if we can pass count and skip
-        self.expect("thread trace dump instructions --count 5 --skip 6 --raw --forwards",
-            substrs=['''thread #1: tid = 3842849
+        self.expect(
+            "thread trace dump instructions --count 5 --skip 6 --raw --forwards",
+            substrs=[
+                """thread #1: tid = 3842849
     7: 0x0000000000400518
     8: 0x000000000040051f
     9: 0x0000000000400529
     10: 0x000000000040052d
-    11: 0x0000000000400521'''])
+    11: 0x0000000000400521"""
+            ],
+        )
 
-        self.expect("thread trace dump instructions --count 5 --skip 6 --raw",
-            substrs=['''thread #1: tid = 3842849
+        self.expect(
+            "thread trace dump instructions --count 5 --skip 6 --raw",
+            substrs=[
+                """thread #1: tid = 3842849
     21: 0x0000000000400529
     20: 0x0000000000400525
     19: 0x0000000000400521
     18: 0x000000000040052d
-    17: 0x0000000000400529'''])
+    17: 0x0000000000400529"""
+            ],
+        )
 
         # We check if we can pass count and skip and instruction id in hex
-        self.expect("thread trace dump instructions --count 5 --skip 6 --raw --id 0xE",
-            substrs=['''thread #1: tid = 3842849
+        self.expect(
+            "thread trace dump instructions --count 5 --skip 6 --raw --id 0xE",
+            substrs=[
+                """thread #1: tid = 3842849
     8: 0x000000000040051f
     7: 0x0000000000400518
     3: 0x0000000000400511
-    no more data'''])
+    no more data"""
+            ],
+        )
 
         # We check if we can pass count and skip and instruction id in decimal
-        self.expect("thread trace dump instructions --count 5 --skip 6 --raw --id 14",
-            substrs=['''thread #1: tid = 3842849
+        self.expect(
+            "thread trace dump instructions --count 5 --skip 6 --raw --id 14",
+            substrs=[
+                """thread #1: tid = 3842849
     8: 0x000000000040051f
     7: 0x0000000000400518
     3: 0x0000000000400511
-    no more data'''])
+    no more data"""
+            ],
+        )
 
         # We check if we can access the thread by index id
-        self.expect("thread trace dump instructions 1 --raw",
-            substrs=['''thread #1: tid = 3842849
-    26: 0x000000000040052d'''])
+        self.expect(
+            "thread trace dump instructions 1 --raw",
+            substrs=[
+                """thread #1: tid = 3842849
+    26: 0x000000000040052d"""
+            ],
+        )
 
         # We check that we get an error when using an invalid thread index id
-        self.expect("thread trace dump instructions 10", error=True,
-            substrs=['error: no thread with index: "10"'])
+        self.expect(
+            "thread trace dump instructions 10",
+            error=True,
+            substrs=['error: no thread with index: "10"'],
+        )
 
     def testDumpFullInstructionsWithMultipleThreads(self):
         # We load a trace with two threads
-        self.expect("trace load -v " +
-            os.path.join(self.getSourceDir(), "intelpt-trace", "trace_2threads.json"))
+        self.expect(
+            "trace load -v "
+            + os.path.join(self.getSourceDir(), "intelpt-trace", "trace_2threads.json")
+        )
 
         # We print the instructions of a specific thread
-        self.expect("thread trace dump instructions 2 --count 2",
-            substrs=['''thread #2: tid = 3842850
+        self.expect(
+            "thread trace dump instructions 2 --count 2",
+            substrs=[
+                """thread #2: tid = 3842850
   a.out`main + 32 at main.cpp:4
     26: 0x000000000040052d    jle    0x400521                  ; <+20> at main.cpp:5
-    25: 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)'''])
+    25: 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)"""
+            ],
+        )
 
         # We use custom --count and --skip, saving the command to history for later
-        self.expect("thread trace dump instructions 2 --count 2 --skip 2", inHistory=True,
-            substrs=['''thread #2: tid = 3842850
+        self.expect(
+            "thread trace dump instructions 2 --count 2 --skip 2",
+            inHistory=True,
+            substrs=[
+                """thread #2: tid = 3842850
   a.out`main + 28 at main.cpp:4
     25: 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)
-    24: 0x0000000000400525    addl   $0x1, -0x8(%rbp)'''])
+    24: 0x0000000000400525    addl   $0x1, -0x8(%rbp)"""
+            ],
+        )
 
         # We use a repeat command twice and ensure the previous count is used and the
         # start position moves with each command.
-        self.expect("", inHistory=True,
-            substrs=['''thread #2: tid = 3842850
+        self.expect(
+            "",
+            inHistory=True,
+            substrs=[
+                """thread #2: tid = 3842850
   a.out`main + 20 at main.cpp:5
     23: 0x0000000000400521    xorl   $0x1, -0x4(%rbp)
   a.out`main + 32 at main.cpp:4
-    22: 0x000000000040052d    jle    0x400521                  ; <+20> at main.cpp:5'''])
+    22: 0x000000000040052d    jle    0x400521                  ; <+20> at main.cpp:5"""
+            ],
+        )
 
-        self.expect("", inHistory=True,
-            substrs=['''thread #2: tid = 3842850
+        self.expect(
+            "",
+            inHistory=True,
+            substrs=[
+                """thread #2: tid = 3842850
   a.out`main + 28 at main.cpp:4
     21: 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)
-    20: 0x0000000000400525    addl   $0x1, -0x8(%rbp'''])
+    20: 0x0000000000400525    addl   $0x1, -0x8(%rbp"""
+            ],
+        )
 
     def testInvalidBounds(self):
-        self.expect("trace load -v " +
-            os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"))
+        self.expect(
+            "trace load -v "
+            + os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json")
+        )
 
         # The output should be work when too many instructions are asked
-        self.expect("thread trace dump instructions --count 20 --forwards",
-            substrs=['''thread #1: tid = 3842849
+        self.expect(
+            "thread trace dump instructions --count 20 --forwards",
+            substrs=[
+                """thread #1: tid = 3842849
   a.out`main + 4 at main.cpp:2
     3: 0x0000000000400511    movl   $0x0, -0x4(%rbp)
   a.out`main + 11 at main.cpp:4
     7: 0x0000000000400518    movl   $0x0, -0x8(%rbp)
-    8: 0x000000000040051f    jmp    0x400529                  ; <+28> at main.cpp:4'''])
+    8: 0x000000000040051f    jmp    0x400529                  ; <+28> at main.cpp:4"""
+            ],
+        )
 
         # Should print no instructions if the position is out of bounds
-        self.expect("thread trace dump instructions --skip 23",
-            endstr='no more data\n')
+        self.expect("thread trace dump instructions --skip 23", endstr="no more data\n")
 
         # Should fail with negative bounds
         self.expect("thread trace dump instructions --skip -1", error=True)
         self.expect("thread trace dump instructions --count -1", error=True)
 
     def testWrongImage(self):
-        self.expect("trace load " +
-            os.path.join(self.getSourceDir(), "intelpt-trace", "trace_bad_image.json"))
-        self.expect("thread trace dump instructions --forwards",
-            substrs=['''thread #1: tid = 3842849
+        self.expect(
+            "trace load "
+            + os.path.join(self.getSourceDir(), "intelpt-trace", "trace_bad_image.json")
+        )
+        self.expect(
+            "thread trace dump instructions --forwards",
+            substrs=[
+                """thread #1: tid = 3842849
     ...missing instructions
-    3: (error) no memory mapped at this address: 0x0000000000400511'''])
+    3: (error) no memory mapped at this address: 0x0000000000400511"""
+            ],
+        )
 
     def testWrongCPU(self):
-        self.expect("trace load " +
-            os.path.join(self.getSourceDir(), "intelpt-trace", "trace_wrong_cpu.json"))
-        self.expect("thread trace dump instructions --forwards",
-            substrs=["error: unknown cpu"], error=True)
+        self.expect(
+            "trace load "
+            + os.path.join(self.getSourceDir(), "intelpt-trace", "trace_wrong_cpu.json")
+        )
+        self.expect(
+            "thread trace dump instructions --forwards",
+            substrs=["error: unknown cpu"],
+            error=True,
+        )
 
     def testMultiFileTraceWithMissingModuleInJSON(self):
-        self.expect("trace load " +
-            os.path.join(self.getSourceDir(), "intelpt-trace-multi-file", "multi-file-no-ld.json"))
+        self.expect(
+            "trace load "
+            + os.path.join(
+                self.getSourceDir(), "intelpt-trace-multi-file", "multi-file-no-ld.json"
+            )
+        )
 
-        self.expect("thread trace dump instructions --count 4 --id 9 --forwards --pretty-json",
-            substrs=['''[
+        self.expect(
+            "thread trace dump instructions --count 4 --id 9 --forwards --pretty-json",
+            substrs=[
+                """[
   {
     "id": 9,
     "loadAddress": "0x40054b",
@@ -276,10 +376,14 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
     "line": 10,
     "column": 0
   }
-]'''])
+]"""
+            ],
+        )
 
-        self.expect("thread trace dump instructions --count 4 --id 20 --forwards --pretty-json",
-                substrs=['''[
+        self.expect(
+            "thread trace dump instructions --count 4 --id 20 --forwards --pretty-json",
+            substrs=[
+                """[
   {
     "id": 20,
     "loadAddress": "0x400677",
@@ -320,11 +424,17 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
     "line": 4,
     "column": 0
   }
-]'''])
+]"""
+            ],
+        )
 
     def testMultiFileTraceWithMissingModule(self):
-        self.expect("trace load " +
-            os.path.join(self.getSourceDir(), "intelpt-trace-multi-file", "multi-file-no-ld.json"))
+        self.expect(
+            "trace load "
+            + os.path.join(
+                self.getSourceDir(), "intelpt-trace-multi-file", "multi-file-no-ld.json"
+            )
+        )
 
         # This instructions in this test covers the following flow:
         #
@@ -340,8 +450,10 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
         # line is printed showing the symbol context change.
         #
         # Finally, the instruction disassembly is included in the dump.
-        self.expect("thread trace dump instructions --count 50 --forwards",
-            substrs=['''thread #1: tid = 815455
+        self.expect(
+            "thread trace dump instructions --count 50 --forwards",
+            substrs=[
+                """thread #1: tid = 815455
   a.out`main + 15 at main.cpp:10
     3: 0x000000000040066f    callq  0x400540                  ; symbol stub for: foo()
   a.out`symbol stub for: foo()
@@ -395,8 +507,8 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
   libbar.so`bar() + 22 at bar.cpp:4
     50: 0x00007ffff79d76a6    movl   -0x4(%rbp), %eax
     51: 0x00007ffff79d76a9    popq   %rbp
-    52: 0x00007ffff79d76aa    retq''',
-  '''libfoo.so`foo() + 13 at foo.cpp:4
+    52: 0x00007ffff79d76aa    retq""",
+                """libfoo.so`foo() + 13 at foo.cpp:4
     53: 0x00007ffff7bd96ed    movl   %eax, -0x4(%rbp)
   libfoo.so`foo() + 16 at foo.cpp:5
     54: 0x00007ffff7bd96f0    movl   -0x4(%rbp), %eax
@@ -406,23 +518,26 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
     57: 0x00007ffff7bd96fb    movl   -0x4(%rbp), %eax
     58: 0x00007ffff7bd96fe    addq   $0x10, %rsp
     59: 0x00007ffff7bd9702    popq   %rbp
-    60: 0x00007ffff7bd9703    retq''',
-  '''a.out`main + 68 at main.cpp:16
+    60: 0x00007ffff7bd9703    retq""",
+                """a.out`main + 68 at main.cpp:16
     61: 0x00000000004006a4    movl   -0xc(%rbp), %ecx
     62: 0x00000000004006a7    addl   %eax, %ecx
     63: 0x00000000004006a9    movl   %ecx, -0xc(%rbp)
-    no more data'''])
+    no more data""",
+            ],
+        )
 
-
-        self.expect("thread trace dump instructions --count 50",
-            substrs=['''thread #1: tid = 815455
+        self.expect(
+            "thread trace dump instructions --count 50",
+            substrs=[
+                """thread #1: tid = 815455
   a.out`main + 73 at main.cpp:16
     63: 0x00000000004006a9    movl   %ecx, -0xc(%rbp)
     62: 0x00000000004006a7    addl   %eax, %ecx
     61: 0x00000000004006a4    movl   -0xc(%rbp), %ecx
   libfoo.so`foo() + 35 at foo.cpp:6
-    60: 0x00007ffff7bd9703    retq''',
-    '''59: 0x00007ffff7bd9702    popq   %rbp
+    60: 0x00007ffff7bd9703    retq""",
+                """59: 0x00007ffff7bd9702    popq   %rbp
     58: 0x00007ffff7bd96fe    addq   $0x10, %rsp
     57: 0x00007ffff7bd96fb    movl   -0x4(%rbp), %eax
   libfoo.so`foo() + 24 at foo.cpp:5
@@ -432,8 +547,8 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
   libfoo.so`foo() + 13 at foo.cpp:4
     53: 0x00007ffff7bd96ed    movl   %eax, -0x4(%rbp)
   libbar.so`bar() + 26 at bar.cpp:4
-    52: 0x00007ffff79d76aa    retq''',
-    '''51: 0x00007ffff79d76a9    popq   %rbp
+    52: 0x00007ffff79d76aa    retq""",
+                """51: 0x00007ffff79d76a9    popq   %rbp
     50: 0x00007ffff79d76a6    movl   -0x4(%rbp), %eax
   libbar.so`bar() + 19 at bar.cpp:3
     49: 0x00007ffff79d76a3    movl   %eax, -0x4(%rbp)
@@ -485,25 +600,40 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
     7: 0x0000000000400540    jmpq   *0x200ae2(%rip)           ; _GLOBAL_OFFSET_TABLE_ + 40
   a.out`main + 15 at main.cpp:10
     3: 0x000000000040066f    callq  0x400540                  ; symbol stub for: foo()
-    no more data'''])
+    no more data""",
+            ],
+        )
 
-        self.expect("thread trace dump instructions --skip 100 --forwards", inHistory=True,
-            substrs=['''thread #1: tid = 815455
-    no more data'''])
+        self.expect(
+            "thread trace dump instructions --skip 100 --forwards",
+            inHistory=True,
+            substrs=[
+                """thread #1: tid = 815455
+    no more data"""
+            ],
+        )
 
-        self.expect("", substrs=['''thread #1: tid = 815455
-    no more data'''])
+        self.expect(
+            "",
+            substrs=[
+                """thread #1: tid = 815455
+    no more data"""
+            ],
+        )
 
-
-        self.expect("thread trace dump instructions --raw --all --forwards",
-            substrs=['''thread #1: tid = 815455
+        self.expect(
+            "thread trace dump instructions --raw --all --forwards",
+            substrs=[
+                """thread #1: tid = 815455
     3: 0x000000000040066f
-    7: 0x0000000000400540''',
-    '''11: 0x0000000000400516
+    7: 0x0000000000400540""",
+                """11: 0x0000000000400516
     ...missing instructions
     12: (error) no memory mapped at this address: 0x00007ffff7df1950
-    16: 0x0000000000400674''',
-    '''61: 0x00000000004006a4
+    16: 0x0000000000400674""",
+                """61: 0x00000000004006a4
     62: 0x00000000004006a7
     63: 0x00000000004006a9
-    no more data'''])
+    no more data""",
+            ],
+        )

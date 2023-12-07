@@ -8,10 +8,10 @@ declare <4 x float> @ext(<4 x float>)
 define void @f1(<4 x float> %init, ptr %base, i32 %count) {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INIT_I0:%.*]] = extractelement <4 x float> [[INIT:%.*]], i32 0
-; CHECK-NEXT:    [[INIT_I1:%.*]] = extractelement <4 x float> [[INIT]], i32 1
-; CHECK-NEXT:    [[INIT_I2:%.*]] = extractelement <4 x float> [[INIT]], i32 2
-; CHECK-NEXT:    [[INIT_I3:%.*]] = extractelement <4 x float> [[INIT]], i32 3
+; CHECK-NEXT:    [[INIT_I0:%.*]] = extractelement <4 x float> [[INIT:%.*]], i64 0
+; CHECK-NEXT:    [[INIT_I1:%.*]] = extractelement <4 x float> [[INIT]], i64 1
+; CHECK-NEXT:    [[INIT_I2:%.*]] = extractelement <4 x float> [[INIT]], i64 2
+; CHECK-NEXT:    [[INIT_I3:%.*]] = extractelement <4 x float> [[INIT]], i64 3
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[COUNT:%.*]], [[ENTRY:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
@@ -32,18 +32,18 @@ define void @f1(<4 x float> %init, ptr %base, i32 %count) {
 ; CHECK-NEXT:    [[ADD_I1:%.*]] = fadd float [[VAL_I1]], [[VAL_I3]]
 ; CHECK-NEXT:    [[ADD_I2:%.*]] = fadd float [[ACC_I0]], [[ACC_I2]]
 ; CHECK-NEXT:    [[ADD_I3:%.*]] = fadd float [[ACC_I1]], [[ACC_I3]]
-; CHECK-NEXT:    [[ADD_UPTO0:%.*]] = insertelement <4 x float> poison, float [[ADD_I0]], i32 0
-; CHECK-NEXT:    [[ADD_UPTO1:%.*]] = insertelement <4 x float> [[ADD_UPTO0]], float [[ADD_I1]], i32 1
-; CHECK-NEXT:    [[ADD_UPTO2:%.*]] = insertelement <4 x float> [[ADD_UPTO1]], float [[ADD_I2]], i32 2
-; CHECK-NEXT:    [[ADD:%.*]] = insertelement <4 x float> [[ADD_UPTO2]], float [[ADD_I3]], i32 3
+; CHECK-NEXT:    [[ADD_UPTO0:%.*]] = insertelement <4 x float> poison, float [[ADD_I0]], i64 0
+; CHECK-NEXT:    [[ADD_UPTO1:%.*]] = insertelement <4 x float> [[ADD_UPTO0]], float [[ADD_I1]], i64 1
+; CHECK-NEXT:    [[ADD_UPTO2:%.*]] = insertelement <4 x float> [[ADD_UPTO1]], float [[ADD_I2]], i64 2
+; CHECK-NEXT:    [[ADD:%.*]] = insertelement <4 x float> [[ADD_UPTO2]], float [[ADD_I3]], i64 3
 ; CHECK-NEXT:    [[CALL:%.*]] = call <4 x float> @ext(<4 x float> [[ADD]])
-; CHECK-NEXT:    [[CALL_I0:%.*]] = extractelement <4 x float> [[CALL]], i32 0
+; CHECK-NEXT:    [[CALL_I0:%.*]] = extractelement <4 x float> [[CALL]], i64 0
 ; CHECK-NEXT:    [[CMP_I0:%.*]] = fcmp ogt float [[CALL_I0]], 1.000000e+00
-; CHECK-NEXT:    [[CALL_I1:%.*]] = extractelement <4 x float> [[CALL]], i32 1
+; CHECK-NEXT:    [[CALL_I1:%.*]] = extractelement <4 x float> [[CALL]], i64 1
 ; CHECK-NEXT:    [[CMP_I1:%.*]] = fcmp ogt float [[CALL_I1]], 2.000000e+00
-; CHECK-NEXT:    [[CALL_I2:%.*]] = extractelement <4 x float> [[CALL]], i32 2
+; CHECK-NEXT:    [[CALL_I2:%.*]] = extractelement <4 x float> [[CALL]], i64 2
 ; CHECK-NEXT:    [[CMP_I2:%.*]] = fcmp ogt float [[CALL_I2]], 3.000000e+00
-; CHECK-NEXT:    [[CALL_I3:%.*]] = extractelement <4 x float> [[CALL]], i32 3
+; CHECK-NEXT:    [[CALL_I3:%.*]] = extractelement <4 x float> [[CALL]], i64 3
 ; CHECK-NEXT:    [[CMP_I3:%.*]] = fcmp ogt float [[CALL_I3]], 4.000000e+00
 ; CHECK-NEXT:    [[SEL_I0]] = select i1 [[CMP_I0]], float [[CALL_I0]], float 5.000000e+00
 ; CHECK-NEXT:    [[SEL_I1]] = select i1 [[CMP_I1]], float [[CALL_I1]], float 6.000000e+00
@@ -94,10 +94,10 @@ exit:
 define void @f2(<4 x i32> %init, ptr %base, i32 %count) {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INIT_I0:%.*]] = extractelement <4 x i32> [[INIT:%.*]], i32 0
-; CHECK-NEXT:    [[INIT_I1:%.*]] = extractelement <4 x i32> [[INIT]], i32 1
-; CHECK-NEXT:    [[INIT_I2:%.*]] = extractelement <4 x i32> [[INIT]], i32 2
-; CHECK-NEXT:    [[INIT_I3:%.*]] = extractelement <4 x i32> [[INIT]], i32 3
+; CHECK-NEXT:    [[INIT_I0:%.*]] = extractelement <4 x i32> [[INIT:%.*]], i64 0
+; CHECK-NEXT:    [[INIT_I1:%.*]] = extractelement <4 x i32> [[INIT]], i64 1
+; CHECK-NEXT:    [[INIT_I2:%.*]] = extractelement <4 x i32> [[INIT]], i64 2
+; CHECK-NEXT:    [[INIT_I3:%.*]] = extractelement <4 x i32> [[INIT]], i64 3
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[COUNT:%.*]], [[ENTRY:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
@@ -205,21 +205,21 @@ define void @f4(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[DST_I1:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 1
 ; CHECK-NEXT:    [[DST_I2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
 ; CHECK-NEXT:    [[DST_I3:%.*]] = getelementptr i32, ptr [[DST]], i32 3
-; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, ptr [[SRC:%.*]], align 16, !tbaa.struct !5
+; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, ptr [[SRC:%.*]], align 16, !tbaa.struct [[TBAA_STRUCT5:![0-9]+]]
 ; CHECK-NEXT:    [[SRC_I1:%.*]] = getelementptr i32, ptr [[SRC]], i32 1
-; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, ptr [[SRC_I1]], align 4, !tbaa.struct !5
+; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, ptr [[SRC_I1]], align 4, !tbaa.struct [[TBAA_STRUCT5]]
 ; CHECK-NEXT:    [[SRC_I2:%.*]] = getelementptr i32, ptr [[SRC]], i32 2
-; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, ptr [[SRC_I2]], align 8, !tbaa.struct !5
+; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, ptr [[SRC_I2]], align 8, !tbaa.struct [[TBAA_STRUCT5]]
 ; CHECK-NEXT:    [[SRC_I3:%.*]] = getelementptr i32, ptr [[SRC]], i32 3
-; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, ptr [[SRC_I3]], align 4, !tbaa.struct !5
+; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, ptr [[SRC_I3]], align 4, !tbaa.struct [[TBAA_STRUCT5]]
 ; CHECK-NEXT:    [[ADD_I0:%.*]] = add i32 [[VAL_I0]], [[VAL_I0]]
 ; CHECK-NEXT:    [[ADD_I1:%.*]] = add i32 [[VAL_I1]], [[VAL_I1]]
 ; CHECK-NEXT:    [[ADD_I2:%.*]] = add i32 [[VAL_I2]], [[VAL_I2]]
 ; CHECK-NEXT:    [[ADD_I3:%.*]] = add i32 [[VAL_I3]], [[VAL_I3]]
-; CHECK-NEXT:    store i32 [[ADD_I0]], ptr [[DST]], align 16, !tbaa.struct !5
-; CHECK-NEXT:    store i32 [[ADD_I1]], ptr [[DST_I1]], align 4, !tbaa.struct !5
-; CHECK-NEXT:    store i32 [[ADD_I2]], ptr [[DST_I2]], align 8, !tbaa.struct !5
-; CHECK-NEXT:    store i32 [[ADD_I3]], ptr [[DST_I3]], align 4, !tbaa.struct !5
+; CHECK-NEXT:    store i32 [[ADD_I0]], ptr [[DST]], align 16, !tbaa.struct [[TBAA_STRUCT5]]
+; CHECK-NEXT:    store i32 [[ADD_I1]], ptr [[DST_I1]], align 4, !tbaa.struct [[TBAA_STRUCT5]]
+; CHECK-NEXT:    store i32 [[ADD_I2]], ptr [[DST_I2]], align 8, !tbaa.struct [[TBAA_STRUCT5]]
+; CHECK-NEXT:    store i32 [[ADD_I3]], ptr [[DST_I3]], align 4, !tbaa.struct [[TBAA_STRUCT5]]
 ; CHECK-NEXT:    ret void
 ;
   %val = load <4 x i32> , ptr %src, !tbaa.struct !5
@@ -282,18 +282,18 @@ end:
 ; Check that fpmath information is preserved.
 define <4 x float> @f6(<4 x float> %x) {
 ; CHECK-LABEL: @f6(
-; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <4 x float> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[RES_I0:%.*]] = fadd float [[X_I0]], 1.000000e+00, !fpmath !9
-; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <4 x float> [[X]], i32 1
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <4 x float> [[X]], i64 1
 ; CHECK-NEXT:    [[RES_I1:%.*]] = fadd float [[X_I1]], 2.000000e+00, !fpmath !9
-; CHECK-NEXT:    [[X_I2:%.*]] = extractelement <4 x float> [[X]], i32 2
+; CHECK-NEXT:    [[X_I2:%.*]] = extractelement <4 x float> [[X]], i64 2
 ; CHECK-NEXT:    [[RES_I2:%.*]] = fadd float [[X_I2]], 3.000000e+00, !fpmath !9
-; CHECK-NEXT:    [[X_I3:%.*]] = extractelement <4 x float> [[X]], i32 3
+; CHECK-NEXT:    [[X_I3:%.*]] = extractelement <4 x float> [[X]], i64 3
 ; CHECK-NEXT:    [[RES_I3:%.*]] = fadd float [[X_I3]], 4.000000e+00, !fpmath !9
-; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <4 x float> poison, float [[RES_I0]], i32 0
-; CHECK-NEXT:    [[RES_UPTO1:%.*]] = insertelement <4 x float> [[RES_UPTO0]], float [[RES_I1]], i32 1
-; CHECK-NEXT:    [[RES_UPTO2:%.*]] = insertelement <4 x float> [[RES_UPTO1]], float [[RES_I2]], i32 2
-; CHECK-NEXT:    [[RES:%.*]] = insertelement <4 x float> [[RES_UPTO2]], float [[RES_I3]], i32 3
+; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <4 x float> poison, float [[RES_I0]], i64 0
+; CHECK-NEXT:    [[RES_UPTO1:%.*]] = insertelement <4 x float> [[RES_UPTO0]], float [[RES_I1]], i64 1
+; CHECK-NEXT:    [[RES_UPTO2:%.*]] = insertelement <4 x float> [[RES_UPTO1]], float [[RES_I2]], i64 2
+; CHECK-NEXT:    [[RES:%.*]] = insertelement <4 x float> [[RES_UPTO2]], float [[RES_I3]], i64 3
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = fadd <4 x float> %x, <float 1.0, float 2.0, float 3.0, float 4.0>,
@@ -336,11 +336,11 @@ define void @f8(ptr %dest, <4 x ptr> %ptr0, <4 x i32> %i0,
 ; CHECK-NEXT:    [[DEST_I1:%.*]] = getelementptr ptr, ptr [[DEST:%.*]], i32 1
 ; CHECK-NEXT:    [[DEST_I2:%.*]] = getelementptr ptr, ptr [[DEST]], i32 2
 ; CHECK-NEXT:    [[DEST_I3:%.*]] = getelementptr ptr, ptr [[DEST]], i32 3
-; CHECK-NEXT:    [[PTR0_I0:%.*]] = extractelement <4 x ptr> [[PTR0:%.*]], i32 0
-; CHECK-NEXT:    [[PTR0_I2:%.*]] = extractelement <4 x ptr> [[PTR0]], i32 2
-; CHECK-NEXT:    [[PTR0_I3:%.*]] = extractelement <4 x ptr> [[PTR0]], i32 3
-; CHECK-NEXT:    [[I0_I1:%.*]] = extractelement <4 x i32> [[I0:%.*]], i32 1
-; CHECK-NEXT:    [[I0_I3:%.*]] = extractelement <4 x i32> [[I0]], i32 3
+; CHECK-NEXT:    [[PTR0_I0:%.*]] = extractelement <4 x ptr> [[PTR0:%.*]], i64 0
+; CHECK-NEXT:    [[PTR0_I2:%.*]] = extractelement <4 x ptr> [[PTR0]], i64 2
+; CHECK-NEXT:    [[PTR0_I3:%.*]] = extractelement <4 x ptr> [[PTR0]], i64 3
+; CHECK-NEXT:    [[I0_I1:%.*]] = extractelement <4 x i32> [[I0:%.*]], i64 1
+; CHECK-NEXT:    [[I0_I3:%.*]] = extractelement <4 x i32> [[I0]], i64 3
 ; CHECK-NEXT:    [[VAL_I0:%.*]] = getelementptr float, ptr [[PTR0_I0]], i32 100
 ; CHECK-NEXT:    [[VAL_I1:%.*]] = getelementptr float, ptr [[OTHER:%.*]], i32 [[I0_I1]]
 ; CHECK-NEXT:    [[VAL_I2:%.*]] = getelementptr float, ptr [[PTR0_I2]], i32 100
@@ -413,135 +413,135 @@ define void @f11(ptr %dest, ptr %src0) {
 ; CHECK-LABEL: @f11(
 ; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr <32 x i1>, ptr [[SRC0:%.*]], i32 1
 ; CHECK-NEXT:    [[VAL0:%.*]] = load <32 x i1>, ptr [[SRC0]], align 4
-; CHECK-NEXT:    [[VAL0_I0:%.*]] = extractelement <32 x i1> [[VAL0]], i32 0
-; CHECK-NEXT:    [[VAL0_I1:%.*]] = extractelement <32 x i1> [[VAL0]], i32 1
-; CHECK-NEXT:    [[VAL0_I2:%.*]] = extractelement <32 x i1> [[VAL0]], i32 2
-; CHECK-NEXT:    [[VAL0_I3:%.*]] = extractelement <32 x i1> [[VAL0]], i32 3
-; CHECK-NEXT:    [[VAL0_I4:%.*]] = extractelement <32 x i1> [[VAL0]], i32 4
-; CHECK-NEXT:    [[VAL0_I5:%.*]] = extractelement <32 x i1> [[VAL0]], i32 5
-; CHECK-NEXT:    [[VAL0_I6:%.*]] = extractelement <32 x i1> [[VAL0]], i32 6
-; CHECK-NEXT:    [[VAL0_I7:%.*]] = extractelement <32 x i1> [[VAL0]], i32 7
-; CHECK-NEXT:    [[VAL0_I8:%.*]] = extractelement <32 x i1> [[VAL0]], i32 8
-; CHECK-NEXT:    [[VAL0_I9:%.*]] = extractelement <32 x i1> [[VAL0]], i32 9
-; CHECK-NEXT:    [[VAL0_I10:%.*]] = extractelement <32 x i1> [[VAL0]], i32 10
-; CHECK-NEXT:    [[VAL0_I11:%.*]] = extractelement <32 x i1> [[VAL0]], i32 11
-; CHECK-NEXT:    [[VAL0_I12:%.*]] = extractelement <32 x i1> [[VAL0]], i32 12
-; CHECK-NEXT:    [[VAL0_I13:%.*]] = extractelement <32 x i1> [[VAL0]], i32 13
-; CHECK-NEXT:    [[VAL0_I14:%.*]] = extractelement <32 x i1> [[VAL0]], i32 14
-; CHECK-NEXT:    [[VAL0_I15:%.*]] = extractelement <32 x i1> [[VAL0]], i32 15
-; CHECK-NEXT:    [[VAL0_I16:%.*]] = extractelement <32 x i1> [[VAL0]], i32 16
-; CHECK-NEXT:    [[VAL0_I17:%.*]] = extractelement <32 x i1> [[VAL0]], i32 17
-; CHECK-NEXT:    [[VAL0_I18:%.*]] = extractelement <32 x i1> [[VAL0]], i32 18
-; CHECK-NEXT:    [[VAL0_I19:%.*]] = extractelement <32 x i1> [[VAL0]], i32 19
-; CHECK-NEXT:    [[VAL0_I20:%.*]] = extractelement <32 x i1> [[VAL0]], i32 20
-; CHECK-NEXT:    [[VAL0_I21:%.*]] = extractelement <32 x i1> [[VAL0]], i32 21
-; CHECK-NEXT:    [[VAL0_I22:%.*]] = extractelement <32 x i1> [[VAL0]], i32 22
-; CHECK-NEXT:    [[VAL0_I23:%.*]] = extractelement <32 x i1> [[VAL0]], i32 23
-; CHECK-NEXT:    [[VAL0_I24:%.*]] = extractelement <32 x i1> [[VAL0]], i32 24
-; CHECK-NEXT:    [[VAL0_I25:%.*]] = extractelement <32 x i1> [[VAL0]], i32 25
-; CHECK-NEXT:    [[VAL0_I26:%.*]] = extractelement <32 x i1> [[VAL0]], i32 26
-; CHECK-NEXT:    [[VAL0_I27:%.*]] = extractelement <32 x i1> [[VAL0]], i32 27
-; CHECK-NEXT:    [[VAL0_I28:%.*]] = extractelement <32 x i1> [[VAL0]], i32 28
-; CHECK-NEXT:    [[VAL0_I29:%.*]] = extractelement <32 x i1> [[VAL0]], i32 29
-; CHECK-NEXT:    [[VAL0_I30:%.*]] = extractelement <32 x i1> [[VAL0]], i32 30
-; CHECK-NEXT:    [[VAL0_I31:%.*]] = extractelement <32 x i1> [[VAL0]], i32 31
+; CHECK-NEXT:    [[VAL0_I0:%.*]] = extractelement <32 x i1> [[VAL0]], i64 0
+; CHECK-NEXT:    [[VAL0_I1:%.*]] = extractelement <32 x i1> [[VAL0]], i64 1
+; CHECK-NEXT:    [[VAL0_I2:%.*]] = extractelement <32 x i1> [[VAL0]], i64 2
+; CHECK-NEXT:    [[VAL0_I3:%.*]] = extractelement <32 x i1> [[VAL0]], i64 3
+; CHECK-NEXT:    [[VAL0_I4:%.*]] = extractelement <32 x i1> [[VAL0]], i64 4
+; CHECK-NEXT:    [[VAL0_I5:%.*]] = extractelement <32 x i1> [[VAL0]], i64 5
+; CHECK-NEXT:    [[VAL0_I6:%.*]] = extractelement <32 x i1> [[VAL0]], i64 6
+; CHECK-NEXT:    [[VAL0_I7:%.*]] = extractelement <32 x i1> [[VAL0]], i64 7
+; CHECK-NEXT:    [[VAL0_I8:%.*]] = extractelement <32 x i1> [[VAL0]], i64 8
+; CHECK-NEXT:    [[VAL0_I9:%.*]] = extractelement <32 x i1> [[VAL0]], i64 9
+; CHECK-NEXT:    [[VAL0_I10:%.*]] = extractelement <32 x i1> [[VAL0]], i64 10
+; CHECK-NEXT:    [[VAL0_I11:%.*]] = extractelement <32 x i1> [[VAL0]], i64 11
+; CHECK-NEXT:    [[VAL0_I12:%.*]] = extractelement <32 x i1> [[VAL0]], i64 12
+; CHECK-NEXT:    [[VAL0_I13:%.*]] = extractelement <32 x i1> [[VAL0]], i64 13
+; CHECK-NEXT:    [[VAL0_I14:%.*]] = extractelement <32 x i1> [[VAL0]], i64 14
+; CHECK-NEXT:    [[VAL0_I15:%.*]] = extractelement <32 x i1> [[VAL0]], i64 15
+; CHECK-NEXT:    [[VAL0_I16:%.*]] = extractelement <32 x i1> [[VAL0]], i64 16
+; CHECK-NEXT:    [[VAL0_I17:%.*]] = extractelement <32 x i1> [[VAL0]], i64 17
+; CHECK-NEXT:    [[VAL0_I18:%.*]] = extractelement <32 x i1> [[VAL0]], i64 18
+; CHECK-NEXT:    [[VAL0_I19:%.*]] = extractelement <32 x i1> [[VAL0]], i64 19
+; CHECK-NEXT:    [[VAL0_I20:%.*]] = extractelement <32 x i1> [[VAL0]], i64 20
+; CHECK-NEXT:    [[VAL0_I21:%.*]] = extractelement <32 x i1> [[VAL0]], i64 21
+; CHECK-NEXT:    [[VAL0_I22:%.*]] = extractelement <32 x i1> [[VAL0]], i64 22
+; CHECK-NEXT:    [[VAL0_I23:%.*]] = extractelement <32 x i1> [[VAL0]], i64 23
+; CHECK-NEXT:    [[VAL0_I24:%.*]] = extractelement <32 x i1> [[VAL0]], i64 24
+; CHECK-NEXT:    [[VAL0_I25:%.*]] = extractelement <32 x i1> [[VAL0]], i64 25
+; CHECK-NEXT:    [[VAL0_I26:%.*]] = extractelement <32 x i1> [[VAL0]], i64 26
+; CHECK-NEXT:    [[VAL0_I27:%.*]] = extractelement <32 x i1> [[VAL0]], i64 27
+; CHECK-NEXT:    [[VAL0_I28:%.*]] = extractelement <32 x i1> [[VAL0]], i64 28
+; CHECK-NEXT:    [[VAL0_I29:%.*]] = extractelement <32 x i1> [[VAL0]], i64 29
+; CHECK-NEXT:    [[VAL0_I30:%.*]] = extractelement <32 x i1> [[VAL0]], i64 30
+; CHECK-NEXT:    [[VAL0_I31:%.*]] = extractelement <32 x i1> [[VAL0]], i64 31
 ; CHECK-NEXT:    [[VAL1:%.*]] = load <32 x i1>, ptr [[SRC1]], align 4
-; CHECK-NEXT:    [[VAL1_I0:%.*]] = extractelement <32 x i1> [[VAL1]], i32 0
+; CHECK-NEXT:    [[VAL1_I0:%.*]] = extractelement <32 x i1> [[VAL1]], i64 0
 ; CHECK-NEXT:    [[AND_I0:%.*]] = and i1 [[VAL0_I0]], [[VAL1_I0]]
-; CHECK-NEXT:    [[VAL1_I1:%.*]] = extractelement <32 x i1> [[VAL1]], i32 1
+; CHECK-NEXT:    [[VAL1_I1:%.*]] = extractelement <32 x i1> [[VAL1]], i64 1
 ; CHECK-NEXT:    [[AND_I1:%.*]] = and i1 [[VAL0_I1]], [[VAL1_I1]]
-; CHECK-NEXT:    [[VAL1_I2:%.*]] = extractelement <32 x i1> [[VAL1]], i32 2
+; CHECK-NEXT:    [[VAL1_I2:%.*]] = extractelement <32 x i1> [[VAL1]], i64 2
 ; CHECK-NEXT:    [[AND_I2:%.*]] = and i1 [[VAL0_I2]], [[VAL1_I2]]
-; CHECK-NEXT:    [[VAL1_I3:%.*]] = extractelement <32 x i1> [[VAL1]], i32 3
+; CHECK-NEXT:    [[VAL1_I3:%.*]] = extractelement <32 x i1> [[VAL1]], i64 3
 ; CHECK-NEXT:    [[AND_I3:%.*]] = and i1 [[VAL0_I3]], [[VAL1_I3]]
-; CHECK-NEXT:    [[VAL1_I4:%.*]] = extractelement <32 x i1> [[VAL1]], i32 4
+; CHECK-NEXT:    [[VAL1_I4:%.*]] = extractelement <32 x i1> [[VAL1]], i64 4
 ; CHECK-NEXT:    [[AND_I4:%.*]] = and i1 [[VAL0_I4]], [[VAL1_I4]]
-; CHECK-NEXT:    [[VAL1_I5:%.*]] = extractelement <32 x i1> [[VAL1]], i32 5
+; CHECK-NEXT:    [[VAL1_I5:%.*]] = extractelement <32 x i1> [[VAL1]], i64 5
 ; CHECK-NEXT:    [[AND_I5:%.*]] = and i1 [[VAL0_I5]], [[VAL1_I5]]
-; CHECK-NEXT:    [[VAL1_I6:%.*]] = extractelement <32 x i1> [[VAL1]], i32 6
+; CHECK-NEXT:    [[VAL1_I6:%.*]] = extractelement <32 x i1> [[VAL1]], i64 6
 ; CHECK-NEXT:    [[AND_I6:%.*]] = and i1 [[VAL0_I6]], [[VAL1_I6]]
-; CHECK-NEXT:    [[VAL1_I7:%.*]] = extractelement <32 x i1> [[VAL1]], i32 7
+; CHECK-NEXT:    [[VAL1_I7:%.*]] = extractelement <32 x i1> [[VAL1]], i64 7
 ; CHECK-NEXT:    [[AND_I7:%.*]] = and i1 [[VAL0_I7]], [[VAL1_I7]]
-; CHECK-NEXT:    [[VAL1_I8:%.*]] = extractelement <32 x i1> [[VAL1]], i32 8
+; CHECK-NEXT:    [[VAL1_I8:%.*]] = extractelement <32 x i1> [[VAL1]], i64 8
 ; CHECK-NEXT:    [[AND_I8:%.*]] = and i1 [[VAL0_I8]], [[VAL1_I8]]
-; CHECK-NEXT:    [[VAL1_I9:%.*]] = extractelement <32 x i1> [[VAL1]], i32 9
+; CHECK-NEXT:    [[VAL1_I9:%.*]] = extractelement <32 x i1> [[VAL1]], i64 9
 ; CHECK-NEXT:    [[AND_I9:%.*]] = and i1 [[VAL0_I9]], [[VAL1_I9]]
-; CHECK-NEXT:    [[VAL1_I10:%.*]] = extractelement <32 x i1> [[VAL1]], i32 10
+; CHECK-NEXT:    [[VAL1_I10:%.*]] = extractelement <32 x i1> [[VAL1]], i64 10
 ; CHECK-NEXT:    [[AND_I10:%.*]] = and i1 [[VAL0_I10]], [[VAL1_I10]]
-; CHECK-NEXT:    [[VAL1_I11:%.*]] = extractelement <32 x i1> [[VAL1]], i32 11
+; CHECK-NEXT:    [[VAL1_I11:%.*]] = extractelement <32 x i1> [[VAL1]], i64 11
 ; CHECK-NEXT:    [[AND_I11:%.*]] = and i1 [[VAL0_I11]], [[VAL1_I11]]
-; CHECK-NEXT:    [[VAL1_I12:%.*]] = extractelement <32 x i1> [[VAL1]], i32 12
+; CHECK-NEXT:    [[VAL1_I12:%.*]] = extractelement <32 x i1> [[VAL1]], i64 12
 ; CHECK-NEXT:    [[AND_I12:%.*]] = and i1 [[VAL0_I12]], [[VAL1_I12]]
-; CHECK-NEXT:    [[VAL1_I13:%.*]] = extractelement <32 x i1> [[VAL1]], i32 13
+; CHECK-NEXT:    [[VAL1_I13:%.*]] = extractelement <32 x i1> [[VAL1]], i64 13
 ; CHECK-NEXT:    [[AND_I13:%.*]] = and i1 [[VAL0_I13]], [[VAL1_I13]]
-; CHECK-NEXT:    [[VAL1_I14:%.*]] = extractelement <32 x i1> [[VAL1]], i32 14
+; CHECK-NEXT:    [[VAL1_I14:%.*]] = extractelement <32 x i1> [[VAL1]], i64 14
 ; CHECK-NEXT:    [[AND_I14:%.*]] = and i1 [[VAL0_I14]], [[VAL1_I14]]
-; CHECK-NEXT:    [[VAL1_I15:%.*]] = extractelement <32 x i1> [[VAL1]], i32 15
+; CHECK-NEXT:    [[VAL1_I15:%.*]] = extractelement <32 x i1> [[VAL1]], i64 15
 ; CHECK-NEXT:    [[AND_I15:%.*]] = and i1 [[VAL0_I15]], [[VAL1_I15]]
-; CHECK-NEXT:    [[VAL1_I16:%.*]] = extractelement <32 x i1> [[VAL1]], i32 16
+; CHECK-NEXT:    [[VAL1_I16:%.*]] = extractelement <32 x i1> [[VAL1]], i64 16
 ; CHECK-NEXT:    [[AND_I16:%.*]] = and i1 [[VAL0_I16]], [[VAL1_I16]]
-; CHECK-NEXT:    [[VAL1_I17:%.*]] = extractelement <32 x i1> [[VAL1]], i32 17
+; CHECK-NEXT:    [[VAL1_I17:%.*]] = extractelement <32 x i1> [[VAL1]], i64 17
 ; CHECK-NEXT:    [[AND_I17:%.*]] = and i1 [[VAL0_I17]], [[VAL1_I17]]
-; CHECK-NEXT:    [[VAL1_I18:%.*]] = extractelement <32 x i1> [[VAL1]], i32 18
+; CHECK-NEXT:    [[VAL1_I18:%.*]] = extractelement <32 x i1> [[VAL1]], i64 18
 ; CHECK-NEXT:    [[AND_I18:%.*]] = and i1 [[VAL0_I18]], [[VAL1_I18]]
-; CHECK-NEXT:    [[VAL1_I19:%.*]] = extractelement <32 x i1> [[VAL1]], i32 19
+; CHECK-NEXT:    [[VAL1_I19:%.*]] = extractelement <32 x i1> [[VAL1]], i64 19
 ; CHECK-NEXT:    [[AND_I19:%.*]] = and i1 [[VAL0_I19]], [[VAL1_I19]]
-; CHECK-NEXT:    [[VAL1_I20:%.*]] = extractelement <32 x i1> [[VAL1]], i32 20
+; CHECK-NEXT:    [[VAL1_I20:%.*]] = extractelement <32 x i1> [[VAL1]], i64 20
 ; CHECK-NEXT:    [[AND_I20:%.*]] = and i1 [[VAL0_I20]], [[VAL1_I20]]
-; CHECK-NEXT:    [[VAL1_I21:%.*]] = extractelement <32 x i1> [[VAL1]], i32 21
+; CHECK-NEXT:    [[VAL1_I21:%.*]] = extractelement <32 x i1> [[VAL1]], i64 21
 ; CHECK-NEXT:    [[AND_I21:%.*]] = and i1 [[VAL0_I21]], [[VAL1_I21]]
-; CHECK-NEXT:    [[VAL1_I22:%.*]] = extractelement <32 x i1> [[VAL1]], i32 22
+; CHECK-NEXT:    [[VAL1_I22:%.*]] = extractelement <32 x i1> [[VAL1]], i64 22
 ; CHECK-NEXT:    [[AND_I22:%.*]] = and i1 [[VAL0_I22]], [[VAL1_I22]]
-; CHECK-NEXT:    [[VAL1_I23:%.*]] = extractelement <32 x i1> [[VAL1]], i32 23
+; CHECK-NEXT:    [[VAL1_I23:%.*]] = extractelement <32 x i1> [[VAL1]], i64 23
 ; CHECK-NEXT:    [[AND_I23:%.*]] = and i1 [[VAL0_I23]], [[VAL1_I23]]
-; CHECK-NEXT:    [[VAL1_I24:%.*]] = extractelement <32 x i1> [[VAL1]], i32 24
+; CHECK-NEXT:    [[VAL1_I24:%.*]] = extractelement <32 x i1> [[VAL1]], i64 24
 ; CHECK-NEXT:    [[AND_I24:%.*]] = and i1 [[VAL0_I24]], [[VAL1_I24]]
-; CHECK-NEXT:    [[VAL1_I25:%.*]] = extractelement <32 x i1> [[VAL1]], i32 25
+; CHECK-NEXT:    [[VAL1_I25:%.*]] = extractelement <32 x i1> [[VAL1]], i64 25
 ; CHECK-NEXT:    [[AND_I25:%.*]] = and i1 [[VAL0_I25]], [[VAL1_I25]]
-; CHECK-NEXT:    [[VAL1_I26:%.*]] = extractelement <32 x i1> [[VAL1]], i32 26
+; CHECK-NEXT:    [[VAL1_I26:%.*]] = extractelement <32 x i1> [[VAL1]], i64 26
 ; CHECK-NEXT:    [[AND_I26:%.*]] = and i1 [[VAL0_I26]], [[VAL1_I26]]
-; CHECK-NEXT:    [[VAL1_I27:%.*]] = extractelement <32 x i1> [[VAL1]], i32 27
+; CHECK-NEXT:    [[VAL1_I27:%.*]] = extractelement <32 x i1> [[VAL1]], i64 27
 ; CHECK-NEXT:    [[AND_I27:%.*]] = and i1 [[VAL0_I27]], [[VAL1_I27]]
-; CHECK-NEXT:    [[VAL1_I28:%.*]] = extractelement <32 x i1> [[VAL1]], i32 28
+; CHECK-NEXT:    [[VAL1_I28:%.*]] = extractelement <32 x i1> [[VAL1]], i64 28
 ; CHECK-NEXT:    [[AND_I28:%.*]] = and i1 [[VAL0_I28]], [[VAL1_I28]]
-; CHECK-NEXT:    [[VAL1_I29:%.*]] = extractelement <32 x i1> [[VAL1]], i32 29
+; CHECK-NEXT:    [[VAL1_I29:%.*]] = extractelement <32 x i1> [[VAL1]], i64 29
 ; CHECK-NEXT:    [[AND_I29:%.*]] = and i1 [[VAL0_I29]], [[VAL1_I29]]
-; CHECK-NEXT:    [[VAL1_I30:%.*]] = extractelement <32 x i1> [[VAL1]], i32 30
+; CHECK-NEXT:    [[VAL1_I30:%.*]] = extractelement <32 x i1> [[VAL1]], i64 30
 ; CHECK-NEXT:    [[AND_I30:%.*]] = and i1 [[VAL0_I30]], [[VAL1_I30]]
-; CHECK-NEXT:    [[VAL1_I31:%.*]] = extractelement <32 x i1> [[VAL1]], i32 31
+; CHECK-NEXT:    [[VAL1_I31:%.*]] = extractelement <32 x i1> [[VAL1]], i64 31
 ; CHECK-NEXT:    [[AND_I31:%.*]] = and i1 [[VAL0_I31]], [[VAL1_I31]]
-; CHECK-NEXT:    [[AND_UPTO0:%.*]] = insertelement <32 x i1> poison, i1 [[AND_I0]], i32 0
-; CHECK-NEXT:    [[AND_UPTO1:%.*]] = insertelement <32 x i1> [[AND_UPTO0]], i1 [[AND_I1]], i32 1
-; CHECK-NEXT:    [[AND_UPTO2:%.*]] = insertelement <32 x i1> [[AND_UPTO1]], i1 [[AND_I2]], i32 2
-; CHECK-NEXT:    [[AND_UPTO3:%.*]] = insertelement <32 x i1> [[AND_UPTO2]], i1 [[AND_I3]], i32 3
-; CHECK-NEXT:    [[AND_UPTO4:%.*]] = insertelement <32 x i1> [[AND_UPTO3]], i1 [[AND_I4]], i32 4
-; CHECK-NEXT:    [[AND_UPTO5:%.*]] = insertelement <32 x i1> [[AND_UPTO4]], i1 [[AND_I5]], i32 5
-; CHECK-NEXT:    [[AND_UPTO6:%.*]] = insertelement <32 x i1> [[AND_UPTO5]], i1 [[AND_I6]], i32 6
-; CHECK-NEXT:    [[AND_UPTO7:%.*]] = insertelement <32 x i1> [[AND_UPTO6]], i1 [[AND_I7]], i32 7
-; CHECK-NEXT:    [[AND_UPTO8:%.*]] = insertelement <32 x i1> [[AND_UPTO7]], i1 [[AND_I8]], i32 8
-; CHECK-NEXT:    [[AND_UPTO9:%.*]] = insertelement <32 x i1> [[AND_UPTO8]], i1 [[AND_I9]], i32 9
-; CHECK-NEXT:    [[AND_UPTO10:%.*]] = insertelement <32 x i1> [[AND_UPTO9]], i1 [[AND_I10]], i32 10
-; CHECK-NEXT:    [[AND_UPTO11:%.*]] = insertelement <32 x i1> [[AND_UPTO10]], i1 [[AND_I11]], i32 11
-; CHECK-NEXT:    [[AND_UPTO12:%.*]] = insertelement <32 x i1> [[AND_UPTO11]], i1 [[AND_I12]], i32 12
-; CHECK-NEXT:    [[AND_UPTO13:%.*]] = insertelement <32 x i1> [[AND_UPTO12]], i1 [[AND_I13]], i32 13
-; CHECK-NEXT:    [[AND_UPTO14:%.*]] = insertelement <32 x i1> [[AND_UPTO13]], i1 [[AND_I14]], i32 14
-; CHECK-NEXT:    [[AND_UPTO15:%.*]] = insertelement <32 x i1> [[AND_UPTO14]], i1 [[AND_I15]], i32 15
-; CHECK-NEXT:    [[AND_UPTO16:%.*]] = insertelement <32 x i1> [[AND_UPTO15]], i1 [[AND_I16]], i32 16
-; CHECK-NEXT:    [[AND_UPTO17:%.*]] = insertelement <32 x i1> [[AND_UPTO16]], i1 [[AND_I17]], i32 17
-; CHECK-NEXT:    [[AND_UPTO18:%.*]] = insertelement <32 x i1> [[AND_UPTO17]], i1 [[AND_I18]], i32 18
-; CHECK-NEXT:    [[AND_UPTO19:%.*]] = insertelement <32 x i1> [[AND_UPTO18]], i1 [[AND_I19]], i32 19
-; CHECK-NEXT:    [[AND_UPTO20:%.*]] = insertelement <32 x i1> [[AND_UPTO19]], i1 [[AND_I20]], i32 20
-; CHECK-NEXT:    [[AND_UPTO21:%.*]] = insertelement <32 x i1> [[AND_UPTO20]], i1 [[AND_I21]], i32 21
-; CHECK-NEXT:    [[AND_UPTO22:%.*]] = insertelement <32 x i1> [[AND_UPTO21]], i1 [[AND_I22]], i32 22
-; CHECK-NEXT:    [[AND_UPTO23:%.*]] = insertelement <32 x i1> [[AND_UPTO22]], i1 [[AND_I23]], i32 23
-; CHECK-NEXT:    [[AND_UPTO24:%.*]] = insertelement <32 x i1> [[AND_UPTO23]], i1 [[AND_I24]], i32 24
-; CHECK-NEXT:    [[AND_UPTO25:%.*]] = insertelement <32 x i1> [[AND_UPTO24]], i1 [[AND_I25]], i32 25
-; CHECK-NEXT:    [[AND_UPTO26:%.*]] = insertelement <32 x i1> [[AND_UPTO25]], i1 [[AND_I26]], i32 26
-; CHECK-NEXT:    [[AND_UPTO27:%.*]] = insertelement <32 x i1> [[AND_UPTO26]], i1 [[AND_I27]], i32 27
-; CHECK-NEXT:    [[AND_UPTO28:%.*]] = insertelement <32 x i1> [[AND_UPTO27]], i1 [[AND_I28]], i32 28
-; CHECK-NEXT:    [[AND_UPTO29:%.*]] = insertelement <32 x i1> [[AND_UPTO28]], i1 [[AND_I29]], i32 29
-; CHECK-NEXT:    [[AND_UPTO30:%.*]] = insertelement <32 x i1> [[AND_UPTO29]], i1 [[AND_I30]], i32 30
-; CHECK-NEXT:    [[AND:%.*]] = insertelement <32 x i1> [[AND_UPTO30]], i1 [[AND_I31]], i32 31
+; CHECK-NEXT:    [[AND_UPTO0:%.*]] = insertelement <32 x i1> poison, i1 [[AND_I0]], i64 0
+; CHECK-NEXT:    [[AND_UPTO1:%.*]] = insertelement <32 x i1> [[AND_UPTO0]], i1 [[AND_I1]], i64 1
+; CHECK-NEXT:    [[AND_UPTO2:%.*]] = insertelement <32 x i1> [[AND_UPTO1]], i1 [[AND_I2]], i64 2
+; CHECK-NEXT:    [[AND_UPTO3:%.*]] = insertelement <32 x i1> [[AND_UPTO2]], i1 [[AND_I3]], i64 3
+; CHECK-NEXT:    [[AND_UPTO4:%.*]] = insertelement <32 x i1> [[AND_UPTO3]], i1 [[AND_I4]], i64 4
+; CHECK-NEXT:    [[AND_UPTO5:%.*]] = insertelement <32 x i1> [[AND_UPTO4]], i1 [[AND_I5]], i64 5
+; CHECK-NEXT:    [[AND_UPTO6:%.*]] = insertelement <32 x i1> [[AND_UPTO5]], i1 [[AND_I6]], i64 6
+; CHECK-NEXT:    [[AND_UPTO7:%.*]] = insertelement <32 x i1> [[AND_UPTO6]], i1 [[AND_I7]], i64 7
+; CHECK-NEXT:    [[AND_UPTO8:%.*]] = insertelement <32 x i1> [[AND_UPTO7]], i1 [[AND_I8]], i64 8
+; CHECK-NEXT:    [[AND_UPTO9:%.*]] = insertelement <32 x i1> [[AND_UPTO8]], i1 [[AND_I9]], i64 9
+; CHECK-NEXT:    [[AND_UPTO10:%.*]] = insertelement <32 x i1> [[AND_UPTO9]], i1 [[AND_I10]], i64 10
+; CHECK-NEXT:    [[AND_UPTO11:%.*]] = insertelement <32 x i1> [[AND_UPTO10]], i1 [[AND_I11]], i64 11
+; CHECK-NEXT:    [[AND_UPTO12:%.*]] = insertelement <32 x i1> [[AND_UPTO11]], i1 [[AND_I12]], i64 12
+; CHECK-NEXT:    [[AND_UPTO13:%.*]] = insertelement <32 x i1> [[AND_UPTO12]], i1 [[AND_I13]], i64 13
+; CHECK-NEXT:    [[AND_UPTO14:%.*]] = insertelement <32 x i1> [[AND_UPTO13]], i1 [[AND_I14]], i64 14
+; CHECK-NEXT:    [[AND_UPTO15:%.*]] = insertelement <32 x i1> [[AND_UPTO14]], i1 [[AND_I15]], i64 15
+; CHECK-NEXT:    [[AND_UPTO16:%.*]] = insertelement <32 x i1> [[AND_UPTO15]], i1 [[AND_I16]], i64 16
+; CHECK-NEXT:    [[AND_UPTO17:%.*]] = insertelement <32 x i1> [[AND_UPTO16]], i1 [[AND_I17]], i64 17
+; CHECK-NEXT:    [[AND_UPTO18:%.*]] = insertelement <32 x i1> [[AND_UPTO17]], i1 [[AND_I18]], i64 18
+; CHECK-NEXT:    [[AND_UPTO19:%.*]] = insertelement <32 x i1> [[AND_UPTO18]], i1 [[AND_I19]], i64 19
+; CHECK-NEXT:    [[AND_UPTO20:%.*]] = insertelement <32 x i1> [[AND_UPTO19]], i1 [[AND_I20]], i64 20
+; CHECK-NEXT:    [[AND_UPTO21:%.*]] = insertelement <32 x i1> [[AND_UPTO20]], i1 [[AND_I21]], i64 21
+; CHECK-NEXT:    [[AND_UPTO22:%.*]] = insertelement <32 x i1> [[AND_UPTO21]], i1 [[AND_I22]], i64 22
+; CHECK-NEXT:    [[AND_UPTO23:%.*]] = insertelement <32 x i1> [[AND_UPTO22]], i1 [[AND_I23]], i64 23
+; CHECK-NEXT:    [[AND_UPTO24:%.*]] = insertelement <32 x i1> [[AND_UPTO23]], i1 [[AND_I24]], i64 24
+; CHECK-NEXT:    [[AND_UPTO25:%.*]] = insertelement <32 x i1> [[AND_UPTO24]], i1 [[AND_I25]], i64 25
+; CHECK-NEXT:    [[AND_UPTO26:%.*]] = insertelement <32 x i1> [[AND_UPTO25]], i1 [[AND_I26]], i64 26
+; CHECK-NEXT:    [[AND_UPTO27:%.*]] = insertelement <32 x i1> [[AND_UPTO26]], i1 [[AND_I27]], i64 27
+; CHECK-NEXT:    [[AND_UPTO28:%.*]] = insertelement <32 x i1> [[AND_UPTO27]], i1 [[AND_I28]], i64 28
+; CHECK-NEXT:    [[AND_UPTO29:%.*]] = insertelement <32 x i1> [[AND_UPTO28]], i1 [[AND_I29]], i64 29
+; CHECK-NEXT:    [[AND_UPTO30:%.*]] = insertelement <32 x i1> [[AND_UPTO29]], i1 [[AND_I30]], i64 30
+; CHECK-NEXT:    [[AND:%.*]] = insertelement <32 x i1> [[AND_UPTO30]], i1 [[AND_I31]], i64 31
 ; CHECK-NEXT:    store <32 x i1> [[AND]], ptr [[DEST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -559,17 +559,17 @@ define void @f13(ptr %dest, <4 x ptr> %ptr, <4 x i32> %i,
 ; CHECK-NEXT:    [[DEST_I1:%.*]] = getelementptr ptr, ptr [[DEST:%.*]], i32 1
 ; CHECK-NEXT:    [[DEST_I2:%.*]] = getelementptr ptr, ptr [[DEST]], i32 2
 ; CHECK-NEXT:    [[DEST_I3:%.*]] = getelementptr ptr, ptr [[DEST]], i32 3
-; CHECK-NEXT:    [[I_I0:%.*]] = extractelement <4 x i32> [[I:%.*]], i32 0
-; CHECK-NEXT:    [[PTR_I0:%.*]] = extractelement <4 x ptr> [[PTR:%.*]], i32 0
+; CHECK-NEXT:    [[PTR_I0:%.*]] = extractelement <4 x ptr> [[PTR:%.*]], i64 0
+; CHECK-NEXT:    [[I_I0:%.*]] = extractelement <4 x i32> [[I:%.*]], i64 0
 ; CHECK-NEXT:    [[VAL_I0:%.*]] = getelementptr inbounds [4 x float], ptr [[PTR_I0]], i32 0, i32 [[I_I0]]
-; CHECK-NEXT:    [[I_I1:%.*]] = extractelement <4 x i32> [[I]], i32 1
-; CHECK-NEXT:    [[PTR_I1:%.*]] = extractelement <4 x ptr> [[PTR]], i32 1
+; CHECK-NEXT:    [[PTR_I1:%.*]] = extractelement <4 x ptr> [[PTR]], i64 1
+; CHECK-NEXT:    [[I_I1:%.*]] = extractelement <4 x i32> [[I]], i64 1
 ; CHECK-NEXT:    [[VAL_I1:%.*]] = getelementptr inbounds [4 x float], ptr [[PTR_I1]], i32 1, i32 [[I_I1]]
-; CHECK-NEXT:    [[I_I2:%.*]] = extractelement <4 x i32> [[I]], i32 2
-; CHECK-NEXT:    [[PTR_I2:%.*]] = extractelement <4 x ptr> [[PTR]], i32 2
+; CHECK-NEXT:    [[PTR_I2:%.*]] = extractelement <4 x ptr> [[PTR]], i64 2
+; CHECK-NEXT:    [[I_I2:%.*]] = extractelement <4 x i32> [[I]], i64 2
 ; CHECK-NEXT:    [[VAL_I2:%.*]] = getelementptr inbounds [4 x float], ptr [[PTR_I2]], i32 2, i32 [[I_I2]]
-; CHECK-NEXT:    [[I_I3:%.*]] = extractelement <4 x i32> [[I]], i32 3
-; CHECK-NEXT:    [[PTR_I3:%.*]] = extractelement <4 x ptr> [[PTR]], i32 3
+; CHECK-NEXT:    [[PTR_I3:%.*]] = extractelement <4 x ptr> [[PTR]], i64 3
+; CHECK-NEXT:    [[I_I3:%.*]] = extractelement <4 x i32> [[I]], i64 3
 ; CHECK-NEXT:    [[VAL_I3:%.*]] = getelementptr inbounds [4 x float], ptr [[PTR_I3]], i32 3, i32 [[I_I3]]
 ; CHECK-NEXT:    store ptr [[VAL_I0]], ptr [[DEST]], align 32
 ; CHECK-NEXT:    store ptr [[VAL_I1]], ptr [[DEST_I1]], align 8
@@ -589,10 +589,10 @@ define void @f13(ptr %dest, <4 x ptr> %ptr, <4 x i32> %i,
 define <4 x float> @f14(<4 x float> %acc, i32 %count) {
 ; CHECK-LABEL: @f14(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ACC_I0:%.*]] = extractelement <4 x float> [[ACC:%.*]], i32 0
-; CHECK-NEXT:    [[ACC_I1:%.*]] = extractelement <4 x float> [[ACC]], i32 1
-; CHECK-NEXT:    [[ACC_I2:%.*]] = extractelement <4 x float> [[ACC]], i32 2
-; CHECK-NEXT:    [[ACC_I3:%.*]] = extractelement <4 x float> [[ACC]], i32 3
+; CHECK-NEXT:    [[ACC_I0:%.*]] = extractelement <4 x float> [[ACC:%.*]], i64 0
+; CHECK-NEXT:    [[ACC_I1:%.*]] = extractelement <4 x float> [[ACC]], i64 1
+; CHECK-NEXT:    [[ACC_I2:%.*]] = extractelement <4 x float> [[ACC]], i64 2
+; CHECK-NEXT:    [[ACC_I3:%.*]] = extractelement <4 x float> [[ACC]], i64 3
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[THIS_ACC_I0:%.*]] = phi float [ [[ACC_I0]], [[ENTRY:%.*]] ], [ [[NEXT_ACC_I0:%.*]], [[LOOP]] ]
@@ -600,23 +600,23 @@ define <4 x float> @f14(<4 x float> %acc, i32 %count) {
 ; CHECK-NEXT:    [[THIS_ACC_I2:%.*]] = phi float [ [[ACC_I2]], [[ENTRY]] ], [ [[NEXT_ACC_I2:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[THIS_ACC_I3:%.*]] = phi float [ [[ACC_I3]], [[ENTRY]] ], [ [[NEXT_ACC_I3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[THIS_COUNT:%.*]] = phi i32 [ [[COUNT:%.*]], [[ENTRY]] ], [ [[NEXT_COUNT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[THIS_ACC_UPTO0:%.*]] = insertelement <4 x float> poison, float [[THIS_ACC_I0]], i32 0
-; CHECK-NEXT:    [[THIS_ACC_UPTO1:%.*]] = insertelement <4 x float> [[THIS_ACC_UPTO0]], float [[THIS_ACC_I1]], i32 1
-; CHECK-NEXT:    [[THIS_ACC_UPTO2:%.*]] = insertelement <4 x float> [[THIS_ACC_UPTO1]], float [[THIS_ACC_I2]], i32 2
-; CHECK-NEXT:    [[THIS_ACC:%.*]] = insertelement <4 x float> [[THIS_ACC_UPTO2]], float [[THIS_ACC_I3]], i32 3
+; CHECK-NEXT:    [[THIS_ACC_UPTO0:%.*]] = insertelement <4 x float> poison, float [[THIS_ACC_I0]], i64 0
+; CHECK-NEXT:    [[THIS_ACC_UPTO1:%.*]] = insertelement <4 x float> [[THIS_ACC_UPTO0]], float [[THIS_ACC_I1]], i64 1
+; CHECK-NEXT:    [[THIS_ACC_UPTO2:%.*]] = insertelement <4 x float> [[THIS_ACC_UPTO1]], float [[THIS_ACC_I2]], i64 2
+; CHECK-NEXT:    [[THIS_ACC:%.*]] = insertelement <4 x float> [[THIS_ACC_UPTO2]], float [[THIS_ACC_I3]], i64 3
 ; CHECK-NEXT:    [[FOO:%.*]] = call <4 x float> @ext(<4 x float> [[THIS_ACC]])
-; CHECK-NEXT:    [[FOO_I0:%.*]] = extractelement <4 x float> [[FOO]], i32 0
+; CHECK-NEXT:    [[FOO_I0:%.*]] = extractelement <4 x float> [[FOO]], i64 0
 ; CHECK-NEXT:    [[NEXT_ACC_I0]] = fadd float [[THIS_ACC_I0]], [[FOO_I0]]
-; CHECK-NEXT:    [[FOO_I1:%.*]] = extractelement <4 x float> [[FOO]], i32 1
+; CHECK-NEXT:    [[FOO_I1:%.*]] = extractelement <4 x float> [[FOO]], i64 1
 ; CHECK-NEXT:    [[NEXT_ACC_I1]] = fadd float [[THIS_ACC_I1]], [[FOO_I1]]
-; CHECK-NEXT:    [[FOO_I2:%.*]] = extractelement <4 x float> [[FOO]], i32 2
+; CHECK-NEXT:    [[FOO_I2:%.*]] = extractelement <4 x float> [[FOO]], i64 2
 ; CHECK-NEXT:    [[NEXT_ACC_I2]] = fadd float [[THIS_ACC_I2]], [[FOO_I2]]
-; CHECK-NEXT:    [[FOO_I3:%.*]] = extractelement <4 x float> [[FOO]], i32 3
+; CHECK-NEXT:    [[FOO_I3:%.*]] = extractelement <4 x float> [[FOO]], i64 3
 ; CHECK-NEXT:    [[NEXT_ACC_I3]] = fadd float [[THIS_ACC_I3]], [[FOO_I3]]
-; CHECK-NEXT:    [[NEXT_ACC_UPTO0:%.*]] = insertelement <4 x float> poison, float [[NEXT_ACC_I0]], i32 0
-; CHECK-NEXT:    [[NEXT_ACC_UPTO1:%.*]] = insertelement <4 x float> [[NEXT_ACC_UPTO0]], float [[NEXT_ACC_I1]], i32 1
-; CHECK-NEXT:    [[NEXT_ACC_UPTO2:%.*]] = insertelement <4 x float> [[NEXT_ACC_UPTO1]], float [[NEXT_ACC_I2]], i32 2
-; CHECK-NEXT:    [[NEXT_ACC:%.*]] = insertelement <4 x float> [[NEXT_ACC_UPTO2]], float [[NEXT_ACC_I3]], i32 3
+; CHECK-NEXT:    [[NEXT_ACC_UPTO0:%.*]] = insertelement <4 x float> poison, float [[NEXT_ACC_I0]], i64 0
+; CHECK-NEXT:    [[NEXT_ACC_UPTO1:%.*]] = insertelement <4 x float> [[NEXT_ACC_UPTO0]], float [[NEXT_ACC_I1]], i64 1
+; CHECK-NEXT:    [[NEXT_ACC_UPTO2:%.*]] = insertelement <4 x float> [[NEXT_ACC_UPTO1]], float [[NEXT_ACC_I2]], i64 2
+; CHECK-NEXT:    [[NEXT_ACC:%.*]] = insertelement <4 x float> [[NEXT_ACC_UPTO2]], float [[NEXT_ACC_I3]], i64 3
 ; CHECK-NEXT:    [[NEXT_COUNT]] = sub i32 [[THIS_COUNT]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[NEXT_COUNT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
@@ -659,18 +659,18 @@ define void @f15(<4 x float> %init, ptr %base, i32 %count) {
 ; CHECK-NEXT:    [[NEG_I1:%.*]] = fneg float [[VAL_I1]]
 ; CHECK-NEXT:    [[NEG_I2:%.*]] = fneg float [[VAL_I2]]
 ; CHECK-NEXT:    [[NEG_I3:%.*]] = fneg float [[VAL_I3]]
-; CHECK-NEXT:    [[NEG_UPTO0:%.*]] = insertelement <4 x float> poison, float [[NEG_I0]], i32 0
-; CHECK-NEXT:    [[NEG_UPTO1:%.*]] = insertelement <4 x float> [[NEG_UPTO0]], float [[NEG_I1]], i32 1
-; CHECK-NEXT:    [[NEG_UPTO2:%.*]] = insertelement <4 x float> [[NEG_UPTO1]], float [[NEG_I2]], i32 2
-; CHECK-NEXT:    [[NEG:%.*]] = insertelement <4 x float> [[NEG_UPTO2]], float [[NEG_I3]], i32 3
+; CHECK-NEXT:    [[NEG_UPTO0:%.*]] = insertelement <4 x float> poison, float [[NEG_I0]], i64 0
+; CHECK-NEXT:    [[NEG_UPTO1:%.*]] = insertelement <4 x float> [[NEG_UPTO0]], float [[NEG_I1]], i64 1
+; CHECK-NEXT:    [[NEG_UPTO2:%.*]] = insertelement <4 x float> [[NEG_UPTO1]], float [[NEG_I2]], i64 2
+; CHECK-NEXT:    [[NEG:%.*]] = insertelement <4 x float> [[NEG_UPTO2]], float [[NEG_I3]], i64 3
 ; CHECK-NEXT:    [[CALL:%.*]] = call <4 x float> @ext(<4 x float> [[NEG]])
-; CHECK-NEXT:    [[CALL_I0:%.*]] = extractelement <4 x float> [[CALL]], i32 0
+; CHECK-NEXT:    [[CALL_I0:%.*]] = extractelement <4 x float> [[CALL]], i64 0
 ; CHECK-NEXT:    [[CMP_I0:%.*]] = fcmp ogt float [[CALL_I0]], 1.000000e+00
-; CHECK-NEXT:    [[CALL_I1:%.*]] = extractelement <4 x float> [[CALL]], i32 1
+; CHECK-NEXT:    [[CALL_I1:%.*]] = extractelement <4 x float> [[CALL]], i64 1
 ; CHECK-NEXT:    [[CMP_I1:%.*]] = fcmp ogt float [[CALL_I1]], 2.000000e+00
-; CHECK-NEXT:    [[CALL_I2:%.*]] = extractelement <4 x float> [[CALL]], i32 2
+; CHECK-NEXT:    [[CALL_I2:%.*]] = extractelement <4 x float> [[CALL]], i64 2
 ; CHECK-NEXT:    [[CMP_I2:%.*]] = fcmp ogt float [[CALL_I2]], 3.000000e+00
-; CHECK-NEXT:    [[CALL_I3:%.*]] = extractelement <4 x float> [[CALL]], i32 3
+; CHECK-NEXT:    [[CALL_I3:%.*]] = extractelement <4 x float> [[CALL]], i64 3
 ; CHECK-NEXT:    [[CMP_I3:%.*]] = fcmp ogt float [[CALL_I3]], 4.000000e+00
 ; CHECK-NEXT:    [[SEL_I0:%.*]] = select i1 [[CMP_I0]], float [[CALL_I0]], float 5.000000e+00
 ; CHECK-NEXT:    [[SEL_I1:%.*]] = select i1 [[CMP_I1]], float [[CALL_I1]], float 6.000000e+00
@@ -713,14 +713,14 @@ exit:
 ; Check that IR flags are preserved.
 define <2 x i32> @f16(<2 x i32> %i, <2 x i32> %j) {
 ; CHECK-LABEL: @f16(
-; CHECK-NEXT:    [[I_I0:%.*]] = extractelement <2 x i32> [[I:%.*]], i32 0
-; CHECK-NEXT:    [[J_I0:%.*]] = extractelement <2 x i32> [[J:%.*]], i32 0
+; CHECK-NEXT:    [[I_I0:%.*]] = extractelement <2 x i32> [[I:%.*]], i64 0
+; CHECK-NEXT:    [[J_I0:%.*]] = extractelement <2 x i32> [[J:%.*]], i64 0
 ; CHECK-NEXT:    [[RES_I0:%.*]] = add nuw nsw i32 [[I_I0]], [[J_I0]]
-; CHECK-NEXT:    [[I_I1:%.*]] = extractelement <2 x i32> [[I]], i32 1
-; CHECK-NEXT:    [[J_I1:%.*]] = extractelement <2 x i32> [[J]], i32 1
+; CHECK-NEXT:    [[I_I1:%.*]] = extractelement <2 x i32> [[I]], i64 1
+; CHECK-NEXT:    [[J_I1:%.*]] = extractelement <2 x i32> [[J]], i64 1
 ; CHECK-NEXT:    [[RES_I1:%.*]] = add nuw nsw i32 [[I_I1]], [[J_I1]]
-; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[RES_I0]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x i32> [[RES_UPTO0]], i32 [[RES_I1]], i32 1
+; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[RES_I0]], i64 0
+; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x i32> [[RES_UPTO0]], i32 [[RES_I1]], i64 1
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
   %res = add nuw nsw <2 x i32> %i, %j
@@ -728,14 +728,14 @@ define <2 x i32> @f16(<2 x i32> %i, <2 x i32> %j) {
 }
 define <2 x i32> @f17(<2 x i32> %i, <2 x i32> %j) {
 ; CHECK-LABEL: @f17(
-; CHECK-NEXT:    [[I_I0:%.*]] = extractelement <2 x i32> [[I:%.*]], i32 0
-; CHECK-NEXT:    [[J_I0:%.*]] = extractelement <2 x i32> [[J:%.*]], i32 0
+; CHECK-NEXT:    [[I_I0:%.*]] = extractelement <2 x i32> [[I:%.*]], i64 0
+; CHECK-NEXT:    [[J_I0:%.*]] = extractelement <2 x i32> [[J:%.*]], i64 0
 ; CHECK-NEXT:    [[RES_I0:%.*]] = sdiv exact i32 [[I_I0]], [[J_I0]]
-; CHECK-NEXT:    [[I_I1:%.*]] = extractelement <2 x i32> [[I]], i32 1
-; CHECK-NEXT:    [[J_I1:%.*]] = extractelement <2 x i32> [[J]], i32 1
+; CHECK-NEXT:    [[I_I1:%.*]] = extractelement <2 x i32> [[I]], i64 1
+; CHECK-NEXT:    [[J_I1:%.*]] = extractelement <2 x i32> [[J]], i64 1
 ; CHECK-NEXT:    [[RES_I1:%.*]] = sdiv exact i32 [[I_I1]], [[J_I1]]
-; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[RES_I0]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x i32> [[RES_UPTO0]], i32 [[RES_I1]], i32 1
+; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[RES_I0]], i64 0
+; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x i32> [[RES_UPTO0]], i32 [[RES_I1]], i64 1
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
   %res = sdiv exact <2 x i32> %i, %j
@@ -743,14 +743,14 @@ define <2 x i32> @f17(<2 x i32> %i, <2 x i32> %j) {
 }
 define <2 x float> @f18(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @f18(
-; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[Y_I0:%.*]] = extractelement <2 x float> [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[Y_I0:%.*]] = extractelement <2 x float> [[Y:%.*]], i64 0
 ; CHECK-NEXT:    [[RES_I0:%.*]] = fadd fast float [[X_I0]], [[Y_I0]]
-; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i32 1
-; CHECK-NEXT:    [[Y_I1:%.*]] = extractelement <2 x float> [[Y]], i32 1
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i64 1
+; CHECK-NEXT:    [[Y_I1:%.*]] = extractelement <2 x float> [[Y]], i64 1
 ; CHECK-NEXT:    [[RES_I1:%.*]] = fadd fast float [[X_I1]], [[Y_I1]]
-; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x float> poison, float [[RES_I0]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x float> [[RES_UPTO0]], float [[RES_I1]], i32 1
+; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x float> poison, float [[RES_I0]], i64 0
+; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x float> [[RES_UPTO0]], float [[RES_I1]], i64 1
 ; CHECK-NEXT:    ret <2 x float> [[RES]]
 ;
   %res = fadd fast <2 x float> %x, %y
@@ -758,12 +758,12 @@ define <2 x float> @f18(<2 x float> %x, <2 x float> %y) {
 }
 define <2 x float> @f19(<2 x float> %x) {
 ; CHECK-LABEL: @f19(
-; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[RES_I0:%.*]] = fneg fast float [[X_I0]]
-; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i32 1
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i64 1
 ; CHECK-NEXT:    [[RES_I1:%.*]] = fneg fast float [[X_I1]]
-; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x float> poison, float [[RES_I0]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x float> [[RES_UPTO0]], float [[RES_I1]], i32 1
+; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x float> poison, float [[RES_I0]], i64 0
+; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x float> [[RES_UPTO0]], float [[RES_I1]], i64 1
 ; CHECK-NEXT:    ret <2 x float> [[RES]]
 ;
   %res = fneg fast <2 x float> %x
@@ -771,14 +771,14 @@ define <2 x float> @f19(<2 x float> %x) {
 }
 define <2 x i1> @f20(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @f20(
-; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[Y_I0:%.*]] = extractelement <2 x float> [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[Y_I0:%.*]] = extractelement <2 x float> [[Y:%.*]], i64 0
 ; CHECK-NEXT:    [[RES_I0:%.*]] = fcmp fast ogt float [[X_I0]], [[Y_I0]]
-; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i32 1
-; CHECK-NEXT:    [[Y_I1:%.*]] = extractelement <2 x float> [[Y]], i32 1
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i64 1
+; CHECK-NEXT:    [[Y_I1:%.*]] = extractelement <2 x float> [[Y]], i64 1
 ; CHECK-NEXT:    [[RES_I1:%.*]] = fcmp fast ogt float [[X_I1]], [[Y_I1]]
-; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x i1> poison, i1 [[RES_I0]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x i1> [[RES_UPTO0]], i1 [[RES_I1]], i32 1
+; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x i1> poison, i1 [[RES_I0]], i64 0
+; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x i1> [[RES_UPTO0]], i1 [[RES_I1]], i64 1
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
   %res = fcmp fast ogt <2 x float> %x, %y
@@ -787,12 +787,12 @@ define <2 x i1> @f20(<2 x float> %x, <2 x float> %y) {
 declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)
 define <2 x float> @f21(<2 x float> %x) {
 ; CHECK-LABEL: @f21(
-; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[RES_I0:%.*]] = call fast float @llvm.sqrt.f32(float [[X_I0]])
-; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i32 1
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i64 1
 ; CHECK-NEXT:    [[RES_I1:%.*]] = call fast float @llvm.sqrt.f32(float [[X_I1]])
-; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x float> poison, float [[RES_I0]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x float> [[RES_UPTO0]], float [[RES_I1]], i32 1
+; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x float> poison, float [[RES_I0]], i64 0
+; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x float> [[RES_UPTO0]], float [[RES_I1]], i64 1
 ; CHECK-NEXT:    ret <2 x float> [[RES]]
 ;
   %res = call fast <2 x float> @llvm.sqrt.v2f32(<2 x float> %x)
@@ -801,16 +801,16 @@ define <2 x float> @f21(<2 x float> %x) {
 declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)
 define <2 x float> @f22(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @f22(
-; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[Y_I0:%.*]] = extractelement <2 x float> [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[Z_I0:%.*]] = extractelement <2 x float> [[Z:%.*]], i32 0
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[Y_I0:%.*]] = extractelement <2 x float> [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[Z_I0:%.*]] = extractelement <2 x float> [[Z:%.*]], i64 0
 ; CHECK-NEXT:    [[RES_I0:%.*]] = call fast float @llvm.fma.f32(float [[X_I0]], float [[Y_I0]], float [[Z_I0]])
-; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i32 1
-; CHECK-NEXT:    [[Y_I1:%.*]] = extractelement <2 x float> [[Y]], i32 1
-; CHECK-NEXT:    [[Z_I1:%.*]] = extractelement <2 x float> [[Z]], i32 1
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i64 1
+; CHECK-NEXT:    [[Y_I1:%.*]] = extractelement <2 x float> [[Y]], i64 1
+; CHECK-NEXT:    [[Z_I1:%.*]] = extractelement <2 x float> [[Z]], i64 1
 ; CHECK-NEXT:    [[RES_I1:%.*]] = call fast float @llvm.fma.f32(float [[X_I1]], float [[Y_I1]], float [[Z_I1]])
-; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x float> poison, float [[RES_I0]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x float> [[RES_UPTO0]], float [[RES_I1]], i32 1
+; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x float> poison, float [[RES_I0]], i64 0
+; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x float> [[RES_UPTO0]], float [[RES_I1]], i64 1
 ; CHECK-NEXT:    ret <2 x float> [[RES]]
 ;
   %res = call fast <2 x float> @llvm.fma.v2f32(<2 x float> %x, <2 x float> %y, <2 x float> %z)
@@ -820,9 +820,9 @@ define <2 x float> @f22(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; See https://reviews.llvm.org/D83101#2133062
 define <2 x i32> @f23_crash(<2 x i32> %srcvec, i32 %v1) {
 ; CHECK-LABEL: @f23_crash(
-; CHECK-NEXT:    [[SRCVEC_I0:%.*]] = extractelement <2 x i32> [[SRCVEC:%.*]], i32 0
-; CHECK-NEXT:    [[T1_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[SRCVEC_I0]], i32 0
-; CHECK-NEXT:    [[T1:%.*]] = insertelement <2 x i32> [[T1_UPTO0]], i32 [[V1:%.*]], i32 1
+; CHECK-NEXT:    [[SRCVEC_I0:%.*]] = extractelement <2 x i32> [[SRCVEC:%.*]], i64 0
+; CHECK-NEXT:    [[T1_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[SRCVEC_I0]], i64 0
+; CHECK-NEXT:    [[T1:%.*]] = insertelement <2 x i32> [[T1_UPTO0]], i32 [[V1:%.*]], i64 1
 ; CHECK-NEXT:    ret <2 x i32> [[T1]]
 ;
   %v0 = extractelement <2 x i32> %srcvec, i32 0

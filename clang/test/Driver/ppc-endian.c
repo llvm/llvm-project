@@ -1,5 +1,5 @@
 // RUN: %clang -target powerpc-unknown -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE32 %s
-// RUN: %clang -target powerpc-unknown -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE32 %s
+// RUN: %clang --target=powerpc-unknown -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE32 %s --implicit-check-not=error:
 // RUN: %clang -target powerpcle-unknown -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE32 %s
 // CHECK-BE32: "-cc1"{{.*}} "-triple" "powerpc-{{.*}}"
 

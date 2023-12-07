@@ -13,7 +13,7 @@ define float @t1(i1 %a, float %b, float %c) nounwind {
 
 ; This may infinite loop if isNegatibleForFree and getNegatedExpression are conflicted.
 
-define double @negation_propagation(double* %arg, double %arg1, double %arg2) {
+define double @negation_propagation(ptr %arg, double %arg1, double %arg2) {
 ; CHECK-LABEL: negation_propagation:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d2, #1.00000000

@@ -189,7 +189,7 @@ void Thumb2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     // Thumb2 STRD expects its dest-registers to be in rGPR. Not a problem for
     // gsub_0, but needs an extra constraint for gsub_1 (which could be sp
     // otherwise).
-    if (Register::isVirtualRegister(SrcReg)) {
+    if (SrcReg.isVirtual()) {
       MachineRegisterInfo *MRI = &MF.getRegInfo();
       MRI->constrainRegClass(SrcReg, &ARM::GPRPairnospRegClass);
     }
@@ -232,7 +232,7 @@ void Thumb2InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     // Thumb2 LDRD expects its dest-registers to be in rGPR. Not a problem for
     // gsub_0, but needs an extra constraint for gsub_1 (which could be sp
     // otherwise).
-    if (Register::isVirtualRegister(DestReg)) {
+    if (DestReg.isVirtual()) {
       MachineRegisterInfo *MRI = &MF.getRegInfo();
       MRI->constrainRegClass(DestReg, &ARM::GPRPairnospRegClass);
     }
@@ -242,7 +242,7 @@ void Thumb2InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead, TRI);
     MIB.addFrameIndex(FI).addImm(0).addMemOperand(MMO).add(predOps(ARMCC::AL));
 
-    if (Register::isPhysicalRegister(DestReg))
+    if (DestReg.isPhysical())
       MIB.addReg(DestReg, RegState::ImplicitDefine);
     return;
   }
@@ -398,8 +398,8 @@ void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
     } else {
       // Use one T2 instruction to reduce NumBytes
       // FIXME: Move this to ARMAddressingModes.h?
-      unsigned RotAmt = countLeadingZeros(ThisVal);
-      ThisVal = ThisVal & ARM_AM::rotr32(0xff000000U, RotAmt);
+      unsigned RotAmt = llvm::countl_zero(ThisVal);
+      ThisVal = ThisVal & llvm::rotr<uint32_t>(0xff000000U, RotAmt);
       NumBytes &= ~ThisVal;
       assert(ARM_AM::getT2SOImmVal(ThisVal) != -1 &&
              "Bit extraction didn't work?");
@@ -603,8 +603,8 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 
     // Otherwise, extract 8 adjacent bits from the immediate into this
     // t2ADDri/t2SUBri.
-    unsigned RotAmt = countLeadingZeros<unsigned>(Offset);
-    unsigned ThisImmVal = Offset & ARM_AM::rotr32(0xff000000U, RotAmt);
+    unsigned RotAmt = llvm::countl_zero<unsigned>(Offset);
+    unsigned ThisImmVal = Offset & llvm::rotr<uint32_t>(0xff000000U, RotAmt);
 
     // We will handle these bits from offset, clear them.
     Offset &= ~ThisImmVal;
@@ -722,9 +722,8 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
     int ImmedOffset = Offset / Scale;
     unsigned Mask = (1 << NumBits) - 1;
     if ((unsigned)Offset <= Mask * Scale &&
-        (Register::isVirtualRegister(FrameReg) ||
-         RegClass->contains(FrameReg))) {
-      if (Register::isVirtualRegister(FrameReg)) {
+        (FrameReg.isVirtual() || RegClass->contains(FrameReg))) {
+      if (FrameReg.isVirtual()) {
         // Make sure the register class for the virtual register is correct
         MachineRegisterInfo *MRI = &MF.getRegInfo();
         if (!MRI->constrainRegClass(FrameReg, RegClass))
@@ -763,8 +762,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   }
 
   Offset = (isSub) ? -Offset : Offset;
-  return Offset == 0 && (Register::isVirtualRegister(FrameReg) ||
-                         RegClass->contains(FrameReg));
+  return Offset == 0 && (FrameReg.isVirtual() || RegClass->contains(FrameReg));
 }
 
 ARMCC::CondCodes llvm::getITInstrPredicate(const MachineInstr &MI,
@@ -778,11 +776,8 @@ ARMCC::CondCodes llvm::getITInstrPredicate(const MachineInstr &MI,
 int llvm::findFirstVPTPredOperandIdx(const MachineInstr &MI) {
   const MCInstrDesc &MCID = MI.getDesc();
 
-  if (!MCID.OpInfo)
-    return -1;
-
   for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
-    if (ARM::isVpred(MCID.OpInfo[i].OperandType))
+    if (ARM::isVpred(MCID.operands()[i].OperandType))
       return i;
 
   return -1;

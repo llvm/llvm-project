@@ -13,9 +13,9 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 
 #include <chrono>
+#include <optional>
 
 class SelectHelper {
 public:
@@ -65,7 +65,7 @@ protected:
         write_is_set : 1, error_is_set : 1;
   };
   llvm::DenseMap<lldb::socket_t, FDInfo> m_fd_map;
-  llvm::Optional<std::chrono::steady_clock::time_point> m_end_time;
+  std::optional<std::chrono::steady_clock::time_point> m_end_time;
 };
 
 #endif // LLDB_UTILITY_SELECTHELPER_H

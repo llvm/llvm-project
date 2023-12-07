@@ -13,7 +13,7 @@ define void @test_compress_undef_float_passthrough() {
 entry:                                          ; preds = %loop.50
   %0 = bitcast i4 undef to <4 x i1>
   %1 = call <4 x double> @llvm.x86.avx512.mask.compress.v4f64(<4 x double> undef, <4 x double> undef, <4 x i1> <i1 1, i1 0, i1 1, i1 0>)
-  call void @llvm.masked.scatter.v4f64.v4p0f64(<4 x double> %1, <4 x double*> undef, i32 0, <4 x i1> %0)
+  call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> %1, <4 x ptr> undef, i32 0, <4 x i1> %0)
   ret void
 }
 
@@ -21,5 +21,5 @@ entry:                                          ; preds = %loop.50
 declare <4 x double> @llvm.x86.avx512.mask.compress.v4f64(<4 x double>, <4 x double>, <4 x i1>)
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn writeonly
-declare void @llvm.masked.scatter.v4f64.v4p0f64(<4 x double>, <4 x double*>, i32 immarg, <4 x i1>)
+declare void @llvm.masked.scatter.v4f64.v4p0(<4 x double>, <4 x ptr>, i32 immarg, <4 x i1>)
 

@@ -247,7 +247,7 @@ LLDB_NUMBER_TYPEMAP(enum SWIGTYPE);
 // Typemap for file handles (e.g. used in SBDebugger::GetOutputFileHandle)
 
 %typemap(out) lldb::FileSP {
-  lldb::FileSP &sp = $1;
+  lldb::FileSP sp = $1;
   if (sp && sp->IsValid()) {
     luaL_Stream *p = (luaL_Stream *)lua_newuserdata(L, sizeof(luaL_Stream));
     p->closef = &LLDBSwigLuaCloseFileHandle;

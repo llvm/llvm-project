@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify
 
-// rdar://12645424, crash due to a double-free
+// Crash due to a double-free
 
 template<typename _Tp> struct __add_lvalue_reference_helper {};
 template<typename _Tp> struct add_lvalue_reference :  __add_lvalue_reference_helper<_Tp> {

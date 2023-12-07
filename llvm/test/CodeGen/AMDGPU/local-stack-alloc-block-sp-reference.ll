@@ -16,7 +16,7 @@
 ; so eliminateFrameIndex would not adjust the access to use the
 ; correct FP offset.
 
-define amdgpu_kernel void @local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; MUBUF-LABEL: local_stack_offset_uses_sp:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s9
@@ -61,10 +61,10 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s2, s5
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
-; FLATSCR-NEXT:    s_movk_i32 vcc_hi, 0x2000
-; FLATSCR-NEXT:    s_mov_b32 s2, 0
-; FLATSCR-NEXT:    scratch_store_dword off, v0, vcc_hi
+; FLATSCR-NEXT:    s_movk_i32 s2, 0x2000
+; FLATSCR-NEXT:    scratch_store_dword off, v0, s2
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    s_mov_b32 s2, 0
 ; FLATSCR-NEXT:  .LBB0_1: ; %loadstoreloop
 ; FLATSCR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; FLATSCR-NEXT:    s_add_i32 s3, s2, 0x3000
@@ -92,19 +92,18 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 entry:
   %pin.low = alloca i32, align 8192, addrspace(5)
   %local.area = alloca [1060 x i64], align 4096, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %pin.low
-  %local.area.cast = bitcast [1060 x i64] addrspace(5)* %local.area to i8 addrspace(5)*
-  call void @llvm.memset.p5i8.i32(i8 addrspace(5)* align 4 %local.area.cast, i8 0, i32 8480, i1 true)
-  %gep.large.offset = getelementptr inbounds [1060 x i64], [1060 x i64] addrspace(5)* %local.area, i64 0, i64 1050
-  %gep.small.offset = getelementptr inbounds [1060 x i64], [1060 x i64] addrspace(5)* %local.area, i64 0, i64 8
-  %load0 = load volatile i64, i64 addrspace(5)* %gep.large.offset
-  %load1 = load volatile i64, i64 addrspace(5)* %gep.small.offset
+  store volatile i32 0, ptr addrspace(5) %pin.low
+  call void @llvm.memset.p5.i32(ptr addrspace(5) align 4 %local.area, i8 0, i32 8480, i1 true)
+  %gep.large.offset = getelementptr inbounds [1060 x i64], ptr addrspace(5) %local.area, i64 0, i64 1050
+  %gep.small.offset = getelementptr inbounds [1060 x i64], ptr addrspace(5) %local.area, i64 0, i64 8
+  %load0 = load volatile i64, ptr addrspace(5) %gep.large.offset
+  %load1 = load volatile i64, ptr addrspace(5) %gep.small.offset
   %add0 = add i64 %load0, %load1
-  store volatile i64 %add0, i64 addrspace(1)* %out
+  store volatile i64 %add0, ptr addrspace(1) %out
   ret void
 }
 
-define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
+define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; MUBUF-LABEL: func_local_stack_offset_uses_sp:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -156,14 +155,14 @@ define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 ; FLATSCR-NEXT:    s_and_b32 s33, s33, 0xffffe000
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 0x8000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
-; FLATSCR-NEXT:    s_add_i32 vcc_hi, s33, 0x2000
-; FLATSCR-NEXT:    s_mov_b32 s0, 0
-; FLATSCR-NEXT:    scratch_store_dword off, v2, vcc_hi
+; FLATSCR-NEXT:    s_add_i32 s0, s33, 0x2000
+; FLATSCR-NEXT:    scratch_store_dword off, v2, s0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:  .LBB1_1: ; %loadstoreloop
 ; FLATSCR-NEXT:    ; =>This Inner Loop Header: Depth=1
-; FLATSCR-NEXT:    s_add_i32 vcc_hi, s33, 0x3000
-; FLATSCR-NEXT:    s_add_i32 s1, s0, vcc_hi
+; FLATSCR-NEXT:    s_add_i32 s3, s33, 0x3000
+; FLATSCR-NEXT:    s_add_i32 s1, s0, s3
 ; FLATSCR-NEXT:    s_add_i32 s0, s0, 1
 ; FLATSCR-NEXT:    s_cmpk_lt_u32 s0, 0x2120
 ; FLATSCR-NEXT:    scratch_store_byte off, v2, s1
@@ -188,19 +187,18 @@ define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 entry:
   %pin.low = alloca i32, align 8192, addrspace(5)
   %local.area = alloca [1060 x i64], align 4096, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %pin.low
-  %local.area.cast = bitcast [1060 x i64] addrspace(5)* %local.area to i8 addrspace(5)*
-  call void @llvm.memset.p5i8.i32(i8 addrspace(5)* align 4 %local.area.cast, i8 0, i32 8480, i1 true)
-  %gep.large.offset = getelementptr inbounds [1060 x i64], [1060 x i64] addrspace(5)* %local.area, i64 0, i64 1050
-  %gep.small.offset = getelementptr inbounds [1060 x i64], [1060 x i64] addrspace(5)* %local.area, i64 0, i64 8
-  %load0 = load volatile i64, i64 addrspace(5)* %gep.large.offset
-  %load1 = load volatile i64, i64 addrspace(5)* %gep.small.offset
+  store volatile i32 0, ptr addrspace(5) %pin.low
+  call void @llvm.memset.p5.i32(ptr addrspace(5) align 4 %local.area, i8 0, i32 8480, i1 true)
+  %gep.large.offset = getelementptr inbounds [1060 x i64], ptr addrspace(5) %local.area, i64 0, i64 1050
+  %gep.small.offset = getelementptr inbounds [1060 x i64], ptr addrspace(5) %local.area, i64 0, i64 8
+  %load0 = load volatile i64, ptr addrspace(5) %gep.large.offset
+  %load1 = load volatile i64, ptr addrspace(5) %gep.small.offset
   %add0 = add i64 %load0, %load1
-  store volatile i64 %add0, i64 addrspace(1)* %out
+  store volatile i64 %add0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @local_stack_offset_uses_sp_flat(<3 x i64> addrspace(1)* %out) {
+define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out) {
 ; MUBUF-LABEL: local_stack_offset_uses_sp_flat:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s9
@@ -235,35 +233,35 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(<3 x i64> addrspace(1
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_or_b32_e32 v1, 0x12cc, v0
 ; MUBUF-NEXT:    v_or_b32_e32 v0, 0x12c8, v0
-; MUBUF-NEXT:    v_mov_b32_e32 v18, 0x4000
-; MUBUF-NEXT:    v_mov_b32_e32 v17, 0x4000
-; MUBUF-NEXT:    v_mov_b32_e32 v16, 0x4000
+; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x4000
 ; MUBUF-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_mov_b32_e32 v15, 0x4000
+; MUBUF-NEXT:    v_mov_b32_e32 v3, 0x4000
 ; MUBUF-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_mov_b32_e32 v14, 0x4000
-; MUBUF-NEXT:    buffer_load_dword v8, v18, s[0:3], 0 offen glc
+; MUBUF-NEXT:    v_mov_b32_e32 v10, 0x4000
+; MUBUF-NEXT:    buffer_load_dword v8, v2, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v9, v17, s[0:3], 0 offen offset:4 glc
+; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x4000
+; MUBUF-NEXT:    buffer_load_dword v9, v2, s[0:3], 0 offen offset:4 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v2, v16, s[0:3], 0 offen offset:8 glc
+; MUBUF-NEXT:    v_mov_b32_e32 v11, 0x4000
+; MUBUF-NEXT:    buffer_load_dword v2, v3, s[0:3], 0 offen offset:8 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v3, v15, s[0:3], 0 offen offset:12 glc
-; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v10, v14, s[0:3], 0 offen offset:16 glc
-; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_mov_b32_e32 v13, 0x4000
-; MUBUF-NEXT:    buffer_load_dword v11, v13, s[0:3], 0 offen offset:20 glc
+; MUBUF-NEXT:    v_mov_b32_e32 v12, 0x4000
+; MUBUF-NEXT:    buffer_load_dword v3, v10, s[0:3], 0 offen offset:12 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; MUBUF-NEXT:    v_mov_b32_e32 v12, 0
+; MUBUF-NEXT:    buffer_load_dword v10, v11, s[0:3], 0 offen offset:16 glc
+; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v2
+; MUBUF-NEXT:    buffer_load_dword v11, v12, s[0:3], 0 offen offset:20 glc
+; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_addc_co_u32_e32 v3, vcc, v1, v3, vcc
 ; MUBUF-NEXT:    v_add_co_u32_e32 v0, vcc, v7, v8
 ; MUBUF-NEXT:    v_addc_co_u32_e32 v1, vcc, v6, v9, vcc
 ; MUBUF-NEXT:    v_add_co_u32_e32 v4, vcc, v4, v10
+; MUBUF-NEXT:    v_mov_b32_e32 v12, 0
 ; MUBUF-NEXT:    v_addc_co_u32_e32 v5, vcc, v5, v11, vcc
 ; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    global_store_dwordx2 v12, v[4:5], s[4:5] offset:16
@@ -277,9 +275,8 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(<3 x i64> addrspace(1
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s2, s5
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
-; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
 ; FLATSCR-NEXT:    s_mov_b32 s2, 0
-; FLATSCR-NEXT:    scratch_store_dword off, v0, vcc_hi offset:1024
+; FLATSCR-NEXT:    scratch_store_dword off, v0, s2 offset:1024
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:  .LBB2_1: ; %loadstoreloop
 ; FLATSCR-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -296,9 +293,8 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(<3 x i64> addrspace(1
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_dwordx4 v[0:3], off, s2 offset:704 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    s_movk_i32 s3, 0x2000
 ; FLATSCR-NEXT:    s_movk_i32 s2, 0x2000
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[10:11], off, s3 offset:16 glc
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[10:11], off, s2 offset:16 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_dwordx4 v[4:7], off, s2 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -319,18 +315,16 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(<3 x i64> addrspace(1
 entry:
   %pin.low = alloca i32, align 1024, addrspace(5)
   %local.area = alloca [160 x <3 x i64>], align 8192, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %pin.low
-  %local.area.cast = bitcast [160 x <3 x i64>] addrspace(5)* %local.area to i8 addrspace(5)*
-  call void @llvm.memset.p5i8.i32(i8 addrspace(5)* align 4 %local.area.cast, i8 0, i32 8480, i1 true)
-  %gep.large.offset = getelementptr inbounds [160 x <3 x i64>], [160 x <3 x i64>] addrspace(5)* %local.area, i64 0, i64 150
-  %gep.small.offset = getelementptr inbounds [160 x <3 x i64>], [160 x <3 x i64>] addrspace(5)* %local.area, i64 0, i64 0
-  %load0 = load volatile <3 x i64>, <3 x i64> addrspace(5)* %gep.large.offset
-  %load1 = load volatile <3 x i64>, <3 x i64> addrspace(5)* %gep.small.offset
+  store volatile i32 0, ptr addrspace(5) %pin.low
+  call void @llvm.memset.p5.i32(ptr addrspace(5) align 4 %local.area, i8 0, i32 8480, i1 true)
+  %gep.large.offset = getelementptr inbounds [160 x <3 x i64>], ptr addrspace(5) %local.area, i64 0, i64 150
+  %load0 = load volatile <3 x i64>, ptr addrspace(5) %gep.large.offset
+  %load1 = load volatile <3 x i64>, ptr addrspace(5) %local.area
   %add0 = add <3 x i64> %load0, %load1
-  store volatile <3 x i64> %add0, <3 x i64> addrspace(1)* %out
+  store volatile <3 x i64> %add0, ptr addrspace(1) %out
   ret void
 }
 
-declare void @llvm.memset.p5i8.i32(i8 addrspace(5)* nocapture writeonly, i8, i32, i1 immarg) #0
+declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, i1 immarg) #0
 
 attributes #0 = { argmemonly nounwind willreturn writeonly }

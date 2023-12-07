@@ -6,16 +6,16 @@
 
 ; CHECK-NOT: if ({{!?}}p{{[0-3]}}) jump:t
 
-%s.0 = type { %s.0*, i8 }
+%s.0 = type { ptr, i8 }
 
-define i32 @f0(%s.0** nocapture %a0, i32 %a1) #0 {
+define i32 @f0(ptr nocapture %a0, i32 %a1) #0 {
 b0:
   %v0 = and i32 %a1, 63
   %v1 = icmp eq i32 %v0, %a1
   br i1 %v1, label %b1, label %b7
 
 b1:                                               ; preds = %b0
-  %v2 = tail call i8* @f1()
+  %v2 = tail call ptr @f1()
   br label %b2
 
 b2:                                               ; preds = %b4, %b1
@@ -26,8 +26,8 @@ b2:                                               ; preds = %b4, %b1
   br i1 %v6, label %b3, label %b5
 
 b3:                                               ; preds = %b2
-  %v7 = tail call %s.0* @f2(i8* undef, i8* %v2)
-  %v8 = icmp eq %s.0* %v7, null
+  %v7 = tail call ptr @f2(ptr undef, ptr %v2)
+  %v8 = icmp eq ptr %v7, null
   br i1 %v8, label %b7, label %b4
 
 b4:                                               ; preds = %b3
@@ -45,8 +45,8 @@ b7:                                               ; preds = %b6, %b5, %b3, %b0
   ret i32 %v10
 }
 
-declare i8* @f1()
+declare ptr @f1()
 
-declare %s.0* @f2(i8*, i8*)
+declare ptr @f2(ptr, ptr)
 
 attributes #0 = { nounwind "target-cpu"="hexagonv55" }

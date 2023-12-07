@@ -37,11 +37,11 @@
 
 #include "automemcpy/CodeGen.h"
 #include <cassert>
-#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/StringSet.h>
 #include <llvm/Support/FormatVariadic.h>
 #include <llvm/Support/raw_ostream.h>
+#include <optional>
 #include <set>
 
 namespace llvm {
@@ -126,9 +126,9 @@ struct FunctionImplementation {
   StringRef Name;
   std::vector<Individual> Individuals;
   std::vector<Overlap> Overlaps;
-  Optional<Loop> Loop;
-  Optional<AlignedLoop> AlignedLoop;
-  Optional<Accelerator> Accelerator;
+  std::optional<Loop> Loop;
+  std::optional<AlignedLoop> AlignedLoop;
+  std::optional<Accelerator> Accelerator;
   ElementTypeClass ElementClass;
 };
 
@@ -314,7 +314,7 @@ namespace descriptors {
 //     {"memcpy_0x8661D80472487AB5",{FunctionType::MEMCPY,Contiguous{{0,1}},std::nullopt,std::nullopt,std::nullopt,Accelerator{{1,kMaxSize}},ElementTypeClass::NATIVE}},
 //     ...
 //   };
-//   return makeArrayRef(kDescriptors);
+//   return ArrayRef(kDescriptors);
 // }
 
 static raw_ostream &operator<<(raw_ostream &Stream, const SizeSpan &SS) {
@@ -377,7 +377,7 @@ static raw_ostream &operator<<(raw_ostream &Stream, const FunctionType &T) {
 }
 template <typename T>
 static raw_ostream &operator<<(raw_ostream &Stream,
-                               const llvm::Optional<T> &MaybeT) {
+                               const std::optional<T> &MaybeT) {
   if (MaybeT)
     return Stream << *MaybeT;
   return Stream << "std::nullopt";
@@ -415,7 +415,7 @@ static void Serialize(raw_ostream &Stream,
     Stream << kIndent << kIndent << Descriptors[I] << ",\n";
   }
   Stream << R"(  };
-  return makeArrayRef(kDescriptors);
+  return ArrayRef(kDescriptors);
 }
 )";
 }
@@ -434,7 +434,7 @@ namespace configurations {
 //     {Wrap<memcpy_0x8661D80472487AB5>, "memcpy_0x8661D80472487AB5"},
 //     ...
 //   };
-//   return llvm::makeArrayRef(kConfigurations);
+//   return llvm::ArrayRef(kConfigurations);
 // }
 
 // The `Wrap` template function is provided in the `Main` function below.
@@ -509,7 +509,7 @@ static raw_ostream &operator<<(raw_ostream &Stream, const Configuration &C) {
            << " kConfigurations[] = {\n";
     Stream << C.Descriptors;
     Stream << kIndent << "};\n";
-    Stream << kIndent << "return llvm::makeArrayRef(kConfigurations);\n";
+    Stream << kIndent << "return llvm::ArrayRef(kConfigurations);\n";
   }
   Stream << "}\n";
   return Stream;

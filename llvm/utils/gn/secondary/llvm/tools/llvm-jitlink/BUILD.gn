@@ -9,11 +9,13 @@ executable("llvm-jitlink") {
     "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "llvm-jitlink-coff.cpp",
     "llvm-jitlink-elf.cpp",
     "llvm-jitlink-macho.cpp",
+    "llvm-jitlink-statistics.cpp",
     "llvm-jitlink.cpp",
   ]
   if (host_os != "mac" && host_os != "win") {

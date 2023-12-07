@@ -116,9 +116,8 @@ end subroutine
 subroutine assumed_length_param(n)
   character(*), parameter :: c(1)=(/"abcd"/)
   integer :: n
-  ! CHECK: %[[c4:.*]] = arith.constant 4 : index
-  ! CHECK: %[[len:.*]] = fir.convert %[[c4]] : (index) -> i64
-  ! CHECK: fir.store %[[len]] to %[[tmp:.*]] : !fir.ref<i64>
+  ! CHECK: %[[c4:.*]] = arith.constant 4 : i64
+  ! CHECK: fir.store %[[c4]] to %[[tmp:.*]] : !fir.ref<i64>
   ! CHECK: fir.call @_QPtake_int(%[[tmp]]) {{.*}}: (!fir.ref<i64>) -> ()
   call take_int(len(c(n), kind=8))
 end

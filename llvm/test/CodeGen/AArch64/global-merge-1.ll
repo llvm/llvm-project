@@ -15,8 +15,8 @@ define void @f1(i32 %a1, i32 %a2) {
 ;CHECK-APPLE-IOS: adrp	x8, __MergedGlobals@PAGE
 ;CHECK-APPLE-IOS-NOT: adrp
 ;CHECK-APPLE-IOS: add	x8, x8, __MergedGlobals@PAGEOFF
-  store i32 %a1, i32* @m, align 4
-  store i32 %a2, i32* @n, align 4
+  store i32 %a1, ptr @m, align 4
+  store i32 %a2, ptr @n, align 4
   ret void
 }
 

@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <map>
+#include <optional>
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -255,7 +256,7 @@ CATEGORY(REFACTORING, ANALYSIS)
   return Found;
 }
 
-static DiagnosticMapping GetDefaultDiagMapping(unsigned DiagID) {
+DiagnosticMapping DiagnosticIDs::getDefaultMapping(unsigned DiagID) {
   DiagnosticMapping Info = DiagnosticMapping::Make(
       diag::Severity::Fatal, /*IsUser=*/false, /*IsPragma=*/false);
 
@@ -290,21 +291,6 @@ namespace {
       return StringRef(NameStr, NameLen);
     }
   };
-}
-
-// Unfortunately, the split between DiagnosticIDs and Diagnostic is not
-// particularly clean, but for now we just implement this method here so we can
-// access GetDefaultDiagMapping.
-DiagnosticMapping &
-DiagnosticsEngine::DiagState::getOrAddMapping(diag::kind Diag) {
-  std::pair<iterator, bool> Result =
-      DiagMap.insert(std::make_pair(Diag, DiagnosticMapping()));
-
-  // Initialize the entry if we added it.
-  if (Result.second)
-    Result.first->second = GetDefaultDiagMapping(Diag);
-
-  return Result.first->second;
 }
 
 static const StaticDiagCategoryRec CategoryNameTable[] = {
@@ -448,7 +434,7 @@ bool DiagnosticIDs::isBuiltinExtensionDiag(unsigned DiagID,
     return false;
 
   EnabledByDefault =
-      GetDefaultDiagMapping(DiagID).getSeverity() != diag::Severity::Ignored;
+      getDefaultMapping(DiagID).getSeverity() != diag::Severity::Ignored;
   return true;
 }
 
@@ -456,7 +442,7 @@ bool DiagnosticIDs::isDefaultMappingAsError(unsigned DiagID) {
   if (DiagID >= diag::DIAG_UPPER_LIMIT)
     return false;
 
-  return GetDefaultDiagMapping(DiagID).getSeverity() >= diag::Severity::Error;
+  return getDefaultMapping(DiagID).getSeverity() >= diag::Severity::Error;
 }
 
 /// getDescription - Given a diagnostic ID, return a description of the
@@ -634,7 +620,7 @@ StringRef DiagnosticIDs::getWarningOptionForGroup(diag::Group Group) {
   return OptionTable[static_cast<int>(Group)].getName();
 }
 
-llvm::Optional<diag::Group>
+std::optional<diag::Group>
 DiagnosticIDs::getGroupForWarningOption(StringRef Name) {
   const auto *Found = llvm::partition_point(
       OptionTable, [=](const WarningOption &O) { return O.getName() < Name; });
@@ -643,7 +629,7 @@ DiagnosticIDs::getGroupForWarningOption(StringRef Name) {
   return static_cast<diag::Group>(Found - OptionTable);
 }
 
-llvm::Optional<diag::Group> DiagnosticIDs::getGroupForDiag(unsigned DiagID) {
+std::optional<diag::Group> DiagnosticIDs::getGroupForDiag(unsigned DiagID) {
   if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
     return static_cast<diag::Group>(Info->getOptionGroupIndex());
   return std::nullopt;
@@ -703,7 +689,7 @@ static bool getDiagnosticsInGroup(diag::Flavor Flavor,
 bool
 DiagnosticIDs::getDiagnosticsInGroup(diag::Flavor Flavor, StringRef Group,
                                      SmallVectorImpl<diag::kind> &Diags) const {
-  if (llvm::Optional<diag::Group> G = getGroupForWarningOption(Group))
+  if (std::optional<diag::Group> G = getGroupForWarningOption(Group))
     return ::getDiagnosticsInGroup(
         Flavor, &OptionTable[static_cast<unsigned>(*G)], Diags);
   return true;

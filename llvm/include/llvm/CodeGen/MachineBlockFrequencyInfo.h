@@ -66,6 +66,7 @@ public:
   /// Compute the frequency of the block, relative to the entry block.
   /// This API assumes getEntryFreq() is non-zero.
   float getBlockFreqRelativeToEntryBlock(const MachineBasicBlock *MBB) const {
+    assert(getEntryFreq() != 0 && "getEntryFreq() should not return 0 here!");
     return getBlockFreq(MBB).getFrequency() * (1.0f / getEntryFreq());
   }
 

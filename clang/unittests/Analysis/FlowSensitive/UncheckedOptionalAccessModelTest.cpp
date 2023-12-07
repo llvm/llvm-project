@@ -11,14 +11,15 @@
 #include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1266,6 +1267,12 @@ struct OptionalTypeIdentifier {
   std::string TypeName;
 };
 
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const OptionalTypeIdentifier &TypeId) {
+  OS << TypeId.NamespaceName << "::" << TypeId.TypeName;
+  return OS;
+}
+
 class UncheckedOptionalAccessTest
     : public ::testing::TestWithParam<OptionalTypeIdentifier> {
 protected:
@@ -1273,7 +1280,6 @@ protected:
     ExpectDiagnosticsFor(SourceCode, ast_matchers::hasName("target"));
   }
 
-private:
   template <typename FuncDeclMatcher>
   void ExpectDiagnosticsFor(std::string SourceCode,
                             FuncDeclMatcher FuncMatcher) {
@@ -1316,8 +1322,7 @@ private:
                     ASTContext &Ctx, const CFGElement &Elt,
                     const TransferStateForDiagnostics<NoopLattice>
                         &State) mutable {
-                  auto EltDiagnostics =
-                      Diagnoser.diagnose(Ctx, &Elt, State.Env);
+                  auto EltDiagnostics = Diagnoser(Elt, Ctx, State);
                   llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
                 })
             .withASTBuildArgs(
@@ -1335,7 +1340,17 @@ private:
           auto &SrcMgr = AO.ASTCtx.getSourceManager();
           llvm::DenseSet<unsigned> DiagnosticLines;
           for (SourceLocation &Loc : Diagnostics) {
-            DiagnosticLines.insert(SrcMgr.getPresumedLineNumber(Loc));
+            unsigned Line = SrcMgr.getPresumedLineNumber(Loc);
+            DiagnosticLines.insert(Line);
+            if (!AnnotationLines.contains(Line)) {
+              IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(
+                  new DiagnosticOptions());
+              TextDiagnostic TD(llvm::errs(), AO.ASTCtx.getLangOpts(),
+                                DiagOpts.get());
+              TD.emitDiagnostic(
+                  FullSourceLoc(Loc, SrcMgr), DiagnosticsEngine::Error,
+                  "unexpected diagnostic", std::nullopt, std::nullopt);
+            }
           }
 
           EXPECT_THAT(DiagnosticLines, ContainerEq(AnnotationLines));
@@ -1353,6 +1368,25 @@ INSTANTIATE_TEST_SUITE_P(
     [](const ::testing::TestParamInfo<OptionalTypeIdentifier> &Info) {
       return Info.param.NamespaceName;
     });
+
+// Verifies that similarly-named types are ignored.
+TEST_P(UncheckedOptionalAccessTest, NonTrackedOptionalType) {
+  ExpectDiagnosticsFor(
+      R"(
+    namespace other {
+    namespace $ns {
+    template <typename T>
+    struct $optional {
+      T value();
+    };
+    }
+
+    void target($ns::$optional<int> opt) {
+      opt.value();
+    }
+    }
+  )");
+}
 
 TEST_P(UncheckedOptionalAccessTest, EmptyFunctionBody) {
   ExpectDiagnosticsFor(R"(
@@ -1494,6 +1528,23 @@ TEST_P(UncheckedOptionalAccessTest, NulloptConstructor) {
 
     void target() {
       $ns::$optional<int> opt($ns::nullopt);
+      opt.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, NulloptConstructorWithSugaredType) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+    template <typename T>
+    using wrapper = T;
+
+    template <typename T>
+    wrapper<T> wrap(T);
+
+    void target() {
+      $ns::$optional<int> opt(wrap($ns::nullopt));
       opt.value(); // [[unsafe]]
     }
   )");
@@ -1749,8 +1800,7 @@ TEST_P(UncheckedOptionalAccessTest, ValueOr) {
   )");
 }
 
-TEST_P(UncheckedOptionalAccessTest, ValueOrComparison) {
-  // Pointers.
+TEST_P(UncheckedOptionalAccessTest, ValueOrComparisonPointers) {
   ExpectDiagnosticsFor(
       R"code(
     #include "unchecked_optional_access_test.h"
@@ -1763,8 +1813,9 @@ TEST_P(UncheckedOptionalAccessTest, ValueOrComparison) {
       }
     }
   )code");
+}
 
-  // Integers.
+TEST_P(UncheckedOptionalAccessTest, ValueOrComparisonIntegers) {
   ExpectDiagnosticsFor(
       R"code(
     #include "unchecked_optional_access_test.h"
@@ -1777,8 +1828,9 @@ TEST_P(UncheckedOptionalAccessTest, ValueOrComparison) {
       }
     }
   )code");
+}
 
-  // Strings.
+TEST_P(UncheckedOptionalAccessTest, ValueOrComparisonStrings) {
   ExpectDiagnosticsFor(
       R"code(
     #include "unchecked_optional_access_test.h"
@@ -1804,9 +1856,9 @@ TEST_P(UncheckedOptionalAccessTest, ValueOrComparison) {
       }
     }
   )code");
+}
 
-  // Pointer-to-optional.
-  //
+TEST_P(UncheckedOptionalAccessTest, ValueOrComparisonPointerToOptional) {
   // FIXME: make `opt` a parameter directly, once we ensure that all `optional`
   // values have a `has_value` property.
   ExpectDiagnosticsFor(
@@ -2103,6 +2155,139 @@ TEST_P(UncheckedOptionalAccessTest, StdSwap) {
       opt1.value();
 
       opt2.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, SwapUnmodeledLocLeft) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct L { $ns::$optional<int> hd; L* tl; };
+
+    void target() {
+      $ns::$optional<int> foo = 3;
+      L bar;
+
+      // Any `tl` beyond the first is not modeled.
+      bar.tl->tl->hd.swap(foo);
+
+      bar.tl->tl->hd.value(); // [[unsafe]]
+      foo.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, SwapUnmodeledLocRight) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct L { $ns::$optional<int> hd; L* tl; };
+
+    void target() {
+      $ns::$optional<int> foo = 3;
+      L bar;
+
+      // Any `tl` beyond the first is not modeled.
+      foo.swap(bar.tl->tl->hd);
+
+      bar.tl->tl->hd.value(); // [[unsafe]]
+      foo.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, SwapUnmodeledValueLeftSet) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct S { int x; };
+    struct A { $ns::$optional<S> late; };
+    struct B { A f3; };
+    struct C { B f2; };
+    struct D { C f1; };
+
+    void target() {
+      $ns::$optional<S> foo = S{3};
+      D bar;
+
+      bar.f1.f2.f3.late.swap(foo);
+
+      bar.f1.f2.f3.late.value();
+      foo.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, SwapUnmodeledValueLeftUnset) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct S { int x; };
+    struct A { $ns::$optional<S> late; };
+    struct B { A f3; };
+    struct C { B f2; };
+    struct D { C f1; };
+
+    void target() {
+      $ns::$optional<S> foo;
+      D bar;
+
+      bar.f1.f2.f3.late.swap(foo);
+
+      bar.f1.f2.f3.late.value(); // [[unsafe]]
+      foo.value(); // [[unsafe]]
+    }
+  )");
+}
+
+// fixme: use recursion instead of depth.
+TEST_P(UncheckedOptionalAccessTest, SwapUnmodeledValueRightSet) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct S { int x; };
+    struct A { $ns::$optional<S> late; };
+    struct B { A f3; };
+    struct C { B f2; };
+    struct D { C f1; };
+
+    void target() {
+      $ns::$optional<S> foo = S{3};
+      D bar;
+
+      foo.swap(bar.f1.f2.f3.late);
+
+      bar.f1.f2.f3.late.value();
+      foo.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, SwapUnmodeledValueRightUnset) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct S { int x; };
+    struct A { $ns::$optional<S> late; };
+    struct B { A f3; };
+    struct C { B f2; };
+    struct D { C f1; };
+
+    void target() {
+      $ns::$optional<S> foo;
+      D bar;
+
+      foo.swap(bar.f1.f2.f3.late);
+
+      bar.f1.f2.f3.late.value(); // [[unsafe]]
+      foo.value(); // [[unsafe]]
     }
   )");
 }
@@ -2595,9 +2780,6 @@ TEST_P(UncheckedOptionalAccessTest, OptionalValueStruct) {
 }
 
 TEST_P(UncheckedOptionalAccessTest, OptionalValueInitialization) {
-  // FIXME: Fix when to initialize `value`. All unwrapping should be safe in
-  // this example, but `value` initialization is done multiple times during the
-  // fixpoint iterations and joining the environment won't correctly merge them.
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"
@@ -2617,7 +2799,7 @@ TEST_P(UncheckedOptionalAccessTest, OptionalValueInitialization) {
       }
       // Now we merge the two values. UncheckedOptionalAccessModel::merge() will
       // throw away the "value" property.
-      foo->value(); // [[unsafe]]
+      foo->value();
     }
   )");
 }
@@ -2732,19 +2914,6 @@ TEST_P(UncheckedOptionalAccessTest, CorrelatedBranches) {
       }
     }
   )");
-
-  // FIXME: Add support for operator==.
-  // ExpectDiagnosticsFor(R"(
-  //   #include "unchecked_optional_access_test.h"
-  //
-  //   void target($ns::$optional<int> opt1, $ns::$optional<int> opt2) {
-  //     if (opt1 == opt2) {
-  //       if (opt1.has_value()) {
-  //         opt2.value();
-  //       }
-  //     }
-  //   }
-  // )");
 }
 
 TEST_P(UncheckedOptionalAccessTest, JoinDistinctValues) {
@@ -2830,7 +2999,7 @@ TEST_P(UncheckedOptionalAccessTest, JoinDistinctValues) {
   )code");
 }
 
-TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoop) {
+TEST_P(UncheckedOptionalAccessTest, AccessValueInLoop) {
   ExpectDiagnosticsFor(R"(
     #include "unchecked_optional_access_test.h"
 
@@ -2841,7 +3010,9 @@ TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoop) {
       }
     }
   )");
+}
 
+TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoopWithCheckSafe) {
   ExpectDiagnosticsFor(R"(
     #include "unchecked_optional_access_test.h"
 
@@ -2855,7 +3026,9 @@ TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoop) {
       }
     }
   )");
+}
 
+TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoopNoCheckUnsafe) {
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"
@@ -2869,7 +3042,60 @@ TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoop) {
       }
     }
   )");
+}
 
+TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoopToUnsetUnsafe) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = 3;
+      while (Make<bool>())
+        opt = $ns::nullopt;
+      $ns::$optional<int> opt2 = $ns::nullopt;
+      if (opt.has_value())
+        opt2 = $ns::$optional<int>(3);
+      opt2.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoopToSetUnsafe) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = $ns::nullopt;
+      while (Make<bool>())
+        opt = $ns::$optional<int>(3);
+      $ns::$optional<int> opt2 = $ns::nullopt;
+      if (!opt.has_value())
+        opt2 = $ns::$optional<int>(3);
+      opt2.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoopToUnknownUnsafe) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = $ns::nullopt;
+      while (Make<bool>())
+        opt = Make<$ns::$optional<int>>();
+      $ns::$optional<int> opt2 = $ns::nullopt;
+      if (!opt.has_value())
+        opt2 = $ns::$optional<int>(3);
+      opt2.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoopBadConditionUnsafe) {
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"
@@ -2939,6 +3165,55 @@ TEST_P(UncheckedOptionalAccessTest, StructuredBindingsFromTupleLikeType) {
   )");
 }
 
+TEST_P(UncheckedOptionalAccessTest, CtorInitializerNullopt) {
+  using namespace ast_matchers;
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Target {
+      Target(): opt($ns::nullopt) {
+        opt.value(); // [[unsafe]]
+      }
+      $ns::$optional<int> opt;
+    };
+  )",
+      cxxConstructorDecl(ofClass(hasName("Target"))));
+}
+
+TEST_P(UncheckedOptionalAccessTest, CtorInitializerValue) {
+  using namespace ast_matchers;
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Target {
+      Target(): opt(3) {
+        opt.value();
+      }
+      $ns::$optional<int> opt;
+    };
+  )",
+      cxxConstructorDecl(ofClass(hasName("Target"))));
+}
+
+// This is regression test, it shouldn't crash.
+TEST_P(UncheckedOptionalAccessTest, Bitfield) {
+  using namespace ast_matchers;
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+    struct Dst {
+      unsigned int n : 1;
+    };
+    void target() {
+      $ns::$optional<bool> v;
+      Dst d;
+      if (v.has_value())
+        d.n = v.value();
+    }
+  )");
+}
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)

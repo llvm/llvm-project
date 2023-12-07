@@ -8,9 +8,6 @@
 
 #include "PDLLServer.h"
 
-#include "../lsp-server-support/CompilationDatabase.h"
-#include "../lsp-server-support/Logging.h"
-#include "../lsp-server-support/SourceMgrUtils.h"
 #include "Protocol.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Tools/PDLL/AST/Context.h"
@@ -24,12 +21,16 @@
 #include "mlir/Tools/PDLL/ODS/Operation.h"
 #include "mlir/Tools/PDLL/Parser/CodeComplete.h"
 #include "mlir/Tools/PDLL/Parser/Parser.h"
+#include "mlir/Tools/lsp-server-support/CompilationDatabase.h"
+#include "mlir/Tools/lsp-server-support/Logging.h"
+#include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::pdll;
@@ -63,7 +64,7 @@ static lsp::Location getLocationFromLoc(llvm::SourceMgr &mgr, SMRange range,
 }
 
 /// Convert the given MLIR diagnostic to the LSP form.
-static Optional<lsp::Diagnostic>
+static std::optional<lsp::Diagnostic>
 getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr, const ast::Diagnostic &diag,
                         const lsp::URIForFile &uri) {
   lsp::Diagnostic lspDiag;
@@ -111,10 +112,10 @@ getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr, const ast::Diagnostic &diag,
 }
 
 /// Get or extract the documentation for the given decl.
-static Optional<std::string> getDocumentationFor(llvm::SourceMgr &sourceMgr,
-                                                 const ast::Decl *decl) {
+static std::optional<std::string>
+getDocumentationFor(llvm::SourceMgr &sourceMgr, const ast::Decl *decl) {
   // If the decl already had documentation set, use it.
-  if (Optional<StringRef> doc = decl->getDocComment())
+  if (std::optional<StringRef> doc = decl->getDocComment())
     return doc->str();
 
   // If the decl doesn't yet have documentation, try to extract it from the
@@ -135,7 +136,7 @@ struct PDLIndexSymbol {
 
   /// Return the location of the definition of this symbol.
   SMRange getDefLoc() const {
-    if (const ast::Decl *decl = definition.dyn_cast<const ast::Decl *>()) {
+    if (const ast::Decl *decl = llvm::dyn_cast_if_present<const ast::Decl *>(definition)) {
       const ast::Name *declName = decl->getName();
       return declName ? declName->getLoc() : decl->getLoc();
     }
@@ -215,7 +216,7 @@ void PDLIndex::initialize(const ast::Module &module,
   module.walk([&](const ast::Node *node) {
     // Handle references to PDL decls.
     if (const auto *decl = dyn_cast<ast::OpNameDecl>(node)) {
-      if (Optional<StringRef> name = decl->getName())
+      if (std::optional<StringRef> name = decl->getName())
         insertODSOpRef(*name, decl->getLoc());
     } else if (const ast::Decl *decl = dyn_cast<ast::Decl>(node)) {
       const ast::Name *name = decl->getName();
@@ -464,7 +465,7 @@ PDLDocument::findHover(const lsp::URIForFile &uri,
     return std::nullopt;
 
   // Add hover for operation names.
-  if (const auto *op = symbol->definition.dyn_cast<const ods::Operation *>())
+  if (const auto *op = llvm::dyn_cast_if_present<const ods::Operation *>(symbol->definition))
     return buildHoverForOpName(op, hoverRange);
   const auto *decl = symbol->definition.get<const ast::Decl *>();
   return findHover(decl, hoverRange);
@@ -527,7 +528,7 @@ lsp::Hover PDLDocument::buildHoverForPattern(const ast::PatternDecl *decl,
     if (const ast::Name *name = decl->getName())
       hoverOS << ": `" << name->getName() << "`";
     hoverOS << "\n***\n";
-    if (Optional<uint16_t> benefit = decl->getBenefit())
+    if (std::optional<uint16_t> benefit = decl->getBenefit())
       hoverOS << "Benefit: " << *benefit << "\n";
     if (decl->hasBoundedRewriteRecursion())
       hoverOS << "HasBoundedRewriteRecursion\n";
@@ -535,7 +536,7 @@ lsp::Hover PDLDocument::buildHoverForPattern(const ast::PatternDecl *decl,
             << decl->getRootRewriteStmt()->getRootOpExpr()->getType() << "`\n";
 
     // Format the documentation for the decl.
-    if (Optional<std::string> doc = getDocumentationFor(sourceMgr, decl))
+    if (std::optional<std::string> doc = getDocumentationFor(sourceMgr, decl))
       hoverOS << "\n" << *doc << "\n";
   }
   return hover;
@@ -552,7 +553,7 @@ PDLDocument::buildHoverForCoreConstraint(const ast::CoreConstraintDecl *decl,
         .Case([&](const ast::AttrConstraintDecl *) { hoverOS << "Attr"; })
         .Case([&](const ast::OpConstraintDecl *opCst) {
           hoverOS << "Op";
-          if (Optional<StringRef> name = opCst->getName())
+          if (std::optional<StringRef> name = opCst->getName())
             hoverOS << "<" << *name << ">";
         })
         .Case([&](const ast::TypeConstraintDecl *) { hoverOS << "Type"; })
@@ -602,7 +603,7 @@ lsp::Hover PDLDocument::buildHoverForUserConstraintOrRewrite(
     }
 
     // Format the documentation for the decl.
-    if (Optional<std::string> doc = getDocumentationFor(sourceMgr, decl))
+    if (std::optional<std::string> doc = getDocumentationFor(sourceMgr, decl))
       hoverOS << "\n" << *doc << "\n";
   }
   return hover;
@@ -835,7 +836,8 @@ public:
           }
 
           // Format the documentation for the constraint.
-          if (Optional<std::string> doc = getDocumentationFor(sourceMgr, cst)) {
+          if (std::optional<std::string> doc =
+                  getDocumentationFor(sourceMgr, cst)) {
             item.documentation =
                 lsp::MarkupContent{lsp::MarkupKind::Markdown, std::move(*doc)};
           }
@@ -1026,14 +1028,15 @@ public:
     }
 
     // Format the documentation for the callable.
-    if (Optional<std::string> doc = getDocumentationFor(sourceMgr, callable))
+    if (std::optional<std::string> doc =
+            getDocumentationFor(sourceMgr, callable))
       signatureInfo.documentation = std::move(*doc);
 
     signatureHelp.signatures.emplace_back(std::move(signatureInfo));
   }
 
   void
-  codeCompleteOperationOperandsSignature(Optional<StringRef> opName,
+  codeCompleteOperationOperandsSignature(std::optional<StringRef> opName,
                                          unsigned currentNumOperands) final {
     const ods::Operation *odsOp =
         opName ? odsContext.lookupOperation(*opName) : nullptr;
@@ -1042,7 +1045,7 @@ public:
         currentNumOperands, "operand", "Value");
   }
 
-  void codeCompleteOperationResultsSignature(Optional<StringRef> opName,
+  void codeCompleteOperationResultsSignature(std::optional<StringRef> opName,
                                              unsigned currentNumResults) final {
     const ods::Operation *odsOp =
         opName ? odsContext.lookupOperation(*opName) : nullptr;
@@ -1052,7 +1055,7 @@ public:
   }
 
   void codeCompleteOperationOperandOrResultSignature(
-      Optional<StringRef> opName, const ods::Operation *odsOp,
+      std::optional<StringRef> opName, const ods::Operation *odsOp,
       ArrayRef<ods::OperandOrResult> values, unsigned currentValue,
       StringRef label, StringRef dataType) {
     signatureHelp.activeParameter = currentValue;
@@ -1730,7 +1733,7 @@ void lsp::PDLLServer::updateDocument(
     impl->files.erase(it);
 }
 
-Optional<int64_t> lsp::PDLLServer::removeDocument(const URIForFile &uri) {
+std::optional<int64_t> lsp::PDLLServer::removeDocument(const URIForFile &uri) {
   auto it = impl->files.find(uri.file());
   if (it == impl->files.end())
     return std::nullopt;

@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -frecovery-ast -frecovery-ast-type -o - %s -std=gnu++17 -fsyntax-only -verify
+// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++17 -fsyntax-only -verify
+// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++20 -fsyntax-only -verify
+
 
 namespace test0 {
 struct Indestructible {
@@ -169,5 +171,15 @@ void f() {
     void m(int (&)[undefined()]) {} // expected-error {{undeclared identifier}}
   } S;
   S.m(1); // no crash
+}
+}
+
+namespace test16 {
+// verify we do not crash on incomplete class type.
+template<typename T, typename U> struct A; // expected-note 5{{template is declared here}}
+A<int, int> foo() { // expected-error {{implicit instantiation of undefined template}}
+  if (1 == 1)
+    return A<int, int>{1}; // expected-error 2{{implicit instantiation of undefined template}}
+  return A<int, int>(1); // expected-error 2{{implicit instantiation of undefined template}}
 }
 }

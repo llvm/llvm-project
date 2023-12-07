@@ -13,16 +13,19 @@
 #ifndef LLVM_CLANG_AST_INTERP_TYPE_H
 #define LLVM_CLANG_AST_INTERP_TYPE_H
 
+#include "llvm/Support/raw_ostream.h"
 #include <climits>
 #include <cstddef>
 #include <cstdint>
-#include "Boolean.h"
-#include "Integral.h"
 
 namespace clang {
 namespace interp {
 
 class Pointer;
+class Boolean;
+class Floating;
+class FunctionPointer;
+template <unsigned Bits, bool Signed> class Integral;
 
 /// Enumeration of the primitive types of the VM.
 enum PrimType : unsigned {
@@ -35,8 +38,25 @@ enum PrimType : unsigned {
   PT_Sint64,
   PT_Uint64,
   PT_Bool,
+  PT_Float,
   PT_Ptr,
+  PT_FnPtr,
 };
+
+enum class CastKind : uint8_t {
+  Reinterpret,
+};
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                     interp::CastKind CK) {
+  switch (CK) {
+  case interp::CastKind::Reinterpret:
+    OS << "reinterpret_cast";
+    break;
+  }
+  return OS;
+}
+
+constexpr bool isIntegralType(PrimType T) { return T <= PT_Bool; }
 
 /// Mapping from primitive types to their representation.
 template <PrimType T> struct PrimConv;
@@ -48,8 +68,12 @@ template <> struct PrimConv<PT_Sint32> { using T = Integral<32, true>; };
 template <> struct PrimConv<PT_Uint32> { using T = Integral<32, false>; };
 template <> struct PrimConv<PT_Sint64> { using T = Integral<64, true>; };
 template <> struct PrimConv<PT_Uint64> { using T = Integral<64, false>; };
+template <> struct PrimConv<PT_Float> { using T = Floating; };
 template <> struct PrimConv<PT_Bool> { using T = Boolean; };
 template <> struct PrimConv<PT_Ptr> { using T = Pointer; };
+template <> struct PrimConv<PT_FnPtr> {
+  using T = FunctionPointer;
+};
 
 /// Returns the size of a primitive type in bytes.
 size_t primSize(PrimType Type);
@@ -59,21 +83,11 @@ constexpr size_t align(size_t Size) {
   return ((Size + alignof(void *) - 1) / alignof(void *)) * alignof(void *);
 }
 
-inline bool isPrimitiveIntegral(PrimType Type) {
-  switch (Type) {
-  case PT_Bool:
-  case PT_Sint8:
-  case PT_Uint8:
-  case PT_Sint16:
-  case PT_Uint16:
-  case PT_Sint32:
-  case PT_Uint32:
-  case PT_Sint64:
-  case PT_Uint64:
-    return true;
-  default:
-    return false;
-  }
+constexpr bool aligned(uintptr_t Value) { return Value == align(Value); }
+static_assert(aligned(sizeof(void *)));
+
+static inline bool aligned(const void *P) {
+  return aligned(reinterpret_cast<uintptr_t>(P));
 }
 
 } // namespace interp
@@ -94,10 +108,30 @@ inline bool isPrimitiveIntegral(PrimType Type) {
       TYPE_SWITCH_CASE(PT_Uint32, B)                                           \
       TYPE_SWITCH_CASE(PT_Sint64, B)                                           \
       TYPE_SWITCH_CASE(PT_Uint64, B)                                           \
+      TYPE_SWITCH_CASE(PT_Float, B)                                            \
       TYPE_SWITCH_CASE(PT_Bool, B)                                             \
       TYPE_SWITCH_CASE(PT_Ptr, B)                                              \
+      TYPE_SWITCH_CASE(PT_FnPtr, B)                                            \
     }                                                                          \
   } while (0)
+
+#define INT_TYPE_SWITCH(Expr, B)                                               \
+  do {                                                                         \
+    switch (Expr) {                                                            \
+      TYPE_SWITCH_CASE(PT_Sint8, B)                                            \
+      TYPE_SWITCH_CASE(PT_Uint8, B)                                            \
+      TYPE_SWITCH_CASE(PT_Sint16, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint16, B)                                           \
+      TYPE_SWITCH_CASE(PT_Sint32, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint32, B)                                           \
+      TYPE_SWITCH_CASE(PT_Sint64, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint64, B)                                           \
+      TYPE_SWITCH_CASE(PT_Bool, B)                                             \
+    default:                                                                   \
+      llvm_unreachable("Not an integer value");                                \
+    }                                                                          \
+  } while (0)
+
 #define COMPOSITE_TYPE_SWITCH(Expr, B, D)                                      \
   do {                                                                         \
     switch (Expr) {                                                            \

@@ -82,12 +82,12 @@ gentbl_cc_library(
 cc_binary(
     name = "toyc-ch4",
     srcs = [
-        "toyc.cpp",
-        "parser/AST.cpp",
-        "mlir/MLIRGen.cpp",
         "mlir/Dialect.cpp",
-        "mlir/ToyCombine.cpp",
+        "mlir/MLIRGen.cpp",
         "mlir/ShapeInferencePass.cpp",
+        "mlir/ToyCombine.cpp",
+        "parser/AST.cpp",
+        "toyc.cpp",
     ] + glob(["include/toy/*.h"]),
     includes = ["include/"],
     deps = [
@@ -96,7 +96,8 @@ cc_binary(
         ":ToyOpsIncGen",
         "//llvm:Support",
         "//mlir:Analysis",
-        "//mlir:CastOpInterfaces",
+        "//mlir:CastInterfaces",
+        "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:Pass",

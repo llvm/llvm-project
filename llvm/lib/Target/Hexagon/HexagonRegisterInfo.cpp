@@ -452,8 +452,3 @@ HexagonRegisterInfo::getPointerRegClass(const MachineFunction &MF,
                                         unsigned Kind) const {
   return &Hexagon::IntRegsRegClass;
 }
-
-Register HexagonRegisterInfo::getFirstCallerSavedNonParamReg() const {
-  return Hexagon::R6;
-}
-

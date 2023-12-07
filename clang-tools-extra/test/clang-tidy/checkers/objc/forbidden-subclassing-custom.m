@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s objc-forbidden-subclassing %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: objc-forbidden-subclassing.ClassNames, value: "Foo;Quux"}]}' \
+// RUN:  {objc-forbidden-subclassing.ClassNames: "Foo;Quux"}}' \
 // RUN: --
 
 @interface UIImagePickerController

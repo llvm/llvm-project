@@ -4,7 +4,7 @@ target triple = "wasm32-unknown-unknown"
 
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
 
-declare i32 @setjmp(%struct.__jmp_buf_tag*) #0
+declare i32 @setjmp(ptr) #0
 declare {i32, i32} @returns_struct()
 
 ; Test the combination of backend legalization of large return types and the
@@ -12,8 +12,7 @@ declare {i32, i32} @returns_struct()
 define {i32, i32} @legalized_to_sret() {
 entry:
   %env = alloca [1 x %struct.__jmp_buf_tag], align 16
-  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %env, i32 0, i32 0
-  %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
+  %call = call i32 @setjmp(ptr %env) #0
   ; This is the function pointer to pass to invoke.
   ; It needs to be the first argument (that's what we're testing here)
   ; CHECK: i32.const $push[[FPTR:[0-9]+]]=, returns_struct

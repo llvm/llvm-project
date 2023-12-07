@@ -32,11 +32,7 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   SmallVector<InlineSite, 8> ReversedInlineStack;
   auto *InlinedAt = DebugLoc ? DebugLoc->getInlinedAt() : nullptr;
   while (InlinedAt) {
-    const DISubprogram *SP = InlinedAt->getScope()->getSubprogram();
-    // Use linkage name for C++ if possible.
-    auto Name = SP->getLinkageName();
-    if (Name.empty())
-      Name = SP->getName();
+    auto Name = InlinedAt->getSubprogramLinkageName();
     // Use caching to avoid redundant md5 computation for build speed.
     uint64_t &CallerGuid = NameGuidMap[Name];
     if (!CallerGuid)
@@ -46,8 +42,15 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
     ReversedInlineStack.emplace_back(CallerGuid, CallerProbeId);
     InlinedAt = InlinedAt->getInlinedAt();
   }
-
+  uint64_t Discriminator = 0;
+  // For now only block probes have FS discriminators. See
+  // MIRFSDiscriminator.cpp for more details.
+  if (EnableFSDiscriminator && DebugLoc &&
+      (Type == (uint64_t)PseudoProbeType::Block))
+    Discriminator = DebugLoc->getDiscriminator();
+  assert((EnableFSDiscriminator || Discriminator == 0) &&
+         "Discriminator should not be set in non-FSAFDO mode");
   SmallVector<InlineSite, 8> InlineStack(llvm::reverse(ReversedInlineStack));
-  Asm->OutStreamer->emitPseudoProbe(Guid, Index, Type, Attr, InlineStack,
-                                    Asm->CurrentFnSym);
+  Asm->OutStreamer->emitPseudoProbe(Guid, Index, Type, Attr, Discriminator,
+                                    InlineStack, Asm->CurrentFnSym);
 }

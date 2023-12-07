@@ -13,5 +13,8 @@ unittest("DirextXTests") {
     # and make /llvm/unittests depend on DirextXTests.
     #"//llvm/lib/Target/DirectX:LLVMDirectXCodeGen",
   ]
-  sources = [ "PointerTypeAnalysisTests.cpp" ]
+  sources = [
+    "CBufferDataLayoutTests.cpp",
+    "PointerTypeAnalysisTests.cpp",
+  ]
 }

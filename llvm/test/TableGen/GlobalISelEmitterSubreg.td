@@ -33,6 +33,7 @@ def ERegs : MyClass<32, [i32], (sequence "E%u", 0, 0)>;
 def SOP : RegisterOperand<SRegs>;
 def DOP : RegisterOperand<DRegs>;
 def SOME_INSN : I<(outs DRegs:$dst), (ins DOP:$src), []>;
+def SOME_INSN2 : I<(outs DRegs:$dst), (ins DOP:$src1, DOP:$src2), []>;
 def SUBSOME_INSN : I<(outs SRegs:$dst), (ins SOP:$src), []>;
 def SUBSOME_INSN2 : I<(outs SRegs:$dst), (ins SOP:$src), []>;
 
@@ -41,12 +42,41 @@ def SUBSOME_INSN2 : I<(outs SRegs:$dst), (ins SOP:$src), []>;
 let isAllocatable = 0 in
 def SuperDRegs : MyClass<32, [i32], (add DRegs, ERegs)>;
 
+def complex : Operand<i32>, ComplexPattern<i32, 2, "SelectComplexOperand", []>;
+def gi_complex : GIComplexOperandMatcher<s32, "selectComplexOperand">,
+                 GIComplexPatternEquiv<complex>;
+
 // We should skip cases where we don't have a given register class for the
 // subregister source.
 // SKIPPED: def : Pat<(i32 (anyext i16:$src)), (INSERT_SUBREG (i32 (IMPLICIT_DEF)), i16:$src, sub0)>;
 // SKIPPED: def : Pat<(i32 (anyext i16:$src)), (SOME_INSN (INSERT_SUBREG (i32 (IMPLICIT_DEF)), i16:$src, sub0))>;
 def : Pat<(i32 (anyext i16:$src)), (INSERT_SUBREG (i32 (IMPLICIT_DEF)), i16:$src, sub0)>;
 def : Pat<(i32 (anyext i16:$src)), (SOME_INSN (INSERT_SUBREG (i32 (IMPLICIT_DEF)), i16:$src, sub0))>;
+
+// Test EXTRACT_SUBREG applied to suboperands of a ComplexPattern
+// operand.
+def : Pat<(sub (complex DOP:$src1, DOP:$src2), 77),
+          (SOME_INSN2 (EXTRACT_SUBREG DOP:$src1, sub0),
+                      (EXTRACT_SUBREG DOP:$src2, sub1))>;
+// CHECK-LABEL: // (sub:{ *:[i32] } (complex:{ *:[i32] } DOP:{ *:[i32] }:$src1, DOP:{ *:[i32] }:$src2), 77:{ *:[i32] })  =>  (SOME_INSN2:{ *:[i32] } (EXTRACT_SUBREG:{ *:[i32] } DOP:{ *:[i32] }:$src1, sub0:{ *:[i32] }), (EXTRACT_SUBREG:{ *:[i32] } DOP:{ *:[i32] }:$src2, sub1:{ *:[i32] }))
+// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/GILLT_s32,
+// CHECK-NEXT: GIR_BuildMI, /*InsnID*/2, /*Opcode*/TargetOpcode::COPY,
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/2, /*TempRegID*/1, /*TempRegFlags*/RegState::Define,
+// CHECK-NEXT: GIR_ComplexSubOperandSubRegRenderer, /*InsnID*/2, /*RendererID*/0, /*SubOperand*/1, /*SubRegIdx*/2, // src2
+// CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/2, /*Op*/0, Test::SRegsRegClassID,
+// CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/2, /*Op*/1, Test::DRegsRegClassID,
+// CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::COPY,
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/RegState::Define,
+// CHECK-NEXT: GIR_ComplexSubOperandSubRegRenderer, /*InsnID*/1, /*RendererID*/0, /*SubOperand*/0, /*SubRegIdx*/1, // src1
+// CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/0, Test::SRegsRegClassID,
+// CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/1, Test::DRegsRegClassID,
+// CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::SOME_INSN2,
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/1, /*TempRegFlags*/0,
+// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 
 // Test that we import INSERT_SUBREG when its subregister source has a given
 // class.

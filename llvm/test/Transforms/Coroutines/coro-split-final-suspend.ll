@@ -17,9 +17,10 @@ init_suspend:
   ret ptr %hdl
 
 init_resume:
-  br label %susp
+  invoke void @print(i32 1)
+          to label %final_suspend unwind label %lpad
 
-susp:
+final_suspend:
   %0 = call i8 @llvm.coro.suspend(token none, i1 true)
   switch i8 %0, label %suspend [i8 0, label %resume
                                 i8 1, label %suspend]
@@ -49,6 +50,19 @@ eh.resume:
 
 ; Tests that we need to store the final index if we see unwind coro end.
 ; CHECK: define{{.*}}@unwind_coro_end.resume
+; CHECK: invoke{{.*}}print
+; CHECK-NEXT: to label %[[RESUME:.*]] unwind label %[[LPAD:.*]]
+
+; CHECK: [[RESUME]]:
+; CHECK-NOT: {{.*:}}
+; CHECK: store ptr null, ptr %hdl
+; CHECK-NOT: {{.*:}}
+; CHECK: store i1 true, ptr %index.addr
+
+; CHECK: [[LPAD]]:
+; CHECK-NOT: {{.*:}}
+; CHECK: store ptr null, ptr %hdl
+; CHECK-NOT: {{.*:}}
 ; CHECK: store i1 true, ptr %index.addr
 
 ; Tests the use of final index in the destroy function.

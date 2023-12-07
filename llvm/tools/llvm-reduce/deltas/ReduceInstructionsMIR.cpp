@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
@@ -36,7 +37,7 @@ static Register getPrevDefOfRCInMBB(MachineBasicBlock &MBB,
       if (!MO.isReg() || !MO.isDef() || MO.isDead())
         continue;
       auto Reg = MO.getReg();
-      if (Register::isPhysicalRegister(Reg))
+      if (Reg.isPhysical())
         continue;
 
       if (MRI->getRegClassOrRegBank(Reg) == RC && MRI->getType(Reg) == Ty &&
@@ -92,7 +93,7 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
       if (!MO.isReg() || !MO.isDef() || MO.isDead())
         continue;
       auto Reg = MO.getReg();
-      if (Register::isPhysicalRegister(Reg))
+      if (Reg.isPhysical())
         continue;
       auto UI = MRI->use_begin(Reg);
       auto UE = MRI->use_end();

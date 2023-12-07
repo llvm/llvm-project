@@ -719,7 +719,7 @@ bool EditCharacterInput(
   }
   // When the field is wider than the variable, we drop the leading
   // characters.  When the variable is wider than the field, there can be
-  // trailing padding.
+  // trailing padding or an EOR condition.
   const char *input{nullptr};
   std::size_t ready{0};
   // Skip leading bytes.
@@ -729,11 +729,18 @@ bool EditCharacterInput(
   while (remaining > 0) {
     if (ready == 0) {
       ready = io.GetNextInputBytes(input);
-      if (ready == 0) {
-        if (io.CheckForEndOfRecord()) {
-          std::fill_n(x, length, ' '); // PAD='YES'
+      if (ready == 0 || (ready < remaining && edit.modes.nonAdvancing)) {
+        if (io.CheckForEndOfRecord(ready)) {
+          if (ready == 0) {
+            // PAD='YES' and no more data
+            std::fill_n(x, length, ' ');
+            return !io.GetIoErrorHandler().InError();
+          } else {
+            // Do partial read(s) then pad on last iteration
+          }
+        } else {
+          return !io.GetIoErrorHandler().InError();
         }
-        return !io.GetIoErrorHandler().InError();
       }
     }
     std::size_t chunk;

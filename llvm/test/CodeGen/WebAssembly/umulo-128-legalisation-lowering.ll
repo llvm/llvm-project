@@ -9,21 +9,21 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; WASM32: local.tee       $push39=, 5, $pop40
 ; WASM32: global.set      __stack_pointer, $pop39
 ; WASM32: local.get       $push41=, 5
-; WASM32: i32.const       $push22=, 32
-; WASM32: i32.add         $push23=, $pop41, $pop22
+; WASM32: i32.const       $push24=, 32
+; WASM32: i32.add         $push25=, $pop41, $pop24
 ; WASM32: local.get       $push43=, 1
 ; WASM32: i64.const       $push0=, 0
 ; WASM32: local.get       $push42=, 3
 ; WASM32: i64.const       $push38=, 0
-; WASM32: call            __multi3, $pop23, $pop43, $pop0, $pop42, $pop38
+; WASM32: call            __multi3, $pop25, $pop43, $pop0, $pop42, $pop38
 ; WASM32: local.get       $push44=, 5
-; WASM32: i32.const       $push24=, 16
-; WASM32: i32.add         $push25=, $pop44, $pop24
+; WASM32: i32.const       $push22=, 16
+; WASM32: i32.add         $push23=, $pop44, $pop22
 ; WASM32: local.get       $push46=, 4
 ; WASM32: i64.const       $push37=, 0
 ; WASM32: local.get       $push45=, 1
 ; WASM32: i64.const       $push36=, 0
-; WASM32: call            __multi3, $pop25, $pop46, $pop37, $pop45, $pop36
+; WASM32: call            __multi3, $pop23, $pop46, $pop37, $pop45, $pop36
 ; WASM32: local.get       $push49=, 5
 ; WASM32: local.get       $push48=, 2
 ; WASM32: i64.const       $push35=, 0

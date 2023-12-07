@@ -26,7 +26,7 @@
 
 namespace mlir {
 namespace spirv {
-#define GEN_PASS_DEF_SPIRVLOWERABIATTRIBUTES
+#define GEN_PASS_DEF_SPIRVLOWERABIATTRIBUTESPASS
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
 } // namespace spirv
 } // namespace mlir
@@ -51,19 +51,19 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
   // info create a variable of type !spirv.ptr<!spirv.struct<elementType>>. If
   // not it must already be a !spirv.ptr<!spirv.struct<...>>.
   auto varType = funcOp.getFunctionType().getInput(argIndex);
-  if (varType.cast<spirv::SPIRVType>().isScalarOrVector()) {
+  if (cast<spirv::SPIRVType>(varType).isScalarOrVector()) {
     auto storageClass = abiInfo.getStorageClass();
     if (!storageClass)
       return nullptr;
     varType =
         spirv::PointerType::get(spirv::StructType::get(varType), *storageClass);
   }
-  auto varPtrType = varType.cast<spirv::PointerType>();
-  auto varPointeeType = varPtrType.getPointeeType().cast<spirv::StructType>();
+  auto varPtrType = cast<spirv::PointerType>(varType);
+  auto varPointeeType = cast<spirv::StructType>(varPtrType.getPointeeType());
 
   // Set the offset information.
   varPointeeType =
-      VulkanLayoutUtils::decorateType(varPointeeType).cast<spirv::StructType>();
+      cast<spirv::StructType>(VulkanLayoutUtils::decorateType(varPointeeType));
 
   if (!varPointeeType)
     return nullptr;
@@ -98,7 +98,7 @@ getInterfaceVariables(spirv::FuncOp funcOp,
     // Starting with version 1.4, the interface’s storage classes are all
     // storage classes used in declaring all global variables referenced by the
     // entry point’s call tree." We should consider the target environment here.
-    switch (var.getType().cast<spirv::PointerType>().getStorageClass()) {
+    switch (cast<spirv::PointerType>(var.getType()).getStorageClass()) {
     case spirv::StorageClass::Input:
     case spirv::StorageClass::Output:
       interfaceVarSet.insert(var.getOperation());
@@ -160,7 +160,7 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
           entryPointAttr.getSubgroupSize());
     }
   }
-  if (Optional<int> subgroupSize = entryPointAttr.getSubgroupSize()) {
+  if (std::optional<int> subgroupSize = entryPointAttr.getSubgroupSize()) {
     std::optional<ArrayRef<spirv::Capability>> caps =
         spirv::getCapabilities(spirv::ExecutionMode::SubgroupSize);
     if (!caps || targetEnv.allows(*caps)) {
@@ -199,7 +199,8 @@ public:
 
 /// Pass to implement the ABI information specified as attributes.
 class LowerABIAttributesPass final
-    : public spirv::impl::SPIRVLowerABIAttributesBase<LowerABIAttributesPass> {
+    : public spirv::impl::SPIRVLowerABIAttributesPassBase<
+          LowerABIAttributesPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -246,7 +247,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     // at the start of the function. It is probably better to do the load just
     // before the use. There might be multiple loads and currently there is no
     // easy way to replace all uses with a sequence of operations.
-    if (argType.value().cast<spirv::SPIRVType>().isScalarOrVector()) {
+    if (cast<spirv::SPIRVType>(argType.value()).isScalarOrVector()) {
       auto zero =
           spirv::ConstantOp::getZero(indexType, funcOp.getLoc(), rewriter);
       auto loadPtr = rewriter.create<spirv::AccessChainOp>(
@@ -273,7 +274,12 @@ void LowerABIAttributesPass::runOnOperation() {
   spirv::ModuleOp module = getOperation();
   MLIRContext *context = &getContext();
 
-  spirv::TargetEnv targetEnv(spirv::lookupTargetEnv(module));
+  spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(module);
+  if (!targetEnvAttr) {
+    module->emitOpError("missing SPIR-V target env attribute");
+    return signalPassFailure();
+  }
+  spirv::TargetEnv targetEnv(targetEnvAttr);
 
   SPIRVTypeConverter typeConverter(targetEnv);
 
@@ -281,7 +287,7 @@ void LowerABIAttributesPass::runOnOperation() {
   typeConverter.addSourceMaterialization([](OpBuilder &builder,
                                             spirv::PointerType type,
                                             ValueRange inputs, Location loc) {
-    if (inputs.size() != 1 || !inputs[0].getType().isa<spirv::PointerType>())
+    if (inputs.size() != 1 || !isa<spirv::PointerType>(inputs[0].getType()))
       return Value();
     return builder.create<spirv::BitcastOp>(loc, type, inputs[0]).getResult();
   });
@@ -321,9 +327,4 @@ void LowerABIAttributesPass::runOnOperation() {
       return signalPassFailure();
     }
   }
-}
-
-std::unique_ptr<OperationPass<spirv::ModuleOp>>
-mlir::spirv::createLowerABIAttributesPass() {
-  return std::make_unique<LowerABIAttributesPass>();
 }

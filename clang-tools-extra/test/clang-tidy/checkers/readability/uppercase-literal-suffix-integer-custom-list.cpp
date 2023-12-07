@@ -1,7 +1,7 @@
-// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -config="{CheckOptions: [{key: readability-uppercase-literal-suffix.NewSuffixes, value: 'L;uL'}]}" -- -I %clang_tidy_headers
+// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -config="{CheckOptions: {readability-uppercase-literal-suffix.NewSuffixes: 'L;uL'}}" -- -I %clang_tidy_headers
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t.cpp
-// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -fix -config="{CheckOptions: [{key: readability-uppercase-literal-suffix.NewSuffixes, value: 'L;uL'}]}" -- -I %clang_tidy_headers
-// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -warnings-as-errors='-*,readability-uppercase-literal-suffix' -config="{CheckOptions: [{key: readability-uppercase-literal-suffix.NewSuffixes, value: 'L;uL'}]}" -- -I %clang_tidy_headers
+// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -fix -config="{CheckOptions: {readability-uppercase-literal-suffix.NewSuffixes: 'L;uL'}}" -- -I %clang_tidy_headers
+// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -warnings-as-errors='-*,readability-uppercase-literal-suffix' -config="{CheckOptions: {readability-uppercase-literal-suffix.NewSuffixes: 'L;uL'}}" -- -I %clang_tidy_headers
 
 #include "integral_constant.h"
 
@@ -22,7 +22,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'l', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v5 = 1l;
   // CHECK-MESSAGES-NEXT: ^~
-  // CHECK-MESSAGES-NEXT: {{^ *}}L{{$}}
+  // CHECK-MESSAGES-NEXT: L{{$}}
   // CHECK-FIXES: static constexpr auto v5 = 1L;
   static_assert(is_same<decltype(v5), const long>::value, "");
   static_assert(v5 == 1, "");
@@ -47,7 +47,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'ul', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v9 = 1ul;
   // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: {{^ *}}uL{{$}}
+  // CHECK-MESSAGES-NEXT: uL{{$}}
   // CHECK-FIXES: static constexpr auto v9 = 1uL;
   static_assert(is_same<decltype(v9), const unsigned long>::value, "");
   static_assert(v9 == 1, "");
@@ -60,7 +60,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'Ul', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v11 = 1Ul;
   // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: {{^ *}}uL{{$}}
+  // CHECK-MESSAGES-NEXT: uL{{$}}
   // CHECK-FIXES: static constexpr auto v11 = 1uL;
   static_assert(is_same<decltype(v11), const unsigned long>::value, "");
   static_assert(v11 == 1, "");
@@ -69,7 +69,7 @@ void integer_suffix() {
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'UL', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v12 = 1UL;
   // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: {{^ *}}uL{{$}}
+  // CHECK-MESSAGES-NEXT: uL{{$}}
   // CHECK-FIXES: static constexpr auto v12 = 1uL;
   static_assert(is_same<decltype(v12), const unsigned long>::value, "");
   static_assert(v12 == 1, "");

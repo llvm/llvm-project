@@ -27,13 +27,13 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "VEGenAsmWriter.inc"
 
-void VEInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
+void VEInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
   // Generic registers have identical register name among register classes.
   unsigned AltIdx = VE::AsmName;
   // Misc registers have each own name, so no use alt-names.
-  if (MRI.getRegClass(VE::MISCRegClassID).contains(RegNo))
+  if (MRI.getRegClass(VE::MISCRegClassID).contains(Reg))
     AltIdx = VE::NoRegAltName;
-  OS << '%' << getRegisterName(RegNo, AltIdx);
+  OS << '%' << getRegisterName(Reg, AltIdx);
 }
 
 void VEInstPrinter::printInst(const MCInst *MI, uint64_t Address,

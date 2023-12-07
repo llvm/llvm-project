@@ -22,11 +22,11 @@ using namespace mlir::x86vector;
 /// Extracts the "main" vector element type from the given X86Vector operation.
 template <typename OpTy>
 static Type getSrcVectorElementType(OpTy op) {
-  return op.getSrc().getType().template cast<VectorType>().getElementType();
+  return cast<VectorType>(op.getSrc().getType()).getElementType();
 }
 template <>
 Type getSrcVectorElementType(Vp2IntersectOp op) {
-  return op.getA().getType().template cast<VectorType>().getElementType();
+  return cast<VectorType>(op.getA().getType()).getElementType();
 }
 
 namespace {
@@ -40,8 +40,8 @@ struct LowerToIntrinsic : public OpConversionPattern<OpTy> {
   explicit LowerToIntrinsic(LLVMTypeConverter &converter)
       : OpConversionPattern<OpTy>(converter, &converter.getContext()) {}
 
-  LLVMTypeConverter &getTypeConverter() const {
-    return *static_cast<LLVMTypeConverter *>(
+  const LLVMTypeConverter &getTypeConverter() const {
+    return *static_cast<const LLVMTypeConverter *>(
         OpConversionPattern<OpTy>::getTypeConverter());
   }
 
@@ -79,7 +79,7 @@ struct MaskCompressOpConversion
       src = rewriter.create<arith::ConstantOp>(op.getLoc(), opType,
                                                op.getConstantSrcAttr());
     } else {
-      Attribute zeroAttr = rewriter.getZeroAttr(opType);
+      auto zeroAttr = rewriter.getZeroAttr(opType);
       src = rewriter.create<arith::ConstantOp>(op->getLoc(), opType, zeroAttr);
     }
 

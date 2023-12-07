@@ -9,20 +9,18 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ;; Test that we forward the first store to the second load
 define i16 @bazinga() {
 ; CHECK-LABEL: @bazinga(
-; CHECK-NEXT:    [[_TMP10:%.*]] = load i16, i16* getelementptr inbounds (%rec11, %rec11* @str, i64 0, i32 1)
-; CHECK-NEXT:    store i16 [[_TMP10]], i16* getelementptr inbounds (%rec11, %rec11* @str, i64 0, i32 0)
+; CHECK-NEXT:    [[_TMP10:%.*]] = load i16, ptr getelementptr inbounds (%rec11, ptr @str, i64 0, i32 1)
+; CHECK-NEXT:    store i16 [[_TMP10]], ptr @str
 ; CHECK-NEXT:    [[_TMP15:%.*]] = icmp eq i16 [[_TMP10]], 3
 ; CHECK-NEXT:    [[_TMP16:%.*]] = select i1 [[_TMP15]], i16 1, i16 0
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    ret i16 [[_TMP16]]
 ;
-  %_tmp9 = getelementptr %rec11, %rec11* @str, i16 0, i32 1
-  %_tmp10 = load i16, i16* %_tmp9
-  %_tmp12 = getelementptr %rec11, %rec11* @str, i16 0, i32 0
-  store i16 %_tmp10, i16* %_tmp12
-  %_tmp13 = getelementptr %rec11, %rec11* @str, i16 0, i32 0
-  %_tmp14 = load i16, i16* %_tmp13
+  %_tmp9 = getelementptr %rec11, ptr @str, i16 0, i32 1
+  %_tmp10 = load i16, ptr %_tmp9
+  store i16 %_tmp10, ptr @str
+  %_tmp14 = load i16, ptr @str
   %_tmp15 = icmp eq i16 %_tmp14, 3
   %_tmp16 = select i1 %_tmp15, i16 1, i16 0
   br label %bb1

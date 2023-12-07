@@ -95,7 +95,7 @@ void lld::exitLld(int val) {
       e.outputBuffer->discard();
   }
 
-  // Re-throw a possible signal or exception once/if it was catched by
+  // Re-throw a possible signal or exception once/if it was caught by
   // safeLldMain().
   CrashRecoveryContext::throwIfCrash(val);
 

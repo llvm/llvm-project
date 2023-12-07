@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: not llc -mtriple=amdgcn-unknown-unknown -mcpu=kaveri -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
 ; ERROR: in function test{{.*}}: unsupported hsa intrinsic without hsa target
@@ -16,3 +16,6 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out) {
 declare noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
 
 attributes #0 = { nounwind readnone }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}

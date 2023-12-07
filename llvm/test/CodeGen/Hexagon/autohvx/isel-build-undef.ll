@@ -12,9 +12,9 @@ target triple = "hexagon"
 
 @g0 = global <32 x i8> zeroinitializer
 
-define void @fred(i8* %a0) #0 {
+define void @fred(ptr %a0) #0 {
 b0:
-  %v1 = load i8, i8* %a0, align 1
+  %v1 = load i8, ptr %a0, align 1
   %v2 = insertelement <32 x i8> undef, i8 %v1, i32 31
   %v3 = zext <32 x i8> %v2 to <32 x i16>
   %v4 = add nuw nsw <32 x i16> %v3, zeroinitializer
@@ -34,7 +34,7 @@ b0:
   %v18 = add <32 x i16> %v17, zeroinitializer
   %v19 = lshr <32 x i16> %v18, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
   %v20 = trunc <32 x i16> %v19 to <32 x i8>
-  store <32 x i8> %v20, <32 x i8>* @g0, align 1
+  store <32 x i8> %v20, ptr @g0, align 1
   ret void
 }
 

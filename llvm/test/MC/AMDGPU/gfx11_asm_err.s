@@ -140,3 +140,6 @@ v_fmac_f32_e64_dpp v5, v2, s3 quad_perm:[3,2,1,0]
 
 v_fmac_f32_e64_dpp v5, v2, 0x1234 quad_perm:[3,2,1,0]
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_load_dword s1, s[2:3], s0 0x1
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

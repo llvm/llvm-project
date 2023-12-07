@@ -22,12 +22,9 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
-TEST_SUITE(directory_entry_mods_suite)
-
-TEST_CASE(test_replace_filename_method) {
+static void test_replace_filename_method() {
   using namespace fs;
 
   {
@@ -44,13 +41,13 @@ TEST_CASE(test_replace_filename_method) {
     const path replace("bar.out");
     const path expect("/path/to/bar.out");
     directory_entry e(p);
-    TEST_CHECK(e.path() == p);
+    assert(e.path() == p);
     e.replace_filename(replace);
-    TEST_CHECK(e.path() == expect);
+    assert(e.path() == expect);
   }
 }
 
-TEST_CASE(test_replace_filename_ec_method) {
+static void test_replace_filename_ec_method() {
   using namespace fs;
 
   static_test_env static_env;
@@ -69,27 +66,27 @@ TEST_CASE(test_replace_filename_ec_method) {
     const path replace("bar.out");
     const path expect("/path/to/bar.out");
     directory_entry e(p);
-    TEST_CHECK(e.path() == p);
+    assert(e.path() == p);
     std::error_code ec = GetTestEC();
     e.replace_filename(replace, ec);
-    TEST_CHECK(e.path() == expect);
-    TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
+    assert(e.path() == expect);
+    assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
   }
   {
     const path p = static_env.EmptyFile;
     const path expect = static_env.NonEmptyFile;
     const path replace = static_env.NonEmptyFile.filename();
-    TEST_REQUIRE(expect.parent_path() == p.parent_path());
+    assert(expect.parent_path() == p.parent_path());
     directory_entry e(p);
-    TEST_CHECK(e.path() == p);
+    assert(e.path() == p);
     std::error_code ec = GetTestEC();
     e.replace_filename(replace, ec);
-    TEST_CHECK(e.path() == expect);
-    TEST_CHECK(!ec);
+    assert(e.path() == expect);
+    assert(!ec);
   }
 }
 
-TEST_CASE(test_replace_filename_calls_refresh) {
+static void test_replace_filename_calls_refresh() {
   using namespace fs;
   scoped_test_env env;
   const path dir = env.create_dir("dir");
@@ -101,32 +98,32 @@ TEST_CASE(test_replace_filename_calls_refresh) {
   {
     directory_entry ent(file);
     ent.replace_filename(file_two.filename());
-    TEST_REQUIRE(ent.path() == file_two);
+    assert(ent.path() == file_two);
 
     // removing the file demonstrates that the values where cached previously.
     LIBCPP_ONLY(remove(file_two));
 
-    TEST_CHECK(ent.file_size() == 101);
+    assert(ent.file_size() == 101);
   }
   env.create_file("dir/file_two", 99);
   {
     directory_entry ent(sym);
     ent.replace_filename(sym_two.filename());
-    TEST_REQUIRE(ent.path() == sym_two);
+    assert(ent.path() == sym_two);
 
     LIBCPP_ONLY(remove(file_two));
     LIBCPP_ONLY(remove(sym_two));
 
-    TEST_CHECK(ent.is_symlink());
-    TEST_CHECK(ent.is_regular_file());
-    TEST_CHECK(ent.file_size() == 99);
+    assert(ent.is_symlink());
+    assert(ent.is_regular_file());
+    assert(ent.file_size() == 99);
   }
 }
 
 #ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 // Windows doesn't support setting perms::none to trigger failures
 // reading directories.
-TEST_CASE(test_replace_filename_propagates_error) {
+static void test_replace_filename_propagates_error() {
   using namespace fs;
   scoped_test_env env;
   const path dir = env.create_dir("dir");
@@ -145,7 +142,7 @@ TEST_CASE(test_replace_filename_propagates_error) {
     permissions(dir, perms::none);
     std::error_code ec = GetTestEC();
     ent.replace_filename(file_two.filename(), ec);
-    TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
+    assert(ErrorIs(ec, std::errc::permission_denied));
   }
   permissions(dir, old_perms);
   {
@@ -153,7 +150,7 @@ TEST_CASE(test_replace_filename_propagates_error) {
     permissions(dir, perms::none);
     std::error_code ec = GetTestEC();
     ent.replace_filename(sym_in_dir_two.filename(), ec);
-    TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
+    assert(ErrorIs(ec, std::errc::permission_denied));
   }
   permissions(dir, old_perms);
   {
@@ -161,13 +158,22 @@ TEST_CASE(test_replace_filename_propagates_error) {
     permissions(dir, perms::none);
     std::error_code ec = GetTestEC();
     ent.replace_filename(sym_out_of_dir_two.filename(), ec);
-    TEST_CHECK(!ec);
-    TEST_CHECK(ent.is_symlink());
+    assert(!ec);
+    assert(ent.is_symlink());
     ec = GetTestEC();
-    TEST_CHECK(!ent.exists(ec));
-    TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
+    assert(!ent.exists(ec));
+    assert(ErrorIs(ec, std::errc::permission_denied));
   }
 }
+#endif // TEST_WIN_NO_FILESYSTEM_PERMS_NONE
+
+int main(int, char**) {
+  test_replace_filename_method();
+  test_replace_filename_ec_method();
+  test_replace_filename_calls_refresh();
+#ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
+  test_replace_filename_propagates_error();
 #endif
 
-TEST_SUITE_END()
+  return 0;
+}

@@ -25,6 +25,8 @@
 #  include "sanitizer_common/sanitizer_allocator_internal.h"
 namespace __lsan {
 
+class ThreadContextLsanBase;
+
 enum class SeenRegion {
   None = 0,
   AllocOnce = 1 << 0,
@@ -50,18 +52,18 @@ struct RegionScanState {
 
 typedef struct {
   int disable_counter;
-  u32 current_thread_id;
+  ThreadContextLsanBase *current_thread;
   AllocatorCache cache;
 } thread_local_data_t;
 
 static pthread_key_t key;
 static pthread_once_t key_once = PTHREAD_ONCE_INIT;
 
-// The main thread destructor requires the current thread id,
-// so we can't destroy it until it's been used and reset to invalid tid
+// The main thread destructor requires the current thread,
+// so we can't destroy it until it's been used and reset.
 void restore_tid_data(void *ptr) {
   thread_local_data_t *data = (thread_local_data_t *)ptr;
-  if (data->current_thread_id != kInvalidTid)
+  if (data->current_thread)
     pthread_setspecific(key, data);
 }
 
@@ -76,7 +78,7 @@ static thread_local_data_t *get_tls_val(bool alloc) {
   if (ptr == NULL && alloc) {
     ptr = (thread_local_data_t *)InternalAlloc(sizeof(*ptr));
     ptr->disable_counter = 0;
-    ptr->current_thread_id = kInvalidTid;
+    ptr->current_thread = nullptr;
     ptr->cache = AllocatorCache();
     pthread_setspecific(key, ptr);
   }
@@ -99,12 +101,14 @@ void EnableInThisThread() {
   --*disable_counter;
 }
 
-u32 GetCurrentThread() {
+ThreadContextLsanBase *GetCurrentThread() {
   thread_local_data_t *data = get_tls_val(false);
-  return data ? data->current_thread_id : kInvalidTid;
+  return data ? data->current_thread : nullptr;
 }
 
-void SetCurrentThread(u32 tid) { get_tls_val(true)->current_thread_id = tid; }
+void SetCurrentThread(ThreadContextLsanBase *tctx) {
+  get_tls_val(true)->current_thread = tctx;
+}
 
 AllocatorCache *GetAllocatorCache() { return &get_tls_val(true)->cache; }
 
@@ -161,7 +165,8 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
   vm_address_t address = 0;
   kern_return_t err = KERN_SUCCESS;
 
-  InternalMmapVectorNoCtor<RootRegion> const *root_regions = GetRootRegions();
+  InternalMmapVector<Region> mapped_regions;
+  bool use_root_regions = flags()->use_root_regions && HasRootRegions();
 
   RegionScanState scan_state;
   while (err == KERN_SUCCESS) {
@@ -199,8 +204,7 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
 
     // Recursing over the full memory map is very slow, break out
     // early if we don't need the full iteration.
-    if (scan_state.seen_regions == SeenRegion::All &&
-        !(flags()->use_root_regions && root_regions->size() > 0)) {
+    if (scan_state.seen_regions == SeenRegion::All && !use_root_regions) {
       break;
     }
 
@@ -211,15 +215,12 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
     //
     // TODO(fjricci) - remove this once sanitizer_procmaps_mac has the same
     // behavior as sanitizer_procmaps_linux and traverses all memory regions
-    if (flags()->use_root_regions) {
-      for (uptr i = 0; i < root_regions->size(); i++) {
-        ScanRootRegion(frontier, (*root_regions)[i], address, end_address,
-                       info.protection & kProtectionRead);
-      }
-    }
+    if (use_root_regions && (info.protection & kProtectionRead))
+      mapped_regions.push_back({address, end_address});
 
     address = end_address;
   }
+  ScanRootRegions(frontier, mapped_regions);
 }
 
 // On darwin, we can intercept _exit gracefully, and return a failing exit code

@@ -24,14 +24,14 @@ class DexTestLoader(unittest.TestLoader):
         """
         d = os.path.basename(os.path.dirname(full_path))
         if is_native_windows():
-            if d == 'posix':
+            if d == "posix":
                 return False
-            if d == 'windows':
+            if d == "windows":
                 return has_pywin32()
         else:
-            if d == 'windows':
+            if d == "windows":
                 return False
-            elif d == 'dbgeng':
+            elif d == "dbgeng":
                 return False
         return fnmatch(path, pattern)
 
@@ -39,20 +39,18 @@ class DexTestLoader(unittest.TestLoader):
 def unit_tests_ok(context):
     unittest.TestCase.maxDiff = None  # remove size limit from diff output.
 
-    with Timer('unit tests'):
-        suite = DexTestLoader().discover(
-            context.root_directory, pattern='*.py')
+    with Timer("unit tests"):
+        suite = DexTestLoader().discover(context.root_directory, pattern="*.py")
         stream = StringIO()
         result = unittest.TextTestRunner(verbosity=2, stream=stream).run(suite)
 
         ok = result.wasSuccessful()
-        if not ok or context.options.unittest == 'show-all':
+        if not ok or context.options.unittest == "show-all":
             with PreserveAutoColors(context.o):
-                context.o.auto_reds.extend(
-                    [r'FAIL(ED|\:)', r'\.\.\.\s(FAIL|ERROR)$'])
-                context.o.auto_greens.extend([r'^OK$', r'\.\.\.\sok$'])
-                context.o.auto_blues.extend([r'^Ran \d+ test'])
-                context.o.default('\n')
+                context.o.auto_reds.extend([r"FAIL(ED|\:)", r"\.\.\.\s(FAIL|ERROR)$"])
+                context.o.auto_greens.extend([r"^OK$", r"\.\.\.\sok$"])
+                context.o.auto_blues.extend([r"^Ran \d+ test"])
+                context.o.default("\n")
                 for line in stream.getvalue().splitlines(True):
                     context.o.auto(line, stream=PrettyOutput.stderr)
 

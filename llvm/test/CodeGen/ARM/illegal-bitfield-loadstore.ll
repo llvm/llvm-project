@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=arm-eabi | FileCheck %s -check-prefix=LE
 ; RUN: llc < %s -mtriple=armeb-eabi | FileCheck %s -check-prefix=BE
 
-define void @i24_or(i24* %a) {
+define void @i24_or(ptr %a) {
 ; LE-LABEL: i24_or:
 ; LE:       @ %bb.0:
 ; LE-NEXT:    ldrh r1, [r0]
@@ -20,13 +20,13 @@ define void @i24_or(i24* %a) {
 ; BE-NEXT:    lsr r1, r1, #8
 ; BE-NEXT:    strh r1, [r0]
 ; BE-NEXT:    mov pc, lr
-  %aa = load i24, i24* %a, align 1
+  %aa = load i24, ptr %a, align 1
   %b = or i24 %aa, 384
-  store i24 %b, i24* %a, align 1
+  store i24 %b, ptr %a, align 1
   ret void
 }
 
-define void @i24_and_or(i24* %a) {
+define void @i24_and_or(ptr %a) {
 ; LE-LABEL: i24_and_or:
 ; LE:       @ %bb.0:
 ; LE-NEXT:    ldrh r1, [r0]
@@ -43,14 +43,14 @@ define void @i24_and_or(i24* %a) {
 ; BE-NEXT:    orr r1, r1, #1
 ; BE-NEXT:    strh r1, [r0]
 ; BE-NEXT:    mov pc, lr
-  %b = load i24, i24* %a, align 1
+  %b = load i24, ptr %a, align 1
   %c = and i24 %b, -128
   %d = or i24 %c, 384
-  store i24 %d, i24* %a, align 1
+  store i24 %d, ptr %a, align 1
   ret void
 }
 
-define void @i24_insert_bit(i24* %a, i1 zeroext %bit) {
+define void @i24_insert_bit(ptr %a, i1 zeroext %bit) {
 ; LE-LABEL: i24_insert_bit:
 ; LE:       @ %bb.0:
 ; LE-NEXT:    mov r3, #255
@@ -72,15 +72,15 @@ define void @i24_insert_bit(i24* %a, i1 zeroext %bit) {
 ; BE-NEXT:    strh r1, [r0]
 ; BE-NEXT:    mov pc, lr
   %extbit = zext i1 %bit to i24
-  %b = load i24, i24* %a, align 1
+  %b = load i24, ptr %a, align 1
   %extbit.shl = shl nuw nsw i24 %extbit, 13
   %c = and i24 %b, -8193
   %d = or i24 %c, %extbit.shl
-  store i24 %d, i24* %a, align 1
+  store i24 %d, ptr %a, align 1
   ret void
 }
 
-define void @i56_or(i56* %a) {
+define void @i56_or(ptr %a) {
 ; LE-LABEL: i56_or:
 ; LE:       @ %bb.0:
 ; LE-NEXT:    ldr r1, [r0]
@@ -101,13 +101,13 @@ define void @i56_or(i56* %a) {
 ; BE-NEXT:    lsr r0, r0, #8
 ; BE-NEXT:    strh r0, [r1]
 ; BE-NEXT:    mov pc, lr
-  %aa = load i56, i56* %a
+  %aa = load i56, ptr %a
   %b = or i56 %aa, 384
-  store i56 %b, i56* %a
+  store i56 %b, ptr %a
   ret void
 }
 
-define void @i56_and_or(i56* %a) {
+define void @i56_and_or(ptr %a) {
 ; LE-LABEL: i56_and_or:
 ; LE:       @ %bb.0:
 ; LE-NEXT:    ldr r1, [r0]
@@ -125,14 +125,14 @@ define void @i56_and_or(i56* %a) {
 ; BE-NEXT:    strh r1, [r0]
 ; BE-NEXT:    mov pc, lr
 
-  %b = load i56, i56* %a, align 1
+  %b = load i56, ptr %a, align 1
   %c = and i56 %b, -128
   %d = or i56 %c, 384
-  store i56 %d, i56* %a, align 1
+  store i56 %d, ptr %a, align 1
   ret void
 }
 
-define void @i56_insert_bit(i56* %a, i1 zeroext %bit) {
+define void @i56_insert_bit(ptr %a, i1 zeroext %bit) {
 ; LE-LABEL: i56_insert_bit:
 ; LE:       @ %bb.0:
 ; LE-NEXT:    ldr r2, [r0]
@@ -152,11 +152,11 @@ define void @i56_insert_bit(i56* %a, i1 zeroext %bit) {
 ; BE-NEXT:    strh r1, [r0]
 ; BE-NEXT:    mov pc, lr
   %extbit = zext i1 %bit to i56
-  %b = load i56, i56* %a, align 1
+  %b = load i56, ptr %a, align 1
   %extbit.shl = shl nuw nsw i56 %extbit, 13
   %c = and i56 %b, -8193
   %d = or i56 %c, %extbit.shl
-  store i56 %d, i56* %a, align 1
+  store i56 %d, ptr %a, align 1
   ret void
 }
 

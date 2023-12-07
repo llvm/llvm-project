@@ -1,5 +1,5 @@
-# REQUIRES: x86-registered-target
-# RUN: rm -f reduced.ll reduced.bc
+# REQUIRES: default_triple
+# RUN: rm -rf %t.dir && mkdir %t.dir  && cd %t.dir
 
 # RUN: llvm-as -o test-output-format.bc %p/Inputs/test-output-format.ll
 
@@ -8,20 +8,20 @@
 # RUN: llvm-as -disable-output reduced.ll
 
 
-# A .bc input file should default to bitcode output, in reduced.bc
+# A .bc input file should default to bitcode output, in reduced.bc (with bitcode intermediates)
 # RUN: rm -f reduced.ll reduced.bc
-# RUN: llvm-reduce --delta-passes=instructions --test FileCheck --test-arg %s --test-arg --input-file test-output-format.bc
+# RUN: llvm-reduce --delta-passes=instructions --test %python --test-arg %p/Inputs/llvm-dis-and-filecheck.py --test-arg llvm-dis --test-arg FileCheck --test-arg %s test-output-format.bc
 # RUN: llvm-dis -disable-output reduced.bc
 
 
 # A .bc input file with a requested .bc output should produce bitcode
-# RUN: llvm-reduce --delta-passes=instructions -o %t.0.bc --test FileCheck --test-arg %s --test-arg --input-file test-output-format.bc
+# RUN: llvm-reduce --delta-passes=instructions -o %t.0.bc --test %python --test-arg %p/Inputs/llvm-dis-and-filecheck.py --test-arg llvm-dis --test-arg FileCheck --test-arg %s test-output-format.bc
 # RUN: llvm-dis -disable-output %t.0.bc
 
 
 # A .bc input file with a requested .ll output
 # RUN: rm -f reduced.ll reduced.bc
-# RUN: llvm-reduce --delta-passes=instructions -o %t.0.ll --test FileCheck --test-arg %s --test-arg --input-file test-output-format.bc
+# RUN: llvm-reduce --delta-passes=instructions -o %t.0.ll --test %python --test-arg %p/Inputs/llvm-dis-and-filecheck.py --test-arg llvm-dis --test-arg FileCheck --test-arg %s test-output-format.bc
 # RUN: llvm-dis -disable-output %t.0.ll
 
 
@@ -41,7 +41,7 @@
 
 
 # Make sure MIR ignores requests for bitcode
-# RUN: llvm-reduce -mtriple=x86_64-- -output-bitcode --delta-passes=instructions -o %t.3  --test FileCheck --test-arg --check-prefix=MIR --test-arg %s --test-arg --input-file %p/Inputs/test-output-format.mir
+# RUN: llvm-reduce -output-bitcode --delta-passes=instructions -o %t.3 --test FileCheck --test-arg --check-prefix=MIR --test-arg %s --test-arg --input-file %p/Inputs/test-output-format.mir
 # RUN: llc -x mir -run-pass=none -o /dev/null %t.3
 
 

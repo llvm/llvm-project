@@ -135,19 +135,14 @@ define <4 x i32> @combine_vec_udiv_dupe(<4 x i32> %x) {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: combine_vec_udiv_dupe:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: combine_vec_udiv_dupe:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
-; AVX2-NEXT:    retq
+; AVX-LABEL: combine_vec_udiv_dupe:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
+; AVX-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_udiv_dupe:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
 ; XOP-NEXT:    retq
   %1 = udiv <4 x i32> %x, %x
   ret <4 x i32> %1
@@ -364,7 +359,7 @@ define <4 x i32> @combine_vec_udiv_by_shl_pow2a(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; XOP-LABEL: combine_vec_udiv_by_shl_pow2a:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [4294967294,4294967294,4294967294,4294967294]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4294967294,4294967294,4294967294,4294967294]
 ; XOP-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
 ; XOP-NEXT:    vpshld %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
@@ -688,7 +683,7 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 define <8 x i16> @pr38477(<8 x i16> %a0) {
 ; SSE2-LABEL: pr38477:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,4957,57457,4103,16385,35545,2048,2115]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = <u,4957,57457,4103,16385,35545,2048,2115>
 ; SSE2-NEXT:    pmulhuw %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    psubw %xmm1, %xmm2
@@ -707,7 +702,7 @@ define <8 x i16> @pr38477(<8 x i16> %a0) {
 ;
 ; SSE41-LABEL: pr38477:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,4957,57457,4103,16385,35545,2048,2115]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <u,4957,57457,4103,16385,35545,2048,2115>
 ; SSE41-NEXT:    pmulhuw %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    psubw %xmm1, %xmm2

@@ -15,19 +15,9 @@
 
 #include "test_iterators.h"
 
-struct ForwardProxyIterator {
-  using value_type = int;
-  using difference_type = int;
-  ForwardProxyIterator& operator++();
-  ForwardProxyIterator operator++(int);
-  bool operator==(const ForwardProxyIterator&) const;
-
-  int operator*() const;
-};
-
 static_assert(std::ranges::__nothrow_forward_iterator<forward_iterator<int*>>);
-static_assert(std::forward_iterator<ForwardProxyIterator>);
-static_assert(!std::ranges::__nothrow_forward_iterator<ForwardProxyIterator>);
+static_assert(std::forward_iterator<ForwardProxyIterator<int*>>);
+static_assert(!std::ranges::__nothrow_forward_iterator<ForwardProxyIterator<int*>>);
 
 constexpr bool forward_subsumes_input(std::ranges::__nothrow_forward_iterator auto) {
   return true;

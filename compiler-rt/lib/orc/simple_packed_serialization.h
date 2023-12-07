@@ -39,6 +39,7 @@
 #include "error.h"
 #include "stl_extras.h"
 
+#include <optional>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -188,6 +189,14 @@ public:
   /// Convenience typedef of the corresponding arg list.
   typedef SPSArgList<SPSTagTs...> AsArgList;
 };
+
+/// SPS tag type for optionals.
+///
+/// SPSOptionals should be serialized as a bool with true indicating that an
+/// SPSTagT value is present, and false indicating that there is no value.
+/// If the boolean is true then the serialized SPSTagT will follow immediately
+/// after it.
+template <typename SPSTagT> class SPSOptional {};
 
 /// SPS tag type for sequences.
 ///
@@ -393,6 +402,38 @@ public:
   static bool deserialize(SPSInputBuffer &IB, std::pair<T1, T2> &P) {
     return SPSArgList<SPSTagT1>::deserialize(IB, P.first) &&
            SPSArgList<SPSTagT2>::deserialize(IB, P.second);
+  }
+};
+
+/// SPSOptional serialization for std::optional.
+template <typename SPSTagT, typename T>
+class SPSSerializationTraits<SPSOptional<SPSTagT>, std::optional<T>> {
+public:
+  static size_t size(const std::optional<T> &Value) {
+    size_t Size = SPSArgList<bool>::size(!!Value);
+    if (Value)
+      Size += SPSArgList<SPSTagT>::size(*Value);
+    return Size;
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const std::optional<T> &Value) {
+    if (!SPSArgList<bool>::serialize(OB, !!Value))
+      return false;
+    if (Value)
+      return SPSArgList<SPSTagT>::serialize(OB, *Value);
+    return true;
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, std::optional<T> &Value) {
+    bool HasValue;
+    if (!SPSArgList<bool>::deserialize(IB, HasValue))
+      return false;
+    if (HasValue) {
+      Value = T();
+      return SPSArgList<SPSTagT>::deserialize(IB, *Value);
+    } else
+      Value = std::optional<T>();
+    return true;
   }
 };
 

@@ -11,27 +11,25 @@
 
 // Precondition:  0 <= b < bits_in_tword
 
-COMPILER_RT_ABI ti_int __ashlti3(ti_int a, si_int b);
+COMPILER_RT_ABI ti_int __ashlti3(ti_int a, int b);
 
-int test__ashlti3(ti_int a, si_int b, ti_int expected)
-{
-    ti_int x = __ashlti3(a, b);
-    if (x != expected)
-    {
-        twords at;
-        at.all = a;
-        twords bt;
-        bt.all = b;
-        twords xt;
-        xt.all = x;
-        twords expectedt;
-        expectedt.all = expected;
-        printf("error in __ashlti3: 0x%llX%.16llX << %d = 0x%llX%.16llX,"
-               " expected 0x%llX%.16llX\n",
-                at.s.high, at.s.low, b, xt.s.high, xt.s.low,
-                expectedt.s.high, expectedt.s.low);
-    }
-    return x != expected;
+int test__ashlti3(ti_int a, int b, ti_int expected) {
+  ti_int x = __ashlti3(a, b);
+  if (x != expected) {
+    twords at;
+    at.all = a;
+    twords bt;
+    bt.all = b;
+    twords xt;
+    xt.all = x;
+    twords expectedt;
+    expectedt.all = expected;
+    printf("error in __ashlti3: 0x%llX%.16llX << %d = 0x%llX%.16llX,"
+           " expected 0x%llX%.16llX\n",
+           at.s.high, at.s.low, b, xt.s.high, xt.s.low, expectedt.s.high,
+           expectedt.s.low);
+  }
+  return x != expected;
 }
 
 char assumption_1[sizeof(ti_int) == 2*sizeof(di_int)] = {0};

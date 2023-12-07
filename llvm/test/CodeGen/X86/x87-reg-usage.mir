@@ -5,56 +5,56 @@
 --- |
   declare float @llvm.sqrt.f32(float)
 
-  define void @f1(float* %a, float* %b) {
-    %1 = load float, float* %a, align 4
-    %2 = load float, float* %b, align 4
+  define void @f1(ptr %a, ptr %b) {
+    %1 = load float, ptr %a, align 4
+    %2 = load float, ptr %b, align 4
     %sub = fsub float %1, %2
-    store float %sub, float* %a, align 4
+    store float %sub, ptr %a, align 4
     ret void
   }
 
-  define void @f2(double* %a, double* %b) {
-    %1 = load double, double* %a, align 8
-    %2 = load double, double* %b, align 8
+  define void @f2(ptr %a, ptr %b) {
+    %1 = load double, ptr %a, align 8
+    %2 = load double, ptr %b, align 8
     %add = fadd double %1, %2
-    store double %add, double* %a, align 8
+    store double %add, ptr %a, align 8
     ret void
   }
 
-  define void @f3(x86_fp80* %a, x86_fp80* %b) {
-    %1 = load x86_fp80, x86_fp80* %a, align 16
-    %2 = load x86_fp80, x86_fp80* %b, align 16
+  define void @f3(ptr %a, ptr %b) {
+    %1 = load x86_fp80, ptr %a, align 16
+    %2 = load x86_fp80, ptr %b, align 16
     %mul = fmul x86_fp80 %1, %2
-    store x86_fp80 %mul, x86_fp80* %a, align 16
+    store x86_fp80 %mul, ptr %a, align 16
     ret void
   }
 
-  define void @f4(float* %a, float* %b) {
-    %1 = load float, float* %a, align 4
-    %2 = load float, float* %b, align 4
+  define void @f4(ptr %a, ptr %b) {
+    %1 = load float, ptr %a, align 4
+    %2 = load float, ptr %b, align 4
     %div = fdiv float %1, %2
-    store float %div, float* %a, align 4
+    store float %div, ptr %a, align 4
     ret void
   }
 
-  define void @f5(float* %val, double* %ret) {
-    %1 = load float, float* %val, align 4
+  define void @f5(ptr %val, ptr %ret) {
+    %1 = load float, ptr %val, align 4
     %res = fpext float %1 to double
-    store double %res, double* %ret, align 8
+    store double %res, ptr %ret, align 8
     ret void
   }
 
-  define void @f6(double* %val, float* %ret) {
-    %1 = load double, double* %val, align 8
+  define void @f6(ptr %val, ptr %ret) {
+    %1 = load double, ptr %val, align 8
     %res = fptrunc double %1 to float
-    store float %res, float* %ret, align 4
+    store float %res, ptr %ret, align 4
     ret void
   }
 
-  define void @f7(float* %a) {
-    %1 = load float, float* %a, align 4
+  define void @f7(ptr %a) {
+    %1 = load float, ptr %a, align 4
     %res = call float @llvm.sqrt.f32(float %1)
-    store float %res, float* %a, align 4
+    store float %res, ptr %a, align 4
     ret void
   }
 

@@ -33,7 +33,6 @@ bool CSKYTargetInfo::setCPU(const std::string &Name) {
 
 void CSKYTargetInfo::getTargetDefines(const LangOptions &Opts,
                                       MacroBuilder &Builder) const {
-  Builder.defineMacro("__ELF__");
   Builder.defineMacro("__csky__", "2");
   Builder.defineMacro("__CSKY__", "2");
   Builder.defineMacro("__ckcore__", "2");
@@ -52,8 +51,10 @@ void CSKYTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   Builder.defineMacro("__" + ArchName.upper() + "__");
   Builder.defineMacro("__" + ArchName.lower() + "__");
-  Builder.defineMacro("__" + CPUName.upper() + "__");
-  Builder.defineMacro("__" + CPUName.lower() + "__");
+  if (ArchName != CPUName) {
+    Builder.defineMacro("__" + CPUName.upper() + "__");
+    Builder.defineMacro("__" + CPUName.lower() + "__");
+  }
 
   // TODO: Add support for BE if BE was supported later
   StringRef endian = "__cskyLE__";
@@ -213,7 +214,7 @@ ArrayRef<const char *> CSKYTargetInfo::getGCCRegNames() const {
       "fr31",
 
   };
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::GCCRegAlias> CSKYTargetInfo::getGCCRegAliases() const {
@@ -285,7 +286,7 @@ ArrayRef<TargetInfo::GCCRegAlias> CSKYTargetInfo::getGCCRegAliases() const {
       {{"vr31"}, "fr31"},
 
   };
-  return llvm::makeArrayRef(GCCRegAliases);
+  return llvm::ArrayRef(GCCRegAliases);
 }
 
 bool CSKYTargetInfo::validateAsmConstraint(

@@ -40,11 +40,13 @@ import subprocess
 from difflib import unified_diff
 from pathlib import Path
 
+
 def check_args(args):
     """Verifies that the number is arguments passed is correct."""
     if len(args) < 3:
         print(f"Usage: {args[0]} <fortran-source> <flang-command>")
         sys.exit(1)
+
 
 def set_source(source):
     """Sets the path to the source files."""
@@ -53,6 +55,7 @@ def set_source(source):
         sys.exit(1)
     return Path(source)
 
+
 def set_executable(exe):
     """Sets the path to the Flang frontend driver."""
     if not Path(exe).is_file():
@@ -60,10 +63,11 @@ def set_executable(exe):
         sys.exit(1)
     return str(Path(exe))
 
+
 check_args(sys.argv)
 cwd = os.getcwd()
 srcdir = set_source(sys.argv[1]).resolve()
-with open(srcdir, 'r', encoding="utf-8") as f:
+with open(srcdir, "r", encoding="utf-8") as f:
     src = f.readlines()
 src1 = ""
 src2 = ""
@@ -77,7 +81,7 @@ warning_diffs = ""
 flang_fc1 = set_executable(sys.argv[2])
 flang_fc1_args = sys.argv[3:]
 flang_fc1_options = ""
-LIBPGMATH = os.getenv('LIBPGMATH')
+LIBPGMATH = os.getenv("LIBPGMATH")
 if LIBPGMATH:
     flang_fc1_options = ["-fdebug-dump-symbols", "-DTEST_LIBPGMATH"]
     print("Assuming libpgmath support")
@@ -87,8 +91,14 @@ else:
 
 cmd = [flang_fc1, *flang_fc1_args, *flang_fc1_options, str(srcdir)]
 with tempfile.TemporaryDirectory() as tmpdir:
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                          check=True, universal_newlines=True, cwd=tmpdir)
+    proc = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+        universal_newlines=True,
+        cwd=tmpdir,
+    )
     src1 = proc.stdout
     messages = proc.stderr
 
@@ -125,8 +135,9 @@ for i, line in enumerate(src, 1):
             expected_warnings += f"{i}:{x}\n"
         warnings = []
 
-for line in unified_diff(actual_warnings.split("\n"),
-                         expected_warnings.split("\n"), n=0):
+for line in unified_diff(
+    actual_warnings.split("\n"), expected_warnings.split("\n"), n=0
+):
     line = re.sub(r"(^\-)(\d+:)", r"\nactual at \g<2>", line)
     line = re.sub(r"(^\+)(\d+:)", r"\nexpect at \g<2>", line)
     warning_diffs += line
@@ -152,4 +163,3 @@ else:
     print()
     print(f"All {passed_results+passed_warnings} tests passed")
     print("PASS")
-

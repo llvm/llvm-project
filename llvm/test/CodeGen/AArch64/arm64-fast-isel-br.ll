@@ -2,8 +2,8 @@
 
 define void @branch1() nounwind uwtable ssp {
   %x = alloca i32, align 4
-  store i32 0, i32* %x, align 4
-  %1 = load i32, i32* %x, align 4
+  store i32 0, ptr %x, align 4
+  %1 = load i32, ptr %x, align 4
   %2 = icmp ne i32 %1, 0
   br i1 %2, label %3, label %4
 
@@ -19,41 +19,41 @@ define void @branch2() nounwind uwtable ssp {
   %x = alloca i32, align 4
   %y = alloca i32, align 4
   %z = alloca i32, align 4
-  store i32 0, i32* %1
-  store i32 1, i32* %y, align 4
-  store i32 1, i32* %x, align 4
-  store i32 0, i32* %z, align 4
-  %2 = load i32, i32* %x, align 4
+  store i32 0, ptr %1
+  store i32 1, ptr %y, align 4
+  store i32 1, ptr %x, align 4
+  store i32 0, ptr %z, align 4
+  %2 = load i32, ptr %x, align 4
   %3 = icmp ne i32 %2, 0
   br i1 %3, label %4, label %5
 
 ; <label>:4                                       ; preds = %0
-  store i32 0, i32* %1
+  store i32 0, ptr %1
   br label %14
 
 ; <label>:5                                       ; preds = %0
-  %6 = load i32, i32* %y, align 4
+  %6 = load i32, ptr %y, align 4
   %7 = icmp ne i32 %6, 0
   br i1 %7, label %8, label %13
 
 ; <label>:8                                       ; preds = %5
-  %9 = load i32, i32* %z, align 4
+  %9 = load i32, ptr %z, align 4
   %10 = icmp ne i32 %9, 0
   br i1 %10, label %11, label %12
 
 ; <label>:11                                      ; preds = %8
-  store i32 1, i32* %1
+  store i32 1, ptr %1
   br label %14
 
 ; <label>:12                                      ; preds = %8
-  store i32 0, i32* %1
+  store i32 0, ptr %1
   br label %14
 
 ; <label>:13                                      ; preds = %5
   br label %14
 
 ; <label>:14                                      ; preds = %4, %11, %12, %13
-  %15 = load i32, i32* %1
+  %15 = load i32, ptr %1
   ret void
 }
 
@@ -89,11 +89,11 @@ entry:
   %b.addr = alloca i16, align 2
   %c.addr = alloca i32, align 4
   %d.addr = alloca i64, align 8
-  store i8 %a, i8* %a.addr, align 1
-  store i16 %b, i16* %b.addr, align 2
-  store i32 %c, i32* %c.addr, align 4
-  store i64 %d, i64* %d.addr, align 8
-  %0 = load i16, i16* %b.addr, align 2
+  store i8 %a, ptr %a.addr, align 1
+  store i16 %b, ptr %b.addr, align 2
+  store i32 %c, ptr %c.addr, align 4
+  store i64 %d, ptr %d.addr, align 8
+  %0 = load i16, ptr %b.addr, align 2
 ; CHECK: tbz {{w[0-9]+}}, #0, LBB4_2
   %conv = trunc i16 %0 to i1
   br i1 %conv, label %if.then, label %if.end
@@ -103,7 +103,7 @@ if.then:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %1 = load i32, i32* %c.addr, align 4
+  %1 = load i32, ptr %c.addr, align 4
 ; CHECK: tbz w{{[0-9]+}}, #0, LBB4_4
   %conv1 = trunc i32 %1 to i1
   br i1 %conv1, label %if.then3, label %if.end4
@@ -113,7 +113,7 @@ if.then3:                                         ; preds = %if.end
   br label %if.end4
 
 if.end4:                                          ; preds = %if.then3, %if.end
-  %2 = load i64, i64* %d.addr, align 8
+  %2 = load i64, ptr %d.addr, align 8
 ; CHECK: tbz w{{[0-9]+}}, #0, LBB4_6
   %conv5 = trunc i64 %2 to i1
   br i1 %conv5, label %if.then7, label %if.end8
@@ -123,7 +123,7 @@ if.then7:                                         ; preds = %if.end4
   br label %if.end8
 
 if.end8:                                          ; preds = %if.then7, %if.end4
-  %3 = load i8, i8* %a.addr, align 1
+  %3 = load i8, ptr %a.addr, align 1
   ret i8 %3
 }
 

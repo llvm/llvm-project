@@ -95,8 +95,7 @@ public:
   void OnDebugString(const std::string &string) override;
   void OnDebuggerError(const Status &error, uint32_t type) override;
 
-  Status GetWatchpointSupportInfo(uint32_t &num) override;
-  Status GetWatchpointSupportInfo(uint32_t &num, bool &after) override;
+  std::optional<uint32_t> GetWatchpointSlotCount() override;
   Status EnableWatchpoint(Watchpoint *wp, bool notify = true) override;
   Status DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
 

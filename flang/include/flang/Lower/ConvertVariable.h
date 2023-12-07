@@ -25,6 +25,7 @@ namespace fir {
 class ExtendedValue;
 class FirOpBuilder;
 class GlobalOp;
+class FortranVariableFlagsAttr;
 } // namespace fir
 
 namespace Fortran ::lower {
@@ -70,6 +71,9 @@ void defineCommonBlocks(
 /// instantiateVariable cannot be called.
 void mapSymbolAttributes(AbstractConverter &, const pft::Variable &, SymMap &,
                          StatementContext &, mlir::Value preAlloc = {});
+void mapSymbolAttributes(AbstractConverter &, const semantics::SymbolRef &,
+                         SymMap &, StatementContext &,
+                         mlir::Value preAlloc = {});
 
 /// Instantiate the variables that appear in the specification expressions
 /// of the result of a function call. The instantiated variables are added
@@ -106,6 +110,20 @@ genExtAddrInInitializer(Fortran::lower::AbstractConverter &converter,
 void createRuntimeTypeInfoGlobal(Fortran::lower::AbstractConverter &converter,
                                  mlir::Location loc,
                                  const Fortran::semantics::Symbol &typeInfoSym);
+
+/// Translate the Fortran attributes of \p sym into the FIR variable attribute
+/// representation.
+fir::FortranVariableFlagsAttr
+translateSymbolAttributes(mlir::MLIRContext *mlirContext,
+                          const Fortran::semantics::Symbol &sym);
+
+/// Map a symbol to a given fir::ExtendedValue. This will generate an
+/// hlfir.declare when lowering to HLFIR and map the hlfir.declare result to the
+/// symbol.
+void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
+                      Fortran::lower::SymMap &symMap,
+                      const Fortran::semantics::Symbol &sym,
+                      const fir::ExtendedValue &exv, bool force = false);
 
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_CONVERT_VARIABLE_H

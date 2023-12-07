@@ -428,7 +428,7 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
                                  STI);
 
     if (Result != MCDisassembler::Success &&
-        STI.getFeatureBits()[Hexagon::ExtensionHVX])
+        STI.hasFeature(Hexagon::ExtensionHVX))
       Result = decodeInstruction(DecoderTableEXT_mmvec32, MI, Instruction,
                                  Address, this, STI);
 

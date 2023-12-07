@@ -44,7 +44,7 @@ TEST(SMEAttributes, Constructors) {
 
   ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_pstate_za_new\"")
                       ->getFunction("foo"))
-                  .hasNewZAInterface());
+                  .hasNewZABody());
 
   ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_pstate_za_preserved\"")
                       ->getFunction("foo"))
@@ -87,12 +87,12 @@ TEST(SMEAttributes, Basics) {
   ASSERT_TRUE(SA(SA::ZA_Shared | SA::ZA_Preserved).preservesZA());
 
   ASSERT_TRUE(SA(SA::ZA_New).hasPrivateZAInterface());
-  ASSERT_TRUE(SA(SA::ZA_New).hasNewZAInterface());
+  ASSERT_TRUE(SA(SA::ZA_New).hasNewZABody());
   ASSERT_TRUE(SA(SA::ZA_New).hasZAState());
   ASSERT_FALSE(SA(SA::ZA_New).preservesZA());
 
   ASSERT_TRUE(SA(SA::Normal).hasPrivateZAInterface());
-  ASSERT_FALSE(SA(SA::Normal).hasNewZAInterface());
+  ASSERT_FALSE(SA(SA::Normal).hasNewZABody());
   ASSERT_FALSE(SA(SA::Normal).hasZAState());
   ASSERT_FALSE(SA(SA::Normal).preservesZA());
 }

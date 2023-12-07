@@ -29,11 +29,11 @@ namespace {
 class StackAddrEscapeChecker
     : public Checker<check::PreCall, check::PreStmt<ReturnStmt>,
                      check::EndFunction> {
-  mutable IdentifierInfo *dispatch_semaphore_tII;
-  mutable std::unique_ptr<BuiltinBug> BT_stackleak;
-  mutable std::unique_ptr<BuiltinBug> BT_returnstack;
-  mutable std::unique_ptr<BuiltinBug> BT_capturedstackasync;
-  mutable std::unique_ptr<BuiltinBug> BT_capturedstackret;
+  mutable IdentifierInfo *dispatch_semaphore_tII = nullptr;
+  mutable std::unique_ptr<BugType> BT_stackleak;
+  mutable std::unique_ptr<BugType> BT_returnstack;
+  mutable std::unique_ptr<BugType> BT_capturedstackasync;
+  mutable std::unique_ptr<BugType> BT_capturedstackret;
 
 public:
   enum CheckKind {
@@ -96,6 +96,14 @@ SourceRange StackAddrEscapeChecker::genName(raw_ostream &os, const MemRegion *R,
     os << "stack memory associated with local variable '" << VR->getString()
        << '\'';
     range = VR->getDecl()->getSourceRange();
+  } else if (const auto *LER = dyn_cast<CXXLifetimeExtendedObjectRegion>(R)) {
+    QualType Ty = LER->getValueType().getLocalUnqualifiedType();
+    os << "stack memory associated with temporary object of type '";
+    Ty.print(os, Ctx.getPrintingPolicy());
+    os << "' lifetime extended by local variable";
+    if (const IdentifierInfo *ID = LER->getExtendingDecl()->getIdentifier())
+      os << " '" << ID->getName() << '\'';
+    range = LER->getExpr()->getSourceRange();
   } else if (const auto *TOR = dyn_cast<CXXTempObjectRegion>(R)) {
     QualType Ty = TOR->getValueType().getLocalUnqualifiedType();
     os << "stack memory associated with temporary object of type '";
@@ -130,10 +138,8 @@ SmallVector<const MemRegion *, 4>
 StackAddrEscapeChecker::getCapturedStackRegions(const BlockDataRegion &B,
                                                 CheckerContext &C) {
   SmallVector<const MemRegion *, 4> Regions;
-  BlockDataRegion::referenced_vars_iterator I = B.referenced_vars_begin();
-  BlockDataRegion::referenced_vars_iterator E = B.referenced_vars_end();
-  for (; I != E; ++I) {
-    SVal Val = C.getState()->getSVal(I.getCapturedRegion());
+  for (auto Var : B.referenced_vars()) {
+    SVal Val = C.getState()->getSVal(Var.getCapturedRegion());
     const MemRegion *Region = Val.getAsRegion();
     if (Region && isa<StackSpaceRegion>(Region->getMemorySpace()))
       Regions.push_back(Region);
@@ -148,7 +154,7 @@ void StackAddrEscapeChecker::EmitStackError(CheckerContext &C,
   if (!N)
     return;
   if (!BT_returnstack)
-    BT_returnstack = std::make_unique<BuiltinBug>(
+    BT_returnstack = std::make_unique<BugType>(
         CheckNames[CK_StackAddrEscapeChecker],
         "Return of address to stack-allocated memory");
   // Generate a report for this bug.
@@ -188,7 +194,7 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
     if (!N)
       continue;
     if (!BT_capturedstackasync)
-      BT_capturedstackasync = std::make_unique<BuiltinBug>(
+      BT_capturedstackasync = std::make_unique<BugType>(
           CheckNames[CK_StackAddrAsyncEscapeChecker],
           "Address of stack-allocated memory is captured");
     SmallString<128> Buf;
@@ -212,7 +218,7 @@ void StackAddrEscapeChecker::checkReturnedBlockCaptures(
     if (!N)
       continue;
     if (!BT_capturedstackret)
-      BT_capturedstackret = std::make_unique<BuiltinBug>(
+      BT_capturedstackret = std::make_unique<BugType>(
           CheckNames[CK_StackAddrEscapeChecker],
           "Address of stack-allocated memory is captured");
     SmallString<128> Buf;
@@ -358,12 +364,9 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     return;
 
   if (!BT_stackleak)
-    BT_stackleak = std::make_unique<BuiltinBug>(
-        CheckNames[CK_StackAddrEscapeChecker],
-        "Stack address stored into global variable",
-        "Stack address was saved into a global variable. "
-        "This is dangerous because the address will become "
-        "invalid after returning from the function");
+    BT_stackleak =
+        std::make_unique<BugType>(CheckNames[CK_StackAddrEscapeChecker],
+                                  "Stack address stored into global variable");
 
   for (const auto &P : Cb.V) {
     const MemRegion *Referrer = P.first;
@@ -376,7 +379,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     llvm::raw_svector_ostream Out(Buf);
     const SourceRange Range = genName(Out, Referred, Ctx.getASTContext());
 
-    if (isa<CXXTempObjectRegion>(Referrer)) {
+    if (isa<CXXTempObjectRegion, CXXLifetimeExtendedObjectRegion>(Referrer)) {
       Out << " is still referred to by a temporary object on the stack "
           << CommonSuffix;
       auto Report =

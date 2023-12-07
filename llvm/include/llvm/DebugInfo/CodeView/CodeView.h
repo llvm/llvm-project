@@ -138,8 +138,8 @@ enum class CPUType : uint16_t {
   D3D11_Shader = 0x100,
 };
 
-/// These values correspond to the CV_CFL_LANG enumeration, and are documented
-/// here: https://msdn.microsoft.com/en-us/library/bw3aekw6.aspx
+/// These values correspond to the CV_CFL_LANG enumeration in the Microsoft
+/// Debug Interface Access SDK
 enum SourceLanguage : uint8_t {
   C = 0x00,
   Cpp = 0x01,
@@ -158,6 +158,8 @@ enum SourceLanguage : uint8_t {
   JScript = 0x0e,
   MSIL = 0x0f,
   HLSL = 0x10,
+  ObjC = 0x11,
+  ObjCpp = 0x12,
 
   Rust = 0x15,
 
@@ -613,6 +615,29 @@ inline uint32_t alignOf(CodeViewContainer Container) {
     return 1;
   return 4;
 }
+
+// Corresponds to CV_armswitchtype enum.
+// This enum represents the different ways that jump tables entries can be
+// encoded to represent the target address to jump to.
+// * Pointer: The absolute address to jump to.
+// * [U]Int[8|16|32]: A value that is added to some "base" address to get the
+//    address to jump to.
+// * [U]Int[8|16]ShiftLeft: A value that is shifted left by an implementation
+//    specified amount, then added to some "base" address to get the address to
+//    jump to.
+enum class JumpTableEntrySize : uint16_t {
+  Int8 = 0,
+  UInt8 = 1,
+  Int16 = 2,
+  UInt16 = 3,
+  Int32 = 4,
+  UInt32 = 5,
+  Pointer = 6,
+  UInt8ShiftLeft = 7,
+  UInt16ShiftLeft = 8,
+  Int8ShiftLeft = 9,
+  Int16ShiftLeft = 10,
+};
 }
 }
 

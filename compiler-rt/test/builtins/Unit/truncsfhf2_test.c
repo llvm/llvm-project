@@ -19,7 +19,7 @@ int test__truncsfhf2(float a, uint16_t expected)
     return ret;
 }
 
-char assumption_1[sizeof(__fp16) * CHAR_BIT == 16] = {0};
+char assumption_1[sizeof(TYPE_FP16) * CHAR_BIT == 16] = {0};
 
 int main()
 {

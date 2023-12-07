@@ -75,17 +75,6 @@ class FRdRr<bits<4> opcode, bits<2> f, dag outs, dag ins, string asmstr,
   let Inst{3 - 0} = rr{3 - 0};
 }
 
-class FTST<bits<4> opcode, bits<2> f, dag outs, dag ins, string asmstr,
-           list<dag> pattern> : AVRInst16<outs, ins, asmstr, pattern> {
-  bits<5> rd;
-
-  let Inst{15 - 12} = opcode;
-  let Inst{11 - 10} = f;
-  let Inst{9} = rd{4};
-  let Inst{8 - 4} = rd;
-  let Inst{3 - 0} = rd{3 - 0};
-}
-
 //===----------------------------------------------------------------------===//
 // Instruction of the format `<mnemonic> Z, Rd`
 // <|1001|001r|rrrr|0ttt>
@@ -432,6 +421,8 @@ class FBRsk<bit f, bits<3> s, dag outs, dag ins, string asmstr,
   let Inst{10} = f;
   let Inst{9 - 3} = k;
   let Inst{2 - 0} = s;
+
+  let DecoderMethod = "decodeCondBranch";
 }
 
 //===----------------------------------------------------------------------===//
@@ -440,11 +431,6 @@ class FBRsk<bit f, bits<3> s, dag outs, dag ins, string asmstr,
 
 class F16<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
-  let Inst = opcode;
-}
-
-class F32<bits<32> opcode, dag outs, dag ins, string asmstr, list<dag> pattern>
-    : AVRInst32<outs, ins, asmstr, pattern> {
   let Inst = opcode;
 }
 
@@ -460,6 +446,8 @@ class FBRk<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{15 - 13} = 0b110;
   let Inst{12} = f;
   let Inst{11 - 0} = k;
+
+  let DecoderMethod = "decodeFBRk";
 }
 
 //===----------------------------------------------------------------------===//
@@ -502,6 +490,29 @@ class F32DM<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{15 - 0} = k;
 }
 
+//===---------------------------------------------------------------------===//
+// Special format for the LDS/STS instructions on AVRTiny.
+// <|1010|ikkk|dddd|kkkk>
+// d = R16 ~ R31
+// i = 0 - lds, 1 - sts
+// k = 7-bit data space address
+//===---------------------------------------------------------------------===//
+class FLDSSTSTINY<bit i, dag outs, dag ins, string asmstr, list<dag> pattern>
+    : AVRInst16<outs, ins, asmstr, pattern> {
+  bits<5> rd;
+  bits<7> k;
+
+  let Inst{15 - 12} = 0b1010;
+
+  let Inst{11} = i;
+
+  let Inst{10 - 8} = k{6 - 4};
+  let Inst{7 - 4} = rd{3 - 0};
+  let Inst{3 - 0} = k{3 - 0};
+
+  let DecoderNamespace = "AVRTiny";
+}
+
 // <|1001|0100|bfff|1000>
 class FS<bit b, dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
@@ -536,6 +547,8 @@ class FSK<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
 
   let Inst{3} = k{0};
   let Inst{2 - 0} = s;
+
+  let DecoderMethod = "decodeCondBranch";
 }
 
 class ExtensionPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>

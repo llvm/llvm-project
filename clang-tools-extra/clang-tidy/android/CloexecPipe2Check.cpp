@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace android {
+namespace clang::tidy::android {
 
 void CloexecPipe2Check::registerMatchers(MatchFinder *Finder) {
   registerMatchersImpl(Finder,
@@ -28,6 +26,4 @@ void CloexecPipe2Check::check(const MatchFinder::MatchResult &Result) {
   insertMacroFlag(Result, /*MacroFlag=*/"O_CLOEXEC", /*ArgPos=*/1);
 }
 
-} // namespace android
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::android

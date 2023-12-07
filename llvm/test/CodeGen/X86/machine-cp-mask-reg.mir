@@ -9,11 +9,11 @@
   source_filename = "test.ll"
   target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
-  define i8 @foo(<64 x i8> %x, i64* %y, i64 %z) #0 {
+  define i8 @foo(<64 x i8> %x, ptr %y, i64 %z) #0 {
     %a = icmp eq <64 x i8> %x, zeroinitializer
     %b = bitcast <64 x i1> %a to i64
     %c = add i64 %b, %z
-    store i64 %c, i64* %y, align 8
+    store i64 %c, ptr %y, align 8
     %d = extractelement <64 x i1> %a, i32 0
     %e = zext i1 %d to i8
     ret i8 %e

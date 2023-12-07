@@ -12,6 +12,8 @@
   integer, pointer :: a(:)
   integer, parameter :: const_id = 66666
   procedure(), pointer :: procptr
+  external external
+  intrinsic acos
 
   namelist /nnn/ nn1, nn2
 
@@ -134,8 +136,12 @@
 
   write(*, '(X)')
 
-  !ERROR: Output item must not be a procedure pointer
-  print*, n1, procptr, n2
+  !ERROR: Output item must not be a procedure
+  print*, procptr
+  !ERROR: Output item must not be a procedure
+  print*, acos
+  !ERROR: Output item must not be a procedure
+  print*, external
 
 1 format (A)
 9 continue

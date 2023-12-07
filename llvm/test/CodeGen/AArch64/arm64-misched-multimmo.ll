@@ -15,9 +15,9 @@
 ; CHECK: SU(4):   STRWui $wzr, renamable $x{{[0-9]+}}
 define dso_local i32 @foo() {
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @G2, i64 0, i64 0), align 4
-  %1 = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @G2, i64 0, i64 1), align 4
-  store i32 0, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @G1, i64 0, i64 0), align 4
+  %0 = load i32, ptr @G2, align 4
+  %1 = load i32, ptr getelementptr inbounds ([100 x i32], ptr @G2, i64 0, i64 1), align 4
+  store i32 0, ptr @G1, align 4
   %add = add nsw i32 %1, %0
   ret i32 %add
 }

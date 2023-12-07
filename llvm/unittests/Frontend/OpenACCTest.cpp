@@ -264,35 +264,34 @@ TEST(OpenACCTest, AllowedClause) {
       ACCD_kernels_loop, 3,
       {ACCC_copy,        ACCC_copyin,        ACCC_copyout, ACCC_create,
        ACCC_device_type, ACCC_no_create,     ACCC_present, ACCC_private,
-       ACCC_deviceptr,   ACCC_attach,        ACCC_async,   ACCC_collapse,
-       ACCC_default,     ACCC_gang,          ACCC_if,      ACCC_num_gangs,
-       ACCC_num_workers, ACCC_reduction,     ACCC_self,    ACCC_tile,
+       ACCC_reduction,   ACCC_deviceptr,     ACCC_attach,  ACCC_async,
+       ACCC_collapse,    ACCC_default,       ACCC_gang,    ACCC_if,
+       ACCC_num_gangs,   ACCC_num_workers,   ACCC_self,    ACCC_tile,
        ACCC_vector,      ACCC_vector_length, ACCC_wait,    ACCC_worker,
        ACCC_auto,        ACCC_independent,   ACCC_seq});
 
   expectAllowedClauses(ACCD_loop, 3,
-                       {ACCC_device_type, ACCC_private, ACCC_collapse,
-                        ACCC_gang, ACCC_reduction, ACCC_tile, ACCC_vector,
+                       {ACCC_device_type, ACCC_private, ACCC_reduction,
+                        ACCC_collapse, ACCC_gang, ACCC_tile, ACCC_vector,
                         ACCC_worker, ACCC_auto, ACCC_independent, ACCC_seq});
 
-  expectAllowedClauses(ACCD_parallel, 3,
-                       {ACCC_async,        ACCC_wait,          ACCC_num_gangs,
-                        ACCC_num_workers,  ACCC_vector_length, ACCC_device_type,
-                        ACCC_if,           ACCC_self,          ACCC_reduction,
-                        ACCC_copy,         ACCC_copyin,        ACCC_copyout,
-                        ACCC_create,       ACCC_no_create,     ACCC_present,
-                        ACCC_deviceptr,    ACCC_attach,        ACCC_private,
-                        ACCC_firstprivate, ACCC_default});
+  expectAllowedClauses(
+      ACCD_parallel, 3,
+      {ACCC_async,         ACCC_wait,         ACCC_num_gangs, ACCC_num_workers,
+       ACCC_vector_length, ACCC_device_type,  ACCC_if,        ACCC_self,
+       ACCC_copy,          ACCC_copyin,       ACCC_copyout,   ACCC_create,
+       ACCC_no_create,     ACCC_present,      ACCC_deviceptr, ACCC_attach,
+       ACCC_private,       ACCC_firstprivate, ACCC_reduction, ACCC_default});
 
   expectAllowedClauses(
       ACCD_parallel_loop, 3,
-      {ACCC_attach,    ACCC_copy,      ACCC_copyin,      ACCC_copyout,
-       ACCC_create,    ACCC_deviceptr, ACCC_device_type, ACCC_firstprivate,
-       ACCC_no_create, ACCC_present,   ACCC_private,     ACCC_tile,
-       ACCC_wait,      ACCC_async,     ACCC_collapse,    ACCC_default,
-       ACCC_gang,      ACCC_if,        ACCC_num_gangs,   ACCC_num_workers,
-       ACCC_reduction, ACCC_self,      ACCC_vector,      ACCC_vector_length,
-       ACCC_worker,    ACCC_auto,      ACCC_independent, ACCC_seq});
+      {ACCC_attach,      ACCC_copy,      ACCC_copyin,      ACCC_copyout,
+       ACCC_create,      ACCC_deviceptr, ACCC_device_type, ACCC_firstprivate,
+       ACCC_no_create,   ACCC_present,   ACCC_private,     ACCC_reduction,
+       ACCC_tile,        ACCC_wait,      ACCC_async,       ACCC_collapse,
+       ACCC_default,     ACCC_gang,      ACCC_if,          ACCC_num_gangs,
+       ACCC_num_workers, ACCC_self,      ACCC_vector,      ACCC_vector_length,
+       ACCC_worker,      ACCC_auto,      ACCC_independent, ACCC_seq});
 
   expectAllowedClauses(ACCD_routine, 3,
                        {ACCC_bind, ACCC_device_type, ACCC_nohost, ACCC_gang,
@@ -301,17 +300,17 @@ TEST(OpenACCTest, AllowedClause) {
   expectAllowedClauses(ACCD_serial, 3,
                        {ACCC_attach, ACCC_copy, ACCC_copyin, ACCC_copyout,
                         ACCC_create, ACCC_deviceptr, ACCC_device_type,
-                        ACCC_firstprivate, ACCC_no_create, ACCC_present,
-                        ACCC_private, ACCC_wait, ACCC_async, ACCC_default,
-                        ACCC_if, ACCC_reduction, ACCC_self});
+                        ACCC_no_create, ACCC_present, ACCC_private,
+                        ACCC_firstprivate, ACCC_reduction, ACCC_wait,
+                        ACCC_async, ACCC_default, ACCC_if, ACCC_self});
 
   expectAllowedClauses(
       ACCD_serial_loop, 3,
       {ACCC_attach,    ACCC_copy,      ACCC_copyin,      ACCC_copyout,
        ACCC_create,    ACCC_deviceptr, ACCC_device_type, ACCC_firstprivate,
-       ACCC_no_create, ACCC_present,   ACCC_private,     ACCC_wait,
-       ACCC_async,     ACCC_collapse,  ACCC_default,     ACCC_gang,
-       ACCC_if,        ACCC_reduction, ACCC_self,        ACCC_tile,
+       ACCC_no_create, ACCC_present,   ACCC_private,     ACCC_reduction,
+       ACCC_wait,      ACCC_async,     ACCC_collapse,    ACCC_default,
+       ACCC_gang,      ACCC_if,        ACCC_self,        ACCC_tile,
        ACCC_vector,    ACCC_worker,    ACCC_auto,        ACCC_independent,
        ACCC_seq});
 

@@ -8,7 +8,7 @@ target triple = "hexagon"
 @g0 = external constant [146 x i16], align 8
 @g1 = external constant [0 x i16], align 2
 
-define void @fred(i32* nocapture readonly %p0, i16 signext %p1, i16* nocapture %p2, i16 signext %p3, i16 signext %p4, i16 signext %p5) #0 {
+define void @fred(ptr nocapture readonly %p0, i16 signext %p1, ptr nocapture %p2, i16 signext %p3, i16 signext %p4, i16 signext %p5) #0 {
 entry:
   %conv = sext i16 %p1 to i32
   %0 = tail call i32 @llvm.hexagon.S2.asl.r.r.sat(i32 %conv, i32 1)
@@ -19,22 +19,22 @@ entry:
   br i1 %cmp144, label %for.body, label %for.end
 
 for.body:                                         ; preds = %entry, %for.body
-  %arrayidx.phi = phi i32* [ %arrayidx.inc, %for.body ], [ %p0, %entry ]
+  %arrayidx.phi = phi ptr [ %arrayidx.inc, %for.body ], [ %p0, %entry ]
   %i.0146.apmt = phi i32 [ %inc.apmt, %for.body ], [ 0, %entry ]
   %L_temp1.0145 = phi i32 [ %5, %for.body ], [ 1, %entry ]
-  %3 = load i32, i32* %arrayidx.phi, align 4, !tbaa !1
+  %3 = load i32, ptr %arrayidx.phi, align 4, !tbaa !1
   %4 = tail call i32 @llvm.hexagon.A2.abssat(i32 %3)
   %5 = tail call i32 @llvm.hexagon.A2.max(i32 %L_temp1.0145, i32 %4)
   %inc.apmt = add nuw nsw i32 %i.0146.apmt, 1
   %exitcond151 = icmp eq i32 %inc.apmt, %conv3
-  %arrayidx.inc = getelementptr i32, i32* %arrayidx.phi, i32 1
+  %arrayidx.inc = getelementptr i32, ptr %arrayidx.phi, i32 1
   br i1 %exitcond151, label %for.end, label %for.body, !llvm.loop !5
 
 for.end:                                          ; preds = %for.body, %entry
   %L_temp1.0.lcssa = phi i32 [ 1, %entry ], [ %5, %for.body ]
   %6 = tail call i32 @llvm.hexagon.S2.clbnorm(i32 %L_temp1.0.lcssa)
-  %arrayidx6 = getelementptr inbounds [146 x i16], [146 x i16]* @g0, i32 0, i32 %conv3
-  %7 = load i16, i16* %arrayidx6, align 2, !tbaa !7
+  %arrayidx6 = getelementptr inbounds [146 x i16], ptr @g0, i32 0, i32 %conv3
+  %7 = load i16, ptr %arrayidx6, align 2, !tbaa !7
   %conv7 = sext i16 %7 to i32
   %8 = tail call i32 @llvm.hexagon.A2.subh.l16.sat.ll(i32 %6, i32 %conv7)
   br i1 %cmp144, label %for.body14.lr.ph, label %for.end29
@@ -45,10 +45,10 @@ for.body14.lr.ph:                                 ; preds = %for.end
   br label %for.body14
 
 for.body14:                                       ; preds = %for.body14, %for.body14.lr.ph
-  %arrayidx16.phi = phi i32* [ %p0, %for.body14.lr.ph ], [ %arrayidx16.inc, %for.body14 ]
+  %arrayidx16.phi = phi ptr [ %p0, %for.body14.lr.ph ], [ %arrayidx16.inc, %for.body14 ]
   %i.1143.apmt = phi i32 [ 0, %for.body14.lr.ph ], [ %inc28.apmt, %for.body14 ]
   %L_temp.0142 = phi i32 [ 0, %for.body14.lr.ph ], [ %12, %for.body14 ]
-  %9 = load i32, i32* %arrayidx16.phi, align 4, !tbaa !1
+  %9 = load i32, ptr %arrayidx16.phi, align 4, !tbaa !1
   %10 = tail call i32 @llvm.hexagon.S2.asl.r.r.sat(i32 %9, i32 %conv17)
   %11 = tail call i32 @llvm.hexagon.A2.asrh(i32 %10)
   %sext133 = shl i32 %11, 16
@@ -56,7 +56,7 @@ for.body14:                                       ; preds = %for.body14, %for.bo
   %12 = tail call i32 @llvm.hexagon.M2.mpy.acc.sat.ll.s0(i32 %L_temp.0142, i32 %conv23, i32 %conv23)
   %inc28.apmt = add nuw nsw i32 %i.1143.apmt, 1
   %exitcond = icmp eq i32 %inc28.apmt, %conv3
-  %arrayidx16.inc = getelementptr i32, i32* %arrayidx16.phi, i32 1
+  %arrayidx16.inc = getelementptr i32, ptr %arrayidx16.phi, i32 1
   br i1 %exitcond, label %for.end29, label %for.body14
 
 for.end29:                                        ; preds = %for.body14, %for.end
@@ -66,8 +66,8 @@ for.end29:                                        ; preds = %for.body14, %for.en
   br i1 %cmp31, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.end29
-  %arrayidx34 = getelementptr inbounds [0 x i16], [0 x i16]* @g1, i32 0, i32 %conv3
-  %14 = load i16, i16* %arrayidx34, align 2, !tbaa !7
+  %arrayidx34 = getelementptr inbounds [0 x i16], ptr @g1, i32 0, i32 %conv3
+  %14 = load i16, ptr %arrayidx34, align 2, !tbaa !7
   %cmp.i = icmp eq i32 %L_temp.0.lcssa, -2147483648
   %cmp1.i = icmp eq i16 %14, -32768
   %or.cond.i = and i1 %cmp.i, %cmp1.i
@@ -167,7 +167,7 @@ if.end80:                                         ; preds = %if.end74, %if.then7
   %conv82 = trunc i32 %37 to i16
   %cmp.i134 = icmp sgt i16 %var_out.0.i136, %conv82
   %var_out.0.i = select i1 %cmp.i134, i16 %conv82, i16 %var_out.0.i136
-  store i16 %var_out.0.i, i16* %p2, align 2, !tbaa !7
+  store i16 %var_out.0.i, ptr %p2, align 2, !tbaa !7
   ret void
 }
 
@@ -187,8 +187,8 @@ declare i32 @llvm.hexagon.S2.asr.r.r.sat(i32, i32) #2
 declare i32 @llvm.hexagon.S2.clbnorm(i32) #2
 declare i32 @llvm.hexagon.S2.lsr.r.r(i32, i32) #2
 declare i64 @llvm.hexagon.M2.mpyd.ll.s1(i32, i32) #2
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
 attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,,+hvx-length64b" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }

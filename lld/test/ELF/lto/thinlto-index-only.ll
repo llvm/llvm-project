@@ -16,13 +16,19 @@
 ; RUN: opt -module-summary %p/Inputs/thinlto.ll -o 2.o
 ; RUN: opt -module-summary %p/Inputs/thinlto_empty.ll -o 3.o
 
+;; Ensure lld doesn't generates index files when --thinlto-index-only is not enabled.
+; RUN: rm -f 1.o.thinlto.bc 2.o.thinlto.bc
+; RUN: ld.lld -shared 1.o 2.o -o 5
+; RUN: not ls 1.o.thinlto.bc
+; RUN: not ls 2.o.thinlto.bc
+
 ;; Ensure lld generates an index and not a binary if requested.
 ; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 1.o 2.o -o 4
 ; RUN: llvm-bcanalyzer -dump 1.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND1
 ; RUN: llvm-bcanalyzer -dump 2.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND2
 ; RUN: not test -e 4
 
-;; Ensure lld generates an index even if the file is wrapped in --start-lib/--end-lib
+;; Ensure lld generates an index even if the file is wrapped in --start-lib/--end-lib.
 ; RUN: rm -f 2.o.thinlto.bc 4
 ; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 1.o 3.o --start-lib 2.o --end-lib -o 4
 ; RUN: llvm-dis < 2.o.thinlto.bc | grep -q '\^0 = module:'
@@ -84,7 +90,6 @@
 ; BACKEND2-NEXT: <FLAGS
 ; BACKEND2-NEXT: <VALUE_GUID op0=1 op1=-5300342847281564238
 ; BACKEND2-NEXT: <COMBINED
-; BACKEND2-NEXT: <BLOCK_COUNT op0=2/>
 ; BACKEND2-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

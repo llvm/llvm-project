@@ -20,5 +20,17 @@ __SVBool_t funcB1(__SVBool_t in)
   return ret ;
 }
 
+__SVCount_t funcB1(__SVCount_t in)
+{
+  __SVCount_t ret ;
+  asm volatile (
+    "mov %[ret].b, %[in].b \n"
+    : [ret] "=w" (ret)
+    : [in] "w" (in)
+    :);
+
+  return ret ;
+}
+
 // CHECK: funcB1
 // CHECK-ERROR: fatal error: error in backend: Cannot select

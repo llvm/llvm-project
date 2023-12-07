@@ -13,9 +13,9 @@ target triple = "arm64-apple-ios10.0.0"
 ; CHECK-DAG: stp [[R0:x[0-9]+]], [[R0:x[0-9]+]], [x0, #16]
 ; CHECK-DAG: stp [[R0:x[0-9]+]], [[R0:x[0-9]+]], [x0]
 
-define void @pr33475(i8* %p0, i8* %p1) noimplicitfloat {
-    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %p0, i8* align 4 %p1, i64 32, i1 false)
+define void @pr33475(ptr %p0, ptr %p1) noimplicitfloat {
+    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %p0, ptr align 4 %p1, i64 32, i1 false)
     ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)

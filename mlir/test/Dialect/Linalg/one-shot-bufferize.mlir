@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries" -buffer-loop-hoisting -drop-equivalent-buffer-results -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries" -canonicalize -buffer-loop-hoisting -drop-equivalent-buffer-results -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
@@ -340,7 +340,7 @@ func.func @op_is_reading_but_following_ops_are_not(
 // CHECK-SAME:  %[[RHS:[0-9a-zA-Z]*]]: memref<64xf32
 func.func @map_binary(%lhs: tensor<64xf32>, %rhs: tensor<64xf32>,
                       %init: tensor<64xf32>) -> tensor<64xf32> {
-   // CHECK:      linalg.map ins(%[[LHS]], %[[RHS]] : memref<64xf32
+   // CHECK:      linalg.map { arith.addf } ins(%[[LHS]], %[[RHS]] : memref<64xf32
    %add = linalg.map
           ins(%lhs, %rhs: tensor<64xf32>, tensor<64xf32>)
           outs(%init:tensor<64xf32>)
@@ -357,13 +357,13 @@ func.func @map_binary(%lhs: tensor<64xf32>, %rhs: tensor<64xf32>,
 // CHECK-SAME:  %[[INPUT:.*]]: memref<16x32x64xf32
 func.func @reduce(%input: tensor<16x32x64xf32>,
                   %init: tensor<16x64xf32>) -> tensor<16x64xf32> {
-  // CHECK:     linalg.reduce ins(%[[INPUT]] : memref<16x32x64xf32
+  // CHECK:     linalg.reduce { arith.addf } ins(%[[INPUT]] : memref<16x32x64xf32
   %reduce = linalg.reduce
       ins(%input:tensor<16x32x64xf32>)
       outs(%init:tensor<16x64xf32>)
       dimensions = [1]
       (%in: f32, %out: f32) {
-        %0 = arith.addf %in, %out: f32
+        %0 = arith.addf %out, %in: f32
         linalg.yield %0: f32
       }
   func.return %reduce : tensor<16x64xf32>

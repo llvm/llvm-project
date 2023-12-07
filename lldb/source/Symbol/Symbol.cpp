@@ -19,6 +19,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/Stream.h"
+#include "llvm/ADT/StringSwitch.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -93,6 +94,55 @@ const Symbol &Symbol::operator=(const Symbol &rhs) {
     m_flags = rhs.m_flags;
   }
   return *this;
+}
+
+llvm::Expected<Symbol> Symbol::FromJSON(const JSONSymbol &symbol,
+                                        SectionList *section_list) {
+  if (!section_list)
+    return llvm::make_error<llvm::StringError>("no section list provided",
+                                               llvm::inconvertibleErrorCode());
+
+  if (!symbol.value && !symbol.address)
+    return llvm::make_error<llvm::StringError>(
+        "symbol must contain either a value or an address",
+        llvm::inconvertibleErrorCode());
+
+  if (symbol.value && symbol.address)
+    return llvm::make_error<llvm::StringError>(
+        "symbol cannot contain both a value and an address",
+        llvm::inconvertibleErrorCode());
+
+  const uint64_t size = symbol.size.value_or(0);
+  const bool is_artificial = false;
+  const bool is_trampoline = false;
+  const bool is_debug = false;
+  const bool external = false;
+  const bool size_is_valid = symbol.size.has_value();
+  const bool contains_linker_annotations = false;
+  const uint32_t flags = 0;
+
+  if (symbol.address) {
+    if (SectionSP section_sp =
+            section_list->FindSectionContainingFileAddress(*symbol.address)) {
+      const uint64_t offset = *symbol.address - section_sp->GetFileAddress();
+      return Symbol(symbol.id.value_or(0), Mangled(symbol.name),
+                    symbol.type.value_or(eSymbolTypeAny), external, is_debug,
+                    is_trampoline, is_artificial,
+                    AddressRange(section_sp, offset, size), size_is_valid,
+                    contains_linker_annotations, flags);
+    }
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("no section found for address: {0:x}", *symbol.address),
+        llvm::inconvertibleErrorCode());
+  }
+
+  // Absolute symbols encode the integer value in the m_offset of the
+  // AddressRange object and the section is set to nothing.
+  return Symbol(symbol.id.value_or(0), Mangled(symbol.name),
+                symbol.type.value_or(eSymbolTypeAny), external, is_debug,
+                is_trampoline, is_artificial,
+                AddressRange(SectionSP(), *symbol.value, size), size_is_valid,
+                contains_linker_annotations, flags);
 }
 
 void Symbol::Clear() {
@@ -438,15 +488,9 @@ Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
     lldb_private::SymbolContextList sc_list;
     module_sp->FindSymbolsWithNameAndType(reexport_name, eSymbolTypeAny,
                                           sc_list);
-    const size_t num_scs = sc_list.GetSize();
-    if (num_scs > 0) {
-      for (size_t i = 0; i < num_scs; ++i) {
-        lldb_private::SymbolContext sc;
-        if (sc_list.GetContextAtIndex(i, sc)) {
-          if (sc.symbol->IsExternal())
-            return sc.symbol;
-        }
-      }
+    for (const SymbolContext &sc : sc_list) {
+      if (sc.symbol->IsExternal())
+        return sc.symbol;
     }
     // If we didn't find the symbol in this module, it may be because this
     // module re-exports some whole other library.  We have to search those as
@@ -622,14 +666,14 @@ bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
   const bool is_addr = data.GetU8(offset_ptr) != 0;
   const uint64_t value = data.GetU64(offset_ptr);
   if (is_addr) {
-    m_addr_range.GetBaseAddress().ResolveAddressUsingFileSections(
-        value, section_list);
+    m_addr_range.GetBaseAddress().ResolveAddressUsingFileSections(value,
+                                                                  section_list);
   } else {
     m_addr_range.GetBaseAddress().Clear();
     m_addr_range.GetBaseAddress().SetOffset(value);
   }
   m_addr_range.SetByteSize(data.GetU64(offset_ptr));
-  m_flags =  data.GetU32(offset_ptr);
+  m_flags = data.GetU32(offset_ptr);
   return true;
 }
 
@@ -723,3 +767,77 @@ bool Symbol::operator==(const Symbol &rhs) const {
     return false;
   return true;
 }
+
+namespace llvm {
+namespace json {
+
+bool fromJSON(const llvm::json::Value &value, lldb_private::JSONSymbol &symbol,
+              llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  const bool mapped = o && o.map("value", symbol.value) &&
+                      o.map("address", symbol.address) &&
+                      o.map("size", symbol.size) && o.map("id", symbol.id) &&
+                      o.map("type", symbol.type) && o.map("name", symbol.name);
+
+  if (!mapped)
+    return false;
+
+  if (!symbol.value && !symbol.address) {
+    path.report("symbol must have either a value or an address");
+    return false;
+  }
+
+  if (symbol.value && symbol.address) {
+    path.report("symbol cannot have both a value and an address");
+    return false;
+  }
+
+  return true;
+}
+
+bool fromJSON(const llvm::json::Value &value, lldb::SymbolType &type,
+              llvm::json::Path path) {
+  if (auto str = value.getAsString()) {
+    type = llvm::StringSwitch<lldb::SymbolType>(*str)
+               .Case("absolute", eSymbolTypeAbsolute)
+               .Case("code", eSymbolTypeCode)
+               .Case("resolver", eSymbolTypeResolver)
+               .Case("data", eSymbolTypeData)
+               .Case("trampoline", eSymbolTypeTrampoline)
+               .Case("runtime", eSymbolTypeRuntime)
+               .Case("exception", eSymbolTypeException)
+               .Case("sourcefile", eSymbolTypeSourceFile)
+               .Case("headerfile", eSymbolTypeHeaderFile)
+               .Case("objectfile", eSymbolTypeObjectFile)
+               .Case("commonblock", eSymbolTypeCommonBlock)
+               .Case("block", eSymbolTypeBlock)
+               .Case("local", eSymbolTypeLocal)
+               .Case("param", eSymbolTypeParam)
+               .Case("variable", eSymbolTypeVariable)
+               .Case("variableType", eSymbolTypeVariableType)
+               .Case("lineentry", eSymbolTypeLineEntry)
+               .Case("lineheader", eSymbolTypeLineHeader)
+               .Case("scopebegin", eSymbolTypeScopeBegin)
+               .Case("scopeend", eSymbolTypeScopeEnd)
+               .Case("additional,", eSymbolTypeAdditional)
+               .Case("compiler", eSymbolTypeCompiler)
+               .Case("instrumentation", eSymbolTypeInstrumentation)
+               .Case("undefined", eSymbolTypeUndefined)
+               .Case("objcclass", eSymbolTypeObjCClass)
+               .Case("objcmetaClass", eSymbolTypeObjCMetaClass)
+               .Case("objcivar", eSymbolTypeObjCIVar)
+               .Case("reexporte", eSymbolTypeReExported)
+               .Default(eSymbolTypeInvalid);
+
+    if (type == eSymbolTypeInvalid) {
+      path.report("invalid symbol type");
+      return false;
+    }
+
+    return true;
+  }
+  path.report("expected string");
+  return false;
+}
+} // namespace json
+} // namespace llvm

@@ -1,3 +1,3 @@
-# Test reading an empty archive with free list in it.
+## Test reading an empty archive with free list in it, should exit normally.
 # RUN: llvm-ar tv %p/Inputs/aix-empty-big-archive-with-freelist.a 2>&1 \
-# RUN:   | not grep 'truncated or malformed archive'
+# RUN:   | count 0

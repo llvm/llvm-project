@@ -484,5 +484,19 @@ define double @powf_exp_const2_int_no_fast(double %base) {
   ret double %res
 }
 
+; TODO: This could be transformed the same as scalar if there is an ldexp intrinsic.
+
+define <2 x float> @pow_sitofp_const_base_2_no_fast_vector(<2 x i8> %x) {
+; CHECK-LABEL: @pow_sitofp_const_base_2_no_fast_vector(
+; CHECK-NEXT:    [[S:%.*]] = sitofp <2 x i8> [[X:%.*]] to <2 x float>
+; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.exp2.v2f32(<2 x float> [[S]])
+; CHECK-NEXT:    ret <2 x float> [[EXP2]]
+;
+  %s = sitofp <2 x i8> %x to <2 x float>
+  %r = call <2 x float> @llvm.pow.v2f32(<2 x float><float 2.0, float 2.0>, <2 x float> %s)
+  ret <2 x float> %r
+}
+
 declare float @llvm.pow.f32(float, float)
 declare double @llvm.pow.f64(double, double)
+declare <2 x float> @llvm.pow.v2f32(<2 x float>, <2 x float>)

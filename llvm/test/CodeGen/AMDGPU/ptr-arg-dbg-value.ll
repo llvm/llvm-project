@@ -6,7 +6,7 @@
 ; The 64-bit pointer argument %arg1 will be split into two registers
 ; and for its llvm.dbg.declare, DAG should emit two DBG_VALUE instructions
 ; with the fragment expressions.
-define hidden void @ptr_arg_split_subregs(%struct.A* %arg1) #0 !dbg !9 {
+define hidden void @ptr_arg_split_subregs(ptr %arg1) #0 !dbg !9 {
 ; CHECK-LABEL: ptr_arg_split_subregs:
 ; CHECK:       .Lfunc_begin0:
 ; CHECK:       .loc 1 5 0 ; example.cpp:5:0
@@ -25,9 +25,9 @@ define hidden void @ptr_arg_split_subregs(%struct.A* %arg1) #0 !dbg !9 {
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK:         .cfi_endproc
-  call void @llvm.dbg.declare(metadata %struct.A* %arg1, metadata !20, metadata !DIExpression()), !dbg !21
-  %gep1 = getelementptr inbounds %struct.A, %struct.A* %arg1, i32 0, i32 0, i32 99, !dbg !22
-  store i32 1, i32* %gep1, align 4, !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %arg1, metadata !20, metadata !DIExpression()), !dbg !21
+  %gep1 = getelementptr inbounds %struct.A, ptr %arg1, i32 0, i32 0, i32 99, !dbg !22
+  store i32 1, ptr %gep1, align 4, !dbg !23
   ret void, !dbg !24
 }
 
@@ -37,7 +37,7 @@ define hidden void @ptr_arg_split_subregs(%struct.A* %arg1) #0 !dbg !9 {
 ; are totally misleading. The former represent part of the incoming argument in register
 ; while the latter was emitted for the parameter copy to a virtual register inserted
 ; at the function entry by DAGBuilder.
-define hidden void @ptr_arg_split_reg_mem(<30 x i32>, %struct.A* %arg2) #0 !dbg !25 {
+define hidden void @ptr_arg_split_reg_mem(<30 x i32>, ptr %arg2) #0 !dbg !25 {
 ; CHECK-LABEL: ptr_arg_split_reg_mem:
 ; CHECK:       .Lfunc_begin1:
 ; CHECK-NEXT:    .loc 1 10 0 ; example.cpp:10:0
@@ -56,15 +56,15 @@ define hidden void @ptr_arg_split_reg_mem(<30 x i32>, %struct.A* %arg2) #0 !dbg 
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  .Ltmp3:
 ; CHECK:         .cfi_endproc
-  call void @llvm.dbg.declare(metadata %struct.A* %arg2, metadata !26, metadata !DIExpression()), !dbg !27
-  %gep2 = getelementptr inbounds %struct.A, %struct.A* %arg2, i32 0, i32 0, i32 99, !dbg !28
-  store i32 1, i32* %gep2, align 4, !dbg !29
+  call void @llvm.dbg.declare(metadata ptr %arg2, metadata !26, metadata !DIExpression()), !dbg !27
+  %gep2 = getelementptr inbounds %struct.A, ptr %arg2, i32 0, i32 0, i32 99, !dbg !28
+  store i32 1, ptr %gep2, align 4, !dbg !29
   ret void, !dbg !30
 }
 
 ; FIXME: The 64-bit pointer argument %arg3 will be entirely in the stack memory.
 ; No DBG_VALUE emitted for the incoming argument in this case and it should be fixed.
-define hidden void @ptr_arg_in_memory(<32 x i32>, %struct.A* %arg3) #0 !dbg !31 {
+define hidden void @ptr_arg_in_memory(<32 x i32>, ptr %arg3) #0 !dbg !31 {
 ; CHECK-LABEL: ptr_arg_in_memory:
 ; CHECK:       .Lfunc_begin2:
 ; CHECK-NEXT:    .loc 1 15 0 ; example.cpp:15:0
@@ -83,9 +83,9 @@ define hidden void @ptr_arg_in_memory(<32 x i32>, %struct.A* %arg3) #0 !dbg !31 
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  .Ltmp5:
 ; CHECK:         .cfi_endproc
-  call void @llvm.dbg.declare(metadata %struct.A* %arg3, metadata !32, metadata !DIExpression()), !dbg !33
-  %gep3 = getelementptr inbounds %struct.A, %struct.A* %arg3, i32 0, i32 0, i32 99, !dbg !34
-  store i32 1, i32* %gep3, align 4, !dbg !35
+  call void @llvm.dbg.declare(metadata ptr %arg3, metadata !32, metadata !DIExpression()), !dbg !33
+  %gep3 = getelementptr inbounds %struct.A, ptr %arg3, i32 0, i32 0, i32 99, !dbg !34
+  store i32 1, ptr %gep3, align 4, !dbg !35
   ret void, !dbg !36
 }
 

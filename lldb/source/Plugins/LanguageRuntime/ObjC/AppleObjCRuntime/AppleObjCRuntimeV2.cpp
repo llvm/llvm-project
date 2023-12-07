@@ -33,6 +33,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -753,6 +754,19 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
   RegisterObjCExceptionRecognizer(process);
 }
 
+LanguageRuntime *
+AppleObjCRuntimeV2::GetPreferredLanguageRuntime(ValueObject &in_value) {
+  if (auto process_sp = in_value.GetProcessSP()) {
+    assert(process_sp.get() == m_process);
+    if (auto descriptor_sp = GetNonKVOClassDescriptor(in_value)) {
+      LanguageType impl_lang = descriptor_sp->GetImplementationLanguage();
+      if (impl_lang != eLanguageTypeUnknown)
+        return process_sp->GetLanguageRuntime(impl_lang);
+    }
+  }
+  return nullptr;
+}
+
 bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,
@@ -868,7 +882,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_objc_classtable_dump_options);
+      return llvm::ArrayRef(g_objc_classtable_dump_options);
     }
 
     OptionValueBoolean m_verbose;
@@ -1385,7 +1399,7 @@ public:
       return *this;
     }
 
-    const element operator*() const {
+    element operator*() const {
       if (m_index == -1) {
         // TODO find a way to make this an error, but not an assert
         return element();
@@ -1619,6 +1633,146 @@ lldb::addr_t AppleObjCRuntimeV2::GetISAHashTablePointer() {
   return m_isa_hash_table_ptr;
 }
 
+std::unique_ptr<AppleObjCRuntimeV2::SharedCacheImageHeaders>
+AppleObjCRuntimeV2::SharedCacheImageHeaders::CreateSharedCacheImageHeaders(
+    AppleObjCRuntimeV2 &runtime) {
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
+  Process *process = runtime.GetProcess();
+  ModuleSP objc_module_sp(runtime.GetObjCModule());
+  if (!objc_module_sp || !process)
+    return nullptr;
+
+  const Symbol *symbol = objc_module_sp->FindFirstSymbolWithNameAndType(
+      ConstString("objc_debug_headerInfoRWs"), lldb::eSymbolTypeAny);
+  if (!symbol) {
+    LLDB_LOG(log, "Symbol 'objc_debug_headerInfoRWs' unavailable. Some "
+                  "information concerning the shared cache may be unavailable");
+    return nullptr;
+  }
+
+  lldb::addr_t objc_debug_headerInfoRWs_addr =
+      symbol->GetLoadAddress(&process->GetTarget());
+  if (objc_debug_headerInfoRWs_addr == LLDB_INVALID_ADDRESS) {
+    LLDB_LOG(log, "Symbol 'objc_debug_headerInfoRWs' was found but we were "
+                  "unable to get its load address");
+    return nullptr;
+  }
+
+  Status error;
+  lldb::addr_t objc_debug_headerInfoRWs_ptr =
+      process->ReadPointerFromMemory(objc_debug_headerInfoRWs_addr, error);
+  if (error.Fail()) {
+    LLDB_LOG(log,
+             "Failed to read address of 'objc_debug_headerInfoRWs' at {0:x}",
+             objc_debug_headerInfoRWs_addr);
+    return nullptr;
+  }
+
+  const size_t metadata_size =
+      sizeof(uint32_t) + sizeof(uint32_t); // count + entsize
+  DataBufferHeap metadata_buffer(metadata_size, '\0');
+  process->ReadMemory(objc_debug_headerInfoRWs_ptr, metadata_buffer.GetBytes(),
+                      metadata_size, error);
+  if (error.Fail()) {
+    LLDB_LOG(log,
+             "Unable to read metadata for 'objc_debug_headerInfoRWs' at {0:x}",
+             objc_debug_headerInfoRWs_ptr);
+    return nullptr;
+  }
+
+  DataExtractor metadata_extractor(metadata_buffer.GetBytes(), metadata_size,
+                                   process->GetByteOrder(),
+                                   process->GetAddressByteSize());
+  lldb::offset_t cursor = 0;
+  uint32_t count = metadata_extractor.GetU32_unchecked(&cursor);
+  uint32_t entsize = metadata_extractor.GetU32_unchecked(&cursor);
+  if (count == 0 || entsize == 0) {
+    LLDB_LOG(log,
+             "'objc_debug_headerInfoRWs' had count {0} with entsize {1}. These "
+             "should both be non-zero.",
+             count, entsize);
+    return nullptr;
+  }
+
+  std::unique_ptr<SharedCacheImageHeaders> shared_cache_image_headers(
+      new SharedCacheImageHeaders(runtime, objc_debug_headerInfoRWs_ptr, count,
+                                  entsize));
+  if (auto Err = shared_cache_image_headers->UpdateIfNeeded()) {
+    LLDB_LOG_ERROR(log, std::move(Err),
+                   "Failed to update SharedCacheImageHeaders: {0}");
+    return nullptr;
+  }
+
+  return shared_cache_image_headers;
+}
+
+llvm::Error AppleObjCRuntimeV2::SharedCacheImageHeaders::UpdateIfNeeded() {
+  if (!m_needs_update)
+    return llvm::Error::success();
+
+  Process *process = m_runtime.GetProcess();
+  constexpr lldb::addr_t metadata_size =
+      sizeof(uint32_t) + sizeof(uint32_t); // count + entsize
+
+  Status error;
+  const lldb::addr_t first_header_addr = m_headerInfoRWs_ptr + metadata_size;
+  DataBufferHeap header_buffer(m_entsize, '\0');
+  lldb::offset_t cursor = 0;
+  for (uint32_t i = 0; i < m_count; i++) {
+    const lldb::addr_t header_addr = first_header_addr + (i * m_entsize);
+    process->ReadMemory(header_addr, header_buffer.GetBytes(), m_entsize,
+                        error);
+    if (error.Fail())
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Failed to read memory from inferior when "
+                                     "populating SharedCacheImageHeaders");
+
+    DataExtractor header_extractor(header_buffer.GetBytes(), m_entsize,
+                                   process->GetByteOrder(),
+                                   process->GetAddressByteSize());
+    cursor = 0;
+    bool is_loaded = false;
+    if (m_entsize == 4) {
+      uint32_t header = header_extractor.GetU32_unchecked(&cursor);
+      if (header & 1)
+        is_loaded = true;
+    } else {
+      uint64_t header = header_extractor.GetU64_unchecked(&cursor);
+      if (header & 1)
+        is_loaded = true;
+    }
+
+    if (is_loaded)
+      m_loaded_images.set(i);
+    else
+      m_loaded_images.reset(i);
+  }
+  m_needs_update = false;
+  m_version++;
+  return llvm::Error::success();
+}
+
+bool AppleObjCRuntimeV2::SharedCacheImageHeaders::IsImageLoaded(
+    uint16_t image_index) {
+  if (image_index >= m_count)
+    return false;
+  if (auto Err = UpdateIfNeeded()) {
+    Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
+    LLDB_LOG_ERROR(log, std::move(Err),
+                   "Failed to update SharedCacheImageHeaders: {0}");
+  }
+  return m_loaded_images.test(image_index);
+}
+
+uint64_t AppleObjCRuntimeV2::SharedCacheImageHeaders::GetVersion() {
+  if (auto Err = UpdateIfNeeded()) {
+    Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
+    LLDB_LOG_ERROR(log, std::move(Err),
+                   "Failed to update SharedCacheImageHeaders: {0}");
+  }
+  return m_version;
+}
+
 std::unique_ptr<UtilityFunction>
 AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
     ExecutionContext &exe_ctx, Helper helper, std::string code,
@@ -1627,9 +1781,9 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
 
   LLDB_LOG(log, "Creating utility function {0}", name);
 
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(exe_ctx.GetTargetRef());
-  if (!ast)
+  if (!scratch_ts_sp)
     return {};
 
   auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
@@ -1643,9 +1797,9 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
 
   // Make some types for our arguments.
   CompilerType clang_uint32_t_type =
-      ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
+      scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
   CompilerType clang_void_pointer_type =
-      ast->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
 
   // Make the runner function for our implementation utility function.
   ValueList arguments;
@@ -1768,9 +1922,9 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
   LLDB_LOG(log, "Creating utility function {0}",
            g_get_shared_cache_class_info_name);
 
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(exe_ctx.GetTargetRef());
-  if (!ast)
+  if (!scratch_ts_sp)
     return {};
 
   // If the inferior objc.dylib has the class_getNameRaw function, use that in
@@ -1808,11 +1962,11 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
 
   // Make some types for our arguments.
   CompilerType clang_uint32_t_type =
-      ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
+      scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
   CompilerType clang_void_pointer_type =
-      ast->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
   CompilerType clang_uint64_t_pointer_type =
-      ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 64)
+      scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 64)
           .GetPointerType();
 
   // Next make the function caller for our implementation utility function.
@@ -1879,10 +2033,10 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     return DescriptorMapUpdateResult::Retry();
 
   thread_sp->CalculateExecutionContext(exe_ctx);
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process->GetTarget());
 
-  if (!ast)
+  if (!scratch_ts_sp)
     return DescriptorMapUpdateResult::Fail();
 
   Address function_address;
@@ -2002,7 +2156,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     options.SetIsForUtilityExpr(true);
 
     CompilerType clang_uint32_t_type =
-        ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
+        scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
 
     Value return_value;
     return_value.SetValueType(Value::ValueType::Scalar);
@@ -2144,10 +2298,10 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
     return DescriptorMapUpdateResult::Retry();
 
   thread_sp->CalculateExecutionContext(exe_ctx);
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process->GetTarget());
 
-  if (!ast)
+  if (!scratch_ts_sp)
     return DescriptorMapUpdateResult::Fail();
 
   Address function_address;
@@ -2168,7 +2322,10 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
 
   // The number of entries to pre-allocate room for.
   // Each entry is (addrsize + 4) bytes
-  const uint32_t max_num_classes = 163840;
+  // FIXME: It is not sustainable to continue incrementing this value every time
+  // the shared cache grows. This is because it requires allocating memory in
+  // the inferior process and some inferior processes have small memory limits.
+  const uint32_t max_num_classes = 212992;
 
   UtilityFunction *get_class_info_code = GetClassInfoUtilityFunction(exe_ctx);
   if (!get_class_info_code) {
@@ -2237,7 +2394,7 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
     options.SetIsForUtilityExpr(true);
 
     CompilerType clang_uint32_t_type =
-        ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
+        scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
 
     Value return_value;
     return_value.SetValueType(Value::ValueType::Scalar);
@@ -2370,7 +2527,7 @@ lldb::addr_t AppleObjCRuntimeV2::GetSharedCacheBaseAddress() {
   if (!value)
     return LLDB_INVALID_ADDRESS;
 
-  return value->GetIntegerValue(LLDB_INVALID_ADDRESS);
+  return value->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
 }
 
 void AppleObjCRuntimeV2::UpdateISAToDescriptorMapIfNeeded() {
@@ -2582,7 +2739,7 @@ lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
       std::pair<llvm::StringRef, llvm::StringRef> class_and_ivar =
           ivar_skipped_prefix.split('.');
 
-      if (class_and_ivar.first.size() && class_and_ivar.second.size()) {
+      if (!class_and_ivar.first.empty() && !class_and_ivar.second.empty()) {
         const ConstString class_name_cs(class_and_ivar.first);
         ClassDescriptorSP descriptor =
             ObjCLanguageRuntime::GetClassDescriptorFromClassName(class_name_cs);
@@ -3239,6 +3396,34 @@ void AppleObjCRuntimeV2::GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,
     this->AppleObjCRuntime::GetValuesForGlobalCFBooleans(cf_true, cf_false);
 }
 
+void AppleObjCRuntimeV2::ModulesDidLoad(const ModuleList &module_list) {
+  AppleObjCRuntime::ModulesDidLoad(module_list);
+  if (HasReadObjCLibrary() && m_shared_cache_image_headers_up)
+    m_shared_cache_image_headers_up->SetNeedsUpdate();
+}
+
+bool AppleObjCRuntimeV2::IsSharedCacheImageLoaded(uint16_t image_index) {
+  if (!m_shared_cache_image_headers_up) {
+    m_shared_cache_image_headers_up =
+        SharedCacheImageHeaders::CreateSharedCacheImageHeaders(*this);
+  }
+  if (m_shared_cache_image_headers_up)
+    return m_shared_cache_image_headers_up->IsImageLoaded(image_index);
+
+  return false;
+}
+
+std::optional<uint64_t> AppleObjCRuntimeV2::GetSharedCacheImageHeaderVersion() {
+  if (!m_shared_cache_image_headers_up) {
+    m_shared_cache_image_headers_up =
+        SharedCacheImageHeaders::CreateSharedCacheImageHeaders(*this);
+  }
+  if (m_shared_cache_image_headers_up)
+    return m_shared_cache_image_headers_up->GetVersion();
+
+  return std::nullopt;
+}
+
 #pragma mark Frame recognizers
 
 class ObjCExceptionRecognizedStackFrame : public RecognizedStackFrame {
@@ -3251,12 +3436,12 @@ public:
     if (!abi)
       return;
 
-    TypeSystemClang *clang_ast_context =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
-    if (!clang_ast_context)
+    if (!scratch_ts_sp)
       return;
     CompilerType voidstar =
-        clang_ast_context->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
+        scratch_ts_sp->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
 
     ValueList args;
     Value input_value;

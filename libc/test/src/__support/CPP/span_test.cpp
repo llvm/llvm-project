@@ -8,7 +8,7 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/span.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 using __llvm_libc::cpp::array;
 using __llvm_libc::cpp::span;

@@ -18,7 +18,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i64 %n, float* %A) {
+define void @foo(i64 %n, ptr %A) {
 entry:
   br label %for.cond
 
@@ -40,14 +40,14 @@ for.body3:                                        ; preds = %for.cond1
   %sub4 = add nsw i64 %sub, -1
   %tmp = mul nsw i64 %i.0, %n
   %arrayidx.sum = add i64 %tmp, %sub4
-  %arrayidx5 = getelementptr inbounds float, float* %A, i64 %arrayidx.sum
-  %tmp1 = load float, float* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds float, ptr %A, i64 %arrayidx.sum
+  %tmp1 = load float, ptr %arrayidx5, align 4
   %tmp2 = mul nsw i64 %i.0, %n
   %arrayidx6.sum = add i64 %tmp2, %j.0
-  %arrayidx7 = getelementptr inbounds float, float* %A, i64 %arrayidx6.sum
-  %tmp3 = load float, float* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds float, ptr %A, i64 %arrayidx6.sum
+  %tmp3 = load float, ptr %arrayidx7, align 4
   %add = fadd float %tmp3, %tmp1
-  store float %add, float* %arrayidx7, align 4
+  store float %add, ptr %arrayidx7, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body3

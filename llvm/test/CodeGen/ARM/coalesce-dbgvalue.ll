@@ -18,7 +18,7 @@ target triple = "thumbv7-apple-ios3.0.0"
 ; Function Attrs: nounwind ssp
 define i32 @pr16110() #0 !dbg !15 {
 for.cond1.preheader:
-  store i32 0, i32* @c, align 4, !dbg !24
+  store i32 0, ptr @c, align 4, !dbg !24
   br label %for.cond1.outer, !dbg !26
 
 for.cond1:                                        ; preds = %for.end9, %for.cond1.outer
@@ -27,9 +27,9 @@ for.cond1:                                        ; preds = %for.end9, %for.cond
   br i1 %cmp, label %for.body2, label %for.end9, !dbg !26
 
 for.body2:                                        ; preds = %for.cond1
-  store i32 %storemerge11, i32* @b, align 4, !dbg !26
-  tail call void @llvm.dbg.value(metadata i32* null, metadata !20, metadata !27), !dbg !28
-  %0 = load i64, i64* @a, align 8, !dbg !29
+  store i32 %storemerge11, ptr @b, align 4, !dbg !26
+  tail call void @llvm.dbg.value(metadata ptr null, metadata !20, metadata !27), !dbg !28
+  %0 = load i64, ptr @a, align 8, !dbg !29
   %xor = xor i64 %0, %e.1.ph, !dbg !29
   %conv3 = trunc i64 %xor to i32, !dbg !29
   tail call void @llvm.dbg.value(metadata i32 %conv3, metadata !19, metadata !27), !dbg !29
@@ -37,15 +37,15 @@ for.body2:                                        ; preds = %for.cond1
   br i1 %tobool4, label %land.end, label %land.rhs, !dbg !29
 
 land.rhs:                                         ; preds = %for.body2
-  %call = tail call i32 bitcast (i32 (...)* @fn3 to i32 ()*)() #3, !dbg !29
+  %call = tail call i32 @fn3() #3, !dbg !29
   %tobool5 = icmp ne i32 %call, 0, !dbg !29
   br label %land.end
 
 land.end:                                         ; preds = %land.rhs, %for.body2
   %1 = phi i1 [ false, %for.body2 ], [ %tobool5, %land.rhs ]
   %land.ext = zext i1 %1 to i32
-  %call6 = tail call i32 bitcast (i32 (...)* @fn2 to i32 (i32, i32*)*)(i32 %land.ext, i32* null) #3
-  %2 = load i32, i32* @b, align 4, !dbg !26
+  %call6 = tail call i32 @fn2(i32 %land.ext, ptr null) #3
+  %2 = load i32, ptr @b, align 4, !dbg !26
   %inc8 = add nsw i32 %2, 1, !dbg !26
   %phitmp = and i64 %xor, 4294967295, !dbg !26
   br label %for.cond1.outer, !dbg !26
@@ -53,7 +53,7 @@ land.end:                                         ; preds = %land.rhs, %for.body
 for.cond1.outer:                                  ; preds = %land.end, %for.cond1.preheader
   %storemerge11.ph = phi i32 [ %inc8, %land.end ], [ 0, %for.cond1.preheader ]
   %e.1.ph = phi i64 [ %phitmp, %land.end ], [ 0, %for.cond1.preheader ]
-  %3 = load i32, i32* @d, align 4, !dbg !30
+  %3 = load i32, ptr @d, align 4, !dbg !30
   %tobool10 = icmp eq i32 %3, 0, !dbg !30
   br label %for.cond1
 
@@ -61,7 +61,7 @@ for.end9:                                         ; preds = %for.cond1
   br i1 %tobool10, label %if.end, label %for.cond1, !dbg !30
 
 if.end:                                           ; preds = %for.end9
-  store i32 %storemerge11, i32* @b, align 4, !dbg !26
+  store i32 %storemerge11, ptr @b, align 4, !dbg !26
   ret i32 0, !dbg !31
 }
 

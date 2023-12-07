@@ -4,9 +4,10 @@ import os
 import sys
 
 if len(sys.argv) == 3 and sys.argv[1] == "--gtest_list_tests":
-    if sys.argv[2] != '--gtest_filter=-*DISABLED_*':
+    if sys.argv[2] != "--gtest_filter=-*DISABLED_*":
         raise ValueError("unexpected argument: %s" % (sys.argv[2]))
-    print("""\
+    print(
+        """\
 FirstTest.
   subTestA
   subTestB
@@ -15,18 +16,19 @@ FirstTest.
 ParameterizedTest/0.
   subTest
 ParameterizedTest/1.
-  subTest""")
+  subTest"""
+    )
     sys.exit(0)
 elif len(sys.argv) != 1:
     # sharding and json output are specified using environment variables
-    raise ValueError("unexpected argument: %r" % (' '.join(sys.argv[1:])))
+    raise ValueError("unexpected argument: %r" % (" ".join(sys.argv[1:])))
 
-for e in ['GTEST_TOTAL_SHARDS', 'GTEST_SHARD_INDEX', 'GTEST_OUTPUT']:
+for e in ["GTEST_TOTAL_SHARDS", "GTEST_SHARD_INDEX", "GTEST_OUTPUT"]:
     if e not in os.environ:
         raise ValueError("missing environment variables: " + e)
 
-if not os.environ['GTEST_OUTPUT'].startswith('json:'):
-    raise ValueError("must emit json output: " + os.environ['GTEST_OUTPUT'])
+if not os.environ["GTEST_OUTPUT"].startswith("json:"):
+    raise ValueError("must emit json output: " + os.environ["GTEST_OUTPUT"])
 
 output = """\
 {
@@ -92,12 +94,12 @@ dummy_output = """\
 ]
 }"""
 
-json_filename = os.environ['GTEST_OUTPUT'].split(':', 1)[1]
-with open(json_filename, 'w', encoding='utf-8') as f:
-    if os.environ['GTEST_SHARD_INDEX'] == '0':
-        print('[ RUN      ] FirstTest.subTestB', flush=True)
-        print('I am subTest B output', file=sys.stderr, flush=True)
-        print('[  FAILED  ] FirstTest.subTestB (8 ms)', flush=True)
+json_filename = os.environ["GTEST_OUTPUT"].split(":", 1)[1]
+with open(json_filename, "w", encoding="utf-8") as f:
+    if os.environ["GTEST_SHARD_INDEX"] == "0":
+        print("[ RUN      ] FirstTest.subTestB", flush=True)
+        print("I am subTest B output", file=sys.stderr, flush=True)
+        print("[  FAILED  ] FirstTest.subTestB (8 ms)", flush=True)
 
         f.write(output)
         exit_code = 1

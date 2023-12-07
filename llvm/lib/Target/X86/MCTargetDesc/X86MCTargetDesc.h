@@ -135,16 +135,13 @@ createX86ELFObjectWriter(bool IsELF64, uint8_t OSABI, uint16_t EMachine);
 std::unique_ptr<MCObjectTargetWriter>
 createX86WinCOFFObjectWriter(bool Is64Bit);
 
-/// Returns the sub or super register of a specific X86 register.
-/// e.g. getX86SubSuperRegister(X86::EAX, 16) returns X86::AX.
-/// Aborts on error.
-MCRegister getX86SubSuperRegister(MCRegister, unsigned, bool High=false);
-
-/// Returns the sub or super register of a specific X86 register.
-/// Like getX86SubSuperRegister() but returns 0 on error.
-MCRegister getX86SubSuperRegisterOrZero(MCRegister, unsigned,
-                                        bool High = false);
-
+/// \param Reg speicifed register.
+/// \param Size the bit size of returned register.
+/// \param High requires the high register.
+///
+/// \returns the sub or super register of a specific X86 register.
+MCRegister getX86SubSuperRegister(MCRegister Reg, unsigned Size,
+                                  bool High = false);
 } // End llvm namespace
 
 

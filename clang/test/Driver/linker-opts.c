@@ -15,9 +15,8 @@
 //
 // Make sure that we don't warn on unused compiler arguments.
 // RUN: %clang -Xclang -I. -x c %s -c -o %t/tmp.o
-// RUN: %clang -Xclang -I. %t/tmp.o -o %t/tmp -### 2>&1 | FileCheck %s --check-prefix=NO-UNUSED
-// NO-UNUSED-NOT: warning:{{.*}}unused
-//
+// RUN: %clang -### -I. -ibuiltininc -nobuiltininc -nostdinc -nostdinc++ -nostdlibinc -nogpuinc %t/tmp.o -Wno-msvc-not-found -o /dev/null 2>&1 | FileCheck /dev/null --implicit-check-not=warning:
+
 // Make sure that we do warn in other cases.
 // RUN: %clang %s -lfoo -c -o %t/tmp2.o -### 2>&1 | FileCheck %s --check-prefix=UNUSED
 // UNUSED: warning:{{.*}}unused

@@ -191,6 +191,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -281,7 +282,7 @@ class LoopPredication {
   Instruction *findInsertPt(Instruction *User, ArrayRef<Value*> Ops);
   /// Same as above, *except* that this uses the SCEV definition of invariant
   /// which is that an expression *can be made* invariant via SCEVExpander.
-  /// Thus, this version is only suitable for finding an insert point to be be
+  /// Thus, this version is only suitable for finding an insert point to be
   /// passed to SCEVExpander!
   Instruction *findInsertPt(const SCEVExpander &Expander, Instruction *User,
                             ArrayRef<const SCEV *> Ops);
@@ -306,8 +307,9 @@ class LoopPredication {
   widenICmpRangeCheckDecrementingLoop(LoopICmp LatchCheck, LoopICmp RangeCheck,
                                       SCEVExpander &Expander,
                                       Instruction *Guard);
-  unsigned collectChecks(SmallVectorImpl<Value *> &Checks, Value *Condition,
-                         SCEVExpander &Expander, Instruction *Guard);
+  void widenChecks(SmallVectorImpl<Value *> &Checks,
+                   SmallVectorImpl<Value *> &WidenedChecks,
+                   SCEVExpander &Expander, Instruction *Guard);
   bool widenGuardConditions(IntrinsicInst *II, SCEVExpander &Expander);
   bool widenWidenableBranchGuardConditions(BranchInst *Guard, SCEVExpander &Expander);
   // If the loop always exits through another block in the loop, we should not
@@ -454,8 +456,8 @@ static bool isSafeToTruncateWideIVType(const DataLayout &DL,
                                        Type *RangeCheckType) {
   if (!EnableIVTruncation)
     return false;
-  assert(DL.getTypeSizeInBits(LatchCheck.IV->getType()).getFixedSize() >
-             DL.getTypeSizeInBits(RangeCheckType).getFixedSize() &&
+  assert(DL.getTypeSizeInBits(LatchCheck.IV->getType()).getFixedValue() >
+             DL.getTypeSizeInBits(RangeCheckType).getFixedValue() &&
          "Expected latch check IV type to be larger than range check operand "
          "type!");
   // The start and end values of the IV should be known. This is to guarantee
@@ -475,7 +477,7 @@ static bool isSafeToTruncateWideIVType(const DataLayout &DL,
   // guarantees that truncating the latch check to RangeCheckType is a safe
   // operation.
   auto RangeCheckTypeBitSize =
-      DL.getTypeSizeInBits(RangeCheckType).getFixedSize();
+      DL.getTypeSizeInBits(RangeCheckType).getFixedValue();
   return Start->getAPInt().getActiveBits() < RangeCheckTypeBitSize &&
          Limit->getAPInt().getActiveBits() < RangeCheckTypeBitSize;
 }
@@ -492,8 +494,8 @@ static std::optional<LoopICmp> generateLoopLatchCheck(const DataLayout &DL,
   if (RangeCheckType == LatchType)
     return LatchCheck;
   // For now, bail out if latch type is narrower than range type.
-  if (DL.getTypeSizeInBits(LatchType).getFixedSize() <
-      DL.getTypeSizeInBits(RangeCheckType).getFixedSize())
+  if (DL.getTypeSizeInBits(LatchType).getFixedValue() <
+      DL.getTypeSizeInBits(RangeCheckType).getFixedValue())
     return std::nullopt;
   if (!isSafeToTruncateWideIVType(DL, SE, LatchCheck, RangeCheckType))
     return std::nullopt;
@@ -622,7 +624,8 @@ std::optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
   auto *FirstIterationCheck = expandCheck(Expander, Guard, RangeCheck.Pred,
                                           GuardStart, GuardLimit);
   IRBuilder<> Builder(findInsertPt(Guard, {FirstIterationCheck, LimitCheck}));
-  return Builder.CreateAnd(FirstIterationCheck, LimitCheck);
+  return Builder.CreateFreeze(
+      Builder.CreateAnd(FirstIterationCheck, LimitCheck));
 }
 
 std::optional<Value *> LoopPredication::widenICmpRangeCheckDecrementingLoop(
@@ -670,7 +673,8 @@ std::optional<Value *> LoopPredication::widenICmpRangeCheckDecrementingLoop(
   auto *LimitCheck = expandCheck(Expander, Guard, LimitCheckPred, LatchLimit,
                                  SE->getOne(Ty));
   IRBuilder<> Builder(findInsertPt(Guard, {FirstIterationCheck, LimitCheck}));
-  return Builder.CreateAnd(FirstIterationCheck, LimitCheck);
+  return Builder.CreateFreeze(
+      Builder.CreateAnd(FirstIterationCheck, LimitCheck));
 }
 
 static void normalizePredicate(ScalarEvolution *SE, Loop *L,
@@ -751,58 +755,15 @@ LoopPredication::widenICmpRangeCheck(ICmpInst *ICI, SCEVExpander &Expander,
   }
 }
 
-unsigned LoopPredication::collectChecks(SmallVectorImpl<Value *> &Checks,
-                                        Value *Condition,
-                                        SCEVExpander &Expander,
-                                        Instruction *Guard) {
-  unsigned NumWidened = 0;
-  // The guard condition is expected to be in form of:
-  //   cond1 && cond2 && cond3 ...
-  // Iterate over subconditions looking for icmp conditions which can be
-  // widened across loop iterations. Widening these conditions remember the
-  // resulting list of subconditions in Checks vector.
-  SmallVector<Value *, 4> Worklist(1, Condition);
-  SmallPtrSet<Value *, 4> Visited;
-  Visited.insert(Condition);
-  Value *WideableCond = nullptr;
-  do {
-    Value *Condition = Worklist.pop_back_val();
-    Value *LHS, *RHS;
-    using namespace llvm::PatternMatch;
-    if (match(Condition, m_And(m_Value(LHS), m_Value(RHS)))) {
-      if (Visited.insert(LHS).second)
-        Worklist.push_back(LHS);
-      if (Visited.insert(RHS).second)
-        Worklist.push_back(RHS);
-      continue;
-    }
-
-    if (match(Condition,
-              m_Intrinsic<Intrinsic::experimental_widenable_condition>())) {
-      // Pick any, we don't care which
-      WideableCond = Condition;
-      continue;
-    }
-
-    if (ICmpInst *ICI = dyn_cast<ICmpInst>(Condition)) {
-      if (auto NewRangeCheck = widenICmpRangeCheck(ICI, Expander,
-                                                   Guard)) {
-        Checks.push_back(*NewRangeCheck);
-        NumWidened++;
-        continue;
+void LoopPredication::widenChecks(SmallVectorImpl<Value *> &Checks,
+                                  SmallVectorImpl<Value *> &WidenedChecks,
+                                  SCEVExpander &Expander, Instruction *Guard) {
+  for (auto &Check : Checks)
+    if (ICmpInst *ICI = dyn_cast<ICmpInst>(Check))
+      if (auto NewRangeCheck = widenICmpRangeCheck(ICI, Expander, Guard)) {
+        WidenedChecks.push_back(Check);
+        Check = *NewRangeCheck;
       }
-    }
-
-    // Save the condition as is if we can't widen it
-    Checks.push_back(Condition);
-  } while (!Worklist.empty());
-  // At the moment, our matching logic for wideable conditions implicitly
-  // assumes we preserve the form: (br (and Cond, WC())).  FIXME
-  // Note that if there were multiple calls to wideable condition in the
-  // traversal, we only need to keep one, and which one is arbitrary.
-  if (WideableCond)
-    Checks.push_back(WideableCond);
-  return NumWidened;
 }
 
 bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
@@ -812,12 +773,13 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
 
   TotalConsidered++;
   SmallVector<Value *, 4> Checks;
-  unsigned NumWidened = collectChecks(Checks, Guard->getOperand(0), Expander,
-                                      Guard);
-  if (NumWidened == 0)
+  SmallVector<Value *> WidenedChecks;
+  parseWidenableGuard(Guard, Checks);
+  widenChecks(Checks, WidenedChecks, Expander, Guard);
+  if (WidenedChecks.empty())
     return false;
 
-  TotalWidened += NumWidened;
+  TotalWidened += WidenedChecks.size();
 
   // Emit the new guard condition
   IRBuilder<> Builder(findInsertPt(Guard, Checks));
@@ -830,7 +792,7 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
   }
   RecursivelyDeleteTriviallyDeadInstructions(OldCond, nullptr /* TLI */, MSSAU);
 
-  LLVM_DEBUG(dbgs() << "Widened checks = " << NumWidened << "\n");
+  LLVM_DEBUG(dbgs() << "Widened checks = " << WidenedChecks.size() << "\n");
   return true;
 }
 
@@ -840,20 +802,19 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   LLVM_DEBUG(dbgs() << "Processing guard:\n");
   LLVM_DEBUG(BI->dump());
 
-  Value *Cond, *WC;
-  BasicBlock *IfTrueBB, *IfFalseBB;
-  bool Parsed = parseWidenableBranch(BI, Cond, WC, IfTrueBB, IfFalseBB);
-  assert(Parsed && "Must be able to parse widenable branch");
-  (void)Parsed;
-
   TotalConsidered++;
   SmallVector<Value *, 4> Checks;
-  unsigned NumWidened = collectChecks(Checks, BI->getCondition(),
-                                      Expander, BI);
-  if (NumWidened == 0)
+  SmallVector<Value *> WidenedChecks;
+  parseWidenableGuard(BI, Checks);
+  // At the moment, our matching logic for wideable conditions implicitly
+  // assumes we preserve the form: (br (and Cond, WC())).  FIXME
+  auto WC = extractWidenableCondition(BI);
+  Checks.push_back(WC);
+  widenChecks(Checks, WidenedChecks, Expander, BI);
+  if (WidenedChecks.empty())
     return false;
 
-  TotalWidened += NumWidened;
+  TotalWidened += WidenedChecks.size();
 
   // Emit the new guard condition
   IRBuilder<> Builder(findInsertPt(BI, Checks));
@@ -861,14 +822,27 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   auto *OldCond = BI->getCondition();
   BI->setCondition(AllChecks);
   if (InsertAssumesOfPredicatedGuardsConditions) {
+    BasicBlock *IfTrueBB = BI->getSuccessor(0);
     Builder.SetInsertPoint(IfTrueBB, IfTrueBB->getFirstInsertionPt());
-    Builder.CreateAssumption(Cond);
+    // If this block has other predecessors, we might not be able to use Cond.
+    // In this case, create a Phi where every other input is `true` and input
+    // from guard block is Cond.
+    Value *AssumeCond = Builder.CreateAnd(WidenedChecks);
+    if (!IfTrueBB->getUniquePredecessor()) {
+      auto *GuardBB = BI->getParent();
+      auto *PN = Builder.CreatePHI(AssumeCond->getType(), pred_size(IfTrueBB),
+                                   "assume.cond");
+      for (auto *Pred : predecessors(IfTrueBB))
+        PN->addIncoming(Pred == GuardBB ? AssumeCond : Builder.getTrue(), Pred);
+      AssumeCond = PN;
+    }
+    Builder.CreateAssumption(AssumeCond);
   }
   RecursivelyDeleteTriviallyDeadInstructions(OldCond, nullptr /* TLI */, MSSAU);
   assert(isGuardAsWidenableBranch(BI) &&
          "Stopped being a guard after transform?");
 
-  LLVM_DEBUG(dbgs() << "Widened checks = " << NumWidened << "\n");
+  LLVM_DEBUG(dbgs() << "Widened checks = " << WidenedChecks.size() << "\n");
   return true;
 }
 
@@ -974,37 +948,24 @@ bool LoopPredication::isLoopProfitableToPredicate() {
       LatchExitBlock->getTerminatingDeoptimizeCall())
     return false;
 
-  auto IsValidProfileData = [](MDNode *ProfileData, const Instruction *Term) {
-    if (!ProfileData || !ProfileData->getOperand(0))
-      return false;
-    if (MDString *MDS = dyn_cast<MDString>(ProfileData->getOperand(0)))
-      if (!MDS->getString().equals("branch_weights"))
-        return false;
-    if (ProfileData->getNumOperands() != 1 + Term->getNumSuccessors())
-      return false;
-    return true;
-  };
-  MDNode *LatchProfileData = LatchTerm->getMetadata(LLVMContext::MD_prof);
   // Latch terminator has no valid profile data, so nothing to check
   // profitability on.
-  if (!IsValidProfileData(LatchProfileData, LatchTerm))
+  if (!hasValidBranchWeightMD(*LatchTerm))
     return true;
 
   auto ComputeBranchProbability =
       [&](const BasicBlock *ExitingBlock,
           const BasicBlock *ExitBlock) -> BranchProbability {
     auto *Term = ExitingBlock->getTerminator();
-    MDNode *ProfileData = Term->getMetadata(LLVMContext::MD_prof);
     unsigned NumSucc = Term->getNumSuccessors();
-    if (IsValidProfileData(ProfileData, Term)) {
-      uint64_t Numerator = 0, Denominator = 0, ProfVal = 0;
-      for (unsigned i = 0; i < NumSucc; i++) {
-        ConstantInt *CI =
-            mdconst::extract<ConstantInt>(ProfileData->getOperand(i + 1));
-        ProfVal = CI->getValue().getZExtValue();
+    if (MDNode *ProfileData = getValidBranchWeightMDNode(*Term)) {
+      SmallVector<uint32_t> Weights;
+      extractBranchWeights(ProfileData, Weights);
+      uint64_t Numerator = 0, Denominator = 0;
+      for (auto [i, Weight] : llvm::enumerate(Weights)) {
         if (Term->getSuccessor(i) == ExitBlock)
-          Numerator += ProfVal;
-        Denominator += ProfVal;
+          Numerator += Weight;
+        Denominator += Weight;
       }
       return BranchProbability::getBranchProbability(Numerator, Denominator);
     } else {
@@ -1068,13 +1029,9 @@ static BranchInst *FindWidenableTerminatorAboveLoop(Loop *L, LoopInfo &LI) {
   } while (true);
 
   if (BasicBlock *Pred = BB->getSinglePredecessor()) {
-    auto *Term = Pred->getTerminator();
-
-    Value *Cond, *WC;
-    BasicBlock *IfTrueBB, *IfFalseBB;
-    if (parseWidenableBranch(Term, Cond, WC, IfTrueBB, IfFalseBB) &&
-        IfTrueBB == BB)
-      return cast<BranchInst>(Term);
+    if (auto *BI = dyn_cast<BranchInst>(Pred->getTerminator()))
+      if (BI->getSuccessor(0) == BB && isWidenableBranch(BI))
+        return BI;
   }
   return nullptr;
 }
@@ -1162,16 +1119,21 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     if (!BI)
       continue;
 
-    Use *Cond, *WC;
-    BasicBlock *IfTrueBB, *IfFalseBB;
-    if (parseWidenableBranch(BI, Cond, WC, IfTrueBB, IfFalseBB) &&
-        L->contains(IfTrueBB)) {
-      WC->set(ConstantInt::getTrue(IfTrueBB->getContext()));
-      ChangedLoop = true;
-    }
+    if (auto WC = extractWidenableCondition(BI))
+      if (L->contains(BI->getSuccessor(0))) {
+        assert(WC->hasOneUse() && "Not appropriate widenable branch!");
+        WC->user_back()->replaceUsesOfWith(
+            WC, ConstantInt::getTrue(BI->getContext()));
+        ChangedLoop = true;
+      }
   }
   if (ChangedLoop)
     SE->forgetLoop(L);
+
+  // The insertion point for the widening should be at the widenably call, not
+  // at the WidenableBR. If we do this at the widenableBR, we can incorrectly
+  // change a loop-invariant condition to a loop-varying one.
+  auto *IP = cast<Instruction>(WidenableBR->getCondition());
 
   // The use of umin(all analyzeable exits) instead of latch is subtle, but
   // important for profitability.  We may have a loop which hasn't been fully
@@ -1182,21 +1144,9 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   const SCEV *MinEC = getMinAnalyzeableBackedgeTakenCount(*SE, *DT, L);
   if (isa<SCEVCouldNotCompute>(MinEC) || MinEC->getType()->isPointerTy() ||
       !SE->isLoopInvariant(MinEC, L) ||
-      !Rewriter.isSafeToExpandAt(MinEC, WidenableBR))
+      !Rewriter.isSafeToExpandAt(MinEC, IP))
     return ChangedLoop;
 
-  // Subtlety: We need to avoid inserting additional uses of the WC.  We know
-  // that it can only have one transitive use at the moment, and thus moving
-  // that use to just before the branch and inserting code before it and then
-  // modifying the operand is legal.
-  auto *IP = cast<Instruction>(WidenableBR->getCondition());
-  // Here we unconditionally modify the IR, so after this point we should return
-  // only `true`!
-  IP->moveBefore(WidenableBR);
-  if (MSSAU)
-    if (auto *MUD = MSSAU->getMemorySSA()->getMemoryAccess(IP))
-       MSSAU->moveToPlace(MUD, WidenableBR->getParent(),
-                          MemorySSA::BeforeTerminator);
   Rewriter.setInsertPoint(IP);
   IRBuilder<> B(IP);
 

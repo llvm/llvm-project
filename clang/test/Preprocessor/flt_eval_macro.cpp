@@ -17,7 +17,7 @@
 // RUN:   %s -o - | FileCheck %s  -strict-whitespace
 
 // RUN: %clang_cc1 -E -dM -triple=x86_64-apple-macos13.0 -ffast-math \
-// RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-MINUS-ONE -strict-whitespace
+// RUN:   %s -o - | FileCheck %s -check-prefix=CHECK -strict-whitespace
 
 // RUN: %clang_cc1 -E -dM -triple i386-pc-windows -target-cpu pentium4 %s -o - \
 // RUN:   | FileCheck %s  -strict-whitespace
@@ -64,7 +64,6 @@
 
 int foo() {
   // CHECK: #define Name "One"
-  // CHECK-MINUS-ONE: #define Name "MinusOne"
   // EXT: #define Name "Three"
   return Name;
 }

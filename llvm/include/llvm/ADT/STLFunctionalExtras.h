@@ -17,9 +17,9 @@
 
 #include "llvm/ADT/STLForwardCompat.h"
 
+#include <cstdint>
 #include <type_traits>
 #include <utility>
-#include <cstdint>
 
 namespace llvm {
 

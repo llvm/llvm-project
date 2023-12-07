@@ -3,7 +3,7 @@
 
 ; Test a selectcc with i32 LHS/RHS and float True/False
 
-define amdgpu_kernel void @test(float addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
@@ -22,9 +22,9 @@ define amdgpu_kernel void @test(float addrspace(1)* %out, i32 addrspace(1)* %in)
 ; CHECK-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
 ; CHECK-NEXT:    1065353216(1.000000e+00), 2(2.802597e-45)
 entry:
-  %0 = load i32, i32 addrspace(1)* %in
+  %0 = load i32, ptr addrspace(1) %in
   %1 = icmp sge i32 %0, 0
   %2 = select i1 %1, float 1.0, float 0.0
-  store float %2, float addrspace(1)* %out
+  store float %2, ptr addrspace(1) %out
   ret void
 }

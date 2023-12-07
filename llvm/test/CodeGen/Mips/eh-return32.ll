@@ -2,13 +2,13 @@
 ; RUN: llc -march=mipsel -mcpu=mips32r2 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
 ; RUN: llc -march=mipsel -mcpu=mips32r6 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,R6
 
-declare void @llvm.eh.return.i32(i32, i8*)
+declare void @llvm.eh.return.i32(i32, ptr)
 declare void @foo(...)
 
-define i8* @f1(i32 %offset, i8* %handler) {
+define ptr @f1(i32 %offset, ptr %handler) {
 entry:
   call void (...) @foo()
-  call void @llvm.eh.return.i32(i32 %offset, i8* %handler)
+  call void @llvm.eh.return.i32(i32 %offset, ptr %handler)
   unreachable
 
 ; CHECK:    f1:
@@ -48,9 +48,9 @@ entry:
 ; CHECK:        addu    $sp, $sp, $3
 }
 
-define i8* @f2(i32 %offset, i8* %handler) {
+define ptr @f2(i32 %offset, ptr %handler) {
 entry:
-  call void @llvm.eh.return.i32(i32 %offset, i8* %handler)
+  call void @llvm.eh.return.i32(i32 %offset, ptr %handler)
   unreachable
 
 ; CHECK:    f2:

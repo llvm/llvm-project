@@ -21,12 +21,6 @@
 
 namespace __sanitizer {
 
-// Call these callbacks on mmap/munmap.
-struct NoOpMapUnmapCallback {
-  void OnMap(uptr p, uptr size) const {}
-  void OnUnmap(uptr p, uptr size) const {}
-};
-
 // Maps integers in rage [0, kSize) to values.
 template <typename T, u64 kSize,
           typename AddressSpaceViewTy = LocalAddressSpaceView>
@@ -62,8 +56,7 @@ class FlatMap {
 // Each value is initially zero and can be set to something else only once.
 // Setting and getting values from multiple threads is safe w/o extra locking.
 template <typename T, u64 kSize1, u64 kSize2,
-          typename AddressSpaceViewTy = LocalAddressSpaceView,
-          class MapUnmapCallback = NoOpMapUnmapCallback>
+          typename AddressSpaceViewTy = LocalAddressSpaceView>
 class TwoLevelMap {
   static_assert(IsPowerOfTwo(kSize2), "Use a power of two for performance.");
 
@@ -79,7 +72,6 @@ class TwoLevelMap {
       T *p = Get(i);
       if (!p)
         continue;
-      MapUnmapCallback().OnUnmap(reinterpret_cast<uptr>(p), MmapSize());
       UnmapOrDie(p, kSize2);
     }
     Init();
@@ -149,7 +141,6 @@ class TwoLevelMap {
     T *res = Get(idx);
     if (!res) {
       res = reinterpret_cast<T *>(MmapOrDie(MmapSize(), "TwoLevelMap"));
-      MapUnmapCallback().OnMap(reinterpret_cast<uptr>(res), kSize2);
       atomic_store(&map1_[idx], reinterpret_cast<uptr>(res),
                    memory_order_release);
     }
@@ -164,10 +155,8 @@ template <u64 kSize, typename AddressSpaceViewTy = LocalAddressSpaceView>
 using FlatByteMap = FlatMap<u8, kSize, AddressSpaceViewTy>;
 
 template <u64 kSize1, u64 kSize2,
-          typename AddressSpaceViewTy = LocalAddressSpaceView,
-          class MapUnmapCallback = NoOpMapUnmapCallback>
-using TwoLevelByteMap =
-    TwoLevelMap<u8, kSize1, kSize2, AddressSpaceViewTy, MapUnmapCallback>;
+          typename AddressSpaceViewTy = LocalAddressSpaceView>
+using TwoLevelByteMap = TwoLevelMap<u8, kSize1, kSize2, AddressSpaceViewTy>;
 }  // namespace __sanitizer
 
 #endif

@@ -28,7 +28,7 @@ namespace tooling {
 /// This function can be expensive as it may scan the source code to find out
 /// dont-include-me pattern heuristically.
 bool isSelfContainedHeader(const FileEntry *FE, const SourceManager &SM,
-                           HeaderSearch &HeaderInfo);
+                           const HeaderSearch &HeaderInfo);
 
 /// This scans the given source code to see if it contains #import(s).
 bool codeContainsImports(llvm::StringRef Code);

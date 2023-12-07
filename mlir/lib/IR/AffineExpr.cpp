@@ -17,6 +17,7 @@
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/STLExtras.h"
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -565,7 +566,7 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   // Detect "c1 * expr + c_2 * expr" as "(c1 + c2) * expr".
   // c1 is rRhsConst, c2 is rLhsConst; firstExpr, secondExpr are their
   // respective multiplicands.
-  Optional<int64_t> rLhsConst, rRhsConst;
+  std::optional<int64_t> rLhsConst, rRhsConst;
   AffineExpr firstExpr, secondExpr;
   AffineConstantExpr rLhsConstExpr;
   auto lBinOpExpr = lhs.dyn_cast<AffineBinaryOpExpr>();
@@ -1289,7 +1290,7 @@ void SimpleAffineExprFlattener::addLocalVariableSemiAffine(
 // A floordiv is thus flattened by introducing a new local variable q, and
 // replacing that expression with 'q' while adding the constraints
 // c * q <= expr <= c * q + c - 1 to localVarCst (done by
-// FlatAffineConstraints::addLocalFloorDiv).
+// IntegerRelation::addLocalFloorDiv).
 //
 // A ceildiv is similarly flattened:
 // t = expr ceildiv c   <=> t =  (expr + c - 1) floordiv c

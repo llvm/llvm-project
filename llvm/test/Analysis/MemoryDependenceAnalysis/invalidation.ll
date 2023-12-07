@@ -1,16 +1,19 @@
 ; Test that memdep gets invalidated when the analyses it depends on are
 ; invalidated.
 ;
-; Check AA. AA is stateless, there's nothing to invalidate.
+; Check AA. AA is stateless, but given an explicit invalidate (abandon) the
+; AAManager is invalidated and we must invalidate memdep as well given
+; the transitive dependency.
 ; RUN: opt -disable-output -debug-pass-manager -aa-pipeline='basic-aa' %s 2>&1 \
 ; RUN:     -passes='require<memdep>,invalidate<aa>,gvn' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-AA-INVALIDATE
 ; CHECK-AA-INVALIDATE: Running pass: RequireAnalysisPass
 ; CHECK-AA-INVALIDATE: Running analysis: MemoryDependenceAnalysis
 ; CHECK-AA-INVALIDATE: Running pass: InvalidateAnalysisPass
-; CHECK-NOT-AA-INVALIDATE: Invalidating analysis: MemoryDependenceAnalysis
-; CHECK-AA-INVALIDATE: Running pass: GVN
-; CHECK-NOT-AA-INVALIDATE: Running analysis: MemoryDependenceAnalysis
+; CHECK-AA-INVALIDATE: Invalidating analysis: AAManager
+; CHECK-AA-INVALIDATE: Invalidating analysis: MemoryDependenceAnalysis
+; CHECK-AA-INVALIDATE: Running pass: GVNPass
+; CHECK-AA-INVALIDATE: Running analysis: MemoryDependenceAnalysis
 ;
 ; Check domtree specifically.
 ; RUN: opt -disable-output -debug-pass-manager %s 2>&1 \
@@ -21,7 +24,7 @@
 ; CHECK-DT-INVALIDATE: Running pass: InvalidateAnalysisPass
 ; CHECK-DT-INVALIDATE: Invalidating analysis: DominatorTreeAnalysis
 ; CHECK-DT-INVALIDATE: Invalidating analysis: MemoryDependenceAnalysis
-; CHECK-DT-INVALIDATE: Running pass: GVN
+; CHECK-DT-INVALIDATE: Running pass: GVNPass
 ; CHECK-DT-INVALIDATE: Running analysis: MemoryDependenceAnalysis
 ;
 

@@ -7,6 +7,7 @@ add_clang_unittest(LexTests
   HeaderMapTest.cpp
   HeaderSearchTest.cpp
   LexerTest.cpp
+  ModuleDeclStateTest.cpp
   PPCallbacksTest.cpp
   PPConditionalDirectiveRecordTest.cpp
   PPDependencyDirectivesTest.cpp
@@ -24,5 +25,6 @@ clang_target_link_libraries(LexTests
 
 target_link_libraries(LexTests
   PRIVATE
+  LLVMTestingAnnotations
   LLVMTestingSupport
   )

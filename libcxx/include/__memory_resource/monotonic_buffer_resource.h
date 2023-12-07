@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___MEMORY_RESOURCE_MONOTONIC_BUFFER_RESOURCE_H
 #define _LIBCPP___MEMORY_RESOURCE_MONOTONIC_BUFFER_RESOURCE_H
 
+#include <__availability>
 #include <__config>
 #include <__memory/addressof.h>
 #include <__memory_resource/memory_resource.h>
@@ -18,7 +19,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -26,7 +27,7 @@ namespace pmr {
 
 // [mem.res.monotonic.buffer]
 
-class _LIBCPP_TYPE_VIS monotonic_buffer_resource : public memory_resource {
+class _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI monotonic_buffer_resource : public memory_resource {
   static const size_t __default_buffer_capacity  = 1024;
   static const size_t __default_buffer_alignment = 16;
 
@@ -35,7 +36,9 @@ class _LIBCPP_TYPE_VIS monotonic_buffer_resource : public memory_resource {
     char* __start_;
     char* __cur_;
     size_t __align_;
-    size_t __allocation_size() { return (reinterpret_cast<char*>(this) - __start_) + sizeof(*this); }
+    _LIBCPP_HIDE_FROM_ABI size_t __allocation_size() {
+      return (reinterpret_cast<char*>(this) - __start_) + sizeof(*this);
+    }
     void* __try_allocate_from_chunk(size_t, size_t);
   };
 
@@ -69,7 +72,7 @@ public:
       : __res_(__upstream) {
     __initial_.__start_ = static_cast<char*>(__buffer);
     if (__buffer != nullptr) {
-      __initial_.__cur_ = static_cast<char*>(__buffer);
+      __initial_.__cur_ = static_cast<char*>(__buffer) + __buffer_size;
       __initial_.__end_ = static_cast<char*>(__buffer) + __buffer_size;
     } else {
       __initial_.__cur_  = nullptr;
@@ -80,12 +83,13 @@ public:
 
   monotonic_buffer_resource(const monotonic_buffer_resource&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI ~monotonic_buffer_resource() override { release(); }
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~monotonic_buffer_resource() override { release(); }
 
   monotonic_buffer_resource& operator=(const monotonic_buffer_resource&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI void release() {
-    __initial_.__cur_ = __initial_.__start_;
+    if (__initial_.__start_ != nullptr)
+      __initial_.__cur_ = __initial_.__end_;
     while (__chunks_ != nullptr) {
       __chunk_footer* __next = __chunks_->__next_;
       __res_->deallocate(__chunks_->__start_, __chunks_->__allocation_size(), __chunks_->__align_);
@@ -98,9 +102,9 @@ public:
 protected:
   void* do_allocate(size_t __bytes, size_t __alignment) override; // key function
 
-  _LIBCPP_HIDE_FROM_ABI void do_deallocate(void*, size_t, size_t) override {}
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void do_deallocate(void*, size_t, size_t) override {}
 
-  _LIBCPP_HIDE_FROM_ABI bool do_is_equal(const memory_resource& __other) const _NOEXCEPT override {
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool do_is_equal(const memory_resource& __other) const _NOEXCEPT override {
     return this == std::addressof(__other);
   }
 
@@ -114,6 +118,6 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___MEMORY_RESOURCE_MONOTONIC_BUFFER_RESOURCE_H

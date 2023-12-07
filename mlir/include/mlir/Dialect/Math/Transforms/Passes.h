@@ -9,13 +9,30 @@
 #ifndef MLIR_DIALECT_MATH_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_MATH_TRANSFORMS_PASSES_H_
 
+#include "mlir/Pass/Pass.h"
+
 namespace mlir {
+namespace math {
+#define GEN_PASS_DECL
+#include "mlir/Dialect/Math/Transforms/Passes.h.inc"
+#define GEN_PASS_DECL_MATHUPLIFTTOFMA
+#include "mlir/Dialect/Math/Transforms/Passes.h.inc"
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/Math/Transforms/Passes.h.inc"
+} // namespace math
 
 class RewritePatternSet;
 
 void populateExpandCtlzPattern(RewritePatternSet &patterns);
+void populateExpandTanPattern(RewritePatternSet &patterns);
 void populateExpandTanhPattern(RewritePatternSet &patterns);
-
+void populateExpandFmaFPattern(RewritePatternSet &patterns);
+void populateExpandFloorFPattern(RewritePatternSet &patterns);
+void populateExpandCeilFPattern(RewritePatternSet &patterns);
+void populateExpandExp2FPattern(RewritePatternSet &patterns);
+void populateExpandPowFPattern(RewritePatternSet &patterns);
+void populateExpandRoundFPattern(RewritePatternSet &patterns);
+void populateExpandRoundEvenPattern(RewritePatternSet &patterns);
 void populateMathAlgebraicSimplificationPatterns(RewritePatternSet &patterns);
 
 struct MathPolynomialApproximationOptions {
@@ -26,6 +43,8 @@ struct MathPolynomialApproximationOptions {
 void populateMathPolynomialApproximationPatterns(
     RewritePatternSet &patterns,
     const MathPolynomialApproximationOptions &options = {});
+
+void populateUpliftToFMAPatterns(RewritePatternSet &patterns);
 
 } // namespace mlir
 

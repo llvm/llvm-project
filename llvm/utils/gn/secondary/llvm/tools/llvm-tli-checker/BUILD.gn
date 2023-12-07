@@ -20,6 +20,7 @@ executable("llvm-tli-checker") {
     "//llvm/lib/Option",
     "//llvm/lib/Remarks",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/TextAPI",
   ]
   sources = [ "llvm-tli-checker.cpp" ]

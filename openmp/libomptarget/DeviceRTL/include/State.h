@@ -17,9 +17,12 @@
 #include "Types.h"
 #include "Utils.h"
 
+// Forward declaration.
+struct KernelEnvironmentTy;
+
 #pragma omp begin declare target device_type(nohost)
 
-namespace _OMP {
+namespace ompx {
 
 namespace memory {
 
@@ -52,6 +55,7 @@ struct ICVStateTy {
   uint32_t NThreadsVar;
   uint32_t LevelVar;
   uint32_t ActiveLevelVar;
+  uint32_t Padding0Val;
   uint32_t MaxActiveLevelsVar;
   uint32_t RunSchedVar;
   uint32_t RunSchedChunkVar;
@@ -113,7 +117,10 @@ extern ThreadStateTy **ThreadStates;
 #pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
 
 /// Initialize the state machinery. Must be called by all threads.
-void init(bool IsSPMD);
+void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment);
+
+/// Return the kernel environment associated with the current kernel.
+KernelEnvironmentTy &getKernelEnvironment();
 
 /// TODO
 enum ValueKind {
@@ -153,7 +160,7 @@ inline uint32_t &lookupForModify32Impl(uint32_t state::ICVStateTy::*Var,
   if (OMP_UNLIKELY(!ThreadStates[TId])) {
     ThreadStates[TId] = reinterpret_cast<ThreadStateTy *>(memory::allocGlobal(
         sizeof(ThreadStateTy), "ICV modification outside data environment"));
-    ASSERT(ThreadStates[TId] != nullptr && "Nullptr returned by malloc!");
+    ASSERT(ThreadStates[TId] != nullptr, "Nullptr returned by malloc!");
     TeamState.HasThreadState = true;
     ThreadStates[TId]->init();
   }
@@ -248,7 +255,7 @@ template <typename Ty, ValueKind Kind> struct Value {
   __attribute__((flatten, always_inline)) void
   assert_eq(const Ty &V, IdentTy *Ident = nullptr,
             bool ForceTeamState = false) {
-    ASSERT(lookup(/* IsReadonly */ true, Ident, ForceTeamState) == V);
+    ASSERT(lookup(/* IsReadonly */ true, Ident, ForceTeamState) == V, nullptr);
   }
 
 private:
@@ -308,8 +315,7 @@ template <typename VTy, typename Ty> struct ValueRAII {
         Val(OldValue), Active(Active) {
     if (!Active)
       return;
-    ASSERT(*Ptr == OldValue &&
-           "ValueRAII initialization with wrong old value!");
+    ASSERT(*Ptr == OldValue, "ValueRAII initialization with wrong old value!");
     *Ptr = NewValue;
   }
   ~ValueRAII() {
@@ -340,6 +346,9 @@ void runAndCheckState(void(Func(void)));
 
 void assumeInitialState(bool IsSPMD);
 
+/// Return the value of the ParallelTeamSize ICV.
+int getEffectivePTeamSize();
+
 } // namespace state
 
 namespace icv {
@@ -364,7 +373,7 @@ inline state::Value<uint32_t, state::VK_RunSched> RunSched;
 
 } // namespace icv
 
-} // namespace _OMP
+} // namespace ompx
 
 #pragma omp end declare target
 

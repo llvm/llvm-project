@@ -14,6 +14,7 @@ fuzzer("llvm-opt-fuzzer") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/AggressiveInstCombine",
     "//llvm/lib/Transforms/Coroutines",
     "//llvm/lib/Transforms/IPO",

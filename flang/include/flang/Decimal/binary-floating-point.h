@@ -79,10 +79,26 @@ public:
     return (raw_ & ((RawType{1} << (bits - 1)) - 1)) == 0;
   }
   constexpr bool IsNaN() const {
-    return BiasedExponent() == maxExponent && Significand() != 0;
+    auto expo{BiasedExponent()};
+    auto sig{Significand()};
+    if constexpr (bits == 80) { // x87
+      if (expo == maxExponent) {
+        return sig != (significandMask >> 1) + 1;
+      } else {
+        return expo != 0 && !(sig & (RawType{1} << (significandBits - 1)));
+        ;
+      }
+    } else {
+      return expo == maxExponent && sig != 0;
+    }
   }
   constexpr bool IsInfinite() const {
-    return BiasedExponent() == maxExponent && Significand() == 0;
+    if constexpr (bits == 80) { // x87
+      return BiasedExponent() == maxExponent &&
+          Significand() == ((significandMask >> 1) + 1);
+    } else {
+      return BiasedExponent() == maxExponent && Significand() == 0;
+    }
   }
   constexpr bool IsMaximalFiniteMagnitude() const {
     return BiasedExponent() == maxExponent - 1 &&

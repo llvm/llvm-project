@@ -48,7 +48,7 @@
 # RUN: echo "FOO { global: extern \"C++\" { a[; }; };" > %t9.script
 # RUN: not ld.lld --version-script %t9.script -shared %t.o -o /dev/null 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=ERROR
-# ERROR: invalid glob pattern: a[
+# ERROR: invalid glob pattern, unmatched '[': a[
 
 .text
 .globl _Z3abbi

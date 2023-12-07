@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/clock.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <limits.h>
 #include <time.h>
 

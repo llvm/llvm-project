@@ -65,9 +65,8 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
     break;
   case RTLIB::MEMSET:
     AEABILibcall = AEABI_MEMSET;
-    if (ConstantSDNode *ConstantSrc = dyn_cast<ConstantSDNode>(Src))
-      if (ConstantSrc->getZExtValue() == 0)
-        AEABILibcall = AEABI_MEMCLR;
+    if (isNullConstant(Src))
+      AEABILibcall = AEABI_MEMCLR;
     break;
   default:
     return SDValue();
@@ -266,8 +265,7 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SrcOff += VTSize;
     BytesLeft -= VTSize;
   }
-  Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
-                      makeArrayRef(TFOps, i));
+  Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ArrayRef(TFOps, i));
 
   i = 0;
   BytesLeft = BytesLeftSave;
@@ -282,8 +280,7 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
     DstOff += VTSize;
     BytesLeft -= VTSize;
   }
-  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
-                     makeArrayRef(TFOps, i));
+  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ArrayRef(TFOps, i));
 }
 
 SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemmove(

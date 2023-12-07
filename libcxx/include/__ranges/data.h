@@ -16,8 +16,13 @@
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
 #include <__ranges/access.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_object.h>
+#include <__type_traits/is_pointer.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/remove_pointer.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/auto_cast.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -25,7 +30,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [range.prim.data]
 
@@ -100,7 +105,7 @@ inline namespace __cpo {
 } // namespace __cpo
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

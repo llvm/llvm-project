@@ -12,10 +12,9 @@ target triple = "x86_64-apple-darwin10.0.0"
 ;    f[i+1] = 0;
 ;  }
 ;}
-define void @test(i32* %f, i32 %n) nounwind ssp {
+define void @test(ptr %f, i32 %n) nounwind ssp {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F1:%.*]] = bitcast i32* [[F:%.*]] to i8*
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[N:%.*]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[MUL]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
@@ -25,13 +24,13 @@ define void @test(i32* %f, i32 %n) nounwind ssp {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 8
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[F1]], i8 0, i64 [[TMP4]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[F:%.*]], i8 0, i64 [[TMP4]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[F]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[F]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[F]], i64 [[TMP5]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[F]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
@@ -51,11 +50,11 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %f, i64 %indvars.iv
-  store i32 0, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %f, i64 %indvars.iv
+  store i32 0, ptr %arrayidx, align 4
   %1 = or i64 %indvars.iv, 1
-  %arrayidx2 = getelementptr inbounds i32, i32* %f, i64 %1
-  store i32 0, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %f, i64 %1
+  store i32 0, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 2
   %cmp = icmp ult i64 %indvars.iv.next, %0
   br i1 %cmp, label %for.body, label %for.end.loopexit
@@ -73,10 +72,9 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ;    f[i+1] = 2;
 ;  }
 ;}
-define void @test_pattern(i32* %f, i32 %n) nounwind ssp {
+define void @test_pattern(ptr %f, i32 %n) nounwind ssp {
 ; CHECK-LABEL: @test_pattern(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F1:%.*]] = bitcast i32* [[F:%.*]] to i8*
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[N:%.*]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[MUL]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
@@ -86,13 +84,13 @@ define void @test_pattern(i32* %f, i32 %n) nounwind ssp {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 8
-; CHECK-NEXT:    call void @memset_pattern16(i8* [[F1]], i8* bitcast ([4 x i32]* @.memset_pattern to i8*), i64 [[TMP4]])
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[F:%.*]], ptr @.memset_pattern, i64 [[TMP4]])
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[F]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[F]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[F]], i64 [[TMP5]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[F]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
@@ -112,11 +110,11 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %f, i64 %indvars.iv
-  store i32 2, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %f, i64 %indvars.iv
+  store i32 2, ptr %arrayidx, align 4
   %1 = or i64 %indvars.iv, 1
-  %arrayidx2 = getelementptr inbounds i32, i32* %f, i64 %1
-  store i32 2, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %f, i64 %1
+  store i32 2, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 2
   %cmp = icmp ult i64 %indvars.iv.next, %0
   br i1 %cmp, label %for.body, label %for.end.loopexit

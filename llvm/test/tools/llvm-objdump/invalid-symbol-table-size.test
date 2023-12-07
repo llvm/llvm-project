@@ -3,17 +3,17 @@
 
 ## a) Broken .symtab symbol table. Valid .dynsym symbol table.
 # RUN: yaml2obj -DBITS=32 -DSIZE=33 -DDYNSIZE=32 %s -o %t.32-bit.o
-# RUN: not llvm-objdump --syms %t.32-bit.o 2>&1 | FileCheck -DSIZE=33 -DSYMSIZE=16 -DINDEX=2 %s
+# RUN: llvm-objdump --syms %t.32-bit.o 2>&1 | FileCheck -DSIZE=33 -DSYMSIZE=16 -DINDEX=2 %s
 # RUN: yaml2obj -DBITS=64 -DSIZE=49 -DDYNSIZE=48 %s -o %t.64-bit.o
-# RUN: not llvm-objdump --syms %t.64-bit.o 2>&1 | FileCheck -DSIZE=49 -DSYMSIZE=24 -DINDEX=2 %s
+# RUN: llvm-objdump --syms %t.64-bit.o 2>&1 | FileCheck -DSIZE=49 -DSYMSIZE=24 -DINDEX=2 %s
 
 ## b) Broken .dynsym symbol table. Valid .symtab symbol table.
 # RUN: yaml2obj -DBITS=32 -DSIZE=32 -DDYNSIZE=33 %s -o %t.32-bit.o
-# RUN: not llvm-objdump --dynamic-syms %t.32-bit.o 2>&1 | FileCheck -DSIZE=33 -DSYMSIZE=16 -DINDEX=3 %s
+# RUN: llvm-objdump --dynamic-syms %t.32-bit.o 2>&1 | FileCheck -DSIZE=33 -DSYMSIZE=16 -DINDEX=3 %s
 # RUN: yaml2obj -DBITS=64 -DSIZE=48 -DDYNSIZE=49 %s -o %t.64-bit.o
-# RUN: not llvm-objdump --dynamic-syms %t.64-bit.o 2>&1 | FileCheck -DSIZE=49 -DSYMSIZE=24 -DINDEX=3 %s
+# RUN: llvm-objdump --dynamic-syms %t.64-bit.o 2>&1 | FileCheck -DSIZE=49 -DSYMSIZE=24 -DINDEX=3 %s
 
-# CHECK: error: {{.*}} section [index [[INDEX]]] has an invalid sh_size ([[SIZE]]) which is not a multiple of its sh_entsize ([[SYMSIZE]])
+# CHECK: warning: {{.*}} section [index [[INDEX]]] has an invalid sh_size ([[SIZE]]) which is not a multiple of its sh_entsize ([[SYMSIZE]])
 
 --- !ELF
 FileHeader:

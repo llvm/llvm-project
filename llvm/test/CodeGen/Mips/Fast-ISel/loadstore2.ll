@@ -21,8 +21,8 @@ target triple = "mips--linux-gnu"
 ; Function Attrs: nounwind
 define void @cfoo() #0 {
 entry:
-  %0 = load i8, i8* @c2, align 1
-  store i8 %0, i8* @c1, align 1
+  %0 = load i8, ptr @c2, align 1
+  store i8 %0, ptr @c1, align 1
 ; CHECK-LABEL:	cfoo:
 ; CHECK:	lbu	$[[REGc:[0-9]+]], 0(${{[0-9]+}})
 ; CHECK:	sb	$[[REGc]], 0(${{[0-9]+}})
@@ -34,8 +34,8 @@ entry:
 ; Function Attrs: nounwind
 define void @sfoo() #0 {
 entry:
-  %0 = load i16, i16* @s2, align 2
-  store i16 %0, i16* @s1, align 2
+  %0 = load i16, ptr @s2, align 2
+  store i16 %0, ptr @s1, align 2
 ; CHECK-LABEL:	sfoo:
 ; CHECK:	lhu	$[[REGs:[0-9]+]], 0(${{[0-9]+}})
 ; CHECK:	sh	$[[REGs]], 0(${{[0-9]+}})
@@ -46,8 +46,8 @@ entry:
 ; Function Attrs: nounwind
 define void @ifoo() #0 {
 entry:
-  %0 = load i32, i32* @i2, align 4
-  store i32 %0, i32* @i1, align 4
+  %0 = load i32, ptr @i2, align 4
+  store i32 %0, ptr @i1, align 4
 ; CHECK-LABEL:	ifoo:
 ; CHECK:	lw	$[[REGi:[0-9]+]], 0(${{[0-9]+}})
 ; CHECK:	sw	$[[REGi]], 0(${{[0-9]+}})
@@ -58,8 +58,8 @@ entry:
 ; Function Attrs: nounwind
 define void @ffoo() #0 {
 entry:
-  %0 = load float, float* @f2, align 4
-  store float %0, float* @f1, align 4
+  %0 = load float, ptr @f2, align 4
+  store float %0, ptr @f1, align 4
 ; CHECK-LABEL:	ffoo:
 ; CHECK:	lwc1	$f[[REGf:[0-9]+]], 0(${{[0-9]+}})
 ; CHECK:	swc1	$f[[REGf]], 0(${{[0-9]+}})
@@ -71,8 +71,8 @@ entry:
 ; Function Attrs: nounwind
 define void @dfoo() #0 {
 entry:
-  %0 = load double, double* @d2, align 8
-  store double %0, double* @d1, align 8
+  %0 = load double, ptr @d2, align 8
+  store double %0, ptr @d1, align 8
 ; CHECK-LABEL:        dfoo:
 ; CHECK:        ldc1    $f[[REGd:[0-9]+]], 0(${{[0-9]+}})
 ; CHECK:        sdc1    $f[[REGd]], 0(${{[0-9]+}})

@@ -31,7 +31,7 @@
 ; }
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 
-define void @f1(i32* %sum) {
+define void @f1(ptr %sum) {
 entry:
   br label %entry.split1
 
@@ -43,11 +43,11 @@ entry.split:                                      ; preds = %entry.split1
 
 for.cond:                                         ; preds = %for.cond, %entry.split
   %i1.0 = phi i32 [ 0, %entry.split ], [ %inc, %for.cond ]
-  %sum.reload = load i32, i32* %sum
+  %sum.reload = load i32, ptr %sum
   %mul = mul nsw i32 %i1.0, 3
   %add = add nsw i32 %sum.reload, %mul
   %inc = add nsw i32 %i1.0, 1
-  store i32 %add, i32* %sum
+  store i32 %add, ptr %sum
   %cmp = icmp slt i32 %i1.0, 100
   br i1 %cmp, label %for.cond, label %for.end
 
@@ -56,7 +56,7 @@ for.end:                                          ; preds = %for.cond
 }
 
 
-define void @f2(i32* %sum) {
+define void @f2(ptr %sum) {
 entry:
   br label %entry.split1
 
@@ -68,11 +68,11 @@ entry.split:                                      ; preds = %entry.split1
 
 for.cond:                                         ; preds = %for.cond, %entry.split
   %i1.0 = phi i32 [ 0, %entry.split ], [ %inc, %for.cond ]
-  %sum.reload = load i32, i32* %sum
+  %sum.reload = load i32, ptr %sum
   %mul = mul nsw i32 %i1.0, 3
   %add = add nsw i32 %sum.reload, %mul
   %inc = add nsw i32 %i1.0, 1
-  store i32 %add, i32* %sum
+  store i32 %add, ptr %sum
   %cmp = icmp slt i32 %i1.0, 100
   br i1 %cmp, label %for.cond, label %for.end
 
@@ -80,7 +80,7 @@ for.end:                                          ; preds = %for.cond
   ret void
 }
 
-define void @g1(i32* %sum) {
+define void @g1(ptr %sum) {
 entry:
   br label %entry.split1
 
@@ -92,11 +92,11 @@ entry.split:                                      ; preds = %entry.split1
 
 for.cond:                                         ; preds = %for.cond, %entry.split
   %i1.0 = phi i32 [ 0, %entry.split ], [ %inc, %for.cond ]
-  %sum.reload = load i32, i32* %sum
+  %sum.reload = load i32, ptr %sum
   %mul = mul nsw i32 %i1.0, 3
   %add = add nsw i32 %sum.reload, %mul
   %inc = add nsw i32 %i1.0, 1
-  store i32 %add, i32* %sum
+  store i32 %add, ptr %sum
   %cmp = icmp slt i32 %i1.0, 100
   br i1 %cmp, label %for.cond, label %for.end
 
@@ -104,7 +104,7 @@ for.end:                                          ; preds = %for.cond
   ret void
 }
 
-define void @h(i32* %sum) {
+define void @h(ptr %sum) {
 entry:
   br label %entry.split1
 
@@ -116,11 +116,11 @@ entry.split:                                      ; preds = %entry.split1
 
 for.cond:                                         ; preds = %for.cond, %entry.split
   %i1.0 = phi i32 [ 0, %entry.split ], [ %inc, %for.cond ]
-  %sum.reload = load i32, i32* %sum
+  %sum.reload = load i32, ptr %sum
   %mul = mul nsw i32 %i1.0, 3
   %add = add nsw i32 %sum.reload, %mul
   %inc = add nsw i32 %i1.0, 1
-  store i32 %add, i32* %sum
+  store i32 %add, ptr %sum
   %cmp = icmp slt i32 %i1.0, 100
   br i1 %cmp, label %for.cond, label %for.end
 

@@ -8,7 +8,7 @@ declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture reado
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1) #0
 
-declare void @f1(ptr noalias nocapture sret(%s), ptr nocapture readnone)
+declare void @f1(ptr noalias nocapture sret(%s), ptr nocapture)
 
 define void @f2() {
 entry:

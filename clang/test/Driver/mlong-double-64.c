@@ -6,6 +6,6 @@
 
 // CHECK: "-mlong-double-64"
 
-// RUN: %clang -target aarch64 -c -### %s -mlong-double-64 2>&1 | FileCheck --check-prefix=ERR %s
+// RUN: not %clang --target=aarch64 -c -### %s -mlong-double-64 2>&1 | FileCheck --check-prefix=ERR %s
 
 // ERR: error: unsupported option '-mlong-double-64' for target 'aarch64'

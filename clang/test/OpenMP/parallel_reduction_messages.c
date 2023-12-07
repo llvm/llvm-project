@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 150 -o - %s
 
 int incomplete[];
 

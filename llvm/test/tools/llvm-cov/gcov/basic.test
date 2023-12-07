@@ -43,14 +43,14 @@ RUN: llvm-cov gcov -n -t test.c | count 0
 
 RUN: llvm-cov gcov test_paths.cpp 2>/dev/null | FileCheck %s --check-prefix=MISSING
 RUN: ls a.c.gcov
-MISSING: File 'src/./n/../a.c'
+MISSING: File 'src/a.c'
 MISSING: Creating 'a.c.gcov'
 
 # Preserve paths. This mangles the output filenames.
 RUN: llvm-cov gcov -p test_paths.cpp 2>/dev/null | FileCheck %s --check-prefix=PRESERVE
-RUN: ls src#n#^#a.c.gcov
-PRESERVE: File 'src/./n/../a.c'
-PRESERVE: Creating 'src#n#^#a.c.gcov'
+RUN: ls src#a.c.gcov
+PRESERVE: File 'src/a.c'
+PRESERVE: Creating 'src#a.c.gcov'
 
 # Long file names.
 RUN: llvm-cov gcov -l test_paths.cpp
@@ -58,11 +58,11 @@ RUN: ls test_paths.cpp##a.c.gcov
 
 # Long file names and preserve paths.
 RUN: mkdir -p src && llvm-cov gcov -lp -gcno test_paths.gcno -gcda test_paths.gcda src/../test_paths.cpp
-RUN: ls src#^#test_paths.cpp##src#n#^#a.c.gcov
+RUN: ls src#^#test_paths.cpp##src#a.c.gcov
 
 # Hash pathnames.
 RUN: llvm-cov gcov -x -gcno test_paths.gcno -gcda test_paths.gcda src/../test_paths.cpp
-RUN: ls a.c##4784150e272908907eaa7380ca3eced8.gcov
+RUN: ls a.c##0c546a4dd99c1774b7b06e4fad16158c.gcov
 
 # Function summaries. This changes stdout, but not the gcov files.
 RUN: llvm-cov gcov test.c -f | FileCheck %s --check-prefixes=OUT,OUTFILE,OUT-F
@@ -136,7 +136,7 @@ RUN: FileCheck %s --check-prefixes=H,H-A,H-B --match-full-lines --strict-whitesp
   OUT-B-NEXT:No calls
 OUTFILE-NEXT:Creating 'test.cpp.gcov'
    OUT-EMPTY:
-    OUT-NEXT:File './test.h'
+    OUT-NEXT:File 'test.h'
     OUT-NEXT:Lines executed:100.00% of 1
   OUT-B-NEXT:No branches
   OUT-B-NEXT:No calls
@@ -160,7 +160,7 @@ NO-GCDA:       File 'test.cpp'
 NO-GCDA-NEXT:  Lines executed:0.00% of 43
 NO-GCDA-NEXT:  Creating 'test.cpp.gcov'
 NO-GCDA-EMPTY:
-NO-GCDA-NEXT:  File './test.h'
+NO-GCDA-NEXT:  File 'test.h'
 NO-GCDA-NEXT:  Lines executed:0.00% of 1
 NO-GCDA-NEXT:  Creating 'test.h.gcov'
 
@@ -361,7 +361,7 @@ C-NEXT:        1:   72:  return a + 8 + grid[2][3] + len;
 C-NEXT:        -:   73:  return more_useless();
 C-NEXT:        -:   74:}
 
-     H:        -:    0:Source:./test.h
+     H:        -:    0:Source:test.h
 H-NEXT:        -:    0:Graph:test.gcno
 H-NEXT:        -:    0:Data:test.gcda
 H-NEXT:        -:    0:Runs:1

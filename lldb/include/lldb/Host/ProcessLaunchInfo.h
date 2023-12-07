@@ -20,7 +20,6 @@
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/ProcessInfo.h"
-#include "lldb/Utility/StructuredData.h"
 
 namespace lldb_private {
 
@@ -69,7 +68,7 @@ public:
 
   void SetWorkingDirectory(const FileSpec &working_dir);
 
-  const char *GetProcessPluginName() const;
+  llvm::StringRef GetProcessPluginName() const;
 
   void SetProcessPluginName(llvm::StringRef plugin);
 
@@ -121,19 +120,6 @@ public:
 
   PseudoTerminal &GetPTY() { return *m_pty; }
 
-  // Get and set the actual listener that will be used for the process events
-  lldb::ListenerSP GetListener() const { return m_listener_sp; }
-
-  void SetListener(const lldb::ListenerSP &listener_sp) {
-    m_listener_sp = listener_sp;
-  }
-
-  lldb::ListenerSP GetHijackListener() const { return m_hijack_listener_sp; }
-
-  void SetHijackListener(const lldb::ListenerSP &listener_sp) {
-    m_hijack_listener_sp = listener_sp;
-  }
-
   void SetLaunchEventData(const char *data) { m_event_data.assign(data); }
 
   const char *GetLaunchEventData() const { return m_event_data.c_str(); }
@@ -142,28 +128,6 @@ public:
 
   bool GetDetachOnError() const {
     return m_flags.Test(lldb::eLaunchFlagDetachOnError);
-  }
-
-  bool IsScriptedProcess() const {
-    return !m_scripted_process_class_name.empty();
-  }
-
-  std::string GetScriptedProcessClassName() const {
-    return m_scripted_process_class_name;
-  }
-
-  void SetScriptedProcessClassName(std::string name) {
-    m_scripted_process_class_name = name;
-  }
-
-  lldb_private::StructuredData::DictionarySP
-  GetScriptedProcessDictionarySP() const {
-    return m_scripted_process_dictionary_sp;
-  }
-
-  void SetScriptedProcessDictionarySP(
-      lldb_private::StructuredData::DictionarySP dictionary_sp) {
-    m_scripted_process_dictionary_sp = dictionary_sp;
   }
 
 protected:
@@ -177,13 +141,6 @@ protected:
   Host::MonitorChildProcessCallback m_monitor_callback;
   std::string m_event_data; // A string passed to the plugin launch, having no
                             // meaning to the upper levels of lldb.
-  lldb::ListenerSP m_listener_sp;
-  lldb::ListenerSP m_hijack_listener_sp;
-  std::string m_scripted_process_class_name; // The name of the class that will
-                                             // manage a scripted process.
-  StructuredData::DictionarySP
-      m_scripted_process_dictionary_sp; // A dictionary that holds key/value
-                                        // pairs passed to the scripted process.
 };
 }
 

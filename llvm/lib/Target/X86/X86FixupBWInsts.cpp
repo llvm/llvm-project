@@ -148,8 +148,8 @@ private:
   /// Register Liveness information after the current instruction.
   LivePhysRegs LiveRegs;
 
-  ProfileSummaryInfo *PSI;
-  MachineBlockFrequencyInfo *MBFI;
+  ProfileSummaryInfo *PSI = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
 };
 char FixupBWInstPass::ID = 0;
 }
@@ -193,6 +193,7 @@ bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
   const X86RegisterInfo *TRI = &TII->getRegisterInfo();
   Register OrigDestReg = OrigMI->getOperand(0).getReg();
   SuperDestReg = getX86SubSuperRegister(OrigDestReg, 32);
+  assert(SuperDestReg.isValid() && "Invalid Operand");
 
   const auto SubRegIdx = TRI->getSubRegIndex(SuperDestReg, OrigDestReg);
 
@@ -213,9 +214,9 @@ bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
     // If the original destination register was the low 8-bit subregister and
     // we also need to check the 16-bit subregister and the high 8-bit
     // subregister.
+    MCRegister HighReg = getX86SubSuperRegister(SuperDestReg, 8, /*High=*/true);
     if (!LiveRegs.contains(getX86SubSuperRegister(OrigDestReg, 16)) &&
-        !LiveRegs.contains(getX86SubSuperRegister(SuperDestReg, 8,
-                                                  /*High=*/true)))
+        (!HighReg.isValid() || !LiveRegs.contains(HighReg)))
       return true;
     // Otherwise, we have a little more checking to do.
   }
@@ -298,7 +299,7 @@ MachineInstr *FixupBWInstPass::tryReplaceLoad(unsigned New32BitOpcode,
 
   // Safe to change the instruction.
   MachineInstrBuilder MIB =
-      BuildMI(*MF, MI->getDebugLoc(), TII->get(New32BitOpcode), NewDestReg);
+      BuildMI(*MF, MIMetadata(*MI), TII->get(New32BitOpcode), NewDestReg);
 
   unsigned NumArgs = MI->getNumOperands();
   for (unsigned i = 1; i < NumArgs; ++i)
@@ -327,6 +328,7 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
     return nullptr;
 
   Register NewSrcReg = getX86SubSuperRegister(OldSrc.getReg(), 32);
+  assert(NewSrcReg.isValid() && "Invalid Operand");
 
   // This is only correct if we access the same subregister index: otherwise,
   // we could try to replace "movb %ah, %al" with "movl %eax, %eax".
@@ -341,7 +343,7 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
   // we don't care about the higher bits by reading it as Undef, and adding
   // an imp-use on the original subregister.
   MachineInstrBuilder MIB =
-      BuildMI(*MF, MI->getDebugLoc(), TII->get(X86::MOV32rr), NewDestReg)
+      BuildMI(*MF, MIMetadata(*MI), TII->get(X86::MOV32rr), NewDestReg)
           .addReg(NewSrcReg, RegState::Undef)
           .addReg(OldSrc.getReg(), RegState::Implicit);
 
@@ -369,7 +371,7 @@ MachineInstr *FixupBWInstPass::tryReplaceExtend(unsigned New32BitOpcode,
 
   // Safe to change the instruction.
   MachineInstrBuilder MIB =
-      BuildMI(*MF, MI->getDebugLoc(), TII->get(New32BitOpcode), NewDestReg);
+      BuildMI(*MF, MIMetadata(*MI), TII->get(New32BitOpcode), NewDestReg);
 
   unsigned NumArgs = MI->getNumOperands();
   for (unsigned i = 1; i < NumArgs; ++i)

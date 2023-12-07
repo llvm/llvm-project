@@ -117,25 +117,6 @@ if.end19:                                         ; preds = %if.end18, %for.body
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-; CHECK-LABEL: define ptr @foo() {
-; CHECK-NOT: @llvm.objc
-; CHECK: ret ptr %
-
-define ptr @foo() {
-  %t = alloca ptr, align 8
-  %v4 = load ptr, ptr @global1, align 8
-  %v5 = tail call ptr @llvm.objc.retain(ptr %v4)
-  store ptr %v4, ptr %t, align 8
-  %v13 = load ptr, ptr @"OBJC_CLASSLIST_REFERENCES_$_", align 8
-  %call78 = call ptr @bar(ptr %v13)
-  call void @llvm.objc.release(ptr %v4)
-  ret ptr %call78
-}
-
-declare ptr @bar(ptr)
-
-declare ptr @llvm.objc.retain(ptr)
-
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
 

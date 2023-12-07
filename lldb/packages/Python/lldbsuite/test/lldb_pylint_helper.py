@@ -11,9 +11,6 @@ and multiple OS types, verifying changes across all.
 Provides helper support for adding lldb test paths to the python path.
 """
 
-from __future__ import print_function
-from __future__ import absolute_import
-
 # System modules
 import os
 import platform
@@ -113,16 +110,14 @@ def add_lldb_module_directory():
     try:
         lldb_module_path = None
 
-        if platform.system() == 'Darwin':
+        if platform.system() == "Darwin":
             # Use xcrun to find the selected lldb.
             lldb_module_path = subprocess.check_output(["xcrun", "lldb", "-P"])
-        elif platform.system() == 'Windows':
-            lldb_module_path = subprocess.check_output(
-                ["lldb.exe", "-P"], shell=True)
+        elif platform.system() == "Windows":
+            lldb_module_path = subprocess.check_output(["lldb.exe", "-P"], shell=True)
         else:
             # Use the shell to run lldb from the path.
-            lldb_module_path = subprocess.check_output(
-                ["lldb", "-P"], shell=True)
+            lldb_module_path = subprocess.check_output(["lldb", "-P"], shell=True)
 
         # Trim the result.
         if lldb_module_path is not None:
@@ -145,24 +140,27 @@ def add_lldb_test_package_paths(check_dir):
     """
 
     def child_dirs(parent_dir):
-        return [os.path.join(parent_dir, child)
-                for child in os.listdir(parent_dir)
-                if os.path.isdir(os.path.join(parent_dir, child))]
+        return [
+            os.path.join(parent_dir, child)
+            for child in os.listdir(parent_dir)
+            if os.path.isdir(os.path.join(parent_dir, child))
+        ]
 
     check_dir = os.path.realpath(check_dir)
     while check_dir and len(check_dir) > 0:
         # If the current directory contains a packages/Python
         # directory, add that directory to the path.
-        packages_python_child_dir = os.path.join(
-            check_dir, "packages", "Python")
+        packages_python_child_dir = os.path.join(check_dir, "packages", "Python")
         if os.path.exists(packages_python_child_dir):
             sys.path.insert(0, packages_python_child_dir)
-            sys.path.insert(0, os.path.join(
-                packages_python_child_dir, "test_runner", "lib"))
+            sys.path.insert(
+                0, os.path.join(packages_python_child_dir, "test_runner", "lib")
+            )
 
             # Handle third_party module/package directory.
             third_party_module_dir = os.path.join(
-                check_dir, "third_party", "Python", "module")
+                check_dir, "third_party", "Python", "module"
+            )
             for child_dir in child_dirs(third_party_module_dir):
                 # Yes, we embed the module in the module parent dir
                 sys.path.insert(0, child_dir)

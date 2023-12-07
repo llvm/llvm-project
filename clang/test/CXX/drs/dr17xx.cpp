@@ -1,7 +1,22 @@
 // RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+
+namespace dr1710 { // dr1710: no
+// FIXME: all of the following is well-formed
+template <typename T> struct D1 : T::template B<int>::template C<int> {};
+template <typename T> struct D2 : T::B<int>::template C<int> {};
+// expected-error@-1 {{use 'template' keyword to treat 'B' as a dependent template name}}
+template <typename T> struct D3 : T::template B<int>::C<int> {};
+// expected-error@-1 {{use 'template' keyword to treat 'C' as a dependent template name}}
+template <typename T> struct D4 : T::B<int>::C<int> {};
+// expected-error@-1 {{use 'template' keyword to treat 'B' as a dependent template name}}
+// expected-error@-2 {{use 'template' keyword to treat 'C' as a dependent template name}}
+} // namespace dr1710
 
 namespace dr1715 { // dr1715: 3.9
 #if __cplusplus >= 201103L
@@ -26,6 +41,18 @@ namespace dr1715 { // dr1715: 3.9
   E e(S(), 3); // expected-error {{no match}}
 #endif
 }
+
+namespace dr1722 { // dr1722: 9
+#if __cplusplus >= 201103L
+void f() {
+  const auto lambda = [](int x) { return x + 1; };
+  // Without the DR applied, this static_assert would fail.
+  static_assert(
+      noexcept((int (*)(int))(lambda)),
+      "Lambda-to-function-pointer conversion is expected to be noexcept");
+}
+#endif
+} // namespace dr1722
 
 namespace dr1734 { // dr1734: no
 #if __cplusplus >= 201103L
@@ -111,17 +138,14 @@ namespace dr1758 { // dr1758: 3.7
 #endif
 }
 
-namespace dr1722 { // dr1722: 9
+namespace dr1762 { // dr1762: 14
 #if __cplusplus >= 201103L
-void f() {
-  const auto lambda = [](int x) { return x + 1; };
-  // Without the DR applied, this static_assert would fail.
-  static_assert(
-      noexcept((int (*)(int))(lambda)),
-      "Lambda-to-function-pointer conversion is expected to be noexcept");
-}
+  float operator ""_E(const char *);
+  // expected-error@+2 {{invalid suffix on literal; C++11 requires a space between literal and identifier}}
+  // expected-warning@+1 {{user-defined literal suffixes not starting with '_' are reserved; no literal will invoke this operator}}
+  float operator ""E(const char *);
 #endif
-} // namespace dr1722
+}
 
 namespace dr1778 { // dr1778: 9
   // Superseded by P1286R2.
@@ -138,11 +162,17 @@ namespace dr1778 { // dr1778: 9
 #endif
 }
 
-namespace dr1762 { // dr1762: 14
+namespace dr1794 { // dr1794: yes
+                   // NB: dup 1710
 #if __cplusplus >= 201103L
-  float operator ""_E(const char *);
-  // expected-error@+2 {{invalid suffix on literal; C++11 requires a space between literal and identifier}}
-  // expected-warning@+1 {{user-defined literal suffixes not starting with '_' are reserved; no literal will invoke this operator}}
-  float operator ""E(const char *);
+template <template <typename> class Template> struct Internal {
+  template <typename Arg> using Bind = Template<Arg>;
+};
+
+template <template <typename> class Template, typename Arg>
+using Instantiate = Template<Arg>;
+
+template <template <typename> class Template, typename Argument>
+using Bind = Instantiate<Internal<Template>::template Bind, Argument>;
 #endif
-}
+} // namespace dr1794

@@ -3,12 +3,12 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m-arm-none-eabi"
 
-define float @vctp8(float* %0, i32 %1) {
+define float @vctp8(ptr %0, i32 %1) {
 ; CHECK-LABEL: @vctp8(
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 0, i32 8)
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 [[TMP1:%.*]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint float* [[TMP0:%.*]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP0:%.*]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], <i32 -32, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -28,7 +28,7 @@ define float @vctp8(float* %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP21]] = add i32 [[TMP12]], -4
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[TMP11]], label [[TMP22:%.*]]
 ; CHECK:       22:
-; CHECK-NEXT:    [[TMP23:%.*]] = tail call i32 bitcast (i32 (...)* @vecAddAcrossF32Mve to i32 (<4 x float>)*)(<4 x float> [[TMP19]])
+; CHECK-NEXT:    [[TMP23:%.*]] = tail call i32 @vecAddAcrossF32Mve(<4 x float> [[TMP19]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = sitofp i32 [[TMP23]] to float
 ; CHECK-NEXT:    [[TMP25:%.*]] = tail call float @llvm.fabs.f32(float [[TMP24]])
 ; CHECK-NEXT:    ret float [[TMP25]]
@@ -36,7 +36,7 @@ define float @vctp8(float* %0, i32 %1) {
   %3 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 0, i32 8)
   %4 = extractvalue { <4 x i32>, i32 } %3, 0
   %5 = add nsw i32 %1, -1
-  %6 = ptrtoint float* %0 to i32
+  %6 = ptrtoint ptr %0 to i32
   %7 = insertelement <4 x i32> poison, i32 %6, i32 0
   %8 = add <4 x i32> %7, <i32 -32, i32 undef, i32 undef, i32 undef>
   %9 = shufflevector <4 x i32> %8, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -58,18 +58,18 @@ define float @vctp8(float* %0, i32 %1) {
   br i1 %21, label %11, label %22
 
 22:                                               ; preds = %11
-  %23 = tail call i32 bitcast (i32 (...)* @vecAddAcrossF32Mve to i32 (<4 x float>)*)(<4 x float> %19)
+  %23 = tail call i32 @vecAddAcrossF32Mve(<4 x float> %19)
   %24 = sitofp i32 %23 to float
   %25 = tail call float @llvm.fabs.f32(float %24)
   ret float %25
 }
 
-define float @vctp16(float* %0, i32 %1) {
+define float @vctp16(ptr %0, i32 %1) {
 ; CHECK-LABEL: @vctp16(
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 0, i32 8)
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 [[TMP1:%.*]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint float* [[TMP0:%.*]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP0:%.*]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], <i32 -32, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -89,7 +89,7 @@ define float @vctp16(float* %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP21]] = add i32 [[TMP12]], -4
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[TMP11]], label [[TMP22:%.*]]
 ; CHECK:       22:
-; CHECK-NEXT:    [[TMP23:%.*]] = tail call i32 bitcast (i32 (...)* @vecAddAcrossF32Mve to i32 (<4 x float>)*)(<4 x float> [[TMP19]])
+; CHECK-NEXT:    [[TMP23:%.*]] = tail call i32 @vecAddAcrossF32Mve(<4 x float> [[TMP19]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = sitofp i32 [[TMP23]] to float
 ; CHECK-NEXT:    [[TMP25:%.*]] = tail call float @llvm.fabs.f32(float [[TMP24]])
 ; CHECK-NEXT:    ret float [[TMP25]]
@@ -97,7 +97,7 @@ define float @vctp16(float* %0, i32 %1) {
   %3 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 0, i32 8)
   %4 = extractvalue { <4 x i32>, i32 } %3, 0
   %5 = add nsw i32 %1, -1
-  %6 = ptrtoint float* %0 to i32
+  %6 = ptrtoint ptr %0 to i32
   %7 = insertelement <4 x i32> poison, i32 %6, i32 0
   %8 = add <4 x i32> %7, <i32 -32, i32 undef, i32 undef, i32 undef>
   %9 = shufflevector <4 x i32> %8, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -119,18 +119,18 @@ define float @vctp16(float* %0, i32 %1) {
   br i1 %21, label %11, label %22
 
 22:                                               ; preds = %11
-  %23 = tail call i32 bitcast (i32 (...)* @vecAddAcrossF32Mve to i32 (<4 x float>)*)(<4 x float> %19)
+  %23 = tail call i32 @vecAddAcrossF32Mve(<4 x float> %19)
   %24 = sitofp i32 %23 to float
   %25 = tail call float @llvm.fabs.f32(float %24)
   ret float %25
 }
 
-define float @vctpi32(float* %0, i32 %1) {
+define float @vctpi32(ptr %0, i32 %1) {
 ; CHECK-LABEL: @vctpi32(
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 0, i32 8)
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 [[TMP1:%.*]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint float* [[TMP0:%.*]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP0:%.*]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], <i32 -32, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -149,7 +149,7 @@ define float @vctpi32(float* %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP21]] = add i32 [[TMP12]], -4
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[TMP11]], label [[TMP22:%.*]]
 ; CHECK:       22:
-; CHECK-NEXT:    [[TMP23:%.*]] = tail call i32 bitcast (i32 (...)* @vecAddAcrossF32Mve to i32 (<4 x float>)*)(<4 x float> [[TMP19]])
+; CHECK-NEXT:    [[TMP23:%.*]] = tail call i32 @vecAddAcrossF32Mve(<4 x float> [[TMP19]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = sitofp i32 [[TMP23]] to float
 ; CHECK-NEXT:    [[TMP25:%.*]] = tail call float @llvm.fabs.f32(float [[TMP24]])
 ; CHECK-NEXT:    ret float [[TMP25]]
@@ -157,7 +157,7 @@ define float @vctpi32(float* %0, i32 %1) {
   %3 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 0, i32 8)
   %4 = extractvalue { <4 x i32>, i32 } %3, 0
   %5 = add nsw i32 %1, -1
-  %6 = ptrtoint float* %0 to i32
+  %6 = ptrtoint ptr %0 to i32
   %7 = insertelement <4 x i32> poison, i32 %6, i32 0
   %8 = add <4 x i32> %7, <i32 -32, i32 undef, i32 undef, i32 undef>
   %9 = shufflevector <4 x i32> %8, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -178,19 +178,19 @@ define float @vctpi32(float* %0, i32 %1) {
   br i1 %21, label %11, label %22
 
 22:                                               ; preds = %11
-  %23 = tail call i32 bitcast (i32 (...)* @vecAddAcrossF32Mve to i32 (<4 x float>)*)(<4 x float> %19)
+  %23 = tail call i32 @vecAddAcrossF32Mve(<4 x float> %19)
   %24 = sitofp i32 %23 to float
   %25 = tail call float @llvm.fabs.f32(float %24)
   ret float %25
 }
 
 
-define float @vctpi64(float* %0, i32 %1) {
+define float @vctpi64(ptr %0, i32 %1) {
 ; CHECK-LABEL: @vctpi64(
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 0, i32 8)
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 [[TMP1:%.*]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint float* [[TMP0:%.*]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP0:%.*]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], <i32 -32, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -211,7 +211,7 @@ define float @vctpi64(float* %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP23]] = add i32 [[TMP12]], -4
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[TMP11]], label [[TMP24:%.*]]
 ; CHECK:       24:
-; CHECK-NEXT:    [[TMP25:%.*]] = tail call i32 bitcast (i32 (...)* @vecAddAcrossF32Mve to i32 (<4 x float>)*)(<4 x float> [[TMP21]])
+; CHECK-NEXT:    [[TMP25:%.*]] = tail call i32 @vecAddAcrossF32Mve(<4 x float> [[TMP21]])
 ; CHECK-NEXT:    [[TMP26:%.*]] = sitofp i32 [[TMP25]] to float
 ; CHECK-NEXT:    [[TMP27:%.*]] = tail call float @llvm.fabs.f32(float [[TMP26]])
 ; CHECK-NEXT:    ret float [[TMP27]]
@@ -219,7 +219,7 @@ define float @vctpi64(float* %0, i32 %1) {
   %3 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 0, i32 8)
   %4 = extractvalue { <4 x i32>, i32 } %3, 0
   %5 = add nsw i32 %1, -1
-  %6 = ptrtoint float* %0 to i32
+  %6 = ptrtoint ptr %0 to i32
   %7 = insertelement <4 x i32> poison, i32 %6, i32 0
   %8 = add <4 x i32> %7, <i32 -32, i32 undef, i32 undef, i32 undef>
   %9 = shufflevector <4 x i32> %8, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -240,7 +240,7 @@ define float @vctpi64(float* %0, i32 %1) {
   br i1 %21, label %11, label %22
 
 22:                                               ; preds = %11
-  %23 = tail call i32 bitcast (i32 (...)* @vecAddAcrossF32Mve to i32 (<4 x float>)*)(<4 x float> %19)
+  %23 = tail call i32 @vecAddAcrossF32Mve(<4 x float> %19)
   %24 = sitofp i32 %23 to float
   %25 = tail call float @llvm.fabs.f32(float %24)
   ret float %25

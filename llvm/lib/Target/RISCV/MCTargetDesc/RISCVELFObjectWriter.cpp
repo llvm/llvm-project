@@ -1,4 +1,4 @@
-//===-- RISCVELFObjectWriter.cpp - RISCV ELF Writer -----------------------===//
+//===-- RISCVELFObjectWriter.cpp - RISC-V ELF Writer ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +13,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -26,7 +27,7 @@ public:
 
   // Return true if the given relocation must be with a symbol rather than
   // section plus offset.
-  bool needsRelocateWithSymbol(const MCSymbol &Sym,
+  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                unsigned Type) const override {
     // TODO: this is very conservative, update once RISC-V psABI requirements
     //       are clarified.
@@ -57,11 +58,13 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
   if (IsPCRel) {
     switch (Kind) {
     default:
-      Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
+      Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
       return ELF::R_RISCV_NONE;
     case FK_Data_4:
     case FK_PCRel_4:
-      return ELF::R_RISCV_32_PCREL;
+      return Target.getAccessVariant() == MCSymbolRefExpr::VK_PLT
+                 ? ELF::R_RISCV_PLT32
+                 : ELF::R_RISCV_32_PCREL;
     case RISCV::fixup_riscv_pcrel_hi20:
       return ELF::R_RISCV_PCREL_HI20;
     case RISCV::fixup_riscv_pcrel_lo12_i:
@@ -86,28 +89,12 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_RISCV_CALL_PLT;
     case RISCV::fixup_riscv_call_plt:
       return ELF::R_RISCV_CALL_PLT;
-    case RISCV::fixup_riscv_add_8:
-      return ELF::R_RISCV_ADD8;
-    case RISCV::fixup_riscv_sub_8:
-      return ELF::R_RISCV_SUB8;
-    case RISCV::fixup_riscv_add_16:
-      return ELF::R_RISCV_ADD16;
-    case RISCV::fixup_riscv_sub_16:
-      return ELF::R_RISCV_SUB16;
-    case RISCV::fixup_riscv_add_32:
-      return ELF::R_RISCV_ADD32;
-    case RISCV::fixup_riscv_sub_32:
-      return ELF::R_RISCV_SUB32;
-    case RISCV::fixup_riscv_add_64:
-      return ELF::R_RISCV_ADD64;
-    case RISCV::fixup_riscv_sub_64:
-      return ELF::R_RISCV_SUB64;
     }
   }
 
   switch (Kind) {
   default:
-    Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
+    Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
     return ELF::R_RISCV_NONE;
   case FK_Data_1:
     Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
@@ -140,32 +127,6 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_RELAX;
   case RISCV::fixup_riscv_align:
     return ELF::R_RISCV_ALIGN;
-  case RISCV::fixup_riscv_set_6b:
-    return ELF::R_RISCV_SET6;
-  case RISCV::fixup_riscv_sub_6b:
-    return ELF::R_RISCV_SUB6;
-  case RISCV::fixup_riscv_add_8:
-    return ELF::R_RISCV_ADD8;
-  case RISCV::fixup_riscv_set_8:
-    return ELF::R_RISCV_SET8;
-  case RISCV::fixup_riscv_sub_8:
-    return ELF::R_RISCV_SUB8;
-  case RISCV::fixup_riscv_set_16:
-    return ELF::R_RISCV_SET16;
-  case RISCV::fixup_riscv_add_16:
-    return ELF::R_RISCV_ADD16;
-  case RISCV::fixup_riscv_sub_16:
-    return ELF::R_RISCV_SUB16;
-  case RISCV::fixup_riscv_set_32:
-    return ELF::R_RISCV_SET32;
-  case RISCV::fixup_riscv_add_32:
-    return ELF::R_RISCV_ADD32;
-  case RISCV::fixup_riscv_sub_32:
-    return ELF::R_RISCV_SUB32;
-  case RISCV::fixup_riscv_add_64:
-    return ELF::R_RISCV_ADD64;
-  case RISCV::fixup_riscv_sub_64:
-    return ELF::R_RISCV_SUB64;
   }
 }
 

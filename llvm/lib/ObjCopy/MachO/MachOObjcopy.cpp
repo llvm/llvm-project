@@ -112,6 +112,9 @@ static void updateAndRemoveSymbols(const CommonConfig &Config,
     if (Config.DiscardMode == DiscardType::All && !(N->n_type & MachO::N_EXT))
       return true;
     // This behavior is consistent with cctools' strip.
+    if (Config.StripDebug && (N->n_type & MachO::N_STAB))
+      return true;
+    // This behavior is consistent with cctools' strip.
     if (MachOConfig.StripSwiftSymbols &&
         (Obj.Header.Flags & MachO::MH_DYLDLINK) && Obj.SwiftVersion &&
         *Obj.SwiftVersion && N->isSwiftSymbol())
@@ -487,10 +490,12 @@ Error objcopy::macho::executeObjcopyOnMachOUniversalBinary(
       if (Kind == object::Archive::K_BSD)
         Kind = object::Archive::K_DARWIN;
       Expected<std::unique_ptr<MemoryBuffer>> OutputBufferOrErr =
-          writeArchiveToBuffer(*NewArchiveMembersOrErr,
-                               (*ArOrErr)->hasSymbolTable(), Kind,
-                               Config.getCommonConfig().DeterministicArchives,
-                               (*ArOrErr)->isThin());
+          writeArchiveToBuffer(
+              *NewArchiveMembersOrErr,
+              (*ArOrErr)->hasSymbolTable() ? SymtabWritingMode::NormalSymtab
+                                           : SymtabWritingMode::NoSymtab,
+              Kind, Config.getCommonConfig().DeterministicArchives,
+              (*ArOrErr)->isThin());
       if (!OutputBufferOrErr)
         return OutputBufferOrErr.takeError();
       Expected<std::unique_ptr<Binary>> BinaryOrErr =

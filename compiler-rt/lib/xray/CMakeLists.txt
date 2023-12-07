@@ -47,6 +47,11 @@ set(aarch64_SOURCES
   xray_trampoline_AArch64.S
   )
 
+set(loongarch64_SOURCES
+  xray_loongarch64.cpp
+  xray_trampoline_loongarch64.S
+  )
+
 set(mips_SOURCES
   xray_mips.cpp
   xray_trampoline_mips.S
@@ -76,6 +81,19 @@ set(powerpc64le_SOURCES
 set(hexagon_SOURCES
   xray_hexagon.cpp
   xray_trampoline_hexagon.S
+  )
+
+set(XRAY_SOURCE_ARCHS
+  arm
+  armhf
+  aarch64
+  hexagon
+  mips
+  mipsel
+  mips64
+  mips64el
+  powerpc64le
+  x86_64
   )
 
 set(XRAY_IMPL_HEADERS
@@ -117,6 +135,7 @@ set(XRAY_ALL_SOURCE_FILES
   ${arm_SOURCES}
   ${armhf_SOURCES}
   ${hexagon_SOURCES}
+  ${loongarch64_SOURCES}
   ${mips_SOURCES}
   ${mipsel_SOURCES}
   ${mips64_SOURCES}
@@ -141,7 +160,7 @@ include_directories(../../include)
 set(XRAY_CFLAGS
   ${COMPILER_RT_COMMON_CFLAGS}
   ${COMPILER_RT_CXX_CFLAGS})
-set(XRAY_COMMON_DEFINITIONS XRAY_HAS_EXCEPTIONS=1)
+set(XRAY_COMMON_DEFINITIONS SANITIZER_COMMON_NO_REDEFINE_BUILTINS XRAY_HAS_EXCEPTIONS=1)
 
 # Too many existing bugs, needs cleanup.
 append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format XRAY_CFLAGS)
@@ -171,19 +190,32 @@ if (TARGET cxx-headers OR HAVE_LIBCXX)
 endif()
 
 if (APPLE)
-  add_asm_sources(XRAY_ASM_SOURCES xray_trampoline_x86_64.S)
-
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("xray" WEAK_SYMBOL_LINK_FLAGS)
 
   add_compiler_rt_object_libraries(RTXray
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
-    SOURCES ${XRAY_SOURCES} ${x86_64_SOURCES}
+    SOURCES ${XRAY_SOURCES}
     ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
     CFLAGS ${XRAY_CFLAGS}
     DEFS ${XRAY_COMMON_DEFINITIONS}
     DEPS ${XRAY_DEPS})
+  set(XRAY_RTXRAY_ARCH_LIBS "")
+  foreach(arch ${XRAY_SUPPORTED_ARCH})
+    if(NOT ${arch} IN_LIST XRAY_SOURCE_ARCHS)
+      continue()
+    endif()
+    add_compiler_rt_object_libraries(RTXray_${arch}
+      OS ${XRAY_SUPPORTED_OS}
+      ARCHS ${arch}
+      SOURCES ${${arch}_SOURCES}
+      ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
+      CFLAGS ${XRAY_CFLAGS}
+      DEFS ${XRAY_COMMON_DEFINITIONS}
+      DEPS ${XRAY_DEPS})
+    list(APPEND XRAY_RTXRAY_ARCH_LIBS RTXray_${arch})
+  endforeach()
   add_compiler_rt_object_libraries(RTXrayFDR
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
@@ -214,9 +246,7 @@ if (APPLE)
     STATIC
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
-    OBJECT_LIBS RTXray
-                RTSanitizerCommon
-                RTSanitizerCommonLibc
+    OBJECT_LIBS ${XRAY_COMMON_RUNTIME_OBJECT_LIBS} RTXray ${XRAY_RTXRAY_ARCH_LIBS}
     CFLAGS ${XRAY_CFLAGS}
     DEFS ${XRAY_COMMON_DEFINITIONS}
     LINK_FLAGS ${XRAY_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}

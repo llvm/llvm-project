@@ -5,8 +5,8 @@
 
 define void @check227(
                       i32 %b,
-                      %struct.S227* byval(%struct.S227) nocapture %arg0,
-                      %struct.S227* %arg1) {
+                      ptr byval(%struct.S227) nocapture %arg0,
+                      ptr %arg1) {
 ; b --> R0
 ; arg0 --> [R1, R2, R3, SP+0 .. SP+188)
 ; arg1 --> SP+188
@@ -24,7 +24,7 @@ entry:
 ;CHECK:  pop   {r11, lr}
 ;CHECK:  add   sp, sp, #12
 
-  %0 = ptrtoint %struct.S227* %arg1 to i32
+  %0 = ptrtoint ptr %arg1 to i32
   tail call void @useInt(i32 %0)
   ret void
 }

@@ -29,7 +29,7 @@ contains
     ! CHECK: %[[slice0:.*]] = fir.slice %c1{{.*}}, %[[ext0]]#1, %c1{{.*}} path %[[fldn]] : (index, index, index, !fir.field) -> !fir.slice<1>
     ! CHECK-DAG: = fir.array_coor %[[arg1]] [%[[slice1]]] %[[index:.*]] : (!fir.box<!fir.array<?x!fir.type<_QMcsTr{n:i32,d:i32}>>>, !fir.slice<1>, index) -> !fir.ref<i32>
     ! CHECK-DAG: = fir.array_coor %[[arg0]] [%[[slice0]]] %[[index]] : (!fir.box<!fir.array<?x!fir.type<_QMcsTr{n:i32,d:i32}>>>, !fir.slice<1>, index) -> !fir.ref<i32>
-    ! CHECK: = fir.call @_FortranAAll(
+    ! CHECK: = fir.call @_FortranAAllLogical4x1_simplified(
     c1 = all(c%n == e%n)
   end function c1
 

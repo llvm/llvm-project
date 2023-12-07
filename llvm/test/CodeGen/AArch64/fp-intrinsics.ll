@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64-none-eabi %s -o - | FileCheck %s
-; RUN: llc -mtriple=aarch64-none-eabi -global-isel=true -global-isel-abort=2 %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64 -global-isel=true -global-isel-abort=2 %s -o - | FileCheck %s
 
 ; Check that constrained fp intrinsics are correctly lowered.
 

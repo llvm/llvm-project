@@ -61,6 +61,9 @@ static bool createElementwiseOp(ConversionPatternRewriter &builder,
   case gpu::MMAElementwiseOp::NEGATES:
     builder.replaceOpWithNewOp<spirv::SNegateOp>(op, coopType, operands);
     return true;
+  case gpu::MMAElementwiseOp::EXTF:
+    builder.replaceOpWithNewOp<spirv::FConvertOp>(op, coopType, operands);
+    return true;
   default:
     break;
   }
@@ -81,11 +84,11 @@ struct WmmaLoadOpToSPIRVLowering
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = subgroupMmaLoadMatrixOp->getLoc();
     gpu::MMAMatrixType retType =
-        subgroupMmaLoadMatrixOp.getRes().getType().cast<gpu::MMAMatrixType>();
+        cast<gpu::MMAMatrixType>(subgroupMmaLoadMatrixOp.getRes().getType());
     auto memrefType =
-        subgroupMmaLoadMatrixOp.getSrcMemref().getType().cast<MemRefType>();
+        cast<MemRefType>(subgroupMmaLoadMatrixOp.getSrcMemref().getType());
     Value bufferPtr = spirv::getElementPtr(
-        *getTypeConverter<SPIRVTypeConverter>(), memrefType,
+        *getTypeConverter<const SPIRVTypeConverter>(), memrefType,
         adaptor.getSrcMemref(), adaptor.getIndices(), loc, rewriter);
     auto coopType = convertMMAToSPIRVType(retType);
     int64_t stride = subgroupMmaLoadMatrixOp.getLeadDimension().getSExtValue();
@@ -114,9 +117,9 @@ struct WmmaStoreOpToSPIRVLowering
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = subgroupMmaStoreMatrixOp->getLoc();
     auto memrefType =
-        subgroupMmaStoreMatrixOp.getDstMemref().getType().cast<MemRefType>();
+        cast<MemRefType>(subgroupMmaStoreMatrixOp.getDstMemref().getType());
     Value bufferPtr = spirv::getElementPtr(
-        *getTypeConverter<SPIRVTypeConverter>(), memrefType,
+        *getTypeConverter<const SPIRVTypeConverter>(), memrefType,
         adaptor.getDstMemref(), adaptor.getIndices(), loc, rewriter);
     int64_t stride = subgroupMmaStoreMatrixOp.getLeadDimension().getSExtValue();
     auto i32Type = rewriter.getI32Type();
@@ -161,7 +164,7 @@ struct WmmaConstantOpToSPIRVLowering
                   ConversionPatternRewriter &rewriter) const override {
     Value cst = adaptor.getOperands()[0];
     auto coopType = convertMMAToSPIRVType(
-        subgroupMmaConstantMatrixOp.getType().cast<gpu::MMAMatrixType>());
+        cast<gpu::MMAMatrixType>(subgroupMmaConstantMatrixOp.getType()));
     rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
         subgroupMmaConstantMatrixOp, coopType, cst);
     return success();
@@ -180,11 +183,11 @@ struct WmmaElementwiseOpToSPIRVDefaultLowering
                   ConversionPatternRewriter &rewriter) const override {
     // All operands should be of cooperative matrix types.
     for (Value operand : adaptor.getOperands()) {
-      if (!operand.getType().isa<spirv::CooperativeMatrixNVType>())
+      if (!isa<spirv::CooperativeMatrixNVType>(operand.getType()))
         return failure();
     }
     auto coopType = convertMMAToSPIRVType(
-        elementwiseOp.getType().cast<gpu::MMAMatrixType>());
+        cast<gpu::MMAMatrixType>(elementwiseOp.getType()));
     return success(createElementwiseOp(rewriter, elementwiseOp, coopType,
                                        adaptor.getOperands()));
   }
@@ -204,7 +207,7 @@ struct WmmaElementwiseOpToSPIRVScalarMulLowering
       return failure();
     // All operands should be of cooperative matrix types.
     for (Value operand : adaptor.getOperands()) {
-      if (!operand.getType().isa<spirv::CooperativeMatrixNVType>())
+      if (!isa<spirv::CooperativeMatrixNVType>(operand.getType()))
         return failure();
     }
 
@@ -236,7 +239,7 @@ struct WmmaElementwiseOpToSPIRVScalarMulLowering
     scalar = cc.getConstituents().front();
 
     auto coopType = convertMMAToSPIRVType(
-        elementwiseOp.getType().cast<gpu::MMAMatrixType>());
+        cast<gpu::MMAMatrixType>(elementwiseOp.getType()));
     rewriter.replaceOpWithNewOp<spirv::MatrixTimesScalarOp>(
         elementwiseOp, coopType, ValueRange{matrix, scalar});
     return success();

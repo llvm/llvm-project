@@ -12,6 +12,7 @@
 
 #include "sanitizer_tls_get_addr.h"
 
+#include "sanitizer_allocator_interface.h"
 #include "sanitizer_atomic.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_platform_interceptors.h"
@@ -24,13 +25,6 @@ namespace __sanitizer {
 struct TlsGetAddrParam {
   uptr dso_id;
   uptr offset;
-};
-
-// Glibc starting from 2.19 allocates tls using __signal_safe_memalign,
-// which has such header.
-struct Glibc_2_19_tls_header {
-  uptr size;
-  uptr start;
 };
 
 // This must be static TLS
@@ -108,6 +102,14 @@ static const uptr kDtvOffset = 0x800;
 static const uptr kDtvOffset = 0;
 #endif
 
+extern "C" {
+SANITIZER_WEAK_ATTRIBUTE
+uptr __sanitizer_get_allocated_size(const void *p);
+
+SANITIZER_WEAK_ATTRIBUTE
+const void *__sanitizer_get_allocated_begin(const void *p);
+}
+
 DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
                                 uptr static_tls_begin, uptr static_tls_end) {
   if (!common_flags()->intercept_tls_get_addr) return 0;
@@ -125,19 +127,18 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
           atomic_load(&number_of_live_dtls, memory_order_relaxed));
   if (dtls.last_memalign_ptr == tls_beg) {
     tls_size = dtls.last_memalign_size;
-    VReport(2, "__tls_get_addr: glibc <=2.18 suspected; tls={0x%zx,0x%zx}\n",
+    VReport(2, "__tls_get_addr: glibc <=2.24 suspected; tls={0x%zx,0x%zx}\n",
             tls_beg, tls_size);
   } else if (tls_beg >= static_tls_begin && tls_beg < static_tls_end) {
     // This is the static TLS block which was initialized / unpoisoned at thread
     // creation.
     VReport(2, "__tls_get_addr: static tls: 0x%zx\n", tls_beg);
     tls_size = 0;
-  } else if ((tls_beg % 4096) == sizeof(Glibc_2_19_tls_header)) {
-    // We may want to check gnu_get_libc_version().
-    Glibc_2_19_tls_header *header = (Glibc_2_19_tls_header *)tls_beg - 1;
-    tls_size = header->size;
-    tls_beg = header->start;
-    VReport(2, "__tls_get_addr: glibc >=2.19 suspected; tls={0x%zx 0x%zx}\n",
+  } else if (const void *start =
+                 __sanitizer_get_allocated_begin((void *)tls_beg)) {
+    tls_beg = (uptr)start;
+    tls_size = __sanitizer_get_allocated_size(start);
+    VReport(2, "__tls_get_addr: glibc >=2.25 suspected; tls={0x%zx,0x%zx}\n",
             tls_beg, tls_size);
   } else {
     VReport(2, "__tls_get_addr: Can't guess glibc version\n");

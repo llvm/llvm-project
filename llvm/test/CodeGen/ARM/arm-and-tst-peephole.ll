@@ -6,12 +6,12 @@
 
 ; FIXME: The -mtriple=thumb test doesn't change if -disable-peephole is specified.
 
-%struct.Foo = type { i8* }
+%struct.Foo = type { ptr }
 
 ; ARM-LABEL:   foo:
 ; THUMB-LABEL: foo:
 ; T2-LABEL:    foo:
-define %struct.Foo* @foo(%struct.Foo* %this, i32 %acc) nounwind readonly align 2 {
+define ptr @foo(ptr %this, i32 %acc) nounwind readonly align 2 {
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    add r2, r0, #4
 ; ARM-NEXT:    mov r12, #1
@@ -159,17 +159,16 @@ define %struct.Foo* @foo(%struct.Foo* %this, i32 %acc) nounwind readonly align 2
 ; V8-NEXT:    add.w r0, r0, r1, lsl #2
 ; V8-NEXT:    bx lr
 entry:
-  %scevgep = getelementptr %struct.Foo, %struct.Foo* %this, i32 1
+  %scevgep = getelementptr %struct.Foo, ptr %this, i32 1
   br label %tailrecurse
 
 tailrecurse:                                      ; preds = %sw.bb, %entry
-  %lsr.iv2 = phi %struct.Foo* [ %scevgep3, %sw.bb ], [ %scevgep, %entry ]
+  %lsr.iv2 = phi ptr [ %scevgep3, %sw.bb ], [ %scevgep, %entry ]
   %lsr.iv = phi i32 [ %lsr.iv.next, %sw.bb ], [ 1, %entry ]
   %acc.tr = phi i32 [ %or, %sw.bb ], [ %acc, %entry ]
-  %lsr.iv24 = bitcast %struct.Foo* %lsr.iv2 to i8**
-  %scevgep5 = getelementptr i8*, i8** %lsr.iv24, i32 -1
-  %tmp2 = load i8*, i8** %scevgep5
-  %0 = ptrtoint i8* %tmp2 to i32
+  %scevgep5 = getelementptr ptr, ptr %lsr.iv2, i32 -1
+  %tmp2 = load ptr, ptr %scevgep5
+  %0 = ptrtoint ptr %tmp2 to i32
 
 
 
@@ -190,32 +189,32 @@ sw.bb:                                            ; preds = %tailrecurse.switch,
   %shl = shl i32 %acc.tr, 1
   %or = or i32 %and, %shl
   %lsr.iv.next = add i32 %lsr.iv, 1
-  %scevgep3 = getelementptr %struct.Foo, %struct.Foo* %lsr.iv2, i32 1
+  %scevgep3 = getelementptr %struct.Foo, ptr %lsr.iv2, i32 1
   br label %tailrecurse
 
 sw.bb6:                                           ; preds = %tailrecurse.switch
-  ret %struct.Foo* %lsr.iv2
+  ret ptr %lsr.iv2
 
 sw.bb8:                                           ; preds = %tailrecurse.switch
   %tmp1 = add i32 %acc.tr, %lsr.iv
-  %add.ptr11 = getelementptr inbounds %struct.Foo, %struct.Foo* %this, i32 %tmp1
-  ret %struct.Foo* %add.ptr11
+  %add.ptr11 = getelementptr inbounds %struct.Foo, ptr %this, i32 %tmp1
+  ret ptr %add.ptr11
 
 sw.epilog:                                        ; preds = %tailrecurse.switch
-  ret %struct.Foo* undef
+  ret ptr undef
 }
 
 ; Another test that exercises the AND/TST peephole optimization and also
 ; generates a predicated ANDS instruction. Check that the predicate is printed
 ; after the "S" modifier on the instruction.
 
-%struct.S = type { i8* (i8*)*, [1 x i8] }
+%struct.S = type { ptr, [1 x i8] }
 
 ; ARM-LABEL: bar:
 ; THUMB-LABEL: bar:
 ; T2-LABEL: bar:
 ; V8-LABEL: bar:
-define internal zeroext i8 @bar(%struct.S* %x, %struct.S* nocapture %y) nounwind readonly {
+define internal zeroext i8 @bar(ptr %x, ptr nocapture %y) nounwind readonly {
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r2, [r0, #4]
 ; ARM-NEXT:    ands r2, r2, #112
@@ -288,16 +287,16 @@ define internal zeroext i8 @bar(%struct.S* %x, %struct.S* nocapture %y) nounwind
 ; V8-NEXT:    movs r0, #1
 ; V8-NEXT:    bx lr
 entry:
-  %0 = getelementptr inbounds %struct.S, %struct.S* %x, i32 0, i32 1, i32 0
-  %1 = load i8, i8* %0, align 1
+  %0 = getelementptr inbounds %struct.S, ptr %x, i32 0, i32 1, i32 0
+  %1 = load i8, ptr %0, align 1
   %2 = zext i8 %1 to i32
   %3 = and i32 %2, 112
   %4 = icmp eq i32 %3, 0
   br i1 %4, label %return, label %bb
 
 bb:                                               ; preds = %entry
-  %5 = getelementptr inbounds %struct.S, %struct.S* %y, i32 0, i32 1, i32 0
-  %6 = load i8, i8* %5, align 1
+  %5 = getelementptr inbounds %struct.S, ptr %y, i32 0, i32 1, i32 0
+  %6 = load i8, ptr %5, align 1
   %7 = zext i8 %6 to i32
   %8 = and i32 %7, 112
   %9 = icmp eq i32 %8, 0
@@ -310,7 +309,7 @@ bb2:                                              ; preds = %bb
   br i1 %or.cond, label %bb4, label %return
 
 bb4:                                              ; preds = %bb2
-  %12 = ptrtoint %struct.S* %x to i32
+  %12 = ptrtoint ptr %x to i32
   %phitmp = trunc i32 %12 to i8
   ret i8 %phitmp
 

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strcoll.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 // TODO: Add more comprehensive tests once locale support is added.
 

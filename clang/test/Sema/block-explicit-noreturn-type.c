@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -fblocks
-// rdar://10466373
 
 typedef short SHORT;
 

@@ -1,13 +1,13 @@
 ; RUN: rm -rf %t
 ; RUN: mkdir -p %t
-; RUN: opt %loadNPMPolly -polly-import-jscop-dir=%t -enable-new-pm=1 -polly -O2 -polly-export -S < %s
+; RUN: opt %loadNPMPolly -polly-import-jscop-dir=%t -polly -O2 -polly-export -S < %s
 ; RUN: FileCheck %s -input-file %t/exportjson___%entry.split---%return.jscop
 ;
 ; for (int j = 0; j < n; j += 1) {
 ;   A[0] = 42.0;
 ; }
 ;
-define void @exportjson(i32 %n, double* noalias nonnull %A) {
+define void @exportjson(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -17,7 +17,7 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 42.0, double* %A
+      store double 42.0, ptr %A
       br label %inc
 
 inc:

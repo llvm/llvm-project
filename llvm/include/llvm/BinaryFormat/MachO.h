@@ -473,6 +473,8 @@ enum RelocationInfoType {
   ARM64_RELOC_TLVP_LOAD_PAGEOFF12 = 9,
   // Must be followed by ARM64_RELOC_PAGE21 or ARM64_RELOC_PAGEOFF12.
   ARM64_RELOC_ADDEND = 10,
+  // An authenticated pointer.
+  ARM64_RELOC_AUTHENTICATED_POINTER = 11,
 
   // Constant values for the r_type field in an x86_64 architecture
   // llvm::MachO::relocation_info or llvm::MachO::scattered_relocation_info
@@ -509,7 +511,7 @@ enum PlatformType {
 };
 
 // Values for tools enum in build_tool_version.
-enum { TOOL_CLANG = 1, TOOL_SWIFT = 2, TOOL_LD = 3 };
+enum { TOOL_CLANG = 1, TOOL_SWIFT = 2, TOOL_LD = 3, TOOL_LLD = 4 };
 
 // Structs from <mach-o/loader.h>
 
@@ -896,12 +898,17 @@ struct linker_option_command {
   uint32_t count;
 };
 
+union lc_str {
+  uint32_t offset;
+};
+
 struct fileset_entry_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint64_t vmaddr;
   uint64_t fileoff;
-  uint32_t entry_id;
+  union lc_str entry_id;
+  uint32_t reserved;
 };
 
 // The symseg_command is obsolete and no longer supported.
@@ -1037,8 +1044,8 @@ enum {
 // Values for dyld_chained_starts_in_segment::page_start.
 enum {
   DYLD_CHAINED_PTR_START_NONE = 0xFFFF,
-  DYLD_CHAINED_PTR_START_MULTI = 0x8000,
-  DYLD_CHAINED_PTR_START_LAST = 0x8000,
+  DYLD_CHAINED_PTR_START_MULTI = 0x8000, // page which has multiple starts
+  DYLD_CHAINED_PTR_START_LAST = 0x8000,  // last chain_start for a given page
 };
 
 // Values for dyld_chained_starts_in_segment::pointer_format.
@@ -1071,7 +1078,7 @@ struct dyld_chained_fixups_header {
 };
 
 /// dyld_chained_starts_in_image is embedded in LC_DYLD_CHAINED_FIXUPS payload.
-/// Each each seg_info_offset entry is the offset into this struct for that
+/// Each seg_info_offset entry is the offset into this struct for that
 /// segment followed by pool of dyld_chain_starts_in_segment data.
 struct dyld_chained_starts_in_image {
   uint32_t seg_count;
@@ -1432,7 +1439,8 @@ inline void swapStruct(fileset_entry_command &C) {
   sys::swapByteOrder(C.cmdsize);
   sys::swapByteOrder(C.vmaddr);
   sys::swapByteOrder(C.fileoff);
-  sys::swapByteOrder(C.entry_id);
+  sys::swapByteOrder(C.entry_id.offset);
+  sys::swapByteOrder(C.reserved);
 }
 
 inline void swapStruct(version_min_command &C) {

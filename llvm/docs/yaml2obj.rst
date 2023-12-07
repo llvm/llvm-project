@@ -29,6 +29,61 @@ Here's a sample COFF file.
                        ] # 0x60500020
       SectionData:
         "\x83\xEC\x0C\xC7\x44\x24\x08\x00\x00\x00\x00\xC7\x04\x24\x00\x00\x00\x00\xE8\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x8B\x44\x24\x08\x83\xC4\x0C\xC3" # |....D$.......$...............D$.....|
+    - Name: .rdata
+      Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+      StructuredData:
+        - Binary: {type: str}
+        - UInt32: {type: int}
+        - LoadConfig:
+          Size: {type: int}
+          TimeDateStamp: {type: int}
+          MajorVersion: {type: int}
+          MinorVersion: {type: int}
+          GlobalFlagsClear: {type: int}
+          GlobalFlagsSet: {type: int}
+          CriticalSectionDefaultTimeout: {type: int}
+          DeCommitFreeBlockThreshold: {type: int}
+          DeCommitTotalFreeThreshold: {type: int}
+          LockPrefixTable: {type: int}
+          MaximumAllocationSize: {type: int}
+          VirtualMemoryThreshold: {type: int}
+          ProcessAffinityMask: {type: int}
+          ProcessHeapFlags: {type: int}
+          CSDVersion: {type: int}
+          DependentLoadFlags: {type: int}
+          EditList: {type: int}
+          SecurityCookie: {type: int}
+          SEHandlerTable: {type: int}
+          SEHandlerCount: {type: int}
+          GuardCFCheckFunction: {type: int}
+          GuardCFCheckDispatch: {type: int}
+          GuardCFFunctionTable: {type: int}
+          GuardCFFunctionCount: {type: int}
+          GuardFlags: {type: int}
+          CodeIntegrity:
+            Flags: {type: int}
+            Catalog: {type: int}
+            CatalogOffset: {type: int}
+          GuardAddressTakenIatEntryTable: {type: int}
+          GuardAddressTakenIatEntryCount: {type: int}
+          GuardLongJumpTargetTable: {type: int}
+          GuardLongJumpTargetCount: {type: int}
+          DynamicValueRelocTable: {type: int}
+          CHPEMetadataPointer: {type: int}
+          GuardRFFailureRoutine: {type: int}
+          GuardRFFailureRoutineFunctionPointer: {type: int}
+          DynamicValueRelocTableOffset: {type: int}
+          DynamicValueRelocTableSection: {type: int}
+          GuardRFVerifyStackPointerFunctionPointer: {type: int}
+          HotPatchTableOffset: {type: int}
+          EnclaveConfigurationPointer: {type: int}
+          VolatileMetadataPointer: {type: int}
+          GuardEHContinuationTable: {type: int}
+          GuardEHContinuationCount: {type: int}
+          GuardXFGCheckFunctionPointer: {type: int}
+          GuardXFGDispatchFunctionPointer: {type: int}
+          GuardXFGTableDispatchFunctionPointer: {type: int}
+          CastGuardOsDeterminedFailureMode: {type: int}
 
   symbols:
     - Name: .text

@@ -1,7 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -fblocks -triple x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -fblocks -triple x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
 
-// CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
-// CHECK: @[[BLOCK_DESCRIPTOR22:.*]] = internal constant { i64, i64, i8*, i8*, i8*, i8* } { i64 0, i64 36, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* null }, align 8
+// CHECK: @[[BLOCK_DESCRIPTOR22:.*]] = internal constant { i64, i64, ptr, ptr, ptr, ptr } { i64 0, i64 36, ptr @__copy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE, ptr @__destroy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE, ptr @{{.*}}, ptr null }, align 8
 
 namespace test0 {
   // CHECK-LABEL: define{{.*}} void @_ZN5test04testEi(
@@ -17,7 +16,7 @@ extern void (^out)();
 namespace test1 {
   // Capturing const objects doesn't require a local block.
   // CHECK-LABEL: define{{.*}} void @_ZN5test15test1Ev()
-  // CHECK:   store void ()* bitcast ({{.*}} @__block_literal_global{{.*}} to void ()*), void ()** @out
+  // CHECK:   store ptr @__block_literal_global{{.*}}, ptr @out
   void test1() {
     const int NumHorsemen = 4;
     out = ^{ (void) NumHorsemen; };
@@ -25,7 +24,7 @@ namespace test1 {
 
   // That applies to structs too...
   // CHECK-LABEL: define{{.*}} void @_ZN5test15test2Ev()
-  // CHECK:   store void ()* bitcast ({{.*}} @__block_literal_global{{.*}} to void ()*), void ()** @out
+  // CHECK:   store ptr @__block_literal_global{{.*}}, ptr @out
   struct loc { double x, y; };
   void test2() {
     const loc target = { 5, 6 };
@@ -35,8 +34,7 @@ namespace test1 {
   // ...unless they have mutable fields...
   // CHECK-LABEL: define{{.*}} void @_ZN5test15test3Ev()
   // CHECK:   [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
-  // CHECK:   [[T0:%.*]] = bitcast [[BLOCK_T]]* [[BLOCK]] to void ()*
-  // CHECK:   store void ()* [[T0]], void ()** @out
+  // CHECK:   store ptr [[BLOCK]], ptr @out
   struct mut { mutable int x; };
   void test3() {
     const mut obj = { 5 };
@@ -47,8 +45,7 @@ namespace test1 {
   // CHECK-LABEL: define{{.*}} void @_ZN5test15test4Ev()
   // CHECK:   [[OBJ:%.*]] = alloca
   // CHECK:   [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
-  // CHECK:   [[T0:%.*]] = bitcast [[BLOCK_T]]* [[BLOCK]] to void ()*
-  // CHECK:   store void ()* [[T0]], void ()** @out
+  // CHECK:   store ptr [[BLOCK]], ptr @out
   struct scope { int x; ~scope(); };
   void test4() {
     const scope obj = { 5 };
@@ -92,7 +89,6 @@ namespace test2 {
   // CHECK: call void @_ZN5test21BD1Ev(
 }
 
-// rdar://problem/9334739
 // Make sure we mark destructors for parameters captured in blocks.
 namespace test3 {
   struct A {
@@ -109,7 +105,6 @@ namespace test3 {
   }
 }
 
-// rdar://problem/9971485
 namespace test4 {
   struct A {
     A();
@@ -125,11 +120,10 @@ namespace test4 {
   // CHECK-LABEL: define{{.*}} void @_ZN5test44testEv()
   // CHECK-LABEL: define internal void @___ZN5test44testEv_block_invoke
   // CHECK: [[TMP:%.*]] = alloca [[A:%.*]], align 1
-  // CHECK-NEXT: store i8* [[BLOCKDESC:%.*]], i8** {{.*}}, align 8
-  // CHECK-NEXT: bitcast i8* [[BLOCKDESC]] to <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]* }>*
-  // CHECK:      call void @_ZN5test41AC1Ev([[A]]* {{[^,]*}} [[TMP]])
-  // CHECK-NEXT: call void @_ZN5test43fooENS_1AE([[A]]* noundef [[TMP]])
-  // CHECK-NEXT: call void @_ZN5test41AD1Ev([[A]]* {{[^,]*}} [[TMP]])
+  // CHECK-NEXT: store ptr [[BLOCKDESC:%.*]], ptr {{.*}}, align 8
+  // CHECK:      call void @_ZN5test41AC1Ev(ptr {{[^,]*}} [[TMP]])
+  // CHECK-NEXT: call void @_ZN5test43fooENS_1AE(ptr noundef [[TMP]])
+  // CHECK-NEXT: call void @_ZN5test41AD1Ev(ptr {{[^,]*}} [[TMP]])
   // CHECK-NEXT: ret void
 }
 
@@ -153,36 +147,35 @@ namespace test5 {
   // CHECK-LABEL:    define{{.*}} void @_ZN5test54testEb(
   // CHECK:      [[COND:%.*]] = alloca i8
   // CHECK-NEXT: [[X:%.*]] = alloca [[A:%.*]], align 4
-  // CHECK-NEXT: [[B:%.*]] = alloca void ()*, align 8
+  // CHECK-NEXT: [[B:%.*]] = alloca ptr, align 8
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:.*]], align 8
   // CHECK-NEXT: [[CLEANUP_ACTIVE:%.*]] = alloca i1
-  // CHECK-NEXT: [[COND_CLEANUP_SAVE:%.*]] = alloca [[A]]*, align 8
+  // CHECK-NEXT: [[COND_CLEANUP_SAVE:%.*]] = alloca ptr, align 8
   // CHECK-NEXT: [[T0:%.*]] = zext i1
-  // CHECK-NEXT: store i8 [[T0]], i8* [[COND]], align 1
-  // CHECK-NEXT: call void @_ZN5test51AC1Ev([[A]]* {{[^,]*}} [[X]])
-  // CHECK-NEXT: [[T0:%.*]] = load i8, i8* [[COND]], align 1
+  // CHECK-NEXT: store i8 [[T0]], ptr [[COND]], align 1
+  // CHECK-NEXT: call void @_ZN5test51AC1Ev(ptr {{[^,]*}} [[X]])
+  // CHECK-NEXT: [[T0:%.*]] = load i8, ptr [[COND]], align 1
   // CHECK-NEXT: [[T1:%.*]] = trunc i8 [[T0]] to i1
-  // CHECK-NEXT: store i1 false, i1* [[CLEANUP_ACTIVE]]
+  // CHECK-NEXT: store i1 false, ptr [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: br i1 [[T1]],
 
   // CHECK-NOT:  br
-  // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
-  // CHECK-NEXT: call void @_ZN5test51AC1ERKS0_([[A]]* {{[^,]*}} [[CAPTURE]], [[A]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
-  // CHECK-NEXT: store i1 true, i1* [[CLEANUP_ACTIVE]]
-  // CHECK-NEXT: store [[A]]* [[CAPTURE]], [[A]]** [[COND_CLEANUP_SAVE]], align 8
-  // CHECK-NEXT: bitcast [[BLOCK_T]]* [[BLOCK]] to void ()*
+  // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+  // CHECK-NEXT: call void @_ZN5test51AC1ERKS0_(ptr {{[^,]*}} [[CAPTURE]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
+  // CHECK-NEXT: store i1 true, ptr [[CLEANUP_ACTIVE]]
+  // CHECK-NEXT: store ptr [[CAPTURE]], ptr [[COND_CLEANUP_SAVE]], align 8
   // CHECK-NEXT: br label
   // CHECK:      br label
   // CHECK:      phi
   // CHECK-NEXT: store
   // CHECK-NEXT: load
   // CHECK-NEXT: call void @_ZN5test511doWithBlockEU13block_pointerFvvE(
-  // CHECK-NEXT: [[T0:%.*]] = load i1, i1* [[CLEANUP_ACTIVE]]
+  // CHECK-NEXT: [[T0:%.*]] = load i1, ptr [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: br i1 [[T0]]
-  // CHECK:      [[T3:%.*]] = load [[A]]*, [[A]]** [[COND_CLEANUP_SAVE]], align 8
-  // CHECK-NEXT: call void @_ZN5test51AD1Ev([[A]]* {{[^,]*}} [[T3]])
+  // CHECK:      [[T3:%.*]] = load ptr, ptr [[COND_CLEANUP_SAVE]], align 8
+  // CHECK-NEXT: call void @_ZN5test51AD1Ev(ptr {{[^,]*}} [[T3]])
   // CHECK-NEXT: br label
-  // CHECK:      call void @_ZN5test51AD1Ev([[A]]* {{[^,]*}} [[X]])
+  // CHECK:      call void @_ZN5test51AD1Ev(ptr {{[^,]*}} [[X]])
   // CHECK-NEXT: ret void
 }
 
@@ -204,9 +197,9 @@ namespace test6 {
 
   // CHECK-LABEL:    define{{.*}} void @_ZN5test64testEv()
   // CHECK:      [[TEMP:%.*]] = alloca [[A:%.*]], align 1
-  // CHECK-NEXT: call void @_ZN5test61AC1Ev([[A]]* {{[^,]*}} [[TEMP]])
+  // CHECK-NEXT: call void @_ZN5test61AC1Ev(ptr {{[^,]*}} [[TEMP]])
   // CHECK-NEXT: call void @_ZN5test63fooERKNS_1AEU13block_pointerFvvE(
-  // CHECK-NEXT: call void @_ZN5test61AD1Ev([[A]]* {{[^,]*}} [[TEMP]])
+  // CHECK-NEXT: call void @_ZN5test61AD1Ev(ptr {{[^,]*}} [[TEMP]])
   // CHECK-NEXT: call void @_ZN5test63barEv()
   // CHECK-NEXT: ret void
 }
@@ -220,8 +213,7 @@ namespace test7 {
 }
 
 namespace test8 {
-  // <rdar://problem/10832617>: failure to capture this after skipping rebuild
-  // of the 'this' pointer.
+  // failure to capture this after skipping rebuild of the 'this' pointer.
   struct X {
     int x;
 
@@ -234,7 +226,6 @@ namespace test8 {
   template int X::foo<int>();
 }
 
-// rdar://13459289
 namespace test9 {
   struct B {
     void *p;
@@ -287,7 +278,7 @@ namespace test10 {
 // objects that are non-external and non-trivial have internal linkage.
 
 // CHECK-LABEL: define internal void @_ZN12_GLOBAL__N_14testEv(
-// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i8*, i8*, i8* }* @[[BLOCK_DESCRIPTOR22]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %{{.*}}, align 8
+// CHECK: store ptr @[[BLOCK_DESCRIPTOR22]], ptr %{{.*}}, align 8
 
 // CHECK-LABEL: define internal void @__copy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE(
 // CHECK-LABEL: define internal void @__destroy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE(

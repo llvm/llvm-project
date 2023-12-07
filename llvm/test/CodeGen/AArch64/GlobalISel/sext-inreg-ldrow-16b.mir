@@ -59,19 +59,20 @@ body:             |
 
     ; CHECK-LABEL: name: check_sext_not_lost
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
-    ; CHECK: STRXui [[COPY1]], %stack.0.ptr.addr, 0 :: (store (p0) into %ir.ptr.addr)
-    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64common = LDRXui %stack.0.ptr.addr, 0 :: (dereferenceable load (p0) from %ir.ptr.addr)
-    ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @x
-    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @x :: (dereferenceable load (s32) from @x)
-    ; CHECK: [[SUBSWri:%[0-9]+]]:gpr32 = nsw SUBSWri [[LDRWui]], 8, 12, implicit-def $nzcv
-    ; CHECK: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[SUBSWri]], %subreg.sub_32
-    ; CHECK: [[SBFMXri:%[0-9]+]]:gpr64 = SBFMXri [[INSERT_SUBREG]], 0, 15
-    ; CHECK: [[LDRWroX:%[0-9]+]]:gpr32 = LDRWroX [[LDRXui]], [[SBFMXri]], 0, 1 :: (load (s32) from %ir.arrayidx)
-    ; CHECK: $w0 = COPY [[LDRWroX]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
+    ; CHECK-NEXT: STRXui [[COPY1]], %stack.0.ptr.addr, 0 :: (store (p0) into %ir.ptr.addr)
+    ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64common = LDRXui %stack.0.ptr.addr, 0 :: (dereferenceable load (p0) from %ir.ptr.addr)
+    ; CHECK-NEXT: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @x
+    ; CHECK-NEXT: [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @x :: (dereferenceable load (s32) from @x)
+    ; CHECK-NEXT: [[SUBSWri:%[0-9]+]]:gpr32 = nsw SUBSWri [[LDRWui]], 8, 12, implicit-def dead $nzcv
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[SUBSWri]], %subreg.sub_32
+    ; CHECK-NEXT: [[SBFMXri:%[0-9]+]]:gpr64 = SBFMXri [[INSERT_SUBREG]], 0, 15
+    ; CHECK-NEXT: [[LDRWroX:%[0-9]+]]:gpr32 = LDRWroX [[LDRXui]], [[SBFMXri]], 0, 1 :: (load (s32) from %ir.arrayidx)
+    ; CHECK-NEXT: $w0 = COPY [[LDRWroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
     %1:gpr(p0) = G_FRAME_INDEX %stack.0.ptr.addr
     G_STORE %0(p0), %1(p0) :: (store (p0) into %ir.ptr.addr)

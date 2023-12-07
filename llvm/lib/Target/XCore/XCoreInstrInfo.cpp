@@ -416,7 +416,7 @@ static bool isImmMskBitp(unsigned val) {
   if (!isMask_32(val)) {
     return false;
   }
-  int N = Log2_32(val) + 1;
+  int N = llvm::bit_width(val);
   return (N >= 1 && N <= 8) || N == 16 || N == 24 || N == 32;
 }
 
@@ -428,7 +428,7 @@ MachineBasicBlock::iterator XCoreInstrInfo::loadImmediate(
   if (MI != MBB.end() && !MI->isDebugInstr())
     dl = MI->getDebugLoc();
   if (isImmMskBitp(Value)) {
-    int N = Log2_32(Value) + 1;
+    int N = llvm::bit_width(Value);
     return BuildMI(MBB, MI, dl, get(XCore::MKMSK_rus), Reg)
         .addImm(N)
         .getInstr();

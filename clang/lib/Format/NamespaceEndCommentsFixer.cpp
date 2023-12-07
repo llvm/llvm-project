@@ -174,7 +174,7 @@ bool validEndComment(const FormatToken *RBraceTok, StringRef NamespaceName,
                   llvm::Regex::IgnoreCase);
   static const llvm::Regex NamespaceMacroCommentPattern =
       llvm::Regex("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
-                  "([a-zA-Z0-9_]+)\\(([a-zA-Z0-9:_]*)\\)\\.? *(\\*/)?$",
+                  "([a-zA-Z0-9_]+)\\(([a-zA-Z0-9:_]*|\".+\")\\)\\.? *(\\*/)?$",
                   llvm::Regex::IgnoreCase);
 
   SmallVector<StringRef, 8> Groups;
@@ -359,9 +359,15 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
         computeEndCommentText(NamespaceName, AddNewline, NamespaceTok,
                               Style.SpacesInLineCommentPrefix.Minimum);
     if (!hasEndComment(EndCommentPrevTok)) {
-      bool isShort = I - StartLineIndex <= Style.ShortNamespaceLines + 1;
-      if (!isShort)
-        addEndComment(EndCommentPrevTok, EndCommentText, SourceMgr, &Fixes);
+      unsigned LineCount = 0;
+      for (auto J = StartLineIndex + 1; J < I; ++J)
+        LineCount += AnnotatedLines[J]->size();
+      if (LineCount > Style.ShortNamespaceLines) {
+        addEndComment(EndCommentPrevTok,
+                      std::string(Style.SpacesBeforeTrailingComments, ' ') +
+                          EndCommentText,
+                      SourceMgr, &Fixes);
+      }
     } else if (!validEndComment(EndCommentPrevTok, NamespaceName,
                                 NamespaceTok)) {
       updateEndComment(EndCommentPrevTok, EndCommentText, SourceMgr, &Fixes);

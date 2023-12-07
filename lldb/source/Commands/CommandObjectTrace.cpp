@@ -64,7 +64,7 @@ public:
     };
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_trace_save_options);
+      return llvm::ArrayRef(g_trace_save_options);
     };
 
     bool m_compact;
@@ -96,9 +96,8 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
   }
 
   ~CommandObjectTraceSave() override = default;
@@ -168,7 +167,7 @@ public:
     }
 
     ArrayRef<OptionDefinition> GetDefinitions() override {
-      return makeArrayRef(g_trace_load_options);
+      return ArrayRef(g_trace_load_options);
     }
 
     bool m_verbose; // Enable verbose logging for debugging purposes.
@@ -186,9 +185,8 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
   }
 
   ~CommandObjectTraceLoad() override = default;
@@ -262,7 +260,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_trace_dump_options);
+      return llvm::ArrayRef(g_trace_dump_options);
     }
 
     bool m_verbose; // Enable verbose logging for debugging purposes.
@@ -327,7 +325,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_trace_schema_options);
+      return llvm::ArrayRef(g_trace_schema_options);
     }
 
     bool m_verbose; // Enable verbose logging for debugging purposes.

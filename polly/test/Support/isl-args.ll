@@ -10,7 +10,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Any valid SCoP causing the creation of a ScopInfo object.
-define void @foo_1d(float* %A) {
+define void @foo_1d(ptr %A) {
 bb:
   br label %bb1
 
@@ -21,10 +21,10 @@ bb1:                                              ; preds = %bb6, %bb
 
 bb2:                                              ; preds = %bb1
   %tmp = sitofp i64 %i.0 to float
-  %tmp3 = getelementptr inbounds float, float* %A, i64 %i.0
-  %tmp4 = load float, float* %tmp3, align 4
+  %tmp3 = getelementptr inbounds float, ptr %A, i64 %i.0
+  %tmp4 = load float, ptr %tmp3, align 4
   %tmp5 = fadd float %tmp4, %tmp
-  store float %tmp5, float* %tmp3, align 4
+  store float %tmp5, ptr %tmp3, align 4
   br label %bb6
 
 bb6:                                              ; preds = %bb2

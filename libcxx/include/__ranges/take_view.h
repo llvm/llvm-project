@@ -12,6 +12,7 @@
 
 #include <__algorithm/min.h>
 #include <__algorithm/ranges_min.h>
+#include <__assert>
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
@@ -30,14 +31,18 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/iota_view.h>
 #include <__ranges/range_adaptor.h>
+#include <__ranges/repeat_view.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/maybe_const.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/auto_cast.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <type_traits>
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -48,7 +53,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace ranges {
 
@@ -64,8 +69,10 @@ public:
   take_view() requires default_initializable<_View> = default;
 
   _LIBCPP_HIDE_FROM_ABI
-  constexpr take_view(_View __base, range_difference_t<_View> __count)
-    : __base_(std::move(__base)), __count_(__count) {}
+  constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 take_view(_View __base, range_difference_t<_View> __count)
+      : __base_(std::move(__base)), __count_(__count) {
+    _LIBCPP_ASSERT_UNCATEGORIZED(__count >= 0, "count has to be greater than or equal to zero");
+  }
 
   _LIBCPP_HIDE_FROM_ABI
   constexpr _View base() const& requires copy_constructible<_View> { return __base_; }
@@ -295,6 +302,31 @@ struct __fn {
                               *ranges::begin(__rng),
                               *ranges::begin(__rng) + std::min<_Dist>(ranges::distance(__rng), std::forward<_Np>(__n))
                               ); }
+// clang-format off
+#if _LIBCPP_STD_VER >= 23
+  // [range.take.overview]: the `repeat_view` "_RawRange models sized_range" case.
+  template <class _Range,
+            convertible_to<range_difference_t<_Range>> _Np,
+            class _RawRange = remove_cvref_t<_Range>,
+            class _Dist     = range_difference_t<_Range>>
+    requires(__is_repeat_specialization<_RawRange> && sized_range<_RawRange>)
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
+    noexcept(noexcept(views::repeat(*__range.__value_, std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n)))))
+    -> decltype(      views::repeat(*__range.__value_, std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n))))
+    { return          views::repeat(*__range.__value_, std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n))); }
+
+  // [range.take.overview]: the `repeat_view` "otherwise" case.
+  template <class _Range,
+            convertible_to<range_difference_t<_Range>> _Np,
+            class _RawRange = remove_cvref_t<_Range>,
+            class _Dist     = range_difference_t<_Range>>
+    requires(__is_repeat_specialization<_RawRange> && !sized_range<_RawRange>)
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
+    noexcept(noexcept(views::repeat(*__range.__value_, static_cast<_Dist>(__n))))
+    -> decltype(      views::repeat(*__range.__value_, static_cast<_Dist>(__n)))
+    { return          views::repeat(*__range.__value_, static_cast<_Dist>(__n)); }
+#endif
+// clang-format on
 
   // [range.take.overview]: the "otherwise" case.
   template <class _Range, convertible_to<range_difference_t<_Range>> _Np,
@@ -302,6 +334,9 @@ struct __fn {
     // Note: without specifically excluding the other cases, GCC sees this overload as ambiguous with the other
     // overloads.
     requires (!(__is_empty_view<_RawRange> ||
+#if _LIBCPP_STD_VER >= 23
+                __is_repeat_specialization<_RawRange> ||
+#endif
                (__is_iota_specialization<_RawRange> &&
                 sized_range<_RawRange> &&
                 random_access_range<_RawRange>) ||
@@ -332,7 +367,7 @@ inline namespace __cpo {
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

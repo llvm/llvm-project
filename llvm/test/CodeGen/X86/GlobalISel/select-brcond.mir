@@ -29,7 +29,7 @@ registers:
   - { id: 3, class: gpr, preferred-register: '' }
 # X64:           %0:gr32 = COPY $edi
 # X32:           %0:gr32_abcd = COPY $edi
-# CHECK-NEXT:    %2:gr32 = MOV32r0 implicit-def $eflags
+# CHECK-NEXT:    %2:gr32 = MOV32r0 implicit-def dead $eflags
 # CHECK-NEXT:    %3:gr32 = MOV32ri 1
 # CHECK-NEXT:    %1:gr8 = COPY %0.sub_8bit
 # CHECK-NEXT:    TEST8ri %1, 1, implicit-def $eflags

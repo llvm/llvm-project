@@ -238,7 +238,7 @@ Option *Options::GetLongOptions() {
               llvm::formatv(
                   "option[{0}] --{1} has a short option {2:x} that "
                   "conflicts with option[{3}] --{4}, short option won't "
-                  "be used for --{5}n",
+                  "be used for --{5}",
                   (int)i, defs[i].long_option, short_opt, pos->second,
                   m_getopt_table[pos->second].definition->long_option,
                   defs[i].long_option)
@@ -714,8 +714,8 @@ void Options::HandleOptionArgumentCompletion(
     }
   }
 
-  if (completion_mask & CommandCompletions::eSourceFileCompletion ||
-      completion_mask & CommandCompletions::eSymbolCompletion) {
+  if (completion_mask & lldb::eSourceFileCompletion ||
+      completion_mask & lldb::eSymbolCompletion) {
     for (size_t i = 0; i < opt_element_vector.size(); i++) {
       int cur_defs_index = opt_element_vector[i].opt_defs_index;
 
@@ -748,7 +748,7 @@ void Options::HandleOptionArgumentCompletion(
     }
   }
 
-  CommandCompletions::InvokeCommonCompletionCallbacks(
+  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
       interpreter, completion_mask, request, filter_up.get());
 }
 
@@ -778,6 +778,19 @@ void OptionGroupOptions::Append(OptionGroup *group, uint32_t src_mask,
       m_option_defs.push_back(group_option_defs[i]);
       m_option_defs.back().usage_mask = dst_mask;
     }
+  }
+}
+
+void OptionGroupOptions::Append(
+    OptionGroup *group, llvm::ArrayRef<llvm::StringRef> exclude_long_options) {
+  auto group_option_defs = group->GetDefinitions();
+  for (uint32_t i = 0; i < group_option_defs.size(); ++i) {
+    const auto &definition = group_option_defs[i];
+    if (llvm::is_contained(exclude_long_options, definition.long_option))
+      continue;
+
+    m_option_infos.push_back(OptionInfo(group, i));
+    m_option_defs.push_back(definition);
   }
 }
 
@@ -1007,7 +1020,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
     // given) from the argument list.  Also remove them from the
     // raw_input_string, if one was passed in.
     // Note: We also need to preserve any option argument values that were
-    // surrounded by backticks, as we lose track of them in the 
+    // surrounded by backticks, as we lose track of them in the
     // option_args_vector.
     size_t idx =
         FindArgumentIndexForOption(args_copy, long_options[long_options_index]);
@@ -1339,7 +1352,7 @@ llvm::Expected<Args> Options::Parse(const Args &args,
       // If the Option setting returned an error, we should stop parsing
       // and return the error.
       if (error.Fail())
-        break;      
+        break;
     } else {
       error.SetErrorStringWithFormat("invalid option with value '%i'", val);
     }

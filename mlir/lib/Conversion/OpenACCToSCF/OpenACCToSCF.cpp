@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -36,19 +37,23 @@ class ExpandIfCondition : public OpRewritePattern<OpTy> {
                                 PatternRewriter &rewriter) const override {
     // Early exit if there is no condition.
     if (!op.getIfCond())
-      return success();
+      return failure();
 
-    // Condition is not a constant.
-    if (!op.getIfCond().template getDefiningOp<arith::ConstantOp>()) {
+    IntegerAttr constAttr;
+    if (!matchPattern(op.getIfCond(), m_Constant(&constAttr))) {
       auto ifOp = rewriter.create<scf::IfOp>(op.getLoc(), TypeRange(),
                                              op.getIfCond(), false);
       rewriter.updateRootInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
-      auto thenBodyBuilder = ifOp.getThenBodyBuilder();
-      thenBodyBuilder.setListener(rewriter.getListener());
+      auto thenBodyBuilder = ifOp.getThenBodyBuilder(rewriter.getListener());
       thenBodyBuilder.clone(*op.getOperation());
       rewriter.eraseOp(op);
+    } else {
+      if (constAttr.getInt())
+        rewriter.updateRootInPlace(op,
+                                   [&]() { op.getIfCondMutable().erase(0); });
+      else
+        rewriter.eraseOp(op);
     }
-
     return success();
   }
 };

@@ -58,7 +58,7 @@ bool CSKYAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 #include "CSKYGenCompressInstEmitter.inc"
 void CSKYAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
-  bool Res = compressInst(CInst, Inst, *Subtarget, OutStreamer->getContext());
+  bool Res = compressInst(CInst, Inst, *Subtarget);
   if (Res)
     ++CSKYNumInstrsCompressed;
   AsmPrinter::EmitToStreamer(*OutStreamer, Res ? CInst : Inst);

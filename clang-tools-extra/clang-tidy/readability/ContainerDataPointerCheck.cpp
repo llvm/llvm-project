@@ -8,14 +8,14 @@
 
 #include "ContainerDataPointerCheck.h"
 
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 constexpr llvm::StringLiteral ContainerExprName = "container-expr";
 constexpr llvm::StringLiteral DerefContainerExprName = "deref-container-expr";
@@ -23,13 +23,22 @@ constexpr llvm::StringLiteral AddrOfContainerExprName =
     "addr-of-container-expr";
 constexpr llvm::StringLiteral AddressOfName = "address-of";
 
+void ContainerDataPointerCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoredContainers",
+                utils::options::serializeStringList(IgnoredContainers));
+}
+
 ContainerDataPointerCheck::ContainerDataPointerCheck(StringRef Name,
                                                      ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {}
+    : ClangTidyCheck(Name, Context),
+      IgnoredContainers(utils::options::parseStringList(
+          Options.get("IgnoredContainers", ""))) {}
 
 void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
   const auto Record =
       cxxRecordDecl(
+          unless(matchers::matchesAnyListedName(IgnoredContainers)),
           isSameOrDerivedFrom(
               namedDecl(
                   has(cxxMethodDecl(isPublic(), hasName("data")).bind("data")))
@@ -114,6 +123,4 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
        "the address of the 0-th element")
       << Hint;
 }
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

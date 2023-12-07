@@ -16,7 +16,7 @@ entry:
 
 declare void @z(i32, i32, i32, i32)
 
-define dso_local void @b(i32* nocapture readnone %p) {
+define dso_local void @b(ptr nocapture readnone %p) {
 entry:
   tail call void @z(i32 1, i32 2, i32 3, i32 4)
   ret void

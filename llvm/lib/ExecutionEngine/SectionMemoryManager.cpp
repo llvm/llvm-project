@@ -101,7 +101,7 @@ uint8_t *SectionMemoryManager::allocateSection(
   // FIXME: Initialize the Near member for each memory group to avoid
   // interleaving.
   std::error_code ec;
-  sys::MemoryBlock MB = MMapper.allocateMappedMemory(
+  sys::MemoryBlock MB = MMapper->allocateMappedMemory(
       Purpose, RequiredSize, &MemGroup.Near,
       sys::Memory::MF_READ | sys::Memory::MF_WRITE, ec);
   if (ec) {
@@ -204,7 +204,7 @@ std::error_code
 SectionMemoryManager::applyMemoryGroupPermissions(MemoryGroup &MemGroup,
                                                   unsigned Permissions) {
   for (sys::MemoryBlock &MB : MemGroup.PendingMem)
-    if (std::error_code EC = MMapper.protectMappedMemory(MB, Permissions))
+    if (std::error_code EC = MMapper->protectMappedMemory(MB, Permissions))
       return EC;
 
   MemGroup.PendingMem.clear();
@@ -234,7 +234,7 @@ void SectionMemoryManager::invalidateInstructionCache() {
 SectionMemoryManager::~SectionMemoryManager() {
   for (MemoryGroup *Group : {&CodeMem, &RWDataMem, &RODataMem}) {
     for (sys::MemoryBlock &Block : Group->AllocatedMem)
-      MMapper.releaseMappedMemory(Block);
+      MMapper->releaseMappedMemory(Block);
   }
 }
 
@@ -263,11 +263,14 @@ public:
     return sys::Memory::releaseMappedMemory(M);
   }
 };
-
-DefaultMMapper DefaultMMapperInstance;
 } // namespace
 
-SectionMemoryManager::SectionMemoryManager(MemoryMapper *MM)
-    : MMapper(MM ? *MM : DefaultMMapperInstance) {}
+SectionMemoryManager::SectionMemoryManager(MemoryMapper *UnownedMM)
+    : MMapper(UnownedMM), OwnedMMapper(nullptr) {
+  if (!MMapper) {
+    OwnedMMapper = std::make_unique<DefaultMMapper>();
+    MMapper = OwnedMMapper.get();
+  }
+}
 
 } // namespace llvm

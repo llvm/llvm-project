@@ -19,6 +19,22 @@ class FirOpBuilder;
 
 namespace fir::runtime {
 
+void genBesselJn(fir::FirOpBuilder &builder, mlir::Location loc,
+                 mlir::Value resultBox, mlir::Value n1, mlir::Value n2,
+                 mlir::Value x, mlir::Value bn2, mlir::Value bn2_1);
+
+void genBesselJnX0(fir::FirOpBuilder &builder, mlir::Location loc,
+                   mlir::Type xTy, mlir::Value resultBox, mlir::Value n1,
+                   mlir::Value n2);
+
+void genBesselYn(fir::FirOpBuilder &builder, mlir::Location loc,
+                 mlir::Value resultBox, mlir::Value n1, mlir::Value n2,
+                 mlir::Value x, mlir::Value bn1, mlir::Value bn1_1);
+
+void genBesselYnX0(fir::FirOpBuilder &builder, mlir::Location loc,
+                   mlir::Type xTy, mlir::Value resultBox, mlir::Value n1,
+                   mlir::Value n2);
+
 void genCshift(fir::FirOpBuilder &builder, mlir::Location loc,
                mlir::Value resultBox, mlir::Value arrayBox,
                mlir::Value shiftBox, mlir::Value dimBox);
@@ -38,6 +54,10 @@ void genEoshiftVector(fir::FirOpBuilder &builder, mlir::Location loc,
 void genMatmul(fir::FirOpBuilder &builder, mlir::Location loc,
                mlir::Value matrixABox, mlir::Value matrixBBox,
                mlir::Value resultBox);
+
+void genMatmulTranspose(fir::FirOpBuilder &builder, mlir::Location loc,
+                        mlir::Value matrixABox, mlir::Value matrixBBox,
+                        mlir::Value resultBox);
 
 void genPack(fir::FirOpBuilder &builder, mlir::Location loc,
              mlir::Value resultBox, mlir::Value arrayBox, mlir::Value maskBox,

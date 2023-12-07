@@ -27,8 +27,12 @@ LogicalResult analyzeModuleOp(ModuleOp moduleOp, OneShotAnalysisState &state,
 /// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
 ///
 /// Note: This function does not run One-Shot Analysis. No buffer copies are
-/// inserted unless `options.copyBeforeWrite` is set, in which case buffers are
-/// copied before every write.
+/// inserted except two cases:
+/// - `options.copyBeforeWrite` is set, in which case buffers are copied before
+///   every write.
+/// - `options.copyBeforeWrite` is not set and `options.noAnalysisFuncFilter`
+///   is not empty. The FuncOps it contains were not analyzed. Buffer copies
+///   will be inserted only to these FuncOps.
 LogicalResult bufferizeModuleOp(ModuleOp moduleOp,
                                 const OneShotBufferizationOptions &options,
                                 BufferizationStatistics *statistics = nullptr);

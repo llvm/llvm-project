@@ -16,8 +16,8 @@
 
 #include "MCTargetDesc/AVRFixupKinds.h"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
@@ -42,6 +42,7 @@ public:
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override;
 
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
   unsigned getNumFixupKinds() const override {

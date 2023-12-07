@@ -1,9 +1,9 @@
 // RUN: %check_clang_tidy %s google-runtime-int %t -- \
-// RUN:   -config='{CheckOptions: [ \
-// RUN:     {key: google-runtime-int.UnsignedTypePrefix, value: "std::uint"}, \
-// RUN:     {key: google-runtime-int.SignedTypePrefix, value: "std::int"}, \
-// RUN:     {key: google-runtime-int.TypeSuffix, value: "_t"}, \
-// RUN:   ]}'
+// RUN:   -config='{CheckOptions: { \
+// RUN:     google-runtime-int.UnsignedTypePrefix: "std::uint", \
+// RUN:     google-runtime-int.SignedTypePrefix: "std::int", \
+// RUN:     google-runtime-int.TypeSuffix: "_t", \
+// RUN:   }}'
 
 long a();
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: consider replacing 'long' with 'std::int{{..}}_t'

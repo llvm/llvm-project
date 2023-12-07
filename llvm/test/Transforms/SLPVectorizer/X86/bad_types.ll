@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @test1(x86_mmx %a, x86_mmx %b, i64* %ptr) {
+define void @test1(x86_mmx %a, x86_mmx %b, ptr %ptr) {
 ; Ensure we can handle x86_mmx values which are primitive and can be bitcast
 ; with integer types but can't be put into a vector.
 ;
@@ -14,9 +14,9 @@ define void @test1(x86_mmx %a, x86_mmx %b, i64* %ptr) {
 ; CHECK-NEXT:    [[B_CAST:%.*]] = bitcast x86_mmx [[B:%.*]] to i64
 ; CHECK-NEXT:    [[A_AND:%.*]] = and i64 [[A_CAST]], 42
 ; CHECK-NEXT:    [[B_AND:%.*]] = and i64 [[B_CAST]], 42
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, i64* [[PTR:%.*]], i32 1
-; CHECK-NEXT:    store i64 [[A_AND]], i64* [[PTR]], align 8
-; CHECK-NEXT:    store i64 [[B_AND]], i64* [[GEP]], align 8
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[PTR:%.*]], i32 1
+; CHECK-NEXT:    store i64 [[A_AND]], ptr [[PTR]], align 8
+; CHECK-NEXT:    store i64 [[B_AND]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -24,9 +24,9 @@ entry:
   %b.cast = bitcast x86_mmx %b to i64
   %a.and = and i64 %a.cast, 42
   %b.and = and i64 %b.cast, 42
-  %gep = getelementptr i64, i64* %ptr, i32 1
-  store i64 %a.and, i64* %ptr
-  store i64 %b.and, i64* %gep
+  %gep = getelementptr i64, ptr %ptr, i32 1
+  store i64 %a.and, ptr %ptr
+  store i64 %b.and, ptr %gep
   ret void
 }
 
@@ -66,20 +66,18 @@ exit:
   ret void
 }
 
-define i8 @test3(i8 *%addr) {
+define i8 @test3(ptr %addr) {
 ; Check that we do not vectorize types that are padded to a bigger ones.
 ;
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = bitcast i8* [[ADDR:%.*]] to i2*
-; CHECK-NEXT:    [[A0:%.*]] = getelementptr inbounds i2, i2* [[A]], i64 0
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i2, i2* [[A]], i64 1
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds i2, i2* [[A]], i64 2
-; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds i2, i2* [[A]], i64 3
-; CHECK-NEXT:    [[L0:%.*]] = load i2, i2* [[A0]], align 1
-; CHECK-NEXT:    [[L1:%.*]] = load i2, i2* [[A1]], align 1
-; CHECK-NEXT:    [[L2:%.*]] = load i2, i2* [[A2]], align 1
-; CHECK-NEXT:    [[L3:%.*]] = load i2, i2* [[A3]], align 1
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i2, ptr [[ADDR:%.*]], i64 1
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds i2, ptr [[ADDR]], i64 2
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds i2, ptr [[ADDR]], i64 3
+; CHECK-NEXT:    [[L0:%.*]] = load i2, ptr [[ADDR]], align 1
+; CHECK-NEXT:    [[L1:%.*]] = load i2, ptr [[A1]], align 1
+; CHECK-NEXT:    [[L2:%.*]] = load i2, ptr [[A2]], align 1
+; CHECK-NEXT:    [[L3:%.*]] = load i2, ptr [[A3]], align 1
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[P0:%.*]] = phi i2 [ [[L0]], [[ENTRY:%.*]] ]
@@ -90,15 +88,13 @@ define i8 @test3(i8 *%addr) {
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
-  %a = bitcast i8* %addr to i2*
-  %a0 = getelementptr inbounds i2, i2* %a, i64 0
-  %a1 = getelementptr inbounds i2, i2* %a, i64 1
-  %a2 = getelementptr inbounds i2, i2* %a, i64 2
-  %a3 = getelementptr inbounds i2, i2* %a, i64 3
-  %l0 = load i2, i2* %a0, align 1
-  %l1 = load i2, i2* %a1, align 1
-  %l2 = load i2, i2* %a2, align 1
-  %l3 = load i2, i2* %a3, align 1
+  %a1 = getelementptr inbounds i2, ptr %addr, i64 1
+  %a2 = getelementptr inbounds i2, ptr %addr, i64 2
+  %a3 = getelementptr inbounds i2, ptr %addr, i64 3
+  %l0 = load i2, ptr %addr, align 1
+  %l1 = load i2, ptr %a1, align 1
+  %l2 = load i2, ptr %a2, align 1
+  %l3 = load i2, ptr %a3, align 1
   br label %bb1
 bb1:                                              ; preds = %entry
   %p0 = phi i2 [ %l0, %entry ]
@@ -111,29 +107,29 @@ bb1:                                              ; preds = %entry
 
 declare void @f(i64, i64)
 
-define void @test4(i32 %a, i28* %ptr) {
+define void @test4(i32 %a, ptr %ptr) {
 ; Check that we do not vectorize types that are padded to a bigger ones.
 ;
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[A:%.*]] to i28
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i28, i28* [[PTR:%.*]], i32 1
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i28, i28* [[PTR]], i32 2
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i28, i28* [[PTR]], i32 3
-; CHECK-NEXT:    store i28 [[TRUNC]], i28* [[PTR]], align 4
-; CHECK-NEXT:    store i28 [[TRUNC]], i28* [[GEP1]], align 4
-; CHECK-NEXT:    store i28 [[TRUNC]], i28* [[GEP2]], align 4
-; CHECK-NEXT:    store i28 [[TRUNC]], i28* [[GEP3]], align 4
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i28, ptr [[PTR:%.*]], i32 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i28, ptr [[PTR]], i32 2
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i28, ptr [[PTR]], i32 3
+; CHECK-NEXT:    store i28 [[TRUNC]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store i28 [[TRUNC]], ptr [[GEP1]], align 4
+; CHECK-NEXT:    store i28 [[TRUNC]], ptr [[GEP2]], align 4
+; CHECK-NEXT:    store i28 [[TRUNC]], ptr [[GEP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %trunc = trunc i32 %a to i28
-  %gep1 = getelementptr i28, i28* %ptr, i32 1
-  %gep2 = getelementptr i28, i28* %ptr, i32 2
-  %gep3 = getelementptr i28, i28* %ptr, i32 3
-  store i28 %trunc, i28* %ptr
-  store i28 %trunc, i28* %gep1
-  store i28 %trunc, i28* %gep2
-  store i28 %trunc, i28* %gep3
+  %gep1 = getelementptr i28, ptr %ptr, i32 1
+  %gep2 = getelementptr i28, ptr %ptr, i32 2
+  %gep3 = getelementptr i28, ptr %ptr, i32 3
+  store i28 %trunc, ptr %ptr
+  store i28 %trunc, ptr %gep1
+  store i28 %trunc, ptr %gep2
+  store i28 %trunc, ptr %gep3
   ret void
 }

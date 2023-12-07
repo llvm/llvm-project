@@ -1,4 +1,5 @@
 import os
+
 try:
     import ConfigParser
 except ImportError:
@@ -6,6 +7,7 @@ except ImportError:
 
 import lit.formats
 import lit.Test
+
 
 class DummyFormat(lit.formats.FileBasedTest):
     def execute(self, test, lit_config):
@@ -18,18 +20,17 @@ class DummyFormat(lit.formats.FileBasedTest):
         cfg.read(source_path)
 
         # Create the basic test result.
-        result_code = cfg.get('global', 'result_code')
-        result_output = cfg.get('global', 'result_output')
-        result = lit.Test.Result(getattr(lit.Test, result_code),
-                                 result_output)
+        result_code = cfg.get("global", "result_code")
+        result_output = cfg.get("global", "result_output")
+        result = lit.Test.Result(getattr(lit.Test, result_code), result_output)
 
-        if cfg.has_option('global', 'required_feature'):
-            required_feature = cfg.get('global', 'required_feature')
+        if cfg.has_option("global", "required_feature"):
+            required_feature = cfg.get("global", "required_feature")
             if required_feature:
                 test.requires.append(required_feature)
 
         # Load additional metrics.
-        for key,value_str in cfg.items('results'):
+        for key, value_str in cfg.items("results"):
             value = eval(value_str)
             if isinstance(value, int):
                 metric = lit.Test.IntMetricValue(value)
@@ -40,4 +41,3 @@ class DummyFormat(lit.formats.FileBasedTest):
             result.addMetric(key, metric)
 
         return result
-

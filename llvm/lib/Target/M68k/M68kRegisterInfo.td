@@ -68,6 +68,19 @@ defm A5 : MxAddressRegister<5, "a5", ["bp"]>;
 defm A6 : MxAddressRegister<6, "a6", ["fp"]>;
 defm SP : MxAddressRegister<7, "sp", ["usp", "ssp", "isp", "a7"]>;
 
+// Floating Point Registers
+class MxFPRegister<int INDEX, string REG_NAME, list<string> ALTNAMES = []>
+    : MxReg<REG_NAME, INDEX, /*SUBREGS=*/[], /*SUBIDX=*/[],
+            /*DWREGS=*/[!add(18,INDEX)], ALTNAMES>;
+
+foreach i = {0-7} in
+  def FP#i : MxFPRegister<i, "fp"#i>;
+
+// Unlike their counterparts in integer registers, these
+// control registers can be accessed and modified by instructions.
+def FPC   : MxFPRegister<8,  "fpcr",  ["fpc"]>;
+def FPS   : MxFPRegister<9,  "fpsr",  ["fps"]>;
+def FPIAR : MxFPRegister<10, "fpiar", ["fpi"]>;
 
 // Pseudo Registers
 class MxPseudoReg<string N, list<Register> SUBREGS = [], list<SubRegIndex> SUBIDX = []>
@@ -103,9 +116,16 @@ def XR32 : MxRegClass<[i32], 32, (add DR32, AR32)>;
 
 def SPC  : MxRegClass<[i32], 32, (add SP)>;
 
+// Floating Point Data Registers
+def FPDR32 : MxRegClass<[f32], 32, (sequence "FP%u", 0, 7)>;
+def FPDR64 : MxRegClass<[f64], 32, (add FPDR32)>;
+def FPDR80 : MxRegClass<[f80], 32, (add FPDR32)>;
+
 let CopyCost = -1 in {
   def CCRC : MxRegClass<[i8],  16, (add CCR)>;
   def SRC  : MxRegClass<[i16], 16, (add SR)>;
+
+  def FPCR : MxRegClass<[i32], 32, (add FPC, FPS, FPIAR)>;
 }
 
 let isAllocatable = 0 in {

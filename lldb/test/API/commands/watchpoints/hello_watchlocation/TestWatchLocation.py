@@ -3,7 +3,6 @@ Test lldb watchpoint that uses '-s size' to watch a pointed location with size.
 """
 
 
-
 import re
 import lldb
 from lldbsuite.test.decorators import *
@@ -18,30 +17,31 @@ class HelloWatchLocationTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Our simple source filename.
-        self.source = 'main.cpp'
+        self.source = "main.cpp"
         # Find the line number to break inside main().
-        self.line = line_number(
-            self.source, '// Set break point at this line.')
+        self.line = line_number(self.source, "// Set break point at this line.")
         # This is for verifying that watch location works.
         self.violating_func = "do_bad_thing_with_location"
         # Build dictionary to have unique executable names for each test
         # method.
         self.exe_name = self.testMethodName
-        self.d = {'CXX_SOURCES': self.source, 'EXE': self.exe_name}
+        self.d = {"CXX_SOURCES": self.source, "EXE": self.exe_name}
 
     # on arm64 targets, lldb has incorrect hit-count / ignore-counts
     # for watchpoints when they are hit with multiple threads at
     # the same time.  Tracked as llvm.org/pr49433
     # or rdar://93863107 inside Apple.
-    def affected_by_radar_93863107(self): 
-        return (self.getArchitecture() in ['arm64', 'arm64e']) and self.platformIsDarwin()
+    def affected_by_radar_93863107(self):
+        return (
+            self.getArchitecture() in ["arm64", "arm64e"]
+        ) and self.platformIsDarwin()
 
     # Most of the MIPS boards provide only one H/W watchpoints, and S/W
     # watchpoints are not supported yet
-    @expectedFailureAll(triple=re.compile('^mips'))
+    @expectedFailureAll(triple=re.compile("^mips"))
     # SystemZ and PowerPC also currently supports only one H/W watchpoint
-    @expectedFailureAll(archs=['powerpc64le', 's390x'])
-    @skipIfWindows # This test is flaky on Windows
+    @expectedFailureAll(archs=["powerpc64le", "s390x"])
+    @skipIfWindows  # This test is flaky on Windows
     def test_hello_watchlocation(self):
         """Test watching a location with '-s size' option."""
         self.build(dictionary=self.d)
@@ -51,69 +51,69 @@ class HelloWatchLocationTestCase(TestBase):
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
         lldbutil.run_break_set_by_file_and_line(
-            self, None, self.line, num_expected_locations=1, loc_exact=False)
+            self, None, self.line, num_expected_locations=1, loc_exact=False
+        )
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 
         # We should be stopped again due to the breakpoint.
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         # Now let's set a write-type watchpoint pointed to by 'g_char_ptr'.
         self.expect(
             "watchpoint set expression -w write -s 1 -- g_char_ptr",
             WATCHPOINT_CREATED,
-            substrs=[
-                'Watchpoint created',
-                'size = 1',
-                'type = w'])
+            substrs=["Watchpoint created", "size = 1", "type = w"],
+        )
         # Get a hold of the watchpoint id just created, it is used later on to
         # match the watchpoint id which is expected to be fired.
         match = re.match(
-            "Watchpoint created: Watchpoint (.*):",
-            self.res.GetOutput().splitlines()[0])
+            "Watchpoint created: Watchpoint (.*):", self.res.GetOutput().splitlines()[0]
+        )
         if match:
             expected_wp_id = int(match.group(1), 0)
         else:
             self.fail("Grokking watchpoint id faailed!")
 
         self.runCmd("expr unsigned val = *g_char_ptr; val")
-        self.expect(self.res.GetOutput().splitlines()[0], exe=False,
-                    endstr=' = 0')
+        self.expect(self.res.GetOutput().splitlines()[0], exe=False, endstr=" = 0")
 
         self.runCmd("watchpoint set expression -w write -s 4 -- &threads[0]")
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should be 0 initially.
-        self.expect("watchpoint list -v",
-                    substrs=['hit_count = 0'])
+        self.expect("watchpoint list -v", substrs=["hit_count = 0"])
 
         self.runCmd("process continue")
 
         # We should be stopped again due to the watchpoint (write type), but
         # only once.  The stop reason of the thread should be watchpoint.
-        self.expect("thread list", STOPPED_DUE_TO_WATCHPOINT,
-                    substrs=['stopped',
-                             'stop reason = watchpoint %d' % expected_wp_id])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_WATCHPOINT,
+            substrs=["stopped", "stop reason = watchpoint %d" % expected_wp_id],
+        )
 
         # Switch to the thread stopped due to watchpoint and issue some
         # commands.
         self.switch_to_thread_with_stop_reason(lldb.eStopReasonWatchpoint)
         self.runCmd("thread backtrace")
-        self.expect("frame info",
-                    substrs=[self.violating_func])
+        self.expect("frame info", substrs=[self.violating_func])
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should now be the same as the number of threads that
         # stopped on a watchpoint.
         threads = lldbutil.get_stopped_threads(
-            self.process(), lldb.eStopReasonWatchpoint)
+            self.process(), lldb.eStopReasonWatchpoint
+        )
 
         if not self.affected_by_radar_93863107():
-          self.expect("watchpoint list -v",
-                      substrs=['hit_count = %d' % len(threads)])
+            self.expect("watchpoint list -v", substrs=["hit_count = %d" % len(threads)])
 
         self.runCmd("thread backtrace all")

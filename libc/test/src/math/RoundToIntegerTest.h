@@ -11,9 +11,9 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 
 #include <errno.h>
 #include <math.h>
@@ -42,7 +42,7 @@ private:
 
   void test_one_input(RoundToIntegerFunc func, F input, I expected,
                       bool expectError) {
-    errno = 0;
+    libc_errno = 0;
     __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);
 
     ASSERT_EQ(func(input), expected);
@@ -84,10 +84,13 @@ public:
   void do_infinity_and_na_n_test(RoundToIntegerFunc func) {
     test_one_input(func, inf, INTEGER_MAX, true);
     test_one_input(func, neg_inf, INTEGER_MIN, true);
-#if LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR
+    // This is currently never enabled, the
+    // LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR CMake option in
+    // libc/CMakeLists.txt is not forwarded to C++.
+#if LIBC_COPT_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR
     // Result is not well-defined, we always returns INTEGER_MAX
     test_one_input(func, nan, INTEGER_MAX, true);
-#endif
+#endif // LIBC_COPT_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR
   }
 
   void testInfinityAndNaN(RoundToIntegerFunc func) {
@@ -111,7 +114,7 @@ public:
     test_one_input(func, F(1234.0), I(1234), false);
     test_one_input(func, F(-1234.0), I(-1234), false);
 
-    // The rest of this this function compares with an equivalent MPFR function
+    // The rest of this function compares with an equivalent MPFR function
     // which rounds floating point numbers to long values. There is no MPFR
     // function to round to long long or wider integer values. So, we will
     // the remaining tests only if the width of I less than equal to that of
@@ -211,9 +214,10 @@ public:
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
-    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType COUNT = 1'000'001;
     constexpr UIntType STEP =
-        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
+        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
+        COUNT;
     for (UIntType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
          i += STEP) {
       F x = F(FPBits(i));
@@ -255,8 +259,9 @@ public:
     if (sizeof(I) > sizeof(long))
       return;
 
-    constexpr UIntType COUNT = 1000001;
-    constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
+    constexpr UIntType COUNT = 1'000'001;
+    constexpr UIntType STEP =
+        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
     for (UIntType i = FPBits::MIN_NORMAL; i <= FPBits::MAX_NORMAL; i += STEP) {
       F x = F(FPBits(i));
       // In normal range on x86 platforms, the long double implicit 1 bit can be

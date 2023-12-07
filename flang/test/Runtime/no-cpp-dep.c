@@ -26,11 +26,13 @@ void RTNAME(ProgramStart)(
 int32_t RTNAME(ArgumentCount)();
 int32_t RTNAME(GetCommandArgument)(int32_t, const struct Descriptor *,
     const struct Descriptor *, const struct Descriptor *);
+int32_t RTNAME(GetEnvVariable)();
 
 int main() {
   double x = RTNAME(CpuTime)();
   RTNAME(ProgramStart)(0, 0, 0, 0);
   int32_t c = RTNAME(ArgumentCount)();
   int32_t v = RTNAME(GetCommandArgument)(0, 0, 0, 0);
-  return x + c + v;
+  int32_t e = RTNAME(GetEnvVariable)("FOO", 0, 0);
+  return x + c + v + e;
 }

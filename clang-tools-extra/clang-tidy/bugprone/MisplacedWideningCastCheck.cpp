@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 MisplacedWideningCastCheck::MisplacedWideningCastCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -165,7 +163,7 @@ static int relativeCharSizesW(BuiltinType::Kind Kind) {
 }
 
 static bool isFirstWider(BuiltinType::Kind First, BuiltinType::Kind Second) {
-  int FirstSize, SecondSize;
+  int FirstSize = 0, SecondSize = 0;
   if ((FirstSize = relativeIntSizes(First)) != 0 &&
       (SecondSize = relativeIntSizes(Second)) != 0)
     return FirstSize > SecondSize;
@@ -226,6 +224,4 @@ void MisplacedWideningCastCheck::check(const MatchFinder::MatchResult &Result) {
       << CalcType << CastType;
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

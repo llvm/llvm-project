@@ -20,7 +20,7 @@ namespace {
 TEST_F(AArch64GISelMITest, FoldWithBuilder) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   // Try to use the FoldableInstructionsBuilder to build binary ops.
   CSEMIRBuilder CFB(B.getState());
   LLT s32 = LLT::scalar(32);
@@ -71,7 +71,7 @@ TEST_F(AArch64GISelMITest, FoldWithBuilder) {
 TEST_F(AArch64GISelMITest, FoldBinOp) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s32{LLT::scalar(32)};
   auto MIBCst1 = B.buildConstant(s32, 16);

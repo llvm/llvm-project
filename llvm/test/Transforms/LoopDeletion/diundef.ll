@@ -22,7 +22,7 @@ for.cond:                                         ; preds = %for.cond, %entry
 ; CHECK-NEXT: %call = tail call i32 {{.*}} @patatino()
 for.end:                                          ; preds = %for.cond
   %call = tail call i32 (...) @patatino() #3, !dbg !27
-  %0 = load i32, i32* @a, align 4, !dbg !28
+  %0 = load i32, ptr @a, align 4, !dbg !28
   ret i32 %0, !dbg !33
 }
 

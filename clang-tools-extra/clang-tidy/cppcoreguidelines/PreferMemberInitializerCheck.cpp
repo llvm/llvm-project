@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 static bool isControlStatement(const Stmt *S) {
   return isa<IfStmt, SwitchStmt, ForStmt, WhileStmt, DoStmt, ReturnStmt,
@@ -131,9 +129,11 @@ PreferMemberInitializerCheck::PreferMemberInitializerCheck(
     : ClangTidyCheck(Name, Context),
       IsUseDefaultMemberInitEnabled(
           Context->isCheckEnabled("modernize-use-default-member-init")),
-      UseAssignment(OptionsView("modernize-use-default-member-init",
-                                Context->getOptions().CheckOptions, Context)
-                        .get("UseAssignment", false)) {}
+      UseAssignment(
+          Options.get("UseAssignment",
+                      OptionsView("modernize-use-default-member-init",
+                                  Context->getOptions().CheckOptions, Context)
+                          .get("UseAssignment", false))) {}
 
 void PreferMemberInitializerCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -141,10 +141,11 @@ void PreferMemberInitializerCheck::storeOptions(
 }
 
 void PreferMemberInitializerCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      cxxConstructorDecl(hasBody(compoundStmt()), unless(isInstantiated()))
-          .bind("ctor"),
-      this);
+  Finder->addMatcher(cxxConstructorDecl(hasBody(compoundStmt()),
+                                        unless(isInstantiated()),
+                                        unless(isDelegatingConstructor()))
+                         .bind("ctor"),
+                     this);
 }
 
 void PreferMemberInitializerCheck::check(
@@ -174,8 +175,8 @@ void PreferMemberInitializerCheck::check(
         return;
     }
 
-    const FieldDecl *Field;
-    const Expr *InitValue;
+    const FieldDecl *Field = nullptr;
+    const Expr *InitValue = nullptr;
     std::tie(Field, InitValue) = isAssignmentToMemberOf(Class, S, Ctor);
     if (Field) {
       if (IsUseDefaultMemberInitEnabled && getLangOpts().CPlusPlus11 &&
@@ -315,6 +316,4 @@ void PreferMemberInitializerCheck::check(
   }
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

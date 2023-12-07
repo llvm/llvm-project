@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: availability-filesystem-missing
 
 // These tests require locale for non-char paths
 // UNSUPPORTED: no-localization
@@ -24,11 +25,11 @@
 #include <type_traits>
 #include <cassert>
 
-#include "test_macros.h"
-#include "test_iterators.h"
 #include "count_new.h"
+#include "make_string.h"
 #include "min_allocator.h"
-#include "filesystem_test_helper.h"
+#include "test_iterators.h"
+#include "test_macros.h"
 
 
 // the SSO is always triggered for strings of size 2.

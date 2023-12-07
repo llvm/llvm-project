@@ -198,4 +198,12 @@ extern void (*VPMergeHook)(struct ValueProfData *, __llvm_profile_data *);
  */
 int __llvm_write_binary_ids(ProfDataWriter *Writer);
 
+/*
+ * Write binary id length and then its data, because binary id does not
+ * have a fixed length.
+ */
+int lprofWriteOneBinaryId(ProfDataWriter *Writer, uint64_t BinaryIdLen,
+                          const uint8_t *BinaryIdData,
+                          uint64_t BinaryIdPadding);
+
 #endif

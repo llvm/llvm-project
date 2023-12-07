@@ -139,16 +139,16 @@ v_mov_b32_dpp v5, v1 row_share:1 row_mask:0x0 bank_mask:0x0
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
 
 v_ceil_f64_dpp v[0:1], v[2:3] quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: 64 bit dpp only supports row_newbcast
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_newbcast
 
 v_ceil_f64_dpp v[0:1], v[2:3] row_shl:1 row_mask:0xf bank_mask:0xf
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: 64 bit dpp only supports row_newbcast
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_newbcast
 
 v_ceil_f64_dpp v[0:1], v[2:3] wave_ror:1 row_mask:0xf bank_mask:0xf
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: 64 bit dpp only supports row_newbcast
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_newbcast
 
 v_cvt_u32_f64 v5, v[0:1] quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: 64 bit dpp only supports row_newbcast
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_newbcast
 
 v_ceil_f64_dpp v[0:1], v[2:3] row_share:1 row_mask:0xf bank_mask:0xf
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
@@ -169,12 +169,6 @@ ds_write2_b64 v1, a[4:5], v[2:3] offset1:255
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
 
 ds_write2_b64 v1, v[4:5], a[2:3] offset1:255
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
-
-ds_write2_b64 v1, a[4:5], v[2:3] offset1:255 gds
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
-
-ds_write2_b64 v1, v[4:5], a[2:3] offset1:255 gds
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
 
 ds_wrxchg2st64_rtn_b32 v[6:7], v1, a2, a3 offset0:127
@@ -293,3 +287,6 @@ global_load_lds_dword v[2:3], off
 
 scratch_load_lds_dword v2, off
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_read_b32 v0, v1 gds
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: gds modifier is not supported on this GPU

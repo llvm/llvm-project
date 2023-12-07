@@ -10,10 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+
+#include "BPF.h"
 #include "MCTargetDesc/BPFInstPrinter.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -99,8 +102,13 @@ void BPFInstPrinter::printBrTargetOperand(const MCInst *MI, unsigned OpNo,
                                        raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isImm()) {
-    int16_t Imm = Op.getImm();
-    O << ((Imm >= 0) ? "+" : "") << formatImm(Imm);
+    if (MI->getOpcode() == BPF::JMPL) {
+      int32_t Imm = Op.getImm();
+      O << ((Imm >= 0) ? "+" : "") << formatImm(Imm);
+    } else {
+      int16_t Imm = Op.getImm();
+      O << ((Imm >= 0) ? "+" : "") << formatImm(Imm);
+    }
   } else if (Op.isExpr()) {
     printExpr(Op.getExpr(), O);
   } else {

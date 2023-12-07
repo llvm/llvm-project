@@ -1,7 +1,7 @@
 ; RUN: llc < %s
 
-%Domain = type { i8*, i32, i32*, i32, i32, i32*, %Domain* }
-@AConst = constant i32 123              ; <i32*> [#uses=1]
+%Domain = type { ptr, i32, ptr, i32, i32, ptr, ptr }
+@AConst = constant i32 123              ; <ptr> [#uses=1]
 
 ; Test setting values of different constants in registers.
 ; 
@@ -24,10 +24,10 @@ define void @testConsts(i32 %N, float %X) {
 ; is unused will only generate the condition code but not
 ; the boolean result.
 ; 
-define void @unusedBool(i32* %x, i32* %y) {
-        icmp eq i32* %x, %y             ; <i1>:1 [#uses=1]
+define void @unusedBool(ptr %x, ptr %y) {
+        icmp eq ptr %x, %y             ; <i1>:1 [#uses=1]
         xor i1 %1, true         ; <i1>:2 [#uses=0]
-        icmp ne i32* %x, %y             ; <i1>:3 [#uses=0]
+        icmp ne ptr %x, %y             ; <i1>:3 [#uses=0]
         ret void
 }
 
@@ -39,7 +39,7 @@ define void @unusedBool(i32* %x, i32* %y) {
 ; -- use of immediate fields for integral constants of different sizes
 ; -- branch on a constant condition
 ; 
-define void @mergeConstants(i32* %x, i32* %y) {
+define void @mergeConstants(ptr %x, ptr %y) {
 ; <label>:0
         br label %Top
 
@@ -65,14 +65,13 @@ Next:           ; preds = %Top
 ;    use but has to be loaded into a virtual register so that the reg.
 ;    allocator can allocate the appropriate phys. reg. for it
 ;  
-define i32* @castconst(float) {
+define ptr @castconst(float) {
         %castbig = trunc i64 99999999 to i32            ; <i32> [#uses=1]
         %castsmall = trunc i64 1 to i32         ; <i32> [#uses=1]
         %usebig = add i32 %castbig, %castsmall          ; <i32> [#uses=0]
-        %castglob = bitcast i32* @AConst to i64*                ; <i64*> [#uses=1]
-        %dummyl = load i64, i64* %castglob           ; <i64> [#uses=0]
-        %castnull = inttoptr i64 0 to i32*              ; <i32*> [#uses=1]
-        ret i32* %castnull
+        %dummyl = load i64, ptr @AConst           ; <i64> [#uses=0]
+        %castnull = inttoptr i64 0 to ptr              ; <ptr> [#uses=1]
+        ret ptr %castnull
 }
 
 ; Test branch-on-comparison-with-zero, in two ways:
@@ -148,14 +147,14 @@ goon:           ; preds = %Top
 ;    copy instruction (add-with-0), but this copy should get coalesced
 ;    away by the register allocator.
 ;
-define i32 @checkForward(i32 %N, i32* %A) {
+define i32 @checkForward(i32 %N, ptr %A) {
 bb2:
         %reg114 = shl i32 %N, 2         ; <i32> [#uses=1]
         %cast115 = sext i32 %reg114 to i64              ; <i64> [#uses=1]
-        %cast116 = ptrtoint i32* %A to i64              ; <i64> [#uses=1]
+        %cast116 = ptrtoint ptr %A to i64              ; <i64> [#uses=1]
         %reg116 = add i64 %cast116, %cast115            ; <i64> [#uses=1]
-        %castPtr = inttoptr i64 %reg116 to i32*         ; <i32*> [#uses=1]
-        %reg118 = load i32, i32* %castPtr            ; <i32> [#uses=1]
+        %castPtr = inttoptr i64 %reg116 to ptr         ; <ptr> [#uses=1]
+        %reg118 = load i32, ptr %castPtr            ; <i32> [#uses=1]
         %cast117 = sext i32 %reg118 to i64              ; <i64> [#uses=2]
         %reg159 = add i64 1234567, %cast117             ; <i64> [#uses=0]
         %reg160 = add i64 7654321, %cast117             ; <i64> [#uses=0]
@@ -179,9 +178,9 @@ define void @checkNot(i1 %b, i32 %i) {
 
 ; Test case for folding getelementptr into a load/store
 ;
-define i32 @checkFoldGEP(%Domain* %D, i64 %idx) {
-        %reg841 = getelementptr %Domain, %Domain* %D, i64 0, i32 1               ; <i32*> [#uses=1]
-        %reg820 = load i32, i32* %reg841             ; <i32> [#uses=1]
+define i32 @checkFoldGEP(ptr %D, i64 %idx) {
+        %reg841 = getelementptr %Domain, ptr %D, i64 0, i32 1               ; <ptr> [#uses=1]
+        %reg820 = load i32, ptr %reg841             ; <i32> [#uses=1]
         ret i32 %reg820
 }
 

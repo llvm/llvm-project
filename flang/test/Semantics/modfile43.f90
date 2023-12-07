@@ -5,7 +5,7 @@ module iso_fortran_env
 end module
 module m1
   use, intrinsic :: iso_fortran_env, only: int32
-  !ERROR: Cannot USE,NON_INTRINSIC module 'iso_fortran_env' in the same scope as USE,INTRINSIC
+  !PORTABILITY: Should not USE the non-intrinsic module 'iso_fortran_env' in the same scope as a USE of the intrinsic module
   use, non_intrinsic :: iso_fortran_env, only: user_defined_123
 end module
 module m2

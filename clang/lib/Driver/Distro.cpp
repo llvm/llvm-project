@@ -11,11 +11,11 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace clang::driver;
 using namespace clang;
@@ -93,6 +93,7 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("jammy", Distro::UbuntuJammy)
                     .Case("kinetic", Distro::UbuntuKinetic)
                     .Case("lunar", Distro::UbuntuLunar)
+                    .Case("mantic", Distro::UbuntuMantic)
                     .Default(Distro::UnknownDistro);
   return Version;
 }
@@ -111,7 +112,7 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
   if (Version != Distro::UnknownDistro)
     return Version;
 
-  // Otherwise try some distro-specific quirks for RedHat...
+  // Otherwise try some distro-specific quirks for Red Hat...
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> File =
       VFS.getBufferForFile("/etc/redhat-release");
 
@@ -169,6 +170,7 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         .Case("buster/sid", Distro::DebianBuster)
         .Case("bullseye/sid", Distro::DebianBullseye)
         .Case("bookworm/sid", Distro::DebianBookworm)
+        .Case("trixie/sid", Distro::DebianTrixie)
         .Default(Distro::UnknownDistro);
   }
 

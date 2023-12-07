@@ -458,16 +458,16 @@ method.
 
 ```c++
 /// Fold constants.
-OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) { return value(); }
+OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) { return value(); }
 
 /// Fold struct constants.
-OpFoldResult StructConstantOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult StructConstantOp::fold(FoldAdaptor adaptor) {
   return value();
 }
 
 /// Fold simple struct access operations that access into a constant.
-OpFoldResult StructAccessOp::fold(ArrayRef<Attribute> operands) {
-  auto structAttr = operands.front().dyn_cast_or_null<mlir::ArrayAttr>();
+OpFoldResult StructAccessOp::fold(FoldAdaptor adaptor) {
+  auto structAttr = adaptor.getInput().dyn_cast_or_null<mlir::ArrayAttr>();
   if (!structAttr)
     return nullptr;
 

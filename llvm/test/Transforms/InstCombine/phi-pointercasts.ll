@@ -96,14 +96,14 @@ define void @test_bitcast_loads_in_different_bbs(i1 %c, ptr %ptr.0, ptr %ptr.1) 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
 ; CHECK:       b0:
-; CHECK-NEXT:    [[LOAD_PTR_02:%.*]] = load ptr, ptr [[PTR_0:%.*]], align 8
-; CHECK-NEXT:    call void @use(ptr [[LOAD_PTR_02]])
+; CHECK-NEXT:    [[LOAD_PTR_0:%.*]] = load ptr, ptr [[PTR_0:%.*]], align 8
+; CHECK-NEXT:    call void @use(ptr [[LOAD_PTR_0]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       b1:
-; CHECK-NEXT:    [[LOAD_PTR_11:%.*]] = load ptr, ptr [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[LOAD_PTR_1:%.*]] = load ptr, ptr [[PTR_1:%.*]], align 8
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[LOAD_PTR_02]], [[B0]] ], [ [[LOAD_PTR_11]], [[B1]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[LOAD_PTR_0]], [[B0]] ], [ [[LOAD_PTR_1]], [[B1]] ]
 ; CHECK-NEXT:    store i8 0, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -164,7 +164,7 @@ define void @test_bitcast_not_foldable(i1 %c, ptr %ptr.0, ptr %ptr.1) {
 ; CHECK-NEXT:    call void @use(ptr [[PTR_1:%.*]])
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[PTR_0:%.*]], [[B0]] ], [ [[PTR_1:%.*]], [[B1]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[PTR_0:%.*]], [[B0]] ], [ [[PTR_1]], [[B1]] ]
 ; CHECK-NEXT:    store i8 0, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -223,7 +223,7 @@ define void @test_bitcast_different_bases(i1 %c, ptr %ptr.0, ptr %ptr.1) {
 ; CHECK:       b1:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[PTR_0:%.*]], [[B0]] ], [ [[PTR_1:%.*]], [[B1]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[PTR_0]], [[B0]] ], [ [[PTR_1:%.*]], [[B1]] ]
 ; CHECK-NEXT:    store i8 0, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -293,7 +293,7 @@ define void @test_4_incoming_values_different_bases_1(i32 %c, ptr %ptr.0, ptr %p
 ; CHECK:       b3:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[PTR_0:%.*]], [[B0]] ], [ [[PTR_1:%.*]], [[B1]] ], [ [[PTR_0]], [[B2]] ], [ [[PTR_0]], [[B3]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[PTR_0]], [[B0]] ], [ [[PTR_1:%.*]], [[B1]] ], [ [[PTR_0]], [[B2]] ], [ [[PTR_0]], [[B3]] ]
 ; CHECK-NEXT:    store i8 0, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ; CHECK:       end.2:
@@ -346,8 +346,8 @@ define void @test_4_incoming_values_different_bases_2(i32 %c, ptr %ptr.0, ptr %p
 ; CHECK:       b3:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P_IN:%.*]] = phi ptr [ [[PTR_1:%.*]], [[B0]] ], [ [[PTR_0]], [[B1]] ], [ [[PTR_0]], [[B2]] ], [ [[PTR_0]], [[B3]] ]
-; CHECK-NEXT:    store i8 0, ptr [[P_IN]], align 1
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[PTR_1:%.*]], [[B0]] ], [ [[PTR_0]], [[B1]] ], [ [[PTR_0]], [[B2]] ], [ [[PTR_0]], [[B3]] ]
+; CHECK-NEXT:    store i8 0, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ; CHECK:       end.2:
 ; CHECK-NEXT:    ret void
@@ -394,12 +394,12 @@ define void @test_4_incoming_values_different_bases_3(i32 %c, ptr %ptr.0, ptr %p
 ; CHECK:       b1:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       b2:
-; CHECK-NEXT:    call void @use(ptr [[PTR_0]])
+; CHECK-NEXT:    call void @use(ptr [[PTR_0:%.*]])
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       b3:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[PTR_0:%.*]], [[B0]] ], [ [[PTR_0]], [[B1]] ], [ [[PTR_0]], [[B2]] ], [ [[PTR_1:%.*]], [[B3]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[PTR_0]], [[B0]] ], [ [[PTR_0]], [[B1]] ], [ [[PTR_0]], [[B2]] ], [ [[PTR_1:%.*]], [[B3]] ]
 ; CHECK-NEXT:    store i8 0, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ; CHECK:       end.2:

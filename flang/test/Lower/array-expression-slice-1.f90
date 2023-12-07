@@ -1,6 +1,6 @@
 ! RUN: bbc -o - --outline-intrinsics %s | FileCheck %s
 
-! CHECK-LABEL: func @_QQmain() {
+! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "p"} {
 ! CHECK-DAG:         %[[VAL_0:.*]] = arith.constant 10 : index
 ! CHECK-DAG:         %[[VAL_4:.*]] = arith.constant 2 : index
 ! CHECK-DAG:         %[[VAL_5:.*]] = arith.constant 1 : index
@@ -43,7 +43,7 @@
 ! CHECK:         fir.store %[[VAL_41]] to %[[VAL_31]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_42:.*]] = fir.load %[[VAL_31]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (i32) -> f32
-! CHECK:         %[[VAL_44:.*]] = fir.call @fir.cos.f32.f32(%[[VAL_43]]) {{.*}}: (f32) -> f32
+! CHECK:         %[[VAL_44:.*]] = fir.call @fir.cos.contract.f32.f32(%[[VAL_43]]) {{.*}}: (f32) -> f32
 ! CHECK:         %[[VAL_45:.*]] = fir.load %[[VAL_28]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_46:.*]] = fir.convert %[[VAL_45]] : (i32) -> i64
 ! CHECK:         %[[VAL_47:.*]] = arith.subi %[[VAL_46]], %[[VAL_20]] : i64
@@ -60,7 +60,7 @@
 ! CHECK:         fir.store %[[VAL_36]] to %[[VAL_28]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_55:.*]] = fir.load %[[VAL_31]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_56:.*]] = fir.convert %[[VAL_55]] : (i32) -> f32
-! CHECK:         %[[VAL_57:.*]] = fir.call @fir.sin.f32.f32(%[[VAL_56]]) {{.*}}: (f32) -> f32
+! CHECK:         %[[VAL_57:.*]] = fir.call @fir.sin.contract.f32.f32(%[[VAL_56]]) {{.*}}: (f32) -> f32
 ! CHECK:         %[[VAL_58:.*]] = fir.load %[[VAL_30]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_59:.*]] = fir.convert %[[VAL_58]] : (i32) -> i64
 ! CHECK:         %[[VAL_60:.*]] = arith.subi %[[VAL_59]], %[[VAL_20]] : i64
@@ -227,7 +227,7 @@
 ! CHECK:         %[[VAL_185:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_176]]) {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:         br ^bb24
 ! CHECK:       ^bb24:
-! CHECK:         %[[VAL_186:.*]] = fir.address_of(@_QQro.3xi4.b7f1b733471804c07debf489e49d9c2f) : !fir.ref<!fir.array<3xi32>>
+! CHECK:         %[[VAL_186:.*]] = fir.address_of(@_QQro.3xi4.0) : !fir.ref<!fir.array<3xi32>>
 ! CHECK:         br ^bb25(%[[VAL_6]], %[[VAL_11]] : index, index)
 ! CHECK:       ^bb25(%[[VAL_187:.*]]: index, %[[VAL_188:.*]]: index):
 ! CHECK:         %[[VAL_189:.*]] = arith.cmpi sgt, %[[VAL_188]], %[[VAL_6]] : index

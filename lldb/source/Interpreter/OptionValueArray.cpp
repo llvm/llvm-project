@@ -94,8 +94,7 @@ Status OptionValueArray::SetValueFromString(llvm::StringRef value,
 
 lldb::OptionValueSP
 OptionValueArray::GetSubValue(const ExecutionContext *exe_ctx,
-                              llvm::StringRef name, bool will_modify,
-                              Status &error) const {
+                              llvm::StringRef name, Status &error) const {
   if (name.empty() || name.front() != '[') {
     error.SetErrorStringWithFormat(
       "invalid value path '%s', %s values only support '[<index>]' subvalues "
@@ -129,8 +128,7 @@ OptionValueArray::GetSubValue(const ExecutionContext *exe_ctx,
   if (new_idx < array_count) {
     if (m_values[new_idx]) {
       if (!sub_value.empty())
-        return m_values[new_idx]->GetSubValue(exe_ctx, sub_value,
-                                              will_modify, error);
+        return m_values[new_idx]->GetSubValue(exe_ctx, sub_value, error);
       else
         return m_values[new_idx];
     }
@@ -155,9 +153,9 @@ size_t OptionValueArray::GetArgs(Args &args) const {
   args.Clear();
   const uint32_t size = m_values.size();
   for (uint32_t i = 0; i < size; ++i) {
-    llvm::StringRef string_value = m_values[i]->GetStringValue();
-    if (!string_value.empty())
-      args.AppendArgument(string_value);
+    auto string_value = m_values[i]->GetValueAs<llvm::StringRef>();
+    if (string_value)
+      args.AppendArgument(*string_value);
   }
 
   return args.GetArgumentCount();

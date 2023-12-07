@@ -4,7 +4,7 @@
 
 declare void @llvm.experimental.guard(i1, ...)
 
-define i32 @test_visited(i32* %array, i32 %length, i32 %n, i32 %x) {
+define i32 @test_visited(ptr %array, i32 %length, i32 %n, i32 %x) {
 ; CHECK-LABEL: @test_visited(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -13,6 +13,7 @@ define i32 @test_visited(i32* %array, i32 %length, i32 %n, i32 %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[N]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 0, [[LENGTH]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i1 [[TMP2]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
@@ -117,12 +118,12 @@ define i32 @test_visited(i32* %array, i32 %length, i32 %n, i32 %x) {
 ; CHECK-NEXT:    [[GUARD_COND_97:%.*]] = and i1 [[GUARD_COND_96]], [[GUARD_COND_95]]
 ; CHECK-NEXT:    [[GUARD_COND_98:%.*]] = and i1 [[GUARD_COND_97]], [[GUARD_COND_96]]
 ; CHECK-NEXT:    [[GUARD_COND_99:%.*]] = and i1 [[GUARD_COND_98]], [[GUARD_COND_97]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[UNRELATED_COND]], [[TMP2]]
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    [[TMP4:%.*]] = and i1 [[UNRELATED_COND]], [[TMP3]]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP4]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[GUARD_COND_99]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -247,8 +248,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %guard.cond.99, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nuw i32 %i, 1

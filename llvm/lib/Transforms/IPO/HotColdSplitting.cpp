@@ -46,8 +46,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -168,23 +166,6 @@ static bool markFunctionCold(Function &F, bool UpdateEntryCount = false) {
 
   return Changed;
 }
-
-class HotColdSplittingLegacyPass : public ModulePass {
-public:
-  static char ID;
-  HotColdSplittingLegacyPass() : ModulePass(ID) {
-    initializeHotColdSplittingLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<ProfileSummaryInfoWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addUsedIfAvailable<AssumptionCacheTracker>();
-  }
-
-  bool runOnModule(Module &M) override;
-};
 
 } // end anonymous namespace
 
@@ -713,32 +694,6 @@ bool HotColdSplitting::run(Module &M) {
   return Changed;
 }
 
-bool HotColdSplittingLegacyPass::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-  ProfileSummaryInfo *PSI =
-      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  auto GTTI = [this](Function &F) -> TargetTransformInfo & {
-    return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  };
-  auto GBFI = [this](Function &F) {
-    return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
-  };
-  std::unique_ptr<OptimizationRemarkEmitter> ORE;
-  std::function<OptimizationRemarkEmitter &(Function &)> GetORE =
-      [&ORE](Function &F) -> OptimizationRemarkEmitter & {
-    ORE.reset(new OptimizationRemarkEmitter(&F));
-    return *ORE;
-  };
-  auto LookupAC = [this](Function &F) -> AssumptionCache * {
-    if (auto *ACT = getAnalysisIfAvailable<AssumptionCacheTracker>())
-      return ACT->lookupAssumptionCache(F);
-    return nullptr;
-  };
-
-  return HotColdSplitting(PSI, GBFI, GTTI, &GetORE, LookupAC).run(M);
-}
-
 PreservedAnalyses
 HotColdSplittingPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
@@ -768,16 +723,4 @@ HotColdSplittingPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (HotColdSplitting(PSI, GBFI, GTTI, &GetORE, LookupAC).run(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
-}
-
-char HotColdSplittingLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(HotColdSplittingLegacyPass, "hotcoldsplit",
-                      "Hot Cold Splitting", false, false)
-INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
-INITIALIZE_PASS_END(HotColdSplittingLegacyPass, "hotcoldsplit",
-                    "Hot Cold Splitting", false, false)
-
-ModulePass *llvm::createHotColdSplittingPass() {
-  return new HotColdSplittingLegacyPass();
 }

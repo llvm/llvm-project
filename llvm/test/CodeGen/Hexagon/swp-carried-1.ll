@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -rdf-opt=0 -disable-hexagon-misched -hexagon-initial-cfg-cleanup=0 -lsr-setupcost-depth-limit=1 < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -march=hexagon -rdf-opt=0 -disable-hexagon-misched -hexagon-initial-cfg-cleanup=0 -lsr-setupcost-depth-limit=1 -disable-cgp-delete-phis < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that we generate the correct code when a loop carried value
 ; is scheduled one stage earlier than it's use. The code in
@@ -25,8 +25,8 @@ b2:                                               ; preds = %b1
   br label %b3
 
 b3:                                               ; preds = %b3, %b2
-  %v0 = phi i32* [ getelementptr inbounds ([256 x i32], [256 x i32]* @g0, i32 0, i32 0), %b2 ], [ %v1, %b3 ]
-  %v1 = getelementptr i32, i32* %v0, i32 6
+  %v0 = phi ptr [ @g0, %b2 ], [ %v1, %b3 ]
+  %v1 = getelementptr i32, ptr %v0, i32 6
   br i1 undef, label %b4, label %b3
 
 b4:                                               ; preds = %b3
@@ -34,15 +34,15 @@ b4:                                               ; preds = %b3
 
 b5:                                               ; preds = %b5, %b4
   %v2 = phi i64 [ %v19, %b5 ], [ undef, %b4 ]
-  %v3 = phi i32* [ %v8, %b5 ], [ %v1, %b4 ]
+  %v3 = phi ptr [ %v8, %b5 ], [ %v1, %b4 ]
   %v4 = phi i32 [ %v9, %b5 ], [ undef, %b4 ]
   %v5 = phi i32 [ %v11, %b5 ], [ undef, %b4 ]
   %v6 = phi i32 [ %v5, %b5 ], [ undef, %b4 ]
   %v7 = phi i32 [ %v10, %b5 ], [ 0, %b4 ]
-  %v8 = getelementptr i32, i32* %v3, i32 1
+  %v8 = getelementptr i32, ptr %v3, i32 1
   %v9 = add nsw i32 %v4, 1
-  %v10 = load i32, i32* %v8, align 4
-  %v11 = load i32, i32* null, align 4
+  %v10 = load i32, ptr %v8, align 4
+  %v11 = load i32, ptr null, align 4
   %v12 = sext i32 %v6 to i64
   %v13 = sext i32 %v10 to i64
   %v14 = sext i32 %v7 to i64

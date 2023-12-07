@@ -3,39 +3,39 @@
 --- |
 
   ; Checks that Predecessor gets moved (to before the LoopExit) if it contains a backward WLS.
-  define void @backwards_branch(i32 %N, i32* nocapture %a, i32* nocapture readonly %b)   {
+  define void @backwards_branch(i32 %N, ptr nocapture %a, ptr nocapture readonly %b)   {
   entry:
     unreachable
   }
 
   ; Checks that Predecessor (containing a backwards WLS) does not get moved to before the loopExit if it is the entry block.
-  define void @backwards_branch_entry_block(i32 %N, i32* nocapture %a, i32* nocapture readonly %b)   {
+  define void @backwards_branch_entry_block(i32 %N, ptr nocapture %a, ptr nocapture readonly %b)   {
   entry:
     unreachable
   }
 
   ; Checks that Predecessor (to which a forward WLS exists) is not moved if moving it would cause the WLS to become backwards branching.
-  define void @backwards_branch_backwards_wls(i32 %N, i32 %M, i32* nocapture %a, i32* nocapture %b, i32* nocapture %c)   {
+  define void @backwards_branch_backwards_wls(i32 %N, i32 %M, ptr nocapture %a, ptr nocapture %b, ptr nocapture %c)   {
   entry:
     unreachable
   }
 
   ; Checks that a MachineFunction is unaffected if it doesn't contain any WLS (pseudo) instruction.
-  define void @no_predecessor(i32 %N, i32 %M, i32* nocapture %a, i32* nocapture %b, i32* nocapture %c)   {
+  define void @no_predecessor(i32 %N, i32 %M, ptr nocapture %a, ptr nocapture %b, ptr nocapture %c)   {
   entry:
     unreachable
   }
 
   ; Within a nested (Both the WLS and loopExit are at depth=3 here) loop, checks that Predecessor
   ; gets moved (in backward direction) if there exists a backdwards WLS from it to the LoopExit.
-  define void @nested_loops(i32 %n, i32 %m, i32 %l, i8* noalias %X, i8* noalias %Y)   {
+  define void @nested_loops(i32 %n, i32 %m, i32 %l, ptr noalias %X, ptr noalias %Y)   {
   entry:
     unreachable
   }
 
   ; Checks that Predecessor (to which a forward WLS exists) is moved if moving it would NOT cause the WLS
   ; to become backwards branching.
-  define void @backwards_branch_forwards_wls(i32 %N, i32 %M, i32* nocapture %a, i32* nocapture %b, i32* nocapture %c) {
+  define void @backwards_branch_forwards_wls(i32 %N, i32 %M, ptr nocapture %a, ptr nocapture %b, ptr nocapture %c) {
   entry:
     unreachable
   }

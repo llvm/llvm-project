@@ -93,10 +93,10 @@ public:
 } // namespace
 
 char WriteDXILPass::ID = 0;
-INITIALIZE_PASS_BEGIN(WriteDXILPass, "write-bitcode", "Write Bitcode", false,
-                      true)
+INITIALIZE_PASS_BEGIN(WriteDXILPass, "dxil-write-bitcode", "Write Bitcode",
+                      false, true)
 INITIALIZE_PASS_DEPENDENCY(ModuleSummaryIndexWrapperPass)
-INITIALIZE_PASS_END(WriteDXILPass, "write-bitcode", "Write Bitcode", false,
+INITIALIZE_PASS_END(WriteDXILPass, "dxil-write-bitcode", "Write Bitcode", false,
                     true)
 
 ModulePass *llvm::createDXILWriterPass(raw_ostream &Str) {

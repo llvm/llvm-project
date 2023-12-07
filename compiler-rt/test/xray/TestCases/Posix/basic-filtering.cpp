@@ -22,8 +22,7 @@
 // RUN:     "`ls basic-filtering-* | head -1`" | \
 // RUN:     FileCheck %s --check-prefix TRACE
 // RUN: rm -f basic-filtering-*
-//
-// REQUIRES: x86_64-target-arch
+
 // REQUIRES: built-in-llvm-tree
 
 #include <cstdio>

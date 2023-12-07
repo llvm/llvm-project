@@ -12,7 +12,7 @@
 // CHECK-NEXT:  access_count (ave/min/max): 30.00 / 20 / 40
 // Unfortunately there is not a reliable way to check the ave/min/max lifetime.
 // CHECK-NEXT:  lifetime (ave/min/max):
-// CHECK-NEXT:  num migrated: {{[0-1]}}, num lifetime overlaps: 0, num same alloc cpu: 1, num same dealloc_cpu: 1
+// CHECK-NEXT:  num migrated: {{[0-1]}}, num lifetime overlaps: 0, num same alloc cpu: {{[0-1]}}, num same dealloc_cpu: {{[0-1]}}
 // CHECK: Stack for id [[STACKID]]:
 // CHECK-NEXT: #0 {{.*}} in operator new
 // CHECK-NEXT: #1 {{.*}} in main {{.*}}:[[@LINE+7]]

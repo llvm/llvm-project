@@ -34,11 +34,9 @@ Operation *complex::ComplexDialect::materializeConstant(OpBuilder &builder,
                                                         Location loc) {
   if (complex::ConstantOp::isBuildableWith(value, type)) {
     return builder.create<complex::ConstantOp>(loc, type,
-                                               value.cast<ArrayAttr>());
+                                               llvm::cast<ArrayAttr>(value));
   }
-  if (arith::ConstantOp::isBuildableWith(value, type))
-    return builder.create<arith::ConstantOp>(loc, type, value);
-  return nullptr;
+  return arith::ConstantOp::materialize(builder, value, type, loc);
 }
 
 #define GET_ATTRDEF_CLASSES
@@ -48,16 +46,16 @@ LogicalResult complex::NumberAttr::verify(
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
     ::llvm::APFloat real, ::llvm::APFloat imag, ::mlir::Type type) {
 
-  if (!type.isa<ComplexType>())
+  if (!llvm::isa<ComplexType>(type))
     return emitError() << "complex attribute must be a complex type.";
 
-  Type elementType = type.cast<ComplexType>().getElementType();
-  if (!elementType.isa<FloatType>())
+  Type elementType = llvm::cast<ComplexType>(type).getElementType();
+  if (!llvm::isa<FloatType>(elementType))
     return emitError()
            << "element type of the complex attribute must be float like type.";
 
   const auto &typeFloatSemantics =
-      elementType.cast<FloatType>().getFloatSemantics();
+      llvm::cast<FloatType>(elementType).getFloatSemantics();
   if (&real.getSemantics() != &typeFloatSemantics)
     return emitError()
            << "type doesn't match the type implied by its `real` value";
@@ -69,7 +67,7 @@ LogicalResult complex::NumberAttr::verify(
 }
 
 void complex::NumberAttr::print(AsmPrinter &printer) const {
-  printer << "<:" << getType().cast<ComplexType>().getElementType() << " "
+  printer << "<:" << llvm::cast<ComplexType>(getType()).getElementType() << " "
           << getReal() << ", " << getImag() << ">";
 }
 

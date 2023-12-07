@@ -68,7 +68,8 @@ public:
     MO_IntrinsicID,       ///< Intrinsic ID for ISel
     MO_Predicate,         ///< Generic predicate for ISel
     MO_ShuffleMask,       ///< Other IR Constant for ISel (shuffle masks)
-    MO_Last = MO_ShuffleMask
+    MO_DbgInstrRef, ///< Integer indices referring to an instruction+operand
+    MO_Last = MO_DbgInstrRef
   };
 
 private:
@@ -184,6 +185,11 @@ private:
       MachineOperand *Next;
     } Reg;
 
+    struct { // For MO_DbgInstrRef.
+      unsigned InstrIdx;
+      unsigned OpIdx;
+    } InstrRef;
+
     /// OffsetedInfo - This struct contains the offset and an object identifier.
     /// this represent the object as with an optional offset from it.
     struct {
@@ -246,6 +252,9 @@ public:
   /// Never call clearParent() on an operand in a MachineInstr.
   ///
   void clearParent() { ParentMI = nullptr; }
+
+  /// Returns the index of this operand in the instruction that it belongs to.
+  unsigned getOperandNo() const;
 
   /// Print a subreg index operand.
   /// MO_Immediate operands can also be subreg idices. If it's the case, the
@@ -347,6 +356,7 @@ public:
   /// isMetadata - Tests if this is a MO_Metadata operand.
   bool isMetadata() const { return OpKind == MO_Metadata; }
   bool isMCSymbol() const { return OpKind == MO_MCSymbol; }
+  bool isDbgInstrRef() const { return OpKind == MO_DbgInstrRef; }
   bool isCFIIndex() const { return OpKind == MO_CFIIndex; }
   bool isIntrinsicID() const { return OpKind == MO_IntrinsicID; }
   bool isPredicate() const { return OpKind == MO_Predicate; }
@@ -584,6 +594,16 @@ public:
     return Contents.Sym;
   }
 
+  unsigned getInstrRefInstrIndex() const {
+    assert(isDbgInstrRef() && "Wrong MachineOperand accessor");
+    return Contents.InstrRef.InstrIdx;
+  }
+
+  unsigned getInstrRefOpIndex() const {
+    assert(isDbgInstrRef() && "Wrong MachineOperand accessor");
+    return Contents.InstrRef.OpIdx;
+  }
+
   unsigned getCFIIndex() const {
     assert(isCFIIndex() && "Wrong MachineOperand accessor");
     return Contents.CFIIndex;
@@ -695,6 +715,15 @@ public:
     Contents.MD = MD;
   }
 
+  void setInstrRefInstrIndex(unsigned InstrIdx) {
+    assert(isDbgInstrRef() && "Wrong MachineOperand mutator");
+    Contents.InstrRef.InstrIdx = InstrIdx;
+  }
+  void setInstrRefOpIndex(unsigned OpIdx) {
+    assert(isDbgInstrRef() && "Wrong MachineOperand mutator");
+    Contents.InstrRef.OpIdx = OpIdx;
+  }
+
   void setMBB(MachineBasicBlock *MBB) {
     assert(isMBB() && "Wrong MachineOperand mutator");
     Contents.MBB = MBB;
@@ -761,6 +790,10 @@ public:
 
   /// Replace this operand with a target index.
   void ChangeToTargetIndex(unsigned Idx, int64_t Offset,
+                           unsigned TargetFlags = 0);
+
+  /// Replace this operand with an Instruction Reference.
+  void ChangeToDbgInstrRef(unsigned InstrIdx, unsigned OpIdx,
                            unsigned TargetFlags = 0);
 
   /// ChangeToRegister - Replace this operand with a new register operand of
@@ -916,6 +949,13 @@ public:
     Op.Contents.Sym = Sym;
     Op.setOffset(0);
     Op.setTargetFlags(TargetFlags);
+    return Op;
+  }
+
+  static MachineOperand CreateDbgInstrRef(unsigned InstrIdx, unsigned OpIdx) {
+    MachineOperand Op(MachineOperand::MO_DbgInstrRef);
+    Op.Contents.InstrRef.InstrIdx = InstrIdx;
+    Op.Contents.InstrRef.OpIdx = OpIdx;
     return Op;
   }
 

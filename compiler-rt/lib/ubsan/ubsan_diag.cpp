@@ -214,7 +214,12 @@ static void RenderText(InternalScopedString *Buffer, const char *Message,
       //        printf, and stop using snprintf here.
       char FloatBuffer[32];
 #if SANITIZER_WINDOWS
-      sprintf_s(FloatBuffer, sizeof(FloatBuffer), "%Lg", (long double)A.Float);
+      // On MSVC platforms, long doubles are equal to regular doubles.
+      // In MinGW environments on x86, long doubles are 80 bit, but here,
+      // we're calling an MS CRT provided printf function which considers
+      // long doubles to be 64 bit. Just cast the float value to a regular
+      // double to avoid the potential ambiguity in MinGW mode.
+      sprintf_s(FloatBuffer, sizeof(FloatBuffer), "%g", (double)A.Float);
 #else
       snprintf(FloatBuffer, sizeof(FloatBuffer), "%Lg", (long double)A.Float);
 #endif

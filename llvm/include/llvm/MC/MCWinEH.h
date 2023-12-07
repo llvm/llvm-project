@@ -68,7 +68,7 @@ struct FrameInfo {
     int64_t Offset;
     int64_t Length;
     bool HasProlog;
-    MCSymbol *Symbol;
+    MCSymbol *Symbol = nullptr;
     // Map an Epilog's symbol to its offset within the function.
     MapVector<MCSymbol *, int64_t> Epilogs;
 

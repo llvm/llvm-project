@@ -22,16 +22,16 @@
 ; CHECK-NEXT:  br i1 %p_tmp4, label %polly.stmt.bb5, label %polly.stmt.bb11.exit
 
 ; CHECK:polly.stmt.bb5:
-; CHECK-NEXT:  %p_tmp6 = getelementptr inbounds float, float* %B, i64 42
-; CHECK-NEXT:  %tmp7_p_scalar_ = load float, float* %p_tmp6
+; CHECK-NEXT:  %p_tmp6 = getelementptr inbounds float, ptr %B, i64 42
+; CHECK-NEXT:  %tmp7_p_scalar_ = load float, ptr %p_tmp6
 ; CHECK-NEXT:  %p_tmp8 = fadd float %tmp7_p_scalar_, 1.000000e+00
 ; CHECK-NEXT:  %16 = icmp sle i64 %polly.indvar, 9
 ; CHECK-NEXT:  %polly.Stmt_bb3__TO__bb11_MayWrite2.cond = icmp ne i1 %16, false
 ; CHECK-NEXT:  br i1 %polly.Stmt_bb3__TO__bb11_MayWrite2.cond, label %polly.stmt.bb5.Stmt_bb3__TO__bb11_MayWrite2.partial, label %polly.stmt.bb5.cont
 
 ; CHECK:polly.stmt.bb5.Stmt_bb3__TO__bb11_MayWrite2.partial: ; preds = %polly.stmt.bb5
-; CHECK-NEXT:  %polly.access.B3 = getelementptr float, float* %B, i64 42
-; CHECK-NEXT:  store float %p_tmp8, float* %polly.access.B3
+; CHECK-NEXT:  %polly.access.B3 = getelementptr float, ptr %B, i64 42
+; CHECK-NEXT:  store float %p_tmp8, ptr %polly.access.B3
 ; CHECK-NEXT:  br label %polly.stmt.bb5.cont
 
 ; CHECK:polly.stmt.bb5.cont:
@@ -48,7 +48,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @partial_write_in_region_with_loop(i64* %A, float* %B, i64* %xptr) {
+define void @partial_write_in_region_with_loop(ptr %A, ptr %B, ptr %xptr) {
 bb:
   br label %bb1
 
@@ -58,7 +58,7 @@ bb1:                                              ; preds = %bb12, %bb
   br i1 %exitcond, label %bb2, label %bb14
 
 bb2:                                              ; preds = %bb1
-  %x = load i64, i64* %xptr
+  %x = load i64, ptr %xptr
   br label %bb3
 
 bb3:                                              ; preds = %bb9, %bb2
@@ -68,10 +68,10 @@ bb3:                                              ; preds = %bb9, %bb2
   br i1 %tmp4, label %bb5, label %bb11
 
 bb5:                                              ; preds = %bb3
-  %tmp6 = getelementptr inbounds float, float* %B, i64 42
-  %tmp7 = load float, float* %tmp6, align 4
+  %tmp6 = getelementptr inbounds float, ptr %B, i64 42
+  %tmp7 = load float, ptr %tmp6, align 4
   %tmp8 = fadd float %tmp7, 1.000000e+00
-  store float %tmp8, float* %tmp6, align 4
+  store float %tmp8, ptr %tmp6, align 4
   %tmp10 = add nuw nsw i64 %j.0, 1
   br label %bb3
 

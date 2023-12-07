@@ -1,4 +1,4 @@
-; RUN: llc %s -stop-after=finalize-isel -o - -experimental-assignment-tracking \
+; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG
 
 ;; Test a variety of block inputs and lattice configurations for the assignment
@@ -268,7 +268,7 @@ if.else:                                          ; preds = %do.body1
 ; CHECK-NEXT:    MOV32mi %stack.4.e.addr, 1, $noreg, 0, $noreg, 8
 ; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_deref)
 ; CHECK-NEXT:    MOV32mi %stack.5.f.addr, 1, $noreg, 0, $noreg, 10
-; CHECK-NEXT:    DBG_VALUE %stack.5.f.addr, $noreg, !36, !DIExpression(DW_OP_deref)
+; CHECK-NEXT:    DBG_VALUE %stack.5.f.addr, $noreg, ![[f]], !DIExpression(DW_OP_deref)
 ; CHECK-NEXT: {{^ *$}}
 
 do.cond:                                          ; preds = %if.then, %if.else
@@ -312,7 +312,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!10, !11, !12, !13, !14, !15}
+!llvm.module.flags = !{!10, !11, !12, !13, !14, !15, !1000}
 !llvm.ident = !{!16}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -396,3 +396,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !82 = !DILocalVariable(name: "g", scope: !17, file: !3, line: 3, type: !7)
 !83 = distinct !DIAssignID()
 !84 = distinct !DIAssignID()
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

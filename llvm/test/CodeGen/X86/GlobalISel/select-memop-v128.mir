@@ -4,24 +4,24 @@
 # RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -mattr=+avx512vl -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,AVX512ALL,AVX512VL
 
 --- |
-  define <4 x i32> @test_load_v4i32_noalign(<4 x i32>* %p1) {
-    %r = load <4 x i32>, <4 x i32>* %p1, align 1
+  define <4 x i32> @test_load_v4i32_noalign(ptr %p1) {
+    %r = load <4 x i32>, ptr %p1, align 1
     ret <4 x i32> %r
   }
 
-  define <4 x i32> @test_load_v4i32_align(<4 x i32>* %p1) {
-    %r = load <4 x i32>, <4 x i32>* %p1, align 16
+  define <4 x i32> @test_load_v4i32_align(ptr %p1) {
+    %r = load <4 x i32>, ptr %p1, align 16
     ret <4 x i32> %r
   }
 
-  define <4 x i32>* @test_store_v4i32_align(<4 x i32> %val, <4 x i32>* %p1) {
-    store <4 x i32> %val, <4 x i32>* %p1, align 16
-    ret <4 x i32>* %p1
+  define ptr @test_store_v4i32_align(<4 x i32> %val, ptr %p1) {
+    store <4 x i32> %val, ptr %p1, align 16
+    ret ptr %p1
   }
 
-  define <4 x i32>* @test_store_v4i32_noalign(<4 x i32> %val, <4 x i32>* %p1) {
-    store <4 x i32> %val, <4 x i32>* %p1, align 1
-    ret <4 x i32>* %p1
+  define ptr @test_store_v4i32_noalign(<4 x i32> %val, ptr %p1) {
+    store <4 x i32> %val, ptr %p1, align 1
+    ret ptr %p1
   }
 
 ...

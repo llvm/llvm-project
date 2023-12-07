@@ -3809,7 +3809,7 @@ static kmp_lock_index_t __kmp_lock_table_insert(kmp_user_lock_p lck) {
                sizeof(kmp_user_lock_p) * (__kmp_user_lock_table.used - 1));
     table[0] = (kmp_user_lock_p)__kmp_user_lock_table.table;
     // We cannot free the previous table now, since it may be in use by other
-    // threads. So save the pointer to the previous table in in the first
+    // threads. So save the pointer to the previous table in the first
     // element of the new table. All the tables will be organized into a list,
     // and could be freed when library shutting down.
     __kmp_user_lock_table.table = table;

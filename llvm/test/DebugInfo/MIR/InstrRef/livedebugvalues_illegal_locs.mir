@@ -37,6 +37,7 @@
 ...
 ---
 name: _Z8bb_to_bb
+debugInstrRef: true
 debugValueSubstitutions:
   - { srcinst: 4, srcop: 0, dstinst: 3, dstop: 0, subreg: 0 }
 body:  |
@@ -45,37 +46,37 @@ body:  |
     ; CHECK-LABE: bb.0.entry:
 
     $rax = MOV64ri 1, debug-instr-number 1, debug-location !17
-    DBG_INSTR_REF 1, 0, !16, !DIExpression(), debug-location !17
+    DBG_INSTR_REF !16, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !17
     ;; First check that picking out location works as usual.
-    ; CHECK:      DBG_INSTR_REF 1, 0
-    ; CHECK-NEXT: DBG_VALUE $rax
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $rax
 
     $rax = MOV64ri 1, debug-instr-number 2, debug-location !17
-    DBG_INSTR_REF 2, 999, !16, !DIExpression(), debug-location !17
+    DBG_INSTR_REF !16, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 999), debug-location !17
     ;; Test out of bounds operand number.
-    ; CHECK:      DBG_INSTR_REF 2, 999
-    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 999)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
 
     $rax = MOV64ri 1, debug-instr-number 3, debug-location !17
-    DBG_INSTR_REF 3, 1, !16, !DIExpression(), debug-location !17
+    DBG_INSTR_REF !16, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(3, 1), debug-location !17
     ;; Test non-register operand
-    ; CHECK:      DBG_INSTR_REF 3, 1
-    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 1)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
 
     ;; FIXME: We should test what happens when this meta-instruction is seen
     ;; by livedbugvalues with an instruction number. However, right now it's
     ;; impossible to turn the machine-code verifier off when loading MIR?
     ;KILL implicit killed $eflags, debug-instr-number 4, debug-location !17
-    ;DBG_INSTR_REF 4, 0, !16, !DIExpression(), debug-location !17
+    ;DBG_INSTR_REF !16, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(4, 0), debug-location !17
     ;;; Test non-def operand
-    ;; check:      DBG_INSTR_REF 4, 0
-    ;; check-next: DBG_VALUE $noreg
+    ;; check:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(4, 0)
+    ;; check-next: DBG_VALUE_LIST {{.+}}, $noreg
 
     $noreg = MOV32ri 1, debug-instr-number 5, debug-location !17
-    DBG_INSTR_REF 5, 0, !16, !DIExpression(), debug-location !17
+    DBG_INSTR_REF !16, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(5, 0), debug-location !17
     ;; Def of $noreg?
-    ; CHECK:      DBG_INSTR_REF 5, 0
-    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(5, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
 
     JCC_1 %bb.1, 1, implicit $eflags
     JMP_1 %bb.2
@@ -85,10 +86,10 @@ body:  |
     ; CHECK-LABEL: bb.1:
 
     DBG_PHI $rax, 6
-    DBG_INSTR_REF 6, 1, !16, !DIExpression(), debug-location !17
+    DBG_INSTR_REF !16, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(6, 1), debug-location !17
     ;; Test out-of-bounds reference to a DBG_PHI.
-    ; CHECK:      DBG_INSTR_REF 6, 1
-    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(6, 1)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
 
     DBG_PHI $noreg, 7
     JMP_1 %bb.3
@@ -97,22 +98,22 @@ body:  |
     successors: %bb.3
     ; CHECK-LABEL: bb.2:
     DBG_PHI 1, 6
-    DBG_INSTR_REF 6, 0, !16, !DIExpression(), debug-location !17
+    DBG_INSTR_REF !16, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(6, 0), debug-location !17
     ;; Test non-reg operand to DBG_PHI. It's not clear if this can ever happen
     ;; as the result of an optimisation, but lets test for it anyway.
-    ; CHECK:      DBG_INSTR_REF 6, 0
-    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(6, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
 
     DBG_PHI 1, 7
     JMP_1 %bb.3
 
   bb.3:
     ; CHECK-LABEL: bb.3:
-    DBG_INSTR_REF 7, 0, !16, !DIExpression(), debug-location !17
+    DBG_INSTR_REF !16, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(7, 0), debug-location !17
     ;; PHI resolution of illegal inputs shouldn't crash either. It should also
     ;; come out as a $noreg location.
-    ; CHECK:      DBG_INSTR_REF 7, 0
-    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(7, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
 
     RET 0, debug-location !17
 

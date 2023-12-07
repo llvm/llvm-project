@@ -15,60 +15,115 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/Debuginfod/HTTPClient.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ThreadPool.h"
 
 using namespace llvm;
 
-cl::OptionCategory DebuginfodCategory("llvm-debuginfod Options");
+// Command-line option boilerplate.
+namespace {
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static cl::list<std::string> ScanPaths(cl::Positional,
-                                       cl::desc("<Directories to scan>"),
-                                       cl::cat(DebuginfodCategory));
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
+#include "Opts.inc"
+#undef PREFIX
 
-static cl::opt<unsigned>
-    Port("p", cl::init(0),
-         cl::desc("Port to listen on. Set to 0 to bind to any available port."),
-         cl::cat(DebuginfodCategory));
+using namespace llvm::opt;
+static constexpr opt::OptTable::Info InfoTable[] = {
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static cl::opt<std::string>
-    HostInterface("i", cl::init("0.0.0.0"),
-                  cl::desc("Host interface to bind to."),
-                  cl::cat(DebuginfodCategory));
+class DebuginfodOptTable : public opt::GenericOptTable {
+public:
+  DebuginfodOptTable() : GenericOptTable(InfoTable) {}
+};
+} // end anonymous namespace
 
-static cl::opt<int>
-    ScanInterval("t", cl::init(300),
-                 cl::desc("Number of seconds to wait between subsequent "
-                          "automated scans of the filesystem."),
-                 cl::cat(DebuginfodCategory));
-
-static cl::opt<double> MinInterval(
-    "m", cl::init(10),
-    cl::desc(
-        "Minimum number of seconds to wait before an on-demand update can be "
-        "triggered by a request for a buildid which is not in the collection."),
-    cl::cat(DebuginfodCategory));
-
-static cl::opt<size_t>
-    MaxConcurrency("c", cl::init(0),
-                   cl::desc("Maximum number of files to scan concurrently. If "
-                            "0, use the hardware concurrency."),
-                   cl::cat(DebuginfodCategory));
-
-static cl::opt<bool> VerboseLogging("v", cl::init(false),
-                                    cl::desc("Enable verbose logging."),
-                                    cl::cat(DebuginfodCategory));
+// Options
+static unsigned Port;
+static std::string HostInterface;
+static int ScanInterval;
+static double MinInterval;
+static size_t MaxConcurrency;
+static bool VerboseLogging;
+static std::vector<std::string> ScanPaths;
 
 ExitOnError ExitOnErr;
 
-int main(int argc, char **argv) {
+template <typename T>
+static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value,
+                        T Default) {
+  if (const opt::Arg *A = Args.getLastArg(ID)) {
+    StringRef V(A->getValue());
+    if (!llvm::to_integer(V, Value, 0)) {
+      errs() << A->getSpelling() + ": expected an integer, but got '" + V + "'";
+      exit(1);
+    }
+  } else {
+    Value = Default;
+  }
+}
+
+static void parseArgs(int argc, char **argv) {
+  DebuginfodOptTable Tbl;
+  llvm::StringRef ToolName = argv[0];
+  llvm::BumpPtrAllocator A;
+  llvm::StringSaver Saver{A};
+  opt::InputArgList Args =
+      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+        llvm::errs() << Msg << '\n';
+        std::exit(1);
+      });
+
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(llvm::outs(),
+                  "llvm-debuginfod [options] <Directories to scan>",
+                  ToolName.str().c_str());
+    std::exit(0);
+  }
+
+  VerboseLogging = Args.hasArg(OPT_verbose_logging);
+  ScanPaths = Args.getAllArgValues(OPT_INPUT);
+
+  parseIntArg(Args, OPT_port, Port, 0u);
+  parseIntArg(Args, OPT_scan_interval, ScanInterval, 300);
+  parseIntArg(Args, OPT_max_concurrency, MaxConcurrency, size_t(0));
+
+  if (const opt::Arg *A = Args.getLastArg(OPT_min_interval)) {
+    StringRef V(A->getValue());
+    if (!llvm::to_float(V, MinInterval)) {
+      errs() << A->getSpelling() + ": expected a number, but got '" + V + "'";
+      exit(1);
+    }
+  } else {
+    MinInterval = 10.0;
+  }
+
+  HostInterface = Args.getLastArgValue(OPT_host_interface, "0.0.0.0");
+}
+
+int llvm_debuginfod_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
   HTTPClient::initialize();
-  cl::HideUnrelatedOptions({&DebuginfodCategory});
-  cl::ParseCommandLineOptions(argc, argv);
+  parseArgs(argc, argv);
 
   SmallVector<StringRef, 1> Paths;
   for (const std::string &Path : ScanPaths)

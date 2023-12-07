@@ -9,7 +9,7 @@
 %struct.anon = type { i32, i32, i32, i32, i32, i32, i32, %struct.f, i32, i64, i32 }
 %struct.f = type { i32, i32, i32, i32, i32 }
 
-define arm_aapcscc void @s(i64* %q, %struct.anon* %p) {
+define arm_aapcscc void @s(ptr %q, ptr %p) {
 ; ASSEMBLY-LABEL: s:
 ; ASSEMBLY:       @ %bb.0: @ %entry
 ; ASSEMBLY-NEXT:    push {r4, r5, r11, lr}
@@ -21,9 +21,8 @@ define arm_aapcscc void @s(i64* %q, %struct.anon* %p) {
 ; ASSEMBLY-NEXT:    sbc r5, r5, #0
 ; ASSEMBLY-NEXT:    ldr r2, [r1, #8]
 ; ASSEMBLY-NEXT:    ldr r3, [r1, #12]
-; ASSEMBLY-NEXT:    str r5, [sp, #132]
+; ASSEMBLY-NEXT:    strd r4, r5, [sp, #128]
 ; ASSEMBLY-NEXT:    add r5, r1, #16
-; ASSEMBLY-NEXT:    str r4, [sp, #128]
 ; ASSEMBLY-NEXT:    mov r4, sp
 ; ASSEMBLY-NEXT:    vld1.32 {d16}, [r5]!
 ; ASSEMBLY-NEXT:    vst1.32 {d16}, [r4]!
@@ -52,9 +51,9 @@ define arm_aapcscc void @s(i64* %q, %struct.anon* %p) {
 ; ASSEMBLY-NEXT:    add sp, sp, #136
 ; ASSEMBLY-NEXT:    pop {r4, r5, r11, pc}
 entry:
-  %0 = load i64, i64* %q, align 8
+  %0 = load i64, ptr %q, align 8
   %sub = add nsw i64 %0, -1
-  tail call arm_aapcscc void bitcast (void (...)* @r to void (%struct.anon*, %struct.anon*, i64)*)(%struct.anon* byval(%struct.anon) nonnull align 8 %p, %struct.anon* byval(%struct.anon) nonnull align 8 %p, i64 %sub)
+  tail call arm_aapcscc void @r(ptr byval(%struct.anon) nonnull align 8 %p, ptr byval(%struct.anon) nonnull align 8 %p, i64 %sub)
   ret void
 }
 

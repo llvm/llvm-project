@@ -25,20 +25,18 @@ extern cl::opt<bolt::FrameOptimizationType> FrameOptimization;
 namespace llvm {
 namespace bolt {
 
-namespace {
-
-bool getStackAdjustmentSize(const BinaryContext &BC, const MCInst &Inst,
-                            int64_t &Adjustment) {
+static bool getStackAdjustmentSize(const BinaryContext &BC, const MCInst &Inst,
+                                   int64_t &Adjustment) {
   return BC.MIB->evaluateStackOffsetExpr(
       Inst, Adjustment, std::make_pair(BC.MIB->getStackPointer(), 0LL),
       std::make_pair(0, 0LL));
 }
 
-bool isIndifferentToSP(const MCInst &Inst, const BinaryContext &BC) {
+static bool isIndifferentToSP(const MCInst &Inst, const BinaryContext &BC) {
   if (BC.MIB->isCFI(Inst))
     return true;
 
-  const MCInstrDesc II = BC.MII->get(Inst.getOpcode());
+  const MCInstrDesc &II = BC.MII->get(Inst.getOpcode());
   if (BC.MIB->isTerminator(Inst) ||
       II.hasImplicitDefOfPhysReg(BC.MIB->getStackPointer(), BC.MRI.get()) ||
       II.hasImplicitUseOfPhysReg(BC.MIB->getStackPointer()))
@@ -50,12 +48,12 @@ bool isIndifferentToSP(const MCInst &Inst, const BinaryContext &BC) {
   return true;
 }
 
-bool shouldProcess(const BinaryFunction &Function) {
+static bool shouldProcess(const BinaryFunction &Function) {
   return Function.isSimple() && Function.hasCFG() && !Function.isIgnored();
 }
 
-void runForAllWeCare(std::map<uint64_t, BinaryFunction> &BFs,
-                     std::function<void(BinaryFunction &)> Task) {
+static void runForAllWeCare(std::map<uint64_t, BinaryFunction> &BFs,
+                            std::function<void(BinaryFunction &)> Task) {
   for (auto &It : BFs) {
     BinaryFunction &Function = It.second;
     if (shouldProcess(Function))
@@ -63,14 +61,11 @@ void runForAllWeCare(std::map<uint64_t, BinaryFunction> &BFs,
   }
 }
 
-} // end anonymous namespace
-
 void AllocCombinerPass::combineAdjustments(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   for (BinaryBasicBlock &BB : BF) {
     MCInst *Prev = nullptr;
-    for (auto I = BB.rbegin(), E = BB.rend(); I != E; ++I) {
-      MCInst &Inst = *I;
+    for (MCInst &Inst : llvm::reverse(BB)) {
       if (isIndifferentToSP(Inst, BC))
         continue; // Skip updating Prev
 

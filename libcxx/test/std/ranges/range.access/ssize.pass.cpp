@@ -24,12 +24,12 @@ static_assert( std::is_invocable_v<RangeSSizeT, int (&&)[1]>);
 static_assert( std::is_invocable_v<RangeSSizeT, int (&)[1]>);
 
 struct SizeMember {
-  constexpr size_t size() { return 42; }
+  constexpr std::size_t size() { return 42; }
 };
 static_assert(!std::is_invocable_v<decltype(std::ranges::ssize), const SizeMember&>);
 
 struct SizeFunction {
-  friend constexpr size_t size(SizeFunction) { return 42; }
+  friend constexpr std::size_t size(SizeFunction) { return 42; }
 };
 
 struct SizeFunctionSigned {
@@ -47,7 +47,7 @@ struct ShortUnsignedReturnType {
 };
 
 // size_t changes depending on the platform.
-using SignedSizeT = std::make_signed_t<size_t>;
+using SignedSizeT = std::make_signed_t<std::size_t>;
 
 constexpr bool test() {
   int a[4];
@@ -71,7 +71,7 @@ constexpr bool test() {
   // This gets converted to ptrdiff_t because it's wider.
   ShortUnsignedReturnType c;
   assert(std::ranges::ssize(c) == 42);
-  ASSERT_SAME_TYPE(decltype(std::ranges::ssize(c)), ptrdiff_t);
+  ASSERT_SAME_TYPE(decltype(std::ranges::ssize(c)), std::ptrdiff_t);
 
   return true;
 }

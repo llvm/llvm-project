@@ -23,6 +23,7 @@ endif()
 
 set(SWIG_COMMON_FLAGS
   -c++
+  -w361,362 # Ignore warnings about ignored operator overloads
   -features autodoc
   -I${LLDB_SOURCE_DIR}/include
   -I${CMAKE_CURRENT_SOURCE_DIR}

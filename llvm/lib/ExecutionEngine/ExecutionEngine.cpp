@@ -34,9 +34,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Host.h"
 #include <cmath>
 #include <cstring>
 #include <mutex>
@@ -430,7 +430,7 @@ int ExecutionEngine::runFunctionAsMain(Function *Fn,
   // Check main() type
   unsigned NumArgs = Fn->getFunctionType()->getNumParams();
   FunctionType *FTy = Fn->getFunctionType();
-  Type* PPInt8Ty = Type::getInt8PtrTy(Fn->getContext())->getPointerTo();
+  Type *PPInt8Ty = PointerType::get(Fn->getContext(), 0);
 
   // Check the argument types.
   if (NumArgs > 3)
@@ -719,7 +719,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
         APFloat apf = APFloat(APFloat::x87DoubleExtended(), GV.IntVal);
         uint64_t v;
         bool ignored;
-        (void)apf.convertToInteger(makeMutableArrayRef(v), BitWidth,
+        (void)apf.convertToInteger(MutableArrayRef(v), BitWidth,
                                    CE->getOpcode()==Instruction::FPToSI,
                                    APFloat::rmTowardZero, &ignored);
         GV.IntVal = v; // endian?
@@ -878,6 +878,12 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     report_fatal_error(OS.str());
   }
 
+  if (auto *TETy = dyn_cast<TargetExtType>(C->getType())) {
+    assert(TETy->hasProperty(TargetExtType::HasZeroInit) && C->isNullValue() &&
+           "TargetExtType only supports null constant value");
+    C = Constant::getNullValue(TETy->getLayoutType());
+  }
+
   // Otherwise, we have a simple constant.
   GenericValue Result;
   switch (C->getType()->getTypeID()) {
@@ -1017,6 +1023,11 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
 
 void ExecutionEngine::StoreValueToMemory(const GenericValue &Val,
                                          GenericValue *Ptr, Type *Ty) {
+  // It is safe to treat TargetExtType as its layout type since the underlying
+  // bits are only copied and are not inspected.
+  if (auto *TETy = dyn_cast<TargetExtType>(Ty))
+    Ty = TETy->getLayoutType();
+
   const unsigned StoreBytes = getDataLayout().getTypeStoreSize(Ty);
 
   switch (Ty->getTypeID()) {
@@ -1068,6 +1079,9 @@ void ExecutionEngine::StoreValueToMemory(const GenericValue &Val,
 void ExecutionEngine::LoadValueFromMemory(GenericValue &Result,
                                           GenericValue *Ptr,
                                           Type *Ty) {
+  if (auto *TETy = dyn_cast<TargetExtType>(Ty))
+    Ty = TETy->getLayoutType();
+
   const unsigned LoadBytes = getDataLayout().getTypeStoreSize(Ty);
 
   switch (Ty->getTypeID()) {

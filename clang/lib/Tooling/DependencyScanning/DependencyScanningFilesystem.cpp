@@ -10,6 +10,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/Threading.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;
@@ -67,7 +68,7 @@ EntryRef DependencyScanningWorkerFilesystem::scanForDirectivesIfNecessary(
                                         Directives)) {
     Contents->DepDirectiveTokens.clear();
     // FIXME: Propagate the diagnostic if desired by the client.
-    Contents->DepDirectives.store(new Optional<DependencyDirectivesTy>());
+    Contents->DepDirectives.store(new std::optional<DependencyDirectivesTy>());
     return EntryRef(Filename, Entry);
   }
 
@@ -76,7 +77,7 @@ EntryRef DependencyScanningWorkerFilesystem::scanForDirectivesIfNecessary(
   // threads may skip the
   // critical section (`DepDirectives != nullptr`), leading to a data race.
   Contents->DepDirectives.store(
-      new Optional<DependencyDirectivesTy>(std::move(Directives)));
+      new std::optional<DependencyDirectivesTy>(std::move(Directives)));
   return EntryRef(Filename, Entry);
 }
 
@@ -180,7 +181,11 @@ static bool shouldCacheStatFailures(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
     return false; // This may be the module cache directory.
-  // Only cache stat failures on source files.
+  // Only cache stat failures on files that are not expected to change during
+  // the build.
+  StringRef FName = llvm::sys::path::filename(Filename);
+  if (FName == "module.modulemap" || FName == "module.map")
+    return true;
   return shouldScanForDirectivesBasedOnExtension(Filename);
 }
 
@@ -257,6 +262,9 @@ DependencyScanningWorkerFilesystem::status(const Twine &Path) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
 
+  if (Filename.endswith(".pcm"))
+    return getUnderlyingFS().status(Path);
+
   llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
   if (!Result)
     return Result.getError();
@@ -313,6 +321,9 @@ llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
 DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
+
+  if (Filename.endswith(".pcm"))
+    return getUnderlyingFS().openFileForRead(Path);
 
   llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
   if (!Result)

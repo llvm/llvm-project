@@ -16,7 +16,7 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 define hidden i32 @f(i32 %n) local_unnamed_addr #0 {
 entry:
   %vla = alloca i32, i32 %n, align 4
-  %call = call i32 @g(i32 %n, i32* nonnull %vla) #0
+  %call = call i32 @g(i32 %n, ptr nonnull %vla) #0
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %for.body.preheader, label %for.cond.cleanup
 
@@ -38,8 +38,8 @@ for.cond.cleanup.loopexit.unr-lcssa:              ; preds = %for.body, %for.body
   br i1 %lcmp.mod.not, label %for.cond.cleanup, label %for.body.epil
 
 for.body.epil:                                    ; preds = %for.cond.cleanup.loopexit.unr-lcssa
-  %arrayidx.epil = getelementptr inbounds i32, i32* %vla, i32 %i.010.unr
-  %2 = load i32, i32* %arrayidx.epil, align 4
+  %arrayidx.epil = getelementptr inbounds i32, ptr %vla, i32 %i.010.unr
+  %2 = load i32, ptr %arrayidx.epil, align 4
   %add.epil = add nsw i32 %2, %s.09.unr
   %epil.iter.cmp.not = icmp eq i32 %xtraiter, 1
   br i1 %epil.iter.cmp.not, label %for.cond.cleanup, label %for.body.epil.1
@@ -52,20 +52,20 @@ for.body:                                         ; preds = %for.body, %for.body
   %i.010 = phi i32 [ 0, %for.body.preheader.new ], [ %inc.3, %for.body ]
   %s.09 = phi i32 [ 0, %for.body.preheader.new ], [ %add.3, %for.body ]
   %niter = phi i32 [ %unroll_iter, %for.body.preheader.new ], [ %niter.nsub.3, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %vla, i32 %i.010
-  %3 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %vla, i32 %i.010
+  %3 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %3, %s.09
   %inc = or i32 %i.010, 1
-  %arrayidx.1 = getelementptr inbounds i32, i32* %vla, i32 %inc
-  %4 = load i32, i32* %arrayidx.1, align 4
+  %arrayidx.1 = getelementptr inbounds i32, ptr %vla, i32 %inc
+  %4 = load i32, ptr %arrayidx.1, align 4
   %add.1 = add nsw i32 %4, %add
   %inc.1 = or i32 %i.010, 2
-  %arrayidx.2 = getelementptr inbounds i32, i32* %vla, i32 %inc.1
-  %5 = load i32, i32* %arrayidx.2, align 4
+  %arrayidx.2 = getelementptr inbounds i32, ptr %vla, i32 %inc.1
+  %5 = load i32, ptr %arrayidx.2, align 4
   %add.2 = add nsw i32 %5, %add.1
   %inc.2 = or i32 %i.010, 3
-  %arrayidx.3 = getelementptr inbounds i32, i32* %vla, i32 %inc.2
-  %6 = load i32, i32* %arrayidx.3, align 4
+  %arrayidx.3 = getelementptr inbounds i32, ptr %vla, i32 %inc.2
+  %6 = load i32, ptr %arrayidx.3, align 4
   %add.3 = add nsw i32 %6, %add.2
   %inc.3 = add nuw nsw i32 %i.010, 4
   %niter.nsub.3 = add i32 %niter, -4
@@ -74,16 +74,16 @@ for.body:                                         ; preds = %for.body, %for.body
 
 for.body.epil.1:                                  ; preds = %for.body.epil
   %inc.epil = add nuw nsw i32 %i.010.unr, 1
-  %arrayidx.epil.1 = getelementptr inbounds i32, i32* %vla, i32 %inc.epil
-  %7 = load i32, i32* %arrayidx.epil.1, align 4
+  %arrayidx.epil.1 = getelementptr inbounds i32, ptr %vla, i32 %inc.epil
+  %7 = load i32, ptr %arrayidx.epil.1, align 4
   %add.epil.1 = add nsw i32 %7, %add.epil
   %epil.iter.cmp.1.not = icmp eq i32 %xtraiter, 2
   br i1 %epil.iter.cmp.1.not, label %for.cond.cleanup, label %for.body.epil.2
 
 for.body.epil.2:                                  ; preds = %for.body.epil.1
   %inc.epil.1 = add nuw nsw i32 %i.010.unr, 2
-  %arrayidx.epil.2 = getelementptr inbounds i32, i32* %vla, i32 %inc.epil.1
-  %8 = load i32, i32* %arrayidx.epil.2, align 4
+  %arrayidx.epil.2 = getelementptr inbounds i32, ptr %vla, i32 %inc.epil.1
+  %8 = load i32, ptr %arrayidx.epil.2, align 4
   %add.epil.2 = add nsw i32 %8, %add.epil.1
   br label %for.cond.cleanup
 }
@@ -114,7 +114,7 @@ for.body.epil.2:                                  ; preds = %for.body.epil.1
 ; CHECK-NEXT: aut    r12, lr, sp
 ; CHECK-NEXT: bx     lr
 
-declare dso_local i32 @g(i32, i32*) local_unnamed_addr #0
+declare dso_local i32 @g(i32, ptr) local_unnamed_addr #0
 
 attributes #0 = { nounwind }
 

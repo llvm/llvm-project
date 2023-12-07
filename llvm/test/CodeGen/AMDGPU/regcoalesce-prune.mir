@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=amdgcn-amd-amdhsa-opencl -run-pass=simple-register-coalescing | FileCheck %s
+# RUN: llc -o - %s -mtriple=amdgcn-amd-amdhsa-opencl -run-pass=register-coalescer | FileCheck %s
 ---
 # Checks for a bug where subregister liveranges were not properly pruned for
 # an IMPLCITI_DEF that gets removed completely.

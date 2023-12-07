@@ -10,17 +10,14 @@
 # CHECK:       <dest>:
 # CHECK-NEXT:     10700:       ret
 # CHECK:       <__AArch64ADRPThunk_>:
-# CHECK-NEXT:     10704:       adrp    x16, 0x10000
-# CHECK-NEXT:                  add     x16, x16, #1792
-# CHECK-NEXT:                  br      x16
-# CHECK-EMPTY:
+# CHECK-NEXT:     10704:       b       0x10700 <dest>
 # CHECK:       <__AArch64ADRPThunk_>:
-# CHECK-NEXT:   8010710:       adrp    x16, 0x10000
+# CHECK-NEXT:   8010708:       adrp    x16, 0x10000
 # CHECK-NEXT:                  add     x16, x16, #1792
-# CHECK-NEXT:                  br      x16
+# CHECk-NEXT:                  br      x16
 # CHECK-LABEL: <high>:
-# CHECK-NEXT:   801071c:       bl      0x8010710 <__AArch64ADRPThunk_>
-# CHECK-NEXT:                  b       0x8010710 <__AArch64ADRPThunk_>
+# CHECK-NEXT:   8010714:       bl      0x8010708 <__AArch64ADRPThunk_>
+# CHECK-NEXT:                  b       0x8010708 <__AArch64ADRPThunk_>
 
 .section .text._start, "ax", %progbits
 .globl _start

@@ -101,8 +101,3 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
 void SanitizerMetadata::disableSanitizerForGlobal(llvm::GlobalVariable *GV) {
   reportGlobal(GV, SourceLocation(), "", QualType(), SanitizerKind::All);
 }
-
-void SanitizerMetadata::disableSanitizerForInstruction(llvm::Instruction *I) {
-  I->setMetadata(llvm::LLVMContext::MD_nosanitize,
-                 llvm::MDNode::get(CGM.getLLVMContext(), std::nullopt));
-}

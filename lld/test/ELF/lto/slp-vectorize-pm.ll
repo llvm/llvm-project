@@ -2,16 +2,16 @@
 ; RUN: opt -module-summary %s -o %t.o
 
 ; Test SLP and Loop Vectorization are enabled by default at O2 and O3.
-; RUN: ld.lld --plugin-opt=new-pass-manager --plugin-opt=debug-pass-manager --plugin-opt=O0 --plugin-opt=save-temps -shared -o %t1.o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-O0-SLP
+; RUN: ld.lld --plugin-opt=debug-pass-manager --plugin-opt=O0 --plugin-opt=save-temps -shared -o %t1.o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-O0-SLP
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-O0-LPV
 
-; RUN: ld.lld --plugin-opt=new-pass-manager --plugin-opt=debug-pass-manager --plugin-opt=O1 --plugin-opt=save-temps -shared -o %t2.o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-O1-SLP
+; RUN: ld.lld --plugin-opt=debug-pass-manager --plugin-opt=O1 --plugin-opt=save-temps -shared -o %t2.o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-O1-SLP
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-O1-LPV
 
-; RUN: ld.lld --plugin-opt=new-pass-manager --plugin-opt=debug-pass-manager --plugin-opt=O2 --plugin-opt=save-temps -shared -o %t3.o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-O2-SLP
+; RUN: ld.lld --plugin-opt=debug-pass-manager --plugin-opt=O2 --plugin-opt=save-temps -shared -o %t3.o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-O2-SLP
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-O2-LPV
 
-; RUN: ld.lld --plugin-opt=new-pass-manager --plugin-opt=debug-pass-manager --plugin-opt=O3 --plugin-opt=save-temps -shared -o %t4.o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-O3-SLP
+; RUN: ld.lld --plugin-opt=debug-pass-manager --plugin-opt=O3 --plugin-opt=save-temps -shared -o %t4.o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-O3-SLP
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-O3-LPV
 
 ; CHECK-O0-SLP-NOT: Running pass: SLPVectorizerPass

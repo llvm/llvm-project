@@ -1,14 +1,14 @@
 # REQUIRES: riscv
-# RUN: llvm-mc -filetype=obj -triple=riscv64 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -riscv-asm-relax-branches=0 %s -o %t.o
 # RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=RELOC %s
 
 # RUN: ld.lld -e absolute %t.o -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=CHECK,PC %s
-# RUN: llvm-readelf -x .data %t | FileCheck --check-prefixes=HEX %s
+# RUN: llvm-readelf -x .data %t | FileCheck --check-prefixes=HEX,HEX-WITHOUT-PLT %s
 
 # RUN: ld.lld -e absolute %t.o -o %t --export-dynamic
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=CHECK,PLT %s
-# RUN: llvm-readelf -x .data %t | FileCheck --check-prefixes=HEX %s
+# RUN: llvm-readelf -x .data %t | FileCheck --check-prefixes=HEX,HEX-WITH-PLT %s
 
 .weak target
 .global absolute, relative, branch
@@ -75,8 +75,22 @@ branch:
 ## Absolute relocations are resolved to 0.
 # RELOC:      0x0 R_RISCV_64 target 0x3
 # RELOC-NEXT: 0x8 R_RISCV_32 target 0x4
+# RELOC-NEXT: 0xC R_RISCV_PLT32 target 0x0
+
 # HEX:      section '.data':
 # HEX-NEXT: 03000000 00000000 04000000
+# HEX-WITHOUT-PLT-SAME: 00000000
+
+## A plt entry is created for target, so this is the offset between the
+## plt entry and this address.
+##
+##   S = 0x11360 (the address of the plt entry for target)
+##   A = 0
+##   P = 0x1343c (the address of `.`)
+##
+##   S - A + P = -0x0x20dc = 0xffffdf24
+# HEX-WITH-PLT-SAME: 24dfffff
+
 .data
 .p2align 3
 .quad target+3
@@ -84,3 +98,5 @@ branch:
 
 # PC-NOT:      .plt:
 # PLT:         .plt:
+
+.word target@plt - .

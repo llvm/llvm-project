@@ -73,7 +73,7 @@ public:
             .Case<LLVM::LLVMArrayType, IntegerType, LLVM::LLVMFunctionType,
                   LLVM::LLVMPointerType, LLVM::LLVMStructType,
                   LLVM::LLVMFixedVectorType, LLVM::LLVMScalableVectorType,
-                  VectorType>(
+                  VectorType, LLVM::LLVMTargetExtType>(
                 [this](auto type) { return this->translate(type); })
             .Default([](Type t) -> llvm::Type * {
               llvm_unreachable("unknown LLVM dialect type");
@@ -106,10 +106,7 @@ private:
 
   /// Translates the given pointer type.
   llvm::Type *translate(LLVM::LLVMPointerType type) {
-    if (type.isOpaque())
-      return llvm::PointerType::get(context, type.getAddressSpace());
-    return llvm::PointerType::get(translateType(type.getElementType()),
-                                  type.getAddressSpace());
+    return llvm::PointerType::get(context, type.getAddressSpace());
   }
 
   /// Translates the given structure type, supports both identified and literal
@@ -158,6 +155,14 @@ private:
                                          type.getMinNumElements());
   }
 
+  /// Translates the given target extension type.
+  llvm::Type *translate(LLVM::LLVMTargetExtType type) {
+    SmallVector<llvm::Type *> typeParams;
+    translateTypes(type.getTypeParams(), typeParams);
+    return llvm::TargetExtType::get(context, type.getExtTypeName(), typeParams,
+                                    type.getIntParams());
+  }
+
   /// Translates a list of types.
   void translateTypes(ArrayRef<Type> types,
                       SmallVectorImpl<llvm::Type *> &result) {
@@ -190,5 +195,5 @@ llvm::Type *LLVM::TypeToLLVMIRTranslator::translateType(Type type) {
 
 unsigned LLVM::TypeToLLVMIRTranslator::getPreferredAlignment(
     Type type, const llvm::DataLayout &layout) {
-  return layout.getPrefTypeAlignment(translateType(type));
+  return layout.getPrefTypeAlign(translateType(type)).value();
 }

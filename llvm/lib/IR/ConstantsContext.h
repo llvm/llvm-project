@@ -90,32 +90,6 @@ public:
   }
 };
 
-/// SelectConstantExpr - This class is private to Constants.cpp, and is used
-/// behind the scenes to implement select constant exprs.
-class SelectConstantExpr final : public ConstantExpr {
-public:
-  SelectConstantExpr(Constant *C1, Constant *C2, Constant *C3)
-    : ConstantExpr(C2->getType(), Instruction::Select, &Op<0>(), 3) {
-    Op<0>() = C1;
-    Op<1>() = C2;
-    Op<2>() = C3;
-  }
-
-  // allocate space for exactly three operands
-  void *operator new(size_t S) { return User::operator new(S, 3); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
-
-  /// Transparently provide more efficient getOperand methods.
-  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-
-  static bool classof(const ConstantExpr *CE) {
-    return CE->getOpcode() == Instruction::Select;
-  }
-  static bool classof(const Value *V) {
-    return isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V));
-  }
-};
-
 /// ExtractElementConstantExpr - This class is private to
 /// Constants.cpp, and is used behind the scenes to implement
 /// extractelement constant exprs.
@@ -278,11 +252,6 @@ template <>
 struct OperandTraits<BinaryConstantExpr>
     : public FixedNumOperandTraits<BinaryConstantExpr, 2> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BinaryConstantExpr, Value)
-
-template <>
-struct OperandTraits<SelectConstantExpr>
-    : public FixedNumOperandTraits<SelectConstantExpr, 3> {};
-DEFINE_TRANSPARENT_OPERAND_ACCESSORS(SelectConstantExpr, Value)
 
 template <>
 struct OperandTraits<ExtractElementConstantExpr>
@@ -523,8 +492,6 @@ public:
         return new BinaryConstantExpr(Opcode, Ops[0], Ops[1],
                                       SubclassOptionalData);
       llvm_unreachable("Invalid ConstantExpr!");
-    case Instruction::Select:
-      return new SelectConstantExpr(Ops[0], Ops[1], Ops[2]);
     case Instruction::ExtractElement:
       return new ExtractElementConstantExpr(Ops[0], Ops[1]);
     case Instruction::InsertElement:

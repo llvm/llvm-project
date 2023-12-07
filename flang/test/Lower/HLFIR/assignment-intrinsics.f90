@@ -1,5 +1,5 @@
 ! Test lowering of intrinsic assignments to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 ! -----------------------------------------------------------------------------
 !     Test assignments with scalar variable LHS and RHS
@@ -12,7 +12,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPscalar_int(
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_intEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_intEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:  hlfir.assign %[[VAL_3]]#0 to %[[VAL_2]]#0 : !fir.ref<i32>, !fir.ref<i32>
+! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0
+! CHECK:  hlfir.assign %[[VAL_4]] to %[[VAL_2]]#0 : i32, !fir.ref<i32>
 
 subroutine scalar_logical(x, y)
   logical :: x, y
@@ -21,7 +22,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPscalar_logical(
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_logicalEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_logicalEy"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:  hlfir.assign %[[VAL_3]]#0 to %[[VAL_2]]#0 : !fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>
+! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0
+! CHECK:  hlfir.assign %[[VAL_4]] to %[[VAL_2]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 
 subroutine scalar_real(x, y)
   real :: x, y
@@ -30,7 +32,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPscalar_real(
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_realEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_realEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:  hlfir.assign %[[VAL_3]]#0 to %[[VAL_2]]#0 : !fir.ref<f32>, !fir.ref<f32>
+! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0
+! CHECK:  hlfir.assign %[[VAL_4]] to %[[VAL_2]]#0 : f32, !fir.ref<f32>
 
 subroutine scalar_complex(x, y)
   complex :: x, y
@@ -39,7 +42,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPscalar_complex(
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_complexEx"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_complexEy"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  hlfir.assign %[[VAL_3]]#0 to %[[VAL_2]]#0 : !fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>
+! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0
+! CHECK:  hlfir.assign %[[VAL_4]] to %[[VAL_2]]#0 : !fir.complex<4>, !fir.ref<!fir.complex<4>>
 
 subroutine scalar_character(x, y)
   character(*) :: x, y
@@ -70,7 +74,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPscalar_logical_2(
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_logical_2Ex"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant true
-! CHECK:  hlfir.assign %[[VAL_2]] to %[[VAL_1]]#0 : i1, !fir.ref<!fir.logical<4>>
+! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (i1) -> !fir.logical<4>
+! CHECK:  hlfir.assign %[[VAL_3]] to %[[VAL_1]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 
 subroutine scalar_real_2(x)
   real :: x
@@ -135,6 +140,17 @@ end subroutine
 ! CHECK:  %[[VAL_11:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFarray_characterEy"} : (!fir.ref<!fir.array<10x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<10x!fir.char<1,?>>>, !fir.ref<!fir.array<10x!fir.char<1,?>>>)
 ! CHECK:  hlfir.assign %[[VAL_11]]#0 to %[[VAL_6]]#0 : !fir.box<!fir.array<10x!fir.char<1,?>>>, !fir.box<!fir.array<10x!fir.char<1,?>>>
 
+subroutine array_pointer(x, y)
+  real, pointer :: x(:), y(:)
+  x = y
+end subroutine
+! CHECK-LABEL: func.func @_QParray_pointer(
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %{{.*}}Ex
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}}Ey
+! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:  hlfir.assign %[[VAL_3]] to %[[VAL_4]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.box<!fir.ptr<!fir.array<?xf32>>>
+
 ! -----------------------------------------------------------------------------
 !     Test assignments with array LHS and scalar RHS
 ! -----------------------------------------------------------------------------
@@ -146,4 +162,39 @@ end subroutine
 ! CHECK-LABEL: func.func @_QParray_scalar(
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFarray_scalarEx"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFarray_scalarEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:  hlfir.assign %[[VAL_5]]#0 to %[[VAL_4]]#0 : !fir.ref<i32>, !fir.ref<!fir.array<100xi32>>
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_5]]#0
+! CHECK:  hlfir.assign %[[VAL_6]] to %[[VAL_4]]#0 : i32, !fir.ref<!fir.array<100xi32>>
+
+! -----------------------------------------------------------------------------
+!     Test assignments with whole allocatable LHS
+! -----------------------------------------------------------------------------
+
+subroutine test_whole_allocatable_assignment(x, y)
+  integer, allocatable :: x(:)
+  integer :: y(:)
+  x = y
+end subroutine
+! CHECK-LABEL: func.func @_QPtest_whole_allocatable_assignment(
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}Ex"
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}Ey"
+! CHECK:  hlfir.assign %[[VAL_3]]#0 to %[[VAL_2]]#0 realloc : !fir.box<!fir.array<?xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+
+subroutine test_whole_allocatable_deferred_char(x, y)
+  character(:), allocatable :: x
+  character(*) :: y
+  x = y
+end subroutine
+! CHECK-LABEL: func.func @_QPtest_whole_allocatable_deferred_char(
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}Ex"
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare {{.*}}Ey"
+! CHECK:  hlfir.assign %[[VAL_4]]#0 to %[[VAL_2]]#0 realloc : !fir.boxchar<1>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+
+subroutine test_whole_allocatable_assumed_char(x, y)
+  character(*), allocatable :: x
+  character(*) :: y
+  x = y
+end subroutine
+! CHECK-LABEL: func.func @_QPtest_whole_allocatable_assumed_char(
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare {{.*}}Ex"
+! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare {{.*}}Ey"
+! CHECK:  hlfir.assign %[[VAL_6]]#0 to %[[VAL_4]]#0 realloc keep_lhs_len : !fir.boxchar<1>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>

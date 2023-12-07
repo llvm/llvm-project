@@ -53,7 +53,7 @@ void CommandObjectScript::CommandOptions::OptionParsingStarting(
 
 llvm::ArrayRef<OptionDefinition>
 CommandObjectScript::CommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_script_options);
+  return llvm::ArrayRef(g_script_options);
 }
 
 CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter)

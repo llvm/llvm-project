@@ -174,11 +174,13 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   sw    $31, (4 * 31)($4)
   # Store return address to pc
   sw    $31, (4 * 32)($4)
+#if __mips_isa_rev < 6
   # hi and lo
   mfhi  $8
   sw    $8,  (4 * 33)($4)
   mflo  $8
   sw    $8,  (4 * 34)($4)
+#endif
 #ifdef __mips_hard_float
 #if __mips_fpr != 64
   sdc1  $f0, (4 * 36 + 8 * 0)($4)
@@ -255,11 +257,13 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   .endr
   # Store return address to pc
   sd    $31, (8 * 32)($4)
+#if __mips_isa_rev < 6
   # hi and lo
   mfhi  $8
   sd    $8,  (8 * 33)($4)
   mflo  $8
   sd    $8,  (8 * 34)($4)
+#endif
 #ifdef __mips_hard_float
   .irp i,FROM_0_TO_31
     sdc1 $f\i, (280+8*\i)($4)
@@ -351,9 +355,20 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   addi  4, 3, PPC64_OFFS_FP
 
 // store VS register
+#ifdef __LITTLE_ENDIAN__
+// For little-endian targets, we need a swap since stxvd2x will store the
+// register in the incorrect doubleword order.
+// FIXME: when supporting targets older than Power9 on LE is no longer required
+//        this can be changed to simply `stxv n, 16 * n(4)`.
+#define PPC64_STVS(n)      \
+  xxswapd n, n            ;\
+  stxvd2x n, 0, 4         ;\
+  addi    4, 4, 16
+#else
 #define PPC64_STVS(n)      \
   stxvd2x n, 0, 4         ;\
   addi    4, 4, 16
+#endif
 
   PPC64_STVS(0)
   PPC64_STVS(1)

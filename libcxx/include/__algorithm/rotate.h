@@ -15,9 +15,9 @@
 #include <__algorithm/swap_ranges.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/is_trivially_move_assignable.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -48,7 +48,7 @@ __rotate_right(_BidirectionalIterator __first, _BidirectionalIterator __last)
 
     _BidirectionalIterator __lm1 = _Ops::prev(__last);
     value_type __tmp = _Ops::__iter_move(__lm1);
-    _BidirectionalIterator __fp1 = std::__move_backward<_AlgPolicy>(__first, __lm1, std::move(__last));
+    _BidirectionalIterator __fp1 = std::__move_backward<_AlgPolicy>(__first, __lm1, std::move(__last)).second;
     *__first = _VSTD::move(__tmp);
     return __fp1;
 }

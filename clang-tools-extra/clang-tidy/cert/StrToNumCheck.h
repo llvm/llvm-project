@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace cert {
+namespace clang::tidy::cert {
 
 /// Guards against use of string conversion functions that do not have
 /// reasonable error handling for conversion errors.
@@ -28,8 +26,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace cert
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cert
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_STRTONUMCHECK_H

@@ -8,41 +8,42 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m5       | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-n1     | FileCheck %s --check-prefix=CHECKFUSE-NEOVERSE
 
-@g = common local_unnamed_addr global i8* null, align 8
+@g = common local_unnamed_addr global ptr null, align 8
 
-define dso_local i8* @litp(i32 %a, i32 %b) {
+define dso_local ptr @litp(i32 %a, i32 %b) {
 entry:
   %add = add nsw i32 %b, %a
   %idx.ext = sext i32 %add to i64
-  %add.ptr = getelementptr i8, i8* bitcast (i8* (i32, i32)* @litp to i8*), i64 %idx.ext
-  store i8* %add.ptr, i8** @g, align 8
-  ret i8* %add.ptr
+  %add.ptr = getelementptr i8, ptr @litp, i64 %idx.ext
+  store ptr %add.ptr, ptr @g, align 8
+  ret ptr %add.ptr
 
 ; CHECK-LABEL: litp:
 ; CHECK: adrp [[R:x[0-9]+]], litp
 ; CHECKFUSE-NEXT: add {{x[0-9]+}}, [[R]], :lo12:litp
 }
 
-define dso_local i8* @litp_tune_generic(i32 %a, i32 %b) "tune-cpu"="generic" {
+define dso_local ptr @litp_tune_generic(i32 %a, i32 %b) "tune-cpu"="generic" {
 entry:
   %add = add nsw i32 %b, %a
   %idx.ext = sext i32 %add to i64
-  %add.ptr = getelementptr i8, i8* bitcast (i8* (i32, i32)* @litp_tune_generic to i8*), i64 %idx.ext
-  store i8* %add.ptr, i8** @g, align 8
-  ret i8* %add.ptr
+  %add.ptr = getelementptr i8, ptr @litp_tune_generic, i64 %idx.ext
+  store ptr %add.ptr, ptr @g, align 8
+  ret ptr %add.ptr
 
 ; CHECK-LABEL: litp_tune_generic:
 ; CHECK:         adrp [[R:x[0-9]+]], litp_tune_generic
+; CHECKDONT:     add  {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}
 ; CHECK-NEXT:    add {{x[0-9]+}}, [[R]], :lo12:litp_tune_generic
 }
 
-define dso_local i8* @litp_tune_neoverse_n1(i32 %a, i32 %b) "tune-cpu"="neoverse-n1" {
+define dso_local ptr @litp_tune_neoverse_n1(i32 %a, i32 %b) "tune-cpu"="neoverse-n1" {
 entry:
   %add = add nsw i32 %b, %a
   %idx.ext = sext i32 %add to i64
-  %add.ptr = getelementptr i8, i8* bitcast (i8* (i32, i32)* @litp_tune_generic to i8*), i64 %idx.ext
-  store i8* %add.ptr, i8** @g, align 8
-  ret i8* %add.ptr
+  %add.ptr = getelementptr i8, ptr @litp_tune_generic, i64 %idx.ext
+  store ptr %add.ptr, ptr @g, align 8
+  ret ptr %add.ptr
 
 ; CHECKFUSE-NEOVERSE-LABEL: litp_tune_neoverse_n1:
 ; CHECKFUSE-NEOVERSE:         adrp [[R:x[0-9]+]], litp_tune_generic

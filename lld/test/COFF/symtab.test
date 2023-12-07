@@ -84,7 +84,8 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# NO: Symbols [
+# NO:       Symbols [
+# NO-NEXT:  ]
 
 --- !COFF
 header:

@@ -66,7 +66,6 @@ int main(void)
 }
 @end
 
-// rdar://13186010
 @class NSDictionary, NSException;
 @class NSMutableDictionary;
 

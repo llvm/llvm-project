@@ -39,7 +39,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @multiple_types(i8* noalias %Short, i16* noalias %Float, i8* noalias %Double) {
+define void @multiple_types(ptr noalias %Short, ptr noalias %Float, ptr noalias %Double) {
 bb:
   br label %bb1
 
@@ -50,24 +50,21 @@ bb1:                                              ; preds = %bb20, %bb
 
 bb2:                                              ; preds = %bb1
   %quad = and i64 %i.0, 8
-  %tmp3 = getelementptr inbounds i8, i8* %Short, i64 %quad
-  %tmp4 = bitcast i8* %tmp3 to i16*
-  %tmp5 = load i16, i16* %tmp4, align 2
+  %tmp3 = getelementptr inbounds i8, ptr %Short, i64 %quad
+  %tmp5 = load i16, ptr %tmp3, align 2
   %tmp6 = trunc i16 %tmp5 to i8
-  %tmp7 = getelementptr inbounds i8, i8* %Short, i64 %i.0
-  store i8 %tmp6, i8* %tmp7, align 1
-  %tmp9 = getelementptr inbounds i16, i16* %Float, i64 %quad
-  %tmp10 = bitcast i16* %tmp9 to float*
-  %tmp11 = load float, float* %tmp10, align 4
+  %tmp7 = getelementptr inbounds i8, ptr %Short, i64 %i.0
+  store i8 %tmp6, ptr %tmp7, align 1
+  %tmp9 = getelementptr inbounds i16, ptr %Float, i64 %quad
+  %tmp11 = load float, ptr %tmp9, align 4
   %tmp12 = fptosi float %tmp11 to i16
-  %tmp13 = getelementptr inbounds i16, i16* %Float, i64 %i.0
-  store i16 %tmp12, i16* %tmp13, align 1
-  %tmp15 = getelementptr inbounds i8, i8* %Double, i64 %quad
-  %tmp16 = bitcast i8* %tmp15 to double*
-  %tmp17 = load double, double* %tmp16, align 8
+  %tmp13 = getelementptr inbounds i16, ptr %Float, i64 %i.0
+  store i16 %tmp12, ptr %tmp13, align 1
+  %tmp15 = getelementptr inbounds i8, ptr %Double, i64 %quad
+  %tmp17 = load double, ptr %tmp15, align 8
   %tmp18 = fptosi double %tmp17 to i8
-  %tmp19 = getelementptr inbounds i8, i8* %Double, i64 %i.0
-  store i8 %tmp18, i8* %tmp19, align 1
+  %tmp19 = getelementptr inbounds i8, ptr %Double, i64 %i.0
+  store i8 %tmp18, ptr %tmp19, align 1
   br label %bb20
 
 bb20:                                             ; preds = %bb2

@@ -38,7 +38,7 @@ struct OptionDefinition {
   /// If not empty, an array of enum values.
   OptionEnumValues enum_values;
   /// The kind of completion for this option.
-  /// Contains values of the CommandCompletions::CommonCompletionTypes enum.
+  /// Contains values of the lldb::CompletionType enum.
   uint32_t completion_type;
   /// Type of argument this option takes.
   lldb::CommandArgumentType argument_type;

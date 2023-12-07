@@ -980,7 +980,7 @@ define <16 x i8> @splatvar_modulo_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwi
 ;
 ; AVX512DQVL-LABEL: splatvar_modulo_shift_v16i8:
 ; AVX512DQVL:       # %bb.0:
-; AVX512DQVL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX512DQVL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; AVX512DQVL-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; AVX512DQVL-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX512DQVL-NEXT:    vpsrld %xmm1, %zmm0, %zmm0
@@ -990,7 +990,7 @@ define <16 x i8> @splatvar_modulo_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwi
 ;
 ; AVX512BWVL-LABEL: splatvar_modulo_shift_v16i8:
 ; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; AVX512BWVL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; AVX512BWVL-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX512BWVL-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
@@ -1463,7 +1463,7 @@ define <16 x i8> @splatconstant_shift_v16i8(<16 x i8> %a) nounwind {
 ; AVX512VL-LABEL: splatconstant_shift_v16i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsrlw $3, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; X86-SSE-LABEL: splatconstant_shift_v16i8:
@@ -1526,8 +1526,8 @@ define <4 x i32> @vector_variable_shift_right(<4 x i1> %cond, <4 x i32> %x, <4 x
 ; XOPAVX1-LABEL: vector_variable_shift_right:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vpslld $31, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; XOPAVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; XOPAVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; XOPAVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; XOPAVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; XOPAVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0

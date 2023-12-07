@@ -123,16 +123,16 @@
 
 target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f16:16:16-f32:32:32-f64:64:64-f128:128:128-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-define void @ham(i64* noalias %arg, i64* noalias %arg1, i64* noalias %arg2, i64* noalias %arg3, [1000 x double]* noalias %arg4) unnamed_addr {
+define void @ham(ptr noalias %arg, ptr noalias %arg1, ptr noalias %arg2, ptr noalias %arg3, ptr noalias %arg4) unnamed_addr {
 bb:
   br label %bb5
 
 bb5:                                              ; preds = %bb
-  %tmp = load i64, i64* %arg1, align 8
+  %tmp = load i64, ptr %arg1, align 8
   %tmp6 = icmp slt i64 %tmp, 0
   %tmp7 = select i1 %tmp6, i64 0, i64 %tmp
   %tmp8 = xor i64 %tmp7, -1
-  %tmp9 = load i64, i64* %arg, align 8
+  %tmp9 = load i64, ptr %arg, align 8
   %tmp10 = icmp sgt i64 %tmp9, 0
   br i1 %tmp10, label %bb11, label %bb32
 
@@ -141,7 +141,7 @@ bb11:                                             ; preds = %bb5
 
 bb12:                                             ; preds = %bb28, %bb11
   %tmp13 = phi i64 [ %tmp30, %bb28 ], [ 1, %bb11 ]
-  %tmp14 = load i64, i64* %arg1, align 8
+  %tmp14 = load i64, ptr %arg1, align 8
   %tmp15 = icmp sgt i64 %tmp14, 0
   br i1 %tmp15, label %bb16, label %bb28
 
@@ -155,10 +155,10 @@ bb17:                                             ; preds = %bb17, %bb16
   %tmp21 = add i64 %tmp20, %tmp18
   %tmp22 = add i64 %tmp18, %tmp13
   %tmp23 = sitofp i64 %tmp22 to double
-  %tmp24 = getelementptr [1000 x double], [1000 x double]* %arg4, i64 0, i64 %tmp21
-  %call = call double @func(double* %tmp24) #2
+  %tmp24 = getelementptr [1000 x double], ptr %arg4, i64 0, i64 %tmp21
+  %call = call double @func(ptr %tmp24) #2
   %sum = fadd double %call, %tmp23
-  store double %sum, double* %tmp24, align 8
+  store double %sum, ptr %tmp24, align 8
   %tmp25 = icmp eq i64 %tmp18, %tmp14
   %tmp26 = add i64 %tmp18, 1
   br i1 %tmp25, label %bb27, label %bb17
@@ -178,6 +178,6 @@ bb32:                                             ; preds = %bb31, %bb5
   ret void
 }
 
-declare double @func(double*) #1
+declare double @func(ptr) #1
 
 attributes #1 = { nounwind readonly }

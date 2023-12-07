@@ -13,10 +13,9 @@
 ; CHECK-NEXT:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                { Stmt_for_body3[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 186 };
 ;
-; IR:   %[[r1:[a-zA-Z0-9]*]] = bitcast i32* %A to i8*
 ;
 ; IR: polly.stmt.for.body3:
-; IR:   call void @llvm.memset.p0i8.i64(i8* align 4 %[[r1]], i8 36, i64 187, i1 false)
+; IR:   call void @llvm.memset.p0.i64(ptr align 4 %A, i8 36, i64 187, i1 false)
 ;
 ;    #include <string.h>
 ;
@@ -28,7 +27,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @jd(i32* noalias %A) {
+define void @jd(ptr noalias %A) {
 entry:
   br label %for.cond
 
@@ -46,8 +45,7 @@ for.cond1:                                        ; preds = %for.inc, %for.body
   br i1 %exitcond, label %for.body3, label %for.end
 
 for.body3:                                        ; preds = %for.cond1
-  %tmp = bitcast i32* %A to i8*
-  call void @llvm.memset.p0i8.i64(i8* %tmp, i8 36, i64 187, i32 4, i1 false)
+  call void @llvm.memset.p0.i64(ptr %A, i8 36, i64 187, i32 4, i1 false)
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body3
@@ -65,5 +63,5 @@ for.end6:                                         ; preds = %for.cond
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #1
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i32, i1) #1
 

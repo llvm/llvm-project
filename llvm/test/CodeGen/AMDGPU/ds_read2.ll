@@ -9,7 +9,7 @@
 @lds = addrspace(3) global [512 x float] undef, align 4
 @lds.f64 = addrspace(3) global [512 x double] undef, align 8
 
-define amdgpu_kernel void @simple_read2_f32(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_f32(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: simple_read2_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -34,18 +34,18 @@ define amdgpu_kernel void @simple_read2_f32(float addrspace(1)* %out) #0 {
 ; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
-  %val0 = load float, float addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %x.i
+  %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 8
-  %arrayidx1 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %add.x
-  %val1 = load float, float addrspace(3)* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %add.x
+  %val1 = load float, ptr addrspace(3) %arrayidx1, align 4
   %sum = fadd float %val0, %val1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %x.i
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %x.i
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
-define amdgpu_kernel void @simple_read2_f32_max_offset(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_f32_max_offset(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: simple_read2_f32_max_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -70,18 +70,18 @@ define amdgpu_kernel void @simple_read2_f32_max_offset(float addrspace(1)* %out)
 ; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
-  %val0 = load float, float addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %x.i
+  %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 255
-  %arrayidx1 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %add.x
-  %val1 = load float, float addrspace(3)* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %add.x
+  %val1 = load float, ptr addrspace(3) %arrayidx1, align 4
   %sum = fadd float %val0, %val1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %x.i
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %x.i
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
-define amdgpu_kernel void @simple_read2_f32_too_far(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_f32_too_far(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: simple_read2_f32_too_far:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -108,18 +108,18 @@ define amdgpu_kernel void @simple_read2_f32_too_far(float addrspace(1)* %out) #0
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
-  %val0 = load float, float addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %x.i
+  %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 257
-  %arrayidx1 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %add.x
-  %val1 = load float, float addrspace(3)* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %add.x
+  %val1 = load float, ptr addrspace(3) %arrayidx1, align 4
   %sum = fadd float %val0, %val1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %x.i
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %x.i
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
-define amdgpu_kernel void @simple_read2_f32_x2(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_f32_x2(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: simple_read2_f32_x2:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -151,31 +151,31 @@ define amdgpu_kernel void @simple_read2_f32_x2(float addrspace(1)* %out) #0 {
 ; GFX9-NEXT:    s_endpgm
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 0
-  %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.0
-  %val0 = load float, float addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %idx.0
+  %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
 
   %idx.1 = add nsw i32 %tid.x, 8
-  %arrayidx1 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.1
-  %val1 = load float, float addrspace(3)* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %idx.1
+  %val1 = load float, ptr addrspace(3) %arrayidx1, align 4
   %sum.0 = fadd float %val0, %val1
 
   %idx.2 = add nsw i32 %tid.x, 11
-  %arrayidx2 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.2
-  %val2 = load float, float addrspace(3)* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %idx.2
+  %val2 = load float, ptr addrspace(3) %arrayidx2, align 4
 
   %idx.3 = add nsw i32 %tid.x, 27
-  %arrayidx3 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.3
-  %val3 = load float, float addrspace(3)* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %idx.3
+  %val3 = load float, ptr addrspace(3) %arrayidx3, align 4
   %sum.1 = fadd float %val2, %val3
 
   %sum = fadd float %sum.0, %sum.1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %idx.0
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %idx.0
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
 ; Make sure there is an instruction between the two sets of reads.
-define amdgpu_kernel void @simple_read2_f32_x2_barrier(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_f32_x2_barrier(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: simple_read2_f32_x2_barrier:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -211,34 +211,34 @@ define amdgpu_kernel void @simple_read2_f32_x2_barrier(float addrspace(1)* %out)
 ; GFX9-NEXT:    s_endpgm
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 0
-  %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.0
-  %val0 = load float, float addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %idx.0
+  %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
 
   %idx.1 = add nsw i32 %tid.x, 8
-  %arrayidx1 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.1
-  %val1 = load float, float addrspace(3)* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %idx.1
+  %val1 = load float, ptr addrspace(3) %arrayidx1, align 4
   %sum.0 = fadd float %val0, %val1
 
   call void @llvm.amdgcn.s.barrier() #2
 
   %idx.2 = add nsw i32 %tid.x, 11
-  %arrayidx2 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.2
-  %val2 = load float, float addrspace(3)* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %idx.2
+  %val2 = load float, ptr addrspace(3) %arrayidx2, align 4
 
   %idx.3 = add nsw i32 %tid.x, 27
-  %arrayidx3 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.3
-  %val3 = load float, float addrspace(3)* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %idx.3
+  %val3 = load float, ptr addrspace(3) %arrayidx3, align 4
   %sum.1 = fadd float %val2, %val3
 
   %sum = fadd float %sum.0, %sum.1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %idx.0
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %idx.0
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
 ; For some reason adding something to the base address for the first
 ; element results in only folding the inner pair.
-define amdgpu_kernel void @simple_read2_f32_x2_nonzero_base(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_f32_x2_nonzero_base(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: simple_read2_f32_x2_nonzero_base:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -270,26 +270,26 @@ define amdgpu_kernel void @simple_read2_f32_x2_nonzero_base(float addrspace(1)* 
 ; GFX9-NEXT:    s_endpgm
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
-  %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.0
-  %val0 = load float, float addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %idx.0
+  %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
 
   %idx.1 = add nsw i32 %tid.x, 8
-  %arrayidx1 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.1
-  %val1 = load float, float addrspace(3)* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %idx.1
+  %val1 = load float, ptr addrspace(3) %arrayidx1, align 4
   %sum.0 = fadd float %val0, %val1
 
   %idx.2 = add nsw i32 %tid.x, 11
-  %arrayidx2 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.2
-  %val2 = load float, float addrspace(3)* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %idx.2
+  %val2 = load float, ptr addrspace(3) %arrayidx2, align 4
 
   %idx.3 = add nsw i32 %tid.x, 27
-  %arrayidx3 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.3
-  %val3 = load float, float addrspace(3)* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %idx.3
+  %val3 = load float, ptr addrspace(3) %arrayidx3, align 4
   %sum.1 = fadd float %val2, %val3
 
   %sum = fadd float %sum.0, %sum.1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %idx.0
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %idx.0
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
@@ -298,7 +298,7 @@ define amdgpu_kernel void @simple_read2_f32_x2_nonzero_base(float addrspace(1)* 
 ; merge.
 ; Base pointers come from different subregister of same super
 ; register. We can't safely merge this.
-define amdgpu_kernel void @read2_ptr_is_subreg_arg_f32(float addrspace(1)* %out, <2 x float addrspace(3)*> %lds.ptr) #0 {
+define amdgpu_kernel void @read2_ptr_is_subreg_arg_f32(ptr addrspace(1) %out, <2 x ptr addrspace(3)> %lds.ptr) #0 {
 ; CI-LABEL: read2_ptr_is_subreg_arg_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -333,15 +333,15 @@ define amdgpu_kernel void @read2_ptr_is_subreg_arg_f32(float addrspace(1)* %out,
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %index.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
   %index.1 = insertelement <2 x i32> %index.0, i32 8, i32 0
-  %gep = getelementptr inbounds float, <2 x float addrspace(3)*> %lds.ptr, <2 x i32> %index.1
-  %gep.0 = extractelement <2 x float addrspace(3)*> %gep, i32 0
-  %gep.1 = extractelement <2 x float addrspace(3)*> %gep, i32 1
-  %val0 = load float, float addrspace(3)* %gep.0, align 4
-  %val1 = load float, float addrspace(3)* %gep.1, align 4
+  %gep = getelementptr inbounds float, <2 x ptr addrspace(3)> %lds.ptr, <2 x i32> %index.1
+  %gep.0 = extractelement <2 x ptr addrspace(3)> %gep, i32 0
+  %gep.1 = extractelement <2 x ptr addrspace(3)> %gep, i32 1
+  %val0 = load float, ptr addrspace(3) %gep.0, align 4
+  %val1 = load float, ptr addrspace(3) %gep.1, align 4
   %add.x = add nsw i32 %x.i, 8
   %sum = fadd float %val0, %val1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %x.i
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %x.i
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
@@ -349,7 +349,7 @@ define amdgpu_kernel void @read2_ptr_is_subreg_arg_f32(float addrspace(1)* %out,
 ; are rejecting merges that have the same, constant 0 offset, so make
 ; sure we are really rejecting it because of the different
 ; subregisters.
-define amdgpu_kernel void @read2_ptr_is_subreg_arg_offset_f32(float addrspace(1)* %out, <2 x float addrspace(3)*> %lds.ptr) #0 {
+define amdgpu_kernel void @read2_ptr_is_subreg_arg_offset_f32(ptr addrspace(1) %out, <2 x ptr addrspace(3)> %lds.ptr) #0 {
 ; CI-LABEL: read2_ptr_is_subreg_arg_offset_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -384,23 +384,23 @@ define amdgpu_kernel void @read2_ptr_is_subreg_arg_offset_f32(float addrspace(1)
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %index.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
   %index.1 = insertelement <2 x i32> %index.0, i32 8, i32 0
-  %gep = getelementptr inbounds float, <2 x float addrspace(3)*> %lds.ptr, <2 x i32> %index.1
-  %gep.0 = extractelement <2 x float addrspace(3)*> %gep, i32 0
-  %gep.1 = extractelement <2 x float addrspace(3)*> %gep, i32 1
+  %gep = getelementptr inbounds float, <2 x ptr addrspace(3)> %lds.ptr, <2 x i32> %index.1
+  %gep.0 = extractelement <2 x ptr addrspace(3)> %gep, i32 0
+  %gep.1 = extractelement <2 x ptr addrspace(3)> %gep, i32 1
 
   ; Apply an additional offset after the vector that will be more obviously folded.
-  %gep.1.offset = getelementptr float, float addrspace(3)* %gep.1, i32 8
+  %gep.1.offset = getelementptr float, ptr addrspace(3) %gep.1, i32 8
 
-  %val0 = load float, float addrspace(3)* %gep.0, align 4
-  %val1 = load float, float addrspace(3)* %gep.1.offset, align 4
+  %val0 = load float, ptr addrspace(3) %gep.0, align 4
+  %val1 = load float, ptr addrspace(3) %gep.1.offset, align 4
   %add.x = add nsw i32 %x.i, 8
   %sum = fadd float %val0, %val1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %x.i
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %x.i
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
-define amdgpu_kernel void @read2_ptr_is_subreg_f32(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @read2_ptr_is_subreg_f32(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: read2_ptr_is_subreg_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -425,24 +425,24 @@ define amdgpu_kernel void @read2_ptr_is_subreg_f32(float addrspace(1)* %out) #0 
 ; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %ptr.0 = insertelement <2 x [512 x float] addrspace(3)*> undef, [512 x float] addrspace(3)* @lds, i32 0
-  %ptr.1 = insertelement <2 x [512 x float] addrspace(3)*> %ptr.0, [512 x float] addrspace(3)* @lds, i32 1
+  %ptr.0 = insertelement <2 x ptr addrspace(3)> undef, ptr addrspace(3) @lds, i32 0
+  %ptr.1 = insertelement <2 x ptr addrspace(3)> %ptr.0, ptr addrspace(3) @lds, i32 1
   %x.i.v.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
   %x.i.v.1 = insertelement <2 x i32> %x.i.v.0, i32 %x.i, i32 1
   %idx = add <2 x i32> %x.i.v.1, <i32 0, i32 8>
-  %gep = getelementptr inbounds [512 x float], <2 x [512 x float] addrspace(3)*> %ptr.1, <2 x i32> <i32 0, i32 0>, <2 x i32> %idx
-  %gep.0 = extractelement <2 x float addrspace(3)*> %gep, i32 0
-  %gep.1 = extractelement <2 x float addrspace(3)*> %gep, i32 1
-  %val0 = load float, float addrspace(3)* %gep.0, align 4
-  %val1 = load float, float addrspace(3)* %gep.1, align 4
+  %gep = getelementptr inbounds [512 x float], <2 x ptr addrspace(3)> %ptr.1, <2 x i32> <i32 0, i32 0>, <2 x i32> %idx
+  %gep.0 = extractelement <2 x ptr addrspace(3)> %gep, i32 0
+  %gep.1 = extractelement <2 x ptr addrspace(3)> %gep, i32 1
+  %val0 = load float, ptr addrspace(3) %gep.0, align 4
+  %val1 = load float, ptr addrspace(3) %gep.1, align 4
   %add.x = add nsw i32 %x.i, 8
   %sum = fadd float %val0, %val1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %x.i
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %x.i
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
-define amdgpu_kernel void @simple_read2_f32_volatile_0(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_f32_volatile_0(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: simple_read2_f32_volatile_0:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -469,18 +469,18 @@ define amdgpu_kernel void @simple_read2_f32_volatile_0(float addrspace(1)* %out)
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
-  %val0 = load volatile float, float addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %x.i
+  %val0 = load volatile float, ptr addrspace(3) %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 8
-  %arrayidx1 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %add.x
-  %val1 = load float, float addrspace(3)* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %add.x
+  %val1 = load float, ptr addrspace(3) %arrayidx1, align 4
   %sum = fadd float %val0, %val1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %x.i
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %x.i
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
-define amdgpu_kernel void @simple_read2_f32_volatile_1(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_f32_volatile_1(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: simple_read2_f32_volatile_1:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -507,19 +507,19 @@ define amdgpu_kernel void @simple_read2_f32_volatile_1(float addrspace(1)* %out)
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
-  %val0 = load float, float addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %x.i
+  %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 8
-  %arrayidx1 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %add.x
-  %val1 = load volatile float, float addrspace(3)* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %add.x
+  %val1 = load volatile float, ptr addrspace(3) %arrayidx1, align 4
   %sum = fadd float %val0, %val1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %x.i
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %x.i
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
 ; Can't fold since not correctly aligned.
-define amdgpu_kernel void @unaligned_read2_f32(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
+define amdgpu_kernel void @unaligned_read2_f32(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
 ; CI-LABEL: unaligned_read2_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[0:1], 0x2
@@ -601,18 +601,18 @@ define amdgpu_kernel void @unaligned_read2_f32(float addrspace(1)* %out, float a
 ; GFX9-UNALIGNED-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-UNALIGNED-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %arrayidx0 = getelementptr inbounds float, float addrspace(3)* %lds, i32 %x.i
-  %val0 = load float, float addrspace(3)* %arrayidx0, align 1
+  %arrayidx0 = getelementptr inbounds float, ptr addrspace(3) %lds, i32 %x.i
+  %val0 = load float, ptr addrspace(3) %arrayidx0, align 1
   %add.x = add nsw i32 %x.i, 8
-  %arrayidx1 = getelementptr inbounds float, float addrspace(3)* %lds, i32 %add.x
-  %val1 = load float, float addrspace(3)* %arrayidx1, align 1
+  %arrayidx1 = getelementptr inbounds float, ptr addrspace(3) %lds, i32 %add.x
+  %val1 = load float, ptr addrspace(3) %arrayidx1, align 1
   %sum = fadd float %val0, %val1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %x.i
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %x.i
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
-define amdgpu_kernel void @unaligned_offset_read2_f32(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
+define amdgpu_kernel void @unaligned_offset_read2_f32(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
 ; CI-LABEL: unaligned_offset_read2_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[0:1], 0x2
@@ -694,21 +694,18 @@ define amdgpu_kernel void @unaligned_offset_read2_f32(float addrspace(1)* %out, 
 ; GFX9-UNALIGNED-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-UNALIGNED-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %base = getelementptr inbounds float, float addrspace(3)* %lds, i32 %x.i
-  %base.i8 = bitcast float addrspace(3)* %base to i8 addrspace(3)*
-  %addr0.i8 = getelementptr inbounds i8, i8 addrspace(3)* %base.i8, i32 5
-  %addr0 = bitcast i8 addrspace(3)* %addr0.i8 to float addrspace(3)*
-  %val0 = load float, float addrspace(3)* %addr0, align 1
-  %addr1.i8 = getelementptr inbounds i8, i8 addrspace(3)* %base.i8, i32 9
-  %addr1 = bitcast i8 addrspace(3)* %addr1.i8 to float addrspace(3)*
-  %val1 = load float, float addrspace(3)* %addr1, align 1
+  %base = getelementptr inbounds float, ptr addrspace(3) %lds, i32 %x.i
+  %addr0.i8 = getelementptr inbounds i8, ptr addrspace(3) %base, i32 5
+  %val0 = load float, ptr addrspace(3) %addr0.i8, align 1
+  %addr1.i8 = getelementptr inbounds i8, ptr addrspace(3) %base, i32 9
+  %val1 = load float, ptr addrspace(3) %addr1.i8, align 1
   %sum = fadd float %val0, %val1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %x.i
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %x.i
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
-define amdgpu_kernel void @misaligned_2_simple_read2_f32(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
+define amdgpu_kernel void @misaligned_2_simple_read2_f32(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
 ; CI-LABEL: misaligned_2_simple_read2_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[0:1], 0x2
@@ -767,18 +764,18 @@ define amdgpu_kernel void @misaligned_2_simple_read2_f32(float addrspace(1)* %ou
 ; GFX9-UNALIGNED-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-UNALIGNED-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %arrayidx0 = getelementptr inbounds float, float addrspace(3)* %lds, i32 %x.i
-  %val0 = load float, float addrspace(3)* %arrayidx0, align 2
+  %arrayidx0 = getelementptr inbounds float, ptr addrspace(3) %lds, i32 %x.i
+  %val0 = load float, ptr addrspace(3) %arrayidx0, align 2
   %add.x = add nsw i32 %x.i, 8
-  %arrayidx1 = getelementptr inbounds float, float addrspace(3)* %lds, i32 %add.x
-  %val1 = load float, float addrspace(3)* %arrayidx1, align 2
+  %arrayidx1 = getelementptr inbounds float, ptr addrspace(3) %lds, i32 %add.x
+  %val1 = load float, ptr addrspace(3) %arrayidx1, align 2
   %sum = fadd float %val0, %val1
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i32 %x.i
-  store float %sum, float addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i32 %x.i
+  store float %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
-define amdgpu_kernel void @simple_read2_f64(double addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_f64(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: simple_read2_f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
@@ -803,18 +800,18 @@ define amdgpu_kernel void @simple_read2_f64(double addrspace(1)* %out) #0 {
 ; GFX9-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %arrayidx0 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %x.i
-  %val0 = load double, double addrspace(3)* %arrayidx0, align 8
+  %arrayidx0 = getelementptr inbounds [512 x double], ptr addrspace(3) @lds.f64, i32 0, i32 %x.i
+  %val0 = load double, ptr addrspace(3) %arrayidx0, align 8
   %add.x = add nsw i32 %x.i, 8
-  %arrayidx1 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %add.x
-  %val1 = load double, double addrspace(3)* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds [512 x double], ptr addrspace(3) @lds.f64, i32 0, i32 %add.x
+  %val1 = load double, ptr addrspace(3) %arrayidx1, align 8
   %sum = fadd double %val0, %val1
-  %out.gep = getelementptr inbounds double, double addrspace(1)* %out, i32 %x.i
-  store double %sum, double addrspace(1)* %out.gep, align 8
+  %out.gep = getelementptr inbounds double, ptr addrspace(1) %out, i32 %x.i
+  store double %sum, ptr addrspace(1) %out.gep, align 8
   ret void
 }
 
-define amdgpu_kernel void @simple_read2_f64_max_offset(double addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_f64_max_offset(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: simple_read2_f64_max_offset:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
@@ -839,18 +836,18 @@ define amdgpu_kernel void @simple_read2_f64_max_offset(double addrspace(1)* %out
 ; GFX9-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %arrayidx0 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %x.i
-  %val0 = load double, double addrspace(3)* %arrayidx0, align 8
+  %arrayidx0 = getelementptr inbounds [512 x double], ptr addrspace(3) @lds.f64, i32 0, i32 %x.i
+  %val0 = load double, ptr addrspace(3) %arrayidx0, align 8
   %add.x = add nsw i32 %x.i, 255
-  %arrayidx1 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %add.x
-  %val1 = load double, double addrspace(3)* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds [512 x double], ptr addrspace(3) @lds.f64, i32 0, i32 %add.x
+  %val1 = load double, ptr addrspace(3) %arrayidx1, align 8
   %sum = fadd double %val0, %val1
-  %out.gep = getelementptr inbounds double, double addrspace(1)* %out, i32 %x.i
-  store double %sum, double addrspace(1)* %out.gep, align 8
+  %out.gep = getelementptr inbounds double, ptr addrspace(1) %out, i32 %x.i
+  store double %sum, ptr addrspace(1) %out.gep, align 8
   ret void
 }
 
-define amdgpu_kernel void @simple_read2_f64_too_far(double addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_f64_too_far(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: simple_read2_f64_too_far:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -877,19 +874,19 @@ define amdgpu_kernel void @simple_read2_f64_too_far(double addrspace(1)* %out) #
 ; GFX9-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %arrayidx0 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %x.i
-  %val0 = load double, double addrspace(3)* %arrayidx0, align 8
+  %arrayidx0 = getelementptr inbounds [512 x double], ptr addrspace(3) @lds.f64, i32 0, i32 %x.i
+  %val0 = load double, ptr addrspace(3) %arrayidx0, align 8
   %add.x = add nsw i32 %x.i, 257
-  %arrayidx1 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %add.x
-  %val1 = load double, double addrspace(3)* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds [512 x double], ptr addrspace(3) @lds.f64, i32 0, i32 %add.x
+  %val1 = load double, ptr addrspace(3) %arrayidx1, align 8
   %sum = fadd double %val0, %val1
-  %out.gep = getelementptr inbounds double, double addrspace(1)* %out, i32 %x.i
-  store double %sum, double addrspace(1)* %out.gep, align 8
+  %out.gep = getelementptr inbounds double, ptr addrspace(1) %out, i32 %x.i
+  store double %sum, ptr addrspace(1) %out.gep, align 8
   ret void
 }
 
 ; Alignment only 4
-define amdgpu_kernel void @misaligned_read2_f64(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {
+define amdgpu_kernel void @misaligned_read2_f64(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
 ; CI-LABEL: misaligned_read2_f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[0:1], 0x2
@@ -922,20 +919,20 @@ define amdgpu_kernel void @misaligned_read2_f64(double addrspace(1)* %out, doubl
 ; GFX9-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %arrayidx0 = getelementptr inbounds double, double addrspace(3)* %lds, i32 %x.i
-  %val0 = load double, double addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds double, ptr addrspace(3) %lds, i32 %x.i
+  %val0 = load double, ptr addrspace(3) %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 7
-  %arrayidx1 = getelementptr inbounds double, double addrspace(3)* %lds, i32 %add.x
-  %val1 = load double, double addrspace(3)* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds double, ptr addrspace(3) %lds, i32 %add.x
+  %val1 = load double, ptr addrspace(3) %arrayidx1, align 4
   %sum = fadd double %val0, %val1
-  %out.gep = getelementptr inbounds double, double addrspace(1)* %out, i32 %x.i
-  store double %sum, double addrspace(1)* %out.gep, align 4
+  %out.gep = getelementptr inbounds double, ptr addrspace(1) %out, i32 %x.i
+  store double %sum, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
 @foo = addrspace(3) global [4 x i32] undef, align 4
 
-define amdgpu_kernel void @load_constant_adjacent_offsets(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @load_constant_adjacent_offsets(ptr addrspace(1) %out) {
 ; CI-LABEL: load_constant_adjacent_offsets:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
@@ -945,7 +942,7 @@ define amdgpu_kernel void @load_constant_adjacent_offsets(i32 addrspace(1)* %out
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
+; CI-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
 ;
@@ -958,14 +955,14 @@ define amdgpu_kernel void @load_constant_adjacent_offsets(i32 addrspace(1)* %out
 ; GFX9-NEXT:    v_add_u32_e32 v0, v0, v1
 ; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
-  %val0 = load i32, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 0), align 4
-  %val1 = load i32, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 1), align 4
+  %val0 = load i32, ptr addrspace(3) @foo, align 4
+  %val1 = load i32, ptr addrspace(3) getelementptr inbounds ([4 x i32], ptr addrspace(3) @foo, i32 0, i32 1), align 4
   %sum = add i32 %val0, %val1
-  store i32 %sum, i32 addrspace(1)* %out, align 4
+  store i32 %sum, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @load_constant_disjoint_offsets(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @load_constant_disjoint_offsets(ptr addrspace(1) %out) {
 ; CI-LABEL: load_constant_disjoint_offsets:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
@@ -988,16 +985,16 @@ define amdgpu_kernel void @load_constant_disjoint_offsets(i32 addrspace(1)* %out
 ; GFX9-NEXT:    v_add_u32_e32 v0, v0, v1
 ; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
-  %val0 = load i32, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 0), align 4
-  %val1 = load i32, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 2), align 4
+  %val0 = load i32, ptr addrspace(3) @foo, align 4
+  %val1 = load i32, ptr addrspace(3) getelementptr inbounds ([4 x i32], ptr addrspace(3) @foo, i32 0, i32 2), align 4
   %sum = add i32 %val0, %val1
-  store i32 %sum, i32 addrspace(1)* %out, align 4
+  store i32 %sum, ptr addrspace(1) %out, align 4
   ret void
 }
 
 @bar = addrspace(3) global [4 x i64] undef, align 4
 
-define amdgpu_kernel void @load_misaligned64_constant_offsets(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @load_misaligned64_constant_offsets(ptr addrspace(1) %out) {
 ; CI-LABEL: load_misaligned64_constant_offsets:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
@@ -1022,16 +1019,16 @@ define amdgpu_kernel void @load_misaligned64_constant_offsets(i64 addrspace(1)* 
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX9-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
-  %val0 = load i64, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 0), align 4
-  %val1 = load i64, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 1), align 4
+  %val0 = load i64, ptr addrspace(3) @bar, align 4
+  %val1 = load i64, ptr addrspace(3) getelementptr inbounds ([4 x i64], ptr addrspace(3) @bar, i32 0, i32 1), align 4
   %sum = add i64 %val0, %val1
-  store i64 %sum, i64 addrspace(1)* %out, align 8
+  store i64 %sum, ptr addrspace(1) %out, align 8
   ret void
 }
 
 @bar.large = addrspace(3) global [4096 x i64] undef, align 4
 
-define amdgpu_kernel void @load_misaligned64_constant_large_offsets(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @load_misaligned64_constant_large_offsets(ptr addrspace(1) %out) {
 ; CI-LABEL: load_misaligned64_constant_large_offsets:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_mov_b32_e32 v2, 0
@@ -1058,17 +1055,17 @@ define amdgpu_kernel void @load_misaligned64_constant_large_offsets(i64 addrspac
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX9-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
-  %val0 = load i64, i64 addrspace(3)* getelementptr inbounds ([4096 x i64], [4096 x i64] addrspace(3)* @bar.large, i32 0, i32 2048), align 4
-  %val1 = load i64, i64 addrspace(3)* getelementptr inbounds ([4096 x i64], [4096 x i64] addrspace(3)* @bar.large, i32 0, i32 4095), align 4
+  %val0 = load i64, ptr addrspace(3) getelementptr inbounds ([4096 x i64], ptr addrspace(3) @bar.large, i32 0, i32 2048), align 4
+  %val1 = load i64, ptr addrspace(3) getelementptr inbounds ([4096 x i64], ptr addrspace(3) @bar.large, i32 0, i32 4095), align 4
   %sum = add i64 %val0, %val1
-  store i64 %sum, i64 addrspace(1)* %out, align 8
+  store i64 %sum, ptr addrspace(1) %out, align 8
   ret void
 }
 
 @sgemm.lA = internal unnamed_addr addrspace(3) global [264 x float] undef, align 4
 @sgemm.lB = internal unnamed_addr addrspace(3) global [776 x float] undef, align 4
 
-define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(float addrspace(1)* %C, i32 %lda, i32 %ldb) #0 {
+define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(ptr addrspace(1) %C, i32 %lda, i32 %ldb) #0 {
 ; CI-LABEL: sgemm_inner_loop_read2_sequence:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
@@ -1131,34 +1128,34 @@ define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(float addrspace(1)* %
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workgroup.id.x() #1
   %y.i = tail call i32 @llvm.amdgcn.workitem.id.y() #1
-  %arrayidx44 = getelementptr inbounds [264 x float], [264 x float] addrspace(3)* @sgemm.lA, i32 0, i32 %x.i
-  %tmp16 = load float, float addrspace(3)* %arrayidx44, align 4
+  %arrayidx44 = getelementptr inbounds [264 x float], ptr addrspace(3) @sgemm.lA, i32 0, i32 %x.i
+  %tmp16 = load float, ptr addrspace(3) %arrayidx44, align 4
   %add47 = add nsw i32 %x.i, 1
-  %arrayidx48 = getelementptr inbounds [264 x float], [264 x float] addrspace(3)* @sgemm.lA, i32 0, i32 %add47
-  %tmp17 = load float, float addrspace(3)* %arrayidx48, align 4
+  %arrayidx48 = getelementptr inbounds [264 x float], ptr addrspace(3) @sgemm.lA, i32 0, i32 %add47
+  %tmp17 = load float, ptr addrspace(3) %arrayidx48, align 4
   %add51 = add nsw i32 %x.i, 16
-  %arrayidx52 = getelementptr inbounds [264 x float], [264 x float] addrspace(3)* @sgemm.lA, i32 0, i32 %add51
-  %tmp18 = load float, float addrspace(3)* %arrayidx52, align 4
+  %arrayidx52 = getelementptr inbounds [264 x float], ptr addrspace(3) @sgemm.lA, i32 0, i32 %add51
+  %tmp18 = load float, ptr addrspace(3) %arrayidx52, align 4
   %add55 = add nsw i32 %x.i, 17
-  %arrayidx56 = getelementptr inbounds [264 x float], [264 x float] addrspace(3)* @sgemm.lA, i32 0, i32 %add55
-  %tmp19 = load float, float addrspace(3)* %arrayidx56, align 4
-  %arrayidx60 = getelementptr inbounds [776 x float], [776 x float] addrspace(3)* @sgemm.lB, i32 0, i32 %y.i
-  %tmp20 = load float, float addrspace(3)* %arrayidx60, align 4
+  %arrayidx56 = getelementptr inbounds [264 x float], ptr addrspace(3) @sgemm.lA, i32 0, i32 %add55
+  %tmp19 = load float, ptr addrspace(3) %arrayidx56, align 4
+  %arrayidx60 = getelementptr inbounds [776 x float], ptr addrspace(3) @sgemm.lB, i32 0, i32 %y.i
+  %tmp20 = load float, ptr addrspace(3) %arrayidx60, align 4
   %add63 = add nsw i32 %y.i, 1
-  %arrayidx64 = getelementptr inbounds [776 x float], [776 x float] addrspace(3)* @sgemm.lB, i32 0, i32 %add63
-  %tmp21 = load float, float addrspace(3)* %arrayidx64, align 4
+  %arrayidx64 = getelementptr inbounds [776 x float], ptr addrspace(3) @sgemm.lB, i32 0, i32 %add63
+  %tmp21 = load float, ptr addrspace(3) %arrayidx64, align 4
   %add67 = add nsw i32 %y.i, 32
-  %arrayidx68 = getelementptr inbounds [776 x float], [776 x float] addrspace(3)* @sgemm.lB, i32 0, i32 %add67
-  %tmp22 = load float, float addrspace(3)* %arrayidx68, align 4
+  %arrayidx68 = getelementptr inbounds [776 x float], ptr addrspace(3) @sgemm.lB, i32 0, i32 %add67
+  %tmp22 = load float, ptr addrspace(3) %arrayidx68, align 4
   %add71 = add nsw i32 %y.i, 33
-  %arrayidx72 = getelementptr inbounds [776 x float], [776 x float] addrspace(3)* @sgemm.lB, i32 0, i32 %add71
-  %tmp23 = load float, float addrspace(3)* %arrayidx72, align 4
+  %arrayidx72 = getelementptr inbounds [776 x float], ptr addrspace(3) @sgemm.lB, i32 0, i32 %add71
+  %tmp23 = load float, ptr addrspace(3) %arrayidx72, align 4
   %add75 = add nsw i32 %y.i, 64
-  %arrayidx76 = getelementptr inbounds [776 x float], [776 x float] addrspace(3)* @sgemm.lB, i32 0, i32 %add75
-  %tmp24 = load float, float addrspace(3)* %arrayidx76, align 4
+  %arrayidx76 = getelementptr inbounds [776 x float], ptr addrspace(3) @sgemm.lB, i32 0, i32 %add75
+  %tmp24 = load float, ptr addrspace(3) %arrayidx76, align 4
   %add79 = add nsw i32 %y.i, 65
-  %arrayidx80 = getelementptr inbounds [776 x float], [776 x float] addrspace(3)* @sgemm.lB, i32 0, i32 %add79
-  %tmp25 = load float, float addrspace(3)* %arrayidx80, align 4
+  %arrayidx80 = getelementptr inbounds [776 x float], ptr addrspace(3) @sgemm.lB, i32 0, i32 %add79
+  %tmp25 = load float, ptr addrspace(3) %arrayidx80, align 4
   %sum.0 = fadd float %tmp16, %tmp17
   %sum.1 = fadd float %sum.0, %tmp18
   %sum.2 = fadd float %sum.1, %tmp19
@@ -1168,11 +1165,11 @@ define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(float addrspace(1)* %
   %sum.6 = fadd float %sum.5, %tmp23
   %sum.7 = fadd float %sum.6, %tmp24
   %sum.8 = fadd float %sum.7, %tmp25
-  store float %sum.8, float addrspace(1)* %C, align 4
+  store float %sum.8, ptr addrspace(1) %C, align 4
   ret void
 }
 
-define amdgpu_kernel void @misaligned_read2_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(3)* %in) #0 {
+define amdgpu_kernel void @misaligned_read2_v2i32(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
 ; CI-LABEL: misaligned_read2_v2i32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[0:1], 0x2
@@ -1198,12 +1195,12 @@ define amdgpu_kernel void @misaligned_read2_v2i32(<2 x i32> addrspace(1)* %out, 
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; GFX9-NEXT:    s_endpgm
-  %load = load <2 x i32>, <2 x i32> addrspace(3)* %in, align 4
-  store <2 x i32> %load, <2 x i32> addrspace(1)* %out, align 8
+  %load = load <2 x i32>, ptr addrspace(3) %in, align 4
+  store <2 x i32> %load, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @misaligned_read2_i64(i64 addrspace(1)* %out, i64 addrspace(3)* %in) #0 {
+define amdgpu_kernel void @misaligned_read2_i64(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
 ; CI-LABEL: misaligned_read2_i64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[0:1], 0x2
@@ -1229,8 +1226,8 @@ define amdgpu_kernel void @misaligned_read2_i64(i64 addrspace(1)* %out, i64 addr
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; GFX9-NEXT:    s_endpgm
-  %load = load i64, i64 addrspace(3)* %in, align 4
-  store i64 %load, i64 addrspace(1)* %out, align 8
+  %load = load i64, ptr addrspace(3) %in, align 4
+  store i64 %load, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -1294,44 +1291,44 @@ define amdgpu_kernel void @ds_read_diff_base_interleaving(
 ; GFX9-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; GFX9-NEXT:    global_store_dword v8, v0, s[0:1] offset:40
 ; GFX9-NEXT:    s_endpgm
-  float addrspace(1)* nocapture %arg,
-  [4 x [4 x float]] addrspace(3)* %arg1,
-  [4 x [4 x float]] addrspace(3)* %arg2,
-  [4 x [4 x float]] addrspace(3)* %arg3,
-  [4 x [4 x float]] addrspace(3)* %arg4) #1 {
+  ptr addrspace(1) nocapture %arg,
+  ptr addrspace(3) %arg1,
+  ptr addrspace(3) %arg2,
+  ptr addrspace(3) %arg3,
+  ptr addrspace(3) %arg4) #1 {
 bb:
-  %tmp = getelementptr float, float addrspace(1)* %arg, i64 10
+  %tmp = getelementptr float, ptr addrspace(1) %arg, i64 10
   %tmp5 = tail call i32 @llvm.amdgcn.workitem.id.x() #2
   %tmp6 = tail call i32 @llvm.amdgcn.workitem.id.y() #2
-  %tmp7 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg1, i32 0, i32 %tmp6, i32 0
-  %tmp8 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg2, i32 0, i32 0, i32 %tmp5
-  %tmp9 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg3, i32 0, i32 %tmp6, i32 0
-  %tmp10 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg4, i32 0, i32 0, i32 %tmp5
-  %tmp11 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg1, i32 0, i32 %tmp6, i32 1
-  %tmp12 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg2, i32 0, i32 1, i32 %tmp5
-  %tmp13 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg3, i32 0, i32 %tmp6, i32 1
-  %tmp14 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg4, i32 0, i32 1, i32 %tmp5
-  %tmp15 = load float, float addrspace(3)* %tmp7
-  %tmp16 = load float, float addrspace(3)* %tmp8
+  %tmp7 = getelementptr [4 x [4 x float]], ptr addrspace(3) %arg1, i32 0, i32 %tmp6, i32 0
+  %tmp8 = getelementptr [4 x [4 x float]], ptr addrspace(3) %arg2, i32 0, i32 0, i32 %tmp5
+  %tmp9 = getelementptr [4 x [4 x float]], ptr addrspace(3) %arg3, i32 0, i32 %tmp6, i32 0
+  %tmp10 = getelementptr [4 x [4 x float]], ptr addrspace(3) %arg4, i32 0, i32 0, i32 %tmp5
+  %tmp11 = getelementptr [4 x [4 x float]], ptr addrspace(3) %arg1, i32 0, i32 %tmp6, i32 1
+  %tmp12 = getelementptr [4 x [4 x float]], ptr addrspace(3) %arg2, i32 0, i32 1, i32 %tmp5
+  %tmp13 = getelementptr [4 x [4 x float]], ptr addrspace(3) %arg3, i32 0, i32 %tmp6, i32 1
+  %tmp14 = getelementptr [4 x [4 x float]], ptr addrspace(3) %arg4, i32 0, i32 1, i32 %tmp5
+  %tmp15 = load float, ptr addrspace(3) %tmp7
+  %tmp16 = load float, ptr addrspace(3) %tmp8
   %tmp17 = fmul float %tmp15, %tmp16
   %tmp18 = fadd float 2.000000e+00, %tmp17
-  %tmp19 = load float, float addrspace(3)* %tmp9
-  %tmp20 = load float, float addrspace(3)* %tmp10
+  %tmp19 = load float, ptr addrspace(3) %tmp9
+  %tmp20 = load float, ptr addrspace(3) %tmp10
   %tmp21 = fmul float %tmp19, %tmp20
   %tmp22 = fsub float %tmp18, %tmp21
-  %tmp23 = load float, float addrspace(3)* %tmp11
-  %tmp24 = load float, float addrspace(3)* %tmp12
+  %tmp23 = load float, ptr addrspace(3) %tmp11
+  %tmp24 = load float, ptr addrspace(3) %tmp12
   %tmp25 = fmul float %tmp23, %tmp24
   %tmp26 = fsub float %tmp22, %tmp25
-  %tmp27 = load float, float addrspace(3)* %tmp13
-  %tmp28 = load float, float addrspace(3)* %tmp14
+  %tmp27 = load float, ptr addrspace(3) %tmp13
+  %tmp28 = load float, ptr addrspace(3) %tmp14
   %tmp29 = fmul float %tmp27, %tmp28
   %tmp30 = fsub float %tmp26, %tmp29
-  store float %tmp30, float addrspace(1)* %tmp
+  store float %tmp30, ptr addrspace(1) %tmp
   ret void
 }
 
-define amdgpu_kernel void @ds_read_call_read(i32 addrspace(1)* %out, i32 addrspace(3)* %arg) {
+define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspace(3) %arg) {
 ; CI-LABEL: ds_read_call_read:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_getpc_b64 s[40:41]
@@ -1416,17 +1413,17 @@ define amdgpu_kernel void @ds_read_call_read(i32 addrspace(1)* %out, i32 addrspa
 ; GFX9-NEXT:    global_store_dword v40, v0, s[34:35]
 ; GFX9-NEXT:    s_endpgm
   %x = call i32 @llvm.amdgcn.workitem.id.x()
-  %arrayidx0 = getelementptr i32, i32 addrspace(3)* %arg, i32 %x
-  %arrayidx1 = getelementptr i32, i32 addrspace(3)* %arrayidx0, i32 1
-  %v0 = load i32, i32 addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr i32, ptr addrspace(3) %arg, i32 %x
+  %arrayidx1 = getelementptr i32, ptr addrspace(3) %arrayidx0, i32 1
+  %v0 = load i32, ptr addrspace(3) %arrayidx0, align 4
   call void @void_func_void()
-  %v1 = load i32, i32 addrspace(3)* %arrayidx1, align 4
+  %v1 = load i32, ptr addrspace(3) %arrayidx1, align 4
   %r = add i32 %v0, %v1
-  store i32 %r, i32 addrspace(1)* %out, align 4
+  store i32 %r, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_ps <2 x float> @ds_read_interp_read(i32 inreg %prims, float addrspace(3)* %inptr) {
+define amdgpu_ps <2 x float> @ds_read_interp_read(i32 inreg %prims, ptr addrspace(3) %inptr) {
 ; CI-LABEL: ds_read_interp_read:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_mov_b32 m0, -1
@@ -1449,10 +1446,10 @@ define amdgpu_ps <2 x float> @ds_read_interp_read(i32 inreg %prims, float addrsp
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX9-NEXT:    ; return to shader part epilog
-  %v0 = load float, float addrspace(3)* %inptr, align 4
+  %v0 = load float, ptr addrspace(3) %inptr, align 4
   %intrp = call float @llvm.amdgcn.interp.mov(i32 0, i32 0, i32 0, i32 %prims)
-  %ptr1 = getelementptr float, float addrspace(3)* %inptr, i32 4
-  %v1 = load float, float addrspace(3)* %ptr1, align 4
+  %ptr1 = getelementptr float, ptr addrspace(3) %inptr, i32 4
+  %v1 = load float, ptr addrspace(3) %ptr1, align 4
   %v1b = fadd float %v1, %intrp
   %r0 = insertelement <2 x float> undef, float %v0, i32 0
   %r1 = insertelement <2 x float> %r0, float %v1b, i32 1
@@ -1461,7 +1458,7 @@ define amdgpu_ps <2 x float> @ds_read_interp_read(i32 inreg %prims, float addrsp
 
 @v2i32_align1 = internal addrspace(3) global [100 x <2 x i32>] undef, align 1
 
-define amdgpu_kernel void @read2_v2i32_align1_odd_offset(<2 x i32> addrspace(1)* %out) {
+define amdgpu_kernel void @read2_v2i32_align1_odd_offset(ptr addrspace(1) %out) {
 ; CI-LABEL: read2_v2i32_align1_odd_offset:
 ; CI:       ; %bb.0: ; %entry
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
@@ -1533,8 +1530,8 @@ define amdgpu_kernel void @read2_v2i32_align1_odd_offset(<2 x i32> addrspace(1)*
 ; GFX9-UNALIGNED-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-UNALIGNED-NEXT:    s_endpgm
 entry:
-  %load = load <2 x i32>, <2 x i32> addrspace(3)* bitcast (i8 addrspace(3)* getelementptr (i8, i8 addrspace(3)* bitcast ([100 x <2 x i32>] addrspace(3)* @v2i32_align1 to i8 addrspace(3)*), i32 65) to <2 x i32> addrspace(3)*), align 1
-  store <2 x i32> %load, <2 x i32> addrspace(1)* %out
+  %load = load <2 x i32>, ptr addrspace(3) getelementptr (i8, ptr addrspace(3) @v2i32_align1, i32 65), align 1
+  store <2 x i32> %load, ptr addrspace(1) %out
   ret void
 }
 

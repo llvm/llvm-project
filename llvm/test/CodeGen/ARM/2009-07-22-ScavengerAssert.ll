@@ -1,14 +1,14 @@
 ; RUN: llc < %s -mtriple=armv6-apple-darwin10
 
-	%struct.cli_ac_alt = type { i8, i8*, i16, i16, %struct.cli_ac_alt* }
-	%struct.cli_ac_node = type { i8, i8, %struct.cli_ac_patt*, %struct.cli_ac_node**, %struct.cli_ac_node* }
-	%struct.cli_ac_patt = type { i16*, i16*, i16, i16, i8, i32, i32, i8*, i8*, i32, i16, i16, i16, i16, %struct.cli_ac_alt**, i8, i16, %struct.cli_ac_patt*, %struct.cli_ac_patt* }
-	%struct.cli_bm_patt = type { i8*, i8*, i16, i16, i8*, i8*, i8, %struct.cli_bm_patt*, i16 }
-	%struct.cli_matcher = type { i16, i8, i8*, %struct.cli_bm_patt**, i32*, i32, i8, i8, %struct.cli_ac_node*, %struct.cli_ac_node**, %struct.cli_ac_patt**, i32, i32, i32 }
+	%struct.cli_ac_alt = type { i8, ptr, i16, i16, ptr }
+	%struct.cli_ac_node = type { i8, i8, ptr, ptr, ptr }
+	%struct.cli_ac_patt = type { ptr, ptr, i16, i16, i8, i32, i32, ptr, ptr, i32, i16, i16, i16, i16, ptr, i8, i16, ptr, ptr }
+	%struct.cli_bm_patt = type { ptr, ptr, i16, i16, ptr, ptr, i8, ptr, i16 }
+	%struct.cli_matcher = type { i16, i8, ptr, ptr, ptr, i32, i8, i8, ptr, ptr, ptr, i32, i32, i32 }
 
-declare i32 @strlen(i8* nocapture) nounwind readonly
+declare i32 @strlen(ptr nocapture) nounwind readonly
 
-define i32 @cli_ac_addsig(%struct.cli_matcher* nocapture %root, i8* %virname, i8* %hexsig, i32 %sigid, i16 zeroext %parts, i16 zeroext %partno, i16 zeroext %type, i32 %mindist, i32 %maxdist, i8* %offset, i8 zeroext %target) nounwind {
+define i32 @cli_ac_addsig(ptr nocapture %root, ptr %virname, ptr %hexsig, i32 %sigid, i16 zeroext %parts, i16 zeroext %partno, i16 zeroext %type, i32 %mindist, i32 %maxdist, ptr %offset, i8 zeroext %target) nounwind {
 entry:
 	br i1 undef, label %bb126, label %bb1
 
@@ -19,7 +19,7 @@ cli_calloc.exit.thread:		; preds = %bb1
 	ret i32 -114
 
 cli_calloc.exit:		; preds = %bb1
-	store i16 %parts, i16* undef, align 4
+	store i16 %parts, ptr undef, align 4
 	br i1 undef, label %bb52, label %bb4
 
 bb4:		; preds = %cli_calloc.exit
@@ -83,10 +83,10 @@ bb45:		; preds = %bb43.preheader, %cli_calloc.exit54
 	br i1 undef, label %cli_calloc.exit70.thread, label %cli_calloc.exit70
 
 bb52:		; preds = %cli_calloc.exit
-	%0 = load i16, i16* undef, align 4		; <i16> [#uses=1]
+	%0 = load i16, ptr undef, align 4		; <i16> [#uses=1]
 	%1 = icmp eq i16 %0, 0		; <i1> [#uses=1]
-	%iftmp.20.0 = select i1 %1, i8* %hexsig, i8* null		; <i8*> [#uses=1]
-	%2 = tail call  i32 @strlen(i8* %iftmp.20.0) nounwind readonly		; <i32> [#uses=0]
+	%iftmp.20.0 = select i1 %1, ptr %hexsig, ptr null		; <ptr> [#uses=1]
+	%2 = tail call  i32 @strlen(ptr %iftmp.20.0) nounwind readonly		; <i32> [#uses=0]
 	unreachable
 
 bb126:		; preds = %entry

@@ -94,3 +94,27 @@ entry:
   %c = add i32 %a, %b
   ret i32 %c
 }
+
+declare i32 @pers(...)
+
+define i32 @eh() personality ptr @pers {
+; CHECK-LABEL: eh:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+;
+; PIC-LABEL: eh:
+; PIC:       # %bb.0:
+; PIC-NEXT:    xorl %eax, %eax
+; PIC-NEXT:    retq
+;
+; WIN-LABEL: eh:
+; WIN:       # %bb.0:
+; WIN-NEXT:    xorl %eax, %eax
+; WIN-NEXT:    retq
+; WIN-NEXT:  .Lfunc_end0:
+; WIN-NEXT:    .seh_handlerdata
+; WIN-NEXT:    .text
+; WIN-NEXT:    .seh_endproc
+  ret i32 0
+}

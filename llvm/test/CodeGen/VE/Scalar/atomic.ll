@@ -35,7 +35,7 @@ define signext i8 @test_atomic_fetch_add_1() {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = atomicrmw add i8* @c, i8 1 seq_cst
+  %0 = atomicrmw add ptr @c, i8 1 seq_cst
   ret i8 %0
 }
 
@@ -66,7 +66,7 @@ define signext i16 @test_atomic_fetch_sub_2() {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = atomicrmw sub i16* @s, i16 1 seq_cst
+  %0 = atomicrmw sub ptr @s, i16 1 seq_cst
   ret i16 %0
 }
 
@@ -90,7 +90,7 @@ define signext i32 @test_atomic_fetch_and_4() {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = atomicrmw and i32* @i, i32 1 seq_cst
+  %0 = atomicrmw and ptr @i, i32 1 seq_cst
   ret i32 %0
 }
 ; Function Attrs: norecurse nounwind
@@ -112,7 +112,7 @@ define i64 @test_atomic_fetch_or_8() {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = atomicrmw or i64* @l, i64 1 seq_cst
+  %0 = atomicrmw or ptr @l, i64 1 seq_cst
   ret i64 %0
 }
 
@@ -138,7 +138,7 @@ define signext i8 @test_atomic_fetch_xor_1() {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = atomicrmw xor i8* @c, i8 1 seq_cst
+  %0 = atomicrmw xor ptr @c, i8 1 seq_cst
   ret i8 %0
 }
 
@@ -171,7 +171,7 @@ define signext i16 @test_atomic_fetch_nand_2() {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = atomicrmw nand i16* @s, i16 1 seq_cst
+  %0 = atomicrmw nand ptr @s, i16 1 seq_cst
   ret i16 %0
 }
 
@@ -195,7 +195,7 @@ define signext i32 @test_atomic_fetch_max_4() {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = atomicrmw max i32* @i, i32 1 seq_cst
+  %0 = atomicrmw max ptr @i, i32 1 seq_cst
   ret i32 %0
 }
 
@@ -219,7 +219,7 @@ define signext i32 @test_atomic_fetch_min_4() {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = atomicrmw min i32* @i, i32 1 seq_cst
+  %0 = atomicrmw min ptr @i, i32 1 seq_cst
   ret i32 %0
 }
 
@@ -245,7 +245,7 @@ define signext i32 @test_atomic_fetch_umax_4() {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = atomicrmw umax i32* @i, i32 1 seq_cst
+  %0 = atomicrmw umax ptr @i, i32 1 seq_cst
   ret i32 %0
 }
 
@@ -271,6 +271,6 @@ define signext i32 @test_atomic_fetch_umin_4() {
 ; CHECK-NEXT:    fencem 3
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:
-  %0 = atomicrmw umin i32* @i, i32 1 seq_cst
+  %0 = atomicrmw umin ptr @i, i32 1 seq_cst
   ret i32 %0
 }

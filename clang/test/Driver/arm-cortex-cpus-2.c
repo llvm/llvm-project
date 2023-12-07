@@ -142,20 +142,20 @@
 // EBV8M_MAINLINE: "-cc1"{{.*}} "-triple" "thumbebv8m.main-{{.*}} "-target-cpu" "generic"
 
 // ================== Check that a bogus architecture gives an error
-// RUN: %clang -target arm -march=armbogusv6 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS %s
+// RUN: not %clang --target=arm -march=armbogusv6 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS %s
 // CHECK-BOGUS: error: unsupported argument 'armbogusv6' to option '-march='
-// RUN: %clang -target arm---eabihf -march=armbogusv7 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-HF %s
+// RUN: not %clang --target=arm---eabihf -march=armbogusv7 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-HF %s
 // CHECK-BOGUS-HF: error: unsupported argument 'armbogusv7' to option '-march='
-// RUN: %clang -target arm -march=armv6bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS2 %s
+// RUN: not %clang --target=arm -march=armv6bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS2 %s
 // CHECK-BOGUS2: error: unsupported argument 'armv6bogus' to option '-march='
-// RUN: %clang -target arm -march=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS3 %s
+// RUN: not %clang --target=arm -march=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS3 %s
 // CHECK-BOGUS3: error: unsupported argument 'bogus' to option '-march='
 
 // ================== Check that a bogus CPU gives an error
-// RUN: %clang -target arm -mcpu=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-CPU %s
-// RUN: %clang -target armv8-apple-darwin -arch arm64 -mcpu=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-CPU %s
+// RUN: not %clang -target arm -mcpu=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-CPU %s
+// RUN: not %clang -target armv8-apple-darwin -arch arm64 -mcpu=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-CPU %s
 // CHECK-BOGUS-CPU: error: unsupported argument 'bogus' to option '-mcpu='
-// RUN: %clang -target armv8-apple-darwin -arch arm64 -mtune=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-TUNE %s
+// RUN: not %clang -target armv8-apple-darwin -arch arm64 -mtune=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-TUNE %s
 // CHECK-BOGUS-TUNE: error: unsupported argument 'bogus' to option '-mtune='
 
 // ================== Check default Architecture on each ARM11 CPU

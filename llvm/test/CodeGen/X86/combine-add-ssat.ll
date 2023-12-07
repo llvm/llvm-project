@@ -77,11 +77,8 @@ define <8 x i16> @combine_constfold_undef_v8i16() {
 define i32 @combine_constant_i32(i32 %a0) {
 ; CHECK-LABEL: combine_constant_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal 1(%rdi), %eax
-; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    addl $-2147483648, %eax # imm = 0x80000000
 ; CHECK-NEXT:    incl %edi
+; CHECK-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    cmovnol %edi, %eax
 ; CHECK-NEXT:    retq
   %res = call i32 @llvm.sadd.sat.i32(i32 1, i32 %a0)
@@ -128,11 +125,7 @@ define i32 @combine_no_overflow_i32(i32 %a0, i32 %a1) {
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    sarl $16, %edi
 ; CHECK-NEXT:    shrl $16, %esi
-; CHECK-NEXT:    leal (%rdi,%rsi), %eax
-; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    addl $-2147483648, %eax # imm = 0x80000000
-; CHECK-NEXT:    addl %edi, %esi
-; CHECK-NEXT:    cmovnol %esi, %eax
+; CHECK-NEXT:    leal (%rsi,%rdi), %eax
 ; CHECK-NEXT:    retq
   %1 = ashr i32 %a0, 16
   %2 = lshr i32 %a1, 16
@@ -145,14 +138,14 @@ define <8 x i16> @combine_no_overflow_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psraw $10, %xmm0
 ; SSE-NEXT:    psrlw $10, %xmm1
-; SSE-NEXT:    paddsw %xmm1, %xmm0
+; SSE-NEXT:    paddw %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_no_overflow_v8i16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsraw $10, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrlw $10, %xmm1, %xmm1
-; AVX-NEXT:    vpaddsw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = ashr <8 x i16> %a0, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
   %2 = lshr <8 x i16> %a1, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>

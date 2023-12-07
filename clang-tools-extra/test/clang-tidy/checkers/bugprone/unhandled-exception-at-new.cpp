@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++14 %s bugprone-unhandled-exception-at-new %t -- -- -fexceptions
-
+// FIXME: Fix the checker to work in C++17 or later mode.
 namespace std {
 typedef __typeof__(sizeof(0)) size_t;
 enum class align_val_t : std::size_t {};

@@ -48,7 +48,7 @@ public:
   VEMCCodeEmitter &operator=(const VEMCCodeEmitter &) = delete;
   ~VEMCCodeEmitter() override = default;
 
-  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
@@ -77,11 +77,12 @@ public:
 
 } // end anonymous namespace
 
-void VEMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void VEMCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                        SmallVectorImpl<char> &CB,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         const MCSubtargetInfo &STI) const {
   uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
-  support::endian::write<uint64_t>(OS, Bits, support::little);
+  support::endian::write<uint64_t>(CB, Bits, support::little);
 
   ++MCNumEmitted; // Keep track of the # of mi's emitted.
 }

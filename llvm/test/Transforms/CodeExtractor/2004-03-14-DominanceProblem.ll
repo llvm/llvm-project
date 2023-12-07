@@ -13,7 +13,7 @@ loopentry.1:            ; preds = %no_exit.1, %loopentry.1.preheader
         br i1 false, label %no_exit.1, label %loopexit.0.loopexit1
 
 no_exit.1:              ; preds = %loopentry.1
-        %tmp.53 = load i32, i32* null                ; <i32> [#uses=1]
+        %tmp.53 = load i32, ptr null                ; <i32> [#uses=1]
         br i1 false, label %shortcirc_next.2, label %loopentry.1
 
 shortcirc_next.2:               ; preds = %no_exit.1

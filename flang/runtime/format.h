@@ -61,7 +61,7 @@ struct DataEdit {
     return IsListDirected() && modes.inNamelist;
   }
 
-  static constexpr char DefinedDerivedType{'d'}; // DT user-defined derived type
+  static constexpr char DefinedDerivedType{'d'}; // DT defined I/O
 
   char variation{'\0'}; // N, S, or X for EN, ES, EX
   std::optional<int> width; // the 'w' field; optional for A
@@ -71,7 +71,7 @@ struct DataEdit {
   int repeat{1};
 
   // "iotype" &/or "v_list" values for a DT'iotype'(v_list)
-  // user-defined derived type data edit descriptor
+  // defined I/O data edit descriptor
   static constexpr std::size_t maxIoTypeChars{32};
   static constexpr std::size_t maxVListEntries{4};
   std::uint8_t ioTypeChars{0};
@@ -102,7 +102,7 @@ public:
   // Extracts the next data edit descriptor, handling control edit descriptors
   // along the way.  If maxRepeat==0, this is a peek at the next data edit
   // descriptor.
-  DataEdit GetNextDataEdit(Context &, int maxRepeat = 1);
+  std::optional<DataEdit> GetNextDataEdit(Context &, int maxRepeat = 1);
 
   // Emit any remaining character literals after the last data item (on output)
   // and perform remaining record positioning actions.
@@ -142,7 +142,8 @@ private:
     }
     return format_[offset_++];
   }
-  int GetIntField(IoErrorHandler &, CharType firstCh = '\0');
+  int GetIntField(
+      IoErrorHandler &, CharType firstCh = '\0', bool *hadError = nullptr);
 
   // Advances through the FORMAT until the next data edit
   // descriptor has been found; handles control edit descriptors

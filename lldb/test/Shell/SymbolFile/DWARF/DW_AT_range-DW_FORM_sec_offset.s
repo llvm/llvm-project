@@ -8,7 +8,7 @@
 # RUN:   -o exit | FileCheck %s
 
 # Failure was the block range 1..2 was not printed plus:
-# error: DW_AT_range-DW_FORM_sec_offset.s.tmp {0x0000003f}: DIE has DW_AT_ranges(0xc) attribute, but range extraction failed (missing or invalid range list table), please file a bug and attach the file at the start of this error message
+# error: DW_AT_range-DW_FORM_sec_offset.s.tmp {0x000000000000003f}: DIE has DW_AT_ranges(0xc) attribute, but range extraction failed (missing or invalid range list table), please file a bug and attach the file at the start of this error message
 
 # CHECK-LABEL: image lookup -v -s lookup_rnglists
 # CHECK:  Function: id = {0x00000029}, name = "rnglists", range = [0x0000000000000000-0x0000000000000003)
@@ -22,7 +22,7 @@
 # RUN: cat %t.error | FileCheck --check-prefix=ERROR %s
 
 # RNGLISTX-LABEL: image lookup -v -s lookup_rnglists
-# ERROR: error: {{.*}} {0x0000003f}: DIE has DW_AT_ranges(DW_FORM_rnglistx 0x0) attribute, but range extraction failed (DW_FORM_rnglistx cannot be used without DW_AT_rnglists_base for CU at 0x00000000), please file a bug and attach the file at the start of this error message
+# ERROR: error: {{.*}} [0x000000000000003f]: DIE has DW_AT_ranges(DW_FORM_rnglistx 0x0000000000000000) attribute, but range extraction failed (DW_FORM_rnglistx cannot be used without DW_AT_rnglists_base for CU at 0x0000000000000000), please file a bug and attach the file at the start of this error message
 
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
 # RUN:   --defsym RNGLISTX=0 --defsym RNGLISTBASE=0 %s > %t-rnglistbase
@@ -31,7 +31,7 @@
 # RUN: cat %t.error | FileCheck --check-prefix=ERRORBASE %s
 
 # RNGLISTBASE-LABEL: image lookup -v -s lookup_rnglists
-# ERRORBASE: error: {{.*}}-rnglistbase {0x00000043}: DIE has DW_AT_ranges(DW_FORM_rnglistx 0x0) attribute, but range extraction failed (invalid range list table index 0; OffsetEntryCount is 0, DW_AT_rnglists_base is 24), please file a bug and attach the file at the start of this error message
+# ERRORBASE: error: {{.*}}-rnglistbase [0x0000000000000043]: DIE has DW_AT_ranges(DW_FORM_rnglistx 0x0000000000000000) attribute, but range extraction failed (invalid range list table index 0; OffsetEntryCount is 0, DW_AT_rnglists_base is 24), please file a bug and attach the file at the start of this error message
 
         .text
 rnglists:

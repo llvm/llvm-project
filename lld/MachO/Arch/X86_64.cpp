@@ -231,11 +231,11 @@ void X86_64::handleDtraceReloc(const Symbol *sym, const Reloc &r,
   if (config->outputType == MH_OBJECT)
     return;
 
-  if (sym->getName().startswith("___dtrace_probe")) {
+  if (sym->getName().starts_with("___dtrace_probe")) {
     // change call site to a NOP
     loc[-1] = 0x90;
     write32le(loc, 0x00401F0F);
-  } else if (sym->getName().startswith("___dtrace_isenabled")) {
+  } else if (sym->getName().starts_with("___dtrace_isenabled")) {
     // change call site to a clear eax
     loc[-1] = 0x33;
     write32le(loc, 0x909090C0);

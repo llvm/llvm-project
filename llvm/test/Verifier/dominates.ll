@@ -10,7 +10,7 @@ define i32 @f1(i32 %x) {
 }
 
 declare i32 @g()
-define void @f2(i32 %x) personality i32 ()* @g {
+define void @f2(i32 %x) personality ptr @g {
 bb0:
   %y1 = invoke i32 @g() to label %bb1 unwind label %bb2
 bb1:
@@ -26,7 +26,7 @@ bb2:
 ; CHECK-NEXT:  %y2 = phi i32 [ %y1, %bb0 ]
 }
 
-define void @f3(i32 %x) personality i32 ()* @g {
+define void @f3(i32 %x) personality ptr @g {
 bb0:
   %y1 = invoke i32 @g() to label %bb1 unwind label %bb2
 bb1:
@@ -69,6 +69,7 @@ next:
 ; CHECK-NEXT:  %x = phi i32 [ %y, %entry ]
 }
 
+;; No issue!
 define i32 @f6(i32 %x) {
 bb0:
   %y1 = callbr i32 asm "", "=r,!i"() to label %bb1 [label %bb2]
@@ -76,8 +77,4 @@ bb1:
   ret i32 0
 bb2:
   ret i32 %y1
-; CHECK: Instruction does not dominate all uses!
-; CHECK-NEXT:  %y1 = callbr i32 asm "", "=r,!i"()
-; CHECK-NEXT:        to label %bb1 [label %bb2]
-; CHECK-NEXT:  ret i32 %y1
 }

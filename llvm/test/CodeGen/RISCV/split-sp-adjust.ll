@@ -18,8 +18,7 @@ define i32 @SplitSP() nounwind {
 ; RV32I-NEXT:    ret
 entry:
   %xx = alloca [2028 x i8], align 1
-  %0 = getelementptr inbounds [2028 x i8], [2028 x i8]* %xx, i32 0, i32 0
-  %call = call i32 @foo(i8* nonnull %0)
+  %call = call i32 @foo(ptr nonnull %xx)
   ret i32 0
 }
 
@@ -37,9 +36,8 @@ define i32 @NoSplitSP() nounwind {
 ; RV32I-NEXT:    ret
 entry:
   %xx = alloca [2024 x i8], align 1
-  %0 = getelementptr inbounds [2024 x i8], [2024 x i8]* %xx, i32 0, i32 0
-  %call = call i32 @foo(i8* nonnull %0)
+  %call = call i32 @foo(ptr nonnull %xx)
   ret i32 0
 }
 
-declare i32 @foo(i8*)
+declare i32 @foo(ptr)

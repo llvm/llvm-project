@@ -4,7 +4,6 @@ typedef __attribute__((__ext_vector_type__(8))) float vector_float8;
 
 typedef vector_float8 float8;
 
-// rdar://20000762
 // CHECK-LABEL: define{{.*}} void @_Z23MandelbrotPolyCalcSIMD8v
 void MandelbrotPolyCalcSIMD8() {
   constexpr float8 v4 = 4.0;  // value to compare against abs(z)^2, to see if bounded
@@ -56,7 +55,7 @@ gcc_int_2 FloatToIntConversion(gcc_int_2 Int2, float f) {
   // CHECK: %[[LOAD_INT:.+]] = load <2 x i32>
   // CHECK: %[[LOAD:.+]] = load float, ptr
   // CHECK: %[[CONV:.+]] = fptosi float %[[LOAD]] to i32
-  // CHECK: %[[INSERT:.+]] = insertelement <2 x i32> poison, i32 %[[CONV]], i32 0
+  // CHECK: %[[INSERT:.+]] = insertelement <2 x i32> poison, i32 %[[CONV]], i64 0
   // CHECK: %[[SPLAT:.+]] = shufflevector <2 x i32> %[[INSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
   // CHECK: add <2 x i32> %[[LOAD_INT]], %[[SPLAT]]
 }

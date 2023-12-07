@@ -32,7 +32,7 @@ struct std::char_traits<char_wrapper> {
 
   static bool eq(char_wrapper lhs, char_wrapper rhs) { return lhs.c == rhs.c; }
 
-  static size_t length(const char_wrapper* a) {
+  static std::size_t length(const char_wrapper* a) {
     static_assert(sizeof(char_wrapper) == 1, "strlen requires this");
     return std::strlen(reinterpret_cast<const char*>(a));
   }

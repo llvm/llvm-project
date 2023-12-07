@@ -14,17 +14,17 @@
 // RUN: rm %T/test.o
 
 // Declarations of C library functions.
-llvm.func @fabsf(f32) -> f32
+llvm.func @logbf(f32) -> f32
 llvm.func @malloc(i64) -> !llvm.ptr<i8>
 llvm.func @free(!llvm.ptr<i8>)
 
 // Check that a simple function with a nested call works.
 llvm.func @main() -> f32 {
   %0 = llvm.mlir.constant(-4.200000e+02 : f32) : f32
-  %1 = llvm.call @fabsf(%0) : (f32) -> f32
+  %1 = llvm.call @logbf(%0) : (f32) -> f32
   llvm.return %1 : f32
 }
-// CHECK: 4.200000e+02
+// CHECK: 8.000000e+00
 
 // Helper typed functions wrapping calls to "malloc" and "free".
 llvm.func @allocation() -> !llvm.ptr<f32> {

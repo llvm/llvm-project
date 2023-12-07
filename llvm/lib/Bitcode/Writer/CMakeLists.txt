@@ -13,4 +13,5 @@ add_llvm_component_library(LLVMBitWriter
   MC
   Object
   Support
+  TargetParser
   )

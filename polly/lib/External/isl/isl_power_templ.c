@@ -3,6 +3,27 @@
 #define xFN(TYPE,NAME) TYPE ## _ ## NAME
 #define FN(TYPE,NAME) xFN(TYPE,NAME)
 
+/* Helper function for isl_*_fixed_power that applies (a copy of) "map2"
+ * to the range of "map1" and returns the result.
+ *
+ * The result is coalesced in an attempt to reduce the number of disjuncts
+ * that result from repeated applications.
+ * Similarly, look for implicit equality constraints in an attempt
+ * to reduce the number of local variables that get introduced
+ * during the repeated applications.
+ */
+static __isl_give TYPE *FN(TYPE,fixed_power_apply)(__isl_take TYPE *map1,
+	__isl_keep TYPE *map2)
+{
+	TYPE *res;
+
+	res = FN(TYPE,apply_range)(map1, FN(TYPE,copy)(map2));
+	res = FN(TYPE,detect_equalities)(res);
+	res = FN(TYPE,coalesce)(res);
+
+	return res;
+}
+
 /* Compute the given non-zero power of "map" and return the result.
  * If the exponent "exp" is negative, then the -exp th power of the inverse
  * relation is computed.
@@ -34,11 +55,8 @@ __isl_give TYPE *FN(TYPE,fixed_power)(__isl_take TYPE *map, isl_int exp)
 		if (!isl_int_is_zero(r)) {
 			if (!res)
 				res = FN(TYPE,copy)(map);
-			else {
-				res = FN(TYPE,apply_range)(res,
-							  FN(TYPE,copy)(map));
-				res = FN(TYPE,coalesce)(res);
-			}
+			else
+				res = FN(TYPE,fixed_power_apply)(res, map);
 			if (!res)
 				break;
 		}
@@ -47,8 +65,7 @@ __isl_give TYPE *FN(TYPE,fixed_power)(__isl_take TYPE *map, isl_int exp)
 		if (isl_int_is_zero(exp))
 			break;
 
-		map = FN(TYPE,apply_range)(map, FN(TYPE,copy)(map));
-		map = FN(TYPE,coalesce)(map);
+		map = FN(TYPE,fixed_power_apply)(map, map);
 	}
 	isl_int_clear(r);
 

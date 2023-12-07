@@ -383,17 +383,12 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
         isa<InvokeInst>(TI) || isa<CallBrInst>(TI)))
     return false;
 
-  MDNode *WeightsNode = TI->getMetadata(LLVMContext::MD_prof);
+  MDNode *WeightsNode = getValidBranchWeightMDNode(*TI);
   if (!WeightsNode)
     return false;
 
   // Check that the number of successors is manageable.
   assert(TI->getNumSuccessors() < UINT32_MAX && "Too many successors");
-
-  // Ensure there are weights for all of the successors. Note that the first
-  // operand to the metadata node is a name, not a weight.
-  if (WeightsNode->getNumOperands() != TI->getNumSuccessors() + 1)
-    return false;
 
   // Build up the final weights that will be used in a temporary buffer.
   // Compute the sum of all weights to later decide whether they need to
@@ -403,7 +398,7 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   SmallVector<unsigned, 2> UnreachableIdxs;
   SmallVector<unsigned, 2> ReachableIdxs;
 
-  extractBranchWeights(*TI, Weights);
+  extractBranchWeights(WeightsNode, Weights);
   for (unsigned I = 0, E = Weights.size(); I != E; ++I) {
     WeightSum += Weights[I];
     const LoopBlock SrcLoopBB = getLoopBlock(BB);
@@ -1168,7 +1163,7 @@ void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
   assert(NumSuccessors == Dst->getTerminator()->getNumSuccessors());
   if (NumSuccessors == 0)
     return; // Nothing to set.
-  if (this->Probs.find(std::make_pair(Src, 0)) == this->Probs.end())
+  if (!this->Probs.contains(std::make_pair(Src, 0)))
     return; // No probability is set for edges from Src. Keep the same for Dst.
 
   Handles.insert(BasicBlockCallbackVH(Dst, this));
@@ -1178,6 +1173,14 @@ void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
     LLVM_DEBUG(dbgs() << "set edge " << Dst->getName() << " -> " << SuccIdx
                       << " successor probability to " << Prob << "\n");
   }
+}
+
+void BranchProbabilityInfo::swapSuccEdgesProbabilities(const BasicBlock *Src) {
+  assert(Src->getTerminator()->getNumSuccessors() == 2);
+  if (!Probs.contains(std::make_pair(Src, 0)))
+    return; // No probability is set for edges from Src
+  assert(Probs.contains(std::make_pair(Src, 1)));
+  std::swap(Probs[std::make_pair(Src, 0)], Probs[std::make_pair(Src, 1)]);
 }
 
 raw_ostream &
@@ -1308,11 +1311,12 @@ void BranchProbabilityInfoWrapperPass::print(raw_ostream &OS,
 AnalysisKey BranchProbabilityAnalysis::Key;
 BranchProbabilityInfo
 BranchProbabilityAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   BranchProbabilityInfo BPI;
-  BPI.calculate(F, AM.getResult<LoopAnalysis>(F),
-                &AM.getResult<TargetLibraryAnalysis>(F),
-                &AM.getResult<DominatorTreeAnalysis>(F),
-                &AM.getResult<PostDominatorTreeAnalysis>(F));
+  BPI.calculate(F, LI, &TLI, &DT, &PDT);
   return BPI;
 }
 

@@ -20,6 +20,7 @@
 #include "CompileUnitIndex.h"
 #include "PdbIndex.h"
 #include "PdbAstBuilder.h"
+#include <optional>
 
 namespace clang {
 class TagDecl;
@@ -115,7 +116,7 @@ public:
   CompilerDeclContext GetDeclContextForUID(lldb::user_id_t uid) override;
   CompilerDeclContext GetDeclContextContainingUID(lldb::user_id_t uid) override;
   Type *ResolveTypeUID(lldb::user_id_t type_uid) override;
-  llvm::Optional<ArrayInfo> GetDynamicArrayInfoForUID(
+  std::optional<ArrayInfo> GetDynamicArrayInfoForUID(
       lldb::user_id_t type_uid,
       const lldb_private::ExecutionContext *exe_ctx) override;
 
@@ -137,7 +138,7 @@ public:
   void FindFunctions(const RegularExpression &regex, bool include_inlines,
                      SymbolContextList &sc_list) override;
 
-  llvm::Optional<PdbCompilandSymId> FindSymbolScope(PdbCompilandSymId id);
+  std::optional<PdbCompilandSymId> FindSymbolScope(PdbCompilandSymId id);
 
   void FindTypes(ConstString name, const CompilerDeclContext &parent_decl_ctx,
                  uint32_t max_matches,
@@ -151,9 +152,9 @@ public:
   llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
-  CompilerDeclContext
-  FindNamespace(ConstString name,
-                const CompilerDeclContext &parent_decl_ctx) override;
+  CompilerDeclContext FindNamespace(ConstString name,
+                                    const CompilerDeclContext &parent_decl_ctx,
+                                    bool only_root_namespaces) override;
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
@@ -164,7 +165,7 @@ public:
 
   void DumpClangAST(Stream &s) override;
 
-  llvm::Optional<llvm::codeview::TypeIndex>
+  std::optional<llvm::codeview::TypeIndex>
   GetParentType(llvm::codeview::TypeIndex ti);
 
 private:

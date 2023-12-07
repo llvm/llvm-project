@@ -1,4 +1,4 @@
-; RUN: opt -passes=mldst-motion -S %s -o - -experimental-assignment-tracking \
+; RUN: opt -passes=mldst-motion -S %s -o - \
 ; RUN: | FileCheck %s
 
 ;; $ cat test.cpp
@@ -63,7 +63,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!6, !7, !8, !9}
+!llvm.module.flags = !{!6, !7, !8, !9, !1000}
 !llvm.ident = !{!10}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -105,3 +105,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !40 = !{null, !41}
 !41 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !5, size: 64)
 !42 = !{}
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

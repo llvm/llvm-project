@@ -13,6 +13,7 @@
 
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -21,7 +22,6 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -330,7 +330,7 @@ LegalizerInfo::getAction(const MachineInstr &MI,
                          const MachineRegisterInfo &MRI) const {
   SmallVector<LLT, 8> Types;
   SmallBitVector SeenTypes(8);
-  const MCOperandInfo *OpInfo = MI.getDesc().OpInfo;
+  ArrayRef<MCOperandInfo> OpInfo = MI.getDesc().operands();
   // FIXME: probably we'll need to cache the results here somehow?
   for (unsigned i = 0; i < MI.getDesc().getNumOperands(); ++i) {
     if (!OpInfo[i].isGenericType())
@@ -379,14 +379,14 @@ void LegalizerInfo::verify(const MCInstrInfo &MII) const {
   for (unsigned Opcode = FirstOp; Opcode <= LastOp; ++Opcode) {
     const MCInstrDesc &MCID = MII.get(Opcode);
     const unsigned NumTypeIdxs = std::accumulate(
-        MCID.opInfo_begin(), MCID.opInfo_end(), 0U,
+        MCID.operands().begin(), MCID.operands().end(), 0U,
         [](unsigned Acc, const MCOperandInfo &OpInfo) {
           return OpInfo.isGenericType()
                      ? std::max(OpInfo.getGenericTypeIndex() + 1U, Acc)
                      : Acc;
         });
     const unsigned NumImmIdxs = std::accumulate(
-        MCID.opInfo_begin(), MCID.opInfo_end(), 0U,
+        MCID.operands().begin(), MCID.operands().end(), 0U,
         [](unsigned Acc, const MCOperandInfo &OpInfo) {
           return OpInfo.isGenericImm()
                      ? std::max(OpInfo.getGenericImmIndex() + 1U, Acc)

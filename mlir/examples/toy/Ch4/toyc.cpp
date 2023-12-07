@@ -114,9 +114,10 @@ int dumpMLIR() {
     return error;
 
   if (enableOpt) {
-    mlir::PassManager pm(&context);
+    mlir::PassManager pm(module.get()->getName());
     // Apply any generic pass manager command line options and run the pipeline.
-    applyPassManagerCLOptions(pm);
+    if (mlir::failed(mlir::applyPassManagerCLOptions(pm)))
+      return 4;
 
     // Inline all functions into main and then delete them.
     pm.addPass(mlir::createInlinerPass());

@@ -10,17 +10,17 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
-define amdgpu_kernel void @dead_def_subregister(i32 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) #0 {
+define amdgpu_kernel void @dead_def_subregister(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
-  %val = load i64, i64 addrspace(1)* %in.gep
+  %in.gep = getelementptr i64, ptr addrspace(1) %in, i32 %tid
+  %val = load i64, ptr addrspace(1) %in.gep
 
   %lshr = shl i64 %val, 24
   %and1 = and i64 %lshr, 2190433320969 ; (255 << 33) | 9
   %vec = bitcast i64 %and1 to <2 x i32>
   %elt1 = extractelement <2 x i32> %vec, i32 1
 
-  store i32 %elt1, i32 addrspace(1)* %out
+  store i32 %elt1, ptr addrspace(1) %out
   ret void
 }
 

@@ -1,3 +1,4 @@
+# RUN: export LSAN_OPTIONS=detect_leaks=0
 # RUN: not llvm-mc -triple x86_64 %s -o /dev/null 2>&1 | FileCheck %s
 
 ## This also tests that we don't assert due to an active macro instantiation.

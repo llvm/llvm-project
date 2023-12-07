@@ -59,7 +59,7 @@ static FILE *open_or_die(const char *filename)
  */
 int main(int argc, char **argv)
 {
-	int more;
+	isl_bool more;
 	isl_ctx *ctx;
 	struct options *options;
 	FILE *input1, *input2;
@@ -77,15 +77,15 @@ int main(int argc, char **argv)
 	s1 = isl_stream_new_file(ctx, input1);
 	s2 = isl_stream_new_file(ctx, input2);
 
-	if (isl_stream_yaml_read_start_mapping(s1))
+	if (isl_stream_yaml_read_start_mapping(s1) < 0)
 		isl_die(ctx, isl_error_unknown, "arg1 not a YAML mapping",
 			return EXIT_FAILURE);
-	if (isl_stream_yaml_read_start_mapping(s2))
+	if (isl_stream_yaml_read_start_mapping(s2) < 0)
 		isl_die(ctx, isl_error_unknown, "arg2 not a YAML mapping",
 			return EXIT_FAILURE);
 
-	while ((more = isl_stream_yaml_next(s1)) > 0) {
-		int more2;
+	while ((more = isl_stream_yaml_next(s1)) == isl_bool_true) {
+		isl_bool more2;
 		isl_bool equal;
 		isl_union_map *umap1, *umap2;
 
@@ -121,14 +121,10 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 
 
-	if (isl_stream_yaml_read_end_mapping(s1) < 0) {
-		isl_stream_error(s1, NULL, "unexpected extra elements");
+	if (isl_stream_yaml_read_end_mapping(s1) < 0)
 		return EXIT_FAILURE;
-	}
-	if (isl_stream_yaml_read_end_mapping(s2) < 0) {
-		isl_stream_error(s2, NULL, "unexpected extra elements");
+	if (isl_stream_yaml_read_end_mapping(s2) < 0)
 		return EXIT_FAILURE;
-	}
 
 	isl_stream_free(s1);
 	isl_stream_free(s2);

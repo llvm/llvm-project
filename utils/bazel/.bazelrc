@@ -22,6 +22,14 @@ build --dynamic_mode=off
 # based on compilation_mode.
 build --strip=never
 
+# Add layering check to all projects.
+build --features=layering_check
+
+# Opt out of legacy lax behavior implicitly exporting files that are rule inputs
+# with default visibility.
+# See: https://bazel.build/reference/be/functions#exports_files
+build --incompatible_no_implicit_file_export
+
 ###############################################################################
 # Options to select different strategies for linking potential dependent
 # libraries. The default leaves it disabled.
@@ -168,9 +176,10 @@ build:ci --config=generic_clang
 # Speedup bazel using a ramdisk.
 build:ci --sandbox_base=/dev/shm
 
-# Use system's mpfr instead of building it from source.
+# Use system's mpfr and pfm instead of building it from source.
 # This is non hermetic but helps with compile time.
 build:ci --@llvm-project//libc:mpfr=system
+build:ci --@llvm-project//llvm:pfm=system
 
 # Don't build/test targets tagged with "nobuildkite".
 build:ci --build_tag_filters=-nobuildkite

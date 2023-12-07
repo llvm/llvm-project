@@ -374,20 +374,15 @@ public:
 
   void setChainedPhi(PHINode *PN) { ChainedPhis.insert(PN); }
 
-  /// Try to find the ValueOffsetPair for S. The function is mainly used to
-  /// check whether S can be expanded cheaply.  If this returns a non-None
-  /// value, we know we can codegen the `ValueOffsetPair` into a suitable
-  /// expansion identical with S so that S can be expanded cheaply.
+  /// Determine whether there is an existing expansion of S that can be reused.
+  /// This is used to check whether S can be expanded cheaply.
   ///
   /// L is a hint which tells in which loop to look for the suitable value.
-  /// On success return value which is equivalent to the expanded S at point
-  /// At. Return nullptr if value was not found.
   ///
   /// Note that this function does not perform an exhaustive search. I.e if it
   /// didn't find any value it does not mean that there is no such value.
-  ///
-  Value *getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
-                                     Loop *L);
+  bool hasRelatedExistingExpansion(const SCEV *S, const Instruction *At,
+                                   Loop *L);
 
   /// Returns a suitable insert point after \p I, that dominates \p
   /// MustDominate. Skips instructions inserted by the expander.
@@ -440,12 +435,14 @@ private:
 
   /// Expand a SCEVAddExpr with a pointer type into a GEP instead of using
   /// ptrtoint+arithmetic+inttoptr.
-  Value *expandAddToGEP(const SCEV *const *op_begin, const SCEV *const *op_end,
-                        PointerType *PTy, Type *Ty, Value *V);
-  Value *expandAddToGEP(const SCEV *Op, PointerType *PTy, Type *Ty, Value *V);
+  Value *expandAddToGEP(const SCEV *Op, Type *Ty, Value *V);
 
   /// Find a previous Value in ExprValueMap for expand.
-  Value *FindValueInExprValueMap(const SCEV *S, const Instruction *InsertPt);
+  /// DropPoisonGeneratingInsts is populated with instructions for which
+  /// poison-generating flags must be dropped if the value is reused.
+  Value *FindValueInExprValueMap(
+      const SCEV *S, const Instruction *InsertPt,
+      SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
 
   Value *expand(const SCEV *S);
 
@@ -456,6 +453,8 @@ private:
                           Twine Name, bool IsSequential = false);
 
   Value *visitConstant(const SCEVConstant *S) { return S->getValue(); }
+
+  Value *visitVScale(const SCEVVScale *S);
 
   Value *visitPtrToIntExpr(const SCEVPtrToIntExpr *S);
 

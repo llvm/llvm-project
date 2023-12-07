@@ -1,12 +1,12 @@
 ; RUN: llvm-link %s %S/Inputs/testlink.ll -S | FileCheck %s
 
-; CHECK: %Ty1 = type { %Ty2* }
-; CHECK: %Ty2 = type { %Ty1* }
+; CHECK: %Ty1.1 = type { ptr }
+; CHECK: %Ty2 = type { ptr, ptr }
 %Ty1 = type opaque
-%Ty2 = type { %Ty1* }
+%Ty2 = type { ptr, ptr }
 
-; CHECK: %intlist = type { %intlist*, i32 }
-%intlist = type { %intlist*, i32 }
+; CHECK: %intlist = type { ptr, i32 }
+%intlist = type { ptr, i32 }
 
 ; The uses of intlist in the other file should be remapped.
 ; CHECK-NOT: {{%intlist.[0-9]}}
@@ -16,16 +16,16 @@
 %VecSize = type { <5 x i32> }
 
 %Struct1 = type opaque
-@S1GV = external global %Struct1*
+@S1GV = external global %Struct1
 
 
-@GVTy1 = external global %Ty1*
-@GVTy2 = global %Ty2* null
+@GVTy1 = external global %Ty1
+@GVTy2 = global %Ty2 { ptr null, ptr null }
 
 
 ; This should stay the same
-; CHECK-DAG: @MyIntList = global %intlist { %intlist* null, i32 17 }
-@MyIntList = global %intlist { %intlist* null, i32 17 }
+; CHECK-DAG: @MyIntList = global %intlist { ptr null, i32 17 }
+@MyIntList = global %intlist { ptr null, i32 17 }
 
 
 ; Nothing to link here.
@@ -33,8 +33,8 @@
 ; CHECK-DAG: @0 = external global i32
 @0 = external global i32
 
-define i32* @use0() {
-  ret i32* @0
+define ptr @use0() {
+  ret ptr @0
 }
 
 ; CHECK-DAG: @Inte = global i32 1
@@ -44,19 +44,19 @@ define i32* @use0() {
 ; CHECK-DAG: @Intern1 = internal constant i32 42
 @Intern1 = internal constant i32 42
 
-@UseIntern1 = global i32* @Intern1
+@UseIntern1 = global ptr @Intern1
 
 ; This should get renamed since there is a definition that is non-internal in
 ; the other module.
 ; CHECK-DAG: @Intern2.{{[0-9]+}} = internal constant i32 792
 @Intern2 = internal constant i32 792
 
-@UseIntern2 = global i32* @Intern2
+@UseIntern2 = global ptr @Intern2
 
-; CHECK-DAG: @MyVarPtr = linkonce global { i32* } { i32* @MyVar }
-@MyVarPtr = linkonce global { i32* } { i32* @MyVar }
+; CHECK-DAG: @MyVarPtr = linkonce global { ptr } { ptr @MyVar }
+@MyVarPtr = linkonce global { ptr } { ptr @MyVar }
 
-@UseMyVarPtr = global { i32* }* @MyVarPtr
+@UseMyVarPtr = global ptr @MyVarPtr
 
 ; CHECK-DAG: @MyVar = global i32 4
 @MyVar = external global i32
@@ -81,15 +81,15 @@ declare i32 @foo(i32)
 declare void @print(i32)
 
 define void @main() {
-  %v1 = load i32, i32* @MyVar
+  %v1 = load i32, ptr @MyVar
   call void @print(i32 %v1)
-  %idx = getelementptr %intlist, %intlist* @MyIntList, i64 0, i32 1
-  %v2 = load i32, i32* %idx
+  %idx = getelementptr %intlist, ptr @MyIntList, i64 0, i32 1
+  %v2 = load i32, ptr %idx
   call void @print(i32 %v2)
   %1 = call i32 @foo(i32 5)
-  %v3 = load i32, i32* @MyVar
+  %v3 = load i32, ptr @MyVar
   call void @print(i32 %v3)
-  %v4 = load i32, i32* %idx
+  %v4 = load i32, ptr %idx
   call void @print(i32 %v4)
   ret void
 }

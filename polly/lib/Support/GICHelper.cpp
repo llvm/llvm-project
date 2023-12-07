@@ -74,8 +74,8 @@ APInt polly::APIntFromVal(__isl_take isl_val *Val) {
   // isl may represent small numbers with more than the minimal number of bits.
   // We truncate the APInt to the minimal number of bits needed to represent the
   // signed value it contains, to ensure that the bitwidth is always minimal.
-  if (A.getMinSignedBits() < A.getBitWidth())
-    A = A.trunc(A.getMinSignedBits());
+  if (A.getSignificantBits() < A.getBitWidth())
+    A = A.trunc(A.getSignificantBits());
 
   free(Data);
   isl_val_free(Val);

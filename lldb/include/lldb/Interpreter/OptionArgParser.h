@@ -11,12 +11,21 @@
 
 #include "lldb/lldb-private-types.h"
 
+#include <optional>
+
 namespace lldb_private {
 
 struct OptionArgParser {
+  /// Try to parse an address. If it succeeds return the address with the
+  /// non-address bits removed.
   static lldb::addr_t ToAddress(const ExecutionContext *exe_ctx,
                                 llvm::StringRef s, lldb::addr_t fail_value,
-                                Status *error);
+                                Status *error_ptr);
+
+  /// As for ToAddress but do not remove non-address bits from the result.
+  static lldb::addr_t ToRawAddress(const ExecutionContext *exe_ctx,
+                                   llvm::StringRef s, lldb::addr_t fail_value,
+                                   Status *error_ptr);
 
   static bool ToBoolean(llvm::StringRef s, bool fail_value, bool *success_ptr);
 
@@ -35,6 +44,11 @@ struct OptionArgParser {
                          size_t *byte_size_ptr); // If non-NULL, then a
                                                  // byte size can precede
                                                  // the format character
+
+private:
+  static std::optional<lldb::addr_t>
+  DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
+              Status *error);
 };
 
 } // namespace lldb_private

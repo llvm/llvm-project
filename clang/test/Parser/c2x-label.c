@@ -6,8 +6,8 @@ void test_label_in_func() {
 label1:
     x = 1;
 label2: label3: label4:
-} // c17-warning {{label at end of compound statement is a C2x extension}} \
-     c2x-warning {{label at end of compound statement is incompatible with C standards before C2x}}
+} // c17-warning {{label at end of compound statement is a C23 extension}} \
+     c2x-warning {{label at end of compound statement is incompatible with C standards before C23}}
 
 int test_label_in_switch(int v) {
     switch (v) {
@@ -16,15 +16,15 @@ int test_label_in_switch(int v) {
     case 2:
         return 2;
     case 3: case 4: case 5:
-    } // c17-warning {{label at end of compound statement is a C2x extension}} \
-         c2x-warning {{label at end of compound statement is incompatible with C standards before C2x}}
+    } // c17-warning {{label at end of compound statement is a C23 extension}} \
+         c2x-warning {{label at end of compound statement is incompatible with C standards before C23}}
 
     switch (v) {
     case 6:
         return 6;
     default:
-    } // c17-warning {{label at end of compound statement is a C2x extension}} \
-         c2x-warning {{label at end of compound statement is incompatible with C standards before C2x}}
+    } // c17-warning {{label at end of compound statement is a C23 extension}} \
+         c2x-warning {{label at end of compound statement is incompatible with C standards before C23}}
 
     return 0;
 }

@@ -16,10 +16,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
-#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -228,6 +228,10 @@ public:
   bool isCPUStringValid(StringRef CPU) const {
     auto Found = llvm::lower_bound(ProcDesc, CPU);
     return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
+  }
+
+  ArrayRef<SubtargetSubTypeKV> getAllProcessorDescriptions() const {
+    return ProcDesc;
   }
 
   virtual unsigned getHwMode() const { return 0; }

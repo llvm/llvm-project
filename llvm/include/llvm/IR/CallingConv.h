@@ -159,13 +159,9 @@ namespace CallingConv {
     /// registers.
     X86_VectorCall = 80,
 
-    /// Used by HipHop Virtual Machine (HHVM) to perform calls to and from
-    /// translation cache, and for calling PHP functions. HHVM calling
-    /// convention supports tail/sibling call elimination.
-    HHVM = 81,
-
-    /// HHVM calling convention for invoking C/C++ helpers.
-    HHVM_C = 82,
+    /// Placeholders for HHVM calling conventions (deprecated, removed).
+    DUMMY_HHVM = 81,
+    DUMMY_HHVM_C = 82,
 
     /// x86 hardware interrupt context. Callee may take one or two parameters,
     /// where the 1st represents a pointer to hardware context frame and the 2nd
@@ -240,6 +236,14 @@ namespace CallingConv {
 
     /// Preserve X2-X15, X19-X29, SP, Z0-Z31, P0-P15.
     AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 = 103,
+
+    /// Used on AMDGPUs to give the middle-end more control over argument
+    /// placement.
+    AMDGPU_CS_Chain = 104,
+
+    /// Used on AMDGPUs to give the middle-end more control over argument
+    /// placement. Preserves active lane values for input VGPRs.
+    AMDGPU_CS_ChainPreserve = 105,
 
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023

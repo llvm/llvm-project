@@ -1,5 +1,6 @@
 /*
  * Copyright 2008-2009 Katholieke Universiteit Leuven
+ * Copyright 2011      Sven Verdoolaege
  * Copyright 2013      Ecole Normale Superieure
  *
  * Use of this software is governed by the MIT license
@@ -652,4 +653,33 @@ __isl_give isl_vec *isl_vec_move_els(__isl_take isl_vec *vec,
 
 	isl_vec_free(vec);
 	return res;
+}
+
+/* Reorder the elements of "vec" starting at "offset" based
+ * on the given reordering.
+ */
+__isl_give isl_vec *isl_vec_reorder(__isl_take isl_vec *vec,
+	unsigned offset, __isl_take isl_reordering *r)
+{
+	isl_vec *res;
+	int i;
+
+	if (!vec || !r)
+		goto error;
+
+	res = isl_vec_alloc(vec->ctx, offset + r->dst_len);
+	if (!res)
+		goto error;
+	isl_seq_cpy(res->el, vec->el, offset);
+	isl_seq_clr(res->el + offset, res->size - offset);
+	for (i = 0; i < r->src_len; ++i)
+		isl_int_set(res->el[offset + r->pos[i]], vec->el[offset + i]);
+
+	isl_reordering_free(r);
+	isl_vec_free(vec);
+	return res;
+error:
+	isl_vec_free(vec);
+	isl_reordering_free(r);
+	return NULL;
 }

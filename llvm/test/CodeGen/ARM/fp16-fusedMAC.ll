@@ -4,7 +4,7 @@
 
 ; Check generated fp16 fused MAC and MLS.
 
-define arm_aapcs_vfpcc void @fusedMACTest2(half *%a1, half *%a2, half *%a3) {
+define arm_aapcs_vfpcc void @fusedMACTest2(ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-LABEL: fusedMACTest2:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -24,16 +24,16 @@ define arm_aapcs_vfpcc void @fusedMACTest2(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE-NEXT:    vstr.16 s0, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %f1 = load half, half *%a1, align 2
-  %f2 = load half, half *%a2, align 2
-  %f3 = load half, half *%a3, align 2
+  %f1 = load half, ptr %a1, align 2
+  %f2 = load half, ptr %a2, align 2
+  %f3 = load half, ptr %a3, align 2
   %1 = fmul half %f1, %f2
   %2 = fadd half %1, %f3
-  store half %2, half *%a1, align 2
+  store half %2, ptr %a1, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @fusedMACTest4(half *%a1, half *%a2, half *%a3) {
+define arm_aapcs_vfpcc void @fusedMACTest4(ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-LABEL: fusedMACTest4:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r2]
@@ -53,16 +53,16 @@ define arm_aapcs_vfpcc void @fusedMACTest4(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE-NEXT:    vstr.16 s0, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %f1 = load half, half *%a1, align 2
-  %f2 = load half, half *%a2, align 2
-  %f3 = load half, half *%a3, align 2
+  %f1 = load half, ptr %a1, align 2
+  %f2 = load half, ptr %a2, align 2
+  %f3 = load half, ptr %a3, align 2
   %1 = fmul half %f2, %f3
   %2 = fsub half %f1, %1
-  store half %2, half *%a1, align 2
+  store half %2, ptr %a1, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @fusedMACTest6(half *%a1, half *%a2, half *%a3) {
+define arm_aapcs_vfpcc void @fusedMACTest6(ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-LABEL: fusedMACTest6:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -82,17 +82,17 @@ define arm_aapcs_vfpcc void @fusedMACTest6(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE-NEXT:    vstr.16 s0, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %f1 = load half, half *%a1, align 2
-  %f2 = load half, half *%a2, align 2
-  %f3 = load half, half *%a3, align 2
+  %f1 = load half, ptr %a1, align 2
+  %f2 = load half, ptr %a2, align 2
+  %f3 = load half, ptr %a3, align 2
   %1 = fmul half %f1, %f2
   %2 = fsub half -0.0, %1
   %3 = fsub half %2, %f3
-  store half %3, half *%a1, align 2
+  store half %3, ptr %a1, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @fusedMACTest8(half *%a1, half *%a2, half *%a3) {
+define arm_aapcs_vfpcc void @fusedMACTest8(ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-LABEL: fusedMACTest8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -112,16 +112,16 @@ define arm_aapcs_vfpcc void @fusedMACTest8(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE-NEXT:    vstr.16 s0, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %f1 = load half, half *%a1, align 2
-  %f2 = load half, half *%a2, align 2
-  %f3 = load half, half *%a3, align 2
+  %f1 = load half, ptr %a1, align 2
+  %f2 = load half, ptr %a2, align 2
+  %f3 = load half, ptr %a3, align 2
   %1 = fmul half %f1, %f2
   %2 = fsub half %1, %f3
-  store half %2, half *%a1, align 2
+  store half %2, ptr %a1, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_fma_f16(half *%aa, half *%bb, half *%cc) nounwind readnone ssp {
+define arm_aapcs_vfpcc void @test_fma_f16(ptr %aa, ptr %bb, ptr %cc) nounwind readnone ssp {
 ; CHECK-LABEL: test_fma_f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -140,15 +140,15 @@ define arm_aapcs_vfpcc void @test_fma_f16(half *%aa, half *%bb, half *%cc) nounw
 ; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 entry:
-  %a = load half, half *%aa, align 2
-  %b = load half, half *%bb, align 2
-  %c = load half, half *%cc, align 2
+  %a = load half, ptr %aa, align 2
+  %b = load half, ptr %bb, align 2
+  %c = load half, ptr %cc, align 2
   %tmp1 = tail call half @llvm.fma.f16(half %a, half %b, half %c) nounwind readnone
-  store half %tmp1, half *%aa, align 2
+  store half %tmp1, ptr %aa, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_fnms_f16(half *%aa, half *%bb, half *%cc) nounwind readnone ssp {
+define arm_aapcs_vfpcc void @test_fnms_f16(ptr %aa, ptr %bb, ptr %cc) nounwind readnone ssp {
 ; CHECK-LABEL: test_fnms_f16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -167,16 +167,16 @@ define arm_aapcs_vfpcc void @test_fnms_f16(half *%aa, half *%bb, half *%cc) noun
 ; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %a = load half, half *%aa, align 2
-  %b = load half, half *%bb, align 2
-  %c = load half, half *%cc, align 2
+  %a = load half, ptr %aa, align 2
+  %b = load half, ptr %bb, align 2
+  %c = load half, ptr %cc, align 2
   %tmp2 = fsub half -0.0, %c
   %tmp3 = tail call half @llvm.fma.f16(half %a, half %b, half %c) nounwind readnone
-  store half %tmp3, half *%aa, align 2
+  store half %tmp3, ptr %aa, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_fma_const_fold(half *%aa, half *%bb) nounwind {
+define arm_aapcs_vfpcc void @test_fma_const_fold(ptr %aa, ptr %bb) nounwind {
 ; CHECK-LABEL: test_fma_const_fold:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -193,14 +193,14 @@ define arm_aapcs_vfpcc void @test_fma_const_fold(half *%aa, half *%bb) nounwind 
 ; DONT-FUSE-NEXT:    vstr.16 s0, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %a = load half, half *%aa, align 2
-  %b = load half, half *%bb, align 2
+  %a = load half, ptr %aa, align 2
+  %b = load half, ptr %bb, align 2
   %ret = call half @llvm.fma.f16(half %a, half 1.0, half %b)
-  store half %ret, half *%aa, align 2
+  store half %ret, ptr %aa, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_fma_canonicalize(half *%aa, half *%bb) nounwind {
+define arm_aapcs_vfpcc void @test_fma_canonicalize(ptr %aa, ptr %bb) nounwind {
 ; CHECK-LABEL: test_fma_canonicalize:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r0]
@@ -219,14 +219,14 @@ define arm_aapcs_vfpcc void @test_fma_canonicalize(half *%aa, half *%bb) nounwin
 ; DONT-FUSE-NEXT:    vstr.16 s2, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %a = load half, half *%aa, align 2
-  %b = load half, half *%bb, align 2
+  %a = load half, ptr %aa, align 2
+  %b = load half, ptr %bb, align 2
   %ret = call half @llvm.fma.f16(half 2.0, half %a, half %b)
-  store half %ret, half *%aa, align 2
+  store half %ret, ptr %aa, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @fms1(half *%a1, half *%a2, half *%a3) {
+define arm_aapcs_vfpcc void @fms1(ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-LABEL: fms1:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -245,16 +245,16 @@ define arm_aapcs_vfpcc void @fms1(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %f1 = load half, half *%a1, align 2
-  %f2 = load half, half *%a2, align 2
-  %f3 = load half, half *%a3, align 2
+  %f1 = load half, ptr %a1, align 2
+  %f2 = load half, ptr %a2, align 2
+  %f3 = load half, ptr %a3, align 2
   %s = fsub half -0.0, %f1
   %ret = call half @llvm.fma.f16(half %s, half %f2, half %f3)
-  store half %ret, half *%a1, align 2
+  store half %ret, ptr %a1, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @fms2(half *%a1, half *%a2, half *%a3) {
+define arm_aapcs_vfpcc void @fms2(ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-LABEL: fms2:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -273,16 +273,16 @@ define arm_aapcs_vfpcc void @fms2(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %f1 = load half, half *%a1, align 2
-  %f2 = load half, half *%a2, align 2
-  %f3 = load half, half *%a3, align 2
+  %f1 = load half, ptr %a1, align 2
+  %f2 = load half, ptr %a2, align 2
+  %f3 = load half, ptr %a3, align 2
   %s = fsub half -0.0, %f1
   %ret = call half @llvm.fma.f16(half %f2, half %s, half %f3)
-  store half %ret, half *%a1, align 2
+  store half %ret, ptr %a1, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @fnma1(half *%a1, half *%a2, half *%a3) {
+define arm_aapcs_vfpcc void @fnma1(ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-LABEL: fnma1:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -301,16 +301,16 @@ define arm_aapcs_vfpcc void @fnma1(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %f1 = load half, half *%a1, align 2
-  %f2 = load half, half *%a2, align 2
-  %f3 = load half, half *%a3, align 2
+  %f1 = load half, ptr %a1, align 2
+  %f2 = load half, ptr %a2, align 2
+  %f3 = load half, ptr %a3, align 2
   %fma = call half @llvm.fma.f16(half %f1, half %f2, half %f3)
   %n1 = fsub half -0.0, %fma
-  store half %n1, half *%a1, align 2
+  store half %n1, ptr %a1, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @fnma2(half *%a1, half *%a2, half *%a3) {
+define arm_aapcs_vfpcc void @fnma2(ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-LABEL: fnma2:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -329,17 +329,17 @@ define arm_aapcs_vfpcc void @fnma2(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %f1 = load half, half *%a1, align 2
-  %f2 = load half, half *%a2, align 2
-  %f3 = load half, half *%a3, align 2
+  %f1 = load half, ptr %a1, align 2
+  %f2 = load half, ptr %a2, align 2
+  %f3 = load half, ptr %a3, align 2
   %n1 = fsub half -0.0, %f1
   %n3 = fsub half -0.0, %f3
   %ret = call half @llvm.fma.f16(half %n1, half %f2, half %n3)
-  store half %ret, half *%a1, align 2
+  store half %ret, ptr %a1, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @fnms1(half *%a1, half *%a2, half *%a3) {
+define arm_aapcs_vfpcc void @fnms1(ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-LABEL: fnms1:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -358,16 +358,16 @@ define arm_aapcs_vfpcc void @fnms1(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %f1 = load half, half *%a1, align 2
-  %f2 = load half, half *%a2, align 2
-  %f3 = load half, half *%a3, align 2
+  %f1 = load half, ptr %a1, align 2
+  %f2 = load half, ptr %a2, align 2
+  %f3 = load half, ptr %a3, align 2
   %n3 = fsub half -0.0, %f3
   %ret = call half @llvm.fma.f16(half %f1, half %f2, half %n3)
-  store half %ret, half *%a1, align 2
+  store half %ret, ptr %a1, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @fnms2(half *%a1, half *%a2, half *%a3) {
+define arm_aapcs_vfpcc void @fnms2(ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-LABEL: fnms2:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -386,17 +386,17 @@ define arm_aapcs_vfpcc void @fnms2(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %f1 = load half, half *%a1, align 2
-  %f2 = load half, half *%a2, align 2
-  %f3 = load half, half *%a3, align 2
+  %f1 = load half, ptr %a1, align 2
+  %f2 = load half, ptr %a2, align 2
+  %f3 = load half, ptr %a3, align 2
   %n1 = fsub half -0.0, %f1
   %fma = call half @llvm.fma.f16(half %n1, half %f2, half %f3)
   %n = fsub half -0.0, %fma
-  store half %n, half *%a1, align 2
+  store half %n, ptr %a1, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @fnms3(half *%a1, half *%a2, half *%a3) {
+define arm_aapcs_vfpcc void @fnms3(ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-LABEL: fnms3:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr.16 s0, [r0]
@@ -415,13 +415,13 @@ define arm_aapcs_vfpcc void @fnms3(half *%a1, half *%a2, half *%a3) {
 ; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
 ; DONT-FUSE-NEXT:    bx lr
 
-  %f1 = load half, half *%a1, align 2
-  %f2 = load half, half *%a2, align 2
-  %f3 = load half, half *%a3, align 2
+  %f1 = load half, ptr %a1, align 2
+  %f2 = load half, ptr %a2, align 2
+  %f3 = load half, ptr %a3, align 2
   %n2 = fsub half -0.0, %f2
   %fma = call half @llvm.fma.f16(half %f1, half %n2, half %f3)
   %n1 = fsub half -0.0, %fma
-  store half %n1, half *%a1, align 2
+  store half %n1, ptr %a1, align 2
   ret void
 }
 

@@ -76,9 +76,9 @@ static cl::opt<unsigned> BlockScanLimit(
              "dependency analysis (default = 100)"));
 
 static cl::opt<unsigned>
-    BlockNumberLimit("memdep-block-number-limit", cl::Hidden, cl::init(1000),
+    BlockNumberLimit("memdep-block-number-limit", cl::Hidden, cl::init(200),
                      cl::desc("The number of blocks to scan during memory "
-                              "dependency analysis (default = 1000)"));
+                              "dependency analysis (default = 200)"));
 
 // Limit on the number of memdep results to process.
 static const unsigned int NumResultsLimit = 100;
@@ -592,6 +592,11 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         return MemDepResult::getDef(Inst);
     }
 
+    // If we found a select instruction for MemLoc pointer, return it as Def
+    // dependency.
+    if (isa<SelectInst>(Inst) && MemLoc.Ptr == Inst)
+      return MemDepResult::getDef(Inst);
+
     if (isInvariantLoad)
       continue;
 
@@ -962,7 +967,7 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
   // If the block has a dependency (i.e. it isn't completely transparent to
   // the value), remember the reverse association because we just added it
   // to Cache!
-  if (!Dep.isDef() && !Dep.isClobber())
+  if (!Dep.isLocal())
     return Dep;
 
   // Keep the ReverseNonLocalPtrDeps map up to date so we can efficiently
@@ -1233,7 +1238,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     // phi translation to change it into a value live in the predecessor block.
     // If not, we just add the predecessors to the worklist and scan them with
     // the same Pointer.
-    if (!Pointer.NeedsPHITranslationFromBlock(BB)) {
+    if (!Pointer.needsPHITranslationFromBlock(BB)) {
       SkipFirstBlock = false;
       SmallVector<BasicBlock *, 16> NewBlocks;
       for (BasicBlock *Pred : PredCache.get(BB)) {
@@ -1272,7 +1277,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 
     // We do need to do phi translation, if we know ahead of time we can't phi
     // translate this value, don't even try.
-    if (!Pointer.IsPotentiallyPHITranslatable())
+    if (!Pointer.isPotentiallyPHITranslatable())
       goto PredTranslationFailure;
 
     // We may have added values to the cache list before this PHI translation.
@@ -1293,8 +1298,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       // Get the PHI translated pointer in this predecessor.  This can fail if
       // not translatable, in which case the getAddr() returns null.
       PHITransAddr &PredPointer = PredList.back().second;
-      PredPointer.PHITranslateValue(BB, Pred, &DT, /*MustDominate=*/false);
-      Value *PredPtrVal = PredPointer.getAddr();
+      Value *PredPtrVal =
+          PredPointer.translateValue(BB, Pred, &DT, /*MustDominate=*/false);
 
       // Check to see if we have already visited this pred block with another
       // pointer.  If so, we can't do this lookup.  This failure can occur

@@ -7,8 +7,8 @@
 
 target triple = "hexagon"
 
-%struct.0 = type { i8*, i8, %union.anon.0 }
-%union.anon.0 = type { i8* }
+%struct.0 = type { ptr, i8, %union.anon.0 }
+%union.anon.0 = type { ptr }
 
 define hidden fastcc void @fred() unnamed_addr #0 {
 entry:
@@ -18,7 +18,7 @@ while.body.lr.ph:                                 ; preds = %entry
   br label %while.body
 
 while.body:                                       ; preds = %exit.2, %while.body.lr.ph
-  %lsr.iv = phi %struct.0* [ %cgep22, %exit.2 ], [ undef, %while.body.lr.ph ]
+  %lsr.iv = phi ptr [ %cgep22, %exit.2 ], [ undef, %while.body.lr.ph ]
   switch i32 undef, label %exit [
     i32 1, label %sw.bb.i
     i32 2, label %sw.bb3.i
@@ -37,17 +37,15 @@ exit:                                             ; preds = %while.body
   ]
 
 sw.bb.i17:                                        ; preds = %.exit
-  %0 = bitcast %struct.0* %lsr.iv to i32*
-  %1 = load i32, i32* %0, align 4
+  %0 = load i32, ptr %lsr.iv, align 4
   unreachable
 
 sw.bb3.i20:                                       ; preds = %exit
-  %2 = bitcast %struct.0* %lsr.iv to i8**
-  %3 = load i8*, i8** %2, align 4
+  %1 = load ptr, ptr %lsr.iv, align 4
   unreachable
 
 exit.2:                                           ; preds = %exit
-  %cgep22 = getelementptr %struct.0, %struct.0* %lsr.iv, i32 1
+  %cgep22 = getelementptr %struct.0, ptr %lsr.iv, i32 1
   br label %while.body
 
 while.end:                                        ; preds = %entry

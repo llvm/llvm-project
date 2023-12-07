@@ -35,10 +35,10 @@
 #define LLVM_ADT_DEPTHFIRSTITERATOR_H
 
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include <iterator>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -88,7 +88,7 @@ public:
   using value_type = typename GT::NodeRef;
   using difference_type = std::ptrdiff_t;
   using pointer = value_type *;
-  using reference = value_type &;
+  using reference = const value_type &;
 
 private:
   using NodeRef = typename GT::NodeRef;
@@ -97,7 +97,7 @@ private:
   // First element is node reference, second is the 'next child' to visit.
   // The second child is initialized lazily to pick up graph changes during the
   // DFS.
-  using StackElement = std::pair<NodeRef, Optional<ChildItTy>>;
+  using StackElement = std::pair<NodeRef, std::optional<ChildItTy>>;
 
   // VisitStack - Used to maintain the ordering.  Top = current block
   std::vector<StackElement> VisitStack;
@@ -123,7 +123,7 @@ private:
   inline void toNext() {
     do {
       NodeRef Node = VisitStack.back().first;
-      Optional<ChildItTy> &Opt = VisitStack.back().second;
+      std::optional<ChildItTy> &Opt = VisitStack.back().second;
 
       if (!Opt)
         Opt.emplace(GT::child_begin(Node));
@@ -165,7 +165,7 @@ public:
   }
   bool operator!=(const df_iterator &x) const { return !(*this == x); }
 
-  const NodeRef &operator*() const { return VisitStack.back().first; }
+  reference operator*() const { return VisitStack.back().first; }
 
   // This is a nonstandard operator-> that dereferences the pointer an extra
   // time... so that you can actually call methods ON the Node, because

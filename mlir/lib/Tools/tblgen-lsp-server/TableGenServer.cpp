@@ -8,12 +8,12 @@
 
 #include "TableGenServer.h"
 
-#include "../lsp-server-support/CompilationDatabase.h"
-#include "../lsp-server-support/Logging.h"
-#include "../lsp-server-support/Protocol.h"
-#include "../lsp-server-support/SourceMgrUtils.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Tools/lsp-server-support/CompilationDatabase.h"
+#include "mlir/Tools/lsp-server-support/Logging.h"
+#include "mlir/Tools/lsp-server-support/Protocol.h"
+#include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMap.h"
@@ -23,8 +23,16 @@
 #include "llvm/Support/Path.h"
 #include "llvm/TableGen/Parser.h"
 #include "llvm/TableGen/Record.h"
+#include <optional>
 
 using namespace mlir;
+
+/// Returns the range of a lexical token given a SMLoc corresponding to the
+/// start of an token location. The range is computed heuristically, and
+/// supports identifier-like tokens, strings, etc.
+static SMRange convertTokenLocToRange(SMLoc loc) {
+  return lsp::convertTokenLocToRange(loc, "$");
+}
 
 /// Returns a language server uri for the given source location. `mainFileURI`
 /// corresponds to the uri for the main file of the source manager.
@@ -50,11 +58,11 @@ static lsp::Location getLocationFromLoc(llvm::SourceMgr &mgr, SMRange loc,
 }
 static lsp::Location getLocationFromLoc(llvm::SourceMgr &mgr, SMLoc loc,
                                         const lsp::URIForFile &uri) {
-  return getLocationFromLoc(mgr, lsp::convertTokenLocToRange(loc), uri);
+  return getLocationFromLoc(mgr, convertTokenLocToRange(loc), uri);
 }
 
 /// Convert the given TableGen diagnostic to the LSP form.
-static Optional<lsp::Diagnostic>
+static std::optional<lsp::Diagnostic>
 getLspDiagnoticFromDiag(const llvm::SMDiagnostic &diag,
                         const lsp::URIForFile &uri) {
   auto *sourceMgr = const_cast<llvm::SourceMgr *>(diag.getSourceMgr());
@@ -138,10 +146,9 @@ namespace {
 struct TableGenIndexSymbol {
   TableGenIndexSymbol(const llvm::Record *record)
       : definition(record),
-        defLoc(lsp::convertTokenLocToRange(record->getLoc().front())) {}
+        defLoc(convertTokenLocToRange(record->getLoc().front())) {}
   TableGenIndexSymbol(const llvm::RecordVal *value)
-      : definition(value),
-        defLoc(lsp::convertTokenLocToRange(value->getLoc())) {}
+      : definition(value), defLoc(convertTokenLocToRange(value->getLoc())) {}
   virtual ~TableGenIndexSymbol() = default;
 
   // The main definition of the symbol.
@@ -255,7 +262,7 @@ void TableGenIndex::initialize(const llvm::RecordKeeper &records) {
     // If the location we got was empty, try to lex a token from the start
     // location.
     if (startLoc == endLoc) {
-      refLoc = lsp::convertTokenLocToRange(SMLoc::getFromPointer(startLoc));
+      refLoc = convertTokenLocToRange(SMLoc::getFromPointer(startLoc));
       startLoc = refLoc.Start.getPointer();
       endLoc = refLoc.End.getPointer();
 
@@ -285,7 +292,7 @@ void TableGenIndex::initialize(const llvm::RecordKeeper &records) {
 
     // Add references to the definition.
     for (SMLoc loc : def.getLoc().drop_front())
-      insertRef(sym, lsp::convertTokenLocToRange(loc));
+      insertRef(sym, convertTokenLocToRange(loc));
     for (SMRange loc : def.getReferenceLocs())
       insertRef(sym, loc);
 
@@ -582,7 +589,7 @@ lsp::Hover TableGenTextFile::buildHoverForRecord(const llvm::Record *record,
     printAndFormatField("description");
 
     // Check for documentation in the source file.
-    if (Optional<std::string> doc =
+    if (std::optional<std::string> doc =
             lsp::extractSourceDocComment(sourceMgr, record->getLoc().front())) {
       hoverOS << "\n" << *doc << "\n";
     }
@@ -617,7 +624,7 @@ lsp::Hover TableGenTextFile::buildHoverForField(const llvm::Record *record,
     hoverOS << "`\n***\n";
 
     // Check for documentation in the source file.
-    if (Optional<std::string> doc =
+    if (std::optional<std::string> doc =
             lsp::extractSourceDocComment(sourceMgr, value->getLoc())) {
       hoverOS << "\n" << *doc << "\n";
       hoverOS << "\n***\n";
@@ -627,7 +634,7 @@ lsp::Hover TableGenTextFile::buildHoverForField(const llvm::Record *record,
     // documentation.
     auto [baseRecord, baseValue] = getBaseValue(record, value);
     if (baseValue) {
-      if (Optional<std::string> doc =
+      if (std::optional<std::string> doc =
               lsp::extractSourceDocComment(sourceMgr, baseValue->getLoc())) {
         hoverOS << "\n *From `" << baseRecord->getName() << "`*:\n\n"
                 << *doc << "\n";
@@ -690,7 +697,8 @@ void lsp::TableGenServer::updateDocument(
     impl->files.erase(it);
 }
 
-Optional<int64_t> lsp::TableGenServer::removeDocument(const URIForFile &uri) {
+std::optional<int64_t>
+lsp::TableGenServer::removeDocument(const URIForFile &uri) {
   auto it = impl->files.find(uri.file());
   if (it == impl->files.end())
     return std::nullopt;

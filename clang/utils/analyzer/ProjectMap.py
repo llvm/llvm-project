@@ -40,6 +40,7 @@ class Size(int, Enum):
     possible sizes, we want projects with UNSPECIFIED size to be filtered out
     for any given size.
     """
+
     TINY = auto()
     SMALL = auto()
     BIG = auto()
@@ -68,17 +69,23 @@ class Size(int, Enum):
             if possible_size.name == raw_size_upper:
                 return possible_size
 
-        possible_sizes = [size.name.lower() for size in Size
-                          # no need in showing our users this size
-                          if size != Size.UNSPECIFIED]
-        raise ValueError(f"Incorrect project size '{raw_size}'. "
-                         f"Available sizes are {possible_sizes}")
+        possible_sizes = [
+            size.name.lower()
+            for size in Size
+            # no need in showing our users this size
+            if size != Size.UNSPECIFIED
+        ]
+        raise ValueError(
+            f"Incorrect project size '{raw_size}'. "
+            f"Available sizes are {possible_sizes}"
+        )
 
 
 class ProjectInfo(NamedTuple):
     """
     Information about a project to analyze.
     """
+
     name: str
     mode: int
     source: DownloadType = DownloadType.SCRIPT
@@ -106,6 +113,7 @@ class ProjectMap:
     """
     Project map stores info about all the "registered" projects.
     """
+
     def __init__(self, path: Optional[str] = None, should_exist: bool = True):
         """
         :param path: optional path to a project JSON file, when None defaults
@@ -122,7 +130,8 @@ class ProjectMap:
             if should_exist:
                 raise ValueError(
                     f"Cannot find the project map file {path}"
-                    f"\nRunning script for the wrong directory?\n")
+                    f"\nRunning script for the wrong directory?\n"
+                )
             else:
                 self._create_empty(path)
 
@@ -140,15 +149,13 @@ class ProjectMap:
             raw_projects = json.load(raw_data)
 
             if not isinstance(raw_projects, list):
-                raise ValueError(
-                    "Project map should be a list of JSON objects")
+                raise ValueError("Project map should be a list of JSON objects")
 
             self.projects = self._parse(raw_projects)
 
     @staticmethod
     def _parse(raw_projects: List[JSON]) -> List[ProjectInfo]:
-        return [ProjectMap._parse_project(raw_project)
-                for raw_project in raw_projects]
+        return [ProjectMap._parse_project(raw_project) for raw_project in raw_projects]
 
     @staticmethod
     def _parse_project(raw_project: JSON) -> ProjectInfo:
@@ -164,12 +171,10 @@ class ProjectMap:
             else:
                 origin, commit = "", ""
 
-            return ProjectInfo(name, build_mode, source, origin, commit,
-                               enabled, size)
+            return ProjectInfo(name, build_mode, source, origin, commit, enabled, size)
 
         except KeyError as e:
-            raise ValueError(
-                f"Project info is required to have a '{e.args[0]}' field")
+            raise ValueError(f"Project info is required to have a '{e.args[0]}' field")
 
     @staticmethod
     def _get_git_params(raw_project: JSON) -> Tuple[str, str]:
@@ -178,7 +183,8 @@ class ProjectMap:
         except KeyError as e:
             raise ValueError(
                 f"Profect info is required to have a '{e.args[0]}' field "
-                f"if it has a 'git' source")
+                f"if it has a 'git' source"
+            )
 
     @staticmethod
     def _create_empty(path: str):
@@ -187,13 +193,11 @@ class ProjectMap:
     @staticmethod
     def _save(projects: List[ProjectInfo], path: str):
         with open(path, "w") as output:
-            json.dump(ProjectMap._convert_infos_to_dicts(projects),
-                      output, indent=2)
+            json.dump(ProjectMap._convert_infos_to_dicts(projects), output, indent=2)
 
     @staticmethod
     def _convert_infos_to_dicts(projects: List[ProjectInfo]) -> List[JSON]:
-        return [ProjectMap._convert_info_to_dict(project)
-                for project in projects]
+        return [ProjectMap._convert_info_to_dict(project) for project in projects]
 
     @staticmethod
     def _convert_info_to_dict(project: ProjectInfo) -> JSON:

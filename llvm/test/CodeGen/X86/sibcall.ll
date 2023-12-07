@@ -138,22 +138,18 @@ define dso_local i32 @t6(i32 %x) nounwind ssp {
 ; X64-LABEL: t6:
 ; X64:       # %bb.0:
 ; X64-NEXT:    cmpl $9, %edi
-; X64-NEXT:    jg .LBB6_2
+; X64-NEXT:    jg bar # TAILCALL
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    decl %edi
 ; X64-NEXT:    jmp t6 # TAILCALL
-; X64-NEXT:  .LBB6_2: # %bb1
-; X64-NEXT:    jmp bar # TAILCALL
 ;
 ; X32-LABEL: t6:
 ; X32:       # %bb.0:
 ; X32-NEXT:    cmpl $9, %edi
-; X32-NEXT:    jg .LBB6_2
+; X32-NEXT:    jg bar # TAILCALL
 ; X32-NEXT:  # %bb.1: # %bb
 ; X32-NEXT:    decl %edi
 ; X32-NEXT:    jmp t6 # TAILCALL
-; X32-NEXT:  .LBB6_2: # %bb1
-; X32-NEXT:    jmp bar # TAILCALL
   %t0 = icmp slt i32 %x, 10
   br i1 %t0, label %bb, label %bb1
 
@@ -260,30 +256,24 @@ define dso_local i32 @t11(i32 %x, i32 %y, i32 %z.0, i32 %z.1, i32 %z.2) nounwind
 ; X86-LABEL: t11:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB11_1
-; X86-NEXT:  # %bb.2: # %bb
-; X86-NEXT:    jmp foo5 # TAILCALL
-; X86-NEXT:  .LBB11_1: # %bb6
+; X86-NEXT:    jne foo5 # TAILCALL
+; X86-NEXT:  # %bb.1: # %bb6
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t11:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    testl %edi, %edi
-; X64-NEXT:    je .LBB11_1
-; X64-NEXT:  # %bb.2: # %bb
-; X64-NEXT:    jmp foo5 # TAILCALL
-; X64-NEXT:  .LBB11_1: # %bb6
+; X64-NEXT:    jne foo5 # TAILCALL
+; X64-NEXT:  # %bb.1: # %bb6
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: t11:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    testl %edi, %edi
-; X32-NEXT:    je .LBB11_1
-; X32-NEXT:  # %bb.2: # %bb
-; X32-NEXT:    jmp foo5 # TAILCALL
-; X32-NEXT:  .LBB11_1: # %bb6
+; X32-NEXT:    jne foo5 # TAILCALL
+; X32-NEXT:  # %bb.1: # %bb6
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    retq
 entry:
@@ -306,30 +296,24 @@ define dso_local i32 @t12(i32 %x, i32 %y, ptr byval(%struct.t) align 4 %z) nounw
 ; X86-LABEL: t12:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB12_1
-; X86-NEXT:  # %bb.2: # %bb
-; X86-NEXT:    jmp foo6 # TAILCALL
-; X86-NEXT:  .LBB12_1: # %bb2
+; X86-NEXT:    jne foo6 # TAILCALL
+; X86-NEXT:  # %bb.1: # %bb2
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t12:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    testl %edi, %edi
-; X64-NEXT:    je .LBB12_1
-; X64-NEXT:  # %bb.2: # %bb
-; X64-NEXT:    jmp foo6 # TAILCALL
-; X64-NEXT:  .LBB12_1: # %bb2
+; X64-NEXT:    jne foo6 # TAILCALL
+; X64-NEXT:  # %bb.1: # %bb2
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: t12:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    testl %edi, %edi
-; X32-NEXT:    je .LBB12_1
-; X32-NEXT:  # %bb.2: # %bb
-; X32-NEXT:    jmp foo6 # TAILCALL
-; X32-NEXT:  .LBB12_1: # %bb2
+; X32-NEXT:    jne foo6 # TAILCALL
+; X32-NEXT:  # %bb.1: # %bb2
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    retq
 entry:
@@ -984,11 +968,11 @@ define ccc void @t22_non_sret_to_sret(ptr %agg.result) nounwind  {
 ;
 ; X64-LABEL: t22_non_sret_to_sret:
 ; X64:       # %bb.0:
-; X64-NEXT:    jmp	t22_f_sret@PLT                  # TAILCALL
+; X64-NEXT:    jmp t22_f_sret@PLT # TAILCALL
 ;
 ; X32-LABEL: t22_non_sret_to_sret:
 ; X32:       # %bb.0:
-; X32-NEXT:    jmp	t22_f_sret@PLT                  # TAILCALL
+; X32-NEXT:    jmp t22_f_sret@PLT # TAILCALL
   tail call ccc void @t22_f_sret(ptr noalias sret(%struct.foo) %agg.result) nounwind
   ret void
 }

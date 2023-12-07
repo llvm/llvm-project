@@ -98,7 +98,7 @@ Error DebugInlineeLinesSubsection::commit(BinaryStreamWriter &Writer) const {
 
     if (auto EC = Writer.writeInteger<uint32_t>(E.ExtraFiles.size()))
       return EC;
-    if (auto EC = Writer.writeArray(makeArrayRef(E.ExtraFiles)))
+    if (auto EC = Writer.writeArray(ArrayRef(E.ExtraFiles)))
       return EC;
   }
 

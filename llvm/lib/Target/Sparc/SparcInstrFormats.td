@@ -83,17 +83,18 @@ class F2_3<bits<3> op2Val, bit annul, bit pred,
   let Inst{18-0}  = imm19;
 }
 
-class F2_4<bits<3> cond, bit annul, bit pred, dag outs, dag ins,
+class F2_4<bit annul, bit pred, dag outs, dag ins,
            string asmstr, list<dag> pattern, InstrItinClass itin = NoItinerary>
    : InstSP<outs, ins, asmstr, pattern, itin> {
   bits<16> imm16;
   bits<5>  rs1;
+  bits<3>  rcond;
 
   let op          = 0;    // op = 0
 
   let Inst{29}    = annul;
   let Inst{28}    = 0;
-  let Inst{27-25} = cond;
+  let Inst{27-25} = rcond;
   let Inst{24-22} = 0b011;
   let Inst{21-20} = imm16{15-14};
   let Inst{19}    = pred;
@@ -132,6 +133,14 @@ class F3_1_asi<bits<2> opVal, bits<6> op3val, dag outs, dag ins,
   let Inst{13}   = 0;     // i field = 0
   let Inst{12-5} = asi;   // address space identifier
   let Inst{4-0}  = rs2;
+}
+
+// CAS instructions does not use an immediate even when i=1
+class F3_1_cas_asi<bits<2> opVal, bits<6> op3val, dag outs, dag ins,
+           string asmstr, list<dag> pattern, InstrItinClass itin = NoItinerary>
+   : F3_1_asi<opVal, op3val, outs, ins, asmstr, pattern, itin> {
+  let asi = 0;
+  let Inst{13}   = 1;     // i field = 1
 }
 
 class F3_1<bits<2> opVal, bits<6> op3val, dag outs, dag ins, string asmstr,

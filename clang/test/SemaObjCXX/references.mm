@@ -64,7 +64,6 @@ void f6(baz* x) {
   (void)((foo&)ToBar());
 }
 
-// rdar://13794269
 @interface B : Root @end
 @implementation B {
   unsigned bf : 4; // expected-note {{declared here}}

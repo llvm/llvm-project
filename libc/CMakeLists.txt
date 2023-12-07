@@ -1,27 +1,65 @@
-cmake_minimum_required(VERSION 3.13.4)
+cmake_minimum_required(VERSION 3.20.0)
+
+# Include LLVM's cmake policies.
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
+  NO_POLICY_SCOPE)
 
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
 
-# Use old version of target_sources command which converts the source
-# file paths to full paths.
-cmake_policy(SET CMP0076 OLD)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
-# The top-level sourse and binary directories.
+# The top-level source directory.
 set(LIBC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(LIBC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # The top-level directory in which libc is being built.
 set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-# For a runtimes build we need to manually include tablgen and LLVM directories.
-if ("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
-  include(TableGen)
-  set(LLVM_LIBC_INCLUDE_DIRS ${LLVM_MAIN_INCLUDE_DIR} ${LLVM_BINARY_DIR}/include)
+set(LIBC_ENABLE_USE_BY_CLANG OFF CACHE BOOL "Whether or not to place libc in a build directory findable by a just built clang")
+
+if(LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+  if(NOT LIBC_HDRGEN_EXE)
+    # We need to set up hdrgen first since other targets depend on it.
+    add_subdirectory(utils/LibcTableGenUtil)
+    add_subdirectory(utils/HdrGen)
+  else()
+    message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
+  endif()
 endif()
+
+option(LIBC_HDRGEN_ONLY "Only build the 'libc-hdrgen' executable" OFF)
+if(("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD) OR 
+   LIBC_HDRGEN_ONLY)
+  # When libc is build as part of the runtimes/bootstrap build's CMake run, we
+  # only need to build the host tools to build the libc. So, we just do enough
+  # to build libc-hdrgen and return.
+
+  # Always make the RPC server availible to other projects for GPU mode.
+  if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+    add_subdirectory(utils/gpu/server)
+  endif()
+  return()
+endif()
+
+option(LIBC_CMAKE_VERBOSE_LOGGING
+  "Log details warnings and notifications during CMake configuration." OFF)
 
 # Path libc/scripts directory.
 set(LIBC_BUILD_SCRIPTS_DIR "${LIBC_SOURCE_DIR}/utils/build_scripts")
+
+# Defining a global namespace to enclose all libc functions.
+set(LIBC_NAMESPACE "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH}_${LLVM_VERSION_SUFFIX}"
+  CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
+)
+
+if(NOT LIBC_NAMESPACE MATCHES "^__llvm_libc")
+  message(FATAL_ERROR "Invalid LIBC_NAMESPACE. Must start with '__llvm_libc' was '${LIBC_NAMESPACE}'")
+endif()
+
+message(STATUS "Setting LIBC_NAMESPACE namespace to '${LIBC_NAMESPACE}'")
+add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
@@ -46,39 +84,96 @@ if(COMMAND_RETURN_CODE EQUAL 0)
   message(STATUS "Set COMPILER_RESOURCE_DIR to "
                  "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
 else()
-  set(COMPILER_RESOURCE_DIR OFF)
-  message(STATUS "COMPILER_RESOURCE_DIR not set
-                  --print-resource-dir not supported by host compiler")
+  if (LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
+  else()
+    set(COMPILER_RESOURCE_DIR OFF)
+    message(STATUS "COMPILER_RESOURCE_DIR not set
+                    --print-resource-dir not supported by host compiler")
+  endif()
 endif()
 
 option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 
-# Set up the target architectures to build for the GPU
-set(ALL_GPU_ARCHITECTURES "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62;sm_70;sm_72;sm_75;sm_80;sm_86;gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906;gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030;gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036;gfx1100;gfx1101;gfx1102;gfx1103")
-set(LLVM_LIBC_GPU_ARCHITECTURES ${ALL_GPU_ARCHITECTURES} CACHE STRING "List of GPU architectures to support in LLVM libc")
-if (LLVM_LIBC_GPU_ARCHITECTURES STREQUAL "all")
-  set(LIBC_GPU_ARCHITECTURES ${ALL_GPU_ARCHITECTURES})
-else()
-  set(LIBC_GPU_ARCHITECTURES ${LLVM_LIBC_GPU_ARCHITECTURES})
-endif()
+option(LIBC_GPU_BUILD "Build libc for the GPU. All CPU build options will be ignored." OFF)
+set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
 
-set(LLVM_LIBC_TARGET_OS ${CMAKE_SYSTEM_NAME} CACHE STRING "Target operating system for LLVM libc")
-string(TOLOWER ${LLVM_LIBC_TARGET_OS} LIBC_TARGET_OS)
+set(LIBC_ENABLE_UNITTESTS ON)
+set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
 
 # Defines LIBC_TARGET_ARCHITECTURE and associated macros.
 include(LLVMLibCArchitectures)
-include(LLVMLibCCheckMPFR)
 
-# Ensure the compiler is a valid clang when building the GPU target.
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND 
-  ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}"))
-  message(FATAL_ERROR "Cannot build GPU library, CMake compiler '${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' is not `Clang ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}`")
+include(LibcConfig)
+# Config loading happens in three steps:
+# 1. Load the config file config/config.json and set up config vars.
+# 2. Load config/${LIBC_TARGET_OS}/config.json if available and override
+#    vars as suitable.
+# 3. Load config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCH}/config.json is
+#    available and override vars as suitable.
+# All the three steps will not override options already set from the
+# CMake command line. That is, the CMake command line option values take
+# precedence over the values in config.json files.
+set(main_config_file ${LIBC_SOURCE_DIR}/config/config.json)
+read_libc_config(${main_config_file} global_config)
+foreach(opt IN LISTS global_config)
+  string(JSON opt_name ERROR_VARIABLE json_error MEMBER ${opt} 0)
+  if(json_error)
+    message(FATAL_ERROR ${json_error})
+  endif()
+  if(DEFINED ${opt_name})
+    # The option is already defined from the command line so we ignore it here.
+    # We still make note of it so that further config load can also ignore
+    # this option.
+    message(STATUS "${opt_name}: ${${opt_name}} (from command line)")
+    list(APPEND cmd_line_conf ${opt_name})
+    continue()
+  endif()
+
+  string(JSON opt_object ERROR_VARIABLE json_error GET ${opt} ${opt_name})
+  if(json_error)
+    message(FATAL_ERROR "Error reading info of option '${opt_name}': ${json_error}")
+  endif()
+  string(JSON opt_value ERROR_VARIABLE json_error GET ${opt_object} "value")
+  if(json_error)
+    message(FATAL_ERROR ${json_error})
+  endif()
+  message(STATUS "${opt_name}: ${opt_value}")
+  set(${opt_name} ${opt_value})
+endforeach()
+load_libc_config(${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/config.json ${cmd_line_conf})
+load_libc_config(${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/config.json ${cmd_line_conf})
+
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  set(LIBC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+  set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/gpu-none-llvm)
+  set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND LIBC_ENABLE_USE_BY_CLANG)
+  set(LIBC_INCLUDE_DIR ${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+else()
+  if(NOT LIBC_ENABLE_USE_BY_CLANG)
+    set(LIBC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+    set(LIBC_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
+  elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
+    set(LIBC_INCLUDE_DIR ${LLVM_BINARY_DIR}/include)
+    set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  else()
+    set(LIBC_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
+    set(LIBC_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
+  endif()
+  set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 endif()
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND NOT LLVM_LIBC_FULL_BUILD)
-  message(FATAL_ERROR "Cannot build GPU library, LLVM_LIBC_FULL_BUILD must be enabled")
+
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  include(prepare_libc_gpu_build)
+  set(LIBC_ENABLE_UNITTESTS OFF)
 endif()
+
+include(LLVMLibCCheckMPFR)
 
 if(LLVM_LIBC_CLANG_TIDY)
   set(LLVM_LIBC_ENABLE_LINTING ON)
@@ -99,7 +194,8 @@ if(LLVM_LIBC_ENABLE_LINTING)
                       OUTPUT_VARIABLE CLANG_TIDY_OUTPUT)
       string(REGEX MATCH "[0-9]+" CLANG_TIDY_VERSION "${CLANG_TIDY_OUTPUT}")
       string(REGEX MATCH "[0-9]+" CLANG_MAJOR_VERSION
-             "${CMAKE_CXX_COMPILER_VERSION}")
+        "${CMAKE_CXX_COMPILER_VERSION}")
+
       if(NOT CLANG_TIDY_VERSION EQUAL CLANG_MAJOR_VERSION)
         set(LLVM_LIBC_ENABLE_LINTING OFF)
         message(WARNING "
@@ -110,6 +206,7 @@ if(LLVM_LIBC_ENABLE_LINTING)
           The path to the clang-tidy binary can be set manually by passing
           -DLLVM_LIBC_CLANG_TIDY=<path/to/clang-tidy> to CMake.")
       endif()
+      add_custom_target(libc-lint)
     else()
       message(FATAL_ERROR "
         Linting is enabled but 'clang-tidy' is not found!
@@ -125,8 +222,8 @@ endif()
 
 option(LLVM_LIBC_INCLUDE_SCUDO "Include the SCUDO standalone as the allocator for LLVM libc" OFF)
 if(LLVM_LIBC_INCLUDE_SCUDO)
-  if (NOT "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR "SCUDO cannot be included without adding compiler-rt to LLVM_ENABLE_PROJECTS")
+  if (NOT ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS OR "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES))
+    message(FATAL_ERROR "SCUDO cannot be included without adding compiler-rt to LLVM_ENABLE_PROJECTS or LLVM_ENABLE_RUNTIMES")
   endif()
 endif()
 
@@ -163,32 +260,17 @@ foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   list(APPEND TARGET_ENTRYPOINT_NAME_LIST ${entrypoint_name})
 endforeach()
 
-if(LLVM_LIBC_FULL_BUILD)
-  # We need to set up hdrgen first since other targets depend on it.
-  add_subdirectory(utils/LibcTableGenUtil)
-  add_subdirectory(utils/HdrGen)
-endif()
-
-set(LIBC_TARGET)
-set(LIBC_COMPONENT)
 set(LIBC_INSTALL_DEPENDS)
-set(LIBC_INSTALL_TARGET)
 if(LLVM_LIBC_FULL_BUILD)
-  set(LIBC_TARGET libc)
-  set(LIBC_COMPONENT libc)
-  set(LIBC_INSTALL_DEPENDS "libc;install-libc-headers;libc-startup")
-  set(LIBC_INSTALL_TARGET install-libc)
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-    set(LIBC_ARCHIVE_NAME cgpu)
-  else()
-    set(LIBC_ARCHIVE_NAME c)
+  set(LIBC_INSTALL_DEPENDS "install-libc-static-archives;install-libc-headers")
+  if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
+    # For now we will disable libc-startup installation for baremetal. The
+    # correct way to do it would be to make a hookable startup for baremetal
+    # and install it as part of the libc installation.
+    list(APPEND LIBC_INSTALL_DEPENDS "libc-startup")
   endif()
 else()
-  set(LIBC_TARGET llvmlibc)
-  set(LIBC_COMPONENT llvmlibc)
-  set(LIBC_INSTALL_DEPENDS llvmlibc)
-  set(LIBC_INSTALL_TARGET install-llvmlibc)
-  set(LIBC_ARCHIVE_NAME llvmlibc)
+  set(LIBC_INSTALL_DEPENDS install-libc-static-archives)
 endif()
 
 add_subdirectory(include)
@@ -207,7 +289,7 @@ endif()
 # of the other directories.
 # TODO: Add testing support for the libc GPU target.
 add_subdirectory(lib)
-if(LLVM_INCLUDE_TESTS AND NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LLVM_INCLUDE_TESTS)
   add_subdirectory(test)
   add_subdirectory(fuzzing)
 endif()
@@ -230,7 +312,7 @@ if(LLVM_LIBC_FULL_BUILD)
 endif()
 
 add_llvm_install_targets(
-  ${LIBC_INSTALL_TARGET}
+  install-libc
   DEPENDS ${LIBC_INSTALL_DEPENDS}
-  COMPONENT ${LIBC_COMPONENT}
+  COMPONENT libc
 )

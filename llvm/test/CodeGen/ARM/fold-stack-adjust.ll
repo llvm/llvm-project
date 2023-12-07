@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=thumbv7-apple-darwin-ios -frame-pointer=all < %s -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-FNSTART,CHECK-IOS
 ; RUN: llc -mtriple=thumbv7--linux-gnueabi -frame-pointer=all < %s -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-FNSTART,CHECK-LINUX
 
-declare void @bar(i8*)
+declare void @bar(ptr)
 
 %bigVec = type [2 x double]
 
@@ -38,7 +38,7 @@ define void @check_simple() minsize {
 ; CHECK-IOS: pop {r0, r1, r2, r3, r7, pc}
 
   %var = alloca i8, i32 16
-  call void @bar(i8* %var)
+  call void @bar(ptr %var)
   ret void
 }
 
@@ -51,7 +51,7 @@ define i32 @check_simple_ret() minsize {
 ; CHECK: pop {r2, r3, r7, pc}
 
   %var = alloca i8, i32 8
-  call void @bar(i8* %var)
+  call void @bar(ptr %var)
   ret i32 0
 }
 
@@ -63,7 +63,7 @@ define void @check_simple_too_big() minsize {
 ; CHECK: add sp,
 ; CHECK: pop {r7, pc}
   %var = alloca i8, i32 64
-  call void @bar(i8* %var)
+  call void @bar(ptr %var)
   ret void
 }
 
@@ -93,8 +93,8 @@ define void @check_vfp_fold() minsize {
 
   %var = alloca i8, i32 16
 
-  call void asm "", "r,~{d8},~{d9}"(i8* %var)
-  call void @bar(i8* %var)
+  call void asm "", "r,~{d8},~{d9}"(ptr %var)
+  call void @bar(ptr %var)
 
   ret void
 }
@@ -110,7 +110,7 @@ define i64 @check_no_return_clobber() minsize {
 ; CHECK: pop {r7, pc}
 
   %var = alloca i8, i32 20
-  call void @bar(i8* %var)
+  call void @bar(ptr %var)
   ret i64 0
 }
 
@@ -126,9 +126,9 @@ define arm_aapcs_vfpcc double @check_vfp_no_return_clobber() minsize {
 
   %var = alloca i8, i32 64
 
-  %tmp = load %bigVec, %bigVec* @var
-  call void @bar(i8* %var)
-  store %bigVec %tmp, %bigVec* @var
+  %tmp = load %bigVec, ptr @var
+  call void @bar(ptr %var)
+  store %bigVec %tmp, ptr @var
 
   ret double 1.0
 }
@@ -158,11 +158,11 @@ define void @test_fold_point(i1 %tst) minsize {
 
   ; We want a long-lived floating register so that a callee-saved dN is used and
   ; there's both a vpop and a pop.
-  %live_val = load double, double* @dbl
+  %live_val = load double, ptr @dbl
   br i1 %tst, label %true, label %end
 true:
-  call void @bar(i8* %var)
-  store double %live_val, double* @dbl
+  call void @bar(ptr %var)
+  store double %live_val, ptr @dbl
   br label %end
 end:
   ; We want the epilogue to be the only thing in a basic block so that we hit
@@ -188,20 +188,20 @@ define void @test_varsize(...) minsize {
 ; CHECK: bx	lr
 
   %var = alloca i8, i32 8
-  call void @llvm.va_start(i8* %var)
-  call void @bar(i8* %var)
+  call void @llvm.va_start(ptr %var)
+  call void @bar(ptr %var)
   ret void
 }
 
-%"MyClass" = type { i8*, i32, i32, float, float, float, [2 x i8], i32, i32* }
+%"MyClass" = type { ptr, i32, i32, float, float, float, [2 x i8], i32, ptr }
 
 declare float @foo()
 
 declare void @bar3()
 
-declare %"MyClass"* @bar2(%"MyClass"* returned, i16*, i32, float, float, i32, i32, i1 zeroext, i1 zeroext, i32)
+declare ptr @bar2(ptr returned, ptr, i32, float, float, i32, i32, i1 zeroext, i1 zeroext, i32)
 
-define fastcc float @check_vfp_no_return_clobber2(i16* %r, i16* %chars, i32 %length, i1 zeroext %flag) minsize {
+define fastcc float @check_vfp_no_return_clobber2(ptr %r, ptr %chars, i32 %length, i1 zeroext %flag) minsize {
 entry:
 ; CHECK-FNSTART-LABEL: check_vfp_no_return_clobber2
 ; CHECK-LINUX: vpush	{d0, d1, d2, d3, d4, d5, d6, d7, d8}
@@ -210,9 +210,9 @@ entry:
 ; CHECK-LINUX: add sp
 ; CHECK-LINUX: vpop {d8}
   %run = alloca %"MyClass", align 4
-  %call = call %"MyClass"* @bar2(%"MyClass"* %run, i16* %chars, i32 %length, float 0.000000e+00, float 0.000000e+00, i32 1, i32 1, i1 zeroext false, i1 zeroext true, i32 3)
+  %call = call ptr @bar2(ptr %run, ptr %chars, i32 %length, float 0.000000e+00, float 0.000000e+00, i32 1, i32 1, i1 zeroext false, i1 zeroext true, i32 3)
   %call1 = call float @foo()
-  %cmp = icmp eq %"MyClass"* %run, null
+  %cmp = icmp eq ptr %run, null
   br i1 %cmp, label %exit, label %if.then
 
 if.then:                                          ; preds = %entry
@@ -223,7 +223,7 @@ exit:                                             ; preds = %if.then, %entry
   ret float %call1
 }
 
-declare void @use_arr(i32*)
+declare void @use_arr(ptr)
 define void @test_fold_reuse() minsize {
 ; CHECK-FNSTART-LABEL: test_fold_reuse:
 ; CHECK: push.w {r4, r7, r8, lr}
@@ -233,7 +233,7 @@ define void @test_fold_reuse() minsize {
 ; CHECK: pop.w {r4, r7, r8, pc}
   %arr = alloca i8, i32 24
   call void asm sideeffect "", "~{r8},~{r4}"()
-  call void @bar(i8* %arr)
+  call void @bar(ptr %arr)
   ret void
 }
 
@@ -245,8 +245,8 @@ define void @test_long_fn() minsize nounwind optsize {
 ; CHECK-T1-NOFP: pop {r3, pc}
 entry:
   %z = alloca i32, align 4
-  call void asm sideeffect ".space 3000", "r"(i32* nonnull %z)
+  call void asm sideeffect ".space 3000", "r"(ptr nonnull %z)
   ret void
 }
 
-declare void @llvm.va_start(i8*) nounwind
+declare void @llvm.va_start(ptr) nounwind

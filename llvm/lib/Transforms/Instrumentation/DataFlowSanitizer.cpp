@@ -67,12 +67,13 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -96,14 +97,13 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -287,9 +287,26 @@ struct MemoryMapParams {
 
 } // end anonymous namespace
 
+// NOLINTBEGIN(readability-identifier-naming)
+// aarch64 Linux
+const MemoryMapParams Linux_AArch64_MemoryMapParams = {
+    0,               // AndMask (not used)
+    0x0B00000000000, // XorMask
+    0,               // ShadowBase (not used)
+    0x0200000000000, // OriginBase
+};
+
 // x86_64 Linux
-// NOLINTNEXTLINE(readability-identifier-naming)
-static const MemoryMapParams Linux_X86_64_MemoryMapParams = {
+const MemoryMapParams Linux_X86_64_MemoryMapParams = {
+    0,              // AndMask (not used)
+    0x500000000000, // XorMask
+    0,              // ShadowBase (not used)
+    0x100000000000, // OriginBase
+};
+// NOLINTEND(readability-identifier-naming)
+
+// loongarch64 Linux
+const MemoryMapParams Linux_LoongArch64_MemoryMapParams = {
     0,              // AndMask (not used)
     0x500000000000, // XorMask
     0,              // ShadowBase (not used)
@@ -395,7 +412,7 @@ transformFunctionAttributes(const TransformedFunction &TransformedFunction,
 
   return AttributeList::get(Ctx, CallSiteAttrs.getFnAttrs(),
                             CallSiteAttrs.getRetAttrs(),
-                            llvm::makeArrayRef(ArgumentAttributes));
+                            llvm::ArrayRef(ArgumentAttributes));
 }
 
 class DataFlowSanitizer {
@@ -515,7 +532,6 @@ class DataFlowSanitizer {
                                  FunctionType *NewFT);
   void initializeCallbackFunctions(Module &M);
   void initializeRuntimeFunctions(Module &M);
-  void injectMetadataGlobals(Module &M);
   bool initializeModule(Module &M);
 
   /// Advances \p OriginAddr to point to the next 32-bit origin and then loads
@@ -548,7 +564,7 @@ class DataFlowSanitizer {
   /// getShadowTy([n x T]) = [n x getShadowTy(T)]
   /// getShadowTy(other type) = i16
   Type *getShadowTy(Type *OrigTy);
-  /// Returns the shadow type of of V's type.
+  /// Returns the shadow type of V's type.
   Type *getShadowTy(Value *V);
 
   const uint64_t NumOfElementsInArgOrgTLS = ArgTLSSize / OriginWidthBytes;
@@ -1033,13 +1049,15 @@ void DFSanFunction::addConditionalCallbacksIfEnabled(Instruction &I,
   }
   IRBuilder<> IRB(&I);
   Value *CondShadow = getShadow(Condition);
+  CallInst *CI;
   if (DFS.shouldTrackOrigins()) {
     Value *CondOrigin = getOrigin(Condition);
-    IRB.CreateCall(DFS.DFSanConditionalCallbackOriginFn,
-                   {CondShadow, CondOrigin});
+    CI = IRB.CreateCall(DFS.DFSanConditionalCallbackOriginFn,
+                        {CondShadow, CondOrigin});
   } else {
-    IRB.CreateCall(DFS.DFSanConditionalCallbackFn, {CondShadow});
+    CI = IRB.CreateCall(DFS.DFSanConditionalCallbackFn, {CondShadow});
   }
+  CI->addParamAttr(0, Attribute::ZExt);
 }
 
 void DFSanFunction::addReachesFunctionCallbacksIfEnabled(IRBuilder<> &IRB,
@@ -1078,6 +1096,7 @@ void DFSanFunction::addReachesFunctionCallbacksIfEnabled(IRBuilder<> &IRB,
     args = { DataShadow, FilePathPtr, CILine, FunctionNamePtr };
     CB = IRB.CreateCall(DFS.DFSanReachesFunctionCallbackFn, args);
   }
+  CB->addParamAttr(0, Attribute::ZExt);
   CB->setDebugLoc(dbgloc);
 }
 
@@ -1110,9 +1129,19 @@ bool DataFlowSanitizer::initializeModule(Module &M) {
 
   if (TargetTriple.getOS() != Triple::Linux)
     report_fatal_error("unsupported operating system");
-  if (TargetTriple.getArch() != Triple::x86_64)
+  switch (TargetTriple.getArch()) {
+  case Triple::aarch64:
+    MapParams = &Linux_AArch64_MemoryMapParams;
+    break;
+  case Triple::x86_64:
+    MapParams = &Linux_X86_64_MemoryMapParams;
+    break;
+  case Triple::loongarch64:
+    MapParams = &Linux_LoongArch64_MemoryMapParams;
+    break;
+  default:
     report_fatal_error("unsupported architecture");
-  MapParams = &Linux_X86_64_MemoryMapParams;
+  }
 
   Mod = &M;
   Ctx = &M.getContext();
@@ -1238,7 +1267,7 @@ void DataFlowSanitizer::addGlobalNameSuffix(GlobalValue *GV) {
   size_t Pos = Asm.find(SearchStr);
   if (Pos != std::string::npos) {
     Asm.replace(Pos, SearchStr.size(), ".symver " + GVName + Suffix + ",");
-    Pos = Asm.find("@");
+    Pos = Asm.find('@');
 
     if (Pos == std::string::npos)
       report_fatal_error(Twine("unsupported .symver: ", Asm));
@@ -1413,45 +1442,53 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
 
 // Initializes event callback functions and declare them in the module
 void DataFlowSanitizer::initializeCallbackFunctions(Module &M) {
-  DFSanLoadCallbackFn = Mod->getOrInsertFunction("__dfsan_load_callback",
-                                                 DFSanLoadStoreCallbackFnTy);
-  DFSanStoreCallbackFn = Mod->getOrInsertFunction("__dfsan_store_callback",
-                                                  DFSanLoadStoreCallbackFnTy);
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanLoadCallbackFn = Mod->getOrInsertFunction(
+        "__dfsan_load_callback", DFSanLoadStoreCallbackFnTy, AL);
+  }
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanStoreCallbackFn = Mod->getOrInsertFunction(
+        "__dfsan_store_callback", DFSanLoadStoreCallbackFnTy, AL);
+  }
   DFSanMemTransferCallbackFn = Mod->getOrInsertFunction(
       "__dfsan_mem_transfer_callback", DFSanMemTransferCallbackFnTy);
-  DFSanCmpCallbackFn =
-      Mod->getOrInsertFunction("__dfsan_cmp_callback", DFSanCmpCallbackFnTy);
-
-  DFSanConditionalCallbackFn = Mod->getOrInsertFunction(
-      "__dfsan_conditional_callback", DFSanConditionalCallbackFnTy);
-  DFSanConditionalCallbackOriginFn =
-      Mod->getOrInsertFunction("__dfsan_conditional_callback_origin",
-                               DFSanConditionalCallbackOriginFnTy);
-  DFSanReachesFunctionCallbackFn = Mod->getOrInsertFunction(
-      "__dfsan_reaches_function_callback", DFSanReachesFunctionCallbackFnTy);
-  DFSanReachesFunctionCallbackOriginFn =
-      Mod->getOrInsertFunction("__dfsan_reaches_function_callback_origin",
-                               DFSanReachesFunctionCallbackOriginFnTy);
-}
-
-void DataFlowSanitizer::injectMetadataGlobals(Module &M) {
-  // These variables can be used:
-  // - by the runtime (to discover what the shadow width was, during
-  //   compilation)
-  // - in testing (to avoid hardcoding the shadow width and type but instead
-  //   extract them by pattern matching)
-  Type *IntTy = Type::getInt32Ty(*Ctx);
-  (void)Mod->getOrInsertGlobal("__dfsan_shadow_width_bits", IntTy, [&] {
-    return new GlobalVariable(
-        M, IntTy, /*isConstant=*/true, GlobalValue::WeakODRLinkage,
-        ConstantInt::get(IntTy, ShadowWidthBits), "__dfsan_shadow_width_bits");
-  });
-  (void)Mod->getOrInsertGlobal("__dfsan_shadow_width_bytes", IntTy, [&] {
-    return new GlobalVariable(M, IntTy, /*isConstant=*/true,
-                              GlobalValue::WeakODRLinkage,
-                              ConstantInt::get(IntTy, ShadowWidthBytes),
-                              "__dfsan_shadow_width_bytes");
-  });
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanCmpCallbackFn = Mod->getOrInsertFunction("__dfsan_cmp_callback",
+                                                  DFSanCmpCallbackFnTy, AL);
+  }
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanConditionalCallbackFn = Mod->getOrInsertFunction(
+        "__dfsan_conditional_callback", DFSanConditionalCallbackFnTy, AL);
+  }
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanConditionalCallbackOriginFn =
+        Mod->getOrInsertFunction("__dfsan_conditional_callback_origin",
+                                 DFSanConditionalCallbackOriginFnTy, AL);
+  }
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanReachesFunctionCallbackFn =
+        Mod->getOrInsertFunction("__dfsan_reaches_function_callback",
+                                 DFSanReachesFunctionCallbackFnTy, AL);
+  }
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanReachesFunctionCallbackOriginFn =
+        Mod->getOrInsertFunction("__dfsan_reaches_function_callback_origin",
+                                 DFSanReachesFunctionCallbackOriginFnTy, AL);
+  }
 }
 
 bool DataFlowSanitizer::runImpl(
@@ -1495,8 +1532,6 @@ bool DataFlowSanitizer::runImpl(
                                shouldTrackOrigins() ? ClTrackOrigins : 0),
         "__dfsan_track_origins");
   });
-
-  injectMetadataGlobals(M);
 
   initializeCallbackFunctions(M);
   initializeRuntimeFunctions(M);
@@ -2132,9 +2167,8 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowFast(
       ShadowSize == 4 ? Type::getInt32Ty(*DFS.Ctx) : Type::getInt64Ty(*DFS.Ctx);
 
   IRBuilder<> IRB(Pos);
-  Value *WideAddr = IRB.CreateBitCast(ShadowAddr, WideShadowTy->getPointerTo());
   Value *CombinedWideShadow =
-      IRB.CreateAlignedLoad(WideShadowTy, WideAddr, ShadowAlign);
+      IRB.CreateAlignedLoad(WideShadowTy, ShadowAddr, ShadowAlign);
 
   unsigned WideShadowBitWidth = WideShadowTy->getIntegerBitWidth();
   const uint64_t BytesPerWideShadow = WideShadowBitWidth / DFS.ShadowWidthBits;
@@ -2171,10 +2205,10 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowFast(
   // shadow).
   for (uint64_t ByteOfs = BytesPerWideShadow; ByteOfs < Size;
        ByteOfs += BytesPerWideShadow) {
-    WideAddr = IRB.CreateGEP(WideShadowTy, WideAddr,
-                             ConstantInt::get(DFS.IntptrTy, 1));
+    ShadowAddr = IRB.CreateGEP(WideShadowTy, ShadowAddr,
+                               ConstantInt::get(DFS.IntptrTy, 1));
     Value *NextWideShadow =
-        IRB.CreateAlignedLoad(WideShadowTy, WideAddr, ShadowAlign);
+        IRB.CreateAlignedLoad(WideShadowTy, ShadowAddr, ShadowAlign);
     CombinedWideShadow = IRB.CreateOr(CombinedWideShadow, NextWideShadow);
     if (ShouldTrackOrigins) {
       Value *NextOrigin = DFS.loadNextOrigin(Pos, OriginAlign, &OriginAddr);
@@ -2403,7 +2437,9 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
   if (ClEventCallbacks) {
     IRBuilder<> IRB(Pos);
     Value *Addr8 = IRB.CreateBitCast(LI.getPointerOperand(), DFSF.DFS.Int8Ptr);
-    IRB.CreateCall(DFSF.DFS.DFSanLoadCallbackFn, {PrimitiveShadow, Addr8});
+    CallInst *CI =
+        IRB.CreateCall(DFSF.DFS.DFSanLoadCallbackFn, {PrimitiveShadow, Addr8});
+    CI->addParamAttr(0, Attribute::ZExt);
   }
 
   IRBuilder<> IRB(AfterLi);
@@ -2500,8 +2536,9 @@ void DFSanFunction::storeOrigin(Instruction *Pos, Value *Addr, uint64_t Size,
                     ConstantInt::get(DFS.IntptrTy, Size), Origin});
   } else {
     Value *Cmp = convertToBool(CollapsedShadow, IRB, "_dfscmp");
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
     Instruction *CheckTerm = SplitBlockAndInsertIfThen(
-        Cmp, &*IRB.GetInsertPoint(), false, DFS.OriginStoreWeights, &DT);
+        Cmp, &*IRB.GetInsertPoint(), false, DFS.OriginStoreWeights, &DTU);
     IRBuilder<> IRBNew(CheckTerm);
     paintOrigin(IRBNew, updateOrigin(Origin, IRBNew), StoreOriginAddr, Size,
                 OriginAlignment);
@@ -2663,7 +2700,9 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
   if (ClEventCallbacks) {
     IRBuilder<> IRB(&SI);
     Value *Addr8 = IRB.CreateBitCast(SI.getPointerOperand(), DFSF.DFS.Int8Ptr);
-    IRB.CreateCall(DFSF.DFS.DFSanStoreCallbackFn, {PrimitiveShadow, Addr8});
+    CallInst *CI =
+        IRB.CreateCall(DFSF.DFS.DFSanStoreCallbackFn, {PrimitiveShadow, Addr8});
+    CI->addParamAttr(0, Attribute::ZExt);
   }
 }
 
@@ -2725,7 +2764,9 @@ void DFSanVisitor::visitCmpInst(CmpInst &CI) {
   if (ClEventCallbacks) {
     IRBuilder<> IRB(&CI);
     Value *CombinedShadow = DFSF.getShadow(&CI);
-    IRB.CreateCall(DFSF.DFS.DFSanCmpCallbackFn, CombinedShadow);
+    CallInst *CallI =
+        IRB.CreateCall(DFSF.DFS.DFSanCmpCallbackFn, CombinedShadow);
+    CallI->addParamAttr(0, Attribute::ZExt);
   }
 }
 
@@ -3160,7 +3201,7 @@ Value *DFSanVisitor::makeAddAcquireOrderingTable(IRBuilder<> &IRB) {
       (int)AtomicOrderingCABI::seq_cst;
 
   return ConstantDataVector::get(IRB.getContext(),
-                                 makeArrayRef(OrderingTable, NumOrderings));
+                                 ArrayRef(OrderingTable, NumOrderings));
 }
 
 void DFSanVisitor::visitLibAtomicLoad(CallBase &CB) {
@@ -3205,7 +3246,7 @@ Value *DFSanVisitor::makeAddReleaseOrderingTable(IRBuilder<> &IRB) {
       (int)AtomicOrderingCABI::seq_cst;
 
   return ConstantDataVector::get(IRB.getContext(),
-                                 makeArrayRef(OrderingTable, NumOrderings));
+                                 ArrayRef(OrderingTable, NumOrderings));
 }
 
 void DFSanVisitor::visitLibAtomicStore(CallBase &CB) {

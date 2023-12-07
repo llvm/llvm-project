@@ -181,12 +181,12 @@ func.func @$invalid_function_name()
 // -----
 
 // expected-error @+1 {{arguments may only have dialect attributes}}
-func.func @invalid_func_arg_attr(i1 {non_dialect_attr = 10})
+func.func private @invalid_func_arg_attr(i1 {non_dialect_attr = 10})
 
 // -----
 
 // expected-error @+1 {{results may only have dialect attributes}}
-func.func @invalid_func_result_attr() -> (i1 {non_dialect_attr = 10})
+func.func private @invalid_func_result_attr() -> (i1 {non_dialect_attr = 10})
 
 // -----
 

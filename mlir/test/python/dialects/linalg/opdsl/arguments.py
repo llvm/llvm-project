@@ -34,8 +34,9 @@ def matmul(
     C=TensorDef(U, S.M, S.N, output=True),
     bfn=BinaryFnAttrDef(default=BinaryFn.mul),
     ufn=UnaryFnAttrDef(default=UnaryFn.exp),
-    cast=TypeFnAttrDef(default=TypeFn.cast_signed)):
-  C[D.m, D.n] += bfn(cast(U, A[D.m, D.k]), cast(U, B[D.k, D.n]))
+    cast=TypeFnAttrDef(default=TypeFn.cast_signed),
+):
+    C[D.m, D.n] += bfn(cast(U, A[D.m, D.k]), cast(U, B[D.k, D.n]))
 
 
 # CHECK: ---
@@ -47,7 +48,7 @@ def matmul(
 # CHECK:     type_var: T
 @linalg_structured_op
 def fill(value=ScalarDef(T), O=TensorDef(T, S.M, S.K, output=True)):
-  O[D.m, D.n] = value
+    O[D.m, D.n] = value
 
 
 # CHECK: ---
@@ -71,5 +72,6 @@ def fill(value=ScalarDef(T), O=TensorDef(T, S.M, S.K, output=True)):
 def strided_copy(
     I=TensorDef(T, S.IH, S.IW),
     O=TensorDef(T, S.OH, S.OW, output=True),
-    strides=IndexAttrDef(S.SH, S.SW, default=[1, 2])):
-  O[D.oh, D.ow] = I[D.oh * S.SH, D.ow * S.SW]
+    strides=IndexAttrDef(S.SH, S.SW, default=[1, 2]),
+):
+    O[D.oh, D.ow] = I[D.oh * S.SH, D.ow * S.SW]

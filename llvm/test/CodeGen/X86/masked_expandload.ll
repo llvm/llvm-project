@@ -104,13 +104,12 @@ define <4 x double> @expandload_v4f64_v4i64(ptr %base, <4 x double> %src0, <4 x 
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[1,0,3,2]
-; SSE2-NEXT:    pand %xmm3, %xmm5
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,0,3,2]
-; SSE2-NEXT:    pand %xmm2, %xmm3
-; SSE2-NEXT:    packssdw %xmm5, %xmm3
-; SSE2-NEXT:    movmskps %xmm3, %eax
+; SSE2-NEXT:    movdqa %xmm2, %xmm4
+; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,3],xmm3[1,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
+; SSE2-NEXT:    andps %xmm4, %xmm2
+; SSE2-NEXT:    movmskps %xmm2, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    jne LBB1_1
 ; SSE2-NEXT:  ## %bb.2: ## %else

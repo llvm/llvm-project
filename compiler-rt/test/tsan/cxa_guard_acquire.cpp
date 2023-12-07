@@ -1,5 +1,6 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 
+#include <sanitizer/tsan_interface.h>
 #include <stdio.h>
 
 namespace __tsan {

@@ -14,22 +14,18 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Rewrite/Core/RewriteBuffer.h"
 #include "clang/Rewrite/Core/RewriteRope.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <iterator>
 #include <map>
-#include <memory>
-#include <system_error>
 #include <utility>
 
 using namespace clang;
@@ -410,68 +406,21 @@ bool Rewriter::IncreaseIndentation(CharSourceRange range,
   return false;
 }
 
-namespace {
-
-// A wrapper for a file stream that atomically overwrites the target.
-//
-// Creates a file output stream for a temporary file in the constructor,
-// which is later accessible via getStream() if ok() return true.
-// Flushes the stream and moves the temporary file to the target location
-// in the destructor.
-class AtomicallyMovedFile {
-public:
-  AtomicallyMovedFile(DiagnosticsEngine &Diagnostics, StringRef Filename,
-                      bool &AllWritten)
-      : Diagnostics(Diagnostics), Filename(Filename), AllWritten(AllWritten) {
-    TempFilename = Filename;
-    TempFilename += "-%%%%%%%%";
-    int FD;
-    if (llvm::sys::fs::createUniqueFile(TempFilename, FD, TempFilename)) {
-      AllWritten = false;
-      Diagnostics.Report(clang::diag::err_unable_to_make_temp)
-        << TempFilename;
-    } else {
-      FileStream.reset(new llvm::raw_fd_ostream(FD, /*shouldClose=*/true));
-    }
-  }
-
-  ~AtomicallyMovedFile() {
-    if (!ok()) return;
-
-    // Close (will also flush) theFileStream.
-    FileStream->close();
-    if (std::error_code ec = llvm::sys::fs::rename(TempFilename, Filename)) {
-      AllWritten = false;
-      Diagnostics.Report(clang::diag::err_unable_to_rename_temp)
-        << TempFilename << Filename << ec.message();
-      // If the remove fails, there's not a lot we can do - this is already an
-      // error.
-      llvm::sys::fs::remove(TempFilename);
-    }
-  }
-
-  bool ok() { return (bool)FileStream; }
-  raw_ostream &getStream() { return *FileStream; }
-
-private:
-  DiagnosticsEngine &Diagnostics;
-  StringRef Filename;
-  SmallString<128> TempFilename;
-  std::unique_ptr<llvm::raw_fd_ostream> FileStream;
-  bool &AllWritten;
-};
-
-} // namespace
-
 bool Rewriter::overwriteChangedFiles() {
   bool AllWritten = true;
+  auto& Diag = getSourceMgr().getDiagnostics();
+  unsigned OverwriteFailure = Diag.getCustomDiagID(
+      DiagnosticsEngine::Error, "unable to overwrite file %0: %1");
   for (buffer_iterator I = buffer_begin(), E = buffer_end(); I != E; ++I) {
-    const FileEntry *Entry =
-        getSourceMgr().getFileEntryForID(I->first);
-    AtomicallyMovedFile File(getSourceMgr().getDiagnostics(), Entry->getName(),
-                             AllWritten);
-    if (File.ok()) {
-      I->second.write(File.getStream());
+    const FileEntry *Entry = getSourceMgr().getFileEntryForID(I->first);
+    if (auto Error =
+            llvm::writeToOutput(Entry->getName(), [&](llvm::raw_ostream &OS) {
+              I->second.write(OS);
+              return llvm::Error::success();
+            })) {
+      Diag.Report(OverwriteFailure)
+          << Entry->getName() << llvm::toString(std::move(Error));
+      AllWritten = false;
     }
   }
   return !AllWritten;

@@ -28,6 +28,7 @@ static_library("Target") {
     "//llvm/lib/IR",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   public_deps = [
     # This is a bit of a hack: llvm-c/Target.h includes llvm/Config/Targets.def,

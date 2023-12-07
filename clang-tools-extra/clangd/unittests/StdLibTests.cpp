@@ -34,7 +34,7 @@ TEST(StdLibTests, getStdlibUmbrellaHeader) {
   auto CXX = getStdlibUmbrellaHeader(LO).str();
   EXPECT_THAT(CXX, HasSubstr("#include <string>"));
   EXPECT_THAT(CXX, HasSubstr("#include <cstdio>"));
-  EXPECT_THAT(CXX, Not(HasSubstr("#include <stdio.h>")));
+  EXPECT_THAT(CXX, Not(HasSubstr("#include <ios646.h>")));
 
   LO.CPlusPlus = false;
   auto C = getStdlibUmbrellaHeader(LO).str();

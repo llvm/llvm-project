@@ -20,6 +20,7 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include <optional>
 
 namespace mlir {
 class Location;
@@ -77,6 +78,14 @@ fir::ExtendedValue createInitializerAddress(mlir::Location loc,
 fir::MutableBoxValue createMutableBox(mlir::Location loc,
                                       AbstractConverter &converter,
                                       const SomeExpr &expr, SymMap &symMap);
+
+/// Return true iff the expression is pointing to a parent component.
+bool isParentComponent(const SomeExpr &expr);
+
+/// Update the extended value to represent the parent component.
+fir::ExtendedValue updateBoxForParentComponent(AbstractConverter &converter,
+                                               fir::ExtendedValue exv,
+                                               const SomeExpr &expr);
 
 /// Create a fir::BoxValue describing the value of \p expr.
 /// If \p expr is a variable without vector subscripts, the fir::BoxValue
@@ -175,7 +184,7 @@ void createArrayOfPointerAssignment(
     AbstractConverter &converter, const SomeExpr &lhs, const SomeExpr &rhs,
     ExplicitIterSpace &explicitIterSpace, ImplicitIterSpace &implicitIterSpace,
     const llvm::SmallVector<mlir::Value> &lbounds,
-    llvm::Optional<llvm::SmallVector<mlir::Value>> ubounds, SymMap &symMap,
+    std::optional<llvm::SmallVector<mlir::Value>> ubounds, SymMap &symMap,
     StatementContext &stmtCtx);
 
 /// Lower an array expression with "parallel" semantics. Such a rhs expression
@@ -225,6 +234,10 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(fir::FirOpBuilder &builder) {
           builder.getUnitAttr()};
 }
 
+Fortran::semantics::SymbolRef getPointer(Fortran::semantics::SymbolRef sym);
+mlir::Value addCrayPointerInst(mlir::Location loc, fir::FirOpBuilder &builder,
+                               mlir::Value ptrVal, mlir::Type ptrTy,
+                               mlir::Type pteTy);
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CONVERTEXPR_H

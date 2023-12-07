@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+f -riscv-v-vector-bits-min=128 \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
 
-define void @foo(i32* nocapture noundef %p1) {
+define void @foo(ptr nocapture noundef %p1) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -192
@@ -55,23 +55,20 @@ define void @foo(i32* nocapture noundef %p1) {
 ; CHECK-NEXT:    ret
 entry:
   %vla = alloca [10 x i32], align 64
-  %0 = bitcast [10 x i32]* %vla to i8*
-  call void @llvm.lifetime.start.p0i8(i64 40, i8* nonnull %0)
-  %1 = bitcast i32* %p1 to <8 x float>*
-  %2 = load <8 x float>, <8 x float>* %1, align 32
-  %arraydecay = getelementptr inbounds [10 x i32], [10 x i32]* %vla, i64 0, i64 0
-  call void @bar(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, i32 noundef signext 7, i32 noundef signext 8, i32* noundef nonnull %arraydecay)
-  %3 = load <8 x float>, <8 x float>* %1, align 32
-  %add = fadd <8 x float> %2, %3
-  store <8 x float> %add, <8 x float>* %1, align 32
-  call void @llvm.lifetime.end.p0i8(i64 40, i8* nonnull %0)
+  call void @llvm.lifetime.start.p0(i64 40, ptr nonnull %vla)
+  %0 = load <8 x float>, ptr %p1, align 32
+  call void @bar(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, i32 noundef signext 7, i32 noundef signext 8, ptr noundef nonnull %vla)
+  %1 = load <8 x float>, ptr %p1, align 32
+  %add = fadd <8 x float> %0, %1
+  store <8 x float> %add, ptr %p1, align 32
+  call void @llvm.lifetime.end.p0(i64 40, ptr nonnull %vla)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
-declare void @bar(i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32* noundef)
+declare void @bar(i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, ptr noundef)
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 attributes #1 = { argmemonly mustprogress nofree nosync nounwind willreturn }

@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "../utils/IncludeInserter.h"
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 /// Finds calls to C math library functions with implicit float to double
 /// promotions.
@@ -39,8 +37,6 @@ private:
   utils::IncludeInserter IncludeInserter;
 };
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_TYPE_PROMOTION_IN_MATH_FN_H

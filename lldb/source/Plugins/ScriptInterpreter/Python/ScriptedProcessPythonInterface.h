@@ -15,6 +15,7 @@
 
 #include "ScriptedPythonInterface.h"
 #include "lldb/Interpreter/ScriptedProcessInterface.h"
+#include <optional>
 
 namespace lldb_private {
 class ScriptedProcessPythonInterface : public ScriptedProcessInterface,
@@ -28,26 +29,28 @@ public:
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override;
 
+  StructuredData::DictionarySP GetCapabilities() override;
+
+  Status Attach(const ProcessAttachInfo &attach_info) override;
+
   Status Launch() override;
 
   Status Resume() override;
 
-  bool ShouldStop() override;
-
-  Status Stop() override;
-
-  llvm::Optional<MemoryRegionInfo>
+  std::optional<MemoryRegionInfo>
   GetMemoryRegionContainingAddress(lldb::addr_t address,
                                    Status &error) override;
 
   StructuredData::DictionarySP GetThreadsInfo() override;
 
-  StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) override;
-
-  StructuredData::DictionarySP GetRegistersForThread(lldb::tid_t tid) override;
+  bool CreateBreakpoint(lldb::addr_t addr, Status &error) override;
 
   lldb::DataExtractorSP ReadMemoryAtAddress(lldb::addr_t address, size_t size,
                                             Status &error) override;
+
+  lldb::offset_t WriteMemoryAtAddress(lldb::addr_t addr,
+                                      lldb::DataExtractorSP data_sp,
+                                      Status &error) override;
 
   StructuredData::ArraySP GetLoadedImages() override;
 
@@ -55,7 +58,7 @@ public:
 
   bool IsAlive() override;
 
-  llvm::Optional<std::string> GetScriptedThreadPluginName() override;
+  std::optional<std::string> GetScriptedThreadPluginName() override;
 
   StructuredData::DictionarySP GetMetadata() override;
 

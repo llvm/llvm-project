@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -test-affine-parametric-tile | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -test-affine-parametric-tile -verify-diagnostics | FileCheck %s
 // Test cases to test the utility introduced to tile affine for loops using
 // SSA values as tiling parameters(tile sizes). The tile sizes are expected
 // to be passed as input arguments(before any other argument) to the function
@@ -267,6 +267,34 @@ func.func @tile_with_upper_bounds_in_dimensions_and_symbols_non_unit_steps(%t12 
   affine.for %i = 0 to affine_map<(d0)[s0] -> (d0 + s0 + 2)>(%M)[%K] step 2 {
     affine.for %j = 0 to affine_map<(d0)[s0] -> (d0 + s0 + 4)>(%N)[%K] step 4 {
       "test.foo" () : () -> ()
+    }
+  }
+  return
+}
+
+// -----
+
+func.func @too_few_tile_size_params() {
+  // expected-error@+1 {{too few tile sizes provided in the argument list of the function which contains the current band}}
+  affine.for %i = 0 to 256 {
+    affine.for %j = 0 to 512 {
+      affine.for %k = 0 to 1024 {
+        "test.foo"(%i, %j, %k) : (index, index, index) -> ()
+      }
+    }
+  }
+  return
+}
+
+// -----
+
+func.func @invalid_type_for_tile_size_params(%arg0: f32, %arg1: f32, %arg2: f32) {
+  // expected-error@+1 {{expected tiling parameters to be of index type}}
+  affine.for %i = 0 to 256 {
+    affine.for %j = 0 to 512 {
+      affine.for %k = 0 to 1024 {
+        "test.foo"(%i, %j, %k) : (index, index, index) -> ()
+      }
     }
   }
   return

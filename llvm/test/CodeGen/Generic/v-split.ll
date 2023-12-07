@@ -2,11 +2,11 @@
 
 %f8 = type <8 x float>
 
-define void @test_f8(%f8 *%P, %f8* %Q, %f8 *%S) {
-  %p = load %f8, %f8* %P
-  %q = load %f8, %f8* %Q
+define void @test_f8(ptr %P, ptr %Q, ptr %S) {
+  %p = load %f8, ptr %P
+  %q = load %f8, ptr %Q
   %R = fadd %f8 %p, %q
-  store %f8 %R, %f8 *%S
+  store %f8 %R, ptr %S
   ret void
 }
 

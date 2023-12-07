@@ -14,9 +14,12 @@
 // sanitizer_common/sanitizer_common_interceptors.h
 //===----------------------------------------------------------------------===//
 
+#define SANITIZER_COMMON_NO_REDEFINE_BUILTINS
+
 #include "interception/interception.h"
 #include "msan.h"
 #include "msan_chained_origin_depot.h"
+#include "msan_dl.h"
 #include "msan_origin.h"
 #include "msan_poisoning.h"
 #include "msan_report.h"
@@ -93,8 +96,7 @@ struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
     if (__msan::IsInSymbolizerOrUnwider())                        \
       break;                                                      \
     if (__offset >= 0 && __msan::flags()->report_umrs) {          \
-      GET_CALLER_PC_BP_SP;                                        \
-      (void)sp;                                                   \
+      GET_CALLER_PC_BP;                                           \
       ReportUMRInsideAddressRange(__func__, x, n, __offset);      \
       __msan::PrintWarningWithOrigin(                             \
           pc, bp, __msan_get_origin((const char *)x + __offset)); \
@@ -399,9 +401,23 @@ INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {
   __msan_unpoison(endptr, sizeof(*endptr));         \
   return res;
 
+// On s390x, long double return values are passed via implicit reference,
+// which needs to be unpoisoned.  We make the implicit pointer explicit.
+#define INTERCEPTOR_STRTO_SRET_BODY(func, sret, ...) \
+  ENSURE_MSAN_INITED();                              \
+  REAL(func)(sret, __VA_ARGS__);                     \
+  __msan_unpoison(sret, sizeof(*sret));              \
+  __msan_unpoison(endptr, sizeof(*endptr));
+
 #define INTERCEPTOR_STRTO(ret_type, func, char_type)                       \
   INTERCEPTOR(ret_type, func, const char_type *nptr, char_type **endptr) { \
     INTERCEPTOR_STRTO_BODY(ret_type, func, nptr, endptr);                  \
+  }
+
+#define INTERCEPTOR_STRTO_SRET(ret_type, func, char_type)                \
+  INTERCEPTOR(void, func, ret_type *sret, const char_type *nptr,         \
+              char_type **endptr) {                                      \
+    INTERCEPTOR_STRTO_SRET_BODY(func, sret, nptr, endptr);               \
   }
 
 #define INTERCEPTOR_STRTO_BASE(ret_type, func, char_type)                \
@@ -416,6 +432,12 @@ INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {
     INTERCEPTOR_STRTO_BODY(ret_type, func, nptr, endptr, loc);           \
   }
 
+#define INTERCEPTOR_STRTO_SRET_LOC(ret_type, func, char_type)            \
+  INTERCEPTOR(void, func, ret_type *sret, const char_type *nptr,         \
+              char_type **endptr, void *loc) {                           \
+    INTERCEPTOR_STRTO_SRET_BODY(func, sret, nptr, endptr, loc);          \
+  }
+
 #define INTERCEPTOR_STRTO_BASE_LOC(ret_type, func, char_type)            \
   INTERCEPTOR(ret_type, func, const char_type *nptr, char_type **endptr, \
               int base, void *loc) {                                     \
@@ -426,6 +448,10 @@ INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {
 #define INTERCEPTORS_STRTO(ret_type, func, char_type)      \
   INTERCEPTOR_STRTO(ret_type, func, char_type)             \
   INTERCEPTOR_STRTO_LOC(ret_type, func##_l, char_type)
+
+#define INTERCEPTORS_STRTO_SRET(ret_type, func, char_type)      \
+  INTERCEPTOR_STRTO_SRET(ret_type, func, char_type)             \
+  INTERCEPTOR_STRTO_SRET_LOC(ret_type, func##_l, char_type)
 
 #define INTERCEPTORS_STRTO_BASE(ret_type, func, char_type)      \
   INTERCEPTOR_STRTO_BASE(ret_type, func, char_type)             \
@@ -438,6 +464,12 @@ INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {
   INTERCEPTOR_STRTO_LOC(ret_type, __##func##_l, char_type) \
   INTERCEPTOR_STRTO_LOC(ret_type, __##func##_internal, char_type)
 
+#define INTERCEPTORS_STRTO_SRET(ret_type, func, char_type)      \
+  INTERCEPTOR_STRTO_SRET(ret_type, func, char_type)             \
+  INTERCEPTOR_STRTO_SRET_LOC(ret_type, func##_l, char_type)     \
+  INTERCEPTOR_STRTO_SRET_LOC(ret_type, __##func##_l, char_type) \
+  INTERCEPTOR_STRTO_SRET_LOC(ret_type, __##func##_internal, char_type)
+
 #define INTERCEPTORS_STRTO_BASE(ret_type, func, char_type)      \
   INTERCEPTOR_STRTO_BASE(ret_type, func, char_type)             \
   INTERCEPTOR_STRTO_BASE_LOC(ret_type, func##_l, char_type)     \
@@ -447,7 +479,11 @@ INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {
 
 INTERCEPTORS_STRTO(double, strtod, char)
 INTERCEPTORS_STRTO(float, strtof, char)
+#ifdef __s390x__
+INTERCEPTORS_STRTO_SRET(long double, strtold, char)
+#else
 INTERCEPTORS_STRTO(long double, strtold, char)
+#endif
 INTERCEPTORS_STRTO_BASE(long, strtol, char)
 INTERCEPTORS_STRTO_BASE(long long, strtoll, char)
 INTERCEPTORS_STRTO_BASE(unsigned long, strtoul, char)
@@ -456,11 +492,42 @@ INTERCEPTORS_STRTO_BASE(u64, strtouq, char)
 
 INTERCEPTORS_STRTO(double, wcstod, wchar_t)
 INTERCEPTORS_STRTO(float, wcstof, wchar_t)
+#ifdef __s390x__
+INTERCEPTORS_STRTO_SRET(long double, wcstold, wchar_t)
+#else
 INTERCEPTORS_STRTO(long double, wcstold, wchar_t)
+#endif
 INTERCEPTORS_STRTO_BASE(long, wcstol, wchar_t)
 INTERCEPTORS_STRTO_BASE(long long, wcstoll, wchar_t)
 INTERCEPTORS_STRTO_BASE(unsigned long, wcstoul, wchar_t)
 INTERCEPTORS_STRTO_BASE(unsigned long long, wcstoull, wchar_t)
+
+#if SANITIZER_GLIBC
+INTERCEPTORS_STRTO(double, __isoc23_strtod, char)
+INTERCEPTORS_STRTO(float, __isoc23_strtof, char)
+#ifdef __s390x__
+INTERCEPTORS_STRTO_SRET(long double, __isoc23_strtold, char)
+#else
+INTERCEPTORS_STRTO(long double, __isoc23_strtold, char)
+#endif
+INTERCEPTORS_STRTO_BASE(long, __isoc23_strtol, char)
+INTERCEPTORS_STRTO_BASE(long long, __isoc23_strtoll, char)
+INTERCEPTORS_STRTO_BASE(unsigned long, __isoc23_strtoul, char)
+INTERCEPTORS_STRTO_BASE(unsigned long long, __isoc23_strtoull, char)
+INTERCEPTORS_STRTO_BASE(u64, __isoc23_strtouq, char)
+
+INTERCEPTORS_STRTO(double, __isoc23_wcstod, wchar_t)
+INTERCEPTORS_STRTO(float, __isoc23_wcstof, wchar_t)
+#ifdef __s390x__
+INTERCEPTORS_STRTO_SRET(long double, __isoc23_wcstold, wchar_t)
+#else
+INTERCEPTORS_STRTO(long double, __isoc23_wcstold, wchar_t)
+#endif
+INTERCEPTORS_STRTO_BASE(long, __isoc23_wcstol, wchar_t)
+INTERCEPTORS_STRTO_BASE(long long, __isoc23_wcstoll, wchar_t)
+INTERCEPTORS_STRTO_BASE(unsigned long, __isoc23_wcstoul, wchar_t)
+INTERCEPTORS_STRTO_BASE(unsigned long long, __isoc23_wcstoull, wchar_t)
+#endif
 
 #if SANITIZER_NETBSD
 #define INTERCEPT_STRTO(func) \
@@ -472,6 +539,12 @@ INTERCEPTORS_STRTO_BASE(unsigned long long, wcstoull, wchar_t)
   INTERCEPT_FUNCTION(func##_l); \
   INTERCEPT_FUNCTION(__##func##_l); \
   INTERCEPT_FUNCTION(__##func##_internal);
+
+#define INTERCEPT_STRTO_VER(func, ver) \
+  INTERCEPT_FUNCTION_VER(func, ver); \
+  INTERCEPT_FUNCTION_VER(func##_l, ver); \
+  INTERCEPT_FUNCTION_VER(__##func##_l, ver); \
+  INTERCEPT_FUNCTION_VER(__##func##_internal, ver);
 #endif
 
 
@@ -1110,16 +1183,34 @@ INTERCEPTOR(int, pthread_key_create, __sanitizer_pthread_key_t *key,
 #if SANITIZER_NETBSD
 INTERCEPTOR(int, __libc_thr_keycreate, __sanitizer_pthread_key_t *m,
             void (*dtor)(void *value))
-ALIAS(WRAPPER_NAME(pthread_key_create));
+ALIAS(WRAP(pthread_key_create));
 #endif
 
-INTERCEPTOR(int, pthread_join, void *th, void **retval) {
+INTERCEPTOR(int, pthread_join, void *thread, void **retval) {
   ENSURE_MSAN_INITED();
-  int res = REAL(pthread_join)(th, retval);
+  int res = REAL(pthread_join)(thread, retval);
   if (!res && retval)
     __msan_unpoison(retval, sizeof(*retval));
   return res;
 }
+
+#if SANITIZER_GLIBC
+INTERCEPTOR(int, pthread_tryjoin_np, void *thread, void **retval) {
+  ENSURE_MSAN_INITED();
+  int res = REAL(pthread_tryjoin_np)(thread, retval);
+  if (!res && retval)
+    __msan_unpoison(retval, sizeof(*retval));
+  return res;
+}
+
+INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **retval,
+            const struct timespec *abstime) {
+  int res = REAL(pthread_timedjoin_np)(thread, retval, abstime);
+  if (!res && retval)
+    __msan_unpoison(retval, sizeof(*retval));
+  return res;
+}
+#endif
 
 DEFINE_REAL_PTHREAD_FUNCTIONS
 
@@ -1404,6 +1495,7 @@ int OnExit() {
   } while (false)
 
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
+#include "sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc"
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 
 static uptr signal_impl(int signo, uptr cb);
@@ -1419,6 +1511,8 @@ static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
     InterceptorScope interceptor_scope;                      \
     return REAL(func)(signo, handler);                       \
   }
+
+#define SIGNAL_INTERCEPTOR_ENTER() ENSURE_MSAN_INITED()
 
 #include "sanitizer_common/sanitizer_signal_interceptors.inc"
 
@@ -1500,26 +1594,31 @@ INTERCEPTOR(const char *, strsignal, int sig) {
   return res;
 }
 
-struct dlinfo {
-  char *dli_fname;
-  void *dli_fbase;
-  char *dli_sname;
-  void *dli_saddr;
-};
-
-INTERCEPTOR(int, dladdr, void *addr, dlinfo *info) {
+INTERCEPTOR(int, dladdr, void *addr, void *info) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, dladdr, addr, info);
   int res = REAL(dladdr)(addr, info);
+  if (res != 0)
+    UnpoisonDllAddrInfo(info);
+  return res;
+}
+
+#if SANITIZER_GLIBC
+INTERCEPTOR(int, dladdr1, void *addr, void *info, void **extra_info,
+            int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, dladdr1, addr, info, extra_info, flags);
+  int res = REAL(dladdr1)(addr, info, extra_info, flags);
   if (res != 0) {
-    __msan_unpoison(info, sizeof(*info));
-    if (info->dli_fname)
-      __msan_unpoison(info->dli_fname, internal_strlen(info->dli_fname) + 1);
-    if (info->dli_sname)
-      __msan_unpoison(info->dli_sname, internal_strlen(info->dli_sname) + 1);
+    UnpoisonDllAddrInfo(info);
+    UnpoisonDllAddr1ExtraInfo(extra_info, flags);
   }
   return res;
 }
+#  define MSAN_MAYBE_INTERCEPT_DLADDR1 MSAN_INTERCEPT_FUNC(dladdr1)
+#else
+#define MSAN_MAYBE_INTERCEPT_DLADDR1
+#endif
 
 INTERCEPTOR(char *, dlerror, int fake) {
   void *ctx;
@@ -1707,7 +1806,11 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(strncat);
   INTERCEPT_STRTO(strtod);
   INTERCEPT_STRTO(strtof);
+#ifdef SANITIZER_NLDBL_VERSION
+  INTERCEPT_STRTO_VER(strtold, SANITIZER_NLDBL_VERSION);
+#else
   INTERCEPT_STRTO(strtold);
+#endif
   INTERCEPT_STRTO(strtol);
   INTERCEPT_STRTO(strtoul);
   INTERCEPT_STRTO(strtoll);
@@ -1715,11 +1818,33 @@ void InitializeInterceptors() {
   INTERCEPT_STRTO(strtouq);
   INTERCEPT_STRTO(wcstod);
   INTERCEPT_STRTO(wcstof);
+#ifdef SANITIZER_NLDBL_VERSION
+  INTERCEPT_STRTO_VER(wcstold, SANITIZER_NLDBL_VERSION);
+#else
   INTERCEPT_STRTO(wcstold);
+#endif
   INTERCEPT_STRTO(wcstol);
   INTERCEPT_STRTO(wcstoul);
   INTERCEPT_STRTO(wcstoll);
   INTERCEPT_STRTO(wcstoull);
+#if SANITIZER_GLIBC
+  INTERCEPT_STRTO(__isoc23_strtod);
+  INTERCEPT_STRTO(__isoc23_strtof);
+  INTERCEPT_STRTO(__isoc23_strtold);
+  INTERCEPT_STRTO(__isoc23_strtol);
+  INTERCEPT_STRTO(__isoc23_strtoul);
+  INTERCEPT_STRTO(__isoc23_strtoll);
+  INTERCEPT_STRTO(__isoc23_strtoull);
+  INTERCEPT_STRTO(__isoc23_strtouq);
+  INTERCEPT_STRTO(__isoc23_wcstod);
+  INTERCEPT_STRTO(__isoc23_wcstof);
+  INTERCEPT_STRTO(__isoc23_wcstold);
+  INTERCEPT_STRTO(__isoc23_wcstol);
+  INTERCEPT_STRTO(__isoc23_wcstoul);
+  INTERCEPT_STRTO(__isoc23_wcstoll);
+  INTERCEPT_STRTO(__isoc23_wcstoull);
+#endif
+
 #ifdef SANITIZER_NLDBL_VERSION
   INTERCEPT_FUNCTION_VER(vswprintf, SANITIZER_NLDBL_VERSION);
   INTERCEPT_FUNCTION_VER(swprintf, SANITIZER_NLDBL_VERSION);
@@ -1768,6 +1893,7 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_EPOLL_PWAIT;
   INTERCEPT_FUNCTION(strsignal);
   INTERCEPT_FUNCTION(dladdr);
+  MSAN_MAYBE_INTERCEPT_DLADDR1;
   INTERCEPT_FUNCTION(dlerror);
   INTERCEPT_FUNCTION(dl_iterate_phdr);
   INTERCEPT_FUNCTION(getrusage);
@@ -1778,6 +1904,10 @@ void InitializeInterceptors() {
 #endif
   INTERCEPT_FUNCTION(pthread_join);
   INTERCEPT_FUNCTION(pthread_key_create);
+#if SANITIZER_GLIBC
+  INTERCEPT_FUNCTION(pthread_tryjoin_np);
+  INTERCEPT_FUNCTION(pthread_timedjoin_np);
+#endif
 
 #if SANITIZER_NETBSD
   INTERCEPT_FUNCTION(__libc_thr_keycreate);

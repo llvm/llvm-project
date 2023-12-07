@@ -8,7 +8,7 @@
 
 #include "src/string/strpbrk.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStrPBrkTest, EmptyStringShouldReturnNullptr) {
   // The search should not include the null terminator.

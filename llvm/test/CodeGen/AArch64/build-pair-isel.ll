@@ -19,6 +19,6 @@ define void @compare_and_swap128() {
 ; CHECK-NEXT:    str x8, [x9]
 ; CHECK-NEXT:    ret
   %1 = call i128 asm sideeffect "nop", "=r,~{memory}"()
-  store i128 %1, i128* undef, align 16
+  store i128 %1, ptr undef, align 16
   ret void
 }

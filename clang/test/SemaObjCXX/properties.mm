@@ -22,7 +22,6 @@ struct X {
 }
 @end
 
-// rdar://problem/10444030
 @interface Test2
 - (void) setY: (int) y;
 - (int) z;
@@ -32,7 +31,6 @@ void test2(Test2 *a) {
   auto z = a.z;
 }
 
-// rdar://problem/10672108
 @interface Test3
 - (int) length;
 @end
@@ -41,7 +39,6 @@ void test3(Test3 *t) {
   char *heaparray = new char[t.length];
 }
 
-// <rdar://problem/10672501>
 namespace std {
   template<typename T> void count();
 }
@@ -86,7 +83,6 @@ void test6_template(T *t6) {
 
 template void test6_template(Test6*);
 
-// rdar://problem/10965735
 struct Test7PointerMaker {
   operator char *() const;
 };
@@ -129,7 +125,6 @@ extern void* VoidType;
 extern decltype(TestNonTrivialObj.p1 = NonTrivial1())* VoidType;
 extern decltype(TestNonTrivialObj.p2 = NonTrivial2())* VoidType;
 
-// rdar://13332183
 namespace test9 {
   struct CString {
     const char *_data;
@@ -165,7 +160,6 @@ namespace test10 {
   }
 }
 
-// <rdar://problem/14354144>
 @interface PropertyOfItself
 @property (readonly, nonatomic) PropertyOfItself x; // expected-error {{interface type cannot be statically allocated}}
 @end
@@ -173,7 +167,6 @@ namespace test10 {
 @synthesize x;
 @end
 
-// rdar://14654207
 struct CGSize {
   double width;
   double height;

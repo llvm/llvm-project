@@ -26,8 +26,8 @@
     ret i32 %res
   }
 
-  define i32 @test_cmp_p0(i32* %a, i32* %b) {
-    %r = icmp ult i32* %a, %b
+  define i32 @test_cmp_p0(ptr %a, ptr %b) {
+    %r = icmp ult ptr %a, %b
     %res = zext i1 %r to i32
     ret i32 %res
   }

@@ -116,6 +116,10 @@ _foo:
 _foo:
   retq
 
+# An alias is the only way to set .weak_def_can_be_hidden on an already-hidden symbol.
+# Veryify that LLD can handle these double-hidden symbols gracefully.
+.set l_foo, _foo
+
 #--- weak-foo-pe.s
 .private_extern _foo
 .globl _foo

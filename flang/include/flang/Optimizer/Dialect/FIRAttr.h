@@ -57,6 +57,15 @@ public:
   mlir::Type getType() const;
 };
 
+/// Attribute which can be applied to a fir.allocmem operation, specifying that
+/// the allocation may not be moved to the heap by passes
+class MustBeHeapAttr : public mlir::BoolAttr {
+public:
+  using BoolAttr::BoolAttr;
+
+  static constexpr llvm::StringRef getAttrName() { return "fir.must_be_heap"; }
+};
+
 // Attributes for building SELECT CASE multiway branches
 
 /// A closed interval (including the bound values) is an interval with both an

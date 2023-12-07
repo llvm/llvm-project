@@ -251,7 +251,7 @@ void LinePrinter::formatMsfStreamData(StringRef Label, PDBFile &File,
 
 void LinePrinter::formatMsfStreamBlocks(
     PDBFile &File, const msf::MSFStreamLayout &StreamLayout) {
-  auto Blocks = makeArrayRef(StreamLayout.Blocks);
+  auto Blocks = ArrayRef(StreamLayout.Blocks);
   uint64_t L = StreamLayout.Length;
 
   while (L > 0) {

@@ -28,7 +28,7 @@ b0:
 
 ; Given int w[2], short h[4], signed char c[8], the below tests check for the
 ; generation of dpmpyuu_s0.
-; w[0] * h[0]
+; wptr h[0]
 ; CHECK-LABEL: f2:
 ; CHECK: = sxth
 ; CHECK: r1:0 = mpyu(
@@ -43,7 +43,7 @@ b0:
   ret i64 %v5
 }
 
-; w[0] * h[1]
+; wptr h[1]
 ; CHECK-LABEL: f3:
 ; CHECK: = asrh
 ; CHECK: r1:0 = mpyu(
@@ -57,7 +57,7 @@ b0:
   ret i64 %v4
 }
 
-; w[0] * h[2]
+; wptr h[2]
 ; CHECK-LABEL: f4:
 ; CHECK: = extract(
 ; CHECK: r1:0 = mpyu(
@@ -73,7 +73,7 @@ b0:
   ret i64 %v6
 }
 
-; w[0] * h[3]
+; wptr h[3]
 ; CHECK-LABEL: f5:
 ; CHECK: = extractu(
 ; CHECK: r1:0 = mpyu(
@@ -89,7 +89,7 @@ b0:
   ret i64 %v6
 }
 
-; w[1] * h[0]
+; wptr h[0]
 ; CHECK-LABEL: f6:
 ; CHECK: = sxth(
 ; CHECK: r1:0 = mpyu(
@@ -104,7 +104,7 @@ b0:
   ret i64 %v5
 }
 
-; w[0] * c[0]
+; wptr c[0]
 ; CHECK-LABEL: f7:
 ; CHECK: = and({{.*}}#255)
 ; CHECK: r1:0 = mpyu(
@@ -116,7 +116,7 @@ b0:
   ret i64 %v2
 }
 
-; w[0] * c[2]
+; wptr c[2]
 ; CHECK-LABEL: f8:
 ; CHECK: = extractu(
 ; CHECK: r1:0 = mpyu(
@@ -129,7 +129,7 @@ b0:
   ret i64 %v3
 }
 
-; w[0] * c[7]
+; wptr c[7]
 ; CHECK-LABEL: f9:
 ; CHECK: = lsr(
 ; CHECK: r1:0 = mpyu(
@@ -168,7 +168,7 @@ b0:
 
 ; Given unsigned int w[2], unsigned short h[4], unsigned char c[8], the below
 ; tests check for the generation of dpmpyss_s0.
-; w[0] * h[0]
+; wptr h[0]
 ; CHECK-LABEL: f12:
 ; CHECK: = sxth
 ; CHECK: r1:0 = mpy(
@@ -182,7 +182,7 @@ b0:
   ret i64 %v4
 }
 
-; w[0] * h[1]
+; wptr h[1]
 ; CHECK-LABEL: f13:
 ; CHECK: = asrh
 ; CHECK: r1:0 = mpy(
@@ -197,7 +197,7 @@ b0:
   ret i64 %v5
 }
 
-; w[0] * h[2]
+; wptr h[2]
 ; CHECK-LABEL: f14:
 ; CHECK: = extract(
 ; CHECK: r1:0 = mpy(
@@ -214,7 +214,7 @@ b0:
   ret i64 %v7
 }
 
-; w[0] * h[3]
+; wptr h[3]
 ; CHECK-LABEL: f15:
 ; CHECK: = sxth(
 ; CHECK: r1:0 = mpy(
@@ -227,7 +227,7 @@ b0:
   ret i64 %v3
 }
 
-; w[1] * h[0]
+; wptr h[0]
 ; CHECK-LABEL: f16:
 ; CHECK: = asrh(
 ; CHECK: r1:0 = mpy(
@@ -241,7 +241,7 @@ b0:
   ret i64 %v4
 }
 
-; w[0] * c[0]
+; wptr c[0]
 ; CHECK-LABEL: f17:
 ; CHECK: = sxtb(
 ; CHECK: r1:0 = mpy(
@@ -255,7 +255,7 @@ b0:
   ret i64 %v4
 }
 
-; w[0] * c[2]
+; wptr c[2]
 ; CHECK-LABEL: f18:
 ; CHECK: = extract(
 ; CHECK: r1:0 = mpy(
@@ -272,7 +272,7 @@ b0:
   ret i64 %v7
 }
 
-; w[0] * c[7]
+; wptr c[7]
 ; CHECK-LABEL: f19:
 ; CHECK: = sxtb(
 ; CHECK: r1:0 = mpy(

@@ -21,7 +21,7 @@
 ; RUN: llvm-objdump -dr --symbol-description %t64.o | \
 ; RUN:   FileCheck --check-prefix=DIS64 %s
 
-@alias_foo = alias void (...), bitcast (void ()* @foo to void (...)*)
+@alias_foo = alias void (...), ptr @foo
 
 define void @foo() {
 entry:
@@ -37,8 +37,8 @@ define void @bar() {
 entry:
   call void @foo()
   call void @static_overalign_foo()
-  call void bitcast (void (...)* @alias_foo to void ()*)()
-  call void bitcast (void (...)* @extern_foo to void ()*)()
+  call void @alias_foo()
+  call void @extern_foo()
   call void @hidden_foo()
   ret void
 }
@@ -114,7 +114,7 @@ entry:
 ; XCOFF32-NEXT: 00000000      df *DEBUG*	00000000 (idx: 0) <stdin>
 ; XCOFF32-NEXT: 00000000         *UND*	00000000 (idx: 1) .extern_foo[PR]
 ; XCOFF32-NEXT: 00000000         *UND*	00000000 (idx: 3) extern_foo[DS]
-; XCOFF32-NEXT: 00000000 l       .text	00000000 (idx: 5) .text[PR]
+; XCOFF32-NEXT: 00000000 l       .text	00000000 (idx: 5) [PR]
 ; XCOFF32-NEXT: 00000000 g       .text	00000019 (idx: 7) .foo[PR]
 ; XCOFF32-NEXT: 00000000 g     F .text (csect: (idx: 7) .foo[PR]) 	00000000 (idx: 9) .alias_foo
 ; XCOFF32-NEXT: 00000020 g       .text	00000020 .hidden (idx: 11) .hidden_foo[PR]
@@ -149,7 +149,7 @@ entry:
 ; XCOFF64-NEXT: 0000000000000000      df *DEBUG*	0000000000000000 (idx: 0) <stdin>
 ; XCOFF64-NEXT: 0000000000000000         *UND*	0000000000000000 (idx: 1) .extern_foo[PR]
 ; XCOFF64-NEXT: 0000000000000000         *UND*	0000000000000000 (idx: 3) extern_foo[DS]
-; XCOFF64-NEXT: 0000000000000000 l       .text	0000000000000000 (idx: 5) .text[PR]
+; XCOFF64-NEXT: 0000000000000000 l       .text	0000000000000000 (idx: 5) [PR]
 ; XCOFF64-NEXT: 0000000000000000 g       .text	0000000000000019 (idx: 7) .foo[PR]
 ; XCOFF64-NEXT: 0000000000000000 g     F .text (csect: (idx: 7) .foo[PR]) 	0000000000000000 (idx: 9) .alias_foo
 ; XCOFF64-NEXT: 0000000000000020 g       .text	0000000000000020 .hidden (idx: 11) .hidden_foo[PR]

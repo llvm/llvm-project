@@ -1,0 +1,8 @@
+; RUN: llvm-dlltool -m i386 -d %s -l %t.a --temp-prefix foo
+; RUN: llvm-dlltool -m i386 -d %s -l %t.a --temp-prefix=foo
+; RUN: llvm-dlltool -m i386 -d %s -l %t.a -t foo
+; RUN: llvm-dlltool -m i386 -d %s -l %t.a -tfoo
+
+LIBRARY test.dll
+EXPORTS
+TestFunction

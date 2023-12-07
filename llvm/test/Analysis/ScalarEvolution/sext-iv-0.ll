@@ -13,7 +13,7 @@ bb1.thread:
 bb1:		; preds = %bb1, %bb1.thread
 	%i.0.reg2mem.0 = phi i64 [ -128, %bb1.thread ], [ %8, %bb1 ]		; <i64> [#uses=3]
 ; CHECK: %i.0.reg2mem.0
-; CHECK-NEXT: -->  {-128,+,1}<%bb1>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: 127
+; CHECK-NEXT: -->  {-128,+,1}<nsw><%bb1>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: 127
 	%0 = trunc i64 %i.0.reg2mem.0 to i8		; <i8> [#uses=1]
 ; CHECK: %0
 ; CHECK-NEXT: -->  {-128,+,1}<%bb1>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: 127

@@ -32,42 +32,48 @@ static_assert(!__is_abstract(E), "E inherits from an abstract class but implemen
 C *d = new C; // expected-error {{allocating an object of abstract class type 'C'}}
 
 C c; // expected-error {{variable type 'C' is an abstract class}}
-void t1(C c); // expected-error {{parameter type 'C' is an abstract class}}
-void t2(C); // expected-error {{parameter type 'C' is an abstract class}}
+void t1(C c);
+void t2(C);
+void t3(C c){} // expected-error {{parameter type 'C' is an abstract class}}
+void t4(C){} // expected-error {{parameter type 'C' is an abstract class}}
 
 struct S {
   C c; // expected-error {{field type 'C' is an abstract class}}
 };
 
-void t3(const C&);
+void t5(const C&);
 
 void f() {
   C(); // expected-error {{allocating an object of abstract class type 'C'}}
-  t3(C()); // expected-error {{allocating an object of abstract class type 'C'}}
+  t5(C()); // expected-error {{allocating an object of abstract class type 'C'}}
 }
 
 C e1[2]; // expected-error {{array of abstract class type 'C'}}
 C (*e2)[2]; // expected-error {{array of abstract class type 'C'}}
 C (**e3)[2]; // expected-error {{array of abstract class type 'C'}}
 
-void t4(C c[2]); // expected-error {{array of abstract class type 'C'}}
+void t6(C c[2]); // expected-error {{array of abstract class type 'C'}}
 
-void t5(void (*)(C)); // expected-error {{parameter type 'C' is an abstract class}}
+void t7(void (*)(C));
 
-typedef void (*Func)(C); // expected-error {{parameter type 'C' is an abstract class}}
-void t6(Func);
+typedef void (*Func)(C);
+void t8(Func);
 
 class F {
   F a() { while (1) {} } // expected-error {{return type 'F' is an abstract class}}
-    
+
   class D {
-    void f(F c); // expected-error {{parameter type 'F' is an abstract class}}
+    void f(F c){}  // expected-error {{parameter type 'F' is an abstract class}}
+    void g(F c);
+    void h(F c) = delete;
   };
 
   union U {
-    void u(F c); // expected-error {{parameter type 'F' is an abstract class}}
+    void u(F c){} // expected-error {{parameter type 'F' is an abstract class}}
+    void v(F c);
+    void w(F c) = delete;
   };
-    
+
   virtual void f() = 0; // expected-note {{unimplemented pure virtual method 'f'}}
 };
 
@@ -76,9 +82,9 @@ class F {
 
 class Abstract;
 
-void t7(Abstract a);
+void t8(Abstract a);
 
-void t8() {
+void t9() {
   void h(Abstract a);
 }
 
@@ -90,7 +96,6 @@ class Abstract {
   virtual void f() = 0;
 };
 
-// <rdar://problem/6854087>
 class foo {
 public:
   virtual foo *getFoo() = 0;
@@ -103,7 +108,6 @@ public:
 
 bar x;
 
-// <rdar://problem/6902298>
 class A {
 public:
   virtual void release() = 0;
@@ -143,7 +147,7 @@ namespace PR5222 {
     virtual C *clone();
   };
 
-  C c;  
+  C c;
 }
 
 // PR5550 - instantiating template didn't track overridden methods
@@ -159,7 +163,7 @@ namespace PR5550 {
   struct C : public B<int> {
     virtual void a();
     virtual void c();
-  }; 
+  };
   C x;
 }
 
@@ -194,19 +198,18 @@ namespace test1 {
   }
 }
 
-// rdar://problem/8302168
 namespace test2 {
   struct X1 {
     virtual void xfunc(void) = 0;  // expected-note {{unimplemented pure virtual method}}
-    void g(X1 parm7);        // expected-error {{parameter type 'test2::X1' is an abstract class}}
-    void g(X1 parm8[2]);     // expected-error {{array of abstract class type 'test2::X1'}}
+    void g(X1 parm7){}        // expected-error {{parameter type 'X1' is an abstract class}}
+    void g(X1 parm8[2]){}     // expected-error {{parameter type 'X1' is an abstract class}}
   };
 
   template <int N>
   struct X2 {
     virtual void xfunc(void) = 0;  // expected-note {{unimplemented pure virtual method}}
-    void g(X2 parm10);        // expected-error {{parameter type 'X2<N>' is an abstract class}}
-    void g(X2 parm11[2]);     // expected-error {{array of abstract class type 'X2<N>'}}
+    void g(X2 parm10){}        // expected-error {{parameter type 'X2<N>' is an abstract class}}
+    void g(X2 parm11[2]) {}     // expected-error {{parameter type 'X2<N>' is an abstract class}}
   };
 }
 
@@ -331,8 +334,8 @@ struct var_template_def { // expected-note {{until the closing '}'}}
 };
 
 struct friend_fn {
-  friend void g(friend_fn); // expected-error {{abstract class}}
-  virtual void f() = 0; // expected-note {{unimplemented}}
+  friend void g(friend_fn);
+  virtual void f() = 0;
 };
 
 struct friend_fn_def {
@@ -342,8 +345,8 @@ struct friend_fn_def {
 
 struct friend_template {
   template<typename T>
-  friend void g(friend_template); // expected-error {{abstract class}}
-  virtual void f() = 0; // expected-note {{unimplemented}}
+  friend void g(friend_template);
+  virtual void f() = 0;
 };
 
 struct friend_template_def {
@@ -351,3 +354,27 @@ struct friend_template_def {
   friend void g(friend_template_def) {} // expected-error {{abstract class}}
   virtual void f() = 0; // expected-note {{unimplemented}}
 };
+
+namespace GH63012 {
+struct foo {
+    virtual ~foo() = 0;
+};
+void f(foo) = delete;
+foo  i() = delete;
+void h(foo);
+foo  g();
+
+struct S {
+  virtual void func() = 0; // expected-note {{unimplemented pure virtual method 'func' in 'S'}}
+};
+void S::func() {}
+
+static_assert(__is_abstract(S), "");
+
+struct T {
+  void func(S) = delete;
+  void other(S);
+  void yet_another(S) {} // expected-error{{parameter type 'S' is an abstract class}}
+};
+
+}

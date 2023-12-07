@@ -49,7 +49,7 @@ MlirIntegerSet mlirIntegerSetGet(MlirContext context, intptr_t numDims,
   return wrap(IntegerSet::get(
       static_cast<unsigned>(numDims), static_cast<unsigned>(numSymbols),
       mlirConstraints,
-      llvm::makeArrayRef(eqFlags, static_cast<size_t>(numConstraints))));
+      llvm::ArrayRef(eqFlags, static_cast<size_t>(numConstraints))));
 }
 
 MlirIntegerSet

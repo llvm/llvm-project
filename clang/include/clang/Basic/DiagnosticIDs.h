@@ -17,6 +17,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -35,7 +36,7 @@ namespace clang {
       DIAG_SIZE_SERIALIZATION =  120,
       DIAG_SIZE_LEX           =  400,
       DIAG_SIZE_PARSE         =  700,
-      DIAG_SIZE_AST           =  250,
+      DIAG_SIZE_AST           =  300,
       DIAG_SIZE_COMMENT       =  100,
       DIAG_SIZE_CROSSTU       =  100,
       DIAG_SIZE_SEMA          = 4500,
@@ -158,6 +159,10 @@ public:
     Result.Severity = Bits & 0x7;
     return Result;
   }
+
+  bool operator==(DiagnosticMapping Other) const {
+    return serialize() == Other.serialize();
+  }
 };
 
 /// Used for handling and querying diagnostic IDs.
@@ -207,6 +212,9 @@ public:
   /// default.
   static bool isDefaultMappingAsError(unsigned DiagID);
 
+  /// Get the default mapping for this diagnostic.
+  static DiagnosticMapping getDefaultMapping(unsigned DiagID);
+
   /// Determine whether the given built-in diagnostic ID is a Note.
   static bool isBuiltinNote(unsigned DiagID);
 
@@ -237,10 +245,10 @@ public:
   /// Given a group ID, returns the flag that toggles the group.
   /// For example, for "deprecated-declarations", returns
   /// Group::DeprecatedDeclarations.
-  static llvm::Optional<diag::Group> getGroupForWarningOption(StringRef);
+  static std::optional<diag::Group> getGroupForWarningOption(StringRef);
 
   /// Return the lowest-level group that contains the specified diagnostic.
-  static llvm::Optional<diag::Group> getGroupForDiag(unsigned DiagID);
+  static std::optional<diag::Group> getGroupForDiag(unsigned DiagID);
 
   /// Return the lowest-level warning option that enables the specified
   /// diagnostic.

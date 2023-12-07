@@ -1,0 +1,91 @@
+#ifndef _STRING_
+#define _STRING_
+
+// For size_t
+#include <string.h>
+
+typedef unsigned __INT16_TYPE__ char16;
+typedef unsigned __INT32_TYPE__ char32;
+
+namespace std {
+template <typename T>
+class allocator {};
+template <typename T>
+class char_traits {};
+template <typename C, typename T = char_traits<C>, typename A = allocator<C>>
+struct basic_string {
+  typedef size_t size_type;
+  typedef basic_string<C, T, A> _Type;
+  basic_string();
+  basic_string(const C *p, const A &a = A());
+  basic_string(const C *p, size_type count);
+
+  ~basic_string();
+
+  const C *c_str() const;
+  const C *data() const;
+
+  bool empty() const;
+  size_type size() const;
+  size_type length() const;
+
+  _Type& append(const C *s);
+  _Type& append(const C *s, size_type n);
+  _Type& assign(const C *s);
+  _Type& assign(const C *s, size_type n);
+
+  int compare(const _Type&) const;
+  int compare(const C* s) const;
+  int compare(size_type pos, size_type len, const _Type&) const;
+  int compare(size_type pos, size_type len, const C* s) const;
+
+  size_type find(const _Type& str, size_type pos = 0) const;
+  size_type find(const C* s, size_type pos = 0) const;
+  size_type find(const C* s, size_type pos, size_type n) const;
+
+  _Type& insert(size_type pos, const _Type& str);
+  _Type& insert(size_type pos, const C* s);
+  _Type& insert(size_type pos, const C* s, size_type n);
+
+  _Type& operator[](size_type);
+  const _Type& operator[](size_type) const;
+
+  _Type& operator+=(const _Type& str);
+  _Type& operator+=(const C* s);
+  _Type& operator=(const _Type& str);
+  _Type& operator=(const C* s);
+};
+
+typedef basic_string<char> string;
+typedef basic_string<wchar_t> wstring;
+typedef basic_string<char16> u16string;
+typedef basic_string<char32> u32string;
+
+template <typename C, typename T = char_traits<C>>
+struct basic_string_view {
+  const C *str;
+  constexpr basic_string_view(const C* s) : str(s) {}
+};
+typedef basic_string_view<char> string_view;
+typedef basic_string_view<wchar_t> wstring_view;
+typedef basic_string_view<char16> u16string_view;
+typedef basic_string_view<char32> u32string_view;
+
+std::string operator+(const std::string&, const std::string&);
+std::string operator+(const std::string&, const char*);
+std::string operator+(const char*, const std::string&);
+
+bool operator==(const std::string&, const std::string&);
+bool operator==(const std::string&, const char*);
+bool operator==(const char*, const std::string&);
+
+bool operator!=(const std::string&, const std::string&);
+bool operator!=(const std::string&, const char*);
+bool operator!=(const char*, const std::string&);
+
+bool operator==(const std::wstring&, const std::wstring&);
+bool operator==(const std::wstring&, const wchar_t*);
+bool operator==(const wchar_t*, const std::wstring&);
+}
+
+#endif // _STRING_

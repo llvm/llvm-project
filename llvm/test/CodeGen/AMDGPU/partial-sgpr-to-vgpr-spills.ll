@@ -8,204 +8,204 @@
 
 ; Ideally we only need 2 VGPRs for all spilling. The VGPRs are
 ; allocated per-frame index, so it's possible to get up with more.
-define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(i32 addrspace(1)* %out, i32 %in) #0 {
+define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(ptr addrspace(1) %out, i32 %in) #0 {
 ; GCN-LABEL: spill_sgprs_to_multiple_vgprs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s92, SCRATCH_RSRC_DWORD0
 ; GCN-NEXT:    s_mov_b32 s93, SCRATCH_RSRC_DWORD1
 ; GCN-NEXT:    s_mov_b32 s94, -1
 ; GCN-NEXT:    s_mov_b32 s95, 0xe8f000
-; GCN-NEXT:    s_add_u32 s92, s92, s3
+; GCN-NEXT:    s_add_u32 s92, s92, s11
 ; GCN-NEXT:    s_addc_u32 s93, s93, 0
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0xb
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; def s[4:11]
-; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    v_writelane_b32 v0, s4, 0
-; GCN-NEXT:    v_writelane_b32 v0, s5, 1
-; GCN-NEXT:    v_writelane_b32 v0, s6, 2
-; GCN-NEXT:    v_writelane_b32 v0, s7, 3
-; GCN-NEXT:    v_writelane_b32 v0, s8, 4
-; GCN-NEXT:    v_writelane_b32 v0, s9, 5
-; GCN-NEXT:    v_writelane_b32 v0, s10, 6
-; GCN-NEXT:    v_writelane_b32 v0, s11, 7
+; GCN-NEXT:    ; implicit-def: $vgpr1
+; GCN-NEXT:    ; implicit-def: $vgpr2
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 8
-; GCN-NEXT:    v_writelane_b32 v0, s5, 9
-; GCN-NEXT:    v_writelane_b32 v0, s6, 10
-; GCN-NEXT:    v_writelane_b32 v0, s7, 11
-; GCN-NEXT:    v_writelane_b32 v0, s8, 12
-; GCN-NEXT:    v_writelane_b32 v0, s9, 13
-; GCN-NEXT:    v_writelane_b32 v0, s10, 14
-; GCN-NEXT:    v_writelane_b32 v0, s11, 15
+; GCN-NEXT:    v_writelane_b32 v2, s4, 0
+; GCN-NEXT:    v_writelane_b32 v2, s5, 1
+; GCN-NEXT:    v_writelane_b32 v2, s6, 2
+; GCN-NEXT:    v_writelane_b32 v2, s7, 3
+; GCN-NEXT:    v_writelane_b32 v2, s8, 4
+; GCN-NEXT:    v_writelane_b32 v2, s9, 5
+; GCN-NEXT:    v_writelane_b32 v2, s10, 6
+; GCN-NEXT:    v_writelane_b32 v2, s11, 7
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 16
-; GCN-NEXT:    v_writelane_b32 v0, s5, 17
-; GCN-NEXT:    v_writelane_b32 v0, s6, 18
-; GCN-NEXT:    v_writelane_b32 v0, s7, 19
-; GCN-NEXT:    v_writelane_b32 v0, s8, 20
-; GCN-NEXT:    v_writelane_b32 v0, s9, 21
-; GCN-NEXT:    v_writelane_b32 v0, s10, 22
-; GCN-NEXT:    v_writelane_b32 v0, s11, 23
+; GCN-NEXT:    v_writelane_b32 v2, s4, 8
+; GCN-NEXT:    v_writelane_b32 v2, s5, 9
+; GCN-NEXT:    v_writelane_b32 v2, s6, 10
+; GCN-NEXT:    v_writelane_b32 v2, s7, 11
+; GCN-NEXT:    v_writelane_b32 v2, s8, 12
+; GCN-NEXT:    v_writelane_b32 v2, s9, 13
+; GCN-NEXT:    v_writelane_b32 v2, s10, 14
+; GCN-NEXT:    v_writelane_b32 v2, s11, 15
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 24
-; GCN-NEXT:    v_writelane_b32 v0, s5, 25
-; GCN-NEXT:    v_writelane_b32 v0, s6, 26
-; GCN-NEXT:    v_writelane_b32 v0, s7, 27
-; GCN-NEXT:    v_writelane_b32 v0, s8, 28
-; GCN-NEXT:    v_writelane_b32 v0, s9, 29
-; GCN-NEXT:    v_writelane_b32 v0, s10, 30
-; GCN-NEXT:    v_writelane_b32 v0, s11, 31
+; GCN-NEXT:    v_writelane_b32 v2, s4, 16
+; GCN-NEXT:    v_writelane_b32 v2, s5, 17
+; GCN-NEXT:    v_writelane_b32 v2, s6, 18
+; GCN-NEXT:    v_writelane_b32 v2, s7, 19
+; GCN-NEXT:    v_writelane_b32 v2, s8, 20
+; GCN-NEXT:    v_writelane_b32 v2, s9, 21
+; GCN-NEXT:    v_writelane_b32 v2, s10, 22
+; GCN-NEXT:    v_writelane_b32 v2, s11, 23
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 32
-; GCN-NEXT:    v_writelane_b32 v0, s5, 33
-; GCN-NEXT:    v_writelane_b32 v0, s6, 34
-; GCN-NEXT:    v_writelane_b32 v0, s7, 35
-; GCN-NEXT:    v_writelane_b32 v0, s8, 36
-; GCN-NEXT:    v_writelane_b32 v0, s9, 37
-; GCN-NEXT:    v_writelane_b32 v0, s10, 38
-; GCN-NEXT:    v_writelane_b32 v0, s11, 39
+; GCN-NEXT:    v_writelane_b32 v2, s4, 24
+; GCN-NEXT:    v_writelane_b32 v2, s5, 25
+; GCN-NEXT:    v_writelane_b32 v2, s6, 26
+; GCN-NEXT:    v_writelane_b32 v2, s7, 27
+; GCN-NEXT:    v_writelane_b32 v2, s8, 28
+; GCN-NEXT:    v_writelane_b32 v2, s9, 29
+; GCN-NEXT:    v_writelane_b32 v2, s10, 30
+; GCN-NEXT:    v_writelane_b32 v2, s11, 31
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 40
-; GCN-NEXT:    v_writelane_b32 v0, s5, 41
-; GCN-NEXT:    v_writelane_b32 v0, s6, 42
-; GCN-NEXT:    v_writelane_b32 v0, s7, 43
-; GCN-NEXT:    v_writelane_b32 v0, s8, 44
-; GCN-NEXT:    v_writelane_b32 v0, s9, 45
-; GCN-NEXT:    v_writelane_b32 v0, s10, 46
-; GCN-NEXT:    v_writelane_b32 v0, s11, 47
+; GCN-NEXT:    v_writelane_b32 v2, s4, 32
+; GCN-NEXT:    v_writelane_b32 v2, s5, 33
+; GCN-NEXT:    v_writelane_b32 v2, s6, 34
+; GCN-NEXT:    v_writelane_b32 v2, s7, 35
+; GCN-NEXT:    v_writelane_b32 v2, s8, 36
+; GCN-NEXT:    v_writelane_b32 v2, s9, 37
+; GCN-NEXT:    v_writelane_b32 v2, s10, 38
+; GCN-NEXT:    v_writelane_b32 v2, s11, 39
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 48
-; GCN-NEXT:    v_writelane_b32 v0, s5, 49
-; GCN-NEXT:    v_writelane_b32 v0, s6, 50
-; GCN-NEXT:    v_writelane_b32 v0, s7, 51
-; GCN-NEXT:    v_writelane_b32 v0, s8, 52
-; GCN-NEXT:    v_writelane_b32 v0, s9, 53
-; GCN-NEXT:    v_writelane_b32 v0, s10, 54
-; GCN-NEXT:    v_writelane_b32 v0, s11, 55
+; GCN-NEXT:    v_writelane_b32 v2, s4, 40
+; GCN-NEXT:    v_writelane_b32 v2, s5, 41
+; GCN-NEXT:    v_writelane_b32 v2, s6, 42
+; GCN-NEXT:    v_writelane_b32 v2, s7, 43
+; GCN-NEXT:    v_writelane_b32 v2, s8, 44
+; GCN-NEXT:    v_writelane_b32 v2, s9, 45
+; GCN-NEXT:    v_writelane_b32 v2, s10, 46
+; GCN-NEXT:    v_writelane_b32 v2, s11, 47
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 56
-; GCN-NEXT:    v_writelane_b32 v0, s5, 57
-; GCN-NEXT:    v_writelane_b32 v0, s6, 58
-; GCN-NEXT:    v_writelane_b32 v0, s7, 59
-; GCN-NEXT:    v_writelane_b32 v0, s8, 60
-; GCN-NEXT:    v_writelane_b32 v0, s9, 61
-; GCN-NEXT:    v_writelane_b32 v0, s10, 62
-; GCN-NEXT:    v_writelane_b32 v0, s11, 63
+; GCN-NEXT:    v_writelane_b32 v2, s4, 48
+; GCN-NEXT:    v_writelane_b32 v2, s5, 49
+; GCN-NEXT:    v_writelane_b32 v2, s6, 50
+; GCN-NEXT:    v_writelane_b32 v2, s7, 51
+; GCN-NEXT:    v_writelane_b32 v2, s8, 52
+; GCN-NEXT:    v_writelane_b32 v2, s9, 53
+; GCN-NEXT:    v_writelane_b32 v2, s10, 54
+; GCN-NEXT:    v_writelane_b32 v2, s11, 55
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def s[4:11]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    v_writelane_b32 v2, s4, 56
+; GCN-NEXT:    v_writelane_b32 v2, s5, 57
+; GCN-NEXT:    v_writelane_b32 v2, s6, 58
+; GCN-NEXT:    v_writelane_b32 v2, s7, 59
+; GCN-NEXT:    v_writelane_b32 v2, s8, 60
+; GCN-NEXT:    v_writelane_b32 v2, s9, 61
+; GCN-NEXT:    v_writelane_b32 v2, s10, 62
+; GCN-NEXT:    v_writelane_b32 v2, s11, 63
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_store_dword v0, off, s[92:95], 0 offset:12 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v2, off, s[92:95], 0 offset:12 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    v_writelane_b32 v0, s4, 0
-; GCN-NEXT:    v_writelane_b32 v0, s5, 1
-; GCN-NEXT:    v_writelane_b32 v0, s6, 2
-; GCN-NEXT:    v_writelane_b32 v0, s7, 3
-; GCN-NEXT:    v_writelane_b32 v0, s8, 4
-; GCN-NEXT:    v_writelane_b32 v0, s9, 5
-; GCN-NEXT:    v_writelane_b32 v0, s10, 6
-; GCN-NEXT:    v_writelane_b32 v0, s11, 7
+; GCN-NEXT:    v_writelane_b32 v1, s4, 0
+; GCN-NEXT:    v_writelane_b32 v1, s5, 1
+; GCN-NEXT:    v_writelane_b32 v1, s6, 2
+; GCN-NEXT:    v_writelane_b32 v1, s7, 3
+; GCN-NEXT:    v_writelane_b32 v1, s8, 4
+; GCN-NEXT:    v_writelane_b32 v1, s9, 5
+; GCN-NEXT:    v_writelane_b32 v1, s10, 6
+; GCN-NEXT:    v_writelane_b32 v1, s11, 7
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 8
-; GCN-NEXT:    v_writelane_b32 v0, s5, 9
-; GCN-NEXT:    v_writelane_b32 v0, s6, 10
-; GCN-NEXT:    v_writelane_b32 v0, s7, 11
-; GCN-NEXT:    v_writelane_b32 v0, s8, 12
-; GCN-NEXT:    v_writelane_b32 v0, s9, 13
-; GCN-NEXT:    v_writelane_b32 v0, s10, 14
-; GCN-NEXT:    v_writelane_b32 v0, s11, 15
+; GCN-NEXT:    v_writelane_b32 v1, s4, 8
+; GCN-NEXT:    v_writelane_b32 v1, s5, 9
+; GCN-NEXT:    v_writelane_b32 v1, s6, 10
+; GCN-NEXT:    v_writelane_b32 v1, s7, 11
+; GCN-NEXT:    v_writelane_b32 v1, s8, 12
+; GCN-NEXT:    v_writelane_b32 v1, s9, 13
+; GCN-NEXT:    v_writelane_b32 v1, s10, 14
+; GCN-NEXT:    v_writelane_b32 v1, s11, 15
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 16
-; GCN-NEXT:    v_writelane_b32 v0, s5, 17
-; GCN-NEXT:    v_writelane_b32 v0, s6, 18
-; GCN-NEXT:    v_writelane_b32 v0, s7, 19
-; GCN-NEXT:    v_writelane_b32 v0, s8, 20
-; GCN-NEXT:    v_writelane_b32 v0, s9, 21
-; GCN-NEXT:    v_writelane_b32 v0, s10, 22
-; GCN-NEXT:    v_writelane_b32 v0, s11, 23
+; GCN-NEXT:    v_writelane_b32 v1, s4, 16
+; GCN-NEXT:    v_writelane_b32 v1, s5, 17
+; GCN-NEXT:    v_writelane_b32 v1, s6, 18
+; GCN-NEXT:    v_writelane_b32 v1, s7, 19
+; GCN-NEXT:    v_writelane_b32 v1, s8, 20
+; GCN-NEXT:    v_writelane_b32 v1, s9, 21
+; GCN-NEXT:    v_writelane_b32 v1, s10, 22
+; GCN-NEXT:    v_writelane_b32 v1, s11, 23
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 24
-; GCN-NEXT:    v_writelane_b32 v0, s5, 25
-; GCN-NEXT:    v_writelane_b32 v0, s6, 26
-; GCN-NEXT:    v_writelane_b32 v0, s7, 27
-; GCN-NEXT:    v_writelane_b32 v0, s8, 28
-; GCN-NEXT:    v_writelane_b32 v0, s9, 29
-; GCN-NEXT:    v_writelane_b32 v0, s10, 30
-; GCN-NEXT:    v_writelane_b32 v0, s11, 31
+; GCN-NEXT:    v_writelane_b32 v1, s4, 24
+; GCN-NEXT:    v_writelane_b32 v1, s5, 25
+; GCN-NEXT:    v_writelane_b32 v1, s6, 26
+; GCN-NEXT:    v_writelane_b32 v1, s7, 27
+; GCN-NEXT:    v_writelane_b32 v1, s8, 28
+; GCN-NEXT:    v_writelane_b32 v1, s9, 29
+; GCN-NEXT:    v_writelane_b32 v1, s10, 30
+; GCN-NEXT:    v_writelane_b32 v1, s11, 31
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 32
-; GCN-NEXT:    v_writelane_b32 v0, s5, 33
-; GCN-NEXT:    v_writelane_b32 v0, s6, 34
-; GCN-NEXT:    v_writelane_b32 v0, s7, 35
-; GCN-NEXT:    v_writelane_b32 v0, s8, 36
-; GCN-NEXT:    v_writelane_b32 v0, s9, 37
-; GCN-NEXT:    v_writelane_b32 v0, s10, 38
-; GCN-NEXT:    v_writelane_b32 v0, s11, 39
+; GCN-NEXT:    v_writelane_b32 v1, s4, 32
+; GCN-NEXT:    v_writelane_b32 v1, s5, 33
+; GCN-NEXT:    v_writelane_b32 v1, s6, 34
+; GCN-NEXT:    v_writelane_b32 v1, s7, 35
+; GCN-NEXT:    v_writelane_b32 v1, s8, 36
+; GCN-NEXT:    v_writelane_b32 v1, s9, 37
+; GCN-NEXT:    v_writelane_b32 v1, s10, 38
+; GCN-NEXT:    v_writelane_b32 v1, s11, 39
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 40
-; GCN-NEXT:    v_writelane_b32 v0, s5, 41
-; GCN-NEXT:    v_writelane_b32 v0, s6, 42
-; GCN-NEXT:    v_writelane_b32 v0, s7, 43
-; GCN-NEXT:    v_writelane_b32 v0, s8, 44
-; GCN-NEXT:    v_writelane_b32 v0, s9, 45
-; GCN-NEXT:    v_writelane_b32 v0, s10, 46
-; GCN-NEXT:    v_writelane_b32 v0, s11, 47
+; GCN-NEXT:    v_writelane_b32 v1, s4, 40
+; GCN-NEXT:    v_writelane_b32 v1, s5, 41
+; GCN-NEXT:    v_writelane_b32 v1, s6, 42
+; GCN-NEXT:    v_writelane_b32 v1, s7, 43
+; GCN-NEXT:    v_writelane_b32 v1, s8, 44
+; GCN-NEXT:    v_writelane_b32 v1, s9, 45
+; GCN-NEXT:    v_writelane_b32 v1, s10, 46
+; GCN-NEXT:    v_writelane_b32 v1, s11, 47
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 48
-; GCN-NEXT:    v_writelane_b32 v0, s5, 49
-; GCN-NEXT:    v_writelane_b32 v0, s6, 50
-; GCN-NEXT:    v_writelane_b32 v0, s7, 51
-; GCN-NEXT:    v_writelane_b32 v0, s8, 52
-; GCN-NEXT:    v_writelane_b32 v0, s9, 53
-; GCN-NEXT:    v_writelane_b32 v0, s10, 54
-; GCN-NEXT:    v_writelane_b32 v0, s11, 55
+; GCN-NEXT:    v_writelane_b32 v1, s4, 48
+; GCN-NEXT:    v_writelane_b32 v1, s5, 49
+; GCN-NEXT:    v_writelane_b32 v1, s6, 50
+; GCN-NEXT:    v_writelane_b32 v1, s7, 51
+; GCN-NEXT:    v_writelane_b32 v1, s8, 52
+; GCN-NEXT:    v_writelane_b32 v1, s9, 53
+; GCN-NEXT:    v_writelane_b32 v1, s10, 54
+; GCN-NEXT:    v_writelane_b32 v1, s11, 55
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 56
-; GCN-NEXT:    v_writelane_b32 v0, s5, 57
-; GCN-NEXT:    v_writelane_b32 v0, s6, 58
-; GCN-NEXT:    v_writelane_b32 v0, s7, 59
-; GCN-NEXT:    v_writelane_b32 v0, s8, 60
-; GCN-NEXT:    v_writelane_b32 v0, s9, 61
-; GCN-NEXT:    v_writelane_b32 v0, s10, 62
-; GCN-NEXT:    v_writelane_b32 v0, s11, 63
+; GCN-NEXT:    v_writelane_b32 v1, s4, 56
+; GCN-NEXT:    v_writelane_b32 v1, s5, 57
+; GCN-NEXT:    v_writelane_b32 v1, s6, 58
+; GCN-NEXT:    v_writelane_b32 v1, s7, 59
+; GCN-NEXT:    v_writelane_b32 v1, s8, 60
+; GCN-NEXT:    v_writelane_b32 v1, s9, 61
+; GCN-NEXT:    v_writelane_b32 v1, s10, 62
+; GCN-NEXT:    v_writelane_b32 v1, s11, 63
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_store_dword v0, off, s[92:95], 0 offset:8 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v1, off, s[92:95], 0 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    v_writelane_b32 v0, s4, 0
 ; GCN-NEXT:    v_writelane_b32 v0, s5, 1
 ; GCN-NEXT:    v_writelane_b32 v0, s6, 2
@@ -420,6 +420,18 @@ define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(i32 addrspace(1)* %out,
 ; GCN-NEXT:    ; use s[0:7]
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB0_2: ; %ret
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[92:95], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_load_dword v1, off, s[92:95], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_load_dword v2, off, s[92:95], 0 offset:12 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    ; kill: killed $vgpr2
+; GCN-NEXT:    ; kill: killed $vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    s_endpgm
   %wide.sgpr0 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
   %wide.sgpr1 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
@@ -467,100 +479,100 @@ ret:
 
 ; Some of the lanes of an SGPR spill are in one VGPR and some forced
 ; into the next available VGPR.
-define amdgpu_kernel void @split_sgpr_spill_2_vgprs(i32 addrspace(1)* %out, i32 %in) #1 {
+define amdgpu_kernel void @split_sgpr_spill_2_vgprs(ptr addrspace(1) %out, i32 %in) #1 {
 ; GCN-LABEL: split_sgpr_spill_2_vgprs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s52, SCRATCH_RSRC_DWORD0
 ; GCN-NEXT:    s_mov_b32 s53, SCRATCH_RSRC_DWORD1
 ; GCN-NEXT:    s_mov_b32 s54, -1
 ; GCN-NEXT:    s_mov_b32 s55, 0xe8f000
-; GCN-NEXT:    s_add_u32 s52, s52, s3
+; GCN-NEXT:    s_add_u32 s52, s52, s11
 ; GCN-NEXT:    s_addc_u32 s53, s53, 0
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0xb
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; def s[4:19]
-; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    v_writelane_b32 v0, s4, 0
-; GCN-NEXT:    v_writelane_b32 v0, s5, 1
-; GCN-NEXT:    v_writelane_b32 v0, s6, 2
-; GCN-NEXT:    v_writelane_b32 v0, s7, 3
-; GCN-NEXT:    v_writelane_b32 v0, s8, 4
-; GCN-NEXT:    v_writelane_b32 v0, s9, 5
-; GCN-NEXT:    v_writelane_b32 v0, s10, 6
-; GCN-NEXT:    v_writelane_b32 v0, s11, 7
-; GCN-NEXT:    v_writelane_b32 v0, s12, 8
-; GCN-NEXT:    v_writelane_b32 v0, s13, 9
-; GCN-NEXT:    v_writelane_b32 v0, s14, 10
-; GCN-NEXT:    v_writelane_b32 v0, s15, 11
-; GCN-NEXT:    v_writelane_b32 v0, s16, 12
-; GCN-NEXT:    v_writelane_b32 v0, s17, 13
-; GCN-NEXT:    v_writelane_b32 v0, s18, 14
-; GCN-NEXT:    v_writelane_b32 v0, s19, 15
+; GCN-NEXT:    ; implicit-def: $vgpr1
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:19]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 16
-; GCN-NEXT:    v_writelane_b32 v0, s5, 17
-; GCN-NEXT:    v_writelane_b32 v0, s6, 18
-; GCN-NEXT:    v_writelane_b32 v0, s7, 19
-; GCN-NEXT:    v_writelane_b32 v0, s8, 20
-; GCN-NEXT:    v_writelane_b32 v0, s9, 21
-; GCN-NEXT:    v_writelane_b32 v0, s10, 22
-; GCN-NEXT:    v_writelane_b32 v0, s11, 23
-; GCN-NEXT:    v_writelane_b32 v0, s12, 24
-; GCN-NEXT:    v_writelane_b32 v0, s13, 25
-; GCN-NEXT:    v_writelane_b32 v0, s14, 26
-; GCN-NEXT:    v_writelane_b32 v0, s15, 27
-; GCN-NEXT:    v_writelane_b32 v0, s16, 28
-; GCN-NEXT:    v_writelane_b32 v0, s17, 29
-; GCN-NEXT:    v_writelane_b32 v0, s18, 30
-; GCN-NEXT:    v_writelane_b32 v0, s19, 31
+; GCN-NEXT:    v_writelane_b32 v1, s4, 0
+; GCN-NEXT:    v_writelane_b32 v1, s5, 1
+; GCN-NEXT:    v_writelane_b32 v1, s6, 2
+; GCN-NEXT:    v_writelane_b32 v1, s7, 3
+; GCN-NEXT:    v_writelane_b32 v1, s8, 4
+; GCN-NEXT:    v_writelane_b32 v1, s9, 5
+; GCN-NEXT:    v_writelane_b32 v1, s10, 6
+; GCN-NEXT:    v_writelane_b32 v1, s11, 7
+; GCN-NEXT:    v_writelane_b32 v1, s12, 8
+; GCN-NEXT:    v_writelane_b32 v1, s13, 9
+; GCN-NEXT:    v_writelane_b32 v1, s14, 10
+; GCN-NEXT:    v_writelane_b32 v1, s15, 11
+; GCN-NEXT:    v_writelane_b32 v1, s16, 12
+; GCN-NEXT:    v_writelane_b32 v1, s17, 13
+; GCN-NEXT:    v_writelane_b32 v1, s18, 14
+; GCN-NEXT:    v_writelane_b32 v1, s19, 15
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:19]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 32
-; GCN-NEXT:    v_writelane_b32 v0, s5, 33
-; GCN-NEXT:    v_writelane_b32 v0, s6, 34
-; GCN-NEXT:    v_writelane_b32 v0, s7, 35
-; GCN-NEXT:    v_writelane_b32 v0, s8, 36
-; GCN-NEXT:    v_writelane_b32 v0, s9, 37
-; GCN-NEXT:    v_writelane_b32 v0, s10, 38
-; GCN-NEXT:    v_writelane_b32 v0, s11, 39
-; GCN-NEXT:    v_writelane_b32 v0, s12, 40
-; GCN-NEXT:    v_writelane_b32 v0, s13, 41
-; GCN-NEXT:    v_writelane_b32 v0, s14, 42
-; GCN-NEXT:    v_writelane_b32 v0, s15, 43
-; GCN-NEXT:    v_writelane_b32 v0, s16, 44
-; GCN-NEXT:    v_writelane_b32 v0, s17, 45
-; GCN-NEXT:    v_writelane_b32 v0, s18, 46
-; GCN-NEXT:    v_writelane_b32 v0, s19, 47
+; GCN-NEXT:    v_writelane_b32 v1, s4, 16
+; GCN-NEXT:    v_writelane_b32 v1, s5, 17
+; GCN-NEXT:    v_writelane_b32 v1, s6, 18
+; GCN-NEXT:    v_writelane_b32 v1, s7, 19
+; GCN-NEXT:    v_writelane_b32 v1, s8, 20
+; GCN-NEXT:    v_writelane_b32 v1, s9, 21
+; GCN-NEXT:    v_writelane_b32 v1, s10, 22
+; GCN-NEXT:    v_writelane_b32 v1, s11, 23
+; GCN-NEXT:    v_writelane_b32 v1, s12, 24
+; GCN-NEXT:    v_writelane_b32 v1, s13, 25
+; GCN-NEXT:    v_writelane_b32 v1, s14, 26
+; GCN-NEXT:    v_writelane_b32 v1, s15, 27
+; GCN-NEXT:    v_writelane_b32 v1, s16, 28
+; GCN-NEXT:    v_writelane_b32 v1, s17, 29
+; GCN-NEXT:    v_writelane_b32 v1, s18, 30
+; GCN-NEXT:    v_writelane_b32 v1, s19, 31
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:19]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 48
-; GCN-NEXT:    v_writelane_b32 v0, s5, 49
-; GCN-NEXT:    v_writelane_b32 v0, s6, 50
-; GCN-NEXT:    v_writelane_b32 v0, s7, 51
-; GCN-NEXT:    v_writelane_b32 v0, s8, 52
-; GCN-NEXT:    v_writelane_b32 v0, s9, 53
-; GCN-NEXT:    v_writelane_b32 v0, s10, 54
-; GCN-NEXT:    v_writelane_b32 v0, s11, 55
-; GCN-NEXT:    v_writelane_b32 v0, s12, 56
-; GCN-NEXT:    v_writelane_b32 v0, s13, 57
-; GCN-NEXT:    v_writelane_b32 v0, s14, 58
-; GCN-NEXT:    v_writelane_b32 v0, s15, 59
-; GCN-NEXT:    v_writelane_b32 v0, s16, 60
-; GCN-NEXT:    v_writelane_b32 v0, s17, 61
-; GCN-NEXT:    v_writelane_b32 v0, s18, 62
-; GCN-NEXT:    v_writelane_b32 v0, s19, 63
+; GCN-NEXT:    v_writelane_b32 v1, s4, 32
+; GCN-NEXT:    v_writelane_b32 v1, s5, 33
+; GCN-NEXT:    v_writelane_b32 v1, s6, 34
+; GCN-NEXT:    v_writelane_b32 v1, s7, 35
+; GCN-NEXT:    v_writelane_b32 v1, s8, 36
+; GCN-NEXT:    v_writelane_b32 v1, s9, 37
+; GCN-NEXT:    v_writelane_b32 v1, s10, 38
+; GCN-NEXT:    v_writelane_b32 v1, s11, 39
+; GCN-NEXT:    v_writelane_b32 v1, s12, 40
+; GCN-NEXT:    v_writelane_b32 v1, s13, 41
+; GCN-NEXT:    v_writelane_b32 v1, s14, 42
+; GCN-NEXT:    v_writelane_b32 v1, s15, 43
+; GCN-NEXT:    v_writelane_b32 v1, s16, 44
+; GCN-NEXT:    v_writelane_b32 v1, s17, 45
+; GCN-NEXT:    v_writelane_b32 v1, s18, 46
+; GCN-NEXT:    v_writelane_b32 v1, s19, 47
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def s[4:19]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    v_writelane_b32 v1, s4, 48
+; GCN-NEXT:    v_writelane_b32 v1, s5, 49
+; GCN-NEXT:    v_writelane_b32 v1, s6, 50
+; GCN-NEXT:    v_writelane_b32 v1, s7, 51
+; GCN-NEXT:    v_writelane_b32 v1, s8, 52
+; GCN-NEXT:    v_writelane_b32 v1, s9, 53
+; GCN-NEXT:    v_writelane_b32 v1, s10, 54
+; GCN-NEXT:    v_writelane_b32 v1, s11, 55
+; GCN-NEXT:    v_writelane_b32 v1, s12, 56
+; GCN-NEXT:    v_writelane_b32 v1, s13, 57
+; GCN-NEXT:    v_writelane_b32 v1, s14, 58
+; GCN-NEXT:    v_writelane_b32 v1, s15, 59
+; GCN-NEXT:    v_writelane_b32 v1, s16, 60
+; GCN-NEXT:    v_writelane_b32 v1, s17, 61
+; GCN-NEXT:    v_writelane_b32 v1, s18, 62
+; GCN-NEXT:    v_writelane_b32 v1, s19, 63
 ; GCN-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; GCN-NEXT:    buffer_store_dword v0, off, s[52:55], 0 offset:8 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v1, off, s[52:55], 0 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[28:29]
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    v_writelane_b32 v0, s4, 0
 ; GCN-NEXT:    v_writelane_b32 v0, s5, 1
 ; GCN-NEXT:    v_writelane_b32 v0, s6, 2
@@ -682,6 +694,14 @@ define amdgpu_kernel void @split_sgpr_spill_2_vgprs(i32 addrspace(1)* %out, i32 
 ; GCN-NEXT:    ; use s[0:15]
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB1_2: ; %ret
+; GCN-NEXT:    s_or_saveexec_b64 s[28:29], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[28:29]
+; GCN-NEXT:    s_or_saveexec_b64 s[28:29], -1
+; GCN-NEXT:    buffer_load_dword v1, off, s[52:55], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[28:29]
+; GCN-NEXT:    ; kill: killed $vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    s_endpgm
   %wide.sgpr0 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
   %wide.sgpr1 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
@@ -709,112 +729,120 @@ ret:
 ; The first 64 SGPR spills can go to a VGPR, but there isn't a second
 ; so some spills must be to memory. The last 16 element spill runs out
 ; of lanes at the 15th element.
-define amdgpu_kernel void @no_vgprs_last_sgpr_spill(i32 addrspace(1)* %out, i32 %in) #1 {
+define amdgpu_kernel void @no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %in) #1 {
 ; GCN-LABEL: no_vgprs_last_sgpr_spill:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s52, SCRATCH_RSRC_DWORD0
 ; GCN-NEXT:    s_mov_b32 s53, SCRATCH_RSRC_DWORD1
 ; GCN-NEXT:    s_mov_b32 s54, -1
 ; GCN-NEXT:    s_mov_b32 s55, 0xe8f000
-; GCN-NEXT:    s_add_u32 s52, s52, s3
+; GCN-NEXT:    s_add_u32 s52, s52, s11
 ; GCN-NEXT:    s_addc_u32 s53, s53, 0
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0xb
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; def s[4:19]
-; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    v_writelane_b32 v0, s4, 0
-; GCN-NEXT:    v_writelane_b32 v0, s5, 1
-; GCN-NEXT:    v_writelane_b32 v0, s6, 2
-; GCN-NEXT:    v_writelane_b32 v0, s7, 3
-; GCN-NEXT:    v_writelane_b32 v0, s8, 4
-; GCN-NEXT:    v_writelane_b32 v0, s9, 5
-; GCN-NEXT:    v_writelane_b32 v0, s10, 6
-; GCN-NEXT:    v_writelane_b32 v0, s11, 7
-; GCN-NEXT:    v_writelane_b32 v0, s12, 8
-; GCN-NEXT:    v_writelane_b32 v0, s13, 9
-; GCN-NEXT:    v_writelane_b32 v0, s14, 10
-; GCN-NEXT:    v_writelane_b32 v0, s15, 11
-; GCN-NEXT:    v_writelane_b32 v0, s16, 12
-; GCN-NEXT:    v_writelane_b32 v0, s17, 13
-; GCN-NEXT:    v_writelane_b32 v0, s18, 14
-; GCN-NEXT:    v_writelane_b32 v0, s19, 15
+; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; def s[4:19]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 16
-; GCN-NEXT:    v_writelane_b32 v0, s5, 17
-; GCN-NEXT:    v_writelane_b32 v0, s6, 18
-; GCN-NEXT:    v_writelane_b32 v0, s7, 19
-; GCN-NEXT:    v_writelane_b32 v0, s8, 20
-; GCN-NEXT:    v_writelane_b32 v0, s9, 21
-; GCN-NEXT:    v_writelane_b32 v0, s10, 22
-; GCN-NEXT:    v_writelane_b32 v0, s11, 23
-; GCN-NEXT:    v_writelane_b32 v0, s12, 24
-; GCN-NEXT:    v_writelane_b32 v0, s13, 25
-; GCN-NEXT:    v_writelane_b32 v0, s14, 26
-; GCN-NEXT:    v_writelane_b32 v0, s15, 27
-; GCN-NEXT:    v_writelane_b32 v0, s16, 28
-; GCN-NEXT:    v_writelane_b32 v0, s17, 29
-; GCN-NEXT:    v_writelane_b32 v0, s18, 30
-; GCN-NEXT:    v_writelane_b32 v0, s19, 31
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; def s[4:19]
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 32
-; GCN-NEXT:    v_writelane_b32 v0, s5, 33
-; GCN-NEXT:    v_writelane_b32 v0, s6, 34
-; GCN-NEXT:    v_writelane_b32 v0, s7, 35
-; GCN-NEXT:    v_writelane_b32 v0, s8, 36
-; GCN-NEXT:    v_writelane_b32 v0, s9, 37
-; GCN-NEXT:    v_writelane_b32 v0, s10, 38
-; GCN-NEXT:    v_writelane_b32 v0, s11, 39
-; GCN-NEXT:    v_writelane_b32 v0, s12, 40
-; GCN-NEXT:    v_writelane_b32 v0, s13, 41
-; GCN-NEXT:    v_writelane_b32 v0, s14, 42
-; GCN-NEXT:    v_writelane_b32 v0, s15, 43
-; GCN-NEXT:    v_writelane_b32 v0, s16, 44
-; GCN-NEXT:    v_writelane_b32 v0, s17, 45
-; GCN-NEXT:    v_writelane_b32 v0, s18, 46
-; GCN-NEXT:    v_writelane_b32 v0, s19, 47
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; def s[4:19]
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 48
-; GCN-NEXT:    v_writelane_b32 v0, s5, 49
-; GCN-NEXT:    v_writelane_b32 v0, s6, 50
-; GCN-NEXT:    v_writelane_b32 v0, s7, 51
-; GCN-NEXT:    v_writelane_b32 v0, s8, 52
-; GCN-NEXT:    v_writelane_b32 v0, s9, 53
-; GCN-NEXT:    v_writelane_b32 v0, s10, 54
-; GCN-NEXT:    v_writelane_b32 v0, s11, 55
-; GCN-NEXT:    v_writelane_b32 v0, s12, 56
-; GCN-NEXT:    v_writelane_b32 v0, s13, 57
-; GCN-NEXT:    v_writelane_b32 v0, s14, 58
-; GCN-NEXT:    v_writelane_b32 v0, s15, 59
-; GCN-NEXT:    v_writelane_b32 v0, s16, 60
-; GCN-NEXT:    v_writelane_b32 v0, s17, 61
-; GCN-NEXT:    v_writelane_b32 v0, s18, 62
-; GCN-NEXT:    v_writelane_b32 v0, s19, 63
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_store_dword v0, off, s[52:55], 0 offset:8 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_load_dword v1, off, s[52:55], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def s[4:19]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    s_waitcnt vmcnt(1)
+; GCN-NEXT:    v_writelane_b32 v1, s4, 0
+; GCN-NEXT:    v_writelane_b32 v1, s5, 1
+; GCN-NEXT:    v_writelane_b32 v1, s6, 2
+; GCN-NEXT:    v_writelane_b32 v1, s7, 3
+; GCN-NEXT:    v_writelane_b32 v1, s8, 4
+; GCN-NEXT:    v_writelane_b32 v1, s9, 5
+; GCN-NEXT:    v_writelane_b32 v1, s10, 6
+; GCN-NEXT:    v_writelane_b32 v1, s11, 7
+; GCN-NEXT:    v_writelane_b32 v1, s12, 8
+; GCN-NEXT:    v_writelane_b32 v1, s13, 9
+; GCN-NEXT:    v_writelane_b32 v1, s14, 10
+; GCN-NEXT:    v_writelane_b32 v1, s15, 11
+; GCN-NEXT:    v_writelane_b32 v1, s16, 12
+; GCN-NEXT:    v_writelane_b32 v1, s17, 13
+; GCN-NEXT:    v_writelane_b32 v1, s18, 14
+; GCN-NEXT:    v_writelane_b32 v1, s19, 15
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def s[4:19]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    v_writelane_b32 v1, s4, 16
+; GCN-NEXT:    v_writelane_b32 v1, s5, 17
+; GCN-NEXT:    v_writelane_b32 v1, s6, 18
+; GCN-NEXT:    v_writelane_b32 v1, s7, 19
+; GCN-NEXT:    v_writelane_b32 v1, s8, 20
+; GCN-NEXT:    v_writelane_b32 v1, s9, 21
+; GCN-NEXT:    v_writelane_b32 v1, s10, 22
+; GCN-NEXT:    v_writelane_b32 v1, s11, 23
+; GCN-NEXT:    v_writelane_b32 v1, s12, 24
+; GCN-NEXT:    v_writelane_b32 v1, s13, 25
+; GCN-NEXT:    v_writelane_b32 v1, s14, 26
+; GCN-NEXT:    v_writelane_b32 v1, s15, 27
+; GCN-NEXT:    v_writelane_b32 v1, s16, 28
+; GCN-NEXT:    v_writelane_b32 v1, s17, 29
+; GCN-NEXT:    v_writelane_b32 v1, s18, 30
+; GCN-NEXT:    v_writelane_b32 v1, s19, 31
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def s[4:19]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    v_writelane_b32 v1, s4, 32
+; GCN-NEXT:    v_writelane_b32 v1, s5, 33
+; GCN-NEXT:    v_writelane_b32 v1, s6, 34
+; GCN-NEXT:    v_writelane_b32 v1, s7, 35
+; GCN-NEXT:    v_writelane_b32 v1, s8, 36
+; GCN-NEXT:    v_writelane_b32 v1, s9, 37
+; GCN-NEXT:    v_writelane_b32 v1, s10, 38
+; GCN-NEXT:    v_writelane_b32 v1, s11, 39
+; GCN-NEXT:    v_writelane_b32 v1, s12, 40
+; GCN-NEXT:    v_writelane_b32 v1, s13, 41
+; GCN-NEXT:    v_writelane_b32 v1, s14, 42
+; GCN-NEXT:    v_writelane_b32 v1, s15, 43
+; GCN-NEXT:    v_writelane_b32 v1, s16, 44
+; GCN-NEXT:    v_writelane_b32 v1, s17, 45
+; GCN-NEXT:    v_writelane_b32 v1, s18, 46
+; GCN-NEXT:    v_writelane_b32 v1, s19, 47
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def s[4:19]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    v_writelane_b32 v1, s4, 48
+; GCN-NEXT:    v_writelane_b32 v1, s5, 49
+; GCN-NEXT:    v_writelane_b32 v1, s6, 50
+; GCN-NEXT:    v_writelane_b32 v1, s7, 51
+; GCN-NEXT:    v_writelane_b32 v1, s8, 52
+; GCN-NEXT:    v_writelane_b32 v1, s9, 53
+; GCN-NEXT:    v_writelane_b32 v1, s10, 54
+; GCN-NEXT:    v_writelane_b32 v1, s11, 55
+; GCN-NEXT:    v_writelane_b32 v1, s12, 56
+; GCN-NEXT:    v_writelane_b32 v1, s13, 57
+; GCN-NEXT:    v_writelane_b32 v1, s14, 58
+; GCN-NEXT:    v_writelane_b32 v1, s15, 59
+; GCN-NEXT:    v_writelane_b32 v1, s16, 60
+; GCN-NEXT:    v_writelane_b32 v1, s17, 61
+; GCN-NEXT:    v_writelane_b32 v1, s18, 62
+; GCN-NEXT:    v_writelane_b32 v1, s19, 63
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_store_dword v1, off, s[52:55], 0 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[2:3]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_writelane_b32 v0, s2, 0
 ; GCN-NEXT:    v_writelane_b32 v0, s3, 1
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
@@ -914,6 +942,14 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill(i32 addrspace(1)* %out, i32 
 ; GCN-NEXT:    ; use s[0:1]
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB2_2: ; %ret
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_load_dword v1, off, s[52:55], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    ; kill: killed $vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    s_endpgm
   call void asm sideeffect "", "~{v[0:7]}" () #0
   call void asm sideeffect "", "~{v[8:15]}" () #0
@@ -951,105 +987,113 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) #1 {
 ; GCN-NEXT:    s_mov_b32 s53, SCRATCH_RSRC_DWORD1
 ; GCN-NEXT:    s_mov_b32 s54, -1
 ; GCN-NEXT:    s_mov_b32 s55, 0xe8f000
-; GCN-NEXT:    s_add_u32 s52, s52, s3
+; GCN-NEXT:    s_add_u32 s52, s52, s11
 ; GCN-NEXT:    s_addc_u32 s53, s53, 0
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x9
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; def s[4:19]
-; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    v_writelane_b32 v0, s4, 0
-; GCN-NEXT:    v_writelane_b32 v0, s5, 1
-; GCN-NEXT:    v_writelane_b32 v0, s6, 2
-; GCN-NEXT:    v_writelane_b32 v0, s7, 3
-; GCN-NEXT:    v_writelane_b32 v0, s8, 4
-; GCN-NEXT:    v_writelane_b32 v0, s9, 5
-; GCN-NEXT:    v_writelane_b32 v0, s10, 6
-; GCN-NEXT:    v_writelane_b32 v0, s11, 7
-; GCN-NEXT:    v_writelane_b32 v0, s12, 8
-; GCN-NEXT:    v_writelane_b32 v0, s13, 9
-; GCN-NEXT:    v_writelane_b32 v0, s14, 10
-; GCN-NEXT:    v_writelane_b32 v0, s15, 11
-; GCN-NEXT:    v_writelane_b32 v0, s16, 12
-; GCN-NEXT:    v_writelane_b32 v0, s17, 13
-; GCN-NEXT:    v_writelane_b32 v0, s18, 14
-; GCN-NEXT:    v_writelane_b32 v0, s19, 15
+; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; def s[4:19]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 16
-; GCN-NEXT:    v_writelane_b32 v0, s5, 17
-; GCN-NEXT:    v_writelane_b32 v0, s6, 18
-; GCN-NEXT:    v_writelane_b32 v0, s7, 19
-; GCN-NEXT:    v_writelane_b32 v0, s8, 20
-; GCN-NEXT:    v_writelane_b32 v0, s9, 21
-; GCN-NEXT:    v_writelane_b32 v0, s10, 22
-; GCN-NEXT:    v_writelane_b32 v0, s11, 23
-; GCN-NEXT:    v_writelane_b32 v0, s12, 24
-; GCN-NEXT:    v_writelane_b32 v0, s13, 25
-; GCN-NEXT:    v_writelane_b32 v0, s14, 26
-; GCN-NEXT:    v_writelane_b32 v0, s15, 27
-; GCN-NEXT:    v_writelane_b32 v0, s16, 28
-; GCN-NEXT:    v_writelane_b32 v0, s17, 29
-; GCN-NEXT:    v_writelane_b32 v0, s18, 30
-; GCN-NEXT:    v_writelane_b32 v0, s19, 31
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; def s[4:19]
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 32
-; GCN-NEXT:    v_writelane_b32 v0, s5, 33
-; GCN-NEXT:    v_writelane_b32 v0, s6, 34
-; GCN-NEXT:    v_writelane_b32 v0, s7, 35
-; GCN-NEXT:    v_writelane_b32 v0, s8, 36
-; GCN-NEXT:    v_writelane_b32 v0, s9, 37
-; GCN-NEXT:    v_writelane_b32 v0, s10, 38
-; GCN-NEXT:    v_writelane_b32 v0, s11, 39
-; GCN-NEXT:    v_writelane_b32 v0, s12, 40
-; GCN-NEXT:    v_writelane_b32 v0, s13, 41
-; GCN-NEXT:    v_writelane_b32 v0, s14, 42
-; GCN-NEXT:    v_writelane_b32 v0, s15, 43
-; GCN-NEXT:    v_writelane_b32 v0, s16, 44
-; GCN-NEXT:    v_writelane_b32 v0, s17, 45
-; GCN-NEXT:    v_writelane_b32 v0, s18, 46
-; GCN-NEXT:    v_writelane_b32 v0, s19, 47
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; def s[4:19]
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v0, s4, 48
-; GCN-NEXT:    v_writelane_b32 v0, s5, 49
-; GCN-NEXT:    v_writelane_b32 v0, s6, 50
-; GCN-NEXT:    v_writelane_b32 v0, s7, 51
-; GCN-NEXT:    v_writelane_b32 v0, s8, 52
-; GCN-NEXT:    v_writelane_b32 v0, s9, 53
-; GCN-NEXT:    v_writelane_b32 v0, s10, 54
-; GCN-NEXT:    v_writelane_b32 v0, s11, 55
-; GCN-NEXT:    v_writelane_b32 v0, s12, 56
-; GCN-NEXT:    v_writelane_b32 v0, s13, 57
-; GCN-NEXT:    v_writelane_b32 v0, s14, 58
-; GCN-NEXT:    v_writelane_b32 v0, s15, 59
-; GCN-NEXT:    v_writelane_b32 v0, s16, 60
-; GCN-NEXT:    v_writelane_b32 v0, s17, 61
-; GCN-NEXT:    v_writelane_b32 v0, s18, 62
-; GCN-NEXT:    v_writelane_b32 v0, s19, 63
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_store_dword v0, off, s[52:55], 0 offset:8 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_load_dword v1, off, s[52:55], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def s[4:19]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    s_waitcnt vmcnt(1)
+; GCN-NEXT:    v_writelane_b32 v1, s4, 0
+; GCN-NEXT:    v_writelane_b32 v1, s5, 1
+; GCN-NEXT:    v_writelane_b32 v1, s6, 2
+; GCN-NEXT:    v_writelane_b32 v1, s7, 3
+; GCN-NEXT:    v_writelane_b32 v1, s8, 4
+; GCN-NEXT:    v_writelane_b32 v1, s9, 5
+; GCN-NEXT:    v_writelane_b32 v1, s10, 6
+; GCN-NEXT:    v_writelane_b32 v1, s11, 7
+; GCN-NEXT:    v_writelane_b32 v1, s12, 8
+; GCN-NEXT:    v_writelane_b32 v1, s13, 9
+; GCN-NEXT:    v_writelane_b32 v1, s14, 10
+; GCN-NEXT:    v_writelane_b32 v1, s15, 11
+; GCN-NEXT:    v_writelane_b32 v1, s16, 12
+; GCN-NEXT:    v_writelane_b32 v1, s17, 13
+; GCN-NEXT:    v_writelane_b32 v1, s18, 14
+; GCN-NEXT:    v_writelane_b32 v1, s19, 15
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def s[4:19]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    v_writelane_b32 v1, s4, 16
+; GCN-NEXT:    v_writelane_b32 v1, s5, 17
+; GCN-NEXT:    v_writelane_b32 v1, s6, 18
+; GCN-NEXT:    v_writelane_b32 v1, s7, 19
+; GCN-NEXT:    v_writelane_b32 v1, s8, 20
+; GCN-NEXT:    v_writelane_b32 v1, s9, 21
+; GCN-NEXT:    v_writelane_b32 v1, s10, 22
+; GCN-NEXT:    v_writelane_b32 v1, s11, 23
+; GCN-NEXT:    v_writelane_b32 v1, s12, 24
+; GCN-NEXT:    v_writelane_b32 v1, s13, 25
+; GCN-NEXT:    v_writelane_b32 v1, s14, 26
+; GCN-NEXT:    v_writelane_b32 v1, s15, 27
+; GCN-NEXT:    v_writelane_b32 v1, s16, 28
+; GCN-NEXT:    v_writelane_b32 v1, s17, 29
+; GCN-NEXT:    v_writelane_b32 v1, s18, 30
+; GCN-NEXT:    v_writelane_b32 v1, s19, 31
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def s[4:19]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    v_writelane_b32 v1, s4, 32
+; GCN-NEXT:    v_writelane_b32 v1, s5, 33
+; GCN-NEXT:    v_writelane_b32 v1, s6, 34
+; GCN-NEXT:    v_writelane_b32 v1, s7, 35
+; GCN-NEXT:    v_writelane_b32 v1, s8, 36
+; GCN-NEXT:    v_writelane_b32 v1, s9, 37
+; GCN-NEXT:    v_writelane_b32 v1, s10, 38
+; GCN-NEXT:    v_writelane_b32 v1, s11, 39
+; GCN-NEXT:    v_writelane_b32 v1, s12, 40
+; GCN-NEXT:    v_writelane_b32 v1, s13, 41
+; GCN-NEXT:    v_writelane_b32 v1, s14, 42
+; GCN-NEXT:    v_writelane_b32 v1, s15, 43
+; GCN-NEXT:    v_writelane_b32 v1, s16, 44
+; GCN-NEXT:    v_writelane_b32 v1, s17, 45
+; GCN-NEXT:    v_writelane_b32 v1, s18, 46
+; GCN-NEXT:    v_writelane_b32 v1, s19, 47
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def s[4:19]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    v_writelane_b32 v1, s4, 48
+; GCN-NEXT:    v_writelane_b32 v1, s5, 49
+; GCN-NEXT:    v_writelane_b32 v1, s6, 50
+; GCN-NEXT:    v_writelane_b32 v1, s7, 51
+; GCN-NEXT:    v_writelane_b32 v1, s8, 52
+; GCN-NEXT:    v_writelane_b32 v1, s9, 53
+; GCN-NEXT:    v_writelane_b32 v1, s10, 54
+; GCN-NEXT:    v_writelane_b32 v1, s11, 55
+; GCN-NEXT:    v_writelane_b32 v1, s12, 56
+; GCN-NEXT:    v_writelane_b32 v1, s13, 57
+; GCN-NEXT:    v_writelane_b32 v1, s14, 58
+; GCN-NEXT:    v_writelane_b32 v1, s15, 59
+; GCN-NEXT:    v_writelane_b32 v1, s16, 60
+; GCN-NEXT:    v_writelane_b32 v1, s17, 61
+; GCN-NEXT:    v_writelane_b32 v1, s18, 62
+; GCN-NEXT:    v_writelane_b32 v1, s19, 63
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_store_dword v1, off, s[52:55], 0 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[2:3]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_writelane_b32 v0, s2, 0
 ; GCN-NEXT:    v_writelane_b32 v0, s3, 1
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
@@ -1155,6 +1199,14 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) #1 {
 ; GCN-NEXT:    ; use v0
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB3_2: ; %ret
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_load_dword v1, off, s[52:55], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    ; kill: killed $vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    s_endpgm
   call void asm sideeffect "", "~{v[0:7]}" () #0
   call void asm sideeffect "", "~{v[8:15]}" () #0

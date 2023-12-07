@@ -8,6 +8,7 @@ set( LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Option
   Support
+  TargetParser
 )
 
 add_flang_tool(flang-new

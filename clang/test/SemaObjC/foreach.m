@@ -11,13 +11,11 @@ void f(NSArray *a) {
   
   /* This should be ok, 'thisKey' should be scoped to the loop in question,
    * and no diagnostics even in pedantic mode should happen.
-   * rdar://6814674
    */
   for (id thisKey in keys); /* expected-warning {{unused variable 'thisKey'}} */
   for (id thisKey in keys); /* expected-warning {{unused variable 'thisKey'}} */
 }
 
-/* // rdar://9072298 */
 @protocol NSObject @end
 
 @interface NSObject <NSObject> {
@@ -46,7 +44,6 @@ int main (void)
  return 0;
 }
 
-/* rdar://problem/11068137 */
 @interface Test2
 @property (assign) id prop;
 @end

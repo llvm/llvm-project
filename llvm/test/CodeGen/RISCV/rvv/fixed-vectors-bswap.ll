@@ -3,8 +3,10 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=2 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64,LMULMAX2-RV64
 ; RUN: llc -mtriple=riscv32 -mattr=+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV32,LMULMAX1-RV32
 ; RUN: llc -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64,LMULMAX1-RV64
+; RUN: llc -mtriple=riscv32 -mattr=+v,+experimental-zvbb -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
+; RUN: llc -mtriple=riscv64 -mattr=+v,+experimental-zvbb -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
 
-define void @bswap_v8i16(<8 x i16>* %x, <8 x i16>* %y) {
+define void @bswap_v8i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: bswap_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -14,15 +16,23 @@ define void @bswap_v8i16(<8 x i16>* %x, <8 x i16>* %y) {
 ; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <8 x i16>, <8 x i16>* %x
-  %b = load <8 x i16>, <8 x i16>* %y
+;
+; ZVBB-LABEL: bswap_v8i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVBB-NEXT:    vle16.v v8, (a0)
+; ZVBB-NEXT:    vrev8.v v8, v8
+; ZVBB-NEXT:    vse16.v v8, (a0)
+; ZVBB-NEXT:    ret
+  %a = load <8 x i16>, ptr %x
+  %b = load <8 x i16>, ptr %y
   %c = call <8 x i16> @llvm.bswap.v8i16(<8 x i16> %a)
-  store <8 x i16> %c, <8 x i16>* %x
+  store <8 x i16> %c, ptr %x
   ret void
 }
 declare <8 x i16> @llvm.bswap.v8i16(<8 x i16>)
 
-define void @bswap_v4i32(<4 x i32>* %x, <4 x i32>* %y) {
+define void @bswap_v4i32(ptr %x, ptr %y) {
 ; RV32-LABEL: bswap_v4i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -58,19 +68,32 @@ define void @bswap_v4i32(<4 x i32>* %x, <4 x i32>* %y) {
 ; RV64-NEXT:    vor.vv v8, v8, v9
 ; RV64-NEXT:    vse32.v v8, (a0)
 ; RV64-NEXT:    ret
-  %a = load <4 x i32>, <4 x i32>* %x
-  %b = load <4 x i32>, <4 x i32>* %y
+;
+; ZVBB-LABEL: bswap_v4i32:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVBB-NEXT:    vle32.v v8, (a0)
+; ZVBB-NEXT:    vrev8.v v8, v8
+; ZVBB-NEXT:    vse32.v v8, (a0)
+; ZVBB-NEXT:    ret
+  %a = load <4 x i32>, ptr %x
+  %b = load <4 x i32>, ptr %y
   %c = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %a)
-  store <4 x i32> %c, <4 x i32>* %x
+  store <4 x i32> %c, ptr %x
   ret void
 }
 declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>)
 
-define void @bswap_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
+define void @bswap_v2i64(ptr %x, ptr %y) {
 ; RV32-LABEL: bswap_v2i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
+; RV32-NEXT:    sw zero, 12(sp)
+; RV32-NEXT:    lui a1, 1044480
+; RV32-NEXT:    sw a1, 8(sp)
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    vsrl.vx v9, v8, a1
 ; RV32-NEXT:    li a2, 40
@@ -80,15 +103,10 @@ define void @bswap_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; RV32-NEXT:    vand.vx v10, v10, a3
 ; RV32-NEXT:    vor.vv v9, v10, v9
 ; RV32-NEXT:    vsrl.vi v10, v8, 24
+; RV32-NEXT:    addi a4, sp, 8
+; RV32-NEXT:    vlse64.v v11, (a4), zero
 ; RV32-NEXT:    lui a4, 4080
 ; RV32-NEXT:    vand.vx v10, v10, a4
-; RV32-NEXT:    li a5, 5
-; RV32-NEXT:    vmv.s.x v0, a5
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v11, 0
-; RV32-NEXT:    lui a5, 1044480
-; RV32-NEXT:    vmerge.vxm v11, v11, a5, v0
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vsrl.vi v12, v8, 8
 ; RV32-NEXT:    vand.vv v12, v12, v11
 ; RV32-NEXT:    vor.vv v10, v12, v10
@@ -105,6 +123,7 @@ define void @bswap_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; RV32-NEXT:    vor.vv v8, v10, v8
 ; RV32-NEXT:    vor.vv v8, v8, v9
 ; RV32-NEXT:    vse64.v v8, (a0)
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bswap_v2i64:
@@ -141,15 +160,23 @@ define void @bswap_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; RV64-NEXT:    vor.vv v8, v8, v9
 ; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    ret
-  %a = load <2 x i64>, <2 x i64>* %x
-  %b = load <2 x i64>, <2 x i64>* %y
+;
+; ZVBB-LABEL: bswap_v2i64:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZVBB-NEXT:    vle64.v v8, (a0)
+; ZVBB-NEXT:    vrev8.v v8, v8
+; ZVBB-NEXT:    vse64.v v8, (a0)
+; ZVBB-NEXT:    ret
+  %a = load <2 x i64>, ptr %x
+  %b = load <2 x i64>, ptr %y
   %c = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %a)
-  store <2 x i64> %c, <2 x i64>* %x
+  store <2 x i64> %c, ptr %x
   ret void
 }
 declare <2 x i64> @llvm.bswap.v2i64(<2 x i64>)
 
-define void @bswap_v16i16(<16 x i16>* %x, <16 x i16>* %y) {
+define void @bswap_v16i16(ptr %x, ptr %y) {
 ; LMULMAX2-RV32-LABEL: bswap_v16i16:
 ; LMULMAX2-RV32:       # %bb.0:
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
@@ -201,15 +228,23 @@ define void @bswap_v16i16(<16 x i16>* %x, <16 x i16>* %y) {
 ; LMULMAX1-RV64-NEXT:    vse16.v v9, (a0)
 ; LMULMAX1-RV64-NEXT:    vse16.v v8, (a1)
 ; LMULMAX1-RV64-NEXT:    ret
-  %a = load <16 x i16>, <16 x i16>* %x
-  %b = load <16 x i16>, <16 x i16>* %y
+;
+; ZVBB-LABEL: bswap_v16i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVBB-NEXT:    vle16.v v8, (a0)
+; ZVBB-NEXT:    vrev8.v v8, v8
+; ZVBB-NEXT:    vse16.v v8, (a0)
+; ZVBB-NEXT:    ret
+  %a = load <16 x i16>, ptr %x
+  %b = load <16 x i16>, ptr %y
   %c = call <16 x i16> @llvm.bswap.v16i16(<16 x i16> %a)
-  store <16 x i16> %c, <16 x i16>* %x
+  store <16 x i16> %c, ptr %x
   ret void
 }
 declare <16 x i16> @llvm.bswap.v16i16(<16 x i16>)
 
-define void @bswap_v8i32(<8 x i32>* %x, <8 x i32>* %y) {
+define void @bswap_v8i32(ptr %x, ptr %y) {
 ; LMULMAX2-RV32-LABEL: bswap_v8i32:
 ; LMULMAX2-RV32:       # %bb.0:
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -305,19 +340,32 @@ define void @bswap_v8i32(<8 x i32>* %x, <8 x i32>* %y) {
 ; LMULMAX1-RV64-NEXT:    vse32.v v9, (a0)
 ; LMULMAX1-RV64-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-RV64-NEXT:    ret
-  %a = load <8 x i32>, <8 x i32>* %x
-  %b = load <8 x i32>, <8 x i32>* %y
+;
+; ZVBB-LABEL: bswap_v8i32:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZVBB-NEXT:    vle32.v v8, (a0)
+; ZVBB-NEXT:    vrev8.v v8, v8
+; ZVBB-NEXT:    vse32.v v8, (a0)
+; ZVBB-NEXT:    ret
+  %a = load <8 x i32>, ptr %x
+  %b = load <8 x i32>, ptr %y
   %c = call <8 x i32> @llvm.bswap.v8i32(<8 x i32> %a)
-  store <8 x i32> %c, <8 x i32>* %x
+  store <8 x i32> %c, ptr %x
   ret void
 }
 declare <8 x i32> @llvm.bswap.v8i32(<8 x i32>)
 
-define void @bswap_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
+define void @bswap_v4i64(ptr %x, ptr %y) {
 ; LMULMAX2-RV32-LABEL: bswap_v4i64:
 ; LMULMAX2-RV32:       # %bb.0:
+; LMULMAX2-RV32-NEXT:    addi sp, sp, -16
+; LMULMAX2-RV32-NEXT:    .cfi_def_cfa_offset 16
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vle64.v v8, (a0)
+; LMULMAX2-RV32-NEXT:    sw zero, 12(sp)
+; LMULMAX2-RV32-NEXT:    lui a1, 1044480
+; LMULMAX2-RV32-NEXT:    sw a1, 8(sp)
 ; LMULMAX2-RV32-NEXT:    li a1, 56
 ; LMULMAX2-RV32-NEXT:    vsrl.vx v10, v8, a1
 ; LMULMAX2-RV32-NEXT:    li a2, 40
@@ -327,15 +375,10 @@ define void @bswap_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX2-RV32-NEXT:    vand.vx v12, v12, a3
 ; LMULMAX2-RV32-NEXT:    vor.vv v10, v12, v10
 ; LMULMAX2-RV32-NEXT:    vsrl.vi v12, v8, 24
+; LMULMAX2-RV32-NEXT:    addi a4, sp, 8
+; LMULMAX2-RV32-NEXT:    vlse64.v v14, (a4), zero
 ; LMULMAX2-RV32-NEXT:    lui a4, 4080
 ; LMULMAX2-RV32-NEXT:    vand.vx v12, v12, a4
-; LMULMAX2-RV32-NEXT:    li a5, 85
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a5
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; LMULMAX2-RV32-NEXT:    vmv.v.i v14, 0
-; LMULMAX2-RV32-NEXT:    lui a5, 1044480
-; LMULMAX2-RV32-NEXT:    vmerge.vxm v14, v14, a5, v0
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vsrl.vi v16, v8, 8
 ; LMULMAX2-RV32-NEXT:    vand.vv v16, v16, v14
 ; LMULMAX2-RV32-NEXT:    vor.vv v12, v16, v12
@@ -352,6 +395,7 @@ define void @bswap_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX2-RV32-NEXT:    vor.vv v8, v12, v8
 ; LMULMAX2-RV32-NEXT:    vor.vv v8, v8, v10
 ; LMULMAX2-RV32-NEXT:    vse64.v v8, (a0)
+; LMULMAX2-RV32-NEXT:    addi sp, sp, 16
 ; LMULMAX2-RV32-NEXT:    ret
 ;
 ; LMULMAX2-RV64-LABEL: bswap_v4i64:
@@ -391,28 +435,49 @@ define void @bswap_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ;
 ; LMULMAX1-RV32-LABEL: bswap_v4i64:
 ; LMULMAX1-RV32:       # %bb.0:
+; LMULMAX1-RV32-NEXT:    addi sp, sp, -16
+; LMULMAX1-RV32-NEXT:    .cfi_def_cfa_offset 16
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; LMULMAX1-RV32-NEXT:    vle64.v v8, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a1, a0, 16
-; LMULMAX1-RV32-NEXT:    vle64.v v8, (a1)
-; LMULMAX1-RV32-NEXT:    vle64.v v9, (a0)
+; LMULMAX1-RV32-NEXT:    vle64.v v9, (a1)
+; LMULMAX1-RV32-NEXT:    sw zero, 12(sp)
+; LMULMAX1-RV32-NEXT:    lui a2, 1044480
+; LMULMAX1-RV32-NEXT:    sw a2, 8(sp)
 ; LMULMAX1-RV32-NEXT:    li a2, 56
-; LMULMAX1-RV32-NEXT:    vsrl.vx v10, v8, a2
+; LMULMAX1-RV32-NEXT:    vsrl.vx v10, v9, a2
 ; LMULMAX1-RV32-NEXT:    li a3, 40
-; LMULMAX1-RV32-NEXT:    vsrl.vx v11, v8, a3
+; LMULMAX1-RV32-NEXT:    vsrl.vx v11, v9, a3
 ; LMULMAX1-RV32-NEXT:    lui a4, 16
 ; LMULMAX1-RV32-NEXT:    addi a4, a4, -256
 ; LMULMAX1-RV32-NEXT:    vand.vx v11, v11, a4
 ; LMULMAX1-RV32-NEXT:    vor.vv v10, v11, v10
-; LMULMAX1-RV32-NEXT:    vsrl.vi v11, v8, 24
+; LMULMAX1-RV32-NEXT:    vsrl.vi v11, v9, 24
+; LMULMAX1-RV32-NEXT:    addi a5, sp, 8
+; LMULMAX1-RV32-NEXT:    vlse64.v v12, (a5), zero
 ; LMULMAX1-RV32-NEXT:    lui a5, 4080
 ; LMULMAX1-RV32-NEXT:    vand.vx v11, v11, a5
-; LMULMAX1-RV32-NEXT:    li a6, 5
-; LMULMAX1-RV32-NEXT:    vmv.s.x v0, a6
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v12, 0
-; LMULMAX1-RV32-NEXT:    lui a6, 1044480
-; LMULMAX1-RV32-NEXT:    vmerge.vxm v12, v12, a6, v0
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; LMULMAX1-RV32-NEXT:    vsrl.vi v13, v9, 8
+; LMULMAX1-RV32-NEXT:    vand.vv v13, v13, v12
+; LMULMAX1-RV32-NEXT:    vor.vv v11, v13, v11
+; LMULMAX1-RV32-NEXT:    vor.vv v10, v11, v10
+; LMULMAX1-RV32-NEXT:    vand.vv v11, v9, v12
+; LMULMAX1-RV32-NEXT:    vsll.vi v11, v11, 8
+; LMULMAX1-RV32-NEXT:    vand.vx v13, v9, a5
+; LMULMAX1-RV32-NEXT:    vsll.vi v13, v13, 24
+; LMULMAX1-RV32-NEXT:    vor.vv v11, v13, v11
+; LMULMAX1-RV32-NEXT:    vsll.vx v13, v9, a2
+; LMULMAX1-RV32-NEXT:    vand.vx v9, v9, a4
+; LMULMAX1-RV32-NEXT:    vsll.vx v9, v9, a3
+; LMULMAX1-RV32-NEXT:    vor.vv v9, v13, v9
+; LMULMAX1-RV32-NEXT:    vor.vv v9, v9, v11
+; LMULMAX1-RV32-NEXT:    vor.vv v9, v9, v10
+; LMULMAX1-RV32-NEXT:    vsrl.vx v10, v8, a2
+; LMULMAX1-RV32-NEXT:    vsrl.vx v11, v8, a3
+; LMULMAX1-RV32-NEXT:    vand.vx v11, v11, a4
+; LMULMAX1-RV32-NEXT:    vor.vv v10, v11, v10
+; LMULMAX1-RV32-NEXT:    vsrl.vi v11, v8, 24
+; LMULMAX1-RV32-NEXT:    vand.vx v11, v11, a5
 ; LMULMAX1-RV32-NEXT:    vsrl.vi v13, v8, 8
 ; LMULMAX1-RV32-NEXT:    vand.vv v13, v13, v12
 ; LMULMAX1-RV32-NEXT:    vor.vv v11, v13, v11
@@ -428,29 +493,9 @@ define void @bswap_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV32-NEXT:    vor.vv v8, v13, v8
 ; LMULMAX1-RV32-NEXT:    vor.vv v8, v11, v8
 ; LMULMAX1-RV32-NEXT:    vor.vv v8, v8, v10
-; LMULMAX1-RV32-NEXT:    vsrl.vx v10, v9, a2
-; LMULMAX1-RV32-NEXT:    vsrl.vx v11, v9, a3
-; LMULMAX1-RV32-NEXT:    vand.vx v11, v11, a4
-; LMULMAX1-RV32-NEXT:    vor.vv v10, v11, v10
-; LMULMAX1-RV32-NEXT:    vsrl.vi v11, v9, 24
-; LMULMAX1-RV32-NEXT:    vand.vx v11, v11, a5
-; LMULMAX1-RV32-NEXT:    vsrl.vi v13, v9, 8
-; LMULMAX1-RV32-NEXT:    vand.vv v13, v13, v12
-; LMULMAX1-RV32-NEXT:    vor.vv v11, v13, v11
-; LMULMAX1-RV32-NEXT:    vor.vv v10, v11, v10
-; LMULMAX1-RV32-NEXT:    vsll.vx v11, v9, a2
-; LMULMAX1-RV32-NEXT:    vand.vx v13, v9, a4
-; LMULMAX1-RV32-NEXT:    vsll.vx v13, v13, a3
-; LMULMAX1-RV32-NEXT:    vor.vv v11, v11, v13
-; LMULMAX1-RV32-NEXT:    vand.vx v13, v9, a5
-; LMULMAX1-RV32-NEXT:    vsll.vi v13, v13, 24
-; LMULMAX1-RV32-NEXT:    vand.vv v9, v9, v12
-; LMULMAX1-RV32-NEXT:    vsll.vi v9, v9, 8
-; LMULMAX1-RV32-NEXT:    vor.vv v9, v13, v9
-; LMULMAX1-RV32-NEXT:    vor.vv v9, v11, v9
-; LMULMAX1-RV32-NEXT:    vor.vv v9, v9, v10
-; LMULMAX1-RV32-NEXT:    vse64.v v9, (a0)
-; LMULMAX1-RV32-NEXT:    vse64.v v8, (a1)
+; LMULMAX1-RV32-NEXT:    vse64.v v8, (a0)
+; LMULMAX1-RV32-NEXT:    vse64.v v9, (a1)
+; LMULMAX1-RV32-NEXT:    addi sp, sp, 16
 ; LMULMAX1-RV32-NEXT:    ret
 ;
 ; LMULMAX1-RV64-LABEL: bswap_v4i64:
@@ -511,10 +556,18 @@ define void @bswap_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    vse64.v v9, (a0)
 ; LMULMAX1-RV64-NEXT:    vse64.v v8, (a1)
 ; LMULMAX1-RV64-NEXT:    ret
-  %a = load <4 x i64>, <4 x i64>* %x
-  %b = load <4 x i64>, <4 x i64>* %y
+;
+; ZVBB-LABEL: bswap_v4i64:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; ZVBB-NEXT:    vle64.v v8, (a0)
+; ZVBB-NEXT:    vrev8.v v8, v8
+; ZVBB-NEXT:    vse64.v v8, (a0)
+; ZVBB-NEXT:    ret
+  %a = load <4 x i64>, ptr %x
+  %b = load <4 x i64>, ptr %y
   %c = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> %a)
-  store <4 x i64> %c, <4 x i64>* %x
+  store <4 x i64> %c, ptr %x
   ret void
 }
 declare <4 x i64> @llvm.bswap.v4i64(<4 x i64>)

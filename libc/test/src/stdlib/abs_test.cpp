@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/abs.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcAbsTest, Zero) { EXPECT_EQ(__llvm_libc::abs(0), 0); }
 

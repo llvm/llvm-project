@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 # This module will enable GDB remote packet logging when the
 # 'start_gdb_log' command is called with a filename to log to. When the
 # 'stop_gdb_log' command is called, it will disable the logging and
@@ -14,7 +14,7 @@
 #   (lldb) command script import /path/to/gdbremote.py
 # Or it can be added to your ~/.lldbinit file so this module is always
 # available.
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 
 import optparse
 import os
@@ -24,14 +24,14 @@ import tempfile
 
 
 def start_gdb_log(debugger, command, result, dict):
-    '''Start logging GDB remote packets by enabling logging with timestamps and
+    """Start logging GDB remote packets by enabling logging with timestamps and
     thread safe logging. Follow a call to this function with a call to "stop_gdb_log"
-    in order to dump out the commands.'''
+    in order to dump out the commands."""
     global log_file
     if log_file:
         result.PutCString(
-            'error: logging is already in progress with file "%s"',
-            log_file)
+            'error: logging is already in progress with file "%s"', log_file
+        )
     else:
         args_len = len(args)
         if args_len == 0:
@@ -41,14 +41,16 @@ def start_gdb_log(debugger, command, result, dict):
 
         if log_file:
             debugger.HandleCommand(
-                'log enable --threadsafe --timestamp --file "%s" gdb-remote packets' %
-                log_file)
+                'log enable --threadsafe --timestamp --file "%s" gdb-remote packets'
+                % log_file
+            )
             result.PutCString(
-                "GDB packet logging enable with log file '%s'\nUse the 'stop_gdb_log' command to stop logging and show packet statistics." %
-                log_file)
+                "GDB packet logging enable with log file '%s'\nUse the 'stop_gdb_log' command to stop logging and show packet statistics."
+                % log_file
+            )
             return
 
-        result.PutCString('error: invalid log file path')
+        result.PutCString("error: invalid log file path")
     result.PutCString(usage)
 
 
@@ -61,18 +63,18 @@ def parse_time_log(debugger, command, result, dict):
 
 def parse_time_log_args(command_args):
     usage = "usage: parse_time_log [options] [<LOGFILEPATH>]"
-    description = '''Parse a log file that contains timestamps and convert the timestamps to delta times between log lines.'''
+    description = """Parse a log file that contains timestamps and convert the timestamps to delta times between log lines."""
     parser = optparse.OptionParser(
-        description=description,
-        prog='parse_time_log',
-        usage=usage)
+        description=description, prog="parse_time_log", usage=usage
+    )
     parser.add_option(
-        '-v',
-        '--verbose',
-        action='store_true',
-        dest='verbose',
-        help='display verbose debug info',
-        default=False)
+        "-v",
+        "--verbose",
+        action="store_true",
+        dest="verbose",
+        help="display verbose debug info",
+        default=False,
+    )
     try:
         (options, args) = parser.parse_args(command_args)
     except:
@@ -82,7 +84,7 @@ def parse_time_log_args(command_args):
 
 
 def parse_log_file(file, options):
-    '''Parse a log file that was contains timestamps. These logs are typically
+    """Parse a log file that was contains timestamps. These logs are typically
     generated using:
     (lldb) log enable --threadsafe --timestamp --file <FILE> ....
 
@@ -91,13 +93,13 @@ def parse_log_file(file, options):
     show delta times between log lines and also keep track of how long it takes
     for GDB remote commands to make a send/receive round trip. This can be
     handy when trying to figure out why some operation in the debugger is taking
-    a long time during a preset set of debugger commands.'''
+    a long time during a preset set of debugger commands."""
 
-    print('#----------------------------------------------------------------------')
+    print("#----------------------------------------------------------------------")
     print("# Log file: '%s'" % file)
-    print('#----------------------------------------------------------------------')
+    print("#----------------------------------------------------------------------")
 
-    timestamp_regex = re.compile('(\s*)([1-9][0-9]+\.[0-9]+)([^0-9].*)$')
+    timestamp_regex = re.compile("(\s*)([1-9][0-9]+\.[0-9]+)([^0-9].*)$")
 
     base_time = 0.0
     last_time = 0.0
@@ -113,20 +115,27 @@ def parse_log_file(file, options):
             else:
                 base_time = curr_time
 
-            print('%s%.6f %+.6f%s' % (match.group(1), curr_time - base_time, delta, match.group(3)))
+            print(
+                "%s%.6f %+.6f%s"
+                % (match.group(1), curr_time - base_time, delta, match.group(3))
+            )
             last_time = curr_time
         else:
             print(line)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
+
     parse_time_log_args(sys.argv[1:])
 
 
 def __lldb_init_module(debugger, internal_dict):
-        # This initializer is being run from LLDB in the embedded command interpreter
-        # Add any commands contained in this module to LLDB
-        debugger.HandleCommand(
-            'command script add -f delta.parse_time_log parse_time_log')
-        print('The "parse_time_log" command is now installed and ready for use, type "parse_time_log --help" for more information')
+    # This initializer is being run from LLDB in the embedded command interpreter
+    # Add any commands contained in this module to LLDB
+    debugger.HandleCommand(
+        "command script add -o -f delta.parse_time_log parse_time_log"
+    )
+    print(
+        'The "parse_time_log" command is now installed and ready for use, type "parse_time_log --help" for more information'
+    )

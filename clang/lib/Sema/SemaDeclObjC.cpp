@@ -978,7 +978,7 @@ ObjCInterfaceDecl *Sema::ActOnStartClassInterface(
     ArrayRef<ParsedType> SuperTypeArgs, SourceRange SuperTypeArgsRange,
     Decl *const *ProtoRefs, unsigned NumProtoRefs,
     const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
-    const ParsedAttributesView &AttrList) {
+    const ParsedAttributesView &AttrList, SkipBodyInfo *SkipBody) {
   assert(ClassName && "Missing class identifier");
 
   // Check for another declaration kind with the same name.
@@ -1057,10 +1057,16 @@ ObjCInterfaceDecl *Sema::ActOnStartClassInterface(
   if (PrevIDecl) {
     // Class already seen. Was it a definition?
     if (ObjCInterfaceDecl *Def = PrevIDecl->getDefinition()) {
-      Diag(AtInterfaceLoc, diag::err_duplicate_class_def)
-        << PrevIDecl->getDeclName();
-      Diag(Def->getLocation(), diag::note_previous_definition);
-      IDecl->setInvalidDecl();
+      if (SkipBody && !hasVisibleDefinition(Def)) {
+        SkipBody->CheckSameAsPrevious = true;
+        SkipBody->New = IDecl;
+        SkipBody->Previous = Def;
+      } else {
+        Diag(AtInterfaceLoc, diag::err_duplicate_class_def)
+            << PrevIDecl->getDeclName();
+        Diag(Def->getLocation(), diag::note_previous_definition);
+        IDecl->setInvalidDecl();
+      }
     }
   }
 
@@ -1075,7 +1081,9 @@ ObjCInterfaceDecl *Sema::ActOnStartClassInterface(
 
   // Start the definition of this class. If we're in a redefinition case, there
   // may already be a definition, so we'll end up adding to it.
-  if (!IDecl->hasDefinition())
+  if (SkipBody && SkipBody->CheckSameAsPrevious)
+    IDecl->startDuplicateDefinitionForComparison();
+  else if (!IDecl->hasDefinition())
     IDecl->startDefinition();
 
   if (SuperName) {

@@ -12,6 +12,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -31,8 +32,8 @@ void Diagnostics::Terminate() {
 
 bool Diagnostics::Enabled() { return InstanceImpl().operator bool(); }
 
-Optional<Diagnostics> &Diagnostics::InstanceImpl() {
-  static Optional<Diagnostics> g_diagnostics;
+std::optional<Diagnostics> &Diagnostics::InstanceImpl() {
+  static std::optional<Diagnostics> g_diagnostics;
   return g_diagnostics;
 }
 
@@ -42,9 +43,19 @@ Diagnostics::Diagnostics() : m_log_handler(g_num_log_messages) {}
 
 Diagnostics::~Diagnostics() {}
 
-void Diagnostics::AddCallback(Callback callback) {
+Diagnostics::CallbackID Diagnostics::AddCallback(Callback callback) {
   std::lock_guard<std::mutex> guard(m_callbacks_mutex);
-  m_callbacks.push_back(callback);
+  CallbackID id = m_callback_id++;
+  m_callbacks.emplace_back(id, callback);
+  return id;
+}
+
+void Diagnostics::RemoveCallback(CallbackID id) {
+  std::lock_guard<std::mutex> guard(m_callbacks_mutex);
+  m_callbacks.erase(
+      std::remove_if(m_callbacks.begin(), m_callbacks.end(),
+                     [id](const CallbackEntry &e) { return e.id == id; }),
+      m_callbacks.end());
 }
 
 bool Diagnostics::Dump(raw_ostream &stream) {
@@ -83,8 +94,8 @@ Error Diagnostics::Create(const FileSpec &dir) {
   if (Error err = DumpDiangosticsLog(dir))
     return err;
 
-  for (Callback c : m_callbacks) {
-    if (Error err = c(dir))
+  for (CallbackEntry e : m_callbacks) {
+    if (Error err = e.callback(dir))
       return err;
   }
 

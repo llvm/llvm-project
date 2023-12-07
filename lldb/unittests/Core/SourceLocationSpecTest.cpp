@@ -122,7 +122,7 @@ TEST(SourceLocationSpecTest, Equal) {
 
 TEST(SourceLocationSpecTest, Compare) {
   auto Cmp = [](SourceLocationSpec a, SourceLocationSpec b) {
-    return SourceLocationSpec::Compare(a, b);
+    return std::clamp(SourceLocationSpec::Compare(a, b), -1, 1);
   };
 
   FileSpec fs("/foo/bar", FileSpec::Style::posix);

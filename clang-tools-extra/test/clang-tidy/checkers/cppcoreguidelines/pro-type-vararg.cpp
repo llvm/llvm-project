@@ -66,3 +66,16 @@ void no_false_positive_desugar_va_list(char *in) {
   char *tmp1 = in;
   void *tmp2 = in;
 }
+
+namespace PR30542 {
+  struct X;
+  template <typename T>
+  char IsNullConstant(X*);
+  template <typename T>
+  char (&IsNullConstant(...))[2];
+
+  static_assert(sizeof(IsNullConstant<int>(0)) == 1, "");
+  static_assert(sizeof(IsNullConstant<int>(17)) == 2, "");
+
+  using Type = decltype(IsNullConstant<int>(17));
+}

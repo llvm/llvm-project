@@ -11,18 +11,17 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
+namespace clang::tidy::google {
 
 static const llvm::StringRef RenameCaseToSuiteMessage =
     "Google Test APIs named with 'case' are deprecated; use equivalent APIs "
     "named with 'suite'";
 
-static llvm::Optional<llvm::StringRef>
+static std::optional<llvm::StringRef>
 getNewMacroName(llvm::StringRef MacroName) {
   std::pair<llvm::StringRef, llvm::StringRef> ReplacementMap[] = {
       {"TYPED_TEST_CASE", "TYPED_TEST_SUITE"},
@@ -46,7 +45,7 @@ class UpgradeGoogletestCasePPCallback : public PPCallbacks {
 public:
   UpgradeGoogletestCasePPCallback(UpgradeGoogletestCaseCheck *Check,
                                   Preprocessor *PP)
-      : ReplacementFound(false), Check(Check), PP(PP) {}
+      : Check(Check), PP(PP) {}
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange Range, const MacroArgs *) override {
@@ -97,7 +96,7 @@ private:
 
     std::string Name = PP->getSpelling(MacroNameTok);
 
-    llvm::Optional<llvm::StringRef> Replacement = getNewMacroName(Name);
+    std::optional<llvm::StringRef> Replacement = getNewMacroName(Name);
     if (!Replacement)
       return;
 
@@ -113,7 +112,7 @@ private:
           CharSourceRange::getTokenRange(Loc, Loc), *Replacement);
   }
 
-  bool ReplacementFound;
+  bool ReplacementFound = false;
   UpgradeGoogletestCaseCheck *Check;
   Preprocessor *PP;
 };
@@ -268,8 +267,8 @@ void UpgradeGoogletestCaseCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("method")) {
     ReplacementText = getNewMethodName(Method->getName());
 
-    bool IsInInstantiation;
-    bool IsInTemplate;
+    bool IsInInstantiation = false;
+    bool IsInTemplate = false;
     bool AddFix = true;
     if (const auto *Call = Result.Nodes.getNodeAs<CXXMemberCallExpr>("call")) {
       const auto *Callee = llvm::cast<MemberExpr>(Call->getCallee());
@@ -349,6 +348,4 @@ void UpgradeGoogletestCaseCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << FixItHint::CreateReplacement(ReplacementRange, ReplacementText);
 }
 
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google

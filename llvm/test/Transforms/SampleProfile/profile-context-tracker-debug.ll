@@ -27,7 +27,7 @@
 ; INLINE-ALL-NEXT: Getting callee context for instr:   %call.i = tail call i32 @_Z8funcLeafi
 ; INLINE-ALL-NEXT:   Callee context found: main:3 @ _Z5funcAi:1 @ _Z8funcLeafi
 ; INLINE-ALL-NEXT: Marking context profile as inlined: main:3 @ _Z5funcAi:1 @ _Z8funcLeafi
-; INLINE-ALL-NEXT: Getting callee context for instr:   %call.i1 = tail call i32 @_Z3fibi
+; INLINE-ALL-NEXT: Getting callee context for instr:   %call.i2 = tail call i32 @_Z3fibi
 ; INLINE-ALL-NEXT: Getting callee context for instr:   %call5.i = tail call i32 @_Z3fibi
 ; INLINE-ALL-DAG:  Getting base profile for function: _Z5funcAi
 ; INLINE-ALL-DAG-NEXT:   Merging context profile into base profile: _Z5funcAi

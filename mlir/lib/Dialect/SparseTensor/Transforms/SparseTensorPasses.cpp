@@ -12,9 +12,10 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
-#include "mlir/Dialect/SCF/Transforms/Transforms.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -28,6 +29,9 @@ namespace mlir {
 #define GEN_PASS_DEF_SPARSETENSORCODEGEN
 #define GEN_PASS_DEF_SPARSEBUFFERREWRITE
 #define GEN_PASS_DEF_SPARSEVECTORIZATION
+#define GEN_PASS_DEF_SPARSEGPUCODEGEN
+#define GEN_PASS_DEF_SPARSEKOKKOSCODEGEN
+#define GEN_PASS_DEF_STORAGESPECIFIERTOLLVM
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -62,14 +66,27 @@ struct SparsificationPass
   SparsificationPass(const SparsificationPass &pass) = default;
   SparsificationPass(const SparsificationOptions &options) {
     parallelization = options.parallelizationStrategy;
+    gpuDataTransfer = options.gpuDataTransferStrategy;
+    enableIndexReduction = options.enableIndexReduction;
+    enableGPULibgen = options.enableGPULibgen;
+    enableRuntimeLibrary = options.enableRuntimeLibrary;
   }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     // Translate strategy flags to strategy options.
-    SparsificationOptions options(parallelization);
-    // Apply sparsification and cleanup rewriting.
+    SparsificationOptions options(parallelization, gpuDataTransfer,
+                                  enableIndexReduction, enableGPULibgen,
+                                  enableRuntimeLibrary);
+    // Apply GPU libgen (if requested), sparsification, and cleanup rewriting.
     RewritePatternSet patterns(ctx);
+    if (enableGPULibgen) {
+      // TODO : Zero copy is disabled due to correctness bugs.Tracker #64316
+      assert(gpuDataTransfer != GPUDataTransferStrategy::kZeroCopy &&
+             "zero-copy transfer not supported with GPU libgen");
+      populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary,
+                                      gpuDataTransfer);
+    }
     populateSparsificationPatterns(patterns, options);
     scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
@@ -179,7 +196,8 @@ struct SparseTensorCodegenPass
 
   SparseTensorCodegenPass() = default;
   SparseTensorCodegenPass(const SparseTensorCodegenPass &pass) = default;
-  SparseTensorCodegenPass(bool enableInit) {
+  SparseTensorCodegenPass(bool createDeallocs, bool enableInit) {
+    createSparseDeallocs = createDeallocs;
     enableBufferInitialization = enableInit;
   }
 
@@ -193,9 +211,14 @@ struct SparseTensorCodegenPass
     target.addLegalOp<SortOp>();
     target.addLegalOp<SortCooOp>();
     target.addLegalOp<PushBackOp>();
-    // All dynamic rules below accept new function, call, return, and various
-    // tensor and bufferization operations as legal output of the rewriting
-    // provided that all sparse tensor types have been fully rewritten.
+    // Storage specifier outlives sparse tensor pipeline.
+    target.addLegalOp<GetStorageSpecifierOp>();
+    target.addLegalOp<SetStorageSpecifierOp>();
+    target.addLegalOp<StorageSpecifierInitOp>();
+    // All dynamic rules below accept new function, call, return, and
+    // various tensor and bufferization operations as legal output of the
+    // rewriting provided that all sparse tensor types have been fully
+    // rewritten.
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       return converter.isSignatureLegal(op.getFunctionType());
     });
@@ -225,8 +248,8 @@ struct SparseTensorCodegenPass
                                                                    converter);
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
-    populateSparseTensorCodegenPatterns(converter, patterns,
-                                        enableBufferInitialization);
+    populateSparseTensorCodegenPatterns(
+        converter, patterns, createSparseDeallocs, enableBufferInitialization);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -262,12 +285,81 @@ struct SparseVectorizationPass
   }
 
   void runOnOperation() override {
+    if (vectorLength == 0)
+      return signalPassFailure();
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populateSparseVectorizationPatterns(
         patterns, vectorLength, enableVLAVectorization, enableSIMDIndex32);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct SparseGPUCodegenPass
+    : public impl::SparseGPUCodegenBase<SparseGPUCodegenPass> {
+
+  SparseGPUCodegenPass() = default;
+  SparseGPUCodegenPass(const SparseGPUCodegenPass &pass) = default;
+  SparseGPUCodegenPass(unsigned nT) { numThreads = nT; }
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    populateSparseGPUCodegenPatterns(patterns, numThreads);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct SparseKokkosCodegenPass
+    : public impl::SparseKokkosCodegenBase<SparseKokkosCodegenPass> {
+
+  SparseKokkosCodegenPass() = default;
+  SparseKokkosCodegenPass(const SparseKokkosCodegenPass& pass) = default;
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    populateSparseKokkosCodegenPatterns(patterns);
+    (void) applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct StorageSpecifierToLLVMPass
+    : public impl::StorageSpecifierToLLVMBase<StorageSpecifierToLLVMPass> {
+
+  StorageSpecifierToLLVMPass() = default;
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    ConversionTarget target(*ctx);
+    RewritePatternSet patterns(ctx);
+    StorageSpecifierToLLVMTypeConverter converter;
+
+    // All ops in the sparse dialect must go!
+    target.addIllegalDialect<SparseTensorDialect>();
+    target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
+      return converter.isSignatureLegal(op.getFunctionType());
+    });
+    target.addDynamicallyLegalOp<func::CallOp>([&](func::CallOp op) {
+      return converter.isSignatureLegal(op.getCalleeType());
+    });
+    target.addDynamicallyLegalOp<func::ReturnOp>([&](func::ReturnOp op) {
+      return converter.isLegal(op.getOperandTypes());
+    });
+    target.addLegalDialect<arith::ArithDialect, LLVM::LLVMDialect>();
+
+    populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
+                                                                   converter);
+    populateCallOpTypeConversionPattern(patterns, converter);
+    populateBranchOpInterfaceTypeConversionPattern(patterns, converter);
+    populateReturnOpTypeConversionPattern(patterns, converter);
+    scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
+                                                         target);
+    populateStorageSpecifierToLLVMPatterns(converter, patterns);
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
+      signalPassFailure();
   }
 };
 
@@ -331,8 +423,10 @@ std::unique_ptr<Pass> mlir::createSparseTensorCodegenPass() {
 }
 
 std::unique_ptr<Pass>
-mlir::createSparseTensorCodegenPass(bool enableBufferInitialization) {
-  return std::make_unique<SparseTensorCodegenPass>(enableBufferInitialization);
+mlir::createSparseTensorCodegenPass(bool createSparseDeallocs,
+                                    bool enableBufferInitialization) {
+  return std::make_unique<SparseTensorCodegenPass>(createSparseDeallocs,
+                                                   enableBufferInitialization);
 }
 
 std::unique_ptr<Pass> mlir::createSparseBufferRewritePass() {
@@ -354,4 +448,20 @@ mlir::createSparseVectorizationPass(unsigned vectorLength,
                                     bool enableSIMDIndex32) {
   return std::make_unique<SparseVectorizationPass>(
       vectorLength, enableVLAVectorization, enableSIMDIndex32);
+}
+
+std::unique_ptr<Pass> mlir::createSparseGPUCodegenPass() {
+  return std::make_unique<SparseGPUCodegenPass>();
+}
+
+std::unique_ptr<Pass> mlir::createSparseGPUCodegenPass(unsigned numThreads) {
+  return std::make_unique<SparseGPUCodegenPass>(numThreads);
+}
+
+std::unique_ptr<Pass> mlir::createSparseKokkosCodegenPass() {
+  return std::make_unique<SparseKokkosCodegenPass>();
+}
+
+std::unique_ptr<Pass> mlir::createStorageSpecifierToLLVMPass() {
+  return std::make_unique<StorageSpecifierToLLVMPass>();
 }

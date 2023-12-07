@@ -18,16 +18,16 @@
 
 ; GCN: v_bfi_b32 [[RESULT:v[0-9]+]], [[MASK]], [[K]], [[VEC]]
 ; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define amdgpu_kernel void @v_insertelement_v2i16_dynamic_vgpr(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in, i32 addrspace(1)* %idx.ptr) #0 {
+define amdgpu_kernel void @v_insertelement_v2i16_dynamic_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %idx.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %in.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %idx.gep = getelementptr inbounds i32, i32 addrspace(1)* %idx.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %idx = load i32, i32 addrspace(1)* %idx.gep
-  %vec = load <2 x i16>, <2 x i16> addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %idx.gep = getelementptr inbounds i32, ptr addrspace(1) %idx.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %idx = load i32, ptr addrspace(1) %idx.gep
+  %vec = load <2 x i16>, ptr addrspace(1) %in.gep
   %vecins = insertelement <2 x i16> %vec, i16 999, i32 %idx
-  store <2 x i16> %vecins, <2 x i16> addrspace(1)* %out.gep
+  store <2 x i16> %vecins, ptr addrspace(1) %out.gep
   ret void
 }
 

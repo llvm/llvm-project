@@ -23,9 +23,9 @@ target triple = "x86_64-unknown-linux-gnu"
 @c = dso_local local_unnamed_addr global i8 0, align 1, !dbg !9
 define dso_local signext i16 @d() local_unnamed_addr !dbg !17 {
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   %tobool2.not = icmp eq i32 %0, 0
-  %1 = load i8, i8* @b, align 1, !dbg !24
+  %1 = load i8, ptr @b, align 1, !dbg !24
   %cmp.not13 = icmp eq i8 %1, 7, !dbg !24
   br i1 %cmp.not13, label %cleanup, label %if.end.preheader, !dbg !24
 
@@ -42,7 +42,7 @@ if.end4:                                          ; preds = %if.end
 
 i:                                                ; preds = %if.end
   %add = add i8 %2, 1, !dbg !24
-  store i8 %add, i8* @b, align 1, !dbg !24
+  store i8 %add, ptr @b, align 1, !dbg !24
   %cmp.not = icmp eq i8 %add, 7, !dbg !24
   call void @llvm.dbg.value(metadata i1 %cmp.not, metadata !23, metadata !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value)), !dbg !24
   br i1 %cmp.not, label %cleanup.loopexit, label %if.end, !dbg !24
@@ -53,7 +53,7 @@ cleanup.loopexit:                                 ; preds = %i
 cleanup:                                          ; preds = %cleanup.loopexit, %if.end4, %entry
   %cmp.not12 = phi i1 [ %cmp.not13, %if.end4 ], [ %cmp.not13, %entry ], [ %cmp.not, %cleanup.loopexit ]
   %retval.0 = phi i16 [ %conv5, %if.end4 ], [ undef, %entry ], [ undef, %cleanup.loopexit ]
-  %3 = load i8, i8* @c, align 1
+  %3 = load i8, ptr @c, align 1
   %conv8 = sext i8 %3 to i16
   %retval.1 = select i1 %cmp.not12, i16 %conv8, i16 %retval.0
   ret i16 %retval.1, !dbg !24

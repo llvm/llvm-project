@@ -463,7 +463,7 @@ public:
     // Current node and index while traversing the intervals that contain
     // the reference point.
     IntervalNode *Node = nullptr;
-    PointType Point;
+    PointType Point = {};
     unsigned Index = 0;
 
     // For the current node, check if we have intervals that contain the

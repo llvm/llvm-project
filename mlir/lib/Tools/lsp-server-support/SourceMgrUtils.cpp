@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SourceMgrUtils.h"
+#include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::lsp;
@@ -42,7 +44,7 @@ static const char *lexLocStringTok(const char *curPtr) {
   return curPtr - 1;
 }
 
-SMRange lsp::convertTokenLocToRange(SMLoc loc) {
+SMRange lsp::convertTokenLocToRange(SMLoc loc, StringRef identifierChars) {
   if (!loc.isValid())
     return SMRange();
   const char *curPtr = loc.getPointer();
@@ -54,8 +56,8 @@ SMRange lsp::convertTokenLocToRange(SMLoc loc) {
     // Otherwise, default to handling an identifier.
   } else {
     // Return if the given character is a valid identifier character.
-    auto isIdentifierChar = [](char c) {
-      return isalnum(c) || c == '$' || c == '.' || c == '_' || c == '-';
+    auto isIdentifierChar = [=](char c) {
+      return isalnum(c) || c == '_' || identifierChars.contains(c);
     };
 
     while (*curPtr && isIdentifierChar(*(++curPtr)))
@@ -65,8 +67,8 @@ SMRange lsp::convertTokenLocToRange(SMLoc loc) {
   return SMRange(loc, SMLoc::getFromPointer(curPtr));
 }
 
-Optional<std::string> lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr,
-                                                   SMLoc loc) {
+std::optional<std::string>
+lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr, SMLoc loc) {
   // This is a heuristic, and isn't intended to cover every case, but should
   // cover the most common. We essentially look for a comment preceding the
   // line, and if we find one, use that as the documentation.
@@ -80,7 +82,7 @@ Optional<std::string> lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr,
   StringRef buffer(bufferStart, loc.getPointer() - bufferStart);
 
   // Pop the last line from the buffer string.
-  auto popLastLine = [&]() -> Optional<StringRef> {
+  auto popLastLine = [&]() -> std::optional<StringRef> {
     size_t newlineOffset = buffer.find_last_of("\n");
     if (newlineOffset == StringRef::npos)
       return std::nullopt;
@@ -95,7 +97,7 @@ Optional<std::string> lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr,
 
   // Try to parse a comment string from the source file.
   SmallVector<StringRef> commentLines;
-  while (Optional<StringRef> line = popLastLine()) {
+  while (std::optional<StringRef> line = popLastLine()) {
     // Check for a comment at the beginning of the line.
     if (!line->startswith("//"))
       break;

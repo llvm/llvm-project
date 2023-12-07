@@ -14,7 +14,7 @@
 ; INNERMOST-NEXT: Invariant Accesses: {
 ; INNERMOST-NEXT: }
 ; INNERMOST-NEXT: Context:
-; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  : 0 <= p_0 <= 2147483647 and 0 <= p_1 <= 1024 and 0 <= p_2 <= 1024 }
+; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  : 0 <= p_0 <= 1048576 and 0 <= p_1 <= 1024 and 0 <= p_2 <= 1024 }
 ; INNERMOST-NEXT: Assumed Context:
 ; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  :  }
 ; INNERMOST-NEXT: Invalid Context:
@@ -89,9 +89,9 @@
 ; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[i1] };
 ; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 2147483647 };
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 1048576 };
 ; ALL-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 2147483647 };
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 1048576 };
 ; ALL-NEXT: }
 ;
 ;    void f(int *A) {
@@ -103,7 +103,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A) {
+define void @f(ptr %A) {
 bb:
   br label %bb11
 
@@ -132,15 +132,15 @@ bb15:                                             ; preds = %bb24, %bb14
   br i1 %exitcond, label %bb16, label %bb25
 
 bb16:                                             ; preds = %bb15
-  %tmp = getelementptr inbounds i32, i32* %A, i64 %indvars.iv8
-  %tmp17 = load i32, i32* %tmp, align 4
-  %tmp18 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv5
-  %tmp19 = load i32, i32* %tmp18, align 4
+  %tmp = getelementptr inbounds i32, ptr %A, i64 %indvars.iv8
+  %tmp17 = load i32, ptr %tmp, align 4
+  %tmp18 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv5
+  %tmp19 = load i32, ptr %tmp18, align 4
   %tmp20 = add nsw i32 %tmp17, %tmp19
-  %tmp21 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp22 = load i32, i32* %tmp21, align 4
+  %tmp21 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp22 = load i32, ptr %tmp21, align 4
   %tmp23 = add nsw i32 %tmp22, %tmp20
-  store i32 %tmp23, i32* %tmp21, align 4
+  store i32 %tmp23, ptr %tmp21, align 4
   br label %bb24
 
 bb24:                                             ; preds = %bb16

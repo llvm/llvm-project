@@ -60,4 +60,60 @@ const char *AsFortran(RelationalOperator opr) {
   }
 }
 
+const char *AsFortran(DefinedIo x) {
+  switch (x) {
+    SWITCH_COVERS_ALL_CASES
+  case DefinedIo::ReadFormatted:
+    return "read(formatted)";
+  case DefinedIo::ReadUnformatted:
+    return "read(unformatted)";
+  case DefinedIo::WriteFormatted:
+    return "write(formatted)";
+  case DefinedIo::WriteUnformatted:
+    return "write(unformatted)";
+  }
+}
+
+std::string AsFortran(IgnoreTKRSet tkr) {
+  std::string result;
+  if (tkr.test(IgnoreTKR::Type)) {
+    result += 'T';
+  }
+  if (tkr.test(IgnoreTKR::Kind)) {
+    result += 'K';
+  }
+  if (tkr.test(IgnoreTKR::Rank)) {
+    result += 'R';
+  }
+  if (tkr.test(IgnoreTKR::Device)) {
+    result += 'D';
+  }
+  if (tkr.test(IgnoreTKR::Managed)) {
+    result += 'M';
+  }
+  if (tkr.test(IgnoreTKR::Contiguous)) {
+    result += 'C';
+  }
+  return result;
+}
+
+bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
+    std::optional<CUDADataAttr> y, IgnoreTKRSet ignoreTKR) {
+  if (!x && !y) {
+    return true;
+  } else if (x && y && *x == *y) {
+    return true;
+  } else if (ignoreTKR.test(IgnoreTKR::Device) &&
+      x.value_or(CUDADataAttr::Device) == CUDADataAttr::Device &&
+      y.value_or(CUDADataAttr::Device) == CUDADataAttr::Device) {
+    return true;
+  } else if (ignoreTKR.test(IgnoreTKR::Managed) &&
+      x.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed &&
+      y.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 } // namespace Fortran::common

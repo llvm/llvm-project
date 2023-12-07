@@ -11,9 +11,8 @@ define void @varargs_callee(double %x, ...) nounwind {
 ; CHECK-NEXT:    str x4, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
-  %list = alloca i8*, align 8
-  %listx = bitcast i8** %list to i8*
-  call void @llvm.va_start(i8* nonnull %listx)
+  %list = alloca ptr, align 8
+  call void @llvm.va_start(ptr nonnull %list)
   ret void
 }
 
@@ -25,9 +24,8 @@ define void @varargs_callee_manyargs(i64, i64, i64, i64, i64, ...) nounwind {
 ; CHECK-NEXT:    str x8, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-  %list = alloca i8*, align 8
-  %listx = bitcast i8** %list to i8*
-  call void @llvm.va_start(i8* nonnull %listx)
+  %list = alloca ptr, align 8
+  call void @llvm.va_start(ptr nonnull %list)
   ret void
 }
 
@@ -95,4 +93,4 @@ define void @varargs_many_argscalleer() nounwind {
 }
 
 
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start(ptr)

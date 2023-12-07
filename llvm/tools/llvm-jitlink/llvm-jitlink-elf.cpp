@@ -151,6 +151,11 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
       }
     }
 
+    // Add symbol info for absolute symbols.
+    for (auto *Sym : G.absolute_symbols())
+      S.SymbolInfos[Sym->getName()] = {Sym->getSize(),
+                                       Sym->getAddress().getValue()};
+
     auto SecAddr = FirstSym->getAddress();
     auto SecSize =
         (LastSym->getBlock().getAddress() + LastSym->getBlock().getSize()) -

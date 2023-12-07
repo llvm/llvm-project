@@ -16,8 +16,7 @@
 using namespace llvm;
 using namespace llvm::wasm;
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 static bool requiresGOTAccess(const Symbol *sym) {
   if (!config->isPic &&
@@ -33,9 +32,9 @@ static bool requiresGOTAccess(const Symbol *sym) {
 }
 
 static bool allowUndefined(const Symbol* sym) {
-  // Symbols with explicit import names are always allowed to be undefined at
+  // Symbols that are explicitly imported are always allowed to be undefined at
   // link time.
-  if (sym->importName)
+  if (sym->isImported())
     return true;
   if (isa<UndefinedFunction>(sym) && config->importUndefined)
     return true;
@@ -176,5 +175,4 @@ void scanRelocations(InputChunk *chunk) {
   }
 }
 
-} // namespace wasm
-} // namespace lld
+} // namespace lld::wasm

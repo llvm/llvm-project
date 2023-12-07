@@ -4,11 +4,11 @@ target triple = "hexagon"
 
 ; CHECK-LABEL: f0:
 ; CHECK: memw({{.*}}) = clrbit(#18)
-define void @f0(i32* nocapture %a0) #0 {
+define void @f0(ptr nocapture %a0) #0 {
 b0:
-  %v0 = load i32, i32* %a0, align 4, !tbaa !0
+  %v0 = load i32, ptr %a0, align 4, !tbaa !0
   %v1 = and i32 %v0, -262145
-  store i32 %v1, i32* %a0, align 4, !tbaa !0
+  store i32 %v1, ptr %a0, align 4, !tbaa !0
   ret void
 }
 

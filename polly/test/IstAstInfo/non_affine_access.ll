@@ -13,7 +13,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-define void @non_affine_access(float* %A) {
+define void @non_affine_access(ptr %A) {
 bb:
   br label %bb1
 
@@ -27,8 +27,8 @@ bb2:                                              ; preds = %bb1
 
 bb3:                                              ; preds = %bb1
   %prod = mul i64 %i.0, %i.0
-  %tmp5 = getelementptr inbounds float, float* %A, i64 %prod
-  store float 1.000000e+00, float* %tmp5, align 4, !tbaa !5
+  %tmp5 = getelementptr inbounds float, ptr %A, i64 %prod
+  store float 1.000000e+00, ptr %tmp5, align 4, !tbaa !5
   br label %bb6
 
 bb6:                                              ; preds = %bb3

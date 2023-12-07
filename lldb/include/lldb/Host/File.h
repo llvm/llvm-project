@@ -19,6 +19,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <mutex>
+#include <optional>
 #include <sys/types.h>
 
 namespace lldb_private {
@@ -225,7 +226,7 @@ public:
   ///     A buffer where to put the bytes that are read.
   ///
   /// \param[in,out] num_bytes
-  ///     The number of bytes to read form the current file position
+  ///     The number of bytes to read from the current file position
   ///     which gets modified with the number of bytes that were read.
   ///
   /// \param[in,out] offset
@@ -388,9 +389,7 @@ public:
 
   ~NativeFile() override { Close(); }
 
-  bool IsValid() const override {
-    return DescriptorIsValid() || StreamIsValid();
-  }
+  bool IsValid() const override;
 
   Status Read(void *buf, size_t &num_bytes) override;
   Status Write(const void *buf, size_t &num_bytes) override;
@@ -416,15 +415,37 @@ public:
   static bool classof(const File *file) { return file->isA(&ID); }
 
 protected:
-  bool DescriptorIsValid() const {
+  struct ValueGuard {
+    ValueGuard(std::mutex &m, bool b) : guard(m, std::adopt_lock), value(b) {}
+    std::lock_guard<std::mutex> guard;
+    bool value;
+    operator bool() { return value; }
+  };
+
+  bool DescriptorIsValidUnlocked() const {
+
     return File::DescriptorIsValid(m_descriptor);
   }
-  bool StreamIsValid() const { return m_stream != kInvalidStream; }
 
-  // Member variables
+  bool StreamIsValidUnlocked() const { return m_stream != kInvalidStream; }
+
+  ValueGuard DescriptorIsValid() const {
+    m_descriptor_mutex.lock();
+    return ValueGuard(m_descriptor_mutex, DescriptorIsValidUnlocked());
+  }
+
+  ValueGuard StreamIsValid() const {
+    m_stream_mutex.lock();
+    return ValueGuard(m_stream_mutex, StreamIsValidUnlocked());
+  }
+
   int m_descriptor;
   bool m_own_descriptor = false;
+  mutable std::mutex m_descriptor_mutex;
+
   FILE *m_stream;
+  mutable std::mutex m_stream_mutex;
+
   OpenOptions m_options{};
   bool m_own_stream = false;
   std::mutex offset_access_mutex;
@@ -437,10 +458,10 @@ private:
 class SerialPort : public NativeFile {
 public:
   struct Options {
-    llvm::Optional<unsigned int> BaudRate = std::nullopt;
-    llvm::Optional<Terminal::Parity> Parity = std::nullopt;
-    llvm::Optional<Terminal::ParityCheck> ParityCheck = std::nullopt;
-    llvm::Optional<unsigned int> StopBits = std::nullopt;
+    std::optional<unsigned int> BaudRate;
+    std::optional<Terminal::Parity> Parity;
+    std::optional<Terminal::ParityCheck> ParityCheck;
+    std::optional<unsigned int> StopBits;
   };
 
   // Obtain Options corresponding to the passed URL query string

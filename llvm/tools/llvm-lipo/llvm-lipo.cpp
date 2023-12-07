@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -28,8 +27,10 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/TextAPI/Architecture.h"
 #include <optional>
 
@@ -66,33 +67,30 @@ static const StringRef ToolName = "llvm-lipo";
 namespace {
 enum LipoID {
   LIPO_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  LIPO_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(LIPO_, __VA_ARGS__),
 #include "LipoOpts.inc"
 #undef OPTION
 };
 
-// LipoInfoTable below references LIPO_##PREFIX. OptionGroup has prefix nullptr.
-constexpr const char *const *LIPO_nullptr = nullptr;
-#define PREFIX(NAME, VALUE) const char *const LIPO_##NAME[] = VALUE;
+namespace lipo {
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
+  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
+      NAME##_init, std::size(NAME##_init) - 1);
 #include "LipoOpts.inc"
 #undef PREFIX
 
+using namespace llvm::opt;
 static constexpr opt::OptTable::Info LipoInfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {LIPO_##PREFIX, NAME,      HELPTEXT,                                         \
-   METAVAR,       LIPO_##ID, opt::Option::KIND##Class,                         \
-   PARAM,         FLAGS,     LIPO_##GROUP,                                     \
-   LIPO_##ALIAS,  ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(LIPO_, __VA_ARGS__),
 #include "LipoOpts.inc"
 #undef OPTION
 };
+} // namespace lipo
 
-class LipoOptTable : public opt::OptTable {
+class LipoOptTable : public opt::GenericOptTable {
 public:
-  LipoOptTable() : OptTable(LipoInfoTable) {}
+  LipoOptTable() : opt::GenericOptTable(lipo::LipoInfoTable) {}
 };
 
 enum class LipoAction {
@@ -720,13 +718,13 @@ replaceSlices(LLVMContext &LLVMCtx,
   exit(EXIT_SUCCESS);
 }
 
-int llvm_lipo_main(int argc, char **argv) {
+int llvm_lipo_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmParsers();
 
-  Config C = parseLipoOptions(makeArrayRef(argv + 1, argc - 1));
+  Config C = parseLipoOptions(ArrayRef(argv + 1, argc - 1));
   LLVMContext LLVMCtx;
   SmallVector<OwningBinary<Binary>, 1> InputBinaries =
       readInputBinaries(LLVMCtx, C.InputFiles);

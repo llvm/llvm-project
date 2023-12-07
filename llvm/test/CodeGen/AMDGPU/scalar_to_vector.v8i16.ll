@@ -4,19 +4,18 @@
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 < %s | FileCheck -check-prefixes=GFX908 %s
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX90A %s
 
-define amdgpu_kernel void @scalar_to_vector_v8i16(<2 x i32> %in, <8 x i16>* %out) #0 {
+define amdgpu_kernel void @scalar_to_vector_v8i16(<2 x i32> %in, ptr %out) #0 {
 ; GFX900-LABEL: scalar_to_vector_v8i16:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX900-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-NEXT:    s_pack_lh_b32_b16 s4, s0, s0
 ; GFX900-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX900-NEXT:    v_add_co_u32_e32 v4, vcc, s2, v4
+; GFX900-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX900-NEXT:    v_mov_b32_e32 v1, s1
+; GFX900-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX900-NEXT:    v_mov_b32_e32 v3, s0
-; GFX900-NEXT:    v_mov_b32_e32 v0, s4
-; GFX900-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX900-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v5, vcc
 ; GFX900-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX900-NEXT:    s_endpgm
@@ -26,13 +25,12 @@ define amdgpu_kernel void @scalar_to_vector_v8i16(<2 x i32> %in, <8 x i16>* %out
 ; GFX906-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    s_pack_lh_b32_b16 s4, s0, s0
 ; GFX906-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX906-NEXT:    v_add_co_u32_e32 v4, vcc, s2, v4
+; GFX906-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX906-NEXT:    v_mov_b32_e32 v1, s1
+; GFX906-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX906-NEXT:    v_mov_b32_e32 v3, s0
-; GFX906-NEXT:    v_mov_b32_e32 v0, s4
-; GFX906-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX906-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v5, vcc
 ; GFX906-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX906-NEXT:    s_endpgm
@@ -42,13 +40,12 @@ define amdgpu_kernel void @scalar_to_vector_v8i16(<2 x i32> %in, <8 x i16>* %out
 ; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX908-NEXT:    s_pack_lh_b32_b16 s4, s0, s0
 ; GFX908-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX908-NEXT:    v_add_co_u32_e32 v4, vcc, s2, v4
+; GFX908-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX908-NEXT:    v_mov_b32_e32 v1, s1
+; GFX908-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX908-NEXT:    v_mov_b32_e32 v3, s0
-; GFX908-NEXT:    v_mov_b32_e32 v0, s4
-; GFX908-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX908-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v5, vcc
 ; GFX908-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX908-NEXT:    s_endpgm
@@ -58,13 +55,12 @@ define amdgpu_kernel void @scalar_to_vector_v8i16(<2 x i32> %in, <8 x i16>* %out
 ; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX90A-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    s_pack_lh_b32_b16 s4, s0, s0
 ; GFX90A-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX90A-NEXT:    v_add_co_u32_e32 v4, vcc, s2, v4
+; GFX90A-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, s1
+; GFX90A-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, s0
-; GFX90A-NEXT:    v_mov_b32_e32 v0, s4
-; GFX90A-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v5, vcc
 ; GFX90A-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX90A-NEXT:    s_endpgm
@@ -80,13 +76,13 @@ entry:
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %out.gep = getelementptr inbounds <8 x i16>, <8 x i16>* %out, i64 %tid.ext
-  store <8 x i16> %val.6.vec8.i16, <8 x i16>* %out.gep, align 16
+  %out.gep = getelementptr inbounds <8 x i16>, ptr %out, i64 %tid.ext
+  store <8 x i16> %val.6.vec8.i16, ptr %out.gep, align 16
 
   ret void
 }
 
-define amdgpu_kernel void @scalar_to_vector_v8f16(<2 x float> %in, <8 x half>* %out) #0 {
+define amdgpu_kernel void @scalar_to_vector_v8f16(<2 x float> %in, ptr %out) #0 {
 ; GFX900-LABEL: scalar_to_vector_v8f16:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -158,8 +154,8 @@ entry:
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %out.gep = getelementptr inbounds <8 x half>, <8 x half>* %out, i64 %tid.ext
-  store <8 x half> %val.6.vec8.half, <8 x half>* %out.gep, align 16
+  %out.gep = getelementptr inbounds <8 x half>, ptr %out, i64 %tid.ext
+  store <8 x half> %val.6.vec8.half, ptr %out.gep, align 16
 
   ret void
 }

@@ -11,10 +11,9 @@
 
 #include "../ClangTidyCheck.h"
 #include "clang/StaticAnalyzer/Checkers/MPIFunctionClassifier.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace mpi {
+namespace clang::tidy::mpi {
 
 /// This check verifies if a buffer passed to an MPI (Message Passing Interface)
 /// function is sufficiently dereferenced. Buffers should be passed as a single
@@ -44,11 +43,9 @@ private:
 
   enum class IndirectionType : unsigned char { Pointer, Array };
 
-  Optional<ento::mpi::MPIFunctionClassifier> FuncClassifier;
+  std::optional<ento::mpi::MPIFunctionClassifier> FuncClassifier;
 };
 
-} // namespace mpi
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::mpi
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFER_DEREF_H

@@ -6,7 +6,7 @@
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; FIXME: VI or should be unnecessary
-define amdgpu_kernel void @v_test_add_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_test_add_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
 ; VI-LABEL: v_test_add_v2i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -76,20 +76,21 @@ define amdgpu_kernel void @v_test_add_v2i16(<2 x i16> addrspace(1)* %out, <2 x i
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_pk_add_u16 v0, v1, v0
 ; GFX11-NEXT:    global_store_b32 v2, v0, s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
-  %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
-  %gep.in1 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in1, i32 %tid
-  %a = load volatile <2 x i16>, <2 x i16> addrspace(1)* %gep.in0
-  %b = load volatile <2 x i16>, <2 x i16> addrspace(1)* %gep.in1
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i32 %tid
+  %gep.in0 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in0, i32 %tid
+  %gep.in1 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in1, i32 %tid
+  %a = load volatile <2 x i16>, ptr addrspace(1) %gep.in0
+  %b = load volatile <2 x i16>, ptr addrspace(1) %gep.in1
   %add = add <2 x i16> %a, %b
-  store <2 x i16> %add, <2 x i16> addrspace(1)* %out
+  store <2 x i16> %add, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_test_add_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(4)* %in0, <2 x i16> addrspace(4)* %in1) #1 {
+define amdgpu_kernel void @s_test_add_v2i16(ptr addrspace(1) %out, ptr addrspace(4) %in0, ptr addrspace(4) %in1) #1 {
 ; VI-LABEL: s_test_add_v2i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -151,16 +152,17 @@ define amdgpu_kernel void @s_test_add_v2i16(<2 x i16> addrspace(1)* %out, <2 x i
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_pk_add_u16 v1, s2, s0
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %a = load <2 x i16>, <2 x i16> addrspace(4)* %in0
-  %b = load <2 x i16>, <2 x i16> addrspace(4)* %in1
+  %a = load <2 x i16>, ptr addrspace(4) %in0
+  %b = load <2 x i16>, ptr addrspace(4) %in1
   %add = add <2 x i16> %a, %b
-  store <2 x i16> %add, <2 x i16> addrspace(1)* %out
+  store <2 x i16> %add, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_test_add_self_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(4)* %in0) #1 {
+define amdgpu_kernel void @s_test_add_self_v2i16(ptr addrspace(1) %out, ptr addrspace(4) %in0) #1 {
 ; VI-LABEL: s_test_add_self_v2i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -211,16 +213,17 @@ define amdgpu_kernel void @s_test_add_self_v2i16(<2 x i16> addrspace(1)* %out, <
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_pk_add_u16 v1, s2, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %a = load <2 x i16>, <2 x i16> addrspace(4)* %in0
+  %a = load <2 x i16>, ptr addrspace(4) %in0
   %add = add <2 x i16> %a, %a
-  store <2 x i16> %add, <2 x i16> addrspace(1)* %out
+  store <2 x i16> %add, ptr addrspace(1) %out
   ret void
 }
 
 ; FIXME: VI should not scalarize arg access.
-define amdgpu_kernel void @s_test_add_v2i16_kernarg(<2 x i16> addrspace(1)* %out, <2 x i16> %a, <2 x i16> %b) #1 {
+define amdgpu_kernel void @s_test_add_v2i16_kernarg(ptr addrspace(1) %out, <2 x i16> %a, <2 x i16> %b) #1 {
 ; VI-LABEL: s_test_add_v2i16_kernarg:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -264,15 +267,16 @@ define amdgpu_kernel void @s_test_add_v2i16_kernarg(<2 x i16> addrspace(1)* %out
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_pk_add_u16 v1, s2, s3
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %add = add <2 x i16> %a, %b
-  store <2 x i16> %add, <2 x i16> addrspace(1)* %out
+  store <2 x i16> %add, ptr addrspace(1) %out
   ret void
 }
 
 ; FIXME: Eliminate or with sdwa
-define amdgpu_kernel void @v_test_add_v2i16_constant(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_constant(ptr addrspace(1) %out, ptr addrspace(1) %in0) #1 {
 ; VI-LABEL: v_test_add_v2i16_constant:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -326,19 +330,20 @@ define amdgpu_kernel void @v_test_add_v2i16_constant(<2 x i16> addrspace(1)* %ou
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_pk_add_u16 v0, 0x1c8007b, v0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
-  %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
-  %a = load volatile <2 x i16>, <2 x i16> addrspace(1)* %gep.in0
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i32 %tid
+  %gep.in0 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in0, i32 %tid
+  %a = load volatile <2 x i16>, ptr addrspace(1) %gep.in0
   %add = add <2 x i16> %a, <i16 123, i16 456>
-  store <2 x i16> %add, <2 x i16> addrspace(1)* %out
+  store <2 x i16> %add, ptr addrspace(1) %out
   ret void
 }
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
-define amdgpu_kernel void @v_test_add_v2i16_neg_constant(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_neg_constant(ptr addrspace(1) %out, ptr addrspace(1) %in0) #1 {
 ; VI-LABEL: v_test_add_v2i16_neg_constant:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -392,18 +397,19 @@ define amdgpu_kernel void @v_test_add_v2i16_neg_constant(<2 x i16> addrspace(1)*
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_pk_add_u16 v0, 0xfc21fcb3, v0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
-  %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
-  %a = load volatile <2 x i16>, <2 x i16> addrspace(1)* %gep.in0
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i32 %tid
+  %gep.in0 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in0, i32 %tid
+  %a = load volatile <2 x i16>, ptr addrspace(1) %gep.in0
   %add = add <2 x i16> %a, <i16 -845, i16 -991>
-  store <2 x i16> %add, <2 x i16> addrspace(1)* %out
+  store <2 x i16> %add, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_add_v2i16_inline_neg1(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_inline_neg1(ptr addrspace(1) %out, ptr addrspace(1) %in0) #1 {
 ; VI-LABEL: v_test_add_v2i16_inline_neg1:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -456,18 +462,19 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_neg1(<2 x i16> addrspace(1)* 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_pk_sub_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
-  %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
-  %a = load volatile <2 x i16>, <2 x i16> addrspace(1)* %gep.in0
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i32 %tid
+  %gep.in0 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in0, i32 %tid
+  %a = load volatile <2 x i16>, ptr addrspace(1) %gep.in0
   %add = add <2 x i16> %a, <i16 -1, i16 -1>
-  store <2 x i16> %add, <2 x i16> addrspace(1)* %out
+  store <2 x i16> %add, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_add_v2i16_inline_lo_zero_hi(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_inline_lo_zero_hi(ptr addrspace(1) %out, ptr addrspace(1) %in0) #1 {
 ; VI-LABEL: v_test_add_v2i16_inline_lo_zero_hi:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -519,19 +526,20 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_lo_zero_hi(<2 x i16> addrspac
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_pk_add_u16 v0, v0, 32
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
-  %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
-  %a = load volatile <2 x i16>, <2 x i16> addrspace(1)* %gep.in0
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i32 %tid
+  %gep.in0 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in0, i32 %tid
+  %a = load volatile <2 x i16>, ptr addrspace(1) %gep.in0
   %add = add <2 x i16> %a, <i16 32, i16 0>
-  store <2 x i16> %add, <2 x i16> addrspace(1)* %out
+  store <2 x i16> %add, ptr addrspace(1) %out
   ret void
 }
 
 ; The high element gives fp
-define amdgpu_kernel void @v_test_add_v2i16_inline_fp_split(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_inline_fp_split(ptr addrspace(1) %out, ptr addrspace(1) %in0) #1 {
 ; VI-LABEL: v_test_add_v2i16_inline_fp_split:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -584,19 +592,20 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_fp_split(<2 x i16> addrspace(
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_pk_add_u16 v0, 0x3f80, v0 op_sel:[1,0] op_sel_hi:[0,1]
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
-  %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
-  %a = load volatile <2 x i16>, <2 x i16> addrspace(1)* %gep.in0
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i32 %tid
+  %gep.in0 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in0, i32 %tid
+  %a = load volatile <2 x i16>, ptr addrspace(1) %gep.in0
   %add = add <2 x i16> %a, <i16 0, i16 16256>
-  store <2 x i16> %add, <2 x i16> addrspace(1)* %out
+  store <2 x i16> %add, ptr addrspace(1) %out
   ret void
 }
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
-define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
 ; VI-LABEL: v_test_add_v2i16_zext_to_v2i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -672,22 +681,23 @@ define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i32(<2 x i32> addrspace(1)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.out = getelementptr inbounds <2 x i32>, <2 x i32> addrspace(1)* %out, i32 %tid
-  %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
-  %gep.in1 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in1, i32 %tid
-  %a = load volatile <2 x i16>, <2 x i16> addrspace(1)* %gep.in0
-  %b = load volatile <2 x i16>, <2 x i16> addrspace(1)* %gep.in1
+  %gep.out = getelementptr inbounds <2 x i32>, ptr addrspace(1) %out, i32 %tid
+  %gep.in0 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in0, i32 %tid
+  %gep.in1 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in1, i32 %tid
+  %a = load volatile <2 x i16>, ptr addrspace(1) %gep.in0
+  %b = load volatile <2 x i16>, ptr addrspace(1) %gep.in1
   %add = add <2 x i16> %a, %b
   %ext = zext <2 x i16> %add to <2 x i32>
-  store <2 x i32> %ext, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
-define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i64(<2 x i64> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
 ; VI-LABEL: v_test_add_v2i16_zext_to_v2i64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -767,22 +777,23 @@ define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i64(<2 x i64> addrspace(1)
 ; GFX11-NEXT:    v_alignbit_b32 v2, 0, v0, 16
 ; GFX11-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_and_b32 v0, 0xffff, v0
 ; GFX11-NEXT:    global_store_b128 v1, v[0:3], s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.out = getelementptr inbounds <2 x i64>, <2 x i64> addrspace(1)* %out, i32 %tid
-  %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
-  %gep.in1 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in1, i32 %tid
-  %a = load volatile <2 x i16>, <2 x i16> addrspace(1)* %gep.in0
-  %b = load volatile <2 x i16>, <2 x i16> addrspace(1)* %gep.in1
+  %gep.out = getelementptr inbounds <2 x i64>, ptr addrspace(1) %out, i32 %tid
+  %gep.in0 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in0, i32 %tid
+  %gep.in1 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in1, i32 %tid
+  %a = load volatile <2 x i16>, ptr addrspace(1) %gep.in0
+  %b = load volatile <2 x i16>, ptr addrspace(1) %gep.in1
   %add = add <2 x i16> %a, %b
   %ext = zext <2 x i16> %add to <2 x i64>
-  store <2 x i64> %ext, <2 x i64> addrspace(1)* %out
+  store <2 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
-define amdgpu_kernel void @v_test_add_v2i16_sext_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_sext_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
 ; VI-LABEL: v_test_add_v2i16_sext_to_v2i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -860,22 +871,23 @@ define amdgpu_kernel void @v_test_add_v2i16_sext_to_v2i32(<2 x i32> addrspace(1)
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v1, 16, v0
 ; GFX11-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.out = getelementptr inbounds <2 x i32>, <2 x i32> addrspace(1)* %out, i32 %tid
-  %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
-  %gep.in1 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in1, i32 %tid
-  %a = load volatile <2 x i16>, <2 x i16> addrspace(1)* %gep.in0
-  %b = load volatile <2 x i16>, <2 x i16> addrspace(1)* %gep.in1
+  %gep.out = getelementptr inbounds <2 x i32>, ptr addrspace(1) %out, i32 %tid
+  %gep.in0 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in0, i32 %tid
+  %gep.in1 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in1, i32 %tid
+  %a = load volatile <2 x i16>, ptr addrspace(1) %gep.in0
+  %b = load volatile <2 x i16>, ptr addrspace(1) %gep.in1
   %add = add <2 x i16> %a, %b
   %ext = sext <2 x i16> %add to <2 x i32>
-  store <2 x i32> %ext, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
-define amdgpu_kernel void @v_test_add_v2i16_sext_to_v2i64(<2 x i64> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_test_add_v2i16_sext_to_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
 ; VI-LABEL: v_test_add_v2i16_sext_to_v2i64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
@@ -963,17 +975,18 @@ define amdgpu_kernel void @v_test_add_v2i16_sext_to_v2i64(<2 x i64> addrspace(1)
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.out = getelementptr inbounds <2 x i64>, <2 x i64> addrspace(1)* %out, i32 %tid
-  %gep.in0 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in0, i32 %tid
-  %gep.in1 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in1, i32 %tid
-  %a = load <2 x i16>, <2 x i16> addrspace(1)* %gep.in0
-  %b = load <2 x i16>, <2 x i16> addrspace(1)* %gep.in1
+  %gep.out = getelementptr inbounds <2 x i64>, ptr addrspace(1) %out, i32 %tid
+  %gep.in0 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in0, i32 %tid
+  %gep.in1 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in1, i32 %tid
+  %a = load <2 x i16>, ptr addrspace(1) %gep.in0
+  %b = load <2 x i16>, ptr addrspace(1) %gep.in1
   %add = add <2 x i16> %a, %b
   %ext = sext <2 x i16> %add to <2 x i64>
-  store <2 x i64> %ext, <2 x i64> addrspace(1)* %out
+  store <2 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 

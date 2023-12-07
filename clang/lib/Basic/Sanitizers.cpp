@@ -61,7 +61,7 @@ namespace clang {
 unsigned SanitizerMask::countPopulation() const {
   unsigned total = 0;
   for (const auto &Val : maskLoToHigh)
-    total += llvm::countPopulation(Val);
+    total += llvm::popcount(Val);
   return total;
 }
 

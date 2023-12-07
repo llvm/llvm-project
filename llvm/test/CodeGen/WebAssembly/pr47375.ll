@@ -28,8 +28,8 @@ define void @sext_vec() {
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.store16 0
 ; CHECK-NEXT:    # fallthrough-return
-  %L1 = load <2 x i3>, <2 x i3>* undef, align 2
+  %L1 = load <2 x i3>, ptr undef, align 2
   %zext = zext <2 x i3> %L1 to <2 x i10>
-  store <2 x i10> %zext, <2 x i10>* undef, align 4
+  store <2 x i10> %zext, ptr undef, align 4
   ret void
 }

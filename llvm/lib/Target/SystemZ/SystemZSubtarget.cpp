@@ -8,6 +8,7 @@
 
 #include "SystemZSubtarget.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -77,8 +78,42 @@ bool SystemZSubtarget::enableSubRegLiveness() const {
   return UseSubRegLiveness;
 }
 
+bool SystemZSubtarget::isAddressedViaADA(const GlobalValue *GV) const {
+  if (const auto *GO = dyn_cast<GlobalObject>(GV)) {
+    // A R/O variable is placed in code section. If the R/O variable has as
+    // least two byte alignment, then generated code can use relative
+    // instructions to address the variable. Otherwise, use the ADA to address
+    // the variable.
+    if (GO->getAlignment() & 0x1) {
+      return true;
+    }
+
+    // getKindForGlobal only works with definitions
+    if (GO->isDeclaration()) {
+      return true;
+    }
+
+    // check AvailableExternallyLinkage here as getKindForGlobal() asserts
+    if (GO->hasAvailableExternallyLinkage()) {
+      return true;
+    }
+
+    SectionKind GOKind = TargetLoweringObjectFile::getKindForGlobal(
+        GO, TLInfo.getTargetMachine());
+    if (!GOKind.isReadOnly()) {
+      return true;
+    }
+
+    return false; // R/O variable with multiple of 2 byte alignment
+  }
+  return true;
+}
+
 bool SystemZSubtarget::isPC32DBLSymbol(const GlobalValue *GV,
                                        CodeModel::Model CM) const {
+  if (isTargetzOS())
+    return !isAddressedViaADA(GV);
+
   // PC32DBL accesses require the low bit to be clear.
   //
   // FIXME: Explicitly check for functions: the datalayout is currently

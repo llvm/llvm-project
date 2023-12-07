@@ -93,6 +93,15 @@
 # CHECK: Type: R_LARCH_TLS_GD_HI20 (98)
 # CHECK: Type: R_LARCH_32_PCREL (99)
 # CHECK: Type: R_LARCH_RELAX (100)
+# CHECK: Type: R_LARCH_DELETE (101)
+# CHECK: Type: R_LARCH_ALIGN (102)
+# CHECK: Type: R_LARCH_PCREL20_S2 (103)
+# CHECK: Type: R_LARCH_CFA (104)
+# CHECK: Type: R_LARCH_ADD6 (105)
+# CHECK: Type: R_LARCH_SUB6 (106)
+# CHECK: Type: R_LARCH_ADD_ULEB128 (107)
+# CHECK: Type: R_LARCH_SUB_ULEB128 (108)
+# CHECK: Type: R_LARCH_64_PCREL (109)
 
 --- !ELF
 FileHeader:
@@ -193,3 +202,12 @@ Sections:
       - Type: R_LARCH_TLS_GD_HI20
       - Type: R_LARCH_32_PCREL
       - Type: R_LARCH_RELAX
+      - Type: R_LARCH_DELETE
+      - Type: R_LARCH_ALIGN
+      - Type: R_LARCH_PCREL20_S2
+      - Type: R_LARCH_CFA
+      - Type: R_LARCH_ADD6
+      - Type: R_LARCH_SUB6
+      - Type: R_LARCH_ADD_ULEB128
+      - Type: R_LARCH_SUB_ULEB128
+      - Type: R_LARCH_64_PCREL

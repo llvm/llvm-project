@@ -325,7 +325,7 @@ TEST(SerializationTest, CmdlTest) {
 // rlimit is part of POSIX. RLIMIT_AS does not exist in OpenBSD.
 // Sanitizers use a lot of address space, so we can't apply strict limits.
 #if LLVM_ON_UNIX && defined(RLIMIT_AS) && !LLVM_ADDRESS_SANITIZER_BUILD &&     \
-    !LLVM_MEMORY_SANITIZER_BUILD
+    !LLVM_MEMORY_SANITIZER_BUILD && !LLVM_THREAD_SANITIZER_BUILD
 class ScopedMemoryLimit {
   struct rlimit OriginalLimit;
   bool Succeeded = false;

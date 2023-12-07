@@ -39,7 +39,7 @@
 // RUN:     -ivfsoverlay %t.yaml -fsyntax-only -Rmodule-include-translation \
 // RUN:     -Werror=non-modular-include-in-framework-module | FileCheck %s
 // CHECK: warning: treating
-// CHECK-NOT: error
+// CHECK-NOT: error:
 
 // With a VFS-mapped module map file
 // RUN: mv %t/SomeFramework.framework/Modules/module.modulemap %t/hide_module.map

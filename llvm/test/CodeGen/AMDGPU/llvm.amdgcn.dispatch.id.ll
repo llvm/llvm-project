@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 declare i64 @llvm.amdgcn.dispatch.id() #1
 
@@ -17,3 +17,6 @@ define amdgpu_kernel void @dispatch_id(ptr addrspace(1) %out) #0 {
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}

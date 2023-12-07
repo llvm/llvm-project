@@ -21,6 +21,6 @@ int main(int, char**)
   static_assert(std::counting_semaphore<>::max() >= 1, "");
   static_assert(std::counting_semaphore<1>::max() >= 1, "");
   static_assert(std::counting_semaphore<std::numeric_limits<int>::max()>::max() >= std::numeric_limits<int>::max(), "");
-  static_assert(std::counting_semaphore<std::numeric_limits<ptrdiff_t>::max()>::max() == std::numeric_limits<ptrdiff_t>::max(), "");
+  static_assert(std::counting_semaphore<std::numeric_limits<std::ptrdiff_t>::max()>::max() == std::numeric_limits<ptrdiff_t>::max(), "");
   return 0;
 }

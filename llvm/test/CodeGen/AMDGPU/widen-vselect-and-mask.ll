@@ -22,7 +22,7 @@ bb:
   %tmp8 = icmp sgt <4 x i64> %tmp6, <i64 -1, i64 -1, i64 -1, i64 -1>
   %tmp9 = and <4 x i1> %tmp8, %tmp7
   %tmp10 = select <4 x i1> %tmp9, <4 x double> <double 1.0, double 1.0, double 1.0, double 1.0>, <4 x double> zeroinitializer
-  store <4 x double> %tmp10, <4 x double> addrspace(1)* null, align 32
+  store <4 x double> %tmp10, ptr addrspace(1) null, align 32
   ret void
 }
 
@@ -44,7 +44,7 @@ bb:
   %tmp8 = icmp sgt <4 x i64> %tmp6, <i64 -1, i64 -1, i64 -1, i64 -1>
   %tmp9 = and <4 x i1> %tmp8, %tmp7
   %tmp10 = select <4 x i1> %tmp9, <4 x i64> <i64 1, i64 1, i64 1, i64 1>, <4 x i64> zeroinitializer
-  store <4 x i64> %tmp10, <4 x i64> addrspace(1)* null, align 32
+  store <4 x i64> %tmp10, ptr addrspace(1) null, align 32
   ret void
 }
 

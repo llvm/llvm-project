@@ -48,22 +48,18 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.thread)
     DEPENDS
       .mutex
       .${LIBC_TARGET_OS}.thread
+      libc.src.__support.common
       libc.src.__support.fixedvector
       libc.src.__support.CPP.array
       libc.src.__support.CPP.optional
   )
 endif()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS}/callonce.cpp)
+if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.callonce)
   add_object_library(
     callonce
-    SRCS
-      ${LIBC_TARGET_OS}/callonce.cpp
-    HDRS
-      callonce.h
+    ALIAS
     DEPENDS
-      libc.include.sys_syscall
-      libc.src.__support.CPP.atomic
-      libc.src.__support.OSUtil.osutil
+      .${LIBC_TARGET_OS}.callonce
   )
 endif()

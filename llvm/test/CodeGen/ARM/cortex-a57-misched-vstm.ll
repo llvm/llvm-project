@@ -13,10 +13,10 @@
 
 @var = global %bigVec zeroinitializer
 
-define void @bar(%bigVec* %ptr) {
+define void @bar(ptr %ptr) {
 
-  %tmp = load %bigVec, %bigVec* %ptr
-  store %bigVec %tmp, %bigVec* @var
+  %tmp = load %bigVec, ptr %ptr
+  store %bigVec %tmp, ptr @var
 
   ret void
 }

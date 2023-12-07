@@ -39,7 +39,7 @@ entry:
 
 loop:
   %i = phi i32 [ %inc, %loop ], [ 0, %entry ]
-  %0 = load volatile i32, i32* @l, align 4
+  %0 = load volatile i32, ptr @l, align 4
   %inc = add nuw nsw i32 %i, 1
   %cmp = icmp slt i32 %inc, %n
   br i1 %cmp, label %loop, label %ret
@@ -83,7 +83,7 @@ entry:
 
 loop:
   %i = phi i32 [ %inc, %loop ], [ 0, %entry ]
-  %0 = load volatile i32, i32* @g, align 4
+  %0 = load volatile i32, ptr @g, align 4
   %inc = add nuw nsw i32 %i, 1
   %cmp = icmp slt i32 %inc, %n
   br i1 %cmp, label %loop, label %ret
@@ -129,7 +129,7 @@ entry:
 
 loop:
   %i = phi i32 [ %inc, %loop ], [ 0, %entry ]
-  %0 = load volatile i32, i32* @ie, align 4
+  %0 = load volatile i32, ptr @ie, align 4
   %inc = add nuw nsw i32 %i, 1
   %cmp = icmp slt i32 %inc, %n
   br i1 %cmp, label %loop, label %ret
@@ -199,7 +199,7 @@ entry:
 
 loop:
   %i = phi i32 [ %inc, %loop ], [ 0, %entry ]
-  %0 = load volatile i32, i32* @gd, align 4
+  %0 = load volatile i32, ptr @gd, align 4
   %inc = add nuw nsw i32 %i, 1
   %cmp = icmp slt i32 %inc, %n
   br i1 %cmp, label %loop, label %ret

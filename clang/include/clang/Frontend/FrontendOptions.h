@@ -19,6 +19,7 @@
 #include <cassert>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -222,7 +223,7 @@ class FrontendInputFile {
   /// The input, if it comes from a buffer rather than a file. This object
   /// does not own the buffer, and the caller is responsible for ensuring
   /// that it outlives any users.
-  llvm::Optional<llvm::MemoryBufferRef> Buffer;
+  std::optional<llvm::MemoryBufferRef> Buffer;
 
   /// The kind of input, e.g., C source, AST file, LLVM IR.
   InputKind Kind;
@@ -277,11 +278,13 @@ public:
   /// Show frontend performance metrics and statistics.
   unsigned ShowStats : 1;
 
+  unsigned AppendStats : 1;
+
   /// print the supported cpus for the current target
   unsigned PrintSupportedCPUs : 1;
 
-  /// Output time trace profile.
-  unsigned TimeTrace : 1;
+  /// Print the supported extensions for the current target.
+  unsigned PrintSupportedExtensions : 1;
 
   /// Show the -version text.
   unsigned ShowVersion : 1;
@@ -452,8 +455,15 @@ public:
   std::string ProductName;
 
   // Currently this is only used as part of the `-extract-api` action.
-  /// The file providing a list of APIs to ignore when extracting documentation
-  std::string ExtractAPIIgnoresFile;
+  // A comma seperated list of files providing a list of APIs to
+  // ignore when extracting documentation.
+  std::vector<std::string> ExtractAPIIgnoresFileList;
+
+  // Currently this is only used as part of the `-emit-symbol-graph`
+  // action.
+  // Location of output directory where symbol graph information would
+  // be dumped
+  std::string SymbolGraphOutputDir;
 
   /// Args to pass to the plugins
   std::map<std::string, std::vector<std::string>> PluginArgs;
@@ -492,10 +502,10 @@ public:
   std::string AuxTriple;
 
   /// Auxiliary target CPU for CUDA/HIP compilation.
-  Optional<std::string> AuxTargetCPU;
+  std::optional<std::string> AuxTargetCPU;
 
   /// Auxiliary target features for CUDA/HIP compilation.
-  Optional<std::vector<std::string>> AuxTargetFeatures;
+  std::optional<std::vector<std::string>> AuxTargetFeatures;
 
   /// Filename to write statistics to.
   std::string StatsFile;
@@ -509,7 +519,7 @@ public:
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
-        ShowStats(false), TimeTrace(false), ShowVersion(false),
+        ShowStats(false), AppendStats(false), ShowVersion(false),
         FixWhatYouCan(false), FixOnlyWarnings(false), FixAndRecompile(false),
         FixToTemporaries(false), ARCMTMigrateEmitARCErrors(false),
         SkipFunctionBodies(false), UseGlobalModuleIndex(true),

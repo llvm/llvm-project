@@ -119,7 +119,7 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ undef, [[BB]] ], [ [[TMP2:%.*]], [[FLOW4]] ]
 ; OPT-NEXT:    [[LSR_IV_NEXT:%.*]] = add i32 [[LSR_IV]], 1
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp slt i32 [[LSR_IV_NEXT]], 0
-; OPT-NEXT:    [[LOAD0:%.*]] = load volatile i32, i32 addrspace(1)* undef, align 4
+; OPT-NEXT:    [[LOAD0:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
 ; OPT-NEXT:    br label [[NODEBLOCK:%.*]]
 ; OPT:       NodeBlock:
 ; OPT-NEXT:    [[PIVOT:%.*]] = icmp sge i32 [[LOAD0]], 1
@@ -141,7 +141,7 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[TMP5:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP4]])
 ; OPT-NEXT:    br i1 [[TMP5]], label [[BB9:%.*]], label [[BB1]]
 ; OPT:       case0:
-; OPT-NEXT:    [[LOAD1:%.*]] = load volatile i32, i32 addrspace(1)* undef, align 4
+; OPT-NEXT:    [[LOAD1:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
 ; OPT-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[TMP]], [[LOAD1]]
 ; OPT-NEXT:    br label [[FLOW5]]
 ; OPT:       Flow:
@@ -150,7 +150,7 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[TMP8:%.*]] = phi i1 [ false, [[FLOW3]] ], [ true, [[NODEBLOCK]] ]
 ; OPT-NEXT:    br i1 [[TMP8]], label [[LEAFBLOCK:%.*]], label [[FLOW4]]
 ; OPT:       case1:
-; OPT-NEXT:    [[LOAD2:%.*]] = load volatile i32, i32 addrspace(1)* undef, align 4
+; OPT-NEXT:    [[LOAD2:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
 ; OPT-NEXT:    [[CMP2]] = icmp sge i32 [[TMP]], [[LOAD2]]
 ; OPT-NEXT:    br label [[FLOW3]]
 ; OPT:       Flow5:
@@ -226,19 +226,19 @@ bb1:
   %lsr.iv = phi i32 [ undef, %bb ], [ %lsr.iv.next, %case0 ], [ %lsr.iv.next, %case1 ]
   %lsr.iv.next = add i32 %lsr.iv, 1
   %cmp0 = icmp slt i32 %lsr.iv.next, 0
-  %load0 = load volatile i32, i32 addrspace(1)* undef, align 4
+  %load0 = load volatile i32, ptr addrspace(1) undef, align 4
   switch i32 %load0, label %bb9 [
   i32 0, label %case0
   i32 1, label %case1
   ]
 
 case0:
-  %load1 = load volatile i32, i32 addrspace(1)* undef, align 4
+  %load1 = load volatile i32, ptr addrspace(1) undef, align 4
   %cmp1 = icmp slt i32 %tmp, %load1
   br i1 %cmp1, label %bb1, label %bb9
 
 case1:
-  %load2 = load volatile i32, i32 addrspace(1)* undef, align 4
+  %load2 = load volatile i32, ptr addrspace(1) undef, align 4
   %cmp2 = icmp slt i32 %tmp, %load2
   br i1 %cmp2, label %bb1, label %bb9
 

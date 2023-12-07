@@ -56,6 +56,15 @@ Constant<SubscriptInteger> ConstantBounds::SHAPE() const {
   return AsConstantShape(shape_);
 }
 
+bool ConstantBounds::HasNonDefaultLowerBound() const {
+  for (auto n : lbounds_) {
+    if (n != 1) {
+      return true;
+    }
+  }
+  return false;
+}
+
 ConstantSubscript ConstantBounds::SubscriptsToOffset(
     const ConstantSubscripts &index) const {
   CHECK(GetRank(index) == GetRank(shape_));
@@ -344,6 +353,12 @@ Constant<SomeDerived>::GetScalarValue() const {
 StructureConstructor Constant<SomeDerived>::At(
     const ConstantSubscripts &index) const {
   return {result().derivedTypeSpec(), values_.at(SubscriptsToOffset(index))};
+}
+
+bool Constant<SomeDerived>::operator==(
+    const Constant<SomeDerived> &that) const {
+  return result().derivedTypeSpec() == that.result().derivedTypeSpec() &&
+      shape() == that.shape() && values_ == that.values_;
 }
 
 auto Constant<SomeDerived>::Reshape(ConstantSubscripts &&dims) const

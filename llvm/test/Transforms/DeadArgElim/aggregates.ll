@@ -137,27 +137,27 @@ define i32 @test_ret_applies_to_all() {
 ; be reduced. There is scope for further optimisation here (though not visible
 ; in this test-case).
 
-; CHECK-LABEL: define internal { i8*, i32 } @inner()
+; CHECK-LABEL: define internal { ptr, i32 } @inner()
 
-define internal {i8*, i32} @mid() {
-  %res = call {i8*, i32} @inner()
-  %intval = extractvalue {i8*, i32} %res, 1
+define internal {ptr, i32} @mid() {
+  %res = call {ptr, i32} @inner()
+  %intval = extractvalue {ptr, i32} %res, 1
   %tst = icmp eq i32 %intval, 42
   br i1 %tst, label %true, label %true
 
 true:
-  ret {i8*, i32} %res
+  ret {ptr, i32} %res
 }
 
-define internal {i8*, i32} @inner() {
-  ret {i8*, i32} {i8* null, i32 42}
+define internal {ptr, i32} @inner() {
+  ret {ptr, i32} {ptr null, i32 42}
 }
 
 define internal i8 @outer() {
-  %res = call {i8*, i32} @mid()
-  %resptr = extractvalue {i8*, i32} %res, 0
+  %res = call {ptr, i32} @mid()
+  %resptr = extractvalue {ptr, i32} %res, 0
 
-  %val = load i8, i8* %resptr
+  %val = load i8, ptr %resptr
   ret i8 %val
 }
 
@@ -170,7 +170,7 @@ entry:
 ; CHECK: %[[invoke:.*]] = invoke i32 @agg_ret()
 ; CHECK: %[[oldret:.*]] = insertvalue { i32 } poison, i32 %[[invoke]], 0
 ; CHECK: phi { i32 } [ %[[oldret]],
-define void @PR24906() personality i32 (i32)* poison {
+define void @PR24906() personality ptr poison {
 entry:
   %tmp2 = invoke { i32 } @agg_ret()
           to label %bb3 unwind label %bb4
@@ -180,7 +180,7 @@ bb3:
   unreachable
 
 bb4:
-  %tmp4 = landingpad { i8*, i32 }
+  %tmp4 = landingpad { ptr, i32 }
           cleanup
   unreachable
 }

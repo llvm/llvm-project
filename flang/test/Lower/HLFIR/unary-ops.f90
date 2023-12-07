@@ -1,5 +1,5 @@
 ! Test lowering of unary intrinsic operations to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 subroutine parentheses_numeric_var(x)
   integer :: x

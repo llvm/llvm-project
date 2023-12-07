@@ -8,6 +8,8 @@
 // CHECK-DAG: @expm1f(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @atan2(f64, f64) -> f64 attributes {llvm.readnone}
 // CHECK-DAG: @atan2f(f32, f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @cbrt(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @cbrtf(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @tan(f64) -> f64 attributes {llvm.readnone}
 // CHECK-DAG: @tanf(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @tanh(f64) -> f64 attributes {llvm.readnone}
@@ -239,6 +241,27 @@ func.func @trunc_caller(%float: f32, %double: f64) -> (f32, f64) {
   %double_result = math.trunc %double : f64
   // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
   return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL: func @cbrt_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+func.func @cbrt_caller(%float: f32, %double: f64, %half: f16, %bfloat: bf16,
+                       %float_vec: vector<2xf32>) -> (f32, f64, f16, bf16, vector<2xf32>)  {
+  // CHECK: %[[FLOAT_RESULT:.*]] = call @cbrtf(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.cbrt %float : f32
+  // CHECK: %[[DOUBLE_RESULT:.*]] = call @cbrt(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.cbrt %double : f64
+  // Just check that these lower successfully:
+  // CHECK: call @cbrtf
+  %half_result = math.cbrt %half : f16
+  // CHECK: call @cbrtf
+  %bfloat_result = math.cbrt %bfloat : bf16
+  // CHECK: call @cbrtf
+  %vec_result = math.cbrt %float_vec : vector<2xf32>
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result, %half_result, %bfloat_result, %vec_result
+    : f32, f64, f16, bf16, vector<2xf32>
 }
 
 // CHECK-LABEL: func @cos_caller

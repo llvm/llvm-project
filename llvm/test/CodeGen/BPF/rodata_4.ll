@@ -27,7 +27,7 @@
 define i32 @test() local_unnamed_addr #0 {
 ; CHECK-LABEL: test:
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 2 bitcast (%struct.test_t1* @g to i8*), i8* align 2 bitcast (%struct.test_t1* getelementptr inbounds ([4 x %struct.test_t1], [4 x %struct.test_t1]* @test.t1, i64 0, i64 1) to i8*), i64 6, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 2 @g, ptr align 2 getelementptr inbounds ([4 x %struct.test_t1], ptr @test.t1, i64 0, i64 1), i64 6, i1 false)
 ; CHECK:  r2 = 600
 ; CHECK:  *(u16 *)(r1 + 2) = r2
 ; CHECK:  r2 = 60
@@ -37,7 +37,7 @@ entry:
 ; CHECK:  .section  .rodata,"a",@progbits
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }

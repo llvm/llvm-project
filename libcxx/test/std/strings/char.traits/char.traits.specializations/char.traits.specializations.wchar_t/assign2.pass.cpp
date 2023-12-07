@@ -21,22 +21,20 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER > 14
-constexpr bool test_constexpr()
-{
-    wchar_t c = L'1';
-    std::char_traits<wchar_t>::assign(c, L'a');
-    return c == L'a';
+constexpr bool test_constexpr() {
+  wchar_t c = L'1';
+  std::char_traits<wchar_t>::assign(c, L'a');
+  return c == L'a';
 }
 #endif
 
-int main(int, char**)
-{
-    wchar_t c = L'\0';
-    std::char_traits<wchar_t>::assign(c, L'a');
-    assert(c == L'a');
+int main(int, char**) {
+  wchar_t c = L'\0';
+  std::char_traits<wchar_t>::assign(c, L'a');
+  assert(c == L'a');
 
 #if TEST_STD_VER > 14
-    static_assert(test_constexpr(), "" );
+  static_assert(test_constexpr(), "");
 #endif
 
   return 0;

@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
-namespace clang {
-namespace tidy {
-namespace objc {
+namespace clang::tidy::objc {
 
 /// Warn if XCTAssertEqual() or XCTAssertNotEqual() is used with at least one
 /// operands of type NSString*.
@@ -32,8 +30,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace objc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::objc
 
 #endif // THIRD_PARTY_LLVM_LLVM_PROJECT_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_OBJCASSERTEQUALS_H_

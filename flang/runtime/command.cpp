@@ -107,9 +107,13 @@ static void StoreLengthToDescriptor(
 }
 
 template <int KIND> struct FitsInIntegerKind {
-  bool operator()(std::int64_t value) {
-    return value <= std::numeric_limits<Fortran::runtime::CppTypeFor<
-                        Fortran::common::TypeCategory::Integer, KIND>>::max();
+  bool operator()([[maybe_unused]] std::int64_t value) {
+    if constexpr (KIND >= 8) {
+      return true;
+    } else {
+      return value <= std::numeric_limits<Fortran::runtime::CppTypeFor<
+                          Fortran::common::TypeCategory::Integer, KIND>>::max();
+    }
   }
 };
 
@@ -226,45 +230,42 @@ static std::size_t LengthWithoutTrailingSpaces(const Descriptor &d) {
   return s + 1;
 }
 
-static const char *GetEnvVariableValue(
-    const Descriptor &name, bool trim_name, const char *sourceFile, int line) {
-  std::size_t nameLength{
-      trim_name ? LengthWithoutTrailingSpaces(name) : name.ElementBytes()};
-  if (nameLength == 0) {
-    return nullptr;
-  }
-
+std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
+    const Descriptor *value, const Descriptor *length, bool trim_name,
+    const Descriptor *errmsg, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
-  const char *value{executionEnvironment.GetEnv(
-      name.OffsetElement(), nameLength, terminator)};
-  return value;
-}
 
-std::int32_t RTNAME(EnvVariableValue)(const Descriptor &name,
-    const Descriptor *value, bool trim_name, const Descriptor *errmsg,
-    const char *sourceFile, int line) {
-  if (IsValidCharDescriptor(value)) {
+  if (value) {
+    RUNTIME_CHECK(terminator, IsValidCharDescriptor(value));
     FillWithSpaces(*value);
   }
 
-  const char *rawValue{GetEnvVariableValue(name, trim_name, sourceFile, line)};
+  // Store 0 in case we error out later on.
+  if (length) {
+    RUNTIME_CHECK(terminator, IsValidIntDescriptor(length));
+    StoreLengthToDescriptor(length, 0, terminator);
+  }
+
+  const char *rawValue{nullptr};
+  std::size_t nameLength{
+      trim_name ? LengthWithoutTrailingSpaces(name) : name.ElementBytes()};
+  if (nameLength != 0) {
+    rawValue = executionEnvironment.GetEnv(
+        name.OffsetElement(), nameLength, terminator);
+  }
   if (!rawValue) {
     return ToErrmsg(errmsg, StatMissingEnvVariable);
   }
 
-  if (IsValidCharDescriptor(value)) {
-    return CopyToDescriptor(*value, rawValue, StringLength(rawValue), errmsg);
+  std::int64_t varLen{StringLength(rawValue)};
+  if (length && FitsInDescriptor(length, varLen, terminator)) {
+    StoreLengthToDescriptor(length, varLen, terminator);
   }
 
+  if (value) {
+    return CopyToDescriptor(*value, rawValue, varLen, errmsg);
+  }
   return StatOk;
 }
 
-std::int64_t RTNAME(EnvVariableLength)(
-    const Descriptor &name, bool trim_name, const char *sourceFile, int line) {
-  const char *value{GetEnvVariableValue(name, trim_name, sourceFile, line)};
-  if (!value) {
-    return 0;
-  }
-  return StringLength(value);
-}
 } // namespace Fortran::runtime

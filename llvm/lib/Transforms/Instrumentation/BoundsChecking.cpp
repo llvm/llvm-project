@@ -23,8 +23,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -56,7 +54,7 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
                                  const DataLayout &DL, TargetLibraryInfo &TLI,
                                  ObjectSizeOffsetEvaluator &ObjSizeEval,
                                  BuilderTy &IRB, ScalarEvolution &SE) {
-  uint64_t NeededSize = DL.getTypeStoreSize(InstVal->getType());
+  TypeSize NeededSize = DL.getTypeStoreSize(InstVal->getType());
   LLVM_DEBUG(dbgs() << "Instrument " << *Ptr << " for " << Twine(NeededSize)
                     << " bytes\n");
 
@@ -71,8 +69,8 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   Value *Offset = SizeOffset.second;
   ConstantInt *SizeCI = dyn_cast<ConstantInt>(Size);
 
-  Type *IntTy = DL.getIntPtrType(Ptr->getType());
-  Value *NeededSizeVal = ConstantInt::get(IntTy, NeededSize);
+  Type *IndexTy = DL.getIndexType(Ptr->getType());
+  Value *NeededSizeVal = IRB.CreateTypeSize(IndexTy, NeededSize);
 
   auto SizeRange = SE.getUnsignedRange(SE.getSCEV(Size));
   auto OffsetRange = SE.getUnsignedRange(SE.getSCEV(Offset));
@@ -97,7 +95,7 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   Value *Or = IRB.CreateOr(Cmp2, Cmp3);
   if ((!SizeCI || SizeCI->getValue().slt(0)) &&
       !SizeRange.getSignedMin().isNonNegative()) {
-    Value *Cmp1 = IRB.CreateICmpSLT(Offset, ConstantInt::get(IntTy, 0));
+    Value *Cmp1 = IRB.CreateICmpSLT(Offset, ConstantInt::get(IndexTy, 0));
     Or = IRB.CreateOr(Cmp1, Or);
   }
 

@@ -47,7 +47,7 @@ struct SizedViewWithUnsizedSentinel : std::ranges::view_base {
 
   constexpr auto begin() const { return iterator(begin_); }
   constexpr auto end() const { return sentinel(iterator(end_)); }
-  constexpr size_t size() const { return end_ - begin_; }
+  constexpr std::size_t size() const { return end_ - begin_; }
 };
 static_assert(std::ranges::random_access_range<SizedViewWithUnsizedSentinel>);
 static_assert(std::ranges::sized_range<SizedViewWithUnsizedSentinel>);
@@ -219,6 +219,27 @@ constexpr bool test() {
     test_small_range(std::ranges::subrange(buf, buf + N));
     test_small_range(std::views::iota(1, 8));
   }
+
+#if TEST_STD_VER >= 23
+  // `views::drop(repeat_view, n)` returns a `repeat_view` when `repeat_view` models `sized_range`.
+  {
+    auto repeat                                = std::ranges::repeat_view<int, int>(1, 8);
+    using Result                               = std::ranges::repeat_view<int, int>;
+    std::same_as<Result> decltype(auto) result = repeat | std::views::drop(3);
+    static_assert(std::ranges::sized_range<Result>);
+    assert(result.size() == 5);
+    assert(*result.begin() == 1);
+  }
+
+  // `views::drop(repeat_view, n)` returns a `repeat_view` when `repeat_view` doesn't model `sized_range`.
+  {
+    auto repeat                                = std::ranges::repeat_view<int>(1);
+    using Result                               = std::ranges::repeat_view<int, std::unreachable_sentinel_t>;
+    std::same_as<Result> decltype(auto) result = repeat | std::views::drop(3);
+    static_assert(!std::ranges::sized_range<Result>);
+    static_assert(std::same_as<std::unreachable_sentinel_t, decltype(result.end())>);
+  }
+#endif
 
   // Test that it's possible to call `std::views::drop` with any single argument as long as the resulting closure is
   // never invoked. There is no good use case for it, but it's valid.

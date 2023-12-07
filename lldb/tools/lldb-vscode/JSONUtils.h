@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
+#include <optional>
 
 namespace lldb_vscode {
 
@@ -210,8 +211,8 @@ void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
 ///     fallback.
 void AppendBreakpoint(
     lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints,
-    llvm::Optional<llvm::StringRef> request_path = std::nullopt,
-    llvm::Optional<uint32_t> request_line = std::nullopt);
+    std::optional<llvm::StringRef> request_path = std::nullopt,
+    std::optional<uint32_t> request_line = std::nullopt);
 
 /// Converts breakpoint location to a Visual Studio Code "Breakpoint"
 ///
@@ -231,13 +232,21 @@ void AppendBreakpoint(
 ///     provided by the setBreakpoints request are returned to the IDE as a
 ///     fallback.
 ///
+/// \param[in] request_column
+///     An optional column to use when creating the resulting "Breakpoint" object.
+///     It is used if the breakpoint has no valid locations.
+///     It is useful to ensure the same column
+///     provided by the setBreakpoints request are returned to the IDE as a
+///     fallback.
+///
 /// \return
 ///     A "Breakpoint" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Value
 CreateBreakpoint(lldb::SBBreakpoint &bp,
-                 llvm::Optional<llvm::StringRef> request_path = std::nullopt,
-                 llvm::Optional<uint32_t> request_line = std::nullopt);
+                 std::optional<llvm::StringRef> request_path = std::nullopt,
+                 std::optional<uint32_t> request_line = std::nullopt,
+                 std::optional<uint32_t> request_column = std::nullopt);
 
 /// Converts a LLDB module to a VS Code DAP module for use in "modules" events.
 ///
@@ -314,31 +323,6 @@ llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry);
 ///     A "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateSource(llvm::StringRef source_path);
-
-/// Create a "Source" object for a given frame.
-///
-/// When there is no source file information for a stack frame, we will
-/// create disassembly for a function and store a permanent
-/// "sourceReference" that contains the textual disassembly for a
-/// function along with address to line information. The "Source" object
-/// that is created will contain a "sourceReference" that the VSCode
-/// protocol can later fetch as text in order to display disassembly.
-/// The PC will be extracted from the frame and the disassembly line
-/// within the source referred to by "sourceReference" will be filled
-/// in.
-///
-/// \param[in] frame
-///     The LLDB stack frame to use when populating out the "Source"
-///     object.
-///
-/// \param[out] disasm_line
-///     The line within the "sourceReference" file that the PC from
-///     \a frame matches.
-///
-/// \return
-///     A "Source" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line);
 
 /// Create a "StackFrame" object for a LLDB frame object.
 ///
@@ -478,13 +462,19 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit);
 /// \param[in] comm_file
 ///     The fifo file used to communicate the with the target launcher.
 ///
+/// \param[in] debugger_pid
+///     The PID of the lldb-vscode instance that will attach to the target. The
+///     launcher uses it on Linux tell the kernel that it should allow the
+///     debugger process to attach.
+///
 /// \return
 ///     A "runInTerminal" JSON object that follows the specification outlined by
 ///     Microsoft.
 llvm::json::Object
 CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
                                   llvm::StringRef debug_adaptor_path,
-                                  llvm::StringRef comm_file);
+                                  llvm::StringRef comm_file,
+                                  lldb::pid_t debugger_pid);
 
 /// Create a "Terminated" JSON object that contains statistics
 ///

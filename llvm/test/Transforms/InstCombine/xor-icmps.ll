@@ -43,8 +43,8 @@ define i1 @eq_ne_zero(i4 %x, i4 %y) {
 define i1 @slt_zero(i4 %x, i4 %y) {
 ; CHECK-LABEL: @slt_zero(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i4 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i4 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %i0 = icmp slt i4 %x, 0
   %i1 = icmp slt i4 %y, 0
@@ -89,8 +89,8 @@ define i1 @sgt_zero(i4 %x, i4 %y) {
 define i1 @sgt_minus1(i4 %x, i4 %y) {
 ; CHECK-LABEL: @sgt_minus1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i4 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i4 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %i0 = icmp sgt i4 %x, -1
   %i1 = icmp sgt i4 %y, -1
@@ -101,8 +101,8 @@ define i1 @sgt_minus1(i4 %x, i4 %y) {
 define i1 @slt_zero_sgt_minus1(i4 %x, i4 %y) {
 ; CHECK-LABEL: @slt_zero_sgt_minus1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i4 [[TMP1]], -1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i4 [[TMP1]], -1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %i0 = icmp slt i4 %x, 0
   %i1 = icmp sgt i4 %y, -1
@@ -113,8 +113,8 @@ define i1 @slt_zero_sgt_minus1(i4 %x, i4 %y) {
 define <2 x i1> @sgt_minus1_slt_zero_sgt(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @sgt_minus1_slt_zero_sgt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i4> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i4> [[TMP1]], <i4 -1, i4 -1>
-; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i4> [[TMP1]], <i4 -1, i4 -1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %i1 = icmp sgt <2 x i4> %x, <i4 -1, i4 -1>
   %i0 = icmp slt <2 x i4> %y, zeroinitializer
@@ -139,8 +139,8 @@ define i1 @different_type_cmp_ops(i32 %x, i64 %y) {
 
 define i1 @test13(i8 %A, i8 %B) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[E:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[E]]
 ;
   %C = icmp ult i8 %A, %B
   %D = icmp ugt i8 %A, %B

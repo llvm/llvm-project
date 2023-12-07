@@ -6,14 +6,14 @@
 ; RUN: llc -mtriple=arm-apple-none-macho -relocation-model=static -o -  %s | FileCheck %s --check-prefix=CHECK-STATIC
 @var = global [16 x i32] zeroinitializer
 
-declare void @bar(i32*)
+declare void @bar(ptr)
 
 define void @foo() {
-  %flag = load i32, i32* getelementptr inbounds([16 x i32], [16 x i32]* @var, i32 0, i32 1)
+  %flag = load i32, ptr getelementptr inbounds([16 x i32], ptr @var, i32 0, i32 1)
   %tst = icmp eq i32 %flag, 0
   br i1 %tst, label %true, label %false
 true:
-  tail call void @bar(i32* getelementptr inbounds([16 x i32], [16 x i32]* @var, i32 0, i32 4))
+  tail call void @bar(ptr getelementptr inbounds([16 x i32], ptr @var, i32 0, i32 4))
   ret void
 false:
   ret void

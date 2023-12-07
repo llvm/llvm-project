@@ -9,7 +9,7 @@
 #include "src/__support/UInt128.h"
 #include "src/__support/high_precision_decimal.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcHighPrecisionDecimalTest, BasicInit) {
   __llvm_libc::internal::HighPrecisionDecimal hpd =
@@ -390,4 +390,19 @@ TEST(LlvmLibcHighPrecisionDecimalTest, RoundingTest) {
   UInt128 result = UInt128(1) << 100;
 
   EXPECT_EQ(hpd.round_to_integer_type<UInt128>(), result);
+}
+
+TEST(LlvmLibcHighPrecisionDecimalTest, BigExpTest) {
+  __llvm_libc::internal::HighPrecisionDecimal big_hpd =
+      __llvm_libc::internal::HighPrecisionDecimal("1e123456789");
+
+  // We need to add one to handle the digit before the decimal point in our
+  // number.
+  EXPECT_EQ(big_hpd.get_decimal_point(), 123456789 + 1);
+
+  __llvm_libc::internal::HighPrecisionDecimal big_negative_hpd =
+      __llvm_libc::internal::HighPrecisionDecimal("1e-123456789");
+
+  // Same, but since the number is negative the net result is -123456788
+  EXPECT_EQ(big_negative_hpd.get_decimal_point(), -123456789 + 1);
 }

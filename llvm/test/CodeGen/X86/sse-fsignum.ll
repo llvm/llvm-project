@@ -38,10 +38,10 @@ define void @signum64a(ptr) {
 ; AVX-NEXT:    vmovapd (%rdi), %xmm0
 ; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vcmpltpd %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; AVX-NEXT:    vcvtdq2pd %xmm2, %xmm2
 ; AVX-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; AVX-NEXT:    vsubpd %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vmovapd %xmm0, (%rdi)

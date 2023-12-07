@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple i686-pc-win32 -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple aarch64-windows -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple aarch64-windows -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
 // NOTE: we're passing "-O1 -disable-llvm-passes" to avoid adding optnone and noinline everywhere.
 
 void abort(void) __attribute__((noreturn));
@@ -20,14 +20,14 @@ void basic_finally(void) {
 // CHECK:     to label %[[invoke_cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
 // CHECK: [[invoke_cont]]
-// CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"?fin$0@0@basic_finally@@"({{i8 noundef( zeroext)?}} 0, i8* noundef %[[fp]])
+// CHECK: %[[fp:[^ ]*]] = call ptr @llvm.localaddress()
+// CHECK: call void @"?fin$0@0@basic_finally@@"({{i8 noundef( zeroext)?}} 0, ptr noundef %[[fp]])
 // CHECK-NEXT: ret void
 //
 // CHECK: [[lpad]]
 // CHECK-NEXT: %[[pad:[^ ]*]] = cleanuppad
-// CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"?fin$0@0@basic_finally@@"({{i8 noundef( zeroext)?}} 1, i8* noundef %[[fp]])
+// CHECK: %[[fp:[^ ]*]] = call ptr @llvm.localaddress()
+// CHECK: call void @"?fin$0@0@basic_finally@@"({{i8 noundef( zeroext)?}} 1, ptr noundef %[[fp]])
 // CHECK-NEXT: cleanupret from %[[pad]] unwind to caller
 
 // CHECK: define internal void @"?fin$0@0@basic_finally@@"({{.*}})
@@ -60,8 +60,8 @@ l:
 // CHECK:     to label %[[invoke_cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
 // CHECK: [[invoke_cont]]
-// CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"?fin$0@0@label_in_finally@@"({{i8 noundef( zeroext)?}} 0, i8* noundef %[[fp]])
+// CHECK: %[[fp:[^ ]*]] = call ptr @llvm.localaddress()
+// CHECK: call void @"?fin$0@0@label_in_finally@@"({{i8 noundef( zeroext)?}} 0, ptr noundef %[[fp]])
 // CHECK: ret void
 
 // CHECK: define internal void @"?fin$0@0@label_in_finally@@"({{.*}})
@@ -88,20 +88,20 @@ void use_abnormal_termination(void) {
 // CHECK:     to label %[[invoke_cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
 // CHECK: [[invoke_cont]]
-// CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"?fin$0@0@use_abnormal_termination@@"({{i8 noundef( zeroext)?}} 0, i8* noundef %[[fp]])
+// CHECK: %[[fp:[^ ]*]] = call ptr @llvm.localaddress()
+// CHECK: call void @"?fin$0@0@use_abnormal_termination@@"({{i8 noundef( zeroext)?}} 0, ptr noundef %[[fp]])
 // CHECK: ret void
 //
 // CHECK: [[lpad]]
 // CHECK-NEXT: %[[pad:[^ ]*]] = cleanuppad
-// CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"?fin$0@0@use_abnormal_termination@@"({{i8 noundef( zeroext)?}} 1, i8* noundef %[[fp]])
+// CHECK: %[[fp:[^ ]*]] = call ptr @llvm.localaddress()
+// CHECK: call void @"?fin$0@0@use_abnormal_termination@@"({{i8 noundef( zeroext)?}} 1, ptr noundef %[[fp]])
 // CHECK-NEXT: cleanupret from %[[pad]] unwind to caller
 
-// CHECK: define internal void @"?fin$0@0@use_abnormal_termination@@"({{i8 noundef( zeroext)?}} %[[abnormal:abnormal_termination]], i8* noundef %frame_pointer)
+// CHECK: define internal void @"?fin$0@0@use_abnormal_termination@@"({{i8 noundef( zeroext)?}} %[[abnormal:abnormal_termination]], ptr noundef %frame_pointer)
 // CHECK-SAME: [[finally_attrs]]
 // CHECK: %[[abnormal_zext:[^ ]*]] = zext i8 %[[abnormal]] to i32
-// CHECK: store i32 %[[abnormal_zext]], i32* @crashed
+// CHECK: store i32 %[[abnormal_zext]], ptr @crashed
 // CHECK-NEXT: ret void
 
 void noreturn_noop_finally(void) {
@@ -154,8 +154,11 @@ int finally_with_return(void) {
   }
 }
 // CHECK-LABEL: define dso_local i32 @finally_with_return()
+// CHECK: store i32 1, ptr %cleanup.dest.slot
+// CHECK: %cleanup.dest = load i32, ptr %cleanup.dest.slot
+// CHECK: icmp ne i32 %cleanup.dest
 // CHECK: call void @"?fin$0@0@finally_with_return@@"({{.*}})
-// CHECK-NEXT: ret i32 42
+// CHECK: ret i32 42
 
 // CHECK: define internal void @"?fin$0@0@finally_with_return@@"({{.*}})
 // CHECK-SAME: [[finally_attrs]]
@@ -280,7 +283,7 @@ void finally_with_func(void) {
 }
 
 // CHECK-LABEL: define internal void @"?fin$0@0@finally_with_func@@"({{[^)]*}})
-// CHECK: call void @cleanup_with_func(i8* noundef getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@COAGBPGM@finally_with_func?$AA@", i{{32|64}} 0, i{{32|64}} 0))
+// CHECK: call void @cleanup_with_func(ptr noundef @"??_C@_0BC@COAGBPGM@finally_with_func?$AA@")
 
 // Look for the absence of noinline.  nounwind is expected; any further
 // attributes should be string attributes.

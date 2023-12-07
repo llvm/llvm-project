@@ -8,11 +8,11 @@
 target triple = "hexagon"
 
 ; Function Attrs: nounwind
-define void @foo(<16 x i32> %v0, <16 x i32> %v1, <16 x i32>* nocapture %p) #0 {
+define void @foo(<16 x i32> %v0, <16 x i32> %v1, ptr nocapture %p) #0 {
 entry:
   %0 = tail call <64 x i1> asm "$0 = vgtw($1.w,$2.w)", "=q,v,v"(<16 x i32> %v0, <16 x i32> %v1) #1
   %1 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %0, i32 -1) #1
-  store <16 x i32> %1, <16 x i32>* %p, align 64
+  store <16 x i32> %1, ptr %p, align 64
   ret void
 }
 

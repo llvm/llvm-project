@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "../utils/FileExtensionsUtils.h"
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 /// Warns when using 'static' functions or variables at global scope, and
 /// suggests moving them to an anonymous namespace.
@@ -28,7 +26,7 @@ namespace misc {
 ///     empty string between ";" if there are other filename extensions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-anonymous-namespace.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/misc/use-anonymous-namespace.html
 class UseAnonymousNamespaceCheck : public ClangTidyCheck {
 public:
   UseAnonymousNamespaceCheck(StringRef Name, ClangTidyContext *Context);
@@ -40,12 +38,10 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const StringRef RawStringHeaderFileExtensions;
-  utils::FileExtensionsSet HeaderFileExtensions;
+  StringRef RawStringHeaderFileExtensions;
+  FileExtensionsSet HeaderFileExtensions;
 };
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_USEANONYMOUSNAMESPACECHECK_H

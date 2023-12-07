@@ -8,10 +8,10 @@
 define i32 @main() #0 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
-  %0 = load i32, i32* @x, align 4
+  store i32 0, ptr %retval
+  %0 = load i32, ptr @x, align 4
   %1 = call i32 @llvm.ctlz.i32(i32 %0, i1 true)
-  store i32 %1, i32* @y, align 4
+  store i32 %1, ptr @y, align 4
   ret i32 0
 }
 

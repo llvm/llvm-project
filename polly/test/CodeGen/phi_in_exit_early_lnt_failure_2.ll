@@ -10,22 +10,21 @@
 ; CHECK:          %eps1.addr.0.ph.merge = phi double [ %eps1.addr.0.ph.final_reload, %polly.exiting ], [ %eps1.addr.0.ph, %if.end.47.region_exiting ]
 ;
 ; CHECK-LABEL: polly.start:
-; CHECK-NEXT:    store double %eps1, double* %eps1.s2a
+; CHECK-NEXT:    store double %eps1, ptr %eps1.s2a
 ;
 ; CHECK-LABEL: polly.exiting:
-; CHECK-NEXT:     %eps1.addr.0.ph.final_reload = load double, double* %eps1.addr.0.s2a
+; CHECK-NEXT:     %eps1.addr.0.ph.final_reload = load double, ptr %eps1.addr.0.s2a
 ;
-define void @dbisect(double* %c, double* %b, double %eps1, double* %eps2) {
+define void @dbisect(ptr %c, ptr %b, double %eps1, ptr %eps2) {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  store double 0.000000e+00, double* %b, align 8
+  store double 0.000000e+00, ptr %b, align 8
   br i1 false, label %for.inc, label %for.end
 
 if.end:                                           ; preds = %if.then, %for.body
-  %arrayidx33 = getelementptr inbounds double, double* %c, i64 0
-  %0 = load double, double* %arrayidx33, align 8
+  %0 = load double, ptr %c, align 8
   br label %for.inc
 
 for.inc:                                          ; preds = %if.then.36, %if.end
@@ -39,7 +38,7 @@ for.end:                                          ; preds = %for.cond.for.end_cr
   br i1 %cmp45, label %if.end.47, label %if.then.46
 
 if.then.46:                                       ; preds = %for.end
-  %1 = load double, double* %eps2, align 8
+  %1 = load double, ptr %eps2, align 8
   br label %if.end.47
 
 if.end.47:                                        ; preds = %if.then.46, %for.end

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-#===- symcov-report-server.py - Coverage Reports HTTP Serve --*- python -*--===#
+# ===- symcov-report-server.py - Coverage Reports HTTP Serve --*- python -*--===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===------------------------------------------------------------------------===#
-'''(EXPERIMENTAL) HTTP server to browse coverage reports from .symcov files.
+# ===------------------------------------------------------------------------===#
+"""(EXPERIMENTAL) HTTP server to browse coverage reports from .symcov files.
 
 Coverage reports for big binaries are too huge, generating them statically
 makes no sense. Start the server and go to localhost:8001 instead.
@@ -19,7 +19,7 @@ Usage:
 Other options:
     --port port_number - specifies the port to use (8001)
     --host host_name - host name to bind server to (127.0.0.1)
-'''
+"""
 
 from __future__ import print_function
 
@@ -71,10 +71,13 @@ $content
 </html>
 """
 
+FILE_URI_PREFIX = "/file/"
+
+
 class SymcovData:
     def __init__(self, symcov_json):
-        self.covered_points = frozenset(symcov_json['covered-points'])
-        self.point_symbol_info = symcov_json['point-symbol-info']
+        self.covered_points = frozenset(symcov_json["covered-points"])
+        self.point_symbol_info = symcov_json["point-symbol-info"]
         self.file_coverage = self.compute_filecoverage()
 
     def filenames(self):
@@ -112,25 +115,29 @@ class SymcovData:
             for fn, points in fns.items():
                 file_points.extend(points.keys())
             covered_points = self.covered_points & set(file_points)
-            result[filename] = int(math.ceil(
-                len(covered_points) * 100 / len(file_points)))
+            result[filename] = int(
+                math.ceil(len(covered_points) * 100 / len(file_points))
+            )
         return result
 
 
 def format_pct(pct):
     pct_str = str(max(0, min(100, pct)))
-    zeroes = '0' * (3 - len(pct_str))
+    zeroes = "0" * (3 - len(pct_str))
     if zeroes:
         zeroes = '<span class="lz">{0}</span>'.format(zeroes)
     return zeroes + pct_str
+
 
 class ServerHandler(http.server.BaseHTTPRequestHandler):
     symcov_data = None
     src_path = None
 
     def do_GET(self):
-        norm_path = os.path.normpath(urllib.parse.unquote(self.path[1:]))
-        if self.path == '/':
+        norm_path = os.path.normpath(
+            urllib.parse.unquote(self.path[len(FILE_URI_PREFIX) :])
+        )
+        if self.path == "/":
             self.send_response(200)
             self.send_header("Content-type", "text/html; charset=utf-8")
             self.end_headers()
@@ -141,17 +148,21 @@ class ServerHandler(http.server.BaseHTTPRequestHandler):
                 if not file_coverage:
                     continue
                 filelist.append(
-                        "<tr><td><a href=\"./{name}\">{name}</a></td>"
-                        "<td>{coverage}%</td></tr>".format(
-                            name=html.escape(filename, quote=True), 
-                            coverage=format_pct(file_coverage)))
+                    '<tr><td><a href="{prefix}{name}">{name}</a></td>'
+                    "<td>{coverage}%</td></tr>".format(
+                        prefix=FILE_URI_PREFIX,
+                        name=html.escape(filename, quote=True),
+                        coverage=format_pct(file_coverage),
+                    )
+                )
 
             response = string.Template(INDEX_PAGE_TMPL).safe_substitute(
-                filenames='\n'.join(filelist))
-            self.wfile.write(response.encode('UTF-8', 'replace'))
+                filenames="\n".join(filelist)
+            )
+            self.wfile.write(response.encode("UTF-8", "replace"))
         elif self.symcov_data.has_file(norm_path):
             filename = norm_path
-            filepath = os.path.join(self.src_path, filename) 
+            filepath = os.path.join(self.src_path, filename)
             if not os.path.exists(filepath):
                 self.send_response(404)
                 self.end_headers()
@@ -163,18 +174,22 @@ class ServerHandler(http.server.BaseHTTPRequestHandler):
 
             linemap = self.symcov_data.compute_linemap(filename)
 
-            with open(filepath, 'r', encoding='utf8') as f:
+            with open(filepath, "r", encoding="utf8") as f:
                 content = "\n".join(
-                        ["<span class='{cls}'>{line}&nbsp;</span>".format(
-                            line=html.escape(line.rstrip()), 
-                            cls=linemap.get(line_no, ""))
-                            for line_no, line in enumerate(f, start=1)])
+                    [
+                        "<span class='{cls}'>{line}&nbsp;</span>".format(
+                            line=html.escape(line.rstrip()),
+                            cls=linemap.get(line_no, ""),
+                        )
+                        for line_no, line in enumerate(f, start=1)
+                    ]
+                )
 
             response = string.Template(CONTENT_PAGE_TMPL).safe_substitute(
-                path=self.path[1:],
-                content=content)
+                path=self.path[1:], content=content
+            )
 
-            self.wfile.write(response.encode('UTF-8', 'replace'))
+            self.wfile.write(response.encode("UTF-8", "replace"))
         else:
             self.send_response(404)
             self.end_headers()
@@ -182,10 +197,10 @@ class ServerHandler(http.server.BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description="symcov report http server.")
-    parser.add_argument('--host', default='127.0.0.1')
-    parser.add_argument('--port', default=8001)
-    parser.add_argument('--symcov', required=True, type=argparse.FileType('r'))
-    parser.add_argument('--srcpath', required=True)
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", default=8001)
+    parser.add_argument("--symcov", required=True, type=argparse.FileType("r"))
+    parser.add_argument("--srcpath", required=True)
     args = parser.parse_args()
 
     print("Loading coverage...")
@@ -202,5 +217,6 @@ def main():
         pass
     httpd.server_close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

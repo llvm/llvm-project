@@ -22,7 +22,7 @@ entry:
 ;CHECK-ASM-NEXT:                                         # -IsFloatingPointOperationLogOrAbortEnabled
 ;CHECK-ASM-NEXT:        .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ;CHECK-ASM-NEXT:                                         # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
-;CHECK-ASM-NEXT:        .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
+;CHECK-ASM-NEXT:        .byte   0x00                            # -IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
 ;CHECK-ASM-NEXT:        .byte   0x40                            # -HasExtensionTable, +HasVectorInfo, NumOfGPRsSaved = 0
 ;CHECK-ASM-NEXT:        .byte   0x00                            # NumberOfFixedParms = 0
 ;CHECK-ASM-NEXT:        .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack

@@ -759,7 +759,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
       break;
 
     SdwaSel DstSel = static_cast<SdwaSel>(
-      TII->getNamedImmOperand(*SDWAInst, AMDGPU::OpName::dst_sel));;
+        TII->getNamedImmOperand(*SDWAInst, AMDGPU::OpName::dst_sel));
     SdwaSel OtherDstSel = static_cast<SdwaSel>(
       TII->getNamedImmOperand(*OtherInst, AMDGPU::OpName::dst_sel));
 
@@ -1158,9 +1158,9 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
     if (!Op.isImm() && !(Op.isReg() && !TRI->isVGPR(*MRI, Op.getReg())))
       continue;
 
-    unsigned I = MI.getOperandNo(&Op);
-    if (Desc.OpInfo[I].RegClass == -1 ||
-        !TRI->isVSSuperClass(TRI->getRegClass(Desc.OpInfo[I].RegClass)))
+    unsigned I = Op.getOperandNo();
+    if (Desc.operands()[I].RegClass == -1 ||
+        !TRI->isVSSuperClass(TRI->getRegClass(Desc.operands()[I].RegClass)))
       continue;
 
     if (ST.hasSDWAScalar() && ConstantBusCount == 0 && Op.isReg() &&

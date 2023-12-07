@@ -288,7 +288,6 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
   // stack frame. If it wants one, re-use a suitable one we've previously
   // allocated, or if there isn't one that fits the bill, allocate a new one
   // and ask the target to create a defining instruction for it.
-  bool UsedBaseReg = false;
 
   MachineFrameInfo &MFI = Fn.getFrameInfo();
   const TargetRegisterInfo *TRI = Fn.getSubtarget().getRegisterInfo();
@@ -386,7 +385,7 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
     // instruction itself will be taken into account by the target,
     // so we don't have to adjust for it here when reusing a base
     // register.
-    if (UsedBaseReg &&
+    if (BaseReg.isValid() &&
         lookupCandidateBaseReg(BaseReg, BaseOffset, FrameSizeAdjust,
                                LocalOffset, MI, TRI)) {
       LLVM_DEBUG(dbgs() << "  Reusing base register " << BaseReg << "\n");
@@ -396,8 +395,7 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
       // No previously defined register was in range, so create a new one.
       int64_t InstrOffset = TRI->getFrameIndexInstrOffset(&MI, idx);
 
-      int64_t PrevBaseOffset = BaseOffset;
-      BaseOffset = FrameSizeAdjust + LocalOffset + InstrOffset;
+      int64_t CandBaseOffset = FrameSizeAdjust + LocalOffset + InstrOffset;
 
       // We'd like to avoid creating single-use virtual base registers.
       // Because the FrameRefs are in sorted order, and we've already
@@ -406,12 +404,13 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
       // then don't bother creating it.
       if (ref + 1 >= e ||
           !lookupCandidateBaseReg(
-              BaseReg, BaseOffset, FrameSizeAdjust,
+              BaseReg, CandBaseOffset, FrameSizeAdjust,
               FrameReferenceInsns[ref + 1].getLocalOffset(),
-              *FrameReferenceInsns[ref + 1].getMachineInstr(), TRI)) {
-        BaseOffset = PrevBaseOffset;
+              *FrameReferenceInsns[ref + 1].getMachineInstr(), TRI))
         continue;
-      }
+
+      // Save the base offset.
+      BaseOffset = CandBaseOffset;
 
       // Tell the target to insert the instruction to initialize
       // the base register.
@@ -428,7 +427,6 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
       Offset = -InstrOffset;
 
       ++NumBaseRegisters;
-      UsedBaseReg = true;
     }
     assert(BaseReg && "Unable to allocate virtual base register!");
 
@@ -440,5 +438,5 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
     ++NumReplacements;
   }
 
-  return UsedBaseReg;
+  return BaseReg.isValid();
 }

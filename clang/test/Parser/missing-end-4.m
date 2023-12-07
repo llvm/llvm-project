@@ -37,10 +37,10 @@
 - (C<P>*) MyMeth {}
 @end
 
-@interface I2 {}
-@protocol P2; // expected-error {{illegal interface qualifier}}
-@class C2; // expected-error {{illegal interface qualifier}}
-@end
+@interface I2 {} // expected-note {{class started here}}
+@protocol P2; // expected-error {{missing '@end'}}
+@class C2;
+@end // expected-error {{'@end' must appear in an Objective-C context}}
 
 @interface I3
 @end

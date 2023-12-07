@@ -64,6 +64,7 @@ public:
 
   Expr<T> CSHIFT(FunctionRef<T> &&);
   Expr<T> EOSHIFT(FunctionRef<T> &&);
+  Expr<T> MERGE(FunctionRef<T> &&);
   Expr<T> PACK(FunctionRef<T> &&);
   Expr<T> RESHAPE(FunctionRef<T> &&);
   Expr<T> SPREAD(FunctionRef<T> &&);
@@ -255,11 +256,11 @@ std::optional<Constant<T>> Folder<T>::ApplyComponent(
     const std::vector<Constant<SubscriptInteger>> *subscripts) {
   if (auto scalar{structures.GetScalarValue()}) {
     if (std::optional<Expr<SomeType>> expr{scalar->Find(component)}) {
-      if (const Constant<T> *value{UnwrapConstantValue<T>(expr.value())}) {
-        if (!subscripts) {
-          return std::move(*value);
-        } else {
+      if (const Constant<T> *value{UnwrapConstantValue<T>(*expr)}) {
+        if (subscripts) {
           return ApplySubscripts(*value, *subscripts);
+        } else {
+          return *value;
         }
       }
     }
@@ -397,9 +398,11 @@ template <typename T> Expr<T> Folder<T>::Folding(Designator<T> &&designator) {
 template <typename T>
 Constant<T> *Folder<T>::Folding(std::optional<ActualArgument> &arg) {
   if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
-    if (!UnwrapExpr<Expr<T>>(*expr)) {
-      if (auto converted{ConvertToType(T::GetType(), std::move(*expr))}) {
-        *expr = Fold(context_, std::move(*converted));
+    if constexpr (T::category != TypeCategory::Derived) {
+      if (!UnwrapExpr<Expr<T>>(*expr)) {
+        if (auto converted{ConvertToType(T::GetType(), std::move(*expr))}) {
+          *expr = Fold(context_, std::move(*converted));
+        }
       }
     }
     return UnwrapConstantValue<T>(*expr);
@@ -411,8 +414,6 @@ template <typename... A, std::size_t... I>
 std::optional<std::tuple<const Constant<A> *...>> GetConstantArgumentsHelper(
     FoldingContext &context, ActualArguments &arguments,
     std::index_sequence<I...>) {
-  static_assert(
-      (... && IsSpecificIntrinsicType<A>)); // TODO derived types for MERGE?
   static_assert(sizeof...(A) > 0);
   std::tuple<const Constant<A> *...> args{
       Folder<A>{context}.Folding(arguments.at(I))...};
@@ -489,7 +490,6 @@ Expr<TR> FoldElementalIntrinsicHelper(FoldingContext &context,
       }
     }
     CHECK(rank == GetRank(shape));
-
     // Compute all the scalar values of the results
     std::vector<Scalar<TR>> results;
     if (TotalElementCount(shape) > 0) {
@@ -513,6 +513,13 @@ Expr<TR> FoldElementalIntrinsicHelper(FoldingContext &context,
       auto len{static_cast<ConstantSubscript>(
           results.empty() ? 0 : results[0].length())};
       return Expr<TR>{Constant<TR>{len, std::move(results), std::move(shape)}};
+    } else if constexpr (TR::category == TypeCategory::Derived) {
+      if (!results.empty()) {
+        return Expr<TR>{rank == 0
+                ? Constant<TR>{results.front()}
+                : Constant<TR>{results.front().derivedTypeSpec(),
+                      std::move(results), std::move(shape)}};
+      }
     } else {
       return Expr<TR>{Constant<TR>{std::move(results), std::move(shape)}};
     }
@@ -778,6 +785,16 @@ template <typename T> Expr<T> Folder<T>::EOSHIFT(FunctionRef<T> &&funcRef) {
   }
   // Invalid, prevent re-folding
   return MakeInvalidIntrinsic(std::move(funcRef));
+}
+
+template <typename T> Expr<T> Folder<T>::MERGE(FunctionRef<T> &&funcRef) {
+  return FoldElementalIntrinsic<T, T, T, LogicalResult>(context_,
+      std::move(funcRef),
+      ScalarFunc<T, T, T, LogicalResult>(
+          [](const Scalar<T> &ifTrue, const Scalar<T> &ifFalse,
+              const Scalar<LogicalResult> &predicate) -> Scalar<T> {
+            return predicate.IsTrue() ? ifTrue : ifFalse;
+          }));
 }
 
 template <typename T> Expr<T> Folder<T>::PACK(FunctionRef<T> &&funcRef) {
@@ -1063,26 +1080,29 @@ Expr<T> RewriteSpecificMINorMAX(
   auto &intrinsic{DEREF(std::get_if<SpecificIntrinsic>(&funcRef.proc().u))};
   // Rewrite MAX1(args) to INT(MAX(args)) and fold. Same logic for MIN1.
   // Find result type for max/min based on the arguments.
-  DynamicType resultType{args[0].value().GetType().value()};
-  auto *resultTypeArg{&args[0]};
-  for (auto j{args.size() - 1}; j > 0; --j) {
-    DynamicType type{args[j].value().GetType().value()};
-    if (type.category() == resultType.category()) {
-      if (type.kind() > resultType.kind()) {
-        resultTypeArg = &args[j];
-        resultType = type;
-      }
-    } else if (resultType.category() == TypeCategory::Integer) {
+  std::optional<DynamicType> resultType;
+  ActualArgument *resultTypeArg{nullptr};
+  for (auto j{args.size()}; j-- > 0;) {
+    if (args[j]) {
+      DynamicType type{args[j]->GetType().value()};
       // Handle mixed real/integer arguments: all the previous arguments were
       // integers and this one is real. The type of the MAX/MIN result will
       // be the one of the real argument.
-      resultTypeArg = &args[j];
-      resultType = type;
+      if (!resultType ||
+          (type.category() == resultType->category() &&
+              type.kind() > resultType->kind()) ||
+          resultType->category() == TypeCategory::Integer) {
+        resultType = type;
+        resultTypeArg = &*args[j];
+      }
     }
+  }
+  if (!resultType) { // error recovery
+    return Expr<T>{std::move(funcRef)};
   }
   intrinsic.name =
       intrinsic.name.find("max") != std::string::npos ? "max"s : "min"s;
-  intrinsic.characteristics.value().functionResult.value().SetType(resultType);
+  intrinsic.characteristics.value().functionResult.value().SetType(*resultType);
   auto insertConversion{[&](const auto &x) -> Expr<T> {
     using TR = ResultType<decltype(x)>;
     FunctionRef<TR> maxRef{std::move(funcRef.proc()), std::move(args)};
@@ -1112,17 +1132,24 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
 template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
   ActualArguments &args{funcRef.arguments()};
-  for (std::optional<ActualArgument> &arg : args) {
-    if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
-      *expr = Fold(context, std::move(*expr));
+  const auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
+  if (!intrinsic || intrinsic->name != "kind") {
+    // Don't fold the argument to KIND(); it might be a TypeParamInquiry
+    // with a forced result type that doesn't match the parameter.
+    for (std::optional<ActualArgument> &arg : args) {
+      if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
+        *expr = Fold(context, std::move(*expr));
+      }
     }
   }
-  if (auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)}) {
+  if (intrinsic) {
     const std::string name{intrinsic->name};
     if (name == "cshift") {
       return Folder<T>{context}.CSHIFT(std::move(funcRef));
     } else if (name == "eoshift") {
       return Folder<T>{context}.EOSHIFT(std::move(funcRef));
+    } else if (name == "merge") {
+      return Folder<T>{context}.MERGE(std::move(funcRef));
     } else if (name == "pack") {
       return Folder<T>{context}.PACK(std::move(funcRef));
     } else if (name == "reshape") {
@@ -1142,17 +1169,6 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
     }
   }
   return Expr<T>{std::move(funcRef)};
-}
-
-template <typename T>
-Expr<T> FoldMerge(FoldingContext &context, FunctionRef<T> &&funcRef) {
-  return FoldElementalIntrinsic<T, T, T, LogicalResult>(context,
-      std::move(funcRef),
-      ScalarFunc<T, T, T, LogicalResult>(
-          [](const Scalar<T> &ifTrue, const Scalar<T> &ifFalse,
-              const Scalar<LogicalResult> &predicate) -> Scalar<T> {
-            return predicate.IsTrue() ? ifTrue : ifFalse;
-          }));
 }
 
 Expr<ImpliedDoIndex::Result> FoldOperation(FoldingContext &, ImpliedDoIndex &&);
@@ -1346,6 +1362,7 @@ std::optional<Expr<T>> FromArrayConstructor(
 template <typename RESULT, typename OPERAND>
 std::optional<Expr<RESULT>> MapOperation(FoldingContext &context,
     std::function<Expr<RESULT>(Expr<OPERAND> &&)> &&f, const Shape &shape,
+    [[maybe_unused]] std::optional<Expr<SubscriptInteger>> &&length,
     Expr<OPERAND> &&values) {
   ArrayConstructor<RESULT> result{values};
   if constexpr (common::HasMember<OPERAND, AllIntrinsicCategoryTypes>) {
@@ -1366,6 +1383,11 @@ std::optional<Expr<RESULT>> MapOperation(FoldingContext &context,
       result.Push(Fold(context, f(std::move(scalar))));
     }
   }
+  if constexpr (RESULT::category == TypeCategory::Character) {
+    if (length) {
+      result.set_LEN(std::move(*length));
+    }
+  }
   return FromArrayConstructor(context, std::move(result), shape);
 }
 
@@ -1381,6 +1403,28 @@ ArrayConstructor<RESULT> ArrayConstructorFromMold(
   return result;
 }
 
+template <typename LEFT, typename RIGHT>
+bool ShapesMatch(FoldingContext &context,
+    const ArrayConstructor<LEFT> &leftArrConst,
+    const ArrayConstructor<RIGHT> &rightArrConst) {
+  auto rightIter{rightArrConst.begin()};
+  for (auto &leftValue : leftArrConst) {
+    CHECK(rightIter != rightArrConst.end());
+    auto &leftExpr{std::get<Expr<LEFT>>(leftValue.u)};
+    auto &rightExpr{std::get<Expr<RIGHT>>(rightIter->u)};
+    if (leftExpr.Rank() != rightExpr.Rank()) {
+      return false;
+    }
+    std::optional<Shape> leftShape{GetShape(context, leftExpr)};
+    std::optional<Shape> rightShape{GetShape(context, rightExpr)};
+    if (!leftShape || !rightShape || *leftShape != *rightShape) {
+      return false;
+    }
+    ++rightIter;
+  }
+  return true;
+}
+
 // array * array case
 template <typename RESULT, typename LEFT, typename RIGHT>
 auto MapOperation(FoldingContext &context,
@@ -1391,11 +1435,14 @@ auto MapOperation(FoldingContext &context,
   auto result{ArrayConstructorFromMold<RESULT>(leftValues, std::move(length))};
   auto &leftArrConst{std::get<ArrayConstructor<LEFT>>(leftValues.u)};
   if constexpr (common::HasMember<RIGHT, AllIntrinsicCategoryTypes>) {
-    common::visit(
-        [&](auto &&kindExpr) {
+    bool mapped{common::visit(
+        [&](auto &&kindExpr) -> bool {
           using kindType = ResultType<decltype(kindExpr)>;
 
           auto &rightArrConst{std::get<ArrayConstructor<kindType>>(kindExpr.u)};
+          if (!ShapesMatch(context, leftArrConst, rightArrConst)) {
+            return false;
+          }
           auto rightIter{rightArrConst.begin()};
           for (auto &leftValue : leftArrConst) {
             CHECK(rightIter != rightArrConst.end());
@@ -1405,10 +1452,17 @@ auto MapOperation(FoldingContext &context,
                 f(std::move(leftScalar), Expr<RIGHT>{std::move(rightScalar)})));
             ++rightIter;
           }
+          return true;
         },
-        std::move(rightValues.u));
+        std::move(rightValues.u))};
+    if (!mapped) {
+      return std::nullopt;
+    }
   } else {
     auto &rightArrConst{std::get<ArrayConstructor<RIGHT>>(rightValues.u)};
+    if (!ShapesMatch(context, leftArrConst, rightArrConst)) {
+      return std::nullopt;
+    }
     auto rightIter{rightArrConst.begin()};
     for (auto &leftValue : leftArrConst) {
       CHECK(rightIter != rightArrConst.end());
@@ -1471,9 +1525,9 @@ auto MapOperation(FoldingContext &context,
   return FromArrayConstructor(context, std::move(result), shape);
 }
 
-template <typename DERIVED, typename RESULT, typename LEFT, typename RIGHT>
+template <typename DERIVED, typename RESULT, typename... OPD>
 std::optional<Expr<SubscriptInteger>> ComputeResultLength(
-    Operation<DERIVED, RESULT, LEFT, RIGHT> &operation) {
+    Operation<DERIVED, RESULT, OPD...> &operation) {
   if constexpr (RESULT::category == TypeCategory::Character) {
     return Expr<RESULT>{operation.derived()}.LEN();
   }
@@ -1494,7 +1548,8 @@ auto ApplyElementwise(FoldingContext &context,
   if (expr.Rank() > 0) {
     if (std::optional<Shape> shape{GetShape(context, expr)}) {
       if (auto values{AsFlatArrayConstructor(expr)}) {
-        return MapOperation(context, std::move(f), *shape, std::move(*values));
+        return MapOperation(context, std::move(f), *shape,
+            ComputeResultLength(operation), std::move(*values));
       }
     }
   }
@@ -1729,7 +1784,12 @@ Expr<T> FoldOperation(FoldingContext &context, Negate<T> &&x) {
   }
   auto &operand{x.left()};
   if (auto *nn{std::get_if<Negate<T>>(&x.left().u)}) {
-    return std::move(nn->left()); // -(-x) -> x
+    // -(-x) -> (x)
+    if (IsVariable(nn->left())) {
+      return FoldOperation(context, Parentheses<T>{std::move(nn->left())});
+    } else {
+      return std::move(nn->left());
+    }
   } else if (auto value{GetScalarConstantValue<T>(operand)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto negated{value->Negate()};
@@ -1848,9 +1908,13 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
       if (c->IsZero()) {
         return std::move(x.left());
       } else if (c->CompareSigned(Scalar<T>{1}) == Ordering::Equal) {
-        return std::move(x.right());
+        if (IsVariable(x.right())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.right())});
+        } else {
+          return std::move(x.right());
+        }
       } else if (c->CompareSigned(Scalar<T>{-1}) == Ordering::Equal) {
-        return Expr<T>{Negate<T>{std::move(x.right())}};
+        return FoldOperation(context, Negate<T>{std::move(x.right())});
       }
     }
   }

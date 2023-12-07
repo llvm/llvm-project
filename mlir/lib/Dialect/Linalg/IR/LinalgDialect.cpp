@@ -20,7 +20,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -44,12 +44,11 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
   // We don't have any special restrictions on what can be inlined into
   // destination regions (e.g. while/conditional bodies). Always allow it.
   bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
-                       BlockAndValueMapping &valueMapping) const final {
+                       IRMapping &valueMapping) const final {
     return true;
   }
   // Operations in Linalg dialect are always legal to inline.
-  bool isLegalToInline(Operation *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
     return true;
   }
   // Handle the given inlined terminator by replacing it with a new operation
@@ -64,7 +63,7 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
 // LinalgDialect
 //===----------------------------------------------------------------------===//
 
-/// Attribute name used to to memoize indexing maps for named ops.
+/// Attribute name used to memoize indexing maps for named ops.
 constexpr const ::llvm::StringLiteral
     LinalgDialect::kMemoizedIndexingMapsAttrName;
 

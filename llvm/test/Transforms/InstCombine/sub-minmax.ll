@@ -31,8 +31,8 @@ define i32 @na_minus_max_na_b(i32 %A, i32 %B) {
 ; CHECK-LABEL: define {{[^@]+}}@na_minus_max_na_b
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[NOT]], i32 [[B]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[NOT]], i32 [[B]])
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %not = xor i32 %A, -1
   %l0 = icmp ult i32 %not, %B
@@ -44,8 +44,8 @@ define i32 @na_minus_max_na_b(i32 %A, i32 %B) {
 define i5 @sub_umin(i5 %a, i5 %b) {
 ; CHECK-LABEL: define {{[^@]+}}@sub_umin
 ; CHECK-SAME: (i5 [[A:%.*]], i5 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.usub.sat.i5(i5 [[A]], i5 [[B]])
-; CHECK-NEXT:    ret i5 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = call i5 @llvm.usub.sat.i5(i5 [[A]], i5 [[B]])
+; CHECK-NEXT:    ret i5 [[R]]
 ;
   %umin = call i5 @llvm.umin.i5(i5 %a, i5 %b)
   %r = sub i5 %a, %umin
@@ -55,8 +55,8 @@ define i5 @sub_umin(i5 %a, i5 %b) {
 define <2 x i8> @sub_umin_commute_vec(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: define {{[^@]+}}@sub_umin_commute_vec
 ; CHECK-SAME: (<2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[B]], <2 x i8> [[A]])
-; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[B]], <2 x i8> [[A]])
+; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %umin = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %b, <2 x i8> %a)
   %r = sub <2 x i8> %b, %umin
@@ -108,8 +108,8 @@ define i32 @na_minus_max_b_na(i32 %A, i32 %B) {
 ; CHECK-LABEL: define {{[^@]+}}@na_minus_max_b_na
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[NOT]], i32 [[B]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[NOT]], i32 [[B]])
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %not = xor i32 %A, -1
   %l0 = icmp ugt i32 %not, %B
@@ -137,8 +137,8 @@ define i32 @max_na_bi_minux_na(i32 %A, i32 %Bi) {
 define i32 @na_minus_max_na_bi(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: define {{[^@]+}}@na_minus_max_na_bi
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[BI:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[BI]], i32 [[A]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[BI]], i32 [[A]])
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %B =  xor i32 %Bi, -1
   %not = xor i32 %A, -1
@@ -166,8 +166,8 @@ define i32 @max_bi_na_minus_na(i32 %A, i32 %Bi) {
 define i32 @na_minus_max_bi_na(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: define {{[^@]+}}@na_minus_max_bi_na
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[BI:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[BI]], i32 [[A]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[BI]], i32 [[A]])
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %B =  xor i32 %Bi, -1
   %not = xor i32 %A, -1
@@ -182,9 +182,9 @@ define i32 @max_na_bi_minux_na_use(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: define {{[^@]+}}@max_na_bi_minux_na_use
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[BI:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 -32)
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[X:%.*]] = sub i32 [[A]], [[TMP1]]
-; CHECK-NEXT:    call void @use32(i32 [[TMP2]])
+; CHECK-NEXT:    call void @use32(i32 [[L1]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %not = xor i32 %A, -1
@@ -199,9 +199,9 @@ define i32 @na_minus_max_na_bi_use(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: define {{[^@]+}}@na_minus_max_na_bi_use
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[BI:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 -32)
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP1]], [[A]]
-; CHECK-NEXT:    call void @use32(i32 [[TMP2]])
+; CHECK-NEXT:    call void @use32(i32 [[L1]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %not = xor i32 %A, -1
@@ -216,9 +216,9 @@ define i32 @max_bi_na_minus_na_use(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: define {{[^@]+}}@max_bi_na_minus_na_use
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[BI:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[BI]], i32 [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[X:%.*]] = sub i32 [[A]], [[TMP1]]
-; CHECK-NEXT:    call void @use32(i32 [[TMP2]])
+; CHECK-NEXT:    call void @use32(i32 [[L1]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %not = xor i32 %A, -1
@@ -234,9 +234,9 @@ define i32 @na_minus_max_bi_na_use(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: define {{[^@]+}}@na_minus_max_bi_na_use
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[BI:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[BI]], i32 [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP1]], [[A]]
-; CHECK-NEXT:    call void @use32(i32 [[TMP2]])
+; CHECK-NEXT:    call void @use32(i32 [[L1]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %not = xor i32 %A, -1
@@ -253,9 +253,9 @@ define i32 @max_na_bi_minux_na_use2(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: define {{[^@]+}}@max_na_bi_minux_na_use2
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[BI:%.*]]) {
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[NOT]], i32 31)
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP1]], [[NOT]]
-; CHECK-NEXT:    call void @use32(i32 [[TMP1]])
+; CHECK-NEXT:    [[L1:%.*]] = call i32 @llvm.umin.i32(i32 [[NOT]], i32 31)
+; CHECK-NEXT:    [[X:%.*]] = sub i32 [[L1]], [[NOT]]
+; CHECK-NEXT:    call void @use32(i32 [[L1]])
 ; CHECK-NEXT:    call void @use32(i32 [[NOT]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
@@ -272,9 +272,9 @@ define i32 @na_minus_max_na_bi_use2(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: define {{[^@]+}}@na_minus_max_na_bi_use2
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[BI:%.*]]) {
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[NOT]], i32 31)
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[NOT]], [[TMP1]]
-; CHECK-NEXT:    call void @use32(i32 [[TMP1]])
+; CHECK-NEXT:    [[L1:%.*]] = call i32 @llvm.umin.i32(i32 [[NOT]], i32 31)
+; CHECK-NEXT:    [[X:%.*]] = sub i32 [[NOT]], [[L1]]
+; CHECK-NEXT:    call void @use32(i32 [[L1]])
 ; CHECK-NEXT:    call void @use32(i32 [[NOT]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
@@ -292,9 +292,9 @@ define i32 @max_bi_na_minus_na_use2(i32 %A, i32 %Bi) {
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[BI:%.*]]) {
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[BI]], i32 [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[X:%.*]] = sub i32 [[A]], [[TMP1]]
-; CHECK-NEXT:    call void @use32(i32 [[TMP2]])
+; CHECK-NEXT:    call void @use32(i32 [[L1]])
 ; CHECK-NEXT:    call void @use32(i32 [[NOT]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
@@ -313,9 +313,9 @@ define i32 @na_minus_max_bi_na_use2(i32 %A, i32 %Bi) {
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[BI:%.*]]) {
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[BI]], i32 [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP1]], [[A]]
-; CHECK-NEXT:    call void @use32(i32 [[TMP2]])
+; CHECK-NEXT:    call void @use32(i32 [[L1]])
 ; CHECK-NEXT:    call void @use32(i32 [[NOT]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
@@ -333,12 +333,12 @@ define i8 @umin_not_sub(i8 %x, i8 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@umin_not_sub
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    [[MINXY:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[TMP1]], [[X]]
 ; CHECK-NEXT:    [[SUBY:%.*]] = sub i8 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    call void @use8(i8 [[SUBX]])
 ; CHECK-NEXT:    call void @use8(i8 [[SUBY]])
-; CHECK-NEXT:    ret i8 [[TMP2]]
+; CHECK-NEXT:    ret i8 [[MINXY]]
 ;
   %nx = xor i8 %x, -1
   %ny = xor i8 %y, -1
@@ -355,12 +355,12 @@ define i8 @umin_not_sub_rev(i8 %x, i8 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@umin_not_sub_rev
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    [[MINXY:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[X]], [[TMP1]]
 ; CHECK-NEXT:    [[SUBY:%.*]] = sub i8 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    call void @use8(i8 [[SUBX]])
 ; CHECK-NEXT:    call void @use8(i8 [[SUBY]])
-; CHECK-NEXT:    ret i8 [[TMP2]]
+; CHECK-NEXT:    ret i8 [[MINXY]]
 ;
   %nx = xor i8 %x, -1
   %ny = xor i8 %y, -1
@@ -378,11 +378,11 @@ define void @umin3_not_all_ops_extra_uses_invert_subs(i8 %x, i8 %y, i8 %z) {
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Z]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.umax.i8(i8 [[Y]], i8 [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[TMP2]], -1
+; CHECK-NEXT:    [[MINXYZ:%.*]] = xor i8 [[TMP2]], -1
 ; CHECK-NEXT:    [[XMIN:%.*]] = sub i8 [[TMP2]], [[X]]
 ; CHECK-NEXT:    [[YMIN:%.*]] = sub i8 [[TMP2]], [[Y]]
 ; CHECK-NEXT:    [[ZMIN:%.*]] = sub i8 [[TMP2]], [[Z]]
-; CHECK-NEXT:    call void @use8(i8 [[TMP3]])
+; CHECK-NEXT:    call void @use8(i8 [[MINXYZ]])
 ; CHECK-NEXT:    call void @use8(i8 [[XMIN]])
 ; CHECK-NEXT:    call void @use8(i8 [[YMIN]])
 ; CHECK-NEXT:    call void @use8(i8 [[ZMIN]])
@@ -518,8 +518,8 @@ define i8 @umin_not_sub_intrinsic_uses(i8 %x, i8 %y) {
 define i8 @umax_sub_op0(i8 %x, i8 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@umax_sub_op0
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %u = call i8 @llvm.umax.i8(i8 %y, i8 %x)
   %r = sub i8 %u, %y
@@ -529,8 +529,8 @@ define i8 @umax_sub_op0(i8 %x, i8 %y) {
 define <2 x i8> @umax_sub_op0_vec_commute(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: define {{[^@]+}}@umax_sub_op0_vec_commute
 ; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[X]], <2 x i8> [[Y]])
-; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[X]], <2 x i8> [[Y]])
+; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %u = call <2 x i8> @llvm.umax.v2i8(<2 x i8> %x, <2 x i8> %y)
   %r = sub <2 x i8> %u, %y
@@ -592,8 +592,8 @@ define i8 @umax_sub_op1_use(i8 %x, i8 %y) {
 define i8 @umin_sub_op1(i8 %x, i8 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@umin_sub_op1
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[Y]], i8 [[X]])
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %u = call i8 @llvm.umin.i8(i8 %y, i8 %x)
   %r = sub i8 %y, %u
@@ -603,8 +603,8 @@ define i8 @umin_sub_op1(i8 %x, i8 %y) {
 define i8 @umin_sub_op1_commute(i8 %x, i8 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@umin_sub_op1_commute
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[Y]], i8 [[X]])
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %u = call i8 @llvm.umin.i8(i8 %x, i8 %y)
   %r = sub i8 %y, %u
@@ -998,5 +998,149 @@ define i8 @sub_smin0_sub_nsw_commute(i8 %x, i8 %y) {
   ret i8 %r
 }
 
+define i8 @sub_max_min_nsw(i8 %a, i8 %b) {
+; CHECK-LABEL: define {{[^@]+}}@sub_max_min_nsw
+; CHECK-SAME: (i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[AB:%.*]] = call i8 @llvm.abs.i8(i8 [[SUB]], i1 true)
+; CHECK-NEXT:    ret i8 [[AB]]
+;
+  %min = call i8 @llvm.smin.i8(i8 %a, i8 %b)
+  %max = call i8 @llvm.smax.i8(i8 %a, i8 %b)
+  %ab = sub nsw i8 %max, %min
+  ret i8 %ab
+}
+
+define i8 @sub_max_min_nuw(i8 %a, i8 %b) {
+; CHECK-LABEL: define {{[^@]+}}@sub_max_min_nuw
+; CHECK-SAME: (i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[AB:%.*]] = call i8 @llvm.abs.i8(i8 [[SUB]], i1 true)
+; CHECK-NEXT:    ret i8 [[AB]]
+;
+  %min = call i8 @llvm.smin.i8(i8 %a, i8 %b)
+  %max = call i8 @llvm.smax.i8(i8 %a, i8 %b)
+  %ab = sub nuw i8 %max, %min
+  ret i8 %ab
+}
+
+define i8 @sub_max_min_nsw_commute(i8 %a, i8 %b) {
+; CHECK-LABEL: define {{[^@]+}}@sub_max_min_nsw_commute
+; CHECK-SAME: (i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[AB:%.*]] = call i8 @llvm.abs.i8(i8 [[SUB]], i1 true)
+; CHECK-NEXT:    ret i8 [[AB]]
+;
+  %min = call i8 @llvm.smin.i8(i8 %b, i8 %a)
+  %max = call i8 @llvm.smax.i8(i8 %a, i8 %b)
+  %ab = sub nsw i8 %max, %min
+  ret i8 %ab
+}
+
+define i8 @sub_max_min_nuw_commute(i8 %a, i8 %b) {
+; CHECK-LABEL: define {{[^@]+}}@sub_max_min_nuw_commute
+; CHECK-SAME: (i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[AB:%.*]] = call i8 @llvm.abs.i8(i8 [[SUB]], i1 true)
+; CHECK-NEXT:    ret i8 [[AB]]
+;
+  %min = call i8 @llvm.smin.i8(i8 %b, i8 %a)
+  %max = call i8 @llvm.smax.i8(i8 %a, i8 %b)
+  %ab = sub nuw i8 %max, %min
+  ret i8 %ab
+}
+
+define <2 x i8> @sub_max_min_vec_nsw(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: define {{[^@]+}}@sub_max_min_vec_nsw
+; CHECK-SAME: (<2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i8> [[A]], [[B]]
+; CHECK-NEXT:    [[AB:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[SUB]], i1 true)
+; CHECK-NEXT:    ret <2 x i8> [[AB]]
+;
+  %min = call <2 x i8> @llvm.smin.v2i8(<2 x i8> %a, <2 x i8> %b)
+  %max = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %a, <2 x i8> %b)
+  %ab = sub nsw <2 x i8> %max, %min
+  ret <2 x i8> %ab
+}
+
+define <2 x i8> @sub_max_min_vec_nuw(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: define {{[^@]+}}@sub_max_min_vec_nuw
+; CHECK-SAME: (<2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i8> [[A]], [[B]]
+; CHECK-NEXT:    [[AB:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[SUB]], i1 true)
+; CHECK-NEXT:    ret <2 x i8> [[AB]]
+;
+  %min = call <2 x i8> @llvm.smin.v2i8(<2 x i8> %a, <2 x i8> %b)
+  %max = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %a, <2 x i8> %b)
+  %ab = sub nuw <2 x i8> %max, %min
+  ret <2 x i8> %ab
+}
+
+define <2 x i8> @sub_max_min_vec_nsw_commute(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: define {{[^@]+}}@sub_max_min_vec_nsw_commute
+; CHECK-SAME: (<2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i8> [[A]], [[B]]
+; CHECK-NEXT:    [[AB:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[SUB]], i1 true)
+; CHECK-NEXT:    ret <2 x i8> [[AB]]
+;
+  %min = call <2 x i8> @llvm.smin.v2i8(<2 x i8> %b, <2 x i8> %a)
+  %max = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %a, <2 x i8> %b)
+  %ab = sub nsw <2 x i8> %max, %min
+  ret <2 x i8> %ab
+}
+
+define <2 x i8> @sub_max_min_vec_nuw_commute(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: define {{[^@]+}}@sub_max_min_vec_nuw_commute
+; CHECK-SAME: (<2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i8> [[A]], [[B]]
+; CHECK-NEXT:    [[AB:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[SUB]], i1 true)
+; CHECK-NEXT:    ret <2 x i8> [[AB]]
+;
+  %min = call <2 x i8> @llvm.smin.v2i8(<2 x i8> %b, <2 x i8> %a)
+  %max = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %a, <2 x i8> %b)
+  %ab = sub nuw <2 x i8> %max, %min
+  ret <2 x i8> %ab
+}
+
+; negative test - multiple use
+
+define i8 @sub_max_min_multi_use(i8 %a, i8 %b) {
+; CHECK-LABEL: define {{[^@]+}}@sub_max_min_multi_use
+; CHECK-SAME: (i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.smin.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    call void @use8(i8 [[MIN]])
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.smax.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    call void @use8(i8 [[MAX]])
+; CHECK-NEXT:    [[AB:%.*]] = sub nsw i8 [[MAX]], [[MIN]]
+; CHECK-NEXT:    ret i8 [[AB]]
+;
+  %min = call i8 @llvm.smin.i8(i8 %a, i8 %b)
+  call void @use8(i8 %min)
+  %max = call i8 @llvm.smax.i8(i8 %a, i8 %b)
+  call void @use8(i8 %max)
+  %ab = sub nsw i8 %max, %min
+  ret i8 %ab
+}
+
+define <2 x i8> @sub_max_min_vec_multi_use(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: define {{[^@]+}}@sub_max_min_vec_multi_use
+; CHECK-SAME: (<2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]]) {
+; CHECK-NEXT:    [[MIN:%.*]] = call <2 x i8> @llvm.smin.v2i8(<2 x i8> [[A]], <2 x i8> [[B]])
+; CHECK-NEXT:    call void @use8v2(<2 x i8> [[MIN]])
+; CHECK-NEXT:    [[MAX:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[A]], <2 x i8> [[B]])
+; CHECK-NEXT:    call void @use8v2(<2 x i8> [[MAX]])
+; CHECK-NEXT:    [[AB:%.*]] = sub nsw <2 x i8> [[MAX]], [[MIN]]
+; CHECK-NEXT:    ret <2 x i8> [[AB]]
+;
+  %min = call <2 x i8> @llvm.smin.v2i8(<2 x i8> %a, <2 x i8> %b)
+  call void @use8v2(<2 x i8> %min)
+  %max = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %a, <2 x i8> %b)
+  call void @use8v2(<2 x i8> %max)
+  %ab = sub nsw <2 x i8> %max, %min
+  ret <2 x i8> %ab
+}
+
 declare void @use8(i8)
 declare void @use32(i32 %u)
+
+declare void @use8v2(i8)

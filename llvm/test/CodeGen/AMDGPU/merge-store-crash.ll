@@ -26,10 +26,10 @@ main_body:
   %tmp9 = insertelement <4 x i32> %tmp8, i32 %tmp7, i32 1
   %tmp10 = insertelement <4 x i32> %tmp9, i32 undef, i32 2
   %tmp11 = insertelement <4 x i32> %tmp10, i32 undef, i32 3
-  call void @llvm.amdgcn.struct.tbuffer.store.v4i32(<4 x i32> %tmp11, <4 x i32> undef, i32 0, i32 0, i32 %arg, i32 78, i32 3) #2
+  call void @llvm.amdgcn.struct.ptr.tbuffer.store.v4i32(<4 x i32> %tmp11, ptr addrspace(8) undef, i32 0, i32 0, i32 %arg, i32 78, i32 3) #2
   ret void
 }
 
-declare void @llvm.amdgcn.struct.tbuffer.store.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32, i32 immarg, i32 immarg) #0
+declare void @llvm.amdgcn.struct.ptr.tbuffer.store.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32, i32 immarg, i32 immarg) #0
 
 attributes #0 = { nounwind willreturn writeonly }

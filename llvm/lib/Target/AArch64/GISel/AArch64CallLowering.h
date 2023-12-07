@@ -66,6 +66,10 @@ private:
   using MemHandler =
       std::function<void(MachineIRBuilder &, int, CCValAssign &)>;
 
+  void saveVarArgRegisters(MachineIRBuilder &MIRBuilder,
+                           CallLowering::IncomingValueHandler &Handler,
+                           CCState &CCInfo) const;
+
   bool lowerTailCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
                      SmallVectorImpl<ArgInfo> &OutArgs) const;
 

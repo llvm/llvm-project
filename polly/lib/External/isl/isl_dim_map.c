@@ -243,7 +243,7 @@ __isl_give isl_dim_map *isl_dim_map_from_reordering(
 	if (!dim_map)
 		return NULL;
 
-	for (i = 0; i < exp->len; ++i) {
+	for (i = 0; i < exp->src_len; ++i) {
 		dim_map->m[1 + exp->pos[i]].pos = 1 + i;
 		dim_map->m[1 + exp->pos[i]].sgn = 1;
 	}

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -disable-promote-alloca-to-vector -amdgpu-enable-lower-module-lds=0 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -disable-promote-alloca-to-vector -amdgpu-enable-lower-module-lds=0 < %s | FileCheck -check-prefix=GCN %s
 
 ; This shows that the amount LDS size estimate should try to not be
 ; sensitive to the order of the LDS globals. This should try to
@@ -127,3 +127,6 @@ entry:
 }
 
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" "amdgpu-waves-per-eu"="1,7" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}

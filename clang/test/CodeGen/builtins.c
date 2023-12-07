@@ -63,6 +63,8 @@ int main(void) {
   P(isinf, (1.));
   P(isinf_sign, (1.));
   P(isnan, (1.));
+  P(isfinite, (1.));
+  P(isfpclass, (1., 1));
 
   // Bitwise & Numeric Functions
 
@@ -201,20 +203,20 @@ void test_conditional_bzero(void) {
 void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
   volatile int res;
   res = __builtin_isinf(*H);
-  // CHECK:  call half @llvm.fabs.f16(half
-  // CHECK:  fcmp oeq half {{.*}}, 0xH7C00
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 516)
+  // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isinf(F);
-  // CHECK:  call float @llvm.fabs.f32(float
-  // CHECK:  fcmp oeq float {{.*}}, 0x7FF0000000000000
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 516)
+  // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isinf(D);
-  // CHECK:  call double @llvm.fabs.f64(double
-  // CHECK:  fcmp oeq double {{.*}}, 0x7FF0000000000000
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 516)
+  // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isinf(LD);
-  // CHECK:  call x86_fp80 @llvm.fabs.f80(x86_fp80
-  // CHECK:  fcmp oeq x86_fp80 {{.*}}, 0xK7FFF8000000000000000
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 {{.*}}, i32 516)
+  // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isinf_sign(*H);
   // CHECK:  %[[ABS:.*]] = call half @llvm.fabs.f16(half %[[ARG:.*]])
@@ -249,32 +251,24 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
   // CHECK:  select i1 %[[ISINF]], i32 %[[SIGN]], i32 0
 
   res = __builtin_isfinite(*H);
-  // CHECK: call half @llvm.fabs.f16(half
-  // CHECK: fcmp one half {{.*}}, 0xH7C00
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 504)
+  // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isfinite(F);
-  // CHECK: call float @llvm.fabs.f32(float
-  // CHECK: fcmp one float {{.*}}, 0x7FF0000000000000
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 504)
+  // CHECK: zext i1 [[TMP]] to i32
 
   res = finite(D);
-  // CHECK: call double @llvm.fabs.f64(double
-  // CHECK: fcmp one double {{.*}}, 0x7FF0000000000000
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 504)
+  // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isnormal(*H);
-  // CHECK: fcmp oeq half
-  // CHECK: call half @llvm.fabs.f16(half
-  // CHECK: fcmp ult half {{.*}}, 0xH7C00
-  // CHECK: fcmp uge half {{.*}}, 0xH0400
-  // CHECK: and i1
-  // CHECK: and i1
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 264)
+  // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_isnormal(F);
-  // CHECK: fcmp oeq float
-  // CHECK: call float @llvm.fabs.f32(float
-  // CHECK: fcmp ult float {{.*}}, 0x7FF0000000000000
-  // CHECK: fcmp uge float {{.*}}, 0x3810000000000000
-  // CHECK: and i1
-  // CHECK: and i1
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 264)
+  // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_flt_rounds();
   // CHECK: call i32 @llvm.get.rounding(
@@ -411,6 +405,15 @@ void test_float_builtin_ops(float F, double D, long double LD) {
   resld = __builtin_roundl(LD);
   // CHECK: call x86_fp80 @llvm.round.f80
 
+  resf = __builtin_roundevenf(F);
+  // CHECK: call float @llvm.roundeven.f32
+
+  resd = __builtin_roundeven(D);
+  // CHECK: call double @llvm.roundeven.f64
+
+  resld = __builtin_roundevenl(LD);
+  // CHECK: call x86_fp80 @llvm.roundeven.f80
+  
   resli = __builtin_lroundf (F);
   // CHECK: call i64 @llvm.lround.i64.f32
 

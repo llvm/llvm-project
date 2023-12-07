@@ -25,7 +25,7 @@ extern const char *argv0;
 
 namespace __sanitizer {
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID
 TEST(MemoryMappingLayout, CodeRange) {
   uptr start, end;
   bool res = GetCodeRangeForFile("[vdso]", &start, &end);
@@ -33,7 +33,7 @@ TEST(MemoryMappingLayout, CodeRange) {
   EXPECT_GT(start, 0U);
   EXPECT_LT(start, end);
 }
-#endif
+#  endif
 
 TEST(MemoryMappingLayout, DumpListOfModules) {
   const char *last_slash = strrchr(argv0, '/');
@@ -65,11 +65,12 @@ TEST(MemoryMapping, LoadedModuleArchAndUUID) {
     memory_mapping.DumpListOfModules(&modules);
     for (uptr i = 0; i < modules.size(); ++i) {
       ModuleArch arch = modules[i].arch();
-      // Darwin unit tests are only run on i386/x86_64/x86_64h.
+      // Darwin unit tests are only run on i386/x86_64/x86_64h/arm64.
       if (SANITIZER_WORDSIZE == 32) {
         EXPECT_EQ(arch, kModuleArchI386);
       } else if (SANITIZER_WORDSIZE == 64) {
-        EXPECT_TRUE(arch == kModuleArchX86_64 || arch == kModuleArchX86_64H);
+        EXPECT_TRUE(arch == kModuleArchX86_64 || arch == kModuleArchX86_64H ||
+                    arch == kModuleArchARM64);
       }
       const u8 *uuid = modules[i].uuid();
       u8 null_uuid[kModuleUUIDSize] = {0};
@@ -78,8 +79,7 @@ TEST(MemoryMapping, LoadedModuleArchAndUUID) {
   }
 }
 
-#  if (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
-       SANITIZER_SOLARIS) &&                                       \
+#  if (SANITIZER_LINUX || SANITIZER_NETBSD || SANITIZER_SOLARIS) && \
       defined(_LP64)
 const char *const parse_unix_input = R"(
 7fb9862f1000-7fb9862f3000 rw-p 00000000 00:00 0 

@@ -24,13 +24,12 @@ polly.loop_after:                                 ; preds = %polly.loop_body
 polly.loop_body:                                  ; preds = %entry, %polly.loop_body
   %polly.loopiv36 = phi i32 [ 0, %entry ], [ %polly.next_loopiv, %polly.loop_body ]
   %polly.next_loopiv = add nsw i32 %polly.loopiv36, 4
-  %p_arrayidx4 = getelementptr [0 x i16], [0 x i16]* @prev, i32 0, i32 %polly.loopiv36
-  %vector_ptr = bitcast i16* %p_arrayidx4 to <4 x i16>*
-  %_p_vec_full = load <4 x i16>, <4 x i16>* %vector_ptr, align 2
+  %p_arrayidx4 = getelementptr [0 x i16], ptr @prev, i32 0, i32 %polly.loopiv36
+  %_p_vec_full = load <4 x i16>, ptr %p_arrayidx4, align 2
   %cmp1p_vicmp = icmp slt <4 x i16> %_p_vec_full, zeroinitializer
   %subp_vec = xor <4 x i16> %_p_vec_full, <i16 -32768, i16 -32768, i16 -32768, i16 -32768>
   %sel1p_vsel = select <4 x i1> %cmp1p_vicmp, <4 x i16> %subp_vec, <4 x i16> zeroinitializer
-  store <4 x i16> %sel1p_vsel, <4 x i16>* %vector_ptr, align 2
+  store <4 x i16> %sel1p_vsel, ptr %p_arrayidx4, align 2
   %0 = icmp slt i32 %polly.next_loopiv, 32768
   br i1 %0, label %polly.loop_body, label %polly.loop_after
 }

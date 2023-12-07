@@ -48,6 +48,8 @@ std::optional<MemoryBufferRef> readFile(StringRef path);
 // Add symbols in File to the symbol table.
 void parseFile(InputFile *file);
 
+void parseArmCMSEImportLib(InputFile *file);
+
 // The root class of input files.
 class InputFile {
 protected:
@@ -59,7 +61,6 @@ public:
   enum Kind : uint8_t {
     ObjKind,
     SharedKind,
-    ArchiveKind,
     BitcodeKind,
     BinaryKind,
   };
@@ -84,6 +85,12 @@ public:
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
   ArrayRef<Symbol *> getSymbols() const {
+    assert(fileKind == BinaryKind || fileKind == ObjKind ||
+           fileKind == BitcodeKind);
+    return {symbols.get(), numSymbols};
+  }
+
+  MutableArrayRef<Symbol *> getMutableSymbols() {
     assert(fileKind == BinaryKind || fileKind == ObjKind ||
            fileKind == BitcodeKind);
     return {symbols.get(), numSymbols};
@@ -174,14 +181,14 @@ public:
   ArrayRef<Symbol *> getLocalSymbols() {
     if (numSymbols == 0)
       return {};
-    return llvm::makeArrayRef(symbols.get() + 1, firstGlobal - 1);
+    return llvm::ArrayRef(symbols.get() + 1, firstGlobal - 1);
   }
   ArrayRef<Symbol *> getGlobalSymbols() {
-    return llvm::makeArrayRef(symbols.get() + firstGlobal,
-                              numSymbols - firstGlobal);
+    return llvm::ArrayRef(symbols.get() + firstGlobal,
+                          numSymbols - firstGlobal);
   }
   MutableArrayRef<Symbol *> getMutableGlobalSymbols() {
-    return llvm::makeMutableArrayRef(symbols.get() + firstGlobal,
+    return llvm::MutableArrayRef(symbols.get() + firstGlobal,
                                      numSymbols - firstGlobal);
   }
 
@@ -281,6 +288,8 @@ public:
 
   void initSectionsAndLocalSyms(bool ignoreComdats);
   void postParse();
+  void importCmseSymbols();
+  void redirectCmseSymbols();
 
 private:
   void initializeSections(bool ignoreComdats,

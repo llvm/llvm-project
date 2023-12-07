@@ -11,6 +11,7 @@ static_library("ExecutionEngine") {
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "ExecutionEngine.cpp",

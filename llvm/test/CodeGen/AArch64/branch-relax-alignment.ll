@@ -7,9 +7,9 @@
 define i32 @invert_bcc_block_align_higher_func(i32 %x, i32 %y) align 4 #0 {
 ; CHECK-LABEL: invert_bcc_block_align_higher_func:
 ; CHECK:       ; %bb.0: ; %common.ret
+; CHECK-NEXT:    mov w8, #9 ; =0x9
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    mov w8, #9
-; CHECK-NEXT:    mov w9, #42
+; CHECK-NEXT:    mov w9, #42 ; =0x2a
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    csel w8, w9, w8, eq
 ; CHECK-NEXT:    str w8, [x8]
@@ -18,11 +18,11 @@ define i32 @invert_bcc_block_align_higher_func(i32 %x, i32 %y) align 4 #0 {
   br i1 %1, label %bb1, label %bb2
 
 bb2:
-  store volatile i32 9, i32* undef
+  store volatile i32 9, ptr undef
   ret i32 1
 
 bb1:
-  store volatile i32 42, i32* undef
+  store volatile i32 42, ptr undef
   ret i32 0
 }
 

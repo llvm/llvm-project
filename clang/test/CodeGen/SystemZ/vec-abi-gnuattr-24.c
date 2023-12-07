@@ -34,4 +34,20 @@ int fun1() {
   return foo(V)[0] + GlobVal + GlobExtVar;
 }
 
+// Globally visible vector variable less than 16 bytes in size.
+typedef __attribute__((vector_size(8))) int v2i32;
+v2i32 NarrowVecVar;
+
+// Global function taking narrow vector array and pointer.
+void bar(v2i32 VArr[4], v2i32 *Dst) { *Dst = VArr[3]; }
+
+// Wide vector parameters via "hidden" pointers.
+typedef __attribute__((vector_size(32))) int v8i32;
+v8i32 bar2(v8i32 Arg) { return Arg; }
+
+// Same but with a single element struct.
+struct SingleElStruct { v8i32 B; };
+struct SingleElStruct bar3(struct SingleElStruct Arg) { return Arg; }
+
+
 //CHECK-NOT: !{i32 2, !"s390x-visible-vector-ABI", i32 1}

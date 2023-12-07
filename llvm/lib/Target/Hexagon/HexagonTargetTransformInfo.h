@@ -82,7 +82,7 @@ public:
   /// @{
 
   unsigned getNumberOfRegisters(bool vector) const;
-  unsigned getMaxInterleaveFactor(unsigned VF);
+  unsigned getMaxInterleaveFactor(ElementCount VF);
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   unsigned getMinVectorRegisterBitWidth() const;
   ElementCount getMinimumVF(unsigned ElemWidth, bool IsScalable) const;
@@ -92,9 +92,7 @@ public:
     return true;
   }
   bool supportsEfficientVectorElementLoadStore() { return false; }
-  bool hasBranchDivergence() {
-    return false;
-  }
+  bool hasBranchDivergence(const Function *F = nullptr) { return false; }
   bool enableAggressiveInterleaving(bool LoopHasReductions) {
     return false;
   }
@@ -107,9 +105,12 @@ public:
 
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
-                                           bool Insert, bool Extract);
-  InstructionCost getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                                   ArrayRef<Type *> Tys);
+                                           bool Insert, bool Extract,
+                                           TTI::TargetCostKind CostKind);
+  InstructionCost
+  getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
+                                   ArrayRef<Type *> Tys,
+                                   TTI::TargetCostKind CostKind);
   InstructionCost getCallInstrCost(Function *F, Type *RetTy,
                                    ArrayRef<Type *> Tys,
                                    TTI::TargetCostKind CostKind);
@@ -155,7 +156,8 @@ public:
                                    const Instruction *I = nullptr);
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     unsigned Index);
+                                     TTI::TargetCostKind CostKind,
+                                     unsigned Index, Value *Op0, Value *Op1);
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr) {

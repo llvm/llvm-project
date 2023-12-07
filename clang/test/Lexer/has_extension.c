@@ -20,6 +20,14 @@ int has_c_static_assert();
 int no_c_static_assert();
 #endif
 
+// CHECK-PED-NONE: has_c_generic_selections_with_controlling_type
+// CHECK-PED-ERR: no_c_generic_selections_with_controlling_type
+#if __has_extension(c_generic_selection_with_controlling_type)
+int has_c_generic_selections_with_controlling_type();
+#else
+int no_c_generic_selections_with_controlling_type();
+#endif
+
 // CHECK-PED-NONE: has_c_generic_selections
 // CHECK-PED-ERR: no_c_generic_selections
 #if __has_extension(c_generic_selections)

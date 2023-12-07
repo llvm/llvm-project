@@ -17,7 +17,7 @@
 ;   return i;
 ; }
 ;
-define i32 @ctlz_and_other(i32 %n, i8* nocapture %a) {
+define i32 @ctlz_and_other(i32 %n, ptr nocapture %a) {
 ; ALL-LABEL: @ctlz_and_other(
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[C:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -40,8 +40,8 @@ define i32 @ctlz_and_other(i32 %n, i8* nocapture %a) {
 ; ALL-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[ABS_N]]
 ; ALL-NEXT:    [[TOBOOL1:%.*]] = icmp ne i32 [[AND]], 0
 ; ALL-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL1]] to i8
-; ALL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i64 [[INDVARS_IV]]
-; ALL-NEXT:    store i8 [[CONV]], i8* [[ARRAYIDX]], align 1
+; ALL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; ALL-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1
 ; ALL-NEXT:    [[INDVARS_IV_NEXT]] = add nuw i64 [[INDVARS_IV]], 1
 ; ALL-NEXT:    [[SHR]] = ashr i32 [[SHR11]], 1
 ; ALL-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
@@ -74,8 +74,8 @@ while.body:                                       ; preds = %while.body.preheade
   %and = and i32 %shl, %abs_n
   %tobool1 = icmp ne i32 %and, 0
   %conv = zext i1 %tobool1 to i8
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %indvars.iv
-  store i8 %conv, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %indvars.iv
+  store i8 %conv, ptr %arrayidx, align 1
   %indvars.iv.next = add nuw i64 %indvars.iv, 1
   %shr = ashr i32 %shr11, 1
   %tobool = icmp eq i32 %shr, 0
@@ -562,7 +562,7 @@ define i32 @foo(i32 %x) {
 ; ALL-NEXT:    [[X_ADDR_05:%.*]] = phi i32 [ [[X]], [[WHILE_BODY_LR_PH]] ], [ [[SHR:%.*]], [[WHILE_BODY]] ]
 ; ALL-NEXT:    [[SHR]] = ashr i32 [[X_ADDR_05]], 1
 ; ALL-NEXT:    [[INC]] = add i32 [[CNT_06]], 1
-; ALL-NEXT:    store volatile i8 42, i8* [[V]], align 1
+; ALL-NEXT:    store volatile i8 42, ptr [[V]], align 1
 ; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[SHR]], 0
 ; ALL-NEXT:    br i1 [[TOBOOL]], label [[WHILE_COND_WHILE_END_CRIT_EDGE:%.*]], label [[WHILE_BODY]]
 ; ALL:       while.cond.while.end_crit_edge:
@@ -585,7 +585,7 @@ while.body:                                       ; preds = %while.body.lr.ph, %
   %x.addr.05 = phi i32 [ %x, %while.body.lr.ph ], [ %shr, %while.body ]
   %shr = ashr i32 %x.addr.05, 1
   %inc = add i32 %cnt.06, 1
-  store volatile i8 42, i8* %v, align 1
+  store volatile i8 42, ptr %v, align 1
   %tobool = icmp eq i32 %shr, 0
   br i1 %tobool, label %while.cond.while.end_crit_edge, label %while.body
 

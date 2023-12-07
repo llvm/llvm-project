@@ -43,4 +43,4 @@ class TestCase(TestBase):
         event = lldbutil.fetch_next_event(self, listener, broadcaster)
         payload = lldb.SBDebugger.GetProgressFromEvent(event)
         message = payload[0]
-        self.assertEqual(message, "Currently building module MyModule")
+        self.assertEqual(message, "Building Clang modules")

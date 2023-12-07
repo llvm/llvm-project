@@ -11,9 +11,7 @@
 
 #include "../utils/TransformerClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Checks for various ways that the `const CharT*` constructor of
 /// `std::basic_string_view` can be passed a null argument and replaces them
@@ -42,8 +40,6 @@ public:
   }
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STRINGVIEWNULLPTRCHECK_H

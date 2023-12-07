@@ -11,6 +11,7 @@
 #if SCUDO_LINUX
 
 #include "common.h"
+#include "internal_defs.h"
 #include "linux.h"
 #include "mutex.h"
 #include "string_utils.h"
@@ -42,6 +43,7 @@ uptr getPageSize() { return static_cast<uptr>(sysconf(_SC_PAGESIZE)); }
 
 void NORETURN die() { abort(); }
 
+// TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
 void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
           UNUSED MapPlatformData *Data) {
   int MmapFlags = MAP_PRIVATE | MAP_ANONYMOUS;
@@ -74,12 +76,14 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
   return P;
 }
 
+// TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
 void unmap(void *Addr, uptr Size, UNUSED uptr Flags,
            UNUSED MapPlatformData *Data) {
   if (munmap(Addr, Size) != 0)
     dieOnMapUnmapError();
 }
 
+// TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
 void setMemoryPermission(uptr Addr, uptr Size, uptr Flags,
                          UNUSED MapPlatformData *Data) {
   int Prot = (Flags & MAP_NOACCESS) ? PROT_NONE : (PROT_READ | PROT_WRITE);
@@ -87,6 +91,7 @@ void setMemoryPermission(uptr Addr, uptr Size, uptr Flags,
     dieOnMapUnmapError();
 }
 
+// TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
 void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
                       UNUSED MapPlatformData *Data) {
   void *Addr = reinterpret_cast<void *>(BaseAddress + Offset);
@@ -103,12 +108,14 @@ enum State : u32 { Unlocked = 0, Locked = 1, Sleeping = 2 };
 }
 
 bool HybridMutex::tryLock() {
-  return atomic_compare_exchange(&M, Unlocked, Locked) == Unlocked;
+  return atomic_compare_exchange_strong(&M, Unlocked, Locked,
+                                        memory_order_acquire) == Unlocked;
 }
 
 // The following is based on https://akkadia.org/drepper/futex.pdf.
 void HybridMutex::lockSlow() {
-  u32 V = atomic_compare_exchange(&M, Unlocked, Locked);
+  u32 V = atomic_compare_exchange_strong(&M, Unlocked, Locked,
+                                         memory_order_acquire);
   if (V == Unlocked)
     return;
   if (V != Sleeping)
@@ -128,11 +135,26 @@ void HybridMutex::unlock() {
   }
 }
 
+void HybridMutex::assertHeldImpl() {
+  CHECK(atomic_load(&M, memory_order_acquire) != Unlocked);
+}
+
 u64 getMonotonicTime() {
   timespec TS;
   clock_gettime(CLOCK_MONOTONIC, &TS);
   return static_cast<u64>(TS.tv_sec) * (1000ULL * 1000 * 1000) +
          static_cast<u64>(TS.tv_nsec);
+}
+
+u64 getMonotonicTimeFast() {
+#if defined(CLOCK_MONOTONIC_COARSE)
+  timespec TS;
+  clock_gettime(CLOCK_MONOTONIC_COARSE, &TS);
+  return static_cast<u64>(TS.tv_sec) * (1000ULL * 1000 * 1000) +
+         static_cast<u64>(TS.tv_nsec);
+#else
+  return getMonotonicTime();
+#endif
 }
 
 u32 getNumberOfCPUs() {
@@ -180,36 +202,6 @@ bool getRandom(void *Buffer, uptr Length, UNUSED bool Blocking) {
 // Allocation free syslog-like API.
 extern "C" WEAK int async_safe_write_log(int pri, const char *tag,
                                          const char *msg);
-
-static u64 GetRSSFromBuffer(const char *Buf) {
-  // The format of the file is:
-  // 1084 89 69 11 0 79 0
-  // We need the second number which is RSS in pages.
-  const char *Pos = Buf;
-  // Skip the first number.
-  while (*Pos >= '0' && *Pos <= '9')
-    Pos++;
-  // Skip whitespaces.
-  while (!(*Pos >= '0' && *Pos <= '9') && *Pos != 0)
-    Pos++;
-  // Read the number.
-  u64 Rss = 0;
-  for (; *Pos >= '0' && *Pos <= '9'; Pos++)
-    Rss = Rss * 10 + static_cast<u64>(*Pos) - '0';
-  return Rss * getPageSizeCached();
-}
-
-u64 GetRSS() {
-  auto Fd = open("/proc/self/statm", O_RDONLY);
-  char Buf[64];
-  s64 Len = read(Fd, Buf, sizeof(Buf) - 1);
-  close(Fd);
-  if (Len <= 0)
-    return 0;
-  Buf[Len] = 0;
-
-  return GetRSSFromBuffer(Buf);
-}
 
 void outputRaw(const char *Buffer) {
   if (&async_safe_write_log) {

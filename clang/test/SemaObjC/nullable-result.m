@@ -25,9 +25,9 @@ void test_conversion(void) {
 }
 
 void test_dup(void) {
-  id _Nullable_result _Nullable_result a; // expected-warning {{duplicate nullability specifier _Nullable_result}}
-  id _Nullable _Nullable_result b; // expected-error{{nullability specifier _Nullable_result conflicts with existing specifier '_Nullable'}}
-  id _Nullable_result _Nonnull c; // expected-error{{nullability specifier '_Nonnull' conflicts with existing specifier _Nullable_result}}
+  id _Nullable_result _Nullable_result a; // expected-warning {{duplicate nullability specifier '_Nullable_result'}}
+  id _Nullable _Nullable_result b; // expected-error{{nullability specifier '_Nullable_result' conflicts with existing specifier '_Nullable'}}
+  id _Nullable_result _Nonnull c; // expected-error{{nullability specifier '_Nonnull' conflicts with existing specifier '_Nullable_result'}}
 }
 
 @interface NoContextSensitive

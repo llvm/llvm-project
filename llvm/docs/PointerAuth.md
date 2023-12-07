@@ -30,7 +30,7 @@ These intrinsics are provided by LLVM to expose pointer authentication
 operations.
 
 
-#### '``llvm.ptrauth.sign``'
+#### '`llvm.ptrauth.sign`'
 
 ##### Syntax:
 
@@ -40,29 +40,29 @@ declare i64 @llvm.ptrauth.sign(i64 <value>, i32 <key>, i64 <discriminator>)
 
 ##### Overview:
 
-The '``llvm.ptrauth.sign``' intrinsic signs a raw pointer.
+The '`llvm.ptrauth.sign`' intrinsic signs a raw pointer.
 
 
 ##### Arguments:
 
-The ``value`` argument is the raw pointer value to be signed.
-The ``key`` argument is the identifier of the key to be used to generate the
+The `value` argument is the raw pointer value to be signed.
+The `key` argument is the identifier of the key to be used to generate the
 signed value.
-The ``discriminator`` argument is the additional diversity data to be used as a
+The `discriminator` argument is the additional diversity data to be used as a
 discriminator (an integer, an address, or a blend of the two).
 
 ##### Semantics:
 
-The '``llvm.ptrauth.sign``' intrinsic implements the `sign`_ operation.
+The '`llvm.ptrauth.sign`' intrinsic implements the `sign`_ operation.
 It returns a signed value.
 
-If ``value`` is already a signed value, the behavior is undefined.
+If `value` is already a signed value, the behavior is undefined.
 
-If ``value`` is not a pointer value for which ``key`` is appropriate, the
+If `value` is not a pointer value for which `key` is appropriate, the
 behavior is undefined.
 
 
-#### '``llvm.ptrauth.auth``'
+#### '`llvm.ptrauth.auth`'
 
 ##### Syntax:
 
@@ -72,25 +72,25 @@ declare i64 @llvm.ptrauth.auth(i64 <value>, i32 <key>, i64 <discriminator>)
 
 ##### Overview:
 
-The '``llvm.ptrauth.auth``' intrinsic authenticates a signed pointer.
+The '`llvm.ptrauth.auth`' intrinsic authenticates a signed pointer.
 
 ##### Arguments:
 
-The ``value`` argument is the signed pointer value to be authenticated.
-The ``key`` argument is the identifier of the key that was used to generate
+The `value` argument is the signed pointer value to be authenticated.
+The `key` argument is the identifier of the key that was used to generate
 the signed value.
-The ``discriminator`` argument is the additional diversity data to be used as a
+The `discriminator` argument is the additional diversity data to be used as a
 discriminator.
 
 ##### Semantics:
 
-The '``llvm.ptrauth.auth``' intrinsic implements the `auth`_ operation.
+The '`llvm.ptrauth.auth`' intrinsic implements the `auth`_ operation.
 It returns a raw pointer value.
-If ``value`` does not have a correct signature for ``key`` and ``discriminator``,
+If `value` does not have a correct signature for `key` and `discriminator`,
 the intrinsic traps in a target-specific way.
 
 
-#### '``llvm.ptrauth.strip``'
+#### '`llvm.ptrauth.strip`'
 
 ##### Syntax:
 
@@ -100,37 +100,37 @@ declare i64 @llvm.ptrauth.strip(i64 <value>, i32 <key>)
 
 ##### Overview:
 
-The '``llvm.ptrauth.strip``' intrinsic strips the embedded signature out of a
+The '`llvm.ptrauth.strip`' intrinsic strips the embedded signature out of a
 possibly-signed pointer.
 
 
 ##### Arguments:
 
-The ``value`` argument is the signed pointer value to be stripped.
-The ``key`` argument is the identifier of the key that was used to generate
+The `value` argument is the signed pointer value to be stripped.
+The `key` argument is the identifier of the key that was used to generate
 the signed value.
 
 ##### Semantics:
 
-The '``llvm.ptrauth.strip``' intrinsic implements the `strip`_ operation.
+The '`llvm.ptrauth.strip`' intrinsic implements the `strip`_ operation.
 It returns a raw pointer value.  It does **not** check that the
 signature is valid.
 
-``key`` should identify a key that is appropriate for ``value``, as defined
+`key` should identify a key that is appropriate for `value`, as defined
 by the target-specific [keys](#key)).
 
-If ``value`` is a raw pointer value, it is returned as-is (provided the ``key``
+If `value` is a raw pointer value, it is returned as-is (provided the `key`
 is appropriate for the pointer).
 
-If ``value`` is not a pointer value for which ``key`` is appropriate, the
+If `value` is not a pointer value for which `key` is appropriate, the
 behavior is target-specific.
 
-If ``value`` is a signed pointer value, but ``key`` does not identify the
-same key that was used to generate ``value``, the behavior is
+If `value` is a signed pointer value, but `key` does not identify the
+same key that was used to generate `value`, the behavior is
 target-specific.
 
 
-#### '``llvm.ptrauth.resign``'
+#### '`llvm.ptrauth.resign`'
 
 ##### Syntax:
 
@@ -142,30 +142,30 @@ declare i64 @llvm.ptrauth.resign(i64 <value>,
 
 ##### Overview:
 
-The '``llvm.ptrauth.resign``' intrinsic re-signs a signed pointer using
+The '`llvm.ptrauth.resign`' intrinsic re-signs a signed pointer using
 a different key and diversity data.
 
 ##### Arguments:
 
-The ``value`` argument is the signed pointer value to be authenticated.
-The ``old key`` argument is the identifier of the key that was used to generate
+The `value` argument is the signed pointer value to be authenticated.
+The `old key` argument is the identifier of the key that was used to generate
 the signed value.
-The ``old discriminator`` argument is the additional diversity data to be used
+The `old discriminator` argument is the additional diversity data to be used
 as a discriminator in the auth operation.
-The ``new key`` argument is the identifier of the key to use to generate the
+The `new key` argument is the identifier of the key to use to generate the
 resigned value.
-The ``new discriminator`` argument is the additional diversity data to be used
+The `new discriminator` argument is the additional diversity data to be used
 as a discriminator in the sign operation.
 
 ##### Semantics:
 
-The '``llvm.ptrauth.resign``' intrinsic performs a combined `auth`_ and `sign`_
+The '`llvm.ptrauth.resign`' intrinsic performs a combined `auth`_ and `sign`_
 operation, without exposing the intermediate raw pointer.
 It returns a signed pointer value.
-If ``value`` does not have a correct signature for ``old key`` and
-``old discriminator``, the intrinsic traps in a target-specific way.
+If `value` does not have a correct signature for `old key` and
+`old discriminator`, the intrinsic traps in a target-specific way.
 
-#### '``llvm.ptrauth.sign_generic``'
+#### '`llvm.ptrauth.sign_generic`'
 
 ##### Syntax:
 
@@ -175,28 +175,28 @@ declare i64 @llvm.ptrauth.sign_generic(i64 <value>, i64 <discriminator>)
 
 ##### Overview:
 
-The '``llvm.ptrauth.sign_generic``' intrinsic computes a generic signature of
+The '`llvm.ptrauth.sign_generic`' intrinsic computes a generic signature of
 arbitrary data.
 
 ##### Arguments:
 
-The ``value`` argument is the arbitrary data value to be signed.
-The ``discriminator`` argument is the additional diversity data to be used as a
+The `value` argument is the arbitrary data value to be signed.
+The `discriminator` argument is the additional diversity data to be used as a
 discriminator.
 
 ##### Semantics:
 
-The '``llvm.ptrauth.sign_generic``' intrinsic computes the signature of a given
+The '`llvm.ptrauth.sign_generic`' intrinsic computes the signature of a given
 combination of value and additional diversity data.
 
 It returns a full signature value (as opposed to a signed pointer value, with
 an embedded partial signature).
 
-As opposed to [``llvm.ptrauth.sign``](#llvm-ptrauth-sign), it does not interpret
-``value`` as a pointer value.  Instead, it is an arbitrary data value.
+As opposed to [`llvm.ptrauth.sign`](#llvm-ptrauth-sign), it does not interpret
+`value` as a pointer value.  Instead, it is an arbitrary data value.
 
 
-#### '``llvm.ptrauth.blend``'
+#### '`llvm.ptrauth.blend`'
 
 ##### Syntax:
 
@@ -206,18 +206,18 @@ declare i64 @llvm.ptrauth.blend(i64 <address discriminator>, i64 <integer discri
 
 ##### Overview:
 
-The '``llvm.ptrauth.blend``' intrinsic blends a pointer address discriminator
+The '`llvm.ptrauth.blend`' intrinsic blends a pointer address discriminator
 with a small integer discriminator to produce a new "blended" discriminator.
 
 ##### Arguments:
 
-The ``address discriminator`` argument is a pointer value.
-The ``integer discriminator`` argument is a small integer, as specified by the
+The `address discriminator` argument is a pointer value.
+The `integer discriminator` argument is a small integer, as specified by the
 target.
 
 ##### Semantics:
 
-The '``llvm.ptrauth.blend``' intrinsic combines a small integer discriminator
+The '`llvm.ptrauth.blend`' intrinsic combines a small integer discriminator
 with a pointer address discriminator, in a way that is specified by the target
 implementation.
 
@@ -226,16 +226,16 @@ implementation.
 
 Function pointers used as indirect call targets can be signed when materialized,
 and authenticated before calls.  This can be accomplished with the
-[``llvm.ptrauth.auth``](#llvm-ptrauth-auth) intrinsic, feeding its result to
+[`llvm.ptrauth.auth`](#llvm-ptrauth-auth) intrinsic, feeding its result to
 an indirect call.
 
 However, that exposes the intermediate, unauthenticated pointer, e.g., if it
 gets spilled to the stack.  An attacker can then overwrite the pointer in
 memory, negating the security benefit provided by pointer authentication.
-To prevent that, the ``ptrauth`` operand bundle may be used: it guarantees that
+To prevent that, the `ptrauth` operand bundle may be used: it guarantees that
 the intermediate call target is kept in a register and never stored to memory.
 This hardening benefit is similar to that provided by
-[``llvm.ptrauth.resign``](#llvm-ptrauth-resign)).
+[`llvm.ptrauth.resign`](#llvm-ptrauth-resign)).
 
 Concretely:
 
@@ -258,7 +258,7 @@ define void @f(void ()* %fp) {
 }
 ```
 
-but with the added guarantee that ``%fp_i``, ``%fp_auth``, and ``%fp_auth_p``
+but with the added guarantee that `%fp_i`, `%fp_auth`, and `%fp_auth_p`
 are not stored to (and reloaded from) memory.
 
 
@@ -278,25 +278,65 @@ support for instructions that manipulate Pointer Authentication Codes (PAC).
 
 Of those, 4 keys are interchangeably usable to specify the key used in IR
 constructs:
-* ``ASIA``/``ASIB`` are instruction keys (encoded as respectively 0 and 1).
-* ``ASDA``/``ASDB`` are data keys (encoded as respectively 2 and 3).
+* `ASIA`/`ASIB` are instruction keys (encoded as respectively 0 and 1).
+* `ASDA`/`ASDB` are data keys (encoded as respectively 2 and 3).
 
-``ASGA`` is a special key that cannot be explicitly specified, and is only ever
+`ASGA` is a special key that cannot be explicitly specified, and is only ever
 used implicitly, to implement the
-[``llvm.ptrauth.sign_generic``](#llvm-ptrauth-sign-generic) intrinsic.
+[`llvm.ptrauth.sign_generic`](#llvm-ptrauth-sign-generic) intrinsic.
 
 #### Instructions
 
 The IR [Intrinsics](#intrinsics) described above map onto these
 instructions as such:
-* [``llvm.ptrauth.sign``](#llvm-ptrauth-sign): ``PAC{I,D}{A,B}{Z,SP,}``
-* [``llvm.ptrauth.auth``](#llvm-ptrauth-auth): ``AUT{I,D}{A,B}{Z,SP,}``
-* [``llvm.ptrauth.strip``](#llvm-ptrauth-strip): ``XPAC{I,D}``
-* [``llvm.ptrauth.blend``](#llvm-ptrauth-blend): The semantics of the blend
+* [`llvm.ptrauth.sign`](#llvm-ptrauth-sign): `PAC{I,D}{A,B}{Z,SP,}`
+* [`llvm.ptrauth.auth`](#llvm-ptrauth-auth): `AUT{I,D}{A,B}{Z,SP,}`
+* [`llvm.ptrauth.strip`](#llvm-ptrauth-strip): `XPAC{I,D}`
+* [`llvm.ptrauth.blend`](#llvm-ptrauth-blend): The semantics of the blend
   operation are specified by the ABI.  In both the ELF PAuth ABI Extension and
-  arm64e, it's a ``MOVK`` into the high 16 bits.  Consequently, this limits
+  arm64e, it's a `MOVK` into the high 16 bits.  Consequently, this limits
   the width of the integer discriminator used in blends to 16 bits.
-* [``llvm.ptrauth.sign_generic``](#llvm-ptrauth-sign-generic): ``PACGA``
-* [``llvm.ptrauth.resign``](#llvm-ptrauth-resign): ``AUT*+PAC*``.  These are
+* [`llvm.ptrauth.sign_generic`](#llvm-ptrauth-sign-generic): `PACGA`
+* [`llvm.ptrauth.resign`](#llvm-ptrauth-resign): `AUT*+PAC*`.  These are
   represented as a single pseudo-instruction in the backend to guarantee that
   the intermediate raw pointer value is not spilled and attackable.
+
+#### Assembly Representation
+
+At the assembly level,
+[Authenticated Relocations](#authenticated-global-relocation) are represented
+using the `@AUTH` modifier:
+
+```asm
+    .quad _target@AUTH(<key>,<discriminator>[,addr])
+```
+
+where:
+* `key` is the Armv8.3-A key identifier (`ia`, `ib`, `da`, `db`)
+* `discriminator` is the 16-bit unsigned discriminator value
+* `addr` signifies that the authenticated pointer is address-discriminated
+  (that is, that the relocation's target address is to be blended into the
+  `discriminator` before it is used in the sign operation.
+
+For example:
+```asm
+  _authenticated_reference_to_sym:
+    .quad _sym@AUTH(db,0)
+  _authenticated_reference_to_sym_addr_disc:
+    .quad _sym@AUTH(ia,12,addr)
+```
+
+#### ELF Object File Representation
+
+At the object file level,
+[Authenticated Relocations](#authenticated-global-relocation) are represented
+using the `R_AARCH64_AUTH_ABS64` relocation kind (with value `0xE100`).
+
+The signing schema is encoded in the place of relocation to be applied
+as follows:
+
+```
+| 63                | 62       | 61:60    | 59:48    |  47:32        | 31:0                |
+| ----------------- | -------- | -------- | -------- | ------------- | ------------------- |
+| address diversity | reserved | key      | reserved | discriminator | reserved for addend |
+```

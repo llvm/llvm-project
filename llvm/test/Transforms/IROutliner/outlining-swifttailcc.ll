@@ -7,27 +7,27 @@ declare swifttailcc void @musttail()
 
 define swifttailcc void @f1() {
   %a = alloca i32, align 4
-  store i32 2, i32* %a, align 4
+  store i32 2, ptr %a, align 4
   musttail call swifttailcc void @musttail()
   ret void
 }
 
 define swifttailcc void @f2() {
   %a = alloca i32, align 4
-  store i32 2, i32* %a, align 4
+  store i32 2, ptr %a, align 4
   musttail call swifttailcc void @musttail()
   ret void
 }
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 2, i32* [[A]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[A]], align 4
 ; CHECK-NEXT:    musttail call swifttailcc void @musttail()
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 2, i32* [[A]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[A]], align 4
 ; CHECK-NEXT:    musttail call swifttailcc void @musttail()
 ; CHECK-NEXT:    ret void
 ;

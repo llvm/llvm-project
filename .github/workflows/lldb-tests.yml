@@ -1,5 +1,8 @@
 name: lldb Tests
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
   push:
@@ -28,7 +31,6 @@ concurrency:
   # Cancel intermediate builds: only if it is a pull request build.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
-
 
 jobs:
   build_lldb:

@@ -60,7 +60,7 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
   AllTypesMatch<["a", "dst"]>,
   TypesMatchWith<"`k` has the same number of bits as elements in `dst`",
                  "dst", "k",
-                 "VectorType::get({$_self.cast<VectorType>().getShape()[0]}, "
+                 "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
                  "IntegerType::get($_self.getContext(), 1))">]> {
   let summary = "Masked compress op";
   let description = [{
@@ -95,7 +95,7 @@ def MaskCompressIntrOp : AVX512_IntrOverloadedOp<"mask.compress", [
   AllTypesMatch<["a", "src", "res"]>,
   TypesMatchWith<"`k` has the same number of bits as elements in `res`",
                  "res", "k",
-                 "VectorType::get({$_self.cast<VectorType>().getShape()[0]}, "
+                 "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
                  "IntegerType::get($_self.getContext(), 1))">]> {
   let arguments = (ins VectorOfLengthAndType<[16, 8],
                                              [F32, I32, F64, I64]>:$a,
@@ -114,7 +114,7 @@ def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [Pure,
   TypesMatchWith<"imm has the same number of bits as elements in dst",
                  "dst", "imm",
                  "IntegerType::get($_self.getContext(), "
-                 "($_self.cast<VectorType>().getShape()[0]))">]> {
+                 "(::llvm::cast<VectorType>($_self).getShape()[0]))">]> {
   let summary = "Masked roundscale op";
   let description = [{
     The mask.rndscale op is an AVX512 specific op that can lower to the proper
@@ -170,7 +170,7 @@ def MaskScaleFOp : AVX512_Op<"mask.scalef", [Pure,
   TypesMatchWith<"k has the same number of bits as elements in dst",
                  "dst", "k",
                  "IntegerType::get($_self.getContext(), "
-                 "($_self.cast<VectorType>().getShape()[0]))">]> {
+                 "(::llvm::cast<VectorType>($_self).getShape()[0]))">]> {
   let summary = "ScaleF op";
   let description = [{
     The `mask.scalef` op is an AVX512 specific op that can lower to the proper
@@ -226,13 +226,13 @@ def Vp2IntersectOp : AVX512_Op<"vp2intersect", [Pure,
   AllTypesMatch<["a", "b"]>,
   TypesMatchWith<"k1 has the same number of bits as elements in a",
                  "a", "k1",
-                 "VectorType::get({$_self.cast<VectorType>().getShape()[0]}, "
+                 "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
                  "IntegerType::get($_self.getContext(), 1))">,
   TypesMatchWith<"k2 has the same number of bits as elements in b",
                  // Should use `b` instead of `a`, but that would require
                  // adding `type($b)` to assemblyFormat.
                  "a", "k2",
-                 "VectorType::get({$_self.cast<VectorType>().getShape()[0]}, "
+                 "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
                  "IntegerType::get($_self.getContext(), 1))">]> {
   let summary = "Vp2Intersect op";
   let description = [{

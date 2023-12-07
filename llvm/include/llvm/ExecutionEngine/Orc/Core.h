@@ -20,12 +20,15 @@
 #include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 
 #include <atomic>
+#include <deque>
 #include <future>
 #include <memory>
 #include <vector>
@@ -70,6 +73,10 @@ public:
                                          ~static_cast<uintptr_t>(1));
   }
 
+  /// Runs the given callback under the session lock, passing in the associated
+  /// ResourceKey. This is the safe way to associate resources with trackers.
+  template <typename Func> Error withResourceKeyDo(Func &&F);
+
   /// Remove all resources associated with this key.
   Error remove();
 
@@ -97,8 +104,9 @@ private:
 class ResourceManager {
 public:
   virtual ~ResourceManager();
-  virtual Error handleRemoveResources(ResourceKey K) = 0;
-  virtual void handleTransferResources(ResourceKey DstK, ResourceKey SrcK) = 0;
+  virtual Error handleRemoveResources(JITDylib &JD, ResourceKey K) = 0;
+  virtual void handleTransferResources(JITDylib &JD, ResourceKey DstK,
+                                       ResourceKey SrcK) = 0;
 };
 
 /// A set of symbol names (represented by SymbolStringPtrs for
@@ -110,7 +118,7 @@ using SymbolNameVector = std::vector<SymbolStringPtr>;
 
 /// A map from symbol names (as SymbolStringPtrs) to JITSymbols
 /// (address/flags pairs).
-using SymbolMap = DenseMap<SymbolStringPtr, JITEvaluatedSymbol>;
+using SymbolMap = DenseMap<SymbolStringPtr, ExecutorSymbolDef>;
 
 /// A map from symbol names (as SymbolStringPtrs) to JITSymbolFlags.
 using SymbolFlagsMap = DenseMap<SymbolStringPtr, JITSymbolFlags>;
@@ -530,8 +538,11 @@ public:
   ///        emitted or notified of an error.
   ~MaterializationResponsibility();
 
-  /// Returns the ResourceTracker for this instance.
-  template <typename Func> Error withResourceKeyDo(Func &&F) const;
+  /// Runs the given callback under the session lock, passing in the associated
+  /// ResourceKey. This is the safe way to associate resources with trackers.
+  template <typename Func> Error withResourceKeyDo(Func &&F) const {
+    return RT->withResourceKeyDo(std::forward<Func>(F));
+  }
 
   /// Returns the target JITDylib that these symbols are being materialized
   ///        into.
@@ -568,7 +579,7 @@ public:
   /// moved to the error state due to the failure of a dependency. If this
   /// method returns an error then clients should log it and call
   /// failMaterialize. If no dependencies have been registered for the
-  /// symbols covered by this MaterializationResponsibiility then this method
+  /// symbols covered by this MaterializationResponsibility then this method
   /// is guaranteed to return Error::success() and can be wrapped with cantFail.
   Error notifyResolved(const SymbolMap &Symbols);
 
@@ -580,7 +591,7 @@ public:
   /// moved to the error state due to the failure of a dependency. If this
   /// method returns an error then clients should log it and call
   /// failMaterialize. If no dependencies have been registered for the
-  /// symbols covered by this MaterializationResponsibiility then this method
+  /// symbols covered by this MaterializationResponsibility then this method
   /// is guaranteed to return Error::success() and can be wrapped with cantFail.
   Error notifyEmitted();
 
@@ -597,23 +608,9 @@ public:
   /// callbacks, metadata).
   Error defineMaterializing(SymbolFlagsMap SymbolFlags);
 
-  /// Define the given symbols as non-existent, removing it from the symbol
-  /// table and notifying any pending queries. Queries that lookup up the
-  /// symbol using the SymbolLookupFlags::WeaklyReferencedSymbol flag will
-  /// behave as if the symbol had not been matched in the first place. Queries
-  /// that required this symbol will fail with a missing symbol definition
-  /// error.
-  ///
-  /// This method is intended to support cleanup of special symbols like
-  /// initializer symbols: Queries using
-  /// SymbolLookupFlags::WeaklyReferencedSymbol can be used to trigger their
-  /// emission, and this method can be used to remove them from the JITDylib
-  /// once materialization is complete.
-  void defineNonExistent(ArrayRef<SymbolStringPtr> Symbols);
-
   /// Notify all not-yet-emitted covered by this MaterializationResponsibility
   /// instance that an error has occurred.
-  /// This will remove all symbols covered by this MaterializationResponsibilty
+  /// This will remove all symbols covered by this MaterializationResponsibility
   /// from the target JITDylib, and send an error to any queries waiting on
   /// these symbols.
   void failMaterialization();
@@ -754,7 +751,7 @@ private:
 /// \code{.cpp}
 ///   JITDylib &JD = ...;
 ///   SymbolStringPtr Foo = ...;
-///   JITEvaluatedSymbol FooSym = ...;
+///   ExecutorSymbolDef FooSym = ...;
 ///   if (auto Err = JD.define(absoluteSymbols({{Foo, FooSym}})))
 ///     return Err;
 /// \endcode
@@ -858,7 +855,7 @@ public:
 
   /// Notify the query that a requested symbol has reached the required state.
   void notifySymbolMetRequiredState(const SymbolStringPtr &Name,
-                                    JITEvaluatedSymbol Sym);
+                                    ExecutorSymbolDef Sym);
 
   /// Returns true if all symbols covered by this query have been
   ///        resolved.
@@ -916,6 +913,8 @@ private:
 /// Definition generators can be attached to JITDylibs to generate new
 /// definitions for otherwise unresolved symbols during lookup.
 class DefinitionGenerator {
+  friend class ExecutionSession;
+
 public:
   virtual ~DefinitionGenerator();
 
@@ -928,6 +927,11 @@ public:
   virtual Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
                               JITDylibLookupFlags JDLookupFlags,
                               const SymbolLookupSet &LookupSet) = 0;
+
+private:
+  std::mutex M;
+  bool InUse = false;
+  std::deque<LookupState> PendingLookups;
 };
 
 /// Represents a JIT'd dynamic library.
@@ -1045,6 +1049,11 @@ public:
   /// is responsible for ensuring that they do not do so.
   void setLinkOrder(JITDylibSearchOrder NewSearchOrder,
                     bool LinkAgainstThisJITDylibFirst = true);
+
+  /// Append the given JITDylibSearchOrder to the link order for this
+  /// JITDylib (discarding any elements already present in this JITDylib's
+  /// link order).
+  void addToLinkOrder(const JITDylibSearchOrder &NewLinks);
 
   /// Add the given JITDylib to the link order for definitions in this
   /// JITDylib.
@@ -1203,14 +1212,14 @@ private:
         : Flags(Flags), State(static_cast<uint8_t>(SymbolState::NeverSearched)),
           MaterializerAttached(false), PendingRemoval(false) {}
 
-    JITTargetAddress getAddress() const { return Addr; }
+    ExecutorAddr getAddress() const { return Addr; }
     JITSymbolFlags getFlags() const { return Flags; }
     SymbolState getState() const { return static_cast<SymbolState>(State); }
 
     bool hasMaterializerAttached() const { return MaterializerAttached; }
     bool isPendingRemoval() const { return PendingRemoval; }
 
-    void setAddress(JITTargetAddress Addr) { this->Addr = Addr; }
+    void setAddress(ExecutorAddr Addr) { this->Addr = Addr; }
     void setFlags(JITSymbolFlags Flags) { this->Flags = Flags; }
     void setState(SymbolState State) {
       assert(static_cast<uint8_t>(State) < (1 << 6) &&
@@ -1226,12 +1235,10 @@ private:
       this->PendingRemoval = PendingRemoval;
     }
 
-    JITEvaluatedSymbol getSymbol() const {
-      return JITEvaluatedSymbol(Addr, Flags);
-    }
+    ExecutorSymbolDef getSymbol() const { return {Addr, Flags}; }
 
   private:
-    JITTargetAddress Addr = 0;
+    ExecutorAddr Addr;
     JITSymbolFlags Flags;
     uint8_t State : 6;
     uint8_t MaterializerAttached : 1;
@@ -1259,7 +1266,9 @@ private:
                                        const SymbolStringPtr &DependantName,
                                        MaterializingInfo &EmittedMI);
 
-  Expected<SymbolFlagsMap> defineMaterializing(SymbolFlagsMap SymbolFlags);
+  Expected<SymbolFlagsMap>
+  defineMaterializing(MaterializationResponsibility &FromMR,
+                      SymbolFlagsMap SymbolFlags);
 
   Error replace(MaterializationResponsibility &FromMR,
                 std::unique_ptr<MaterializationUnit> MU);
@@ -1361,6 +1370,21 @@ private:
   std::unique_ptr<MaterializationResponsibility> MR;
 };
 
+/// Lookups are usually run on the current thread, but in some cases they may
+/// be run as tasks, e.g. if the lookup has been continued from a suspended
+/// state.
+class LookupTask : public RTTIExtends<LookupTask, Task> {
+public:
+  static char ID;
+
+  LookupTask(LookupState LS) : LS(std::move(LS)) {}
+  void printDescription(raw_ostream &OS) override;
+  void run() override;
+
+private:
+  LookupState LS;
+};
+
 /// An ExecutionSession represents a running JIT program.
 class ExecutionSession {
   friend class InProgressLookupFlagsState;
@@ -1406,6 +1430,12 @@ public:
   /// Get the ExecutorProcessControl object associated with this
   /// ExecutionSession.
   ExecutorProcessControl &getExecutorProcessControl() { return *EPC; }
+
+  /// Return the triple for the executor.
+  const Triple &getTargetTriple() const { return EPC->getTargetTriple(); }
+
+  // Return the page size for the executor.
+  size_t getPageSize() const { return EPC->getPageSize(); }
 
   /// Get the SymbolStringPool for this instance.
   std::shared_ptr<SymbolStringPool> getSymbolStringPool() {
@@ -1461,17 +1491,29 @@ public:
   /// If no Platform is attached this call is equivalent to createBareJITDylib.
   Expected<JITDylib &> createJITDylib(std::string Name);
 
-  /// Closes the given JITDylib.
+  /// Removes the given JITDylibs from the ExecutionSession.
   ///
-  /// This method clears all resources held for the JITDylib, puts it in the
-  /// closed state, and clears all references held by the ExecutionSession and
-  /// other JITDylibs. No further code can be added to the JITDylib, and the
-  /// object will be freed once any remaining JITDylibSPs to it are destroyed.
+  /// This method clears all resources held for the JITDylibs, puts them in the
+  /// closed state, and clears all references to them that are held by the
+  /// ExecutionSession or other JITDylibs. No further code can be added to the
+  /// removed JITDylibs, and the JITDylib objects will be freed once any
+  /// remaining JITDylibSPs pointing to them are destroyed.
   ///
-  /// This method does *not* run static destructors.
+  /// This method does *not* run static destructors for code contained in the
+  /// JITDylibs, and each JITDylib can only be removed once.
   ///
-  /// This method can only be called once for each JITDylib.
-  Error removeJITDylib(JITDylib &JD);
+  /// JITDylibs will be removed in the order given. Teardown is usually
+  /// independent for each JITDylib, but not always. In particular, where the
+  /// ORC runtime is used it is expected that teardown off all JITDylibs will
+  /// depend on it, so the JITDylib containing the ORC runtime must be removed
+  /// last. If the client has introduced any other dependencies they should be
+  /// accounted for in the removal order too.
+  Error removeJITDylibs(std::vector<JITDylibSP> JDsToRemove);
+
+  /// Calls removeJTIDylibs on the gives JITDylib.
+  Error removeJITDylib(JITDylib &JD) {
+    return removeJITDylibs(std::vector<JITDylibSP>({&JD}));
+  }
 
   /// Set the error reporter function.
   ExecutionSession &setErrorReporter(ErrorReporter ReportError) {
@@ -1542,21 +1584,21 @@ public:
   /// Convenience version of blocking lookup.
   /// Searches each of the JITDylibs in the search order in turn for the given
   /// symbol.
-  Expected<JITEvaluatedSymbol>
+  Expected<ExecutorSymbolDef>
   lookup(const JITDylibSearchOrder &SearchOrder, SymbolStringPtr Symbol,
          SymbolState RequiredState = SymbolState::Ready);
 
   /// Convenience version of blocking lookup.
   /// Searches each of the JITDylibs in the search order in turn for the given
   /// symbol. The search will not find non-exported symbols.
-  Expected<JITEvaluatedSymbol>
+  Expected<ExecutorSymbolDef>
   lookup(ArrayRef<JITDylib *> SearchOrder, SymbolStringPtr Symbol,
          SymbolState RequiredState = SymbolState::Ready);
 
   /// Convenience version of blocking lookup.
   /// Searches each of the JITDylibs in the search order in turn for the given
   /// symbol. The search will not find non-exported symbols.
-  Expected<JITEvaluatedSymbol>
+  Expected<ExecutorSymbolDef>
   lookup(ArrayRef<JITDylib *> SearchOrder, StringRef Symbol,
          SymbolState RequiredState = SymbolState::Ready);
 
@@ -1632,7 +1674,7 @@ public:
 
   /// Wrap a class method that takes concrete argument types (and a sender for
   /// a concrete return type) to produce an AsyncHandlerWrapperFunction. Uses
-  /// SPS to unpack teh arguments and pack the result.
+  /// SPS to unpack the arguments and pack the result.
   ///
   /// This function is intended to support easy construction of
   /// AsyncHandlerWrapperFunctions that can be associated with a tag
@@ -1661,10 +1703,9 @@ public:
   /// Run a registered jit-side wrapper function.
   /// This should be called by the ExecutorProcessControl instance in response
   /// to incoming jit-dispatch requests from the executor.
-  void
-  runJITDispatchHandler(SendResultFunction SendResult,
-                        JITTargetAddress HandlerFnTagAddr,
-                        ArrayRef<char> ArgBuffer);
+  void runJITDispatchHandler(SendResultFunction SendResult,
+                             ExecutorAddr HandlerFnTagAddr,
+                             ArrayRef<char> ArgBuffer);
 
   /// Dump the state of all the JITDylibs in this session.
   void dump(raw_ostream &OS);
@@ -1702,6 +1743,9 @@ private:
   Error IL_updateCandidatesFor(JITDylib &JD, JITDylibLookupFlags JDLookupFlags,
                                SymbolLookupSet &Candidates,
                                SymbolLookupSet *NonCandidates);
+
+  /// Handle resumption of a lookup after entering a generator.
+  void OL_resumeLookupAfterGeneration(InProgressLookupState &IPLS);
 
   /// OL_applyQueryPhase1 is an optionally re-startable loop for triggering
   /// definition generation. It is called when a lookup is performed, and again
@@ -1766,23 +1810,22 @@ private:
       OutstandingMUs;
 
   mutable std::mutex JITDispatchHandlersMutex;
-  DenseMap<JITTargetAddress, std::shared_ptr<JITDispatchHandlerFunction>>
+  DenseMap<ExecutorAddr, std::shared_ptr<JITDispatchHandlerFunction>>
       JITDispatchHandlers;
 };
+
+template <typename Func> Error ResourceTracker::withResourceKeyDo(Func &&F) {
+  return getJITDylib().getExecutionSession().runSessionLocked([&]() -> Error {
+    if (isDefunct())
+      return make_error<ResourceTrackerDefunct>(this);
+    F(getKeyUnsafe());
+    return Error::success();
+  });
+}
 
 inline ExecutionSession &
 MaterializationResponsibility::getExecutionSession() const {
   return JD.getExecutionSession();
-}
-
-template <typename Func>
-Error MaterializationResponsibility::withResourceKeyDo(Func &&F) const {
-  return JD.getExecutionSession().runSessionLocked([&]() -> Error {
-    if (RT->isDefunct())
-      return make_error<ResourceTrackerDefunct>(RT);
-    F(RT->getKeyUnsafe());
-    return Error::success();
-  });
 }
 
 template <typename GeneratorT>

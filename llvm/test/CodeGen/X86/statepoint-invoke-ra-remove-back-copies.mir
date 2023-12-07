@@ -9,25 +9,25 @@
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
 
-  define void @hoge(i8 addrspace(1)* %arg) gc "statepoint-example" personality i32* ()* @widget {
+  define void @hoge(ptr addrspace(1) %arg) gc "statepoint-example" personality ptr @widget {
   bb:
-    %tmp = call token (i64, i32, void (i8 addrspace(1)*, i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8p1i8f(i64 2, i32 5, void (i8 addrspace(1)*, i8 addrspace(1)*)* nonnull elementtype(void (i8 addrspace(1)*, i8 addrspace(1)*)) @quux, i32 2, i32 0, i8 addrspace(1)* %arg, i8 addrspace(1)* undef, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 6, i32 0, i32 4, i32 1, i32 0, i8 addrspace(1)* %arg, i32 7, i8* null, i32 0, i8 addrspace(1)* %arg, i32 7, i8* null, i32 0, i8 addrspace(1)* %arg, i32 2, i32 1, i32 5, i32 0, i32 2, i32 0, i32 7, i8* null, i32 7, i8* null), "gc-live"(i8 addrspace(1)* %arg) ]
-    %tmp1 = load atomic i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef unordered, align 8
-    %tmp2 = ptrtoint i8 addrspace(1)* %tmp1 to i64
+    %tmp = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2, i32 5, ptr nonnull elementtype(void (ptr addrspace(1), ptr addrspace(1))) @quux, i32 2, i32 0, ptr addrspace(1) %arg, ptr addrspace(1) undef, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 6, i32 0, i32 4, i32 1, i32 0, ptr addrspace(1) %arg, i32 7, ptr null, i32 0, ptr addrspace(1) %arg, i32 7, ptr null, i32 0, ptr addrspace(1) %arg, i32 2, i32 1, i32 5, i32 0, i32 2, i32 0, i32 7, ptr null, i32 7, ptr null), "gc-live"(ptr addrspace(1) %arg) ]
+    %tmp1 = load atomic ptr addrspace(1), ptr addrspace(1) undef unordered, align 8
+    %tmp2 = ptrtoint ptr addrspace(1) %tmp1 to i64
     %tmp3 = xor i64 %tmp2, -1
-    %tmp4 = inttoptr i64 %tmp3 to i8 addrspace(1)*
-    %tmp5 = select i1 false, i8 addrspace(1)* null, i8 addrspace(1)* %tmp4
+    %tmp4 = inttoptr i64 %tmp3 to ptr addrspace(1)
+    %tmp5 = select i1 false, ptr addrspace(1) null, ptr addrspace(1) %tmp4
     br i1 undef, label %bb6, label %bb40
 
   bb6:                                              ; preds = %bb
     br label %bb7
 
   bb7:                                              ; preds = %bb27, %bb6
-    %tmp9 = phi i8 addrspace(1)* [ undef, %bb6 ], [ %tmp28, %bb27 ]
-    %tmp10 = phi i8 addrspace(1)* [ undef, %bb6 ], [ %tmp29, %bb27 ]
-    %tmp11 = phi i8 addrspace(1)* [ undef, %bb6 ], [ %tmp30, %bb27 ]
+    %tmp9 = phi ptr addrspace(1) [ undef, %bb6 ], [ %tmp28, %bb27 ]
+    %tmp10 = phi ptr addrspace(1) [ undef, %bb6 ], [ %tmp29, %bb27 ]
+    %tmp11 = phi ptr addrspace(1) [ undef, %bb6 ], [ %tmp30, %bb27 ]
     %tmp12 = phi i32 [ 0, %bb6 ], [ %tmp16, %bb27 ]
-    %tmp13 = load atomic i32, i32 addrspace(1)* undef unordered, align 8
+    %tmp13 = load atomic i32, ptr addrspace(1) undef unordered, align 8
     %tmp14 = sub i32 %tmp13, 0
     %tmp15 = select i1 false, i32 %tmp14, i32 undef
     %tmp16 = add i32 %tmp15, %tmp12
@@ -40,17 +40,17 @@
     br i1 undef, label %bb27, label %bb23
 
   bb23:                                             ; preds = %bb20
-    %tmp24 = invoke token (i64, i32, void (i32, i8 addrspace(1)*, i8 addrspace(1)*, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32p1i8p1i8i32i32f(i64 1, i32 16, void (i32, i8 addrspace(1)*, i8 addrspace(1)*, i32, i32)* nonnull elementtype(void (i32, i8 addrspace(1)*, i8 addrspace(1)*, i32, i32)) @barney, i32 5, i32 0, i32 undef, i8 addrspace(1)* nonnull undef, i8 addrspace(1)* null, i32 0, i32 undef, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp11, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp11, i32 10, i32 2, i32 12, i32 0, i32 3, i32 1, i32 0, i8 addrspace(1)* %tmp11, i32 0, i8 addrspace(1)* %tmp11, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp11, i32 2, i32 8, i32 4, i32 0, i32 1, i32 0, i32 7, i8* null, i32 2, i32 12, i32 7, i32 0, i32 2, i32 0, i32 7, i8* null, i32 7, i8* null, i32 10, i32 18, i32 96, i32 0, i32 9, i32 1, i32 0, i8 addrspace(1)* %tmp10, i32 0, i8 addrspace(1)* undef, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp9, i32 3, i32 %tmp16, i32 3, i32 0, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp9, i32 8, i32 9, i32 34, i32 0, i32 3, i32 1, i32 0, i8 addrspace(1)* %tmp10, i32 0, i8 addrspace(1)* undef, i32 7, i8* null, i32 0, i8 addrspace(1)* undef), "gc-live"(i8 addrspace(1)* %tmp11, i8 addrspace(1)* %tmp9, i8 addrspace(1)* undef, i8 addrspace(1)* %tmp10, i8 addrspace(1)* undef, i8 addrspace(1)* %tmp5) ]
+    %tmp24 = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 1, i32 16, ptr nonnull elementtype(void (i32, ptr addrspace(1), ptr addrspace(1), i32, i32)) @barney, i32 5, i32 0, i32 undef, ptr addrspace(1) nonnull undef, ptr addrspace(1) null, i32 0, i32 undef, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp11, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp11, i32 10, i32 2, i32 12, i32 0, i32 3, i32 1, i32 0, ptr addrspace(1) %tmp11, i32 0, ptr addrspace(1) %tmp11, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp11, i32 2, i32 8, i32 4, i32 0, i32 1, i32 0, i32 7, ptr null, i32 2, i32 12, i32 7, i32 0, i32 2, i32 0, i32 7, ptr null, i32 7, ptr null, i32 10, i32 18, i32 96, i32 0, i32 9, i32 1, i32 0, ptr addrspace(1) %tmp10, i32 0, ptr addrspace(1) undef, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp9, i32 3, i32 %tmp16, i32 3, i32 0, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp9, i32 8, i32 9, i32 34, i32 0, i32 3, i32 1, i32 0, ptr addrspace(1) %tmp10, i32 0, ptr addrspace(1) undef, i32 7, ptr null, i32 0, ptr addrspace(1) undef), "gc-live"(ptr addrspace(1) %tmp11, ptr addrspace(1) %tmp9, ptr addrspace(1) undef, ptr addrspace(1) %tmp10, ptr addrspace(1) undef, ptr addrspace(1) %tmp5) ]
             to label %bb25 unwind label %bb35
 
   bb25:                                             ; preds = %bb23
-    %tmp26 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp24, i32 5, i32 5) ; (%tmp5, %tmp5)
+    %tmp26 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tmp24, i32 5, i32 5) ; (%tmp5, %tmp5)
     br label %bb27
 
   bb27:                                             ; preds = %bb25, %bb20
-    %tmp28 = phi i8 addrspace(1)* [ %tmp9, %bb20 ], [ undef, %bb25 ]
-    %tmp29 = phi i8 addrspace(1)* [ %tmp10, %bb20 ], [ undef, %bb25 ]
-    %tmp30 = phi i8 addrspace(1)* [ %tmp11, %bb20 ], [ null, %bb25 ]
+    %tmp28 = phi ptr addrspace(1) [ %tmp9, %bb20 ], [ undef, %bb25 ]
+    %tmp29 = phi ptr addrspace(1) [ %tmp10, %bb20 ], [ undef, %bb25 ]
+    %tmp30 = phi ptr addrspace(1) [ %tmp11, %bb20 ], [ null, %bb25 ]
     %tmp34 = icmp sgt i32 0, %tmp16
     br i1 %tmp34, label %bb7, label %bb44
 
@@ -60,7 +60,7 @@
     br i1 undef, label %bb39, label %bb37
 
   bb37:                                             ; preds = %bb35
-    %tmp38 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @ham, i32 1, i32 2, i32 3, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 10, i32 2, i32 12, i32 0, i32 3, i32 1, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 2, i32 8, i32 4, i32 0, i32 1, i32 0, i32 7, i8* null, i32 2, i32 12, i32 7, i32 0, i32 2, i32 0, i32 7, i8* null, i32 7, i8* null, i32 10, i32 18, i32 96, i32 0, i32 9, i32 1, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 3, i32 %tmp16, i32 3, i32 0, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 0, i32 9, i32 51, i32 0, i32 3, i32 0, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null), "gc-live"() ]
+    %tmp38 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void (i32)) @ham, i32 1, i32 2, i32 3, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) undef, i32 7, ptr null, i32 0, ptr addrspace(1) undef, i32 10, i32 2, i32 12, i32 0, i32 3, i32 1, i32 0, ptr addrspace(1) undef, i32 0, ptr addrspace(1) undef, i32 7, ptr null, i32 0, ptr addrspace(1) undef, i32 2, i32 8, i32 4, i32 0, i32 1, i32 0, i32 7, ptr null, i32 2, i32 12, i32 7, i32 0, i32 2, i32 0, i32 7, ptr null, i32 7, ptr null, i32 10, i32 18, i32 96, i32 0, i32 9, i32 1, i32 0, ptr addrspace(1) undef, i32 0, ptr addrspace(1) undef, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) undef, i32 3, i32 %tmp16, i32 3, i32 0, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) undef, i32 0, i32 9, i32 51, i32 0, i32 3, i32 0, i32 7, ptr null, i32 7, ptr null, i32 7, ptr null), "gc-live"() ]
     unreachable
 
   bb39:                                             ; preds = %bb35
@@ -72,7 +72,7 @@
 
   bb41:                                             ; preds = %bb7, %bb40
     %tmp42 = phi i32 [ 0, %bb40 ], [ %tmp12, %bb7 ]
-    %tmp43 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @ham, i32 1, i32 2, i32 -39, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 10, i32 2, i32 12, i32 0, i32 3, i32 1, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 2, i32 8, i32 4, i32 0, i32 1, i32 0, i32 7, i8* null, i32 2, i32 12, i32 7, i32 0, i32 2, i32 0, i32 7, i8* null, i32 7, i8* null, i32 10, i32 18, i32 63, i32 0, i32 9, i32 1, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 3, i32 %tmp42, i32 3, i32 0, i32 3, i32 undef, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 2, i32 33, i32 6, i32 0, i32 5, i32 0, i32 0, i8 addrspace(1)* undef, i32 3, i32 %tmp42, i32 3, i32 undef, i32 0, i8 addrspace(1)* undef, i32 3, i32 undef, i32 1, i32 34, i32 14, i32 0, i32 3, i32 0, i32 3, i32 %tmp42, i32 3, i32 undef, i32 3, i32 0), "gc-live"() ]
+    %tmp43 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void (i32)) @ham, i32 1, i32 2, i32 -39, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) undef, i32 7, ptr null, i32 0, ptr addrspace(1) undef, i32 10, i32 2, i32 12, i32 0, i32 3, i32 1, i32 0, ptr addrspace(1) undef, i32 0, ptr addrspace(1) undef, i32 7, ptr null, i32 0, ptr addrspace(1) undef, i32 2, i32 8, i32 4, i32 0, i32 1, i32 0, i32 7, ptr null, i32 2, i32 12, i32 7, i32 0, i32 2, i32 0, i32 7, ptr null, i32 7, ptr null, i32 10, i32 18, i32 63, i32 0, i32 9, i32 1, i32 0, ptr addrspace(1) undef, i32 0, ptr addrspace(1) undef, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) undef, i32 3, i32 %tmp42, i32 3, i32 0, i32 3, i32 undef, i32 7, ptr null, i32 0, ptr addrspace(1) undef, i32 2, i32 33, i32 6, i32 0, i32 5, i32 0, i32 0, ptr addrspace(1) undef, i32 3, i32 %tmp42, i32 3, i32 undef, i32 0, ptr addrspace(1) undef, i32 3, i32 undef, i32 1, i32 34, i32 14, i32 0, i32 3, i32 0, i32 3, i32 %tmp42, i32 3, i32 undef, i32 3, i32 0), "gc-live"() ]
     unreachable
 
   bb44:                                             ; preds = %bb27
@@ -83,49 +83,47 @@
     br i1 undef, label %bb56, label %bb46
 
   bb46:                                             ; preds = %bb45
-    %tmp47 = invoke token (i64, i32, void (i32, i8 addrspace(1)*, i8 addrspace(1)*, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32p1i8p1i8i32i32f(i64 1, i32 16, void (i32, i8 addrspace(1)*, i8 addrspace(1)*, i32, i32)* nonnull elementtype(void (i32, i8 addrspace(1)*, i8 addrspace(1)*, i32, i32)) @barney, i32 5, i32 0, i32 undef, i8 addrspace(1)* nonnull undef, i8 addrspace(1)* undef, i32 0, i32 undef, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp30, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp30, i32 10, i32 2, i32 19, i32 0, i32 3, i32 1, i32 0, i8 addrspace(1)* %tmp30, i32 0, i8 addrspace(1)* %tmp30, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp30, i32 8, i32 9, i32 34, i32 0, i32 3, i32 1, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 7, i8* null, i32 0, i8 addrspace(1)* undef), "gc-live"(i8 addrspace(1)* %tmp30, i8 addrspace(1)* undef, i8 addrspace(1)* undef) ]
+    %tmp47 = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 1, i32 16, ptr nonnull elementtype(void (i32, ptr addrspace(1), ptr addrspace(1), i32, i32)) @barney, i32 5, i32 0, i32 undef, ptr addrspace(1) nonnull undef, ptr addrspace(1) undef, i32 0, i32 undef, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp30, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp30, i32 10, i32 2, i32 19, i32 0, i32 3, i32 1, i32 0, ptr addrspace(1) %tmp30, i32 0, ptr addrspace(1) %tmp30, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp30, i32 8, i32 9, i32 34, i32 0, i32 3, i32 1, i32 0, ptr addrspace(1) undef, i32 0, ptr addrspace(1) undef, i32 7, ptr null, i32 0, ptr addrspace(1) undef), "gc-live"(ptr addrspace(1) %tmp30, ptr addrspace(1) undef, ptr addrspace(1) undef) ]
             to label %bb48 unwind label %bb52
 
   bb48:                                             ; preds = %bb46
-    %tmp49 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp47, i32 0, i32 0) ; (%tmp30, %tmp30)
+    %tmp49 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tmp47, i32 0, i32 0) ; (%tmp30, %tmp30)
     br label %bb56
 
   bb50:                                             ; preds = %bb44
-    %tmp51 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @ham, i32 1, i32 2, i32 10, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp30, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp30, i32 10, i32 2, i32 19, i32 0, i32 3, i32 1, i32 0, i8 addrspace(1)* %tmp30, i32 0, i8 addrspace(1)* %tmp30, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp30, i32 1, i32 9, i32 6, i32 1, i32 3, i32 0, i32 0, i8 addrspace(1)* null, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* null, i32 7, i8* null), "gc-live"() ]
+    %tmp51 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void (i32)) @ham, i32 1, i32 2, i32 10, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp30, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp30, i32 10, i32 2, i32 19, i32 0, i32 3, i32 1, i32 0, ptr addrspace(1) %tmp30, i32 0, ptr addrspace(1) %tmp30, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp30, i32 1, i32 9, i32 6, i32 1, i32 3, i32 0, i32 0, ptr addrspace(1) null, i32 0, ptr addrspace(1) undef, i32 0, ptr addrspace(1) null, i32 7, ptr null), "gc-live"() ]
     unreachable
 
   bb52:                                             ; preds = %bb46
     %tmp53 = landingpad token
             cleanup
-    %tmp54 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp53, i32 0, i32 0) ; (%tmp30, %tmp30)
-    %tmp55 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @ham, i32 1, i32 2, i32 3, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp54, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp54, i32 10, i32 2, i32 19, i32 0, i32 3, i32 1, i32 0, i8 addrspace(1)* %tmp54, i32 0, i8 addrspace(1)* %tmp54, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp54, i32 0, i32 9, i32 51, i32 0, i32 3, i32 0, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null), "gc-live"() ]
+    %tmp54 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tmp53, i32 0, i32 0) ; (%tmp30, %tmp30)
+    %tmp55 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void (i32)) @ham, i32 1, i32 2, i32 3, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp54, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp54, i32 10, i32 2, i32 19, i32 0, i32 3, i32 1, i32 0, ptr addrspace(1) %tmp54, i32 0, ptr addrspace(1) %tmp54, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp54, i32 0, i32 9, i32 51, i32 0, i32 3, i32 0, i32 7, ptr null, i32 7, ptr null, i32 7, ptr null), "gc-live"() ]
     unreachable
 
   bb56:                                             ; preds = %bb48, %bb45
-    %tmp57 = phi i8 addrspace(1)* [ %tmp30, %bb45 ], [ %tmp49, %bb48 ]
-    %tmp58 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @ham, i32 1, i32 2, i32 10, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp57, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp57, i32 9, i32 2, i32 26, i32 1, i32 3, i32 1, i32 0, i8 addrspace(1)* null, i32 0, i8 addrspace(1)* %tmp57, i32 0, i8 addrspace(1)* %tmp57, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp57), "gc-live"() ]
+    %tmp57 = phi ptr addrspace(1) [ %tmp30, %bb45 ], [ %tmp49, %bb48 ]
+    %tmp58 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void (i32)) @ham, i32 1, i32 2, i32 10, i32 0, i32 0) [ "deopt"(i32 0, i32 10, i32 0, i32 10, i32 0, i32 4, i32 1, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp57, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp57, i32 9, i32 2, i32 26, i32 1, i32 3, i32 1, i32 0, ptr addrspace(1) null, i32 0, ptr addrspace(1) %tmp57, i32 0, ptr addrspace(1) %tmp57, i32 7, ptr null, i32 0, ptr addrspace(1) %tmp57), "gc-live"() ]
     unreachable
   }
 
-  declare i32* @widget()
+  declare ptr @widget()
 
-  declare void @quux(i8 addrspace(1)*, i8 addrspace(1)*)
+  declare void @quux(ptr addrspace(1), ptr addrspace(1))
 
   declare void @hoge.1()
 
-  declare void @barney(i32, i8 addrspace(1)*, i8 addrspace(1)*, i32, i32)
+  declare void @barney(i32, ptr addrspace(1), ptr addrspace(1), i32, i32)
 
   ; Function Attrs: nounwind readnone
-  declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32 immarg, i32 immarg) #0
+  declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32 immarg, i32 immarg) #0
 
-  declare token @llvm.experimental.gc.statepoint.p0f_isVoidp1i8p1i8f(i64 immarg, i32 immarg, void (i8 addrspace(1)*, i8 addrspace(1)*)*, i32 immarg, i32 immarg, ...)
+  declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, ptr, i32 immarg, i32 immarg, ...)
 
   declare void @ham(i32)
 
-  declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 immarg, i32 immarg, void (i32)*, i32 immarg, i32 immarg, ...)
-
-  declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32p1i8p1i8i32i32f(i64 immarg, i32 immarg, void (i32, i8 addrspace(1)*, i8 addrspace(1)*, i32, i32)*, i32 immarg, i32 immarg, ...)
-
+  
+  
   declare void @wombat()
 
   attributes #0 = { nounwind readnone }
@@ -272,7 +270,7 @@ body:             |
   ; CHECK-NEXT: bb.1.bb6:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm undef %17:gr64, 1, $noreg, 0, $noreg :: (load unordered (s64) from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
+  ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm undef %17:gr64, 1, $noreg, 0, $noreg :: (load unordered (s64) from `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   [[NOT64r:%[0-9]+]]:gr64 = NOT64r [[MOV64rm]]
   ; CHECK-NEXT:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, [[NOT64r]] :: (store (s64) into %stack.1)
   ; CHECK-NEXT:   undef %48.sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
@@ -306,7 +304,7 @@ body:             |
   ; CHECK-NEXT: bb.6.bb7:
   ; CHECK-NEXT:   successors: %bb.16(0x00000000), %bb.7(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm undef %24:gr64, 1, $noreg, 0, $noreg :: (load unordered (s32) from `i32 addrspace(1)* undef`, align 8, addrspace 1)
+  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm undef %24:gr64, 1, $noreg, 0, $noreg :: (load unordered (s32) from `ptr addrspace(1) undef`, align 8, addrspace 1)
   ; CHECK-NEXT:   [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[ADD32rr]], [[MOV32r0_1]], implicit-def dead $eflags
   ; CHECK-NEXT:   CMP32rr [[MOV32r0_1]], [[ADD32rr]], implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.16, 15, implicit $eflags
@@ -468,7 +466,7 @@ body:             |
   bb.1.bb6:
     successors: %bb.2(0x80000000)
 
-    %0:gr64 = MOV64rm undef %17:gr64, 1, $noreg, 0, $noreg :: (load unordered (s64) from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
+    %0:gr64 = MOV64rm undef %17:gr64, 1, $noreg, 0, $noreg :: (load unordered (s64) from `ptr addrspace(1) undef`, addrspace 1)
     %0:gr64 = NOT64r %0
     undef %48.sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
     %1:gr64 = IMPLICIT_DEF
@@ -501,7 +499,7 @@ body:             |
   bb.4.bb7:
     successors: %bb.13(0x00000000), %bb.5(0x80000000)
 
-    %5:gr32 = MOV32rm undef %24:gr64, 1, $noreg, 0, $noreg :: (load unordered (s32) from `i32 addrspace(1)* undef`, align 8, addrspace 1)
+    %5:gr32 = MOV32rm undef %24:gr64, 1, $noreg, 0, $noreg :: (load unordered (s32) from `ptr addrspace(1) undef`, align 8, addrspace 1)
     %5:gr32 = ADD32rr %5, %77, implicit-def dead $eflags
     CMP32rr %77, %5, implicit-def $eflags
     JCC_1 %bb.13, 15, implicit $eflags

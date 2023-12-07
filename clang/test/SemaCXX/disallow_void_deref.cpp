@@ -1,8 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=enabled,sfinae -std=c++20 %s
-// RUN: %clang_cc1 -fsyntax-only -verify=sfinae -std=c++20 -Wno-void-ptr-dereference %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 
 void f(void* p) {
-  (void)*p; // enabled-error{{ISO C++ does not allow indirection on operand of type 'void *'}}
+  (void)*p; // expected-error{{indirection not permitted on operand of type 'void *'}}
 }
 
 template<class T>
@@ -11,6 +10,6 @@ concept deref = requires (T& t) {
 };
 
 static_assert(deref<void*>);
-// sfinae-error@-1{{static assertion failed}}
-// sfinae-note@-2{{because 'void *' does not satisfy 'deref'}}
-// sfinae-note@#FAILED_REQ{{because '*t' would be invalid: ISO C++ does not allow indirection on operand of type 'void *'}}
+// expected-error@-1{{static assertion failed}}
+// expected-note@-2{{because 'void *' does not satisfy 'deref'}}
+// expected-note@#FAILED_REQ{{because '*t' would be invalid: indirection not permitted on operand of type 'void *'}}

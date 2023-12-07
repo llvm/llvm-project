@@ -2,7 +2,7 @@
 // RUN: %clang_tsan %darwin_min_target_with_tls_support %s -DBUILD_SO -fPIC -o \
 // RUN:   %t-so.so -shared
 // RUN: %run %t 2>&1 | FileCheck %s
-// XFAIL: netbsd
+// XFAIL: target={{.*netbsd.*}}
 
 // Test that tsan cleans up dynamic TLS memory between reuse.
 

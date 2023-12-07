@@ -37,7 +37,7 @@ using namespace lldb_private;
                               {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
                                LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
                                LLDB_INVALID_REGNUM },                          \
-                               NULL, NULL
+                               NULL, NULL, NULL
 
 // Include RegisterInfos_arm64 to declare our g_register_infos_arm64 structure.
 #define DECLARE_REGISTER_INFOS_ARM64_STRUCT

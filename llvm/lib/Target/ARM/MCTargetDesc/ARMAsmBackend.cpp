@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
@@ -29,12 +30,10 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -115,6 +114,10 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_arm_movw_lo16", 0, 20, 0},
       {"fixup_t2_movt_hi16", 0, 20, 0},
       {"fixup_t2_movw_lo16", 0, 20, 0},
+      {"fixup_arm_thumb_upper_8_15", 0, 8, 0},
+      {"fixup_arm_thumb_upper_0_7", 0, 8, 0},
+      {"fixup_arm_thumb_lower_8_15", 0, 8, 0},
+      {"fixup_arm_thumb_lower_0_7", 0, 8, 0},
       {"fixup_arm_mod_imm", 0, 12, 0},
       {"fixup_t2_so_imm", 0, 26, 0},
       {"fixup_bf_branch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
@@ -169,6 +172,10 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_arm_movw_lo16", 12, 20, 0},
       {"fixup_t2_movt_hi16", 12, 20, 0},
       {"fixup_t2_movw_lo16", 12, 20, 0},
+      {"fixup_arm_thumb_upper_8_15", 24, 8, 0},
+      {"fixup_arm_thumb_upper_0_7", 24, 8, 0},
+      {"fixup_arm_thumb_lower_8_15", 24, 8, 0},
+      {"fixup_arm_thumb_lower_0_7", 24, 8, 0},
       {"fixup_arm_mod_imm", 20, 12, 0},
       {"fixup_t2_so_imm", 26, 6, 0},
       {"fixup_bf_branch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
@@ -208,8 +215,8 @@ void ARMAsmBackend::handleAssemblerFlag(MCAssemblerFlag Flag) {
 
 unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op,
                                          const MCSubtargetInfo &STI) const {
-  bool HasThumb2 = STI.getFeatureBits()[ARM::FeatureThumb2];
-  bool HasV8MBaselineOps = STI.getFeatureBits()[ARM::HasV8MBaselineOps];
+  bool HasThumb2 = STI.hasFeature(ARM::FeatureThumb2);
+  bool HasV8MBaselineOps = STI.hasFeature(ARM::HasV8MBaselineOps);
 
   switch (Op) {
   default:
@@ -449,7 +456,6 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
 
   switch (Kind) {
   default:
-    Ctx.reportError(Fixup.getLoc(), "bad relocation fixup type");
     return 0;
   case FK_Data_1:
   case FK_Data_2:
@@ -489,6 +495,20 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     Value = (Hi4 << 16) | (i << 26) | (Mid3 << 12) | (Lo8);
     return swapHalfWords(Value, Endian == support::little);
   }
+  case ARM::fixup_arm_thumb_upper_8_15:
+    if (IsResolved || !STI->getTargetTriple().isOSBinFormatELF())
+      return (Value & 0xff000000) >> 24;
+    return Value & 0xff;
+  case ARM::fixup_arm_thumb_upper_0_7:
+    if (IsResolved || !STI->getTargetTriple().isOSBinFormatELF())
+      return (Value & 0x00ff0000) >> 16;
+    return Value & 0xff;
+  case ARM::fixup_arm_thumb_lower_8_15:
+    if (IsResolved || !STI->getTargetTriple().isOSBinFormatELF())
+      return (Value & 0x0000ff00) >> 8;
+    return Value & 0xff;
+  case ARM::fixup_arm_thumb_lower_0_7:
+    return Value & 0x000000ff;
   case ARM::fixup_arm_ldst_pcrel_12:
     // ARM PC-relative values are offset by 8.
     Value -= 4;
@@ -604,9 +624,9 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   }
   case ARM::fixup_arm_thumb_bl: {
     if (!isInt<25>(Value - 4) ||
-        (!STI->getFeatureBits()[ARM::FeatureThumb2] &&
-         !STI->getFeatureBits()[ARM::HasV8MBaselineOps] &&
-         !STI->getFeatureBits()[ARM::HasV6MOps] &&
+        (!STI->hasFeature(ARM::FeatureThumb2) &&
+         !STI->hasFeature(ARM::HasV8MBaselineOps) &&
+         !STI->hasFeature(ARM::HasV6MOps) &&
          !isInt<23>(Value - 4))) {
       Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
       return 0;
@@ -679,7 +699,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     // On CPUs supporting Thumb2, this will be relaxed to an ldr.w, otherwise we
     // could have an error on our hands.
     assert(STI != nullptr);
-    if (!STI->getFeatureBits()[ARM::FeatureThumb2] && IsResolved) {
+    if (!STI->hasFeature(ARM::FeatureThumb2) && IsResolved) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
         Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
@@ -704,8 +724,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   case ARM::fixup_arm_thumb_br:
     // Offset by 4 and don't encode the lower bit, which is always 0.
     assert(STI != nullptr);
-    if (!STI->getFeatureBits()[ARM::FeatureThumb2] &&
-        !STI->getFeatureBits()[ARM::HasV8MBaselineOps]) {
+    if (!STI->hasFeature(ARM::FeatureThumb2) &&
+        !STI->hasFeature(ARM::HasV8MBaselineOps)) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
         Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
@@ -716,7 +736,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   case ARM::fixup_arm_thumb_bcc:
     // Offset by 4 and don't encode the lower bit, which is always 0.
     assert(STI != nullptr);
-    if (!STI->getFeatureBits()[ARM::FeatureThumb2]) {
+    if (!STI->hasFeature(ARM::FeatureThumb2)) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
         Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
@@ -933,6 +953,10 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case ARM::fixup_arm_thumb_bcc:
   case ARM::fixup_arm_thumb_cp:
   case ARM::fixup_thumb_adr_pcrel_10:
+  case ARM::fixup_arm_thumb_upper_8_15:
+  case ARM::fixup_arm_thumb_upper_0_7:
+  case ARM::fixup_arm_thumb_lower_8_15:
+  case ARM::fixup_arm_thumb_lower_0_7:
     return 1;
 
   case FK_Data_2:
@@ -1003,6 +1027,10 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
   case ARM::fixup_thumb_adr_pcrel_10:
   case ARM::fixup_arm_thumb_br:
   case ARM::fixup_arm_thumb_cb:
+  case ARM::fixup_arm_thumb_upper_8_15:
+  case ARM::fixup_arm_thumb_upper_0_7:
+  case ARM::fixup_arm_thumb_lower_8_15:
+  case ARM::fixup_arm_thumb_lower_0_7:
     // Instruction size is 2 bytes.
     return 2;
 
@@ -1109,14 +1137,19 @@ enum CompactUnwindEncodings {
 /// encoded in compact unwind, the method returns UNWIND_ARM_MODE_DWARF which
 /// tells the runtime to fallback and unwind using dwarf.
 uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
-    ArrayRef<MCCFIInstruction> Instrs) const {
+    const MCDwarfFrameInfo *FI, const MCContext *Ctxt) const {
   DEBUG_WITH_TYPE("compact-unwind", llvm::dbgs() << "generateCU()\n");
   // Only armv7k uses CFI based unwinding.
   if (Subtype != MachO::CPU_SUBTYPE_ARM_V7K)
     return 0;
   // No .cfi directives means no frame.
+  ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
   if (Instrs.empty())
     return 0;
+  if (!isDarwinCanonicalPersonality(FI->Personality) &&
+      !Ctxt->emitCompactUnwindNonCanonical())
+    return CU::UNWIND_ARM_MODE_DWARF;
+
   // Start off assuming CFA is at SP+0.
   unsigned CFARegister = ARM::SP;
   int CFARegisterOffset = 0;
@@ -1158,7 +1191,7 @@ uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
       // Directive not convertable to compact unwind, bail out.
       DEBUG_WITH_TYPE("compact-unwind",
                       llvm::dbgs()
-                          << "CFI directive not compatiable with comact "
+                          << "CFI directive not compatible with compact "
                              "unwind encoding, opcode=" << Inst.getOperation()
                           << "\n");
       return CU::UNWIND_ARM_MODE_DWARF;

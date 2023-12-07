@@ -20,16 +20,15 @@
 #include <type_traits>
 #include <vector>
 
-#include "constexpr_char_traits.h"
 #include "make_string.h"
 #include "test_iterators.h"
 #include "test_range.h"
 
-template<class CharT>
+template <class CharT>
 constexpr void test() {
   auto data = MAKE_STRING_VIEW(CharT, "test");
   std::array<CharT, 4> arr;
-  for(int i = 0; i < 4; ++i) {
+  for (int i = 0; i < 4; ++i) {
     arr[i] = data[i];
   }
   auto sv = std::basic_string_view<CharT>(arr);
@@ -107,6 +106,15 @@ constexpr bool test() {
     assert(sv == "test");
   }
 
+  // Different trait types
+  {
+    struct OtherTraits : std::char_traits<char> {};
+    std::basic_string_view<char> sv1{"hello"};
+    std::basic_string_view<char, OtherTraits> sv2(sv1);
+    assert(sv1.size() == sv2.size());
+    assert(sv1.data() == sv2.data());
+  }
+
   return true;
 }
 
@@ -120,7 +128,10 @@ static_assert(!std::ranges::contiguous_range<SizedButNotContiguousRange>);
 static_assert(std::ranges::sized_range<SizedButNotContiguousRange>);
 static_assert(!std::is_constructible_v<std::string_view, SizedButNotContiguousRange>);
 
-using ContiguousButNotSizedRange = std::ranges::subrange<contiguous_iterator<char*>, sentinel_wrapper<contiguous_iterator<char*>>, std::ranges::subrange_kind::unsized>;
+using ContiguousButNotSizedRange =
+    std::ranges::subrange<contiguous_iterator<char*>,
+                          sentinel_wrapper<contiguous_iterator<char*>>,
+                          std::ranges::subrange_kind::unsized>;
 static_assert(std::ranges::contiguous_range<ContiguousButNotSizedRange>);
 static_assert(!std::ranges::sized_range<ContiguousButNotSizedRange>);
 static_assert(!std::is_constructible_v<std::string_view, ContiguousButNotSizedRange>);
@@ -133,38 +144,23 @@ struct WithStringViewConversionOperator {
   operator std::string_view() const { return {}; }
 };
 
-static_assert(std::is_constructible_v<std::string_view, WithStringViewConversionOperator>); // lvalue
+static_assert(std::is_constructible_v<std::string_view, WithStringViewConversionOperator>);        // lvalue
 static_assert(std::is_constructible_v<std::string_view, const WithStringViewConversionOperator&>); // const lvalue
-static_assert(std::is_constructible_v<std::string_view, WithStringViewConversionOperator&&>); // rvalue
-
-template <class CharTraits>
-struct WithTraitsType {
-  typename CharTraits::char_type* begin() const;
-  typename CharTraits::char_type* end() const;
-  using traits_type = CharTraits;
-};
-
-using CCT = constexpr_char_traits<char>;
-static_assert(std::is_constructible_v<std::string_view, WithTraitsType<std::char_traits<char>>>);
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(std::is_constructible_v<std::wstring_view, WithTraitsType<std::char_traits<wchar_t>>>);
-#endif
-static_assert(std::is_constructible_v<std::basic_string_view<char, CCT>, WithTraitsType<CCT>>);
-static_assert(!std::is_constructible_v<std::string_view, WithTraitsType<CCT>>);  // wrong traits type
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(!std::is_constructible_v<std::wstring_view, WithTraitsType<std::char_traits<char>>>);  // wrong traits type
-#endif
+static_assert(std::is_constructible_v<std::string_view, WithStringViewConversionOperator&&>);      // rvalue
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
 void test_throwing() {
   struct ThrowingData {
     char* begin() const { return nullptr; }
     char* end() const { return nullptr; }
-    char* data() const { throw 42; return nullptr; }
+    char* data() const {
+      throw 42;
+      return nullptr;
+    }
   };
   try {
     ThrowingData x;
-    (void) std::string_view(x);
+    (void)std::string_view(x);
     assert(false);
   } catch (int i) {
     assert(i == 42);
@@ -173,11 +169,14 @@ void test_throwing() {
   struct ThrowingSize {
     char* begin() const { return nullptr; }
     char* end() const { return nullptr; }
-    size_t size() const { throw 42; return 0; }
+    std::size_t size() const {
+      throw 42;
+      return 0;
+    }
   };
   try {
     ThrowingSize x;
-    (void) std::string_view(x);
+    (void)std::string_view(x);
     assert(false);
   } catch (int i) {
     assert(i == 42);
@@ -196,4 +195,3 @@ int main(int, char**) {
 
   return 0;
 }
-

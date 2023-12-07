@@ -158,7 +158,7 @@ public:
     // When building a module MainFileName is the name of the modulemap file.
     CodeGenOpts.MainFileName =
         LangOpts.CurrentModule.empty() ? MainFileName : LangOpts.CurrentModule;
-    CodeGenOpts.setDebugInfo(codegenoptions::FullDebugInfo);
+    CodeGenOpts.setDebugInfo(llvm::codegenoptions::FullDebugInfo);
     CodeGenOpts.setDebuggerTuning(CI.getCodeGenOpts().getDebuggerTuning());
     CodeGenOpts.DebugPrefixMap =
         CI.getInvocation().getCodeGenOpts().DebugPrefixMap;
@@ -320,7 +320,7 @@ public:
       clang::EmitBackendOutput(
           Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts, LangOpts,
           Ctx.getTargetInfo().getDataLayoutString(), M.get(),
-          BackendAction::Backend_EmitLL,
+          BackendAction::Backend_EmitLL, FS,
           std::make_unique<llvm::raw_svector_ostream>(Buffer));
       llvm::dbgs() << Buffer;
     });
@@ -329,7 +329,7 @@ public:
     clang::EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
                              LangOpts,
                              Ctx.getTargetInfo().getDataLayoutString(), M.get(),
-                             BackendAction::Backend_EmitObj, std::move(OS));
+                             BackendAction::Backend_EmitObj, FS, std::move(OS));
 
     // Free the memory for the temporary buffer.
     llvm::SmallVector<char, 0> Empty;
@@ -347,6 +347,11 @@ ObjectFilePCHContainerWriter::CreatePCHContainerGenerator(
     std::shared_ptr<PCHBuffer> Buffer) const {
   return std::make_unique<PCHContainerGenerator>(
       CI, MainFileName, OutputFileName, std::move(OS), Buffer);
+}
+
+ArrayRef<StringRef> ObjectFilePCHContainerReader::getFormats() const {
+  static StringRef Formats[] = {"obj", "raw"};
+  return Formats;
 }
 
 StringRef

@@ -98,6 +98,14 @@ define double @log_exp2_not_fast(double %x) {
 }
 
 define double @pr43617(double %d, i32 %i, ptr %f) {
+; CHECK-LABEL: @pr43617(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = fneg double [[D:%.*]]
+; CHECK-NEXT:    [[ICALL:%.*]] = tail call fast double [[F:%.*]](i32 [[I:%.*]])
+; CHECK-NEXT:    [[LOG:%.*]] = tail call fast double @llvm.log.f64(double [[ICALL]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[LOG]], [[SUB]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
 entry:
   %sub = fsub double -0.000000e+00, %d
   %icall = tail call fast double %f(i32 %i)

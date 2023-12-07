@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class FoundationDisassembleTestCase(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfAsan
@@ -26,8 +25,7 @@ class FoundationDisassembleTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         foundation_framework = None
@@ -37,8 +35,8 @@ class FoundationDisassembleTestCase(TestBase):
                 break
 
         self.assertTrue(
-            foundation_framework is not None,
-            "Foundation.framework path located")
+            foundation_framework is not None, "Foundation.framework path located"
+        )
         self.runCmd("image dump symtab '%s'" % foundation_framework)
         raw_output = self.res.GetOutput()
         # Now, grab every 'Code' symbol and feed it into the command:
@@ -46,12 +44,15 @@ class FoundationDisassembleTestCase(TestBase):
         #
         # The symbol name is on the last column and trails the flag column which
         # looks like '0xhhhhhhhh', i.e., 8 hexadecimal digits.
-        codeRE = re.compile(r"""
+        codeRE = re.compile(
+            r"""
                              \ Code\ {9}    # ' Code' followed by 9 SPCs,
                              .*             # the wildcard chars,
                              0x[0-9a-f]{8}  # the flag column, and
                              \ (.+)$        # finally the function symbol.
-                             """, re.VERBOSE)
+                             """,
+            re.VERBOSE,
+        )
         for line in raw_output.split(os.linesep):
             match = codeRE.search(line)
             if match:
@@ -71,36 +72,36 @@ class FoundationDisassembleTestCase(TestBase):
         # Stop at +[NSString stringWithFormat:].
         symbol_name = "+[NSString stringWithFormat:]"
         break_results = lldbutil.run_break_set_command(
-            self, "_regexp-break %s" % (symbol_name))
+            self, "_regexp-break %s" % (symbol_name)
+        )
 
         lldbutil.check_breakpoint_result(
-            self,
-            break_results,
-            symbol_name=symbol_name,
-            num_locations=1)
+            self, break_results, symbol_name=symbol_name, num_locations=1
+        )
 
         # Stop at -[MyString initWithNSString:].
         lldbutil.run_break_set_by_symbol(
             self,
-            '-[MyString initWithNSString:]',
+            "-[MyString initWithNSString:]",
             num_expected_locations=1,
-            sym_exact=True)
+            sym_exact=True,
+        )
 
         # Stop at the "description" selector.
         lldbutil.run_break_set_by_selector(
-            self,
-            'description',
-            num_expected_locations=1,
-            module_name='a.out')
+            self, "description", num_expected_locations=1, module_name="a.out"
+        )
 
         # Stop at -[NSAutoreleasePool release].
         break_results = lldbutil.run_break_set_command(
-            self, "_regexp-break -[NSAutoreleasePool release]")
+            self, "_regexp-break -[NSAutoreleasePool release]"
+        )
         lldbutil.check_breakpoint_result(
             self,
             break_results,
-            symbol_name='-[NSAutoreleasePool release]',
-            num_locations=1)
+            symbol_name="-[NSAutoreleasePool release]",
+            num_locations=1,
+        )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
@@ -108,7 +109,8 @@ class FoundationDisassembleTestCase(TestBase):
         self.expect(
             "thread backtrace",
             "Stop at +[NSString stringWithFormat:]",
-            substrs=["Foundation`+[NSString stringWithFormat:]"])
+            substrs=["Foundation`+[NSString stringWithFormat:]"],
+        )
 
         # Do the disassemble for the currently stopped function.
         self.runCmd("disassemble -f")
@@ -121,7 +123,8 @@ class FoundationDisassembleTestCase(TestBase):
         self.expect(
             "thread backtrace",
             "Stop at a.out`-[MyString initWithNSString:]",
-            substrs=["a.out`-[MyString initWithNSString:]"])
+            substrs=["a.out`-[MyString initWithNSString:]"],
+        )
 
         # Do the disassemble for the currently stopped function.
         self.runCmd("disassemble -f")
@@ -129,8 +132,11 @@ class FoundationDisassembleTestCase(TestBase):
         self.runCmd("process continue")
 
         # Followed by -[MyString description].
-        self.expect("thread backtrace", "Stop at -[MyString description]",
-                    substrs=["a.out`-[MyString description]"])
+        self.expect(
+            "thread backtrace",
+            "Stop at -[MyString description]",
+            substrs=["a.out`-[MyString description]"],
+        )
 
         # Do the disassemble for the currently stopped function.
         self.runCmd("disassemble -f")
@@ -140,8 +146,11 @@ class FoundationDisassembleTestCase(TestBase):
         self.runCmd("process continue")
 
         # Followed by -[NSAutoreleasePool release].
-        self.expect("thread backtrace", "Stop at -[NSAutoreleasePool release]",
-                    substrs=["Foundation`-[NSAutoreleasePool release]"])
+        self.expect(
+            "thread backtrace",
+            "Stop at -[NSAutoreleasePool release]",
+            substrs=["Foundation`-[NSAutoreleasePool release]"],
+        )
 
         # Do the disassemble for the currently stopped function.
         self.runCmd("disassemble -f")

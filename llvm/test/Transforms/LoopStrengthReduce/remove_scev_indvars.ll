@@ -1,14 +1,14 @@
 ; RUN: opt < %s -S -loop-reduce | FileCheck %s
 
-define void @testIVNext(i64* nocapture %a, i64 signext %m, i64 signext %n) {
+define void @testIVNext(ptr nocapture %a, i64 signext %m, i64 signext %n) {
 entry:
   br label %for.body
 
 for.body:
   %indvars.iv.prol = phi i64 [ %indvars.iv.next.prol, %for.body ], [ %m, %entry ]
   %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
-  %uglygep138 = getelementptr i64, i64* %a, i64 %i
-  store i64 55, i64* %uglygep138, align 4
+  %uglygep138 = getelementptr i64, ptr %a, i64 %i
+  store i64 55, ptr %uglygep138, align 4
   %indvars.iv.next.prol = add nuw nsw i64 %indvars.iv.prol, 1
   %i.next = add i64 %i, 1
   %i.cmp.not = icmp eq i64 %i.next, %n
@@ -16,7 +16,7 @@ for.body:
 
 ; CHECK: entry:
 ; CHECK: %0 = add i64 %n, %m
-; CHECK-NOT : %indvars.iv.next.prol
+; CHECK-NOT: %indvars.iv.next.prol
 ; CHECK-NOT: %indvars.iv.prol
 ; CHECK: %indvars.iv.unr = phi i64 [ %0, %for.exit ]
 for.exit:
@@ -28,15 +28,15 @@ exit:
   ret void
 }
 
-define void @testIV(i64* nocapture %a, i64 signext %m, i64 signext %n) {
+define void @testIV(ptr nocapture %a, i64 signext %m, i64 signext %n) {
 entry:
   br label %for.body
 
 for.body:
   %iv.prol = phi i64 [ %iv.next.prol, %for.body ], [ %m, %entry ]
   %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
-  %uglygep138 = getelementptr i64, i64* %a, i64 %i
-  store i64 55, i64* %uglygep138, align 4
+  %uglygep138 = getelementptr i64, ptr %a, i64 %i
+  store i64 55, ptr %uglygep138, align 4
   %iv.next.prol = add nuw nsw i64 %iv.prol, 1
   %i.next = add i64 %i, 1
   %i.cmp.not = icmp eq i64 %i.next, %n
@@ -109,6 +109,6 @@ while.body:                                       ; preds = %while.body, %asm.fa
 
 while.end:                                        ; preds = %while.body
   %inc.lcssa = phi i32 [ %depth.04, %while.body ]
-  store i32 %inc.lcssa, i32* null, align 4
+  store i32 %inc.lcssa, ptr null, align 4
   ret void
 }

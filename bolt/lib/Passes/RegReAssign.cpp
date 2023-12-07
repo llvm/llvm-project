@@ -140,29 +140,25 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
   std::fill(RegScore.begin(), RegScore.end(), 0);
   std::fill(RankedRegs.begin(), RankedRegs.end(), 0);
 
-  for (BinaryBasicBlock &BB : Function) {
+  auto countRegScore = [&](BinaryBasicBlock &BB) {
     for (MCInst &Inst : BB) {
       const bool CannotUseREX = BC.MIB->cannotUseREX(Inst);
       const MCInstrDesc &Desc = BC.MII->get(Inst.getOpcode());
 
       // Disallow substituitions involving regs in implicit uses lists
-      const MCPhysReg *ImplicitUses = Desc.getImplicitUses();
-      while (ImplicitUses && *ImplicitUses) {
+      for (MCPhysReg ImplicitUse : Desc.implicit_uses()) {
         const size_t RegEC =
-            BC.MIB->getAliases(*ImplicitUses, false).find_first();
+            BC.MIB->getAliases(ImplicitUse, false).find_first();
         RegScore[RegEC] =
             std::numeric_limits<decltype(RegScore)::value_type>::min();
-        ++ImplicitUses;
       }
 
       // Disallow substituitions involving regs in implicit defs lists
-      const MCPhysReg *ImplicitDefs = Desc.getImplicitDefs();
-      while (ImplicitDefs && *ImplicitDefs) {
+      for (MCPhysReg ImplicitDef : Desc.implicit_defs()) {
         const size_t RegEC =
-            BC.MIB->getAliases(*ImplicitDefs, false).find_first();
+            BC.MIB->getAliases(ImplicitDef, false).find_first();
         RegScore[RegEC] =
             std::numeric_limits<decltype(RegScore)::value_type>::min();
-        ++ImplicitDefs;
       }
 
       for (int I = 0, E = MCPlus::getNumPrimeOperands(Inst); I != E; ++I) {
@@ -179,9 +175,25 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
           continue;
 
         // Disallow substituitions involving regs in instrs that cannot use REX
+        // The relationship of X86 registers is shown in the diagram. BL and BH
+        // do not have a direct alias relationship. However, if the BH register
+        // cannot be swapped, then the BX/EBX/RBX registers cannot be swapped as
+        // well, which means that BL register also cannot be swapped. Therefore,
+        // in the presence of BX/EBX/RBX registers, BL and BH have an alias
+        // relationship.
+        // ┌─────────────────┐
+        // │  RBX            │
+        // ├─────┬───────────┤
+        // │     │  EBX      │
+        // ├─────┴──┬────────┤
+        // │        │   BX   │
+        // ├────────┼───┬────┤
+        // │        │BH │BL  │
+        // └────────┴───┴────┘
         if (CannotUseREX) {
           RegScore[RegEC] =
               std::numeric_limits<decltype(RegScore)::value_type>::min();
+          RegScore[BC.MIB->getAliasSized(Reg, 1)] = RegScore[RegEC];
           continue;
         }
 
@@ -189,13 +201,22 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
         if (BC.MIB->isUpper8BitReg(Reg) && ClassicCSR.test(Reg)) {
           RegScore[RegEC] =
               std::numeric_limits<decltype(RegScore)::value_type>::min();
+          RegScore[BC.MIB->getAliasSized(Reg, 1)] = RegScore[RegEC];
           continue;
         }
 
         RegScore[RegEC] += BB.getKnownExecutionCount();
       }
     }
+  };
+  for (BinaryBasicBlock &BB : Function)
+    countRegScore(BB);
+
+  for (BinaryFunction *ChildFrag : Function.getFragments()) {
+    for (BinaryBasicBlock &BB : *ChildFrag)
+      countRegScore(BB);
   }
+
   std::iota(RankedRegs.begin(), RankedRegs.end(), 0); // 0, 1, 2, 3...
   llvm::sort(RankedRegs,
              [&](size_t A, size_t B) { return RegScore[A] > RegScore[B]; });
@@ -216,6 +237,17 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
 void RegReAssign::aggressivePassOverFunction(BinaryFunction &Function) {
   BinaryContext &BC = Function.getBinaryContext();
   rankRegisters(Function);
+
+  // If there is a situation where function:
+  //   A() -> A.cold()
+  //   A.localalias() -> A.cold()
+  // simply swapping these two calls can cause issues.
+  for (BinaryFunction *ChildFrag : Function.getFragments()) {
+    if (ChildFrag->getParentFragments()->size() > 1)
+      return;
+    if (ChildFrag->empty())
+      return;
+  }
 
   // Bail early if our registers are all black listed, before running expensive
   // analysis passes
@@ -308,6 +340,10 @@ void RegReAssign::aggressivePassOverFunction(BinaryFunction &Function) {
                       << " with " << BC.MRI->getName(ExtReg) << "\n\n");
     swap(Function, ClassicReg, ExtReg);
     FuncsChanged.insert(&Function);
+    for (BinaryFunction *ChildFrag : Function.getFragments()) {
+      swap(*ChildFrag, ClassicReg, ExtReg);
+      FuncsChanged.insert(ChildFrag);
+    }
     ++Begin;
     if (Begin == End)
       break;
@@ -318,6 +354,13 @@ void RegReAssign::aggressivePassOverFunction(BinaryFunction &Function) {
 bool RegReAssign::conservativePassOverFunction(BinaryFunction &Function) {
   BinaryContext &BC = Function.getBinaryContext();
   rankRegisters(Function);
+
+  for (BinaryFunction *ChildFrag : Function.getFragments()) {
+    if (ChildFrag->getParentFragments()->size() > 1)
+      return false;
+    if (ChildFrag->empty())
+      return false;
+  }
 
   // Try swapping R12, R13, R14 or R15 with RBX (we work with all callee-saved
   // regs except RBP)
@@ -344,11 +387,24 @@ bool RegReAssign::conservativePassOverFunction(BinaryFunction &Function) {
   if (!RBX)
     return false;
 
+  // The high 8 bits of the register will never be swapped. To prevent the high
+  // 8 bits from being swapped incorrectly, we should switched to swapping the
+  // low 8 bits of the register instead.
+  if (BC.MIB->isUpper8BitReg(RBX)) {
+    RBX = BC.MIB->getAliasSized(RBX, 1);
+    if (RegScore[RBX] < 0 || RegScore[RBX] > RegScore[Candidate])
+      return false;
+  }
+
   LLVM_DEBUG(dbgs() << "\n ** Swapping " << BC.MRI->getName(RBX) << " with "
                     << BC.MRI->getName(Candidate) << "\n\n");
   (void)BC;
   swap(Function, RBX, Candidate);
   FuncsChanged.insert(&Function);
+  for (BinaryFunction *ChildFrag : Function.getFragments()) {
+    swap(*ChildFrag, RBX, Candidate);
+    FuncsChanged.insert(ChildFrag);
+  }
   return true;
 }
 
@@ -408,7 +464,7 @@ void RegReAssign::runOnFunctions(BinaryContext &BC) {
   for (auto &I : BC.getBinaryFunctions()) {
     BinaryFunction &Function = I.second;
 
-    if (!Function.isSimple() || Function.isIgnored())
+    if (!Function.isSimple() || Function.isIgnored() || Function.isFragment())
       continue;
 
     LLVM_DEBUG(dbgs() << "====================================\n");

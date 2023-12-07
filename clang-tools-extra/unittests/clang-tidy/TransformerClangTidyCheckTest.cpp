@@ -15,6 +15,7 @@
 #include "clang/Tooling/Transformer/Transformer.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -210,7 +211,7 @@ TEST(TransformerClangTidyCheckTest, TwoMatchesInMacroExpansion) {
 }
 
 // A trivial rewrite-rule generator that requires Objective-C code.
-Optional<RewriteRuleWith<std::string>>
+std::optional<RewriteRuleWith<std::string>>
 needsObjC(const LangOptions &LangOpts,
           const ClangTidyCheck::OptionsView &Options) {
   if (!LangOpts.ObjC)
@@ -236,7 +237,7 @@ TEST(TransformerClangTidyCheckTest, DisableByLang) {
 }
 
 // A trivial rewrite rule generator that checks config options.
-Optional<RewriteRuleWith<std::string>>
+std::optional<RewriteRuleWith<std::string>>
 noSkip(const LangOptions &LangOpts,
        const ClangTidyCheck::OptionsView &Options) {
   if (Options.get("Skip", "false") == "true")

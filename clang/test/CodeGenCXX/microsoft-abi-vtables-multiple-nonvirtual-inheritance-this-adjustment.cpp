@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -fno-rtti -triple=i386-pc-win32 -emit-llvm -o %t.ll -fdump-vtable-layouts >%t
+// RUN: %clang_cc1 %s -fno-rtti -triple=i386-pc-win32 -emit-llvm -o %t.ll -fdump-vtable-layouts >%t
 // RUN: FileCheck %s < %t
 // RUN: FileCheck --check-prefix=BITCODE %s < %t.ll
 
@@ -156,17 +156,15 @@ struct C : public A, public B {
 
 // BITCODE-LABEL: define {{.*}}"?ffun@test4@@YAXAAUC@1@@Z
 void ffun(C &c) {
-  // BITCODE: [[THIS1:%.+]] = bitcast %"struct.test4::C"* {{.*}} to i8*
-  // BITCODE: [[THIS2:%.+]] = getelementptr inbounds i8, i8* [[THIS1]], i32 4
-  // BITCODE: call x86_thiscallcc {{.*}}(i8* noundef [[THIS2]])
+  // BITCODE: [[THIS2:%.+]] = getelementptr inbounds i8, ptr {{.*}}, i32 4
+  // BITCODE: call x86_thiscallcc {{.*}}(ptr noundef [[THIS2]])
   c.bar();
 }
 
 // BITCODE-LABEL: define {{.*}}"?fop@test4@@YAXAAUC@1@@Z
 void fop(C &c) {
-  // BITCODE: [[THIS1:%.+]] = bitcast %"struct.test4::C"* {{.*}} to i8*
-  // BITCODE: [[THIS2:%.+]] = getelementptr inbounds i8, i8* [[THIS1]], i32 4
-  // BITCODE: call x86_thiscallcc {{.*}}(i8* noundef [[THIS2]])
+  // BITCODE: [[THIS2:%.+]] = getelementptr inbounds i8, ptr {{.*}}, i32 4
+  // BITCODE: call x86_thiscallcc {{.*}}(ptr noundef [[THIS2]])
   -c;
 }
 
@@ -189,12 +187,9 @@ void C::g(NonTrivial o) {
   whatsthis = this;
 }
 
-// BITCODE-LABEL: define dso_local void @"?g@C@pr30293@@UAAXUNonTrivial@2@@Z"(<{ i8*, %"struct.pr30293::NonTrivial" }>* inalloca(<{ i8*, %"struct.pr30293::NonTrivial" }>) %0)
-// BITCODE: %[[thisaddr:[^ ]*]] = getelementptr inbounds <{ i8*, %"struct.pr30293::NonTrivial" }>, <{ i8*, %"struct.pr30293::NonTrivial" }>* {{.*}}, i32 0, i32 0
-// BITCODE: %[[thisaddr1:[^ ]*]] = bitcast i8** %[[thisaddr]] to %"struct.pr30293::C"**
-// BITCODE: %[[this1:[^ ]*]] = load %"struct.pr30293::C"*, %"struct.pr30293::C"** %[[thisaddr1]], align 4
-// BITCODE: %[[this2:[^ ]*]] = bitcast %"struct.pr30293::C"* %[[this1]] to i8*
-// BITCODE: %[[this3:[^ ]*]] = getelementptr inbounds i8, i8* %[[this2]], i32 -4
-// BITCODE: %[[this4:[^ ]*]] = bitcast i8* %[[this3]] to %"struct.pr30293::C"*
-// BITCODE: store %"struct.pr30293::C"* %[[this4]], %"struct.pr30293::C"** @"?whatsthis@pr30293@@3PAUC@1@A", align 4
+// BITCODE-LABEL: define dso_local void @"?g@C@pr30293@@UAAXUNonTrivial@2@@Z"(ptr inalloca(<{ ptr, %"struct.pr30293::NonTrivial" }>) %0)
+// BITCODE: %[[thisaddr:[^ ]*]] = getelementptr inbounds <{ ptr, %"struct.pr30293::NonTrivial" }>, ptr {{.*}}, i32 0, i32 0
+// BITCODE: %[[this1:[^ ]*]] = load ptr, ptr %[[thisaddr]], align 4
+// BITCODE: %[[this3:[^ ]*]] = getelementptr inbounds i8, ptr %[[this1]], i32 -4
+// BITCODE: store ptr %[[this3]], ptr @"?whatsthis@pr30293@@3PAUC@1@A", align 4
 }

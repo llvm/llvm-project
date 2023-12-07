@@ -322,15 +322,20 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
   return BinaryOperator::Create(Instruction::And, NewShift, NewMask);
 }
 
-/// If we have a shift-by-constant of a bitwise logic op that itself has a
-/// shift-by-constant operand with identical opcode, we may be able to convert
-/// that into 2 independent shifts followed by the logic op. This eliminates a
-/// a use of an intermediate value (reduces dependency chain).
-static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
+/// If we have a shift-by-constant of a bin op (bitwise logic op or add/sub w/
+/// shl) that itself has a shift-by-constant operand with identical opcode, we
+/// may be able to convert that into 2 independent shifts followed by the logic
+/// op. This eliminates a use of an intermediate value (reduces dependency
+/// chain).
+static Instruction *foldShiftOfShiftedBinOp(BinaryOperator &I,
                                             InstCombiner::BuilderTy &Builder) {
   assert(I.isShift() && "Expected a shift as input");
-  auto *LogicInst = dyn_cast<BinaryOperator>(I.getOperand(0));
-  if (!LogicInst || !LogicInst->isBitwiseLogicOp() || !LogicInst->hasOneUse())
+  auto *BinInst = dyn_cast<BinaryOperator>(I.getOperand(0));
+  if (!BinInst ||
+      (!BinInst->isBitwiseLogicOp() &&
+       BinInst->getOpcode() != Instruction::Add &&
+       BinInst->getOpcode() != Instruction::Sub) ||
+      !BinInst->hasOneUse())
     return nullptr;
 
   Constant *C0, *C1;
@@ -338,6 +343,12 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
     return nullptr;
 
   Instruction::BinaryOps ShiftOpcode = I.getOpcode();
+  // Transform for add/sub only works with shl.
+  if ((BinInst->getOpcode() == Instruction::Add ||
+       BinInst->getOpcode() == Instruction::Sub) &&
+      ShiftOpcode != Instruction::Shl)
+    return nullptr;
+
   Type *Ty = I.getType();
 
   // Find a matching one-use shift by constant. The fold is not valid if the sum
@@ -346,25 +357,31 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
   Value *X, *Y;
   auto matchFirstShift = [&](Value *V) {
     APInt Threshold(Ty->getScalarSizeInBits(), Ty->getScalarSizeInBits());
-    return match(V, m_BinOp(ShiftOpcode, m_Value(), m_Value())) &&
-           match(V, m_OneUse(m_Shift(m_Value(X), m_Constant(C0)))) &&
+    return match(V,
+                 m_OneUse(m_BinOp(ShiftOpcode, m_Value(X), m_Constant(C0)))) &&
            match(ConstantExpr::getAdd(C0, C1),
                  m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, Threshold));
   };
 
-  // Logic ops are commutative, so check each operand for a match.
-  if (matchFirstShift(LogicInst->getOperand(0)))
-    Y = LogicInst->getOperand(1);
-  else if (matchFirstShift(LogicInst->getOperand(1)))
-    Y = LogicInst->getOperand(0);
-  else
+  // Logic ops and Add are commutative, so check each operand for a match. Sub
+  // is not so we cannot reoder if we match operand(1) and need to keep the
+  // operands in their original positions.
+  bool FirstShiftIsOp1 = false;
+  if (matchFirstShift(BinInst->getOperand(0)))
+    Y = BinInst->getOperand(1);
+  else if (matchFirstShift(BinInst->getOperand(1))) {
+    Y = BinInst->getOperand(0);
+    FirstShiftIsOp1 = BinInst->getOpcode() == Instruction::Sub;
+  } else
     return nullptr;
 
-  // shift (logic (shift X, C0), Y), C1 -> logic (shift X, C0+C1), (shift Y, C1)
+  // shift (binop (shift X, C0), Y), C1 -> binop (shift X, C0+C1), (shift Y, C1)
   Constant *ShiftSumC = ConstantExpr::getAdd(C0, C1);
   Value *NewShift1 = Builder.CreateBinOp(ShiftOpcode, X, ShiftSumC);
-  Value *NewShift2 = Builder.CreateBinOp(ShiftOpcode, Y, I.getOperand(1));
-  return BinaryOperator::Create(LogicInst->getOpcode(), NewShift1, NewShift2);
+  Value *NewShift2 = Builder.CreateBinOp(ShiftOpcode, Y, C1);
+  Value *Op1 = FirstShiftIsOp1 ? NewShift2 : NewShift1;
+  Value *Op2 = FirstShiftIsOp1 ? NewShift1 : NewShift2;
+  return BinaryOperator::Create(BinInst->getOpcode(), Op1, Op2);
 }
 
 Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
@@ -463,8 +480,11 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
     return replaceOperand(I, 1, Rem);
   }
 
-  if (Instruction *Logic = foldShiftOfShiftedLogic(I, Builder))
+  if (Instruction *Logic = foldShiftOfShiftedBinOp(I, Builder))
     return Logic;
+
+  if (match(Op1, m_Or(m_Value(), m_SpecificInt(BitWidth - 1))))
+    return replaceOperand(I, 1, ConstantInt::get(Ty, BitWidth - 1));
 
   return nullptr;
 }
@@ -570,8 +590,7 @@ static bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
     const APInt *MulConst;
     // We can fold (shr (mul X, -(1 << C)), C) -> (and (neg X), C`)
     return !IsLeftShift && match(I->getOperand(1), m_APInt(MulConst)) &&
-           MulConst->isNegatedPowerOf2() &&
-           MulConst->countTrailingZeros() == NumBits;
+           MulConst->isNegatedPowerOf2() && MulConst->countr_zero() == NumBits;
   }
   }
 }
@@ -839,6 +858,76 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
   return nullptr;
 }
 
+// Tries to perform
+//    (lshr (add (zext X), (zext Y)), K)
+//      -> (icmp ult (add X, Y), X)
+//    where
+//      - The add's operands are zexts from a K-bits integer to a bigger type.
+//      - The add is only used by the shr, or by iK (or narrower) truncates.
+//      - The lshr type has more than 2 bits (other types are boolean math).
+//      - K > 1
+//    note that
+//      - The resulting add cannot have nuw/nsw, else on overflow we get a
+//        poison value and the transform isn't legal anymore.
+Instruction *InstCombinerImpl::foldLShrOverflowBit(BinaryOperator &I) {
+  assert(I.getOpcode() == Instruction::LShr);
+
+  Value *Add = I.getOperand(0);
+  Value *ShiftAmt = I.getOperand(1);
+  Type *Ty = I.getType();
+
+  if (Ty->getScalarSizeInBits() < 3)
+    return nullptr;
+
+  const APInt *ShAmtAPInt = nullptr;
+  Value *X = nullptr, *Y = nullptr;
+  if (!match(ShiftAmt, m_APInt(ShAmtAPInt)) ||
+      !match(Add,
+             m_Add(m_OneUse(m_ZExt(m_Value(X))), m_OneUse(m_ZExt(m_Value(Y))))))
+    return nullptr;
+
+  const unsigned ShAmt = ShAmtAPInt->getZExtValue();
+  if (ShAmt == 1)
+    return nullptr;
+
+  // X/Y are zexts from `ShAmt`-sized ints.
+  if (X->getType()->getScalarSizeInBits() != ShAmt ||
+      Y->getType()->getScalarSizeInBits() != ShAmt)
+    return nullptr;
+
+  // Make sure that `Add` is only used by `I` and `ShAmt`-truncates.
+  if (!Add->hasOneUse()) {
+    for (User *U : Add->users()) {
+      if (U == &I)
+        continue;
+
+      TruncInst *Trunc = dyn_cast<TruncInst>(U);
+      if (!Trunc || Trunc->getType()->getScalarSizeInBits() > ShAmt)
+        return nullptr;
+    }
+  }
+
+  // Insert at Add so that the newly created `NarrowAdd` will dominate it's
+  // users (i.e. `Add`'s users).
+  Instruction *AddInst = cast<Instruction>(Add);
+  Builder.SetInsertPoint(AddInst);
+
+  Value *NarrowAdd = Builder.CreateAdd(X, Y, "add.narrowed");
+  Value *Overflow =
+      Builder.CreateICmpULT(NarrowAdd, X, "add.narrowed.overflow");
+
+  // Replace the uses of the original add with a zext of the
+  // NarrowAdd's result. Note that all users at this stage are known to
+  // be ShAmt-sized truncs, or the lshr itself.
+  if (!Add->hasOneUse()) {
+    replaceInstUsesWith(*AddInst, Builder.CreateZExt(NarrowAdd, Ty));
+    eraseInstFromFunction(*AddInst);
+  }
+
+  // Replace the LShr with a zext of the overflow check.
+  return new ZExtInst(Overflow, Ty);
+}
+
 Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
   const SimplifyQuery Q = SQ.getWithInstruction(&I);
 
@@ -1065,9 +1154,19 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       return BinaryOperator::CreateLShr(
           ConstantInt::get(Ty, APInt::getSignMask(BitWidth)), X);
 
-    // The only way to shift out the 1 is with an over-shift, and that would
-    // be poison either way.
-    if (!I.hasNoUnsignedWrap()) {
+    // Canonicalize "extract lowest set bit" using cttz to and-with-negate:
+    // 1 << (cttz X) --> -X & X
+    if (match(Op1,
+              m_OneUse(m_Intrinsic<Intrinsic::cttz>(m_Value(X), m_Value())))) {
+      Value *NegX = Builder.CreateNeg(X, "neg");
+      return BinaryOperator::CreateAnd(NegX, X);
+    }
+
+    // The only way to shift out the 1 is with an over-shift, so that would
+    // be poison with or without "nuw". Undef is excluded because (undef << X)
+    // is not undef (it is zero).
+    Constant *ConstantOne = cast<Constant>(Op0);
+    if (!I.hasNoUnsignedWrap() && !ConstantOne->containsUndefElement()) {
       I.setHasNoUnsignedWrap();
       return &I;
     }
@@ -1089,10 +1188,17 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Type *Ty = I.getType();
+  Value *X;
   const APInt *C;
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+
+  // (iN (~X) u>> (N - 1)) --> zext (X > -1)
+  if (match(Op0, m_OneUse(m_Not(m_Value(X)))) &&
+      match(Op1, m_SpecificIntAllowUndef(BitWidth - 1)))
+    return new ZExtInst(Builder.CreateIsNotNeg(X, "isnotneg"), Ty);
+
   if (match(Op1, m_APInt(C))) {
     unsigned ShAmtC = C->getZExtValue();
-    unsigned BitWidth = Ty->getScalarSizeInBits();
     auto *II = dyn_cast<IntrinsicInst>(Op0);
     if (II && isPowerOf2_32(BitWidth) && Log2_32(BitWidth) == ShAmtC &&
         (II->getIntrinsicID() == Intrinsic::ctlz ||
@@ -1318,12 +1424,14 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   }
 
   // Transform  (x << y) >> y  to  x & (-1 >> y)
-  Value *X;
   if (match(Op0, m_OneUse(m_Shl(m_Value(X), m_Specific(Op1))))) {
     Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
     Value *Mask = Builder.CreateLShr(AllOnes, Op1);
     return BinaryOperator::CreateAnd(Mask, X);
   }
+
+  if (Instruction *Overflow = foldLShrOverflowBit(I))
+    return Overflow;
 
   return nullptr;
 }

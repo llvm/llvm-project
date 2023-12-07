@@ -25,7 +25,6 @@ class DominatorTree;
 class Function;
 class Instruction;
 class LLVMContext;
-template <typename T> class Optional;
 class Type;
 class Value;
 

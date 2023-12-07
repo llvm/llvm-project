@@ -37,8 +37,7 @@
 
 using namespace llvm;
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 static std::unique_ptr<lto::LTO> createLTO() {
   lto::Config c;
   c.Options = initTargetOptionsFromCodeGenFlags();
@@ -51,7 +50,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
   c.DiagHandler = diagnosticHandler;
   c.OptLevel = config->ltoo;
   c.MAttrs = getMAttrs();
-  c.CGOptLevel = args::getCGOptLevel(config->ltoo);
+  c.CGOptLevel = config->ltoCgo;
   c.DebugPassManager = config->ltoDebugPassManager;
 
   if (config->relocatable)
@@ -165,5 +164,4 @@ std::vector<StringRef> BitcodeCompiler::compile() {
   return ret;
 }
 
-} // namespace wasm
-} // namespace lld
+} // namespace lld::wasm

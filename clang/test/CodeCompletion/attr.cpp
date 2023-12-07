@@ -1,5 +1,5 @@
 int a [[gnu::used]];
-// RUN: %clang_cc1 -code-completion-at=%s:1:9 %s | FileCheck --check-prefix=STD %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-1):9 %s | FileCheck --check-prefix=STD %s
 // STD:     COMPLETION: Pattern : __carries_dependency__
 // STD-NOT: COMPLETION: Pattern : __convergent__
 // STD:     COMPLETION: Pattern : __gnu__::__used__
@@ -15,9 +15,9 @@ int a [[gnu::used]];
 // STD:     COMPLETION: Pattern : gnu::alias(<#Aliasee#>)
 // STD:     COMPLETION: Pattern : gnu::used
 // STD-NOT: COMPLETION: Pattern : used
-// RUN: %clang_cc1 -code-completion-at=%s:1:9 -xobjective-c++ %s | FileCheck --check-prefix=STD-OBJC %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-17):9 -xobjective-c++ %s | FileCheck --check-prefix=STD-OBJC %s
 // STD-OBJC: COMPLETION: Pattern : clang::called_once
-// RUN: %clang_cc1 -code-completion-at=%s:1:14 %s | FileCheck --check-prefix=STD-NS %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-19):14 %s | FileCheck --check-prefix=STD-NS %s
 // STD-NS-NOT: COMPLETION: Pattern : __used__
 // STD-NS-NOT: COMPLETION: Pattern : carries_dependency
 // STD-NS-NOT: COMPLETION: Pattern : clang::convergent
@@ -25,12 +25,12 @@ int a [[gnu::used]];
 // STD-NS-NOT: COMPLETION: Pattern : gnu::used
 // STD-NS:     COMPLETION: Pattern : used
 int b [[__gnu__::used]];
-// RUN: %clang_cc1 -code-completion-at=%s:27:18 %s | FileCheck --check-prefix=STD-NSU %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-1):18 %s | FileCheck --check-prefix=STD-NSU %s
 // STD-NSU:     COMPLETION: Pattern : __used__
 // STD-NSU-NOT: COMPLETION: Pattern : used
 
 int c [[using gnu: used]];
-// RUN: %clang_cc1 -code-completion-at=%s:32:15 %s | FileCheck --check-prefix=STD-USING %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-1):15 %s | FileCheck --check-prefix=STD-USING %s
 // STD-USING:     COMPLETION: __gnu__
 // STD-USING:     COMPLETION: _Clang
 // STD-USING-NOT: COMPLETION: Pattern : carries_dependency
@@ -38,10 +38,10 @@ int c [[using gnu: used]];
 // STD-USING-NOT: COMPLETION: Pattern : clang::
 // STD-USING-NOT: COMPLETION: Pattern : gnu::
 // STD-USING:     COMPLETION: gnu
-// RUN: %clang_cc1 -code-completion-at=%s:32:20 %s | FileCheck --check-prefix=STD-NS %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-9):20 %s | FileCheck --check-prefix=STD-NS %s
 
 int d __attribute__((used));
-// RUN: %clang_cc1 -code-completion-at=%s:43:22 %s | FileCheck --check-prefix=GNU %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-1):22 %s | FileCheck --check-prefix=GNU %s
 // GNU:     COMPLETION: Pattern : __carries_dependency__
 // GNU:     COMPLETION: Pattern : __convergent__
 // GNU-NOT: COMPLETION: Pattern : __gnu__::__used__
@@ -56,12 +56,12 @@ int d __attribute__((used));
 #pragma clang attribute push (__attribute__((internal_linkage)), apply_to=variable)
 int e;
 #pragma clang attribute pop
-// RUN: %clang_cc1 -code-completion-at=%s:56:46 %s | FileCheck --check-prefix=PRAGMA %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-3):46 %s | FileCheck --check-prefix=PRAGMA %s
 // PRAGMA: COMPLETION: Pattern : internal_linkage
 
 #ifdef MS_EXT
 int __declspec(thread) f;
-// RUN: %clang_cc1 -fms-extensions -DMS_EXT -code-completion-at=%s:63:16 %s | FileCheck --check-prefix=DS %s
+// RUN: %clang_cc1 -fms-extensions -DMS_EXT -code-completion-at=%s:%(line-1):16 %s | FileCheck --check-prefix=DS %s
 // DS-NOT: COMPLETION: Pattern : __convergent__
 // DS-NOT: COMPLETION: Pattern : __used__
 // DS-NOT: COMPLETION: Pattern : clang::convergent
@@ -71,7 +71,7 @@ int __declspec(thread) f;
 // DS:     COMPLETION: Pattern : uuid
 
 [uuid("123e4567-e89b-12d3-a456-426614174000")] struct g;
-// RUN: %clang_cc1 -fms-extensions -DMS_EXT -code-completion-at=%s:73:2 %s | FileCheck --check-prefix=MS %s
+// RUN: %clang_cc1 -fms-extensions -DMS_EXT -code-completion-at=%s:%(line-1):2 %s | FileCheck --check-prefix=MS %s
 // MS-NOT: COMPLETION: Pattern : __uuid__
 // MS-NOT: COMPLETION: Pattern : clang::convergent
 // MS-NOT: COMPLETION: Pattern : convergent
@@ -85,9 +85,9 @@ void foo() {
   {}
 }
 // FIXME: support for omp attributes would be nice.
-// RUN: %clang_cc1 -fopenmp -code-completion-at=%s:84:5 %s | FileCheck --check-prefix=OMP-NS --allow-empty %s
+// RUN: %clang_cc1 -fopenmp -code-completion-at=%s:%(line-4):5 %s | FileCheck --check-prefix=OMP-NS --allow-empty %s
 // OMP-NS-NOT: COMPLETION: omp
-// RUN: %clang_cc1 -fopenmp -code-completion-at=%s:84:10 %s | FileCheck --check-prefix=OMP-ATTR --allow-empty %s
+// RUN: %clang_cc1 -fopenmp -code-completion-at=%s:%(line-6):10 %s | FileCheck --check-prefix=OMP-ATTR --allow-empty %s
 // OMP-ATTR-NOT: COMPLETION: Pattern : sequence
-// RUN: %clang_cc1 -fopenmp -code-completion-at=%s:84:19 %s | FileCheck --check-prefix=OMP-NESTED --allow-empty %s
+// RUN: %clang_cc1 -fopenmp -code-completion-at=%s:%(line-8):19 %s | FileCheck --check-prefix=OMP-NESTED --allow-empty %s
 // OMP-NESTED-NOT: COMPLETION: Pattern : directive

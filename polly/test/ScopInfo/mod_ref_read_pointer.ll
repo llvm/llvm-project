@@ -23,16 +23,16 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @jd(i32* %A) {
+define void @jd(ptr %A) {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.inc
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
-  %call = call i32 @func(i32* %A) #2
+  %call = call i32 @func(ptr %A) #2
   %tmp = add nsw i64 %i, 2
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %tmp
-  store i32 %call, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %tmp
+  store i32 %call, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -44,6 +44,6 @@ for.end:                                          ; preds = %for.inc
   ret void
 }
 
-declare i32 @func(i32*) #0
+declare i32 @func(ptr) #0
 
 attributes #0 = { nounwind readonly }

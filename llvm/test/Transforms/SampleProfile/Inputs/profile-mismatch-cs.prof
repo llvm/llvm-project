@@ -1,0 +1,18 @@
+[main]:30:0
+ 0: 0
+ 1.1: 0
+ 3: 10 matched:10
+ 4: 10
+ 5: 10 bar_mismatch:10
+ 7: 5 foo:5
+ 8: 0
+[main:7 @ foo]:15:5
+ 1: 5
+ 2: 5
+ 3: 5 inlinee_mismatch:5
+[bar]:10:10
+ 1: 10
+[matched]:10:10
+ 1: 10
+[main:7 @ foo:3 @ inlinee_mismatch]:5:5
+ 1: 5

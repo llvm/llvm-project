@@ -36,6 +36,7 @@
 ---
 name: test
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
 debugValueSubstitutions:
@@ -52,33 +53,33 @@ body:  |
     MOV64mr $rsp, 1, $noreg, 16, $noreg, $rdi :: (store 8 into %stack.0)
     $rax = MOV64ri 0, debug-location !12
     INC32m $rsp, 1, $noreg, 4, $noreg, implicit-def dead $eflags, debug-instr-number 3, debug-location !DILocation(line: 0, scope: !7) :: (store (s32) into %stack.0)
-    DBG_INSTR_REF 2, 0, !11, !DIExpression(), debug-location !12
-    ; CHECK:      DBG_INSTR_REF 2, 0
-    ; CHECK-NEXT: DBG_VALUE $rsp
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0), debug-location !12
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $rsp
     ;; Test that the old value (from the DBG_PHI) is not tracked anywhere. It
     ;; should not be considered as being on the stack any more.
-    DBG_INSTR_REF 1, 0, !11, !DIExpression(), debug-location !12
-    ; CHECK:      DBG_INSTR_REF 1, 0
-    ; CHECK-NEXT: DBG_VALUE $noreg
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !12
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
     INC32m $rsp, 1, $noreg, 4, $noreg, implicit-def dead $eflags, debug-location !12 :: (store (s32) into %stack.0)
     ;; The above INC32m should be detected as clobbering the stack location,
     ;; even though it isn't debug labelled.
-    DBG_INSTR_REF 2, 0, !11, !DIExpression(), debug-location !12
-    ; CHECK:      DBG_INSTR_REF 2, 0
-    ; CHECK-NEXT: DBG_VALUE $noreg
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0), debug-location !12
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
 
     ;; Store another debug-labelled value to the stack,
     INC32m $rsp, 1, $noreg, 4, $noreg, implicit-def dead $eflags, debug-instr-number 5, debug-location !DILocation(line: 0, scope: !7) :: (store (s32) into %stack.0)
     ;; Point the variable at that value.
-    DBG_INSTR_REF 4, 0, !11, !DIExpression(), debug-location !12
-    ; CHECK:      DBG_INSTR_REF 4, 0,
-    ; CHECK-NEXT: DBG_VALUE $rsp
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(4, 0), debug-location !12
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(4, 0),
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $rsp
     ;; Overwrite the stack: LiveDebugValues should explicitly undef the stack
-    ;; location with DBG_VALUE $noreg, as DbgEntityHistoryCalculator doesn't
+    ;; location with DBG_VALUE_LIST $noreg, as DbgEntityHistoryCalculator doesn't
     ;; look at the stack.
     INC32m $rsp, 1, $noreg, 4, $noreg, implicit-def dead $eflags, debug-location !DILocation(line: 0, scope: !7) :: (store (s32) into %stack.0)
     ; CHECK:      INC32m $rsp
-    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
 
     $rax = MOV64rm $rsp, 1, $noreg, 8, $noreg :: (load 8 from %stack.0)
     RET64 $rax, debug-location !12

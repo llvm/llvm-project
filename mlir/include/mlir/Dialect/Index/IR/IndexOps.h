@@ -9,10 +9,13 @@
 #ifndef MLIR_DIALECT_INDEX_IR_INDEXOPS_H
 #define MLIR_DIALECT_INDEX_IR_INDEXOPS_H
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/Index/IR/IndexAttrs.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/CastInterfaces.h"
+#include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
@@ -20,10 +23,13 @@
 // Forward Declarations
 //===----------------------------------------------------------------------===//
 
-namespace mlir::index {
+namespace mlir {
+class PatternRewriter;
+namespace index {
 enum class IndexCmpPredicate : uint32_t;
 class IndexCmpPredicateAttr;
-} // namespace mlir::index
+} // namespace index
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // ODS-Generated Declarations

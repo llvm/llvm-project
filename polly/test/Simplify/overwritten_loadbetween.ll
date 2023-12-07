@@ -13,7 +13,7 @@
 ;   B[0] = val;
 ; }
 ;
-define void @overwritten(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
+define void @overwritten(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %for
 
@@ -23,13 +23,13 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 21.0, double* %A
-      %val = load double, double* %A
-      store double 42.0, double* %A
+      store double 21.0, ptr %A
+      %val = load double, ptr %A
+      store double 42.0, ptr %A
       br label %user
 
     user:
-      store double %val, double* %B
+      store double %val, ptr %B
       br label %inc
 
 inc:

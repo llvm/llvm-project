@@ -23,7 +23,8 @@
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -295,6 +296,8 @@ public:
     FEM_UnsetOnCommandLine = 3
   };
 
+  enum ExcessPrecisionKind { FPP_Standard, FPP_Fast, FPP_None };
+
   /// Possible exception handling behavior.
   enum class ExceptionHandlingKind { None, SjLj, WinEH, DwarfCFI, Wasm };
 
@@ -464,7 +467,7 @@ public:
 
   /// C++ ABI to compile with, if specified by the frontend through -fc++-abi=.
   /// This overrides the default ABI used by the target.
-  llvm::Optional<TargetCXXABI::Kind> CXXABI;
+  std::optional<TargetCXXABI::Kind> CXXABI;
 
   /// Indicates whether the front-end is explicitly told that the
   /// input is a header file (i.e. -x c-header).
@@ -476,13 +479,17 @@ public:
   /// The seed used by the randomize structure layout feature.
   std::string RandstructSeed;
 
-  /// Indicates whether the __FILE__ macro should use the target's
-  /// platform-specific file separator or whether it should use the build
-  /// environment's platform-specific file separator.
+  /// Indicates whether to use target's platform-specific file separator when
+  /// __FILE__ macro is used and when concatenating filename with directory or
+  /// to use build environment environment's platform-specific file separator.
   ///
   /// The plaform-specific path separator is the backslash(\) for Windows and
   /// forward slash (/) elsewhere.
   bool UseTargetPathSeparator = false;
+
+  // Indicates whether we should keep all nullptr checks for pointers
+  // received as a result of a standard operator new (-fcheck-new)
+  bool CheckNew = false;
 
   LangOptions();
 
@@ -570,7 +577,7 @@ public:
   /// Returns true if functions without prototypes or functions with an
   /// identifier list (aka K&R C functions) are not allowed.
   bool requiresStrictPrototypes() const {
-    return CPlusPlus || C2x || DisableKNRFunctions;
+    return CPlusPlus || C23 || DisableKNRFunctions;
   }
 
   /// Returns true if implicit function declarations are allowed in the current
@@ -583,7 +590,7 @@ public:
   bool isImplicitIntRequired() const { return !CPlusPlus && !C99; }
 
   /// Returns true if implicit int is supported at all.
-  bool isImplicitIntAllowed() const { return !CPlusPlus && !C2x; }
+  bool isImplicitIntAllowed() const { return !CPlusPlus && !C23; }
 
   /// Check if return address signing is enabled.
   bool hasSignReturnAddress() const {
@@ -739,7 +746,7 @@ public:
   RoundingMode getRoundingMode() const {
     RoundingMode RM = getConstRoundingMode();
     if (RM == RoundingMode::Dynamic) {
-      // C2x: 7.6.2p3  If the FE_DYNAMIC mode is specified and FENV_ACCESS is
+      // C23: 7.6.2p3  If the FE_DYNAMIC mode is specified and FENV_ACCESS is
       // "off", the translator may assume that the default rounding mode is in
       // effect.
       if (!getAllowFEnvAccess() && !getRoundingMath())

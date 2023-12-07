@@ -69,12 +69,7 @@ static bool isIncompletePhi(const til::SExpr *E) {
 
 using CallingContext = SExprBuilder::CallingContext;
 
-til::SExpr *SExprBuilder::lookupStmt(const Stmt *S) {
-  auto It = SMap.find(S);
-  if (It != SMap.end())
-    return It->second;
-  return nullptr;
-}
+til::SExpr *SExprBuilder::lookupStmt(const Stmt *S) { return SMap.lookup(S); }
 
 til::SCFG *SExprBuilder::buildCFG(CFGWalker &Walker) {
   Walker.walk(*this);

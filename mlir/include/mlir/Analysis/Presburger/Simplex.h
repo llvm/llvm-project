@@ -22,11 +22,11 @@
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace mlir {
 namespace presburger {
@@ -43,7 +43,7 @@ class GBRSimplex;
 /// these constraints that are redundant, i.e. a subset of constraints that
 /// doesn't constrain the affine set further after adding the non-redundant
 /// constraints. The LexSimplex class provides support for computing the
-/// lexicographic minimum of an IntegerRelation. The SymbolicLexMin class
+/// lexicographic minimum of an IntegerRelation. The SymbolicLexOpt class
 /// provides support for computing symbolic lexicographic minimums. All of these
 /// classes can be constructed from an IntegerRelation, and all inherit common
 /// functionality from SimplexBase.
@@ -263,7 +263,7 @@ protected:
   /// Returns an empty optional if no pivot is possible, which happens only when
   /// the column unknown is a variable and no constraint has a non-zero
   /// coefficient for it.
-  Optional<unsigned> findAnyPivotRow(unsigned col);
+  std::optional<unsigned> findAnyPivotRow(unsigned col);
 
   /// Swap the row with the column in the tableau's data structures but not the
   /// tableau itself. This is used by pivot.
@@ -522,25 +522,25 @@ private:
 
   /// Get a constraint row that is violated, if one exists.
   /// Otherwise, return an empty optional.
-  Optional<unsigned> maybeGetViolatedRow() const;
+  std::optional<unsigned> maybeGetViolatedRow() const;
 
   /// Get a row corresponding to a var that has a non-integral sample value, if
   /// one exists. Otherwise, return an empty optional.
-  Optional<unsigned> maybeGetNonIntegralVarRow() const;
+  std::optional<unsigned> maybeGetNonIntegralVarRow() const;
 };
 
-/// Represents the result of a symbolic lexicographic minimization computation.
-struct SymbolicLexMin {
-  SymbolicLexMin(const PresburgerSpace &space)
-      : lexmin(space),
+/// Represents the result of a symbolic lexicographic optimization computation.
+struct SymbolicLexOpt {
+  SymbolicLexOpt(const PresburgerSpace &space)
+      : lexopt(space),
         unboundedDomain(PresburgerSet::getEmpty(space.getDomainSpace())) {}
 
-  /// This maps assignments of symbols to the corresponding lexmin.
+  /// This maps assignments of symbols to the corresponding lexopt.
   /// Takes no value when no integer sample exists for the assignment or if the
-  /// lexmin is unbounded.
-  PWMAFunction lexmin;
-  /// Contains all assignments to the symbols that made the lexmin unbounded.
-  /// Note that the symbols of the input set to the symbolic lexmin are dims
+  /// lexopt is unbounded.
+  PWMAFunction lexopt;
+  /// Contains all assignments to the symbols that made the lexopt unbounded.
+  /// Note that the symbols of the input set to the symbolic lexopt are dims
   /// of this PrebsurgerSet.
   PresburgerSet unboundedDomain;
 };
@@ -575,13 +575,13 @@ struct SymbolicLexMin {
 /// where it is.
 class SymbolicLexSimplex : public LexSimplexBase {
 public:
-  /// `constraints` is the set for which the symbolic lexmin will be computed.
-  /// `symbolDomain` is the set of values of the symbols for which the lexmin
+  /// `constraints` is the set for which the symbolic lexopt will be computed.
+  /// `symbolDomain` is the set of values of the symbols for which the lexopt
   /// will be computed. `symbolDomain` should have a dim var for every symbol in
   /// `constraints`, and no other vars. `isSymbol` specifies which vars of
   /// `constraints` should be considered as symbols.
   ///
-  /// The resulting SymbolicLexMin's space will be compatible with that of
+  /// The resulting SymbolicLexOpt's space will be compatible with that of
   /// symbolDomain.
   SymbolicLexSimplex(const IntegerRelation &constraints,
                      const IntegerPolyhedron &symbolDomain,
@@ -594,7 +594,7 @@ public:
            "there must be some non-symbols to optimize!");
   }
 
-  /// An overload to select some subrange of ids as symbols for lexmin.
+  /// An overload to select some subrange of ids as symbols for lexopt.
   /// The symbol ids are the range of ids with absolute index
   /// [symbolOffset, symbolOffset + symbolDomain.getNumVars())
   SymbolicLexSimplex(const IntegerRelation &constraints, unsigned symbolOffset,
@@ -604,7 +604,7 @@ public:
                                                 symbolOffset,
                                                 symbolDomain.getNumVars())) {}
 
-  /// An overload to select the symbols of `constraints` as symbols for lexmin.
+  /// An overload to select the symbols of `constraints` as symbols for lexopt.
   SymbolicLexSimplex(const IntegerRelation &constraints,
                      const IntegerPolyhedron &symbolDomain)
       : SymbolicLexSimplex(constraints,
@@ -614,7 +614,7 @@ public:
            "symbolDomain must have as many vars as constraints has symbols!");
   }
 
-  /// The lexmin will be stored as a function `lexmin` from symbols to
+  /// The lexmin will be stored as a function `lexopt` from symbols to
   /// non-symbols in the result.
   ///
   /// For some values of the symbols, the lexmin may be unbounded.
@@ -622,7 +622,7 @@ public:
   ///
   /// The spaces of the sets in the result are compatible with the symbolDomain
   /// passed in the SymbolicLexSimplex constructor.
-  SymbolicLexMin computeSymbolicIntegerLexMin();
+  SymbolicLexOpt computeSymbolicIntegerLexMin();
 
 private:
   /// Perform all pivots that do not require branching.
@@ -633,11 +633,11 @@ private:
   LogicalResult doNonBranchingPivots();
 
   /// Get a row that is always violated in the current domain, if one exists.
-  Optional<unsigned> maybeGetAlwaysViolatedRow();
+  std::optional<unsigned> maybeGetAlwaysViolatedRow();
 
   /// Get a row corresponding to a variable with non-integral sample value, if
   /// one exists.
-  Optional<unsigned> maybeGetNonIntegralVarRow();
+  std::optional<unsigned> maybeGetNonIntegralVarRow();
 
   /// Given a row that has a non-integer sample value, cut away this fractional
   /// sample value witahout removing any integer points, i.e., the integer
@@ -670,7 +670,7 @@ private:
 
   /// Record a lexmin. The tableau must be consistent with all variables
   /// having symbolic samples with integer coefficients.
-  void recordOutput(SymbolicLexMin &result) const;
+  void recordOutput(SymbolicLexOpt &result) const;
 
   /// The symbol domain.
   IntegerPolyhedron domainPoly;
@@ -781,7 +781,7 @@ public:
 
   /// Returns an integer sample point if one exists, or std::nullopt
   /// otherwise. This should only be called for bounded sets.
-  Optional<SmallVector<MPInt, 8>> findIntegerSample();
+  std::optional<SmallVector<MPInt, 8>> findIntegerSample();
 
   enum class IneqType { Redundant, Cut, Separate };
 
@@ -805,11 +805,11 @@ public:
 
   /// Returns the current sample point if it is integral. Otherwise, returns
   /// std::nullopt.
-  Optional<SmallVector<MPInt, 8>> getSamplePointIfIntegral() const;
+  std::optional<SmallVector<MPInt, 8>> getSamplePointIfIntegral() const;
 
   /// Returns the current sample point, which may contain non-integer (rational)
   /// coordinates. Returns an empty optional when the tableau is empty.
-  Optional<SmallVector<Fraction, 8>> getRationalSample() const;
+  std::optional<SmallVector<Fraction, 8>> getRationalSample() const;
 
 private:
   friend class GBRSimplex;
@@ -828,7 +828,7 @@ private:
   ///
   /// Returns a (row, col) pair denoting a pivot, or an empty Optional if
   /// no valid pivot exists.
-  Optional<Pivot> findPivot(int row, Direction direction) const;
+  std::optional<Pivot> findPivot(int row, Direction direction) const;
 
   /// Find a row that can be used to pivot the column in the specified
   /// direction. If skipRow is not null, then this row is excluded
@@ -838,8 +838,8 @@ private:
   ///
   /// Returns the row to pivot to, or an empty Optional if the column
   /// is unbounded in the specified direction.
-  Optional<unsigned> findPivotRow(Optional<unsigned> skipRow,
-                                  Direction direction, unsigned col) const;
+  std::optional<unsigned> findPivotRow(std::optional<unsigned> skipRow,
+                                       Direction direction, unsigned col) const;
 
   /// Undo the addition of the last constraint while preserving tableau
   /// consistency.

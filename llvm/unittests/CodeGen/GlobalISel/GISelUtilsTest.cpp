@@ -249,7 +249,7 @@ TEST(GISelUtilsTest, getLCMType) {
 TEST_F(AArch64GISelMITest, ConstFalseTest) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   const auto &TLI = *B.getMF().getSubtarget().getTargetLowering();
   bool BooleanChoices[2] = {true, false};
 

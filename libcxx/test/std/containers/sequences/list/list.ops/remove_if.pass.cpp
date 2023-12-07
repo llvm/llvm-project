@@ -77,7 +77,7 @@ int main(int, char**)
     std::list<PredLWG526> c(a1, a1 + 7);
     c.remove_if(std::ref(c.front()));
     assert(c.size() == 5);
-    for (size_t i = 0; i < c.size(); ++i)
+    for (std::size_t i = 0; i < c.size(); ++i)
     {
         assert(c.front() == a2[i]);
         c.pop_front();

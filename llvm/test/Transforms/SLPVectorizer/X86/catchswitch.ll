@@ -6,13 +6,13 @@
 ; is invalid.  Only phis and the catchswitch may be present, so we must
 ; avoid trying to insert shuffles into such a block.
 
-%typeA = type { i8**, i8*, [20 x i8] }
+%typeA = type { ptr, ptr, [20 x i8] }
 @globalA = external global %typeA
 
 declare i32 @__CxxFrameHandler3(...)
 declare void @funcA()
 
-define void @important_func() personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define void @important_func() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @important_func(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LABELB:%.*]]
@@ -45,7 +45,7 @@ define void @important_func() personality i8* bitcast (i32 (...)* @__CxxFrameHan
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi float [ [[H]], [[LABELG]] ], [ [[F]], [[LABELE]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = catchswitch within none [label %catch] unwind to caller
 ; CHECK:       catch:
-; CHECK-NEXT:    [[TMP6:%.*]] = catchpad within [[TMP5]] [%typeA* @globalA, i32 8, i8* null]
+; CHECK-NEXT:    [[TMP6:%.*]] = catchpad within [[TMP5]] [ptr @globalA, i32 8, ptr null]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -88,6 +88,6 @@ catch.dispatch:
   %5 = catchswitch within none [label %catch] unwind to caller
 
 catch:
-  %6 = catchpad within %5 [%typeA* @globalA, i32 8, i8* null]
+  %6 = catchpad within %5 [ptr @globalA, i32 8, ptr null]
   unreachable
 }

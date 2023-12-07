@@ -11,8 +11,8 @@ declare { i8, i1 } @llvm.uadd.with.overflow.i8(i8, i8)
 
 define { i32, i1 } @simple_fold(i32 %x) {
 ; CHECK-LABEL: @simple_fold(
-; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 20)
-; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
+; CHECK-NEXT:    [[B:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 20)
+; CHECK-NEXT:    ret { i32, i1 } [[B]]
 ;
   %a = add nuw i32 %x, 7
   %b = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 13)
@@ -21,8 +21,8 @@ define { i32, i1 } @simple_fold(i32 %x) {
 
 define { i8, i1 } @fold_on_constant_add_no_overflow(i8 %x) {
 ; CHECK-LABEL: @fold_on_constant_add_no_overflow(
-; CHECK-NEXT:    [[TMP1:%.*]] = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 [[X:%.*]], i8 -1)
-; CHECK-NEXT:    ret { i8, i1 } [[TMP1]]
+; CHECK-NEXT:    [[B:%.*]] = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 [[X:%.*]], i8 -1)
+; CHECK-NEXT:    ret { i8, i1 } [[B]]
 ;
   %a = add nuw i8 %x, 200
   %b = tail call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 %a, i8 55)
@@ -63,8 +63,8 @@ define { <2 x i8>, <2 x i1> } @no_fold_vector_overflow(<2 x i8> %x) {
 
 define { <2 x i32>, <2 x i1> } @fold_simple_splat_constant(<2 x i32> %x) {
 ; CHECK-LABEL: @fold_simple_splat_constant(
-; CHECK-NEXT:    [[TMP1:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 42, i32 42>)
-; CHECK-NEXT:    ret { <2 x i32>, <2 x i1> } [[TMP1]]
+; CHECK-NEXT:    [[B:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 42, i32 42>)
+; CHECK-NEXT:    ret { <2 x i32>, <2 x i1> } [[B]]
 ;
   %a = add nuw <2 x i32> %x, <i32 12, i32 12>
   %b = tail call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> %a, <2 x i32> <i32 30, i32 30>)
@@ -95,8 +95,8 @@ define { <2 x i32>, <2 x i1> } @no_fold_splat_not_constant(<2 x i32> %x, <2 x i3
 
 define { i32, i1 } @fold_nuwnsw(i32 %x) {
 ; CHECK-LABEL: @fold_nuwnsw(
-; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 42)
-; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
+; CHECK-NEXT:    [[B:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 42)
+; CHECK-NEXT:    ret { i32, i1 } [[B]]
 ;
   %a = add nuw nsw i32 %x, 12
   %b = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 30)

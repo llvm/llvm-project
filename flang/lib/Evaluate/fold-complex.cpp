@@ -64,8 +64,6 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "dot_product") {
     return FoldDotProduct<T>(context, std::move(funcRef));
-  } else if (name == "merge") {
-    return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "product") {
     auto one{Scalar<Part>::FromInteger(value::Integer<8>{1}).value};
     return FoldProduct<T>(context, std::move(funcRef), Scalar<T>{one});

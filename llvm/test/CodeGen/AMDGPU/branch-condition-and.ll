@@ -30,7 +30,7 @@ bb:
   br i1 %tmp3, label %bb4, label %bb5
 
 bb4:                                              ; preds = %bb
-  store volatile i32 4, i32 addrspace(3)* undef
+  store volatile i32 4, ptr addrspace(3) undef
   unreachable
 
 bb5:                                              ; preds = %bb

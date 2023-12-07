@@ -6,9 +6,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
-// TODO FMT Evaluate gcc-12 status
-// UNSUPPORTED: gcc-12
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
+// XFAIL: availability-fp_to_chars-missing
 
 // Note this formatter shows additional information when tests are failing.
 // This aids the development. Since other formatters fail in the same fashion
@@ -29,23 +29,17 @@
 #include "format_tests.h"
 #include "string_literal.h"
 #include "test_format_string.h"
-
-#ifndef TEST_HAS_NO_LOCALIZATION
-#  include <iostream>
-#  include <type_traits>
-#endif
+#include "assert_macros.h"
+#include "concat_macros.h"
 
 auto test =
     []<class CharT, class... Args>(
         std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) constexpr {
       std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
-#ifndef TEST_HAS_NO_LOCALIZATION
-      if constexpr (std::same_as<CharT, char>)
-        if (out != expected)
-          std::cerr << "\nFormat string   " << fmt.get() << "\nExpected output " << expected << "\nActual output   "
-                    << out << '\n';
-#endif
-      assert(out == expected);
+      TEST_REQUIRE(
+          out == expected,
+          TEST_WRITE_CONCATENATED(
+              "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
     };
 
 auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, Args&&...) {
@@ -56,11 +50,11 @@ auto test_exception = []<class CharT, class... Args>(std::string_view, std::basi
 };
 
 int main(int, char**) {
-  format_tests<char>(test, test_exception);
+  format_tests<char, execution_modus::full>(test, test_exception);
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   format_tests_char_to_wchar_t(test);
-  format_tests<wchar_t>(test, test_exception);
+  format_tests<wchar_t, execution_modus::full>(test, test_exception);
 #endif
 
   return 0;

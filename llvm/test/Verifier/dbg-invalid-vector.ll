@@ -10,7 +10,7 @@
 
 define void @f() {
   %1 = alloca <6 x float>, align 32
-  call void @llvm.dbg.declare(metadata <6 x float>* %1, metadata !10, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !10, metadata !DIExpression()), !dbg !18
   ret void
 }
 

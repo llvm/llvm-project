@@ -1,9 +1,8 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -fblocks -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -fblocks -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - | FileCheck %s
 
 template <class T> void takeItByValue(T);
 void takeABlock(void (^)());
 
-// rdar://problem/11022704
 namespace test_int {
   void test() {
     const int x = 100;
@@ -48,10 +47,10 @@ namespace test_complex_int {
     takeABlock(^{ takeItByValue(x); });
     // CHECK:      store { i32, i32 } { i32 500, i32 0 },
 
+    // CHECK:      [[COERCE:%.*]] = alloca { i32, i32 }
     // CHECK:      store i32 500,
     // CHECK-NEXT: store i32 0,
-    // CHECK-NEXT: [[COERCE:%.*]] = bitcast
-    // CHECK-NEXT: [[CVAL:%.*]] = load i64, i64* [[COERCE]]
+    // CHECK-NEXT: [[CVAL:%.*]] = load i64, ptr [[COERCE]]
     // CHECK-NEXT: call void @_Z13takeItByValueICiEvT_(i64 noundef [[CVAL]])
   }
 }
@@ -70,19 +69,17 @@ namespace test_complex_int_ref_mutable {
   void test() {
     const _Complex int &x = y;
     takeABlock(^{ takeItByValue(x); });
-    // CHECK:      [[R:%.*]] = load i32, i32* getelementptr inbounds ({ i32, i32 }, { i32, i32 }* @_ZN28test_complex_int_ref_mutable1yE, i32 0, i32 0)
-    // CHECK-NEXT: [[I:%.*]] = load i32, i32* getelementptr inbounds ({ i32, i32 }, { i32, i32 }* @_ZN28test_complex_int_ref_mutable1yE, i32 0, i32 1)
-    // CHECK-NEXT: [[RSLOT:%.*]] = getelementptr inbounds { i32, i32 }, { i32, i32 }* [[CSLOT:%.*]], i32 0, i32 0
-    // CHECK-NEXT: [[ISLOT:%.*]] = getelementptr inbounds { i32, i32 }, { i32, i32 }* [[CSLOT]], i32 0, i32 1
-    // CHECK-NEXT: store i32 [[R]], i32* [[RSLOT]]
-    // CHECK-NEXT: store i32 [[I]], i32* [[ISLOT]]
-    // CHECK-NEXT: [[COERCE:%.*]] = bitcast { i32, i32 }* [[CSLOT]] to i64*
-    // CHECK-NEXT: [[CVAL:%.*]] = load i64, i64* [[COERCE]],
+    // CHECK:      [[R:%.*]] = load i32, ptr @_ZN28test_complex_int_ref_mutable1yE
+    // CHECK-NEXT: [[I:%.*]] = load i32, ptr getelementptr inbounds ({ i32, i32 }, ptr @_ZN28test_complex_int_ref_mutable1yE, i32 0, i32 1)
+    // CHECK-NEXT: [[RSLOT:%.*]] = getelementptr inbounds { i32, i32 }, ptr [[CSLOT:%.*]], i32 0, i32 0
+    // CHECK-NEXT: [[ISLOT:%.*]] = getelementptr inbounds { i32, i32 }, ptr [[CSLOT]], i32 0, i32 1
+    // CHECK-NEXT: store i32 [[R]], ptr [[RSLOT]]
+    // CHECK-NEXT: store i32 [[I]], ptr [[ISLOT]]
+    // CHECK-NEXT: [[CVAL:%.*]] = load i64, ptr [[CSLOT]],
     // CHECK-NEXT: call void @_Z13takeItByValueICiEvT_(i64 noundef [[CVAL]])
   }
 }
 
-// rdar://13295759
 namespace test_block_in_lambda {
   void takeBlock(void (^block)());
 
@@ -102,12 +99,11 @@ namespace test_block_in_lambda {
   }
   // CHECK-LABEL:    define internal void @"_ZZN20test_block_in_lambda4testENS_1AEENK3$_0clEv"(
   // CHECK:      [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]], align 8
-  // CHECK:      [[THIS:%.*]] = load [[LAMBDA_T:%.*]]*, [[LAMBDA_T:%.*]]**
-  // CHECK:      [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
-  // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[LAMBDA_T]], [[LAMBDA_T]]* [[THIS]], i32 0, i32 0
-  // CHECK-NEXT: call void @_ZN20test_block_in_lambda1AC1ERKS0_({{.*}}* {{[^,]*}} [[BLOCK_CAPTURED]], {{.*}}* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T1]])
-  // CHECK-NEXT: [[T0:%.*]] = bitcast [[BLOCK_T]]* [[BLOCK]] to void ()*
-  // CHECK-NEXT: call void @_ZN20test_block_in_lambda9takeBlockEU13block_pointerFvvE(void ()* noundef [[T0]])
-  // CHECK-NEXT: call void @_ZN20test_block_in_lambda1AD1Ev({{.*}}* {{[^,]*}} [[BLOCK_CAPTURED]])
+  // CHECK:      [[THIS:%.*]] = load ptr, ptr
+  // CHECK:      [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+  // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[LAMBDA_T:%.*]], ptr [[THIS]], i32 0, i32 0
+  // CHECK-NEXT: call void @_ZN20test_block_in_lambda1AC1ERKS0_(ptr {{[^,]*}} [[BLOCK_CAPTURED]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T1]])
+  // CHECK-NEXT: call void @_ZN20test_block_in_lambda9takeBlockEU13block_pointerFvvE(ptr noundef [[BLOCK]])
+  // CHECK-NEXT: call void @_ZN20test_block_in_lambda1AD1Ev(ptr {{[^,]*}} [[BLOCK_CAPTURED]])
   // CHECK-NEXT: ret void
 }

@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=2 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX2,LMULMAX2-RV64
 ; RUN: llc -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1,LMULMAX1-RV64
 
-define void @splat_v16i8(<16 x i8>* %x, i8 %y) {
+define void @splat_v16i8(ptr %x, i8 %y) {
 ; CHECK-LABEL: splat_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -15,11 +15,11 @@ define void @splat_v16i8(<16 x i8>* %x, i8 %y) {
 ; CHECK-NEXT:    ret
   %a = insertelement <16 x i8> poison, i8 %y, i32 0
   %b = shufflevector <16 x i8> %a, <16 x i8> poison, <16 x i32> zeroinitializer
-  store <16 x i8> %b, <16 x i8>* %x
+  store <16 x i8> %b, ptr %x
   ret void
 }
 
-define void @splat_v8i16(<8 x i16>* %x, i16 %y) {
+define void @splat_v8i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: splat_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -28,11 +28,11 @@ define void @splat_v8i16(<8 x i16>* %x, i16 %y) {
 ; CHECK-NEXT:    ret
   %a = insertelement <8 x i16> poison, i16 %y, i32 0
   %b = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> zeroinitializer
-  store <8 x i16> %b, <8 x i16>* %x
+  store <8 x i16> %b, ptr %x
   ret void
 }
 
-define void @splat_v4i32(<4 x i32>* %x, i32 %y) {
+define void @splat_v4i32(ptr %x, i32 %y) {
 ; CHECK-LABEL: splat_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -41,11 +41,11 @@ define void @splat_v4i32(<4 x i32>* %x, i32 %y) {
 ; CHECK-NEXT:    ret
   %a = insertelement <4 x i32> poison, i32 %y, i32 0
   %b = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer
-  store <4 x i32> %b, <4 x i32>* %x
+  store <4 x i32> %b, ptr %x
   ret void
 }
 
-define void @splat_v2i64(<2 x i64>* %x, i64 %y) {
+define void @splat_v2i64(ptr %x, i64 %y) {
 ; LMULMAX8-RV32-LABEL: splat_v2i64:
 ; LMULMAX8-RV32:       # %bb.0:
 ; LMULMAX8-RV32-NEXT:    addi sp, sp, -16
@@ -107,11 +107,11 @@ define void @splat_v2i64(<2 x i64>* %x, i64 %y) {
 ; LMULMAX1-RV64-NEXT:    ret
   %a = insertelement <2 x i64> poison, i64 %y, i32 0
   %b = shufflevector <2 x i64> %a, <2 x i64> poison, <2 x i32> zeroinitializer
-  store <2 x i64> %b, <2 x i64>* %x
+  store <2 x i64> %b, ptr %x
   ret void
 }
 
-define void @splat_v32i8(<32 x i8>* %x, i8 %y) {
+define void @splat_v32i8(ptr %x, i8 %y) {
 ; LMULMAX8-LABEL: splat_v32i8:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a2, 32
@@ -138,11 +138,11 @@ define void @splat_v32i8(<32 x i8>* %x, i8 %y) {
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <32 x i8> poison, i8 %y, i32 0
   %b = shufflevector <32 x i8> %a, <32 x i8> poison, <32 x i32> zeroinitializer
-  store <32 x i8> %b, <32 x i8>* %x
+  store <32 x i8> %b, ptr %x
   ret void
 }
 
-define void @splat_v16i16(<16 x i16>* %x, i16 %y) {
+define void @splat_v16i16(ptr %x, i16 %y) {
 ; LMULMAX8-LABEL: splat_v16i16:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
@@ -167,11 +167,11 @@ define void @splat_v16i16(<16 x i16>* %x, i16 %y) {
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <16 x i16> poison, i16 %y, i32 0
   %b = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> zeroinitializer
-  store <16 x i16> %b, <16 x i16>* %x
+  store <16 x i16> %b, ptr %x
   ret void
 }
 
-define void @splat_v8i32(<8 x i32>* %x, i32 %y) {
+define void @splat_v8i32(ptr %x, i32 %y) {
 ; LMULMAX8-LABEL: splat_v8i32:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -196,11 +196,11 @@ define void @splat_v8i32(<8 x i32>* %x, i32 %y) {
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <8 x i32> poison, i32 %y, i32 0
   %b = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> zeroinitializer
-  store <8 x i32> %b, <8 x i32>* %x
+  store <8 x i32> %b, ptr %x
   ret void
 }
 
-define void @splat_v4i64(<4 x i64>* %x, i64 %y) {
+define void @splat_v4i64(ptr %x, i64 %y) {
 ; LMULMAX8-RV32-LABEL: splat_v4i64:
 ; LMULMAX8-RV32:       # %bb.0:
 ; LMULMAX8-RV32-NEXT:    addi sp, sp, -16
@@ -229,10 +229,8 @@ define void @splat_v4i64(<4 x i64>* %x, i64 %y) {
 ;
 ; LMULMAX1-RV32-LABEL: splat_v4i64:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    li a3, 5
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.s.x v0, a3
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; LMULMAX1-RV32-NEXT:    vmv.v.i v0, 5
 ; LMULMAX1-RV32-NEXT:    vmv.v.x v8, a2
 ; LMULMAX1-RV32-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; LMULMAX1-RV32-NEXT:    addi a1, a0, 16
@@ -264,11 +262,11 @@ define void @splat_v4i64(<4 x i64>* %x, i64 %y) {
 ; LMULMAX1-RV64-NEXT:    ret
   %a = insertelement <4 x i64> poison, i64 %y, i32 0
   %b = shufflevector <4 x i64> %a, <4 x i64> poison, <4 x i32> zeroinitializer
-  store <4 x i64> %b, <4 x i64>* %x
+  store <4 x i64> %b, ptr %x
   ret void
 }
 
-define void @splat_zero_v16i8(<16 x i8>* %x) {
+define void @splat_zero_v16i8(ptr %x) {
 ; CHECK-LABEL: splat_zero_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -277,11 +275,11 @@ define void @splat_zero_v16i8(<16 x i8>* %x) {
 ; CHECK-NEXT:    ret
   %a = insertelement <16 x i8> poison, i8 0, i32 0
   %b = shufflevector <16 x i8> %a, <16 x i8> poison, <16 x i32> zeroinitializer
-  store <16 x i8> %b, <16 x i8>* %x
+  store <16 x i8> %b, ptr %x
   ret void
 }
 
-define void @splat_zero_v8i16(<8 x i16>* %x) {
+define void @splat_zero_v8i16(ptr %x) {
 ; CHECK-LABEL: splat_zero_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -290,11 +288,11 @@ define void @splat_zero_v8i16(<8 x i16>* %x) {
 ; CHECK-NEXT:    ret
   %a = insertelement <8 x i16> poison, i16 0, i32 0
   %b = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> zeroinitializer
-  store <8 x i16> %b, <8 x i16>* %x
+  store <8 x i16> %b, ptr %x
   ret void
 }
 
-define void @splat_zero_v4i32(<4 x i32>* %x) {
+define void @splat_zero_v4i32(ptr %x) {
 ; CHECK-LABEL: splat_zero_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -303,11 +301,11 @@ define void @splat_zero_v4i32(<4 x i32>* %x) {
 ; CHECK-NEXT:    ret
   %a = insertelement <4 x i32> poison, i32 0, i32 0
   %b = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer
-  store <4 x i32> %b, <4 x i32>* %x
+  store <4 x i32> %b, ptr %x
   ret void
 }
 
-define void @splat_zero_v2i64(<2 x i64>* %x) {
+define void @splat_zero_v2i64(ptr %x) {
 ; CHECK-LABEL: splat_zero_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -316,11 +314,11 @@ define void @splat_zero_v2i64(<2 x i64>* %x) {
 ; CHECK-NEXT:    ret
   %a = insertelement <2 x i64> poison, i64 0, i32 0
   %b = shufflevector <2 x i64> %a, <2 x i64> poison, <2 x i32> zeroinitializer
-  store <2 x i64> %b, <2 x i64>* %x
+  store <2 x i64> %b, ptr %x
   ret void
 }
 
-define void @splat_zero_v32i8(<32 x i8>* %x) {
+define void @splat_zero_v32i8(ptr %x) {
 ; LMULMAX8-LABEL: splat_zero_v32i8:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a1, 32
@@ -347,11 +345,11 @@ define void @splat_zero_v32i8(<32 x i8>* %x) {
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <32 x i8> poison, i8 0, i32 0
   %b = shufflevector <32 x i8> %a, <32 x i8> poison, <32 x i32> zeroinitializer
-  store <32 x i8> %b, <32 x i8>* %x
+  store <32 x i8> %b, ptr %x
   ret void
 }
 
-define void @splat_zero_v16i16(<16 x i16>* %x) {
+define void @splat_zero_v16i16(ptr %x) {
 ; LMULMAX8-LABEL: splat_zero_v16i16:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
@@ -376,11 +374,11 @@ define void @splat_zero_v16i16(<16 x i16>* %x) {
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <16 x i16> poison, i16 0, i32 0
   %b = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> zeroinitializer
-  store <16 x i16> %b, <16 x i16>* %x
+  store <16 x i16> %b, ptr %x
   ret void
 }
 
-define void @splat_zero_v8i32(<8 x i32>* %x) {
+define void @splat_zero_v8i32(ptr %x) {
 ; LMULMAX8-LABEL: splat_zero_v8i32:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -405,11 +403,11 @@ define void @splat_zero_v8i32(<8 x i32>* %x) {
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <8 x i32> poison, i32 0, i32 0
   %b = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> zeroinitializer
-  store <8 x i32> %b, <8 x i32>* %x
+  store <8 x i32> %b, ptr %x
   ret void
 }
 
-define void @splat_zero_v4i64(<4 x i64>* %x) {
+define void @splat_zero_v4i64(ptr %x) {
 ; LMULMAX8-LABEL: splat_zero_v4i64:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -443,11 +441,125 @@ define void @splat_zero_v4i64(<4 x i64>* %x) {
 ; LMULMAX1-RV64-NEXT:    ret
   %a = insertelement <4 x i64> poison, i64 0, i32 0
   %b = shufflevector <4 x i64> %a, <4 x i64> poison, <4 x i32> zeroinitializer
-  store <4 x i64> %b, <4 x i64>* %x
+  store <4 x i64> %b, ptr %x
   ret void
 }
 
-define void @splat_allones_v16i8(<16 x i8>* %x) {
+define void @splat_zero_v2i16(ptr %p) {
+; CHECK-LABEL: splat_zero_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sw zero, 0(a0)
+; CHECK-NEXT:    ret
+  store <2 x i16> zeroinitializer, ptr %p
+  ret void
+}
+
+define void @splat_zero_v2i16_unaligned(ptr %p) {
+; CHECK-LABEL: splat_zero_v2i16_unaligned:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    ret
+  store <2 x i16> zeroinitializer, ptr %p, align 1
+  ret void
+}
+
+define void @splat_zero_v4i16(ptr %p) {
+; LMULMAX8-RV32-LABEL: splat_zero_v4i16:
+; LMULMAX8-RV32:       # %bb.0:
+; LMULMAX8-RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; LMULMAX8-RV32-NEXT:    vmv.v.i v8, 0
+; LMULMAX8-RV32-NEXT:    vse16.v v8, (a0)
+; LMULMAX8-RV32-NEXT:    ret
+;
+; LMULMAX2-RV32-LABEL: splat_zero_v4i16:
+; LMULMAX2-RV32:       # %bb.0:
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.v.i v8, 0
+; LMULMAX2-RV32-NEXT:    vse16.v v8, (a0)
+; LMULMAX2-RV32-NEXT:    ret
+;
+; LMULMAX1-RV32-LABEL: splat_zero_v4i16:
+; LMULMAX1-RV32:       # %bb.0:
+; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
+; LMULMAX1-RV32-NEXT:    vse16.v v8, (a0)
+; LMULMAX1-RV32-NEXT:    ret
+;
+; LMULMAX8-RV64-LABEL: splat_zero_v4i16:
+; LMULMAX8-RV64:       # %bb.0:
+; LMULMAX8-RV64-NEXT:    sd zero, 0(a0)
+; LMULMAX8-RV64-NEXT:    ret
+;
+; LMULMAX2-RV64-LABEL: splat_zero_v4i16:
+; LMULMAX2-RV64:       # %bb.0:
+; LMULMAX2-RV64-NEXT:    sd zero, 0(a0)
+; LMULMAX2-RV64-NEXT:    ret
+;
+; LMULMAX1-RV64-LABEL: splat_zero_v4i16:
+; LMULMAX1-RV64:       # %bb.0:
+; LMULMAX1-RV64-NEXT:    sd zero, 0(a0)
+; LMULMAX1-RV64-NEXT:    ret
+  store <4 x i16> zeroinitializer, ptr %p
+  ret void
+}
+
+define void @splat_zero_v2i32(ptr %p) {
+; LMULMAX8-RV32-LABEL: splat_zero_v2i32:
+; LMULMAX8-RV32:       # %bb.0:
+; LMULMAX8-RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; LMULMAX8-RV32-NEXT:    vmv.v.i v8, 0
+; LMULMAX8-RV32-NEXT:    vse32.v v8, (a0)
+; LMULMAX8-RV32-NEXT:    ret
+;
+; LMULMAX2-RV32-LABEL: splat_zero_v2i32:
+; LMULMAX2-RV32:       # %bb.0:
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.v.i v8, 0
+; LMULMAX2-RV32-NEXT:    vse32.v v8, (a0)
+; LMULMAX2-RV32-NEXT:    ret
+;
+; LMULMAX1-RV32-LABEL: splat_zero_v2i32:
+; LMULMAX1-RV32:       # %bb.0:
+; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
+; LMULMAX1-RV32-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-RV32-NEXT:    ret
+;
+; LMULMAX8-RV64-LABEL: splat_zero_v2i32:
+; LMULMAX8-RV64:       # %bb.0:
+; LMULMAX8-RV64-NEXT:    sd zero, 0(a0)
+; LMULMAX8-RV64-NEXT:    ret
+;
+; LMULMAX2-RV64-LABEL: splat_zero_v2i32:
+; LMULMAX2-RV64:       # %bb.0:
+; LMULMAX2-RV64-NEXT:    sd zero, 0(a0)
+; LMULMAX2-RV64-NEXT:    ret
+;
+; LMULMAX1-RV64-LABEL: splat_zero_v2i32:
+; LMULMAX1-RV64:       # %bb.0:
+; LMULMAX1-RV64-NEXT:    sd zero, 0(a0)
+; LMULMAX1-RV64-NEXT:    ret
+  store <2 x i32> zeroinitializer, ptr %p
+  ret void
+}
+
+; Not a power of two and requires more than two scalar stores.
+define void @splat_zero_v7i16(ptr %p) {
+; CHECK-LABEL: splat_zero_v7i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vsetivli zero, 7, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
+  store <7 x i16> zeroinitializer, ptr %p
+  ret void
+}
+
+define void @splat_allones_v16i8(ptr %x) {
 ; CHECK-LABEL: splat_allones_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -456,11 +568,11 @@ define void @splat_allones_v16i8(<16 x i8>* %x) {
 ; CHECK-NEXT:    ret
   %a = insertelement <16 x i8> poison, i8 -1, i32 0
   %b = shufflevector <16 x i8> %a, <16 x i8> poison, <16 x i32> zeroinitializer
-  store <16 x i8> %b, <16 x i8>* %x
+  store <16 x i8> %b, ptr %x
   ret void
 }
 
-define void @splat_allones_v8i16(<8 x i16>* %x) {
+define void @splat_allones_v8i16(ptr %x) {
 ; CHECK-LABEL: splat_allones_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -469,11 +581,11 @@ define void @splat_allones_v8i16(<8 x i16>* %x) {
 ; CHECK-NEXT:    ret
   %a = insertelement <8 x i16> poison, i16 -1, i32 0
   %b = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> zeroinitializer
-  store <8 x i16> %b, <8 x i16>* %x
+  store <8 x i16> %b, ptr %x
   ret void
 }
 
-define void @splat_allones_v4i32(<4 x i32>* %x) {
+define void @splat_allones_v4i32(ptr %x) {
 ; CHECK-LABEL: splat_allones_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -482,11 +594,11 @@ define void @splat_allones_v4i32(<4 x i32>* %x) {
 ; CHECK-NEXT:    ret
   %a = insertelement <4 x i32> poison, i32 -1, i32 0
   %b = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer
-  store <4 x i32> %b, <4 x i32>* %x
+  store <4 x i32> %b, ptr %x
   ret void
 }
 
-define void @splat_allones_v2i64(<2 x i64>* %x) {
+define void @splat_allones_v2i64(ptr %x) {
 ; CHECK-LABEL: splat_allones_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -495,11 +607,11 @@ define void @splat_allones_v2i64(<2 x i64>* %x) {
 ; CHECK-NEXT:    ret
   %a = insertelement <2 x i64> poison, i64 -1, i32 0
   %b = shufflevector <2 x i64> %a, <2 x i64> poison, <2 x i32> zeroinitializer
-  store <2 x i64> %b, <2 x i64>* %x
+  store <2 x i64> %b, ptr %x
   ret void
 }
 
-define void @splat_allones_v32i8(<32 x i8>* %x) {
+define void @splat_allones_v32i8(ptr %x) {
 ; LMULMAX8-LABEL: splat_allones_v32i8:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a1, 32
@@ -526,11 +638,11 @@ define void @splat_allones_v32i8(<32 x i8>* %x) {
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <32 x i8> poison, i8 -1, i32 0
   %b = shufflevector <32 x i8> %a, <32 x i8> poison, <32 x i32> zeroinitializer
-  store <32 x i8> %b, <32 x i8>* %x
+  store <32 x i8> %b, ptr %x
   ret void
 }
 
-define void @splat_allones_v16i16(<16 x i16>* %x) {
+define void @splat_allones_v16i16(ptr %x) {
 ; LMULMAX8-LABEL: splat_allones_v16i16:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
@@ -555,11 +667,11 @@ define void @splat_allones_v16i16(<16 x i16>* %x) {
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <16 x i16> poison, i16 -1, i32 0
   %b = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> zeroinitializer
-  store <16 x i16> %b, <16 x i16>* %x
+  store <16 x i16> %b, ptr %x
   ret void
 }
 
-define void @splat_allones_v8i32(<8 x i32>* %x) {
+define void @splat_allones_v8i32(ptr %x) {
 ; LMULMAX8-LABEL: splat_allones_v8i32:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -584,11 +696,11 @@ define void @splat_allones_v8i32(<8 x i32>* %x) {
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <8 x i32> poison, i32 -1, i32 0
   %b = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> zeroinitializer
-  store <8 x i32> %b, <8 x i32>* %x
+  store <8 x i32> %b, ptr %x
   ret void
 }
 
-define void @splat_allones_v4i64(<4 x i64>* %x) {
+define void @splat_allones_v4i64(ptr %x) {
 ; LMULMAX8-LABEL: splat_allones_v4i64:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -622,7 +734,7 @@ define void @splat_allones_v4i64(<4 x i64>* %x) {
 ; LMULMAX1-RV64-NEXT:    ret
   %a = insertelement <4 x i64> poison, i64 -1, i32 0
   %b = shufflevector <4 x i64> %a, <4 x i64> poison, <4 x i32> zeroinitializer
-  store <4 x i64> %b, <4 x i64>* %x
+  store <4 x i64> %b, ptr %x
   ret void
 }
 
@@ -630,7 +742,7 @@ define void @splat_allones_v4i64(<4 x i64>* %x) {
 ; build_vector to v8i32.
 ; FIXME: We should prevent this and use the implicit sign extension of vmv.v.x
 ; with SEW=64 on RV32.
-define void @splat_allones_with_use_v4i64(<4 x i64>* %x) {
+define void @splat_allones_with_use_v4i64(ptr %x) {
 ; LMULMAX8-LABEL: splat_allones_with_use_v4i64:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -673,9 +785,9 @@ define void @splat_allones_with_use_v4i64(<4 x i64>* %x) {
 ; LMULMAX1-RV64-NEXT:    vse64.v v9, (a0)
 ; LMULMAX1-RV64-NEXT:    vse64.v v8, (a1)
 ; LMULMAX1-RV64-NEXT:    ret
-  %a = load <4 x i64>, <4 x i64>* %x
+  %a = load <4 x i64>, ptr %x
   %b = add <4 x i64> %a, <i64 -1, i64 -1, i64 -1, i64 -1>
-  store <4 x i64> %b, <4 x i64>* %x
+  store <4 x i64> %b, ptr %x
   ret void
 }
 
@@ -683,7 +795,7 @@ define void @splat_allones_with_use_v4i64(<4 x i64>* %x) {
 ; nxv8i64 at index 0: the v16i64 type was used to get the LMUL, the size of
 ; which exceeded maximum-expected size of 512. The scalable container type of
 ; nxv8i64 should have been used instead.
-define void @vadd_vx_v16i64(<16 x i64>* %a, i64 %b, <16 x i64>* %c) {
+define void @vadd_vx_v16i64(ptr %a, i64 %b, ptr %c) {
 ; LMULMAX8-RV32-LABEL: vadd_vx_v16i64:
 ; LMULMAX8-RV32:       # %bb.0:
 ; LMULMAX8-RV32-NEXT:    addi sp, sp, -16
@@ -709,9 +821,9 @@ define void @vadd_vx_v16i64(<16 x i64>* %a, i64 %b, <16 x i64>* %c) {
 ; LMULMAX2-RV32-NEXT:    vle64.v v12, (a0)
 ; LMULMAX2-RV32-NEXT:    addi a0, a0, 32
 ; LMULMAX2-RV32-NEXT:    vle64.v v14, (a0)
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    li a0, 85
 ; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a0
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vmv.v.x v16, a2
 ; LMULMAX2-RV32-NEXT:    vmerge.vxm v16, v16, a1, v0
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -746,9 +858,8 @@ define void @vadd_vx_v16i64(<16 x i64>* %a, i64 %b, <16 x i64>* %c) {
 ; LMULMAX1-RV32-NEXT:    vle64.v v14, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a0, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle64.v v15, (a0)
-; LMULMAX1-RV32-NEXT:    li a0, 5
-; LMULMAX1-RV32-NEXT:    vmv.s.x v0, a0
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; LMULMAX1-RV32-NEXT:    vmv.v.i v0, 5
 ; LMULMAX1-RV32-NEXT:    vmv.v.x v16, a2
 ; LMULMAX1-RV32-NEXT:    vmerge.vxm v16, v16, a1, v0
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -850,10 +961,10 @@ define void @vadd_vx_v16i64(<16 x i64>* %a, i64 %b, <16 x i64>* %c) {
 ; LMULMAX1-RV64-NEXT:    addi a2, a2, 16
 ; LMULMAX1-RV64-NEXT:    vse64.v v13, (a2)
 ; LMULMAX1-RV64-NEXT:    ret
-  %va = load <16 x i64>, <16 x i64>* %a
+  %va = load <16 x i64>, ptr %a
   %head = insertelement <16 x i64> poison, i64 %b, i32 0
   %splat = shufflevector <16 x i64> %head, <16 x i64> poison, <16 x i32> zeroinitializer
   %vc = add <16 x i64> %va, %splat
-  store <16 x i64> %vc, <16 x i64>* %c
+  store <16 x i64> %vc, ptr %c
   ret void
 }

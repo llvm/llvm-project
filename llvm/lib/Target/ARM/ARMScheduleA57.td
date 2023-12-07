@@ -119,8 +119,7 @@ def : InstRW<[WriteNoop], (instregex "(t)?BKPT$", "(t2)?CDP(2)?$",
   "(t2|t)?HINT$", "(t)?HLT$", "(t2)?HVC$", "(t2)?ISB$", "ITasm$",
   "(t2)?RFE(DA|DB|IA|IB)", "(t)?SETEND", "(t2)?SETPAN", "(t2)?SMC", "SPACE",
   "(t2)?SRS(DA|DB|IA|IB)", "SWP(B)?", "t?TRAP", "(t2|t)?UDF$", "t2DCPS", "t2SG",
-  "t2TT", "tCPS", "CMP_SWAP", "t?SVC", "t2IT", "CompilerBarrier",
-  "t__brkdiv0")>;
+  "t2TT", "tCPS", "CMP_SWAP", "t?SVC", "t2IT", "t__brkdiv0")>;
 
 def : InstRW<[WriteNoop], (instregex "VMRS", "VMSR", "FMSTAT")>;
 

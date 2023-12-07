@@ -13,6 +13,7 @@
 #include "MCTargetDesc/XCoreMCTargetDesc.h"
 #include "TargetInfo/XCoreTargetInfo.h"
 #include "XCore.h"
+#include "XCoreMachineFunctionInfo.h"
 #include "XCoreTargetObjectFile.h"
 #include "XCoreTargetTransformInfo.h"
 #include "llvm/ADT/STLExtras.h"
@@ -105,9 +106,17 @@ void XCorePassConfig::addPreEmitPass() {
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreTarget() {
   RegisterTargetMachine<XCoreTargetMachine> X(getTheXCoreTarget());
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeXCoreDAGToDAGISelPass(PR);
 }
 
 TargetTransformInfo
 XCoreTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(XCoreTTIImpl(this, F));
+}
+
+MachineFunctionInfo *XCoreTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return XCoreFunctionInfo::create<XCoreFunctionInfo>(Allocator, F, STI);
 }

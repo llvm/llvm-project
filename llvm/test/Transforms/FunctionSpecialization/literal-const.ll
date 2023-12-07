@@ -1,8 +1,8 @@
-; RUN: opt -S --passes=ipsccp -specialize-functions \
-; RUN:        -force-function-specialization < %s | FileCheck %s -check-prefix CHECK-NOLIT
-; RUN: opt -S --passes=ipsccp -specialize-functions \
-; RUN:        -function-specialization-for-literal-constant \
-; RUN:        -force-function-specialization < %s | FileCheck %s -check-prefix CHECK-LIT
+; RUN: opt -S --passes="ipsccp<func-spec>" \
+; RUN:        -force-specialization < %s | FileCheck %s -check-prefix CHECK-NOLIT
+; RUN: opt -S --passes="ipsccp<func-spec>" \
+; RUN:        -funcspec-for-literal-constant \
+; RUN:        -force-specialization < %s | FileCheck %s -check-prefix CHECK-LIT
 
 define i32 @f0(i32 noundef %x) {
 entry:

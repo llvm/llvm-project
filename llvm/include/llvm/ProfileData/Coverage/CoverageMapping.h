@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
@@ -41,6 +42,14 @@
 namespace llvm {
 
 class IndexedInstrProfReader;
+
+namespace object {
+class BuildIDFetcher;
+} // namespace object
+
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 
 namespace coverage {
 
@@ -579,6 +588,13 @@ class CoverageMapping {
       ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
       IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage);
 
+  // Load coverage records from file.
+  static Error
+  loadFromFile(StringRef Filename, StringRef Arch, StringRef CompilationDir,
+               IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage,
+               bool &DataFound,
+               SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr);
+
   /// Add a function record corresponding to \p Record.
   Error loadFunctionRecord(const CoverageMappingRecord &Record,
                            IndexedInstrProfReader &ProfileReader);
@@ -604,8 +620,10 @@ public:
   /// Ignores non-instrumented object files unless all are not instrumented.
   static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
-       ArrayRef<StringRef> Arches = std::nullopt,
-       StringRef CompilationDir = "");
+       vfs::FileSystem &FS, ArrayRef<StringRef> Arches = std::nullopt,
+       StringRef CompilationDir = "",
+       const object::BuildIDFetcher *BIDFetcher = nullptr,
+       bool CheckBinaryIDs = false);
 
   /// The number of functions that couldn't have their profiles mapped.
   ///
@@ -1007,6 +1025,20 @@ enum CovMapVersion {
   Version6 = 5,
   // The current version is Version6.
   CurrentVersion = INSTR_PROF_COVMAP_VERSION
+};
+
+// Correspond to "llvmcovm", in little-endian.
+constexpr uint64_t TestingFormatMagic = 0x6d766f636d766c6c;
+
+enum class TestingFormatVersion : uint64_t {
+  // The first version's number corresponds to the string "testdata" in
+  // little-endian. This is for a historical reason.
+  Version1 = 0x6174616474736574,
+  // Version1 has a defect that it can't store multiple file records. Version2
+  // fix this problem by adding a new field before the file records section.
+  Version2 = 1,
+  // The current testing format version is Version2.
+  CurrentVersion = Version2
 };
 
 template <int CovMapVersion, class IntPtrT> struct CovMapTraits {

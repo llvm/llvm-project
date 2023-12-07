@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-unknown-unknown -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -triple x86_64-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -triple x86_64-unknown-unknown -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 //
 // expected-no-diagnostics
@@ -178,7 +178,7 @@ void xyz() {
 
     // TEMP = S;
     // CHECK: [[TEMP_ARR_BEG:%.+]] = getelementptr inbounds [2 x %struct.S], ptr [[TEMP_ARR]], i32 0, i32 0
-    // CHECK: [[TEMP_ARR_END:%.+]] = getelementptr %struct.S, ptr [[TEMP_ARR_BEG]], i64 2
+    // CHECK: [[TEMP_ARR_END:%.+]] = getelementptr inbounds %struct.S, ptr [[TEMP_ARR_BEG]], i64 2
     // CHECK: [[IS_EMPTY:%.+]] = icmp eq ptr [[TEMP_ARR_BEG]], [[TEMP_ARR_END]]
     // CHECK: br i1 [[IS_EMPTY]], label %[[EXIT:[^,]+]], label %[[BODY:[^,]+]]
     // CHECK: [[BODY]]:
@@ -207,7 +207,7 @@ void xyz() {
     // CHECK: [[DONE]]:
 
     // S_PRIV = TEMP;
-    // CHECK: [[RHS_END:%.+]] = getelementptr %struct.S, ptr [[S_PRIV_ADDR]], i64 2
+    // CHECK: [[RHS_END:%.+]] = getelementptr inbounds %struct.S, ptr [[S_PRIV_ADDR]], i64 2
     // CHECK: [[IS_EMPTY:%.+]] = icmp eq ptr [[S_PRIV_ADDR]], [[RHS_END]]
     // CHECK: br i1 [[IS_EMPTY]], label %[[EXIT:[^,]+]], label %[[BODY:[^,]+]]
     // CHECK: [[BODY]]:

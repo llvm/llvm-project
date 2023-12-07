@@ -52,6 +52,18 @@ namespace pr8264 {
   };
 }
 
+namespace issue63503 {
+struct Base {
+  virtual ~Base() = default;
+};
+
+struct Derived final : Base {
+  virtual ~Derived() = defaul; // #default
+} do_not_crash;
+// expected-error@#default {{initializer on function does not look like a pure-specifier}}
+// expected-error@#default {{use of undeclared identifier 'defaul'}}
+}
+
 namespace VirtualFriend {
   // DR (filed but no number yet): reject meaningless pure-specifier on a friend declaration.
   struct A { virtual int f(); };

@@ -3,20 +3,20 @@
 
 target triple = "hexagon"
 
-define i32 @foo(i64* nocapture %p, i64* nocapture %q) nounwind readonly {
+define i32 @foo(ptr nocapture %p, ptr nocapture %q) nounwind readonly {
 entry:
-  %incdec.ptr = getelementptr inbounds i64, i64* %p, i32 1
-  %0 = load i64, i64* %p, align 8, !tbaa !0
-  %incdec.ptr1 = getelementptr inbounds i64, i64* %q, i32 1
-  %1 = load i64, i64* %q, align 8, !tbaa !0
+  %incdec.ptr = getelementptr inbounds i64, ptr %p, i32 1
+  %0 = load i64, ptr %p, align 8, !tbaa !0
+  %incdec.ptr1 = getelementptr inbounds i64, ptr %q, i32 1
+  %1 = load i64, ptr %q, align 8, !tbaa !0
   %2 = tail call i32 @llvm.hexagon.A2.vcmpwgtu(i64 %0, i64 %1)
-  %incdec.ptr2 = getelementptr inbounds i64, i64* %p, i32 2
-  %3 = load i64, i64* %incdec.ptr, align 8, !tbaa !0
-  %incdec.ptr3 = getelementptr inbounds i64, i64* %q, i32 2
-  %4 = load i64, i64* %incdec.ptr1, align 8, !tbaa !0
+  %incdec.ptr2 = getelementptr inbounds i64, ptr %p, i32 2
+  %3 = load i64, ptr %incdec.ptr, align 8, !tbaa !0
+  %incdec.ptr3 = getelementptr inbounds i64, ptr %q, i32 2
+  %4 = load i64, ptr %incdec.ptr1, align 8, !tbaa !0
   %5 = tail call i32 @llvm.hexagon.A2.vcmpwgtu(i64 %3, i64 %4)
-  %6 = load i64, i64* %incdec.ptr2, align 8, !tbaa !0
-  %7 = load i64, i64* %incdec.ptr3, align 8, !tbaa !0
+  %6 = load i64, ptr %incdec.ptr2, align 8, !tbaa !0
+  %7 = load i64, ptr %incdec.ptr3, align 8, !tbaa !0
   %8 = tail call i32 @llvm.hexagon.A2.vcmpwgtu(i64 %6, i64 %7)
   %and = and i32 %5, %2
   %or = or i32 %8, %and

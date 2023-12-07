@@ -60,3 +60,22 @@ void f() {
   }
 }
 }
+
+namespace GH63010 {
+void foo(int n) {
+    int a[] = {1, 2, 3, 4, 5};
+    {
+        for (auto x = n ? 1 : 2 : a); // expected-error {{expected ';' in 'for' statement specifier}} \
+                                    // expected-error {{expected expression}}
+        for (int i = 1; auto x = n ? 1 : 2 : a); // expected-error {{expected ';' in 'for' statement specifier}}
+    }
+    {
+        for (auto x = n ? 1 : 2 : a)  // expected-error {{expected ';' in 'for' statement specifier}} \
+                                      // expected-error {{expected expression}}
+
+    }  // expected-error {{expected statement}}
+    {
+        for (int i = 1; auto x = n ? 1 : 2 : a) // expected-error {{expected ';' in 'for' statement specifier}}
+    } // expected-error {{expected statement}}
+}
+}

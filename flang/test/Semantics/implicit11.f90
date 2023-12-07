@@ -40,6 +40,7 @@ contains
   subroutine s3a()
     implicit none
     real :: a(m, n)
+    !WARN: '%s' was used without (or before) being explicitly typed
     !ERROR: No explicit type declared for 'n'
     common n
   end

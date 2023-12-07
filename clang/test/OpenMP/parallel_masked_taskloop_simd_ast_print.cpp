@@ -1,16 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -DOMP5 -ast-print %s | FileCheck %s --check-prefix CHECK --check-prefix OMP50
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -DOMP5 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -DOMP5 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix CHECK --check-prefix OMP50
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ast-print %s -DOMP5 | FileCheck %s --check-prefix CHECK --check-prefix OMP50
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP5
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -DOMP5 | FileCheck %s --check-prefix CHECK --check-prefix OMP50
+// RUN: %clang_cc1 -verify -fopenmp -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -DOMP5 -ast-print %s | FileCheck %s --check-prefix CHECK --check-prefix OMP50
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -DOMP5 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -DOMP5 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix CHECK --check-prefix OMP50
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -ast-print %s -DOMP5 | FileCheck %s --check-prefix CHECK --check-prefix OMP50
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP5
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -DOMP5 | FileCheck %s --check-prefix CHECK --check-prefix OMP50
+// RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -74,16 +68,12 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
 #pragma omp parallel
-#ifdef OMP5
 #pragma omp parallel masked taskloop simd private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) shared(g) if(simd:argc) mergeable priority(argc) grainsize(argc) reduction(max: a, e) nontemporal(argc, c, d) order(concurrent)
-#else
-#pragma omp parallel masked taskloop simd private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) shared(g) if(argc) mergeable priority(argc) grainsize(argc) reduction(max: a, e)
-#endif // OMP5
   for (int i = 0; i < 10; ++i)
     for (int j = 0; j < 10; ++j)
       foo();
   // CHECK-NEXT: #pragma omp parallel
-  // OMP50-NEXT: #pragma omp parallel masked taskloop simd private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) shared(g) if(simd: argc) mergeable priority(argc) grainsize(argc) reduction(max: a,e) nontemporal(argc,c,d) order(concurrent)
+  // CHECK-NEXT: #pragma omp parallel masked taskloop simd private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) shared(g) if(simd: argc) mergeable priority(argc) grainsize(argc) reduction(max: a,e) nontemporal(argc,c,d) order(concurrent)
   // CHECK-NEXT: for (int i = 0; i < 10; ++i)
   // CHECK-NEXT: for (int j = 0; j < 10; ++j)
   // CHECK-NEXT: foo();

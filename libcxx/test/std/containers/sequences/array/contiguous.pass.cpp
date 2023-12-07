@@ -12,13 +12,14 @@
 
 #include <array>
 #include <cassert>
+#include <memory>
 
 #include "test_macros.h"
 
 template <class Container>
 TEST_CONSTEXPR_CXX14 void assert_contiguous(Container const& c)
 {
-    for (size_t i = 0; i < c.size(); ++i)
+    for (std::size_t i = 0; i < c.size(); ++i)
         assert(*(c.begin() + i) == *(std::addressof(*c.begin()) + i));
 }
 

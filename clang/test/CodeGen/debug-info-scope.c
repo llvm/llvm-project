@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -dwarf-version=4 -debug-info-kind=line-tables-only -disable-llvm-passes -emit-llvm < %s | FileCheck --check-prefix=GMLT %s
 // RUN: %clang_cc1 -dwarf-version=4 -debug-info-kind=line-directives-only -disable-llvm-passes -emit-llvm < %s | FileCheck --check-prefix=GMLT %s
 // Two variables with same name in separate scope.
-// Radar 8330217.
 int main(void) {
 	int j = 0;
 	int k = 0;

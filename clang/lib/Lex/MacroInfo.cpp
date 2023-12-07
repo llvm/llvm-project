@@ -18,12 +18,12 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <optional>
 #include <utility>
 
 using namespace clang;
@@ -198,7 +198,7 @@ LLVM_DUMP_METHOD void MacroInfo::dump() const {
 MacroDirective::DefInfo MacroDirective::getDefinition() {
   MacroDirective *MD = this;
   SourceLocation UndefLoc;
-  Optional<bool> isPublic;
+  std::optional<bool> isPublic;
   for (; MD; MD = MD->getPrevious()) {
     if (DefMacroDirective *DefMD = dyn_cast<DefMacroDirective>(MD))
       return DefInfo(DefMD, UndefLoc, !isPublic || *isPublic);

@@ -252,13 +252,13 @@ static Register getMax32BitSubRegister(Register Reg,
       return Reg;
 
     Register RegNo = 0;
-    for (MCSubRegIterator SubRegs(Reg, &TRI); SubRegs.isValid(); ++SubRegs) {
+    for (MCPhysReg SubReg : TRI.subregs(Reg)) {
       if (hireg) {
-        if (*SubRegs > RegNo)
-          RegNo = *SubRegs;
+        if (SubReg > RegNo)
+          RegNo = SubReg;
       } else {
-        if (!RegNo || *SubRegs < RegNo)
-          RegNo = *SubRegs;
+        if (!RegNo || SubReg < RegNo)
+          RegNo = SubReg;
       }
     }
     return RegNo;
@@ -307,12 +307,15 @@ static bool needsStackFrame(const MachineBasicBlock &MBB, const BitVector &CSR,
           return true;
         if (MO.isReg()) {
           Register R = MO.getReg();
+          // Debug instructions may refer to $noreg.
+          if (!R)
+            continue;
           // Virtual registers will need scavenging, which then may require
           // a stack slot.
           if (R.isVirtual())
             return true;
-          for (MCSubRegIterator S(R, &HRI, true); S.isValid(); ++S)
-            if (CSR[*S])
+          for (MCPhysReg S : HRI.subregs_inclusive(R))
+            if (CSR[S])
               return true;
           continue;
         }
@@ -439,8 +442,8 @@ void HexagonFrameLowering::findShrunkPrologEpilog(MachineFunction &MF,
   SmallVector<MachineBasicBlock*,16> SFBlocks;
   BitVector CSR(Hexagon::NUM_TARGET_REGS);
   for (const MCPhysReg *P = HRI.getCalleeSavedRegs(&MF); *P; ++P)
-    for (MCSubRegIterator S(*P, &HRI, true); S.isValid(); ++S)
-      CSR[*S] = true;
+    for (MCPhysReg S : HRI.subregs_inclusive(*P))
+      CSR[S] = true;
 
   for (auto &I : MF)
     if (needsStackFrame(I, CSR, HRI))
@@ -1569,8 +1572,8 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   for (const CalleeSavedInfo &I : CSI) {
     Register R = I.getReg();
     LLVM_DEBUG(dbgs() << ' ' << printReg(R, TRI));
-    for (MCSubRegIterator SR(R, TRI, true); SR.isValid(); ++SR)
-      SRegs[*SR] = true;
+    for (MCPhysReg SR : TRI->subregs_inclusive(R))
+      SRegs[SR] = true;
   }
   LLVM_DEBUG(dbgs() << " }\n");
   LLVM_DEBUG(dbgs() << "SRegs.1: "; dump_registers(SRegs, *TRI);
@@ -1586,23 +1589,23 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   if (AP.isValid()) {
     Reserved[AP] = false;
     // Unreserve super-regs if no other subregisters are reserved.
-    for (MCSuperRegIterator SP(AP, TRI, false); SP.isValid(); ++SP) {
+    for (MCPhysReg SP : TRI->superregs(AP)) {
       bool HasResSub = false;
-      for (MCSubRegIterator SB(*SP, TRI, false); SB.isValid(); ++SB) {
-        if (!Reserved[*SB])
+      for (MCPhysReg SB : TRI->subregs(SP)) {
+        if (!Reserved[SB])
           continue;
         HasResSub = true;
         break;
       }
       if (!HasResSub)
-        Reserved[*SP] = false;
+        Reserved[SP] = false;
     }
   }
 
   for (int x = Reserved.find_first(); x >= 0; x = Reserved.find_next(x)) {
     Register R = x;
-    for (MCSuperRegIterator SR(R, TRI, true); SR.isValid(); ++SR)
-      SRegs[*SR] = false;
+    for (MCPhysReg SR : TRI->superregs_inclusive(R))
+      SRegs[SR] = false;
   }
   LLVM_DEBUG(dbgs() << "Res:     "; dump_registers(Reserved, *TRI);
              dbgs() << "\n");
@@ -1616,13 +1619,13 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   BitVector TmpSup(Hexagon::NUM_TARGET_REGS);
   for (int x = SRegs.find_first(); x >= 0; x = SRegs.find_next(x)) {
     Register R = x;
-    for (MCSuperRegIterator SR(R, TRI); SR.isValid(); ++SR)
-      TmpSup[*SR] = true;
+    for (MCPhysReg SR : TRI->superregs(R))
+      TmpSup[SR] = true;
   }
   for (int x = TmpSup.find_first(); x >= 0; x = TmpSup.find_next(x)) {
     Register R = x;
-    for (MCSubRegIterator SR(R, TRI, true); SR.isValid(); ++SR) {
-      if (!Reserved[*SR])
+    for (MCPhysReg SR : TRI->subregs_inclusive(R)) {
+      if (!Reserved[SR])
         continue;
       TmpSup[R] = false;
       break;
@@ -1640,8 +1643,8 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   // remove R from SRegs.
   for (int x = SRegs.find_first(); x >= 0; x = SRegs.find_next(x)) {
     Register R = x;
-    for (MCSuperRegIterator SR(R, TRI); SR.isValid(); ++SR) {
-      if (!SRegs[*SR])
+    for (MCPhysReg SR : TRI->superregs(R)) {
+      if (!SRegs[SR])
         continue;
       SRegs[R] = false;
       break;

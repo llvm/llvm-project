@@ -1921,9 +1921,7 @@ define void @mul_2xi16_varconst4(ptr nocapture readonly %a, i64 %index) {
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movl c, %edx
 ; X86-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X86-SSE-NEXT:    psrad $16, %xmm0
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; X86-SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    psllq $32, %xmm0
 ; X86-SSE-NEXT:    movq %xmm0, (%edx,%eax,4)
@@ -1944,9 +1942,7 @@ define void @mul_2xi16_varconst4(ptr nocapture readonly %a, i64 %index) {
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    movq c(%rip), %rax
 ; X64-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-SSE-NEXT:    psrad $16, %xmm0
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; X64-SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE-NEXT:    psllq $32, %xmm0
 ; X64-SSE-NEXT:    movq %xmm0, (%rax,%rsi,4)
@@ -2138,7 +2134,7 @@ define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ; X86-AVX1-NEXT:    imull $8199, {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
 ; X86-AVX1-NEXT:    # imm = 0x2007
 ; X86-AVX1-NEXT:    movl %eax, (%eax)
-; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [8199,8199,8199,8199]
+; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [8199,8199,8199,8199]
 ; X86-AVX1-NEXT:    vpmulld %xmm2, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpmulld %xmm2, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vmovdqa %xmm1, (%eax)
@@ -2341,7 +2337,7 @@ define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ; X64-AVX1-NEXT:    vpinsrd $1, %ebp, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpinsrd $2, %ebx, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpinsrd $3, %r11d, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [8199,8199,8199,8199]
+; X64-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [8199,8199,8199,8199]
 ; X64-AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vmovd %r10d, %xmm2
 ; X64-AVX1-NEXT:    vpinsrd $1, %r9d, %xmm2, %xmm2

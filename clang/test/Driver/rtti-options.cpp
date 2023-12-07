@@ -15,10 +15,10 @@
 // -fsanitize=vptr
 // Make sure we only error/warn once, when trying to enable vptr and
 // undefined and have -fno-rtti
-// RUN: %clang -### -c -target x86_64-unknown-linux -fsanitize=undefined -fsanitize=vptr -fno-rtti %s 2>&1 | FileCheck -check-prefix=CHECK-SAN-ERROR -check-prefix=CHECK-OK %s
+// RUN: not %clang -### -c --target=x86_64-unknown-linux -fsanitize=undefined -fsanitize=vptr -fno-rtti %s 2>&1 | FileCheck -check-prefix=CHECK-SAN-ERROR -check-prefix=CHECK-OK %s
 // RUN: %clang -### -c -target x86_64-unknown-linux -fsanitize=vptr %s 2>&1 | FileCheck -check-prefix=CHECK-OK %s
 // RUN: %clang -### -c -target x86_64-unknown-linux -fsanitize=vptr -frtti %s 2>&1 | FileCheck -check-prefix=CHECK-OK %s
-// RUN: %clang -### -c -target x86_64-unknown-linux -fsanitize=vptr -fno-rtti %s 2>&1 | FileCheck -check-prefix=CHECK-SAN-ERROR %s
+// RUN: not %clang -### -c --target=x86_64-unknown-linux -fsanitize=vptr -fno-rtti %s 2>&1 | FileCheck -check-prefix=CHECK-SAN-ERROR %s
 // RUN: %clang -### -c -target x86_64-unknown-linux -fsanitize=undefined %s 2>&1 | FileCheck -check-prefix=CHECK-OK %s
 // RUN: %clang -### -c -target x86_64-unknown-linux -fsanitize=undefined -frtti %s 2>&1 | FileCheck -check-prefix=CHECK-OK %s
 // RUN: %clang -### -c -target x86_64-scei-ps4 -fsanitize=vptr %s 2>&1 | FileCheck -check-prefix=CHECK-SAN-WARN %s

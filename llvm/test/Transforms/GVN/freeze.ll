@@ -8,7 +8,7 @@ define i1 @f(i1 %a) {
 ;
   %b = freeze i1 %a
   %c = freeze i1 %a
-  %d = and i1 %b, %b
+  %d = and i1 %b, %c
   ret i1 %d
 }
 

@@ -383,9 +383,9 @@ function test_recursion(n) result(res)
   ! CHECK: fir.alloca !fir.array<?xi32>, {{.*}}some_local
   ! CHECK-NOT: fir.alloca !fir.array<?xi32>
   integer :: some_local(n)
-  some_local(0) = n + 64
+  some_local(1) = n + 64
   if (n.eq.1) then
-    res = char(some_local(0))
+    res = char(some_local(1))
   ! CHECK: else
   else 
     ! CHECK-NOT: fir.alloca !fir.array<?xi32>
@@ -407,7 +407,7 @@ function test_recursion(n) result(res)
 
     ! CHECK-NOT: fir.alloca !fir.array<?xi32>
     ! CHECK: fir.call @_QPtest_recursion(%[[tmp]], {{.*}}
-    res = char(some_local(0)) // test_recursion(n-1)
+    res = char(some_local(1)) // test_recursion(n-1)
 
     ! Verify that symbol n was not remapped to the actual argument passed
     ! to n in the call (that the temporary mapping was cleaned-up).

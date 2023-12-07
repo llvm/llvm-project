@@ -173,7 +173,7 @@ static bool convertUTF16LEToUTF8String(ArrayRef<UTF16> Src, std::string &Out) {
   EndianCorrectedSrc.resize(Src.size() + 1);
   llvm::copy(Src, EndianCorrectedSrc.begin() + 1);
   EndianCorrectedSrc[0] = UNI_UTF16_BYTE_ORDER_MARK_SWAPPED;
-  return convertUTF16ToUTF8String(makeArrayRef(EndianCorrectedSrc), Out);
+  return convertUTF16ToUTF8String(ArrayRef(EndianCorrectedSrc), Out);
 }
 
 static std::string makeDuplicateResourceError(
@@ -990,6 +990,7 @@ void WindowsResourceCOFFWriter::writeFirstSectionRelocations() {
       break;
     case COFF::IMAGE_FILE_MACHINE_ARM64:
     case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    case COFF::IMAGE_FILE_MACHINE_ARM64X:
       Reloc->Type = COFF::IMAGE_REL_ARM64_ADDR32NB;
       break;
     default:

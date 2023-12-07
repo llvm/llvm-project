@@ -213,7 +213,7 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
     Filenames.resize(Files.size() + 1);
     for (const auto &E : Files)
       Filenames[E.getValue()] = E.getKey().str();
-    ArrayRef<std::string> FilenameRefs = llvm::makeArrayRef(Filenames);
+    ArrayRef<std::string> FilenameRefs = llvm::ArrayRef(Filenames);
     RawCoverageMappingReader Reader(Coverage, FilenameRefs, Data.Filenames,
                                     Data.Expressions, Data.Regions);
     EXPECT_THAT_ERROR(Reader.read(), Succeeded());
@@ -279,7 +279,7 @@ TEST_P(CoverageMappingTest, basic_write_read) {
   InputFunctionCoverageData &Input = InputFunctions.back();
   OutputFunctionCoverageData &Output = OutputFunctions.back();
 
-  size_t N = makeArrayRef(Input.Regions).size();
+  size_t N = ArrayRef(Input.Regions).size();
   ASSERT_EQ(N, Output.Regions.size());
   for (size_t I = 0; I < N; ++I) {
     ASSERT_EQ(Input.Regions[I].Count, Output.Regions[I].Count);

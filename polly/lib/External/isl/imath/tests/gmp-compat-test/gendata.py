@@ -42,10 +42,13 @@ mm_ushort1 = [minus1(MAX_USHORT)]
 mm_all = mm_slong + mm_ulong + mm_sint + mm_uint + mm_sshort + mm_ushort
 zero_one_all = mzero_one + zero_one
 
-mpz_std_list = zero_one_all + mm_all + apply(plus1, mm_all) + apply(
-    minus1, mm_all)
-si_std_list = zero_one + mm_slong + mm_sint + mm_sshort + mm_slong1 + mm_sint1 + mm_sshort1
-ui_std_list = zero_one + mm_ulong + mm_uint + mm_ushort + mm_ulong1 + mm_uint1 + mm_ushort1
+mpz_std_list = zero_one_all + mm_all + apply(plus1, mm_all) + apply(minus1, mm_all)
+si_std_list = (
+    zero_one + mm_slong + mm_sint + mm_sshort + mm_slong1 + mm_sint1 + mm_sshort1
+)
+ui_std_list = (
+    zero_one + mm_ulong + mm_uint + mm_ushort + mm_ulong1 + mm_uint1 + mm_ushort1
+)
 
 
 def gen_random_mpz(mindigits=1, maxdigits=100, allowneg=True):
@@ -73,8 +76,9 @@ def gen_digits(length):
     if length == 1:
         i = random.randint(1, 9)
     else:
-        digits = [random.randint(1, 9)
-                  ] + [random.randint(0, 9) for x in range(length - 1)]
+        digits = [random.randint(1, 9)] + [
+            random.randint(0, 9) for x in range(length - 1)
+        ]
         digits = map(str, digits)
         i = "".join(digits)
     return str(i)
@@ -82,8 +86,7 @@ def gen_digits(length):
 
 def gen_mpzs(mindigits=1, maxdigits=100, count=10):
     return [
-        gen_random_mpz(mindigits=mindigits, maxdigits=maxdigits)
-        for x in range(count)
+        gen_random_mpz(mindigits=mindigits, maxdigits=maxdigits) for x in range(count)
     ]
 
 
@@ -123,8 +126,7 @@ def is_large_mpz(s):
 
 
 def gen_mpz_spread(count=default_count):
-    return gen_small_mpzs(count) + gen_medium_mpzs(count) + gen_large_mpzs(
-        count)
+    return gen_small_mpzs(count) + gen_medium_mpzs(count) + gen_large_mpzs(count)
 
 
 def gen_mpz_args(count=default_count):
@@ -257,8 +259,7 @@ def mpz_export_data(api):
     size = ["1", "2", "4", "8"]
     endian = ["0"]
     nails = ["0"]
-    ops = gen_mpz_args(1000) + gen_mpzs(
-        count=100, mindigits=100, maxdigits=1000)
+    ops = gen_mpz_args(1000) + gen_mpzs(count=100, mindigits=100, maxdigits=1000)
 
     args = []
     for r in rop:
@@ -274,8 +275,7 @@ def mpz_export_data(api):
 
 def mpz_sizeinbase_data(api):
     bases = list(map(str, range(2, 37)))
-    ops = gen_mpz_args(1000) + gen_mpzs(
-        count=1000, mindigits=100, maxdigits=2000)
+    ops = gen_mpz_args(1000) + gen_mpzs(count=1000, mindigits=100, maxdigits=2000)
     return [(op, b) for op in ops for b in bases]
 
 
@@ -381,7 +381,7 @@ custom = {
 }
 
 if __name__ == "__main__":
-    #apis = [gmpapi.get_api("mpq_set_str"),]
+    # apis = [gmpapi.get_api("mpq_set_str"),]
     apis = gmpapi.apis
     for api in apis:
         tests = gen_args(api)

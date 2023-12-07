@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Logging.h"
+#include "mlir/Tools/lsp-server-support/Logging.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"

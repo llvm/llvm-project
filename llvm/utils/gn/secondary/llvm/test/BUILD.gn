@@ -1,3 +1,4 @@
+import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets_string.gni")
 import("//llvm/triples.gni")
@@ -43,19 +44,19 @@ write_lit_config("lit_site_cfg") {
   extra_values = [
     "BUILD_SHARED_LIBS=0",
 
-    # Only used by the Go bindings tests, or if LLVM_USE_SANITIZER includes
-    # asan and the host OS is macOS. The GN build currently never uses
-    # LLVM_USE_SANITIZER.  (See also CMAKE_CXX_COMPILER in clang/test/BUILD.gn.)
+    # Only used if LLVM_USE_SANITIZER includes asan and the host OS is macOS.
+    # The GN build currently never uses LLVM_USE_SANITIZER. (See also
+    # CMAKE_CXX_COMPILER in clang/test/BUILD.gn.)
     "HOST_CC=cc",
 
-    # Only used by the Go bindings tests, or if LLVM_USE_SANITIZER includes
-    # lsan and the host OS is macOS. The GN build currently never uses
-    # LLVM_USE_SANITIZER.  (See also CMAKE_CXX_COMPILER in clang/test/BUILD.gn.)
+    # Only used if LLVM_USE_SANITIZER includes lsan and the host OS is macOS.
+    # The GN build currently never uses LLVM_USE_SANITIZER. (See also
+    # CMAKE_CXX_COMPILER in clang/test/BUILD.gn.)
     "HOST_CXX=c++",
 
-    # Only used by the Go bindings tests, and for detecting a 32-bit build
-    # and in a belt-and-suspenders check for detecting 32-bit host builds.
-    # (That check also checks LLVM_HOST_TRIPLE.)
+    # Only used for detecting a 32-bit build and in a belt-and-suspenders check
+    # for detecting 32-bit host builds. (That check also checks
+    # LLVM_HOST_TRIPLE.)
     "HOST_LDFLAGS=",
 
     "LLVM_ENABLE_FFI=0",
@@ -82,6 +83,7 @@ write_lit_config("lit_site_cfg") {
     # No bindings are implemented in the GN build.
     "LLVM_BINDINGS=",
     "LLVM_BYE_LINK_INTO_TOOLS=0",
+    "LLVM_EXAMPLEIRTRANSFORMS_LINK_INTO_TOOLS=0",
 
     "HAVE_OCAMLOPT=0",
     "OCAMLFIND=OCAMLFIND-NOTFOUND",
@@ -215,6 +217,12 @@ write_lit_config("lit_site_cfg") {
   } else {
     extra_values += [ "LLVM_ENABLE_CURL=0" ]  # Must be 0.
   }
+
+  if (llvm_enable_reverse_iteration) {
+    extra_values += [ "LLVM_ENABLE_REVERSE_ITERATION=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_REVERSE_ITERATION=0" ]  # Must be 0.
+  }
 }
 
 write_lit_config("lit_unit_site_cfg") {
@@ -289,8 +297,8 @@ group("test") {
     "//llvm/tools/llvm-profgen",
     "//llvm/tools/llvm-rc:symlinks",
     "//llvm/tools/llvm-readobj:symlinks",
+    "//llvm/tools/llvm-readtapi",
     "//llvm/tools/llvm-reduce",
-    "//llvm/tools/llvm-remark-size-diff",
     "//llvm/tools/llvm-remarkutil",
     "//llvm/tools/llvm-rtdyld",
     "//llvm/tools/llvm-sim",
@@ -299,7 +307,6 @@ group("test") {
     "//llvm/tools/llvm-stress",
     "//llvm/tools/llvm-strings",
     "//llvm/tools/llvm-symbolizer:symlinks",
-    "//llvm/tools/llvm-tapi-diff",
     "//llvm/tools/llvm-tli-checker",
     "//llvm/tools/llvm-undname",
     "//llvm/tools/llvm-xray",

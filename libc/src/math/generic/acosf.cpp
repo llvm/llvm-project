@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <errno.h>
 
@@ -43,20 +44,20 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
   uint32_t x_sign = x_uint >> 31;
 
   // |x| <= 0.5
-  if (unlikely(x_abs <= 0x3f00'0000U)) {
+  if (LIBC_UNLIKELY(x_abs <= 0x3f00'0000U)) {
     // |x| < 0x1p-10
-    if (unlikely(x_abs < 0x3a80'0000U)) {
+    if (LIBC_UNLIKELY(x_abs < 0x3a80'0000U)) {
       // When |x| < 2^-10, we use the following approximation:
       //   acos(x) = pi/2 - asin(x)
       //           ~ pi/2 - x - x^3 / 6
 
       // Check for exceptional values
-      if (auto r = ACOSF_EXCEPTS.lookup(x_uint); unlikely(r.has_value()))
+      if (auto r = ACOSF_EXCEPTS.lookup(x_uint); LIBC_UNLIKELY(r.has_value()))
         return r.value();
 
       double xd = static_cast<double>(x);
-      return fputil::multiply_add(-0x1.5555555555555p-3 * xd, xd * xd,
-                                  M_MATH_PI_2 - xd);
+      return static_cast<float>(fputil::multiply_add(
+          -0x1.5555555555555p-3 * xd, xd * xd, M_MATH_PI_2 - xd));
     }
 
     // For |x| <= 0.5, we approximate acosf(x) by:
@@ -69,17 +70,16 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
     double xsq = xd * xd;
     double x3 = xd * xsq;
     double r = asin_eval(xsq);
-    return fputil::multiply_add(-x3, r, M_MATH_PI_2 - xd);
+    return static_cast<float>(fputil::multiply_add(-x3, r, M_MATH_PI_2 - xd));
   }
 
   // |x| > 1, return NaNs.
-  if (unlikely(x_abs > 0x3f80'0000U)) {
+  if (LIBC_UNLIKELY(x_abs > 0x3f80'0000U)) {
     if (x_abs <= 0x7f80'0000U) {
-      errno = EDOM;
-      fputil::set_except(FE_INVALID);
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
     }
-    return x +
-           FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1));
+    return x + FPBits::build_quiet_nan(0);
   }
 
   // When 0.5 < |x| <= 1, we perform range reduction as follow:
@@ -111,7 +111,7 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
 
   double r3 = asin_eval(u);
   double r = fputil::multiply_add(cv * u, r3, cv);
-  return x_sign ? M_MATH_PI - r : r;
+  return static_cast<float>(x_sign ? M_MATH_PI - r : r);
 }
 
 } // namespace __llvm_libc

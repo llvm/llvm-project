@@ -12,7 +12,7 @@ target triple = "hexagon"
 
 define void @fred() local_unnamed_addr #0 {
 b0:
-  %v1 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @g0, i32 0, i32 0), align 8
+  %v1 = load i64, ptr @g0, align 8
   %v2 = trunc i64 %v1 to i32
   %v3 = lshr i64 %v1, 16
   %v4 = trunc i64 %v3 to i32
@@ -24,12 +24,12 @@ b0:
   %v10 = and i32 %v4, 65535
   %v11 = add nuw nsw i32 %v10, %v9
   %v12 = zext i32 %v11 to i64
-  tail call void (i8*, ...) @printf(i8* getelementptr inbounds ([29 x i8], [29 x i8]* @g1, i32 0, i32 0), i64 %v8) #0
-  tail call void (i8*, ...) @printf(i8* getelementptr inbounds ([29 x i8], [29 x i8]* @g2, i32 0, i32 0), i64 %v12) #0
+  tail call void (ptr, ...) @printf(ptr @g1, i64 %v8) #0
+  tail call void (ptr, ...) @printf(ptr @g2, i64 %v12) #0
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @printf(i8* nocapture readonly, ...) local_unnamed_addr #0
+declare void @printf(ptr nocapture readonly, ...) local_unnamed_addr #0
 
 attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }

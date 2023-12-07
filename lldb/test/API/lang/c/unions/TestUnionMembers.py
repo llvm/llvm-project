@@ -4,27 +4,21 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestUnionMembers(TestBase):
-
     def test_union_members(self):
         self._load_exe()
 
         # Set breakpoints
-        bp = self.target.BreakpointCreateBySourceRegex(
-            "Break here", self.src_file_spec)
-        self.assertTrue(
-            bp.IsValid() and bp.GetNumLocations() >= 1,
-            VALID_BREAKPOINT)
+        bp = self.target.BreakpointCreateBySourceRegex("Break here", self.src_file_spec)
+        self.assertTrue(bp.IsValid() and bp.GetNumLocations() >= 1, VALID_BREAKPOINT)
 
         # Launch the process
         self.process = self.target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+            None, None, self.get_process_working_directory()
+        )
         self.assertTrue(self.process.IsValid(), PROCESS_IS_VALID)
-        self.assertEqual(
-            self.process.GetState(), lldb.eStateStopped,
-            PROCESS_STOPPED)
+        self.assertEqual(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        thread = lldbutil.get_stopped_thread(
-            self.process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(self.process, lldb.eStopReasonBreakpoint)
         self.assertTrue(thread.IsValid())
         frame = thread.GetSelectedFrame()
         self.assertTrue(frame.IsValid())

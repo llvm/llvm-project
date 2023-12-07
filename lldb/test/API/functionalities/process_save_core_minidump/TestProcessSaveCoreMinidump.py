@@ -11,7 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class ProcessSaveCoreMinidumpTestCase(TestBase):
-
     @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
     def test_save_linux_mini_dump(self):
@@ -23,7 +22,8 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         try:
             target = self.dbg.CreateTarget(exe)
             process = target.LaunchSimple(
-                None, None, self.get_process_working_directory())
+                None, None, self.get_process_working_directory()
+            )
             self.assertState(process.GetState(), lldb.eStateStopped)
 
             # get neccessary data for the verification phase
@@ -40,7 +40,9 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_threads.append(thread_id)
 
             # save core and, kill process and verify corefile existence
-            self.runCmd("process save-core --plugin-name=minidump --style=stack " + core)
+            self.runCmd(
+                "process save-core --plugin-name=minidump --style=stack " + core
+            )
             self.assertTrue(os.path.isfile(core))
 
             # validate savinig via SBProcess
@@ -85,7 +87,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         finally:
             # Clean up the mini dump file.
             self.assertTrue(self.dbg.DeleteTarget(target))
-            if (os.path.isfile(core)):
+            if os.path.isfile(core):
                 os.unlink(core)
-            if (os.path.isfile(core_sb)):
+            if os.path.isfile(core_sb):
                 os.unlink(core_sb)

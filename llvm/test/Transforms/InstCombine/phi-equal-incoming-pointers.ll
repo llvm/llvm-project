@@ -19,9 +19,9 @@ define i32 @test_gep_and_bitcast(i1 %cond, i1 %cond2) {
 ; ALL:       bb2:
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
-; ALL-NEXT:    [[PTR_TYPED_IN:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
-; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED_IN]], align 4
-; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED_IN]], align 4
+; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED]], align 4
+; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    [[RES:%.*]] = select i1 [[COND2:%.*]], i32 [[RES_PHI]], i32 1
 ; ALL-NEXT:    ret i32 [[RES]]
 ;
@@ -57,9 +57,9 @@ define i32 @test_gep_and_bitcast_arg(ptr %obj, i1 %cond, i1 %cond2) {
 ; ALL:       bb2:
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
-; ALL-NEXT:    [[PTR_TYPED_IN:%.*]] = getelementptr inbounds i8, ptr [[OBJ:%.*]], i64 16
-; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED_IN]], align 4
-; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED_IN]], align 4
+; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i8, ptr [[OBJ:%.*]], i64 16
+; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED]], align 4
+; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    [[RES:%.*]] = select i1 [[COND2:%.*]], i32 [[RES_PHI]], i32 1
 ; ALL-NEXT:    ret i32 [[RES]]
 ;
@@ -105,9 +105,9 @@ define i32 @test_gep_and_bitcast_phi(i1 %cond, i1 %cond2, i1 %cond3) {
 ; ALL:       bb4:
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
-; ALL-NEXT:    [[PTR_TYPED_IN:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
-; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED_IN]], align 4
-; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED_IN]], align 4
+; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED]], align 4
+; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    [[RES:%.*]] = select i1 [[COND3:%.*]], i32 [[RES_PHI]], i32 1
 ; ALL-NEXT:    ret i32 [[RES]]
 ;
@@ -196,9 +196,9 @@ define i32 @test_gep_and_bitcast_gep_base_ptr(i1 %cond, i1 %cond2) {
 ; ALL:       bb2:
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
-; ALL-NEXT:    [[PTR_TYPED_IN:%.*]] = getelementptr inbounds i8, ptr [[OBJ0]], i64 32
-; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED_IN]], align 4
-; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED_IN]], align 4
+; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i8, ptr [[OBJ0]], i64 32
+; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED]], align 4
+; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    [[RES:%.*]] = select i1 [[COND2:%.*]], i32 [[RES_PHI]], i32 1
 ; ALL-NEXT:    ret i32 [[RES]]
 ;
@@ -234,9 +234,9 @@ define i32 @test_gep_and_bitcast_same_bb(i1 %cond, i1 %cond2) {
 ; ALL:       bb2:
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
-; ALL-NEXT:    [[PTR_TYPED_IN:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
-; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED_IN]], align 4
-; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED_IN]], align 4
+; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED]], align 4
+; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    [[RES:%.*]] = select i1 [[COND2:%.*]], i32 [[RES_PHI]], i32 1
 ; ALL-NEXT:    ret i32 [[RES]]
 ;

@@ -1,4 +1,4 @@
-//===- RISCVMacroFusion.cpp - RISCV Macro Fusion --------------------------===//
+//===- RISCVMacroFusion.cpp - RISC-V Macro Fusion -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file This file contains the RISCV implementation of the DAG scheduling
+/// \file This file contains the RISC-V implementation of the DAG scheduling
 /// mutation to pair instructions back to back.
 //
 //===----------------------------------------------------------------------===//

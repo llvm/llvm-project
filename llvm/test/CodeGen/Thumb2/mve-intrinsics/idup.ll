@@ -133,7 +133,7 @@ entry:
   ret <4 x i32> %1
 }
 
-define arm_aapcs_vfpcc <16 x i8> @test_vidupq_wb_u8(i32* nocapture %a) {
+define arm_aapcs_vfpcc <16 x i8> @test_vidupq_wb_u8(ptr nocapture %a) {
 ; CHECK-LABEL: test_vidupq_wb_u8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -141,15 +141,15 @@ define arm_aapcs_vfpcc <16 x i8> @test_vidupq_wb_u8(i32* nocapture %a) {
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = tail call { <16 x i8>, i32 } @llvm.arm.mve.vidup.v16i8(i32 %0, i32 8)
   %2 = extractvalue { <16 x i8>, i32 } %1, 1
-  store i32 %2, i32* %a, align 4
+  store i32 %2, ptr %a, align 4
   %3 = extractvalue { <16 x i8>, i32 } %1, 0
   ret <16 x i8> %3
 }
 
-define arm_aapcs_vfpcc <8 x i16> @test_vidupq_wb_u16(i32* nocapture %a) {
+define arm_aapcs_vfpcc <8 x i16> @test_vidupq_wb_u16(ptr nocapture %a) {
 ; CHECK-LABEL: test_vidupq_wb_u16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -157,15 +157,15 @@ define arm_aapcs_vfpcc <8 x i16> @test_vidupq_wb_u16(i32* nocapture %a) {
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = tail call { <8 x i16>, i32 } @llvm.arm.mve.vidup.v8i16(i32 %0, i32 1)
   %2 = extractvalue { <8 x i16>, i32 } %1, 1
-  store i32 %2, i32* %a, align 4
+  store i32 %2, ptr %a, align 4
   %3 = extractvalue { <8 x i16>, i32 } %1, 0
   ret <8 x i16> %3
 }
 
-define arm_aapcs_vfpcc <4 x i32> @test_vidupq_wb_u32(i32* nocapture %a) {
+define arm_aapcs_vfpcc <4 x i32> @test_vidupq_wb_u32(ptr nocapture %a) {
 ; CHECK-LABEL: test_vidupq_wb_u32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -173,15 +173,15 @@ define arm_aapcs_vfpcc <4 x i32> @test_vidupq_wb_u32(i32* nocapture %a) {
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 %0, i32 4)
   %2 = extractvalue { <4 x i32>, i32 } %1, 1
-  store i32 %2, i32* %a, align 4
+  store i32 %2, ptr %a, align 4
   %3 = extractvalue { <4 x i32>, i32 } %1, 0
   ret <4 x i32> %3
 }
 
-define arm_aapcs_vfpcc <16 x i8> @test_vddupq_wb_u8(i32* nocapture %a) {
+define arm_aapcs_vfpcc <16 x i8> @test_vddupq_wb_u8(ptr nocapture %a) {
 ; CHECK-LABEL: test_vddupq_wb_u8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -189,15 +189,15 @@ define arm_aapcs_vfpcc <16 x i8> @test_vddupq_wb_u8(i32* nocapture %a) {
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = tail call { <16 x i8>, i32 } @llvm.arm.mve.vddup.v16i8(i32 %0, i32 2)
   %2 = extractvalue { <16 x i8>, i32 } %1, 1
-  store i32 %2, i32* %a, align 4
+  store i32 %2, ptr %a, align 4
   %3 = extractvalue { <16 x i8>, i32 } %1, 0
   ret <16 x i8> %3
 }
 
-define arm_aapcs_vfpcc <8 x i16> @test_vddupq_wb_u16(i32* nocapture %a) {
+define arm_aapcs_vfpcc <8 x i16> @test_vddupq_wb_u16(ptr nocapture %a) {
 ; CHECK-LABEL: test_vddupq_wb_u16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -205,15 +205,15 @@ define arm_aapcs_vfpcc <8 x i16> @test_vddupq_wb_u16(i32* nocapture %a) {
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = tail call { <8 x i16>, i32 } @llvm.arm.mve.vddup.v8i16(i32 %0, i32 8)
   %2 = extractvalue { <8 x i16>, i32 } %1, 1
-  store i32 %2, i32* %a, align 4
+  store i32 %2, ptr %a, align 4
   %3 = extractvalue { <8 x i16>, i32 } %1, 0
   ret <8 x i16> %3
 }
 
-define arm_aapcs_vfpcc <4 x i32> @test_vddupq_wb_u32(i32* nocapture %a) {
+define arm_aapcs_vfpcc <4 x i32> @test_vddupq_wb_u32(ptr nocapture %a) {
 ; CHECK-LABEL: test_vddupq_wb_u32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -221,15 +221,15 @@ define arm_aapcs_vfpcc <4 x i32> @test_vddupq_wb_u32(i32* nocapture %a) {
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vddup.v4i32(i32 %0, i32 2)
   %2 = extractvalue { <4 x i32>, i32 } %1, 1
-  store i32 %2, i32* %a, align 4
+  store i32 %2, ptr %a, align 4
   %3 = extractvalue { <4 x i32>, i32 } %1, 0
   ret <4 x i32> %3
 }
 
-define arm_aapcs_vfpcc <16 x i8> @test_vdwdupq_wb_u8(i32* nocapture %a, i32 %b) {
+define arm_aapcs_vfpcc <16 x i8> @test_vdwdupq_wb_u8(ptr nocapture %a, i32 %b) {
 ; CHECK-LABEL: test_vdwdupq_wb_u8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -237,15 +237,15 @@ define arm_aapcs_vfpcc <16 x i8> @test_vdwdupq_wb_u8(i32* nocapture %a, i32 %b) 
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = tail call { <16 x i8>, i32 } @llvm.arm.mve.vdwdup.v16i8(i32 %0, i32 %b, i32 4)
   %2 = extractvalue { <16 x i8>, i32 } %1, 1
-  store i32 %2, i32* %a, align 4
+  store i32 %2, ptr %a, align 4
   %3 = extractvalue { <16 x i8>, i32 } %1, 0
   ret <16 x i8> %3
 }
 
-define arm_aapcs_vfpcc <8 x i16> @test_vdwdupq_wb_u16(i32* nocapture %a, i32 %b) {
+define arm_aapcs_vfpcc <8 x i16> @test_vdwdupq_wb_u16(ptr nocapture %a, i32 %b) {
 ; CHECK-LABEL: test_vdwdupq_wb_u16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -253,15 +253,15 @@ define arm_aapcs_vfpcc <8 x i16> @test_vdwdupq_wb_u16(i32* nocapture %a, i32 %b)
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = tail call { <8 x i16>, i32 } @llvm.arm.mve.vdwdup.v8i16(i32 %0, i32 %b, i32 4)
   %2 = extractvalue { <8 x i16>, i32 } %1, 1
-  store i32 %2, i32* %a, align 4
+  store i32 %2, ptr %a, align 4
   %3 = extractvalue { <8 x i16>, i32 } %1, 0
   ret <8 x i16> %3
 }
 
-define arm_aapcs_vfpcc <16 x i8> @test_viwdupq_wb_u8(i32* nocapture %a, i32 %b) {
+define arm_aapcs_vfpcc <16 x i8> @test_viwdupq_wb_u8(ptr nocapture %a, i32 %b) {
 ; CHECK-LABEL: test_viwdupq_wb_u8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -269,15 +269,15 @@ define arm_aapcs_vfpcc <16 x i8> @test_viwdupq_wb_u8(i32* nocapture %a, i32 %b) 
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = tail call { <16 x i8>, i32 } @llvm.arm.mve.viwdup.v16i8(i32 %0, i32 %b, i32 1)
   %2 = extractvalue { <16 x i8>, i32 } %1, 1
-  store i32 %2, i32* %a, align 4
+  store i32 %2, ptr %a, align 4
   %3 = extractvalue { <16 x i8>, i32 } %1, 0
   ret <16 x i8> %3
 }
 
-define arm_aapcs_vfpcc <8 x i16> @test_viwdupq_wb_u16(i32* nocapture %a, i32 %b) {
+define arm_aapcs_vfpcc <8 x i16> @test_viwdupq_wb_u16(ptr nocapture %a, i32 %b) {
 ; CHECK-LABEL: test_viwdupq_wb_u16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -285,15 +285,15 @@ define arm_aapcs_vfpcc <8 x i16> @test_viwdupq_wb_u16(i32* nocapture %a, i32 %b)
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = tail call { <8 x i16>, i32 } @llvm.arm.mve.viwdup.v8i16(i32 %0, i32 %b, i32 1)
   %2 = extractvalue { <8 x i16>, i32 } %1, 1
-  store i32 %2, i32* %a, align 4
+  store i32 %2, ptr %a, align 4
   %3 = extractvalue { <8 x i16>, i32 } %1, 0
   ret <8 x i16> %3
 }
 
-define arm_aapcs_vfpcc <4 x i32> @test_viwdupq_wb_u32(i32* nocapture %a, i32 %b) {
+define arm_aapcs_vfpcc <4 x i32> @test_viwdupq_wb_u32(ptr nocapture %a, i32 %b) {
 ; CHECK-LABEL: test_viwdupq_wb_u32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -301,15 +301,15 @@ define arm_aapcs_vfpcc <4 x i32> @test_viwdupq_wb_u32(i32* nocapture %a, i32 %b)
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = tail call { <4 x i32>, i32 } @llvm.arm.mve.viwdup.v4i32(i32 %0, i32 %b, i32 8)
   %2 = extractvalue { <4 x i32>, i32 } %1, 1
-  store i32 %2, i32* %a, align 4
+  store i32 %2, ptr %a, align 4
   %3 = extractvalue { <4 x i32>, i32 } %1, 0
   ret <4 x i32> %3
 }
 
-define arm_aapcs_vfpcc <4 x i32> @test_vdwdupq_wb_u32(i32* nocapture %a, i32 %b) {
+define arm_aapcs_vfpcc <4 x i32> @test_vdwdupq_wb_u32(ptr nocapture %a, i32 %b) {
 ; CHECK-LABEL: test_vdwdupq_wb_u32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -317,10 +317,10 @@ define arm_aapcs_vfpcc <4 x i32> @test_vdwdupq_wb_u32(i32* nocapture %a, i32 %b)
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vdwdup.v4i32(i32 %0, i32 %b, i32 2)
   %2 = extractvalue { <4 x i32>, i32 } %1, 1
-  store i32 %2, i32* %a, align 4
+  store i32 %2, ptr %a, align 4
   %3 = extractvalue { <4 x i32>, i32 } %1, 0
   ret <4 x i32> %3
 }
@@ -505,7 +505,7 @@ entry:
   ret <4 x i32> %3
 }
 
-define arm_aapcs_vfpcc <16 x i8> @test_vidupq_m_wb_u8(<16 x i8> %inactive, i32* nocapture %a, i16 zeroext %p) {
+define arm_aapcs_vfpcc <16 x i8> @test_vidupq_m_wb_u8(<16 x i8> %inactive, ptr nocapture %a, i16 zeroext %p) {
 ; CHECK-LABEL: test_vidupq_m_wb_u8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -515,17 +515,17 @@ define arm_aapcs_vfpcc <16 x i8> @test_vidupq_m_wb_u8(<16 x i8> %inactive, i32* 
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = zext i16 %p to i32
   %2 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %1)
   %3 = tail call { <16 x i8>, i32 } @llvm.arm.mve.vidup.predicated.v16i8.v16i1(<16 x i8> %inactive, i32 %0, i32 8, <16 x i1> %2)
   %4 = extractvalue { <16 x i8>, i32 } %3, 1
-  store i32 %4, i32* %a, align 4
+  store i32 %4, ptr %a, align 4
   %5 = extractvalue { <16 x i8>, i32 } %3, 0
   ret <16 x i8> %5
 }
 
-define arm_aapcs_vfpcc <8 x i16> @test_vidupq_m_wb_u16(<8 x i16> %inactive, i32* nocapture %a, i16 zeroext %p) {
+define arm_aapcs_vfpcc <8 x i16> @test_vidupq_m_wb_u16(<8 x i16> %inactive, ptr nocapture %a, i16 zeroext %p) {
 ; CHECK-LABEL: test_vidupq_m_wb_u16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -535,17 +535,17 @@ define arm_aapcs_vfpcc <8 x i16> @test_vidupq_m_wb_u16(<8 x i16> %inactive, i32*
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = zext i16 %p to i32
   %2 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %1)
   %3 = tail call { <8 x i16>, i32 } @llvm.arm.mve.vidup.predicated.v8i16.v8i1(<8 x i16> %inactive, i32 %0, i32 2, <8 x i1> %2)
   %4 = extractvalue { <8 x i16>, i32 } %3, 1
-  store i32 %4, i32* %a, align 4
+  store i32 %4, ptr %a, align 4
   %5 = extractvalue { <8 x i16>, i32 } %3, 0
   ret <8 x i16> %5
 }
 
-define arm_aapcs_vfpcc <4 x i32> @test_vidupq_m_wb_u32(<4 x i32> %inactive, i32* nocapture %a, i16 zeroext %p) {
+define arm_aapcs_vfpcc <4 x i32> @test_vidupq_m_wb_u32(<4 x i32> %inactive, ptr nocapture %a, i16 zeroext %p) {
 ; CHECK-LABEL: test_vidupq_m_wb_u32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -555,17 +555,17 @@ define arm_aapcs_vfpcc <4 x i32> @test_vidupq_m_wb_u32(<4 x i32> %inactive, i32*
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = zext i16 %p to i32
   %2 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %1)
   %3 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.predicated.v4i32.v4i1(<4 x i32> %inactive, i32 %0, i32 8, <4 x i1> %2)
   %4 = extractvalue { <4 x i32>, i32 } %3, 1
-  store i32 %4, i32* %a, align 4
+  store i32 %4, ptr %a, align 4
   %5 = extractvalue { <4 x i32>, i32 } %3, 0
   ret <4 x i32> %5
 }
 
-define arm_aapcs_vfpcc <16 x i8> @test_vddupq_m_wb_u8(<16 x i8> %inactive, i32* nocapture %a, i16 zeroext %p) {
+define arm_aapcs_vfpcc <16 x i8> @test_vddupq_m_wb_u8(<16 x i8> %inactive, ptr nocapture %a, i16 zeroext %p) {
 ; CHECK-LABEL: test_vddupq_m_wb_u8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -575,17 +575,17 @@ define arm_aapcs_vfpcc <16 x i8> @test_vddupq_m_wb_u8(<16 x i8> %inactive, i32* 
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = zext i16 %p to i32
   %2 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %1)
   %3 = tail call { <16 x i8>, i32 } @llvm.arm.mve.vddup.predicated.v16i8.v16i1(<16 x i8> %inactive, i32 %0, i32 1, <16 x i1> %2)
   %4 = extractvalue { <16 x i8>, i32 } %3, 1
-  store i32 %4, i32* %a, align 4
+  store i32 %4, ptr %a, align 4
   %5 = extractvalue { <16 x i8>, i32 } %3, 0
   ret <16 x i8> %5
 }
 
-define arm_aapcs_vfpcc <8 x i16> @test_vddupq_m_wb_u16(<8 x i16> %inactive, i32* nocapture %a, i16 zeroext %p) {
+define arm_aapcs_vfpcc <8 x i16> @test_vddupq_m_wb_u16(<8 x i16> %inactive, ptr nocapture %a, i16 zeroext %p) {
 ; CHECK-LABEL: test_vddupq_m_wb_u16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -595,17 +595,17 @@ define arm_aapcs_vfpcc <8 x i16> @test_vddupq_m_wb_u16(<8 x i16> %inactive, i32*
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = zext i16 %p to i32
   %2 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %1)
   %3 = tail call { <8 x i16>, i32 } @llvm.arm.mve.vddup.predicated.v8i16.v8i1(<8 x i16> %inactive, i32 %0, i32 1, <8 x i1> %2)
   %4 = extractvalue { <8 x i16>, i32 } %3, 1
-  store i32 %4, i32* %a, align 4
+  store i32 %4, ptr %a, align 4
   %5 = extractvalue { <8 x i16>, i32 } %3, 0
   ret <8 x i16> %5
 }
 
-define arm_aapcs_vfpcc <4 x i32> @test_vddupq_m_wb_u32(<4 x i32> %inactive, i32* nocapture %a, i16 zeroext %p) {
+define arm_aapcs_vfpcc <4 x i32> @test_vddupq_m_wb_u32(<4 x i32> %inactive, ptr nocapture %a, i16 zeroext %p) {
 ; CHECK-LABEL: test_vddupq_m_wb_u32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0]
@@ -615,17 +615,17 @@ define arm_aapcs_vfpcc <4 x i32> @test_vddupq_m_wb_u32(<4 x i32> %inactive, i32*
 ; CHECK-NEXT:    str r2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = zext i16 %p to i32
   %2 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %1)
   %3 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vddup.predicated.v4i32.v4i1(<4 x i32> %inactive, i32 %0, i32 4, <4 x i1> %2)
   %4 = extractvalue { <4 x i32>, i32 } %3, 1
-  store i32 %4, i32* %a, align 4
+  store i32 %4, ptr %a, align 4
   %5 = extractvalue { <4 x i32>, i32 } %3, 0
   ret <4 x i32> %5
 }
 
-define arm_aapcs_vfpcc <16 x i8> @test_viwdupq_m_wb_u8(<16 x i8> %inactive, i32* nocapture %a, i32 %b, i16 zeroext %p) {
+define arm_aapcs_vfpcc <16 x i8> @test_viwdupq_m_wb_u8(<16 x i8> %inactive, ptr nocapture %a, i32 %b, i16 zeroext %p) {
 ; CHECK-LABEL: test_viwdupq_m_wb_u8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr.w r12, [r0]
@@ -635,17 +635,17 @@ define arm_aapcs_vfpcc <16 x i8> @test_viwdupq_m_wb_u8(<16 x i8> %inactive, i32*
 ; CHECK-NEXT:    str.w r12, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = zext i16 %p to i32
   %2 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %1)
   %3 = tail call { <16 x i8>, i32 } @llvm.arm.mve.viwdup.predicated.v16i8.v16i1(<16 x i8> %inactive, i32 %0, i32 %b, i32 8, <16 x i1> %2)
   %4 = extractvalue { <16 x i8>, i32 } %3, 1
-  store i32 %4, i32* %a, align 4
+  store i32 %4, ptr %a, align 4
   %5 = extractvalue { <16 x i8>, i32 } %3, 0
   ret <16 x i8> %5
 }
 
-define arm_aapcs_vfpcc <8 x i16> @test_viwdupq_m_wb_u16(<8 x i16> %inactive, i32* nocapture %a, i32 %b, i16 zeroext %p) {
+define arm_aapcs_vfpcc <8 x i16> @test_viwdupq_m_wb_u16(<8 x i16> %inactive, ptr nocapture %a, i32 %b, i16 zeroext %p) {
 ; CHECK-LABEL: test_viwdupq_m_wb_u16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr.w r12, [r0]
@@ -655,17 +655,17 @@ define arm_aapcs_vfpcc <8 x i16> @test_viwdupq_m_wb_u16(<8 x i16> %inactive, i32
 ; CHECK-NEXT:    str.w r12, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = zext i16 %p to i32
   %2 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %1)
   %3 = tail call { <8 x i16>, i32 } @llvm.arm.mve.viwdup.predicated.v8i16.v8i1(<8 x i16> %inactive, i32 %0, i32 %b, i32 8, <8 x i1> %2)
   %4 = extractvalue { <8 x i16>, i32 } %3, 1
-  store i32 %4, i32* %a, align 4
+  store i32 %4, ptr %a, align 4
   %5 = extractvalue { <8 x i16>, i32 } %3, 0
   ret <8 x i16> %5
 }
 
-define arm_aapcs_vfpcc <4 x i32> @test_viwdupq_m_wb_u32(<4 x i32> %inactive, i32* nocapture %a, i32 %b, i16 zeroext %p) {
+define arm_aapcs_vfpcc <4 x i32> @test_viwdupq_m_wb_u32(<4 x i32> %inactive, ptr nocapture %a, i32 %b, i16 zeroext %p) {
 ; CHECK-LABEL: test_viwdupq_m_wb_u32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr.w r12, [r0]
@@ -675,17 +675,17 @@ define arm_aapcs_vfpcc <4 x i32> @test_viwdupq_m_wb_u32(<4 x i32> %inactive, i32
 ; CHECK-NEXT:    str.w r12, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = zext i16 %p to i32
   %2 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %1)
   %3 = tail call { <4 x i32>, i32 } @llvm.arm.mve.viwdup.predicated.v4i32.v4i1(<4 x i32> %inactive, i32 %0, i32 %b, i32 4, <4 x i1> %2)
   %4 = extractvalue { <4 x i32>, i32 } %3, 1
-  store i32 %4, i32* %a, align 4
+  store i32 %4, ptr %a, align 4
   %5 = extractvalue { <4 x i32>, i32 } %3, 0
   ret <4 x i32> %5
 }
 
-define arm_aapcs_vfpcc <16 x i8> @test_vdwdupq_m_wb_u8(<16 x i8> %inactive, i32* nocapture %a, i32 %b, i16 zeroext %p) {
+define arm_aapcs_vfpcc <16 x i8> @test_vdwdupq_m_wb_u8(<16 x i8> %inactive, ptr nocapture %a, i32 %b, i16 zeroext %p) {
 ; CHECK-LABEL: test_vdwdupq_m_wb_u8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr.w r12, [r0]
@@ -695,17 +695,17 @@ define arm_aapcs_vfpcc <16 x i8> @test_vdwdupq_m_wb_u8(<16 x i8> %inactive, i32*
 ; CHECK-NEXT:    str.w r12, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = zext i16 %p to i32
   %2 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %1)
   %3 = tail call { <16 x i8>, i32 } @llvm.arm.mve.vdwdup.predicated.v16i8.v16i1(<16 x i8> %inactive, i32 %0, i32 %b, i32 1, <16 x i1> %2)
   %4 = extractvalue { <16 x i8>, i32 } %3, 1
-  store i32 %4, i32* %a, align 4
+  store i32 %4, ptr %a, align 4
   %5 = extractvalue { <16 x i8>, i32 } %3, 0
   ret <16 x i8> %5
 }
 
-define arm_aapcs_vfpcc <8 x i16> @test_vdwdupq_m_wb_u16(<8 x i16> %inactive, i32* nocapture %a, i32 %b, i16 zeroext %p) {
+define arm_aapcs_vfpcc <8 x i16> @test_vdwdupq_m_wb_u16(<8 x i16> %inactive, ptr nocapture %a, i32 %b, i16 zeroext %p) {
 ; CHECK-LABEL: test_vdwdupq_m_wb_u16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr.w r12, [r0]
@@ -715,17 +715,17 @@ define arm_aapcs_vfpcc <8 x i16> @test_vdwdupq_m_wb_u16(<8 x i16> %inactive, i32
 ; CHECK-NEXT:    str.w r12, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = zext i16 %p to i32
   %2 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %1)
   %3 = tail call { <8 x i16>, i32 } @llvm.arm.mve.vdwdup.predicated.v8i16.v8i1(<8 x i16> %inactive, i32 %0, i32 %b, i32 4, <8 x i1> %2)
   %4 = extractvalue { <8 x i16>, i32 } %3, 1
-  store i32 %4, i32* %a, align 4
+  store i32 %4, ptr %a, align 4
   %5 = extractvalue { <8 x i16>, i32 } %3, 0
   ret <8 x i16> %5
 }
 
-define arm_aapcs_vfpcc <4 x i32> @test_vdwdupq_m_wb_u32(<4 x i32> %inactive, i32* nocapture %a, i32 %b, i16 zeroext %p) {
+define arm_aapcs_vfpcc <4 x i32> @test_vdwdupq_m_wb_u32(<4 x i32> %inactive, ptr nocapture %a, i32 %b, i16 zeroext %p) {
 ; CHECK-LABEL: test_vdwdupq_m_wb_u32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr.w r12, [r0]
@@ -735,12 +735,12 @@ define arm_aapcs_vfpcc <4 x i32> @test_vdwdupq_m_wb_u32(<4 x i32> %inactive, i32
 ; CHECK-NEXT:    str.w r12, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = zext i16 %p to i32
   %2 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %1)
   %3 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vdwdup.predicated.v4i32.v4i1(<4 x i32> %inactive, i32 %0, i32 %b, i32 4, <4 x i1> %2)
   %4 = extractvalue { <4 x i32>, i32 } %3, 1
-  store i32 %4, i32* %a, align 4
+  store i32 %4, ptr %a, align 4
   %5 = extractvalue { <4 x i32>, i32 } %3, 0
   ret <4 x i32> %5
 }

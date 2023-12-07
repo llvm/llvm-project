@@ -14,7 +14,6 @@ target triple = "x86_64-pc-linux"
 define void @foo(ptr nocapture %_stubArgs) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $152, %rsp
 ; CHECK-NEXT:    movq 48(%rdi), %rax
 ; CHECK-NEXT:    movl 64(%rdi), %ecx
 ; CHECK-NEXT:    movl $200, %esi
@@ -33,6 +32,7 @@ define void @foo(ptr nocapture %_stubArgs) nounwind {
 ; CHECK-NEXT:  .LBB0_1:
 ; CHECK-NEXT:    movaps (%rax,%rdx), %xmm0
 ; CHECK-NEXT:  .LBB0_3: # %entry
+; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rsp
 ; CHECK-NEXT:    movaps (%rax,%rcx), %xmm1
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    jne .LBB0_5

@@ -185,8 +185,7 @@ void AArch64StackTaggingPreRA::uncheckUsesOf(unsigned TaggedReg, int FI) {
         UseI.getOperand(OpIdx).ChangeToFrameIndex(FI);
         UseI.getOperand(OpIdx).setTargetFlags(AArch64II::MO_TAGGED);
       }
-    } else if (UseI.isCopy() &&
-               Register::isVirtualRegister(UseI.getOperand(0).getReg())) {
+    } else if (UseI.isCopy() && UseI.getOperand(0).getReg().isVirtual()) {
       uncheckUsesOf(UseI.getOperand(0).getReg(), FI);
     }
   }
@@ -266,7 +265,7 @@ std::optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
       continue;
 
     Register RetagReg = I->getOperand(0).getReg();
-    if (!Register::isVirtualRegister(RetagReg))
+    if (!RetagReg.isVirtual())
       continue;
 
     int Score = 0;
@@ -277,15 +276,15 @@ std::optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
       Register UseReg = WorkList.pop_back_val();
       for (auto &UseI : MRI->use_instructions(UseReg)) {
         unsigned Opcode = UseI.getOpcode();
-        if (Opcode == AArch64::STGOffset || Opcode == AArch64::ST2GOffset ||
-            Opcode == AArch64::STZGOffset || Opcode == AArch64::STZ2GOffset ||
+        if (Opcode == AArch64::STGi || Opcode == AArch64::ST2Gi ||
+            Opcode == AArch64::STZGi || Opcode == AArch64::STZ2Gi ||
             Opcode == AArch64::STGPi || Opcode == AArch64::STGloop ||
             Opcode == AArch64::STZGloop || Opcode == AArch64::STGloop_wback ||
             Opcode == AArch64::STZGloop_wback)
           continue;
         if (UseI.isCopy()) {
           Register DstReg = UseI.getOperand(0).getReg();
-          if (Register::isVirtualRegister(DstReg))
+          if (DstReg.isVirtual())
             WorkList.push_back(DstReg);
           continue;
         }

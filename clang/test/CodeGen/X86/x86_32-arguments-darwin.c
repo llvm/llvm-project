@@ -158,7 +158,6 @@ typedef int v39 __attribute((vector_size(16)));
 struct s39 { v39 x; };
 void f39(struct s39 x) {}
 
-// <rdar://problem/7247671>
 // CHECK-LABEL: define{{.*}} i32 @f40()
 enum e40 { ec0 = 0 };
 enum e40 f40(void) { }
@@ -217,7 +216,6 @@ void f53(struct s53 x) {}
 typedef unsigned short v2i16 __attribute__((__vector_size__(4)));
 
 // CHECK-LABEL: define{{.*}} i32 @f54(i32 noundef %arg.coerce)
-// rdar://8359483
 v2i16 f54(v2i16 arg) { return arg+arg; }
 
 
@@ -246,9 +244,8 @@ v4i32 f55(v4i32 arg) { return arg+arg; }
 // CHECK: <4 x double> noundef {{[^ ]*}}, ptr noundef byval(%struct.s56_6) align 4 %{{[^ ]*}})
 // CHECK: }
 //
-// <rdar://problem/7964854> [i386] clang misaligns long double in structures
-// when passed byval
-// <rdar://problem/8431367> clang misaligns parameters on stack
+// [i386] clang misaligns long double in structures when passed byval
+// clang misaligns parameters on stack
 typedef int __attribute__((vector_size (8))) t56_v2i;
 typedef double __attribute__((vector_size (8))) t56_v1d;
 typedef int __attribute__((vector_size (16))) t56_v4i;
@@ -304,9 +301,8 @@ struct s62 { T62 x; int y; } __attribute((packed, aligned(8)));
 void f62(int x, struct s62 y) {}
 
 // CHECK-LABEL: define{{.*}} i32 @f63
-// CHECK: ptrtoint
-// CHECK: and {{.*}}, -16
-// CHECK: inttoptr
+// CHECK: getelementptr inbounds i8, ptr {{.*}}, i32 15
+// CHECK: call ptr @llvm.ptrmask.p0.i32(ptr {{.*}}, i32 -16)
 typedef int T63 __attribute((vector_size(16)));
 struct s63 { T63 x; int y; };
 int f63(int i, ...) {
@@ -326,9 +322,8 @@ struct s65 { signed char a[0]; float b; };
 struct s65 f65(void) { return (struct s65){{},2}; }
 
 // CHECK-LABEL: define{{.*}} <2 x i64> @f66
-// CHECK: ptrtoint
-// CHECK: and {{.*}}, -16
-// CHECK: inttoptr
+// CHECK: getelementptr inbounds i8, ptr {{.*}}, i32 15
+// CHECK: call ptr @llvm.ptrmask.p0.i32(ptr {{.*}}, i32 -16)
 typedef int T66 __attribute((vector_size(16)));
 T66 f66(int i, ...) {
   __builtin_va_list ap;

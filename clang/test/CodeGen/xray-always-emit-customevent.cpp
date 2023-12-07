@@ -6,5 +6,5 @@
 [[clang::xray_never_instrument]] void neverInstrument() {
   static constexpr char kPhase[] = "never";
   __xray_customevent(kPhase, 5);
-  // CHECK: call void @llvm.xray.customevent(ptr{{.*}}, i32 5)
+  // CHECK: call void @llvm.xray.customevent(ptr{{.*}}, i64 5)
 }

@@ -4,10 +4,11 @@ add_llvm_component_library(LLVMARMDisassembler
   LINK_COMPONENTS
   ARMDesc
   ARMInfo
-  MCDisassembler
-  MC
-  Support
   ARMUtils
+  CodeGenTypes
+  MC
+  MCDisassembler
+  Support
 
   ADD_TO_COMPONENT
   ARM

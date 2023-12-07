@@ -40,9 +40,9 @@ template <typename T> decltype(auto) printable(const T &V) {
 // If raw_ostream support is enabled, we specialize for types with operator<<
 // that takes a raw_ostream.
 #if !GTEST_NO_LLVM_SUPPORT
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <ostream>
 namespace llvm_gtest {
 
@@ -68,14 +68,14 @@ struct StreamSwitch<T, decltype((void)(std::declval<llvm::raw_ostream &>()
   static const RawStreamProxy<T> printable(const T &V) { return {V}; }
 };
 
-// llvm::Optional has a template operator<<, which means it will not accept any
+// std::optional has a template operator<<, which means it will not accept any
 // implicit conversions, so we need to special-case it here.
 template <typename T>
-struct StreamSwitch<llvm::Optional<T>,
+struct StreamSwitch<std::optional<T>,
                     decltype((void)(std::declval<llvm::raw_ostream &>()
-                                    << std::declval<llvm::Optional<T>>()))> {
-  static const RawStreamProxy<llvm::Optional<T>>
-  printable(const llvm::Optional<T> &V) {
+                                    << std::declval<std::optional<T>>()))> {
+  static const RawStreamProxy<std::optional<T>>
+  printable(const std::optional<T> &V) {
     return {V};
   }
 };

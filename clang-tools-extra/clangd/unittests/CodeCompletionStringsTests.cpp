@@ -24,11 +24,13 @@ public:
 
 protected:
   void computeSignature(const CodeCompletionString &CCS,
-                        bool CompletingPattern = false) {
+                        CodeCompletionResult::ResultKind ResultKind =
+                            CodeCompletionResult::ResultKind::RK_Declaration) {
     Signature.clear();
     Snippet.clear();
-    getSignature(CCS, &Signature, &Snippet, /*RequiredQualifier=*/nullptr,
-                 CompletingPattern);
+    getSignature(CCS, &Signature, &Snippet, ResultKind,
+                 /*CursorKind=*/CXCursorKind::CXCursor_NotImplemented,
+                 /*RequiredQualifiers=*/nullptr);
   }
 
   std::shared_ptr<clang::GlobalCodeCompletionAllocator> Allocator;
@@ -145,11 +147,12 @@ TEST_F(CompletionStringTest, SnippetsInPatterns) {
     Builder.AddChunk(CodeCompletionString::CK_SemiColon);
     return *Builder.TakeString();
   };
-  computeSignature(MakeCCS(), /*CompletingPattern=*/false);
+  computeSignature(MakeCCS());
   EXPECT_EQ(Snippet, " ${1:name} = ${2:target};");
 
   // When completing a pattern, the last placeholder holds the cursor position.
-  computeSignature(MakeCCS(), /*CompletingPattern=*/true);
+  computeSignature(MakeCCS(),
+                   /*ResultKind=*/CodeCompletionResult::ResultKind::RK_Pattern);
   EXPECT_EQ(Snippet, " ${1:name} = $0;");
 }
 

@@ -1,12 +1,12 @@
 // RUN: mlir-opt %s \
 // RUN:   -func-bufferize -tensor-bufferize -arith-bufferize --canonicalize \
 // RUN:   -convert-scf-to-cf --convert-complex-to-standard \
-// RUN:   -convert-memref-to-llvm -convert-math-to-llvm -convert-math-to-libm \
+// RUN:   -finalize-memref-to-llvm -convert-math-to-llvm -convert-math-to-libm \
 // RUN:   -convert-vector-to-llvm -convert-complex-to-llvm \
 // RUN:   -convert-func-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext |\
+// RUN:  -shared-libs=%mlir_c_runner_utils |\
 // RUN: FileCheck %s
 
 // XFAIL: target=aarch64{{.*}}

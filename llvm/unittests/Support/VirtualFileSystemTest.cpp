@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -524,6 +525,33 @@ TEST(VirtualFileSystemTest, MultipleWorkingDirs) {
   CIt.increment(EC); // Because likely to read through this path.
   ASSERT_FALSE(EC);
   ASSERT_EQ(CIt, vfs::directory_iterator());
+}
+
+TEST(VirtualFileSystemTest, PhysicalFileSystemWorkingDirFailure) {
+  TempDir D2("d2", /*Unique*/ true);
+  SmallString<128> WD, PrevWD;
+  ASSERT_EQ(sys::fs::current_path(PrevWD), std::error_code());
+  ASSERT_EQ(sys::fs::createUniqueDirectory("d1", WD), std::error_code());
+  ASSERT_EQ(sys::fs::set_current_path(WD), std::error_code());
+  auto Restore =
+      llvm::make_scope_exit([&] { sys::fs::set_current_path(PrevWD); });
+
+  // Delete the working directory to create an error.
+  if (sys::fs::remove_directories(WD, /*IgnoreErrors=*/false))
+    // Some platforms (e.g. Solaris) disallow removal of the working directory.
+    GTEST_SKIP() << "test requires deletion of working directory";
+
+  // Verify that we still get two separate working directories.
+  auto FS1 = vfs::createPhysicalFileSystem();
+  auto FS2 = vfs::createPhysicalFileSystem();
+  ASSERT_EQ(FS1->getCurrentWorkingDirectory().getError(),
+            errc::no_such_file_or_directory);
+  ASSERT_EQ(FS1->setCurrentWorkingDirectory(D2.path()), std::error_code());
+  ASSERT_EQ(FS1->getCurrentWorkingDirectory().get(), D2.path());
+  EXPECT_EQ(FS2->getCurrentWorkingDirectory().getError(),
+            errc::no_such_file_or_directory);
+  SmallString<128> WD2;
+  EXPECT_EQ(sys::fs::current_path(WD2), errc::no_such_file_or_directory);
 }
 
 TEST(VirtualFileSystemTest, BrokenSymlinkRealFSIteration) {
@@ -2552,6 +2580,7 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
   Lower->addSymlink("/link");
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
       "{ 'use-external-names': false,\n"
+      "  'case-sensitive': false,\n"
       "  'roots': [\n"
       "{\n"
       "  'type': 'directory',\n"
@@ -2560,6 +2589,11 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
       "                  'type': 'file',\n"
       "                  'name': 'bar',\n"
       "                  'external-contents': '/link'\n"
+      "                },\n"
+      "                {\n"
+      "                  'type': 'directory',\n"
+      "                  'name': 'baz',\n"
+      "                  'contents': []\n"
       "                }\n"
       "              ]\n"
       "},\n"
@@ -2582,9 +2616,9 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
   EXPECT_FALSE(FS->getRealPath("//root/bar", RealPath));
   EXPECT_EQ(RealPath.str(), "/symlink");
 
-  // Directories should fall back to the underlying file system is possible.
-  EXPECT_FALSE(FS->getRealPath("//dir/", RealPath));
-  EXPECT_EQ(RealPath.str(), "//dir/");
+  // Directories should return the virtual path as written in the definition.
+  EXPECT_FALSE(FS->getRealPath("//ROOT/baz", RealPath));
+  EXPECT_EQ(RealPath.str(), "//root/baz");
 
   // Try a non-existing file.
   EXPECT_EQ(FS->getRealPath("/non_existing", RealPath),

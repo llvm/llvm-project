@@ -25,16 +25,54 @@ class IfOp;
 namespace vector {
 
 //===----------------------------------------------------------------------===//
+// Vector transformation options exposed as auxiliary structs.
+//===----------------------------------------------------------------------===//
+
+/// Structure to control the behavior of vector transform patterns.
+struct VectorTransformsOptions {
+  /// Option to control the lowering of vector.contract.
+  VectorContractLowering vectorContractLowering = VectorContractLowering::Dot;
+  VectorTransformsOptions &
+  setVectorTransformsOptions(VectorContractLowering opt) {
+    vectorContractLowering = opt;
+    return *this;
+  }
+  /// Option to control the lowering of vector.multi_reduction.
+  VectorMultiReductionLowering vectorMultiReductionLowering =
+      VectorMultiReductionLowering::InnerParallel;
+  VectorTransformsOptions &
+  setVectorMultiReductionLowering(VectorMultiReductionLowering opt) {
+    vectorMultiReductionLowering = opt;
+    return *this;
+  }
+  /// Option to control the lowering of vector.transpose.
+  VectorTransposeLowering vectorTransposeLowering =
+      VectorTransposeLowering::EltWise;
+  VectorTransformsOptions &
+  setVectorTransposeLowering(VectorTransposeLowering opt) {
+    vectorTransposeLowering = opt;
+    return *this;
+  }
+  /// Option to control the splitting of vector transfers.
+  VectorTransferSplit vectorTransferSplit = VectorTransferSplit::None;
+  VectorTransformsOptions &setVectorTransferSplit(VectorTransferSplit opt) {
+    vectorTransferSplit = opt;
+    return *this;
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // Standalone transformations and helpers.
 //===----------------------------------------------------------------------===//
-/// Split a vector.transfer operation into an in-bounds (i.e., no out-of-bounds
-/// masking) fastpath and a slowpath.
-/// If `ifOp` is not null and the result is `success, the `ifOp` points to the
-/// newly created conditional upon function return.
-/// To accomodate for the fact that the original vector.transfer indexing may be
-/// arbitrary and the slow path indexes @[0...0] in the temporary buffer, the
-/// scf.if op returns a view and values of type index.
-/// At this time, only vector.transfer_read case is implemented.
+
+/// Split a vector.transfer operation into an in-bounds (i.e., no
+/// out-of-bounds masking) fastpath and a slowpath. If `ifOp` is not null and
+/// the result is `success, the `ifOp` points to the newly created conditional
+/// upon function return. To accomodate for the fact that the original
+/// vector.transfer indexing may be arbitrary and the slow path indexes
+/// @[0...0] in the temporary buffer, the scf.if op returns a view and values
+/// of type index. At this time, only vector.transfer_read case is
+/// implemented.
 ///
 /// Example (a 2-D vector.transfer_read):
 /// ```
@@ -51,15 +89,16 @@ namespace vector {
 ///      memref.cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4 : compatibleMemRefType, index, index
 //     }
-///    %0 = vector.transfer_read %1#0[%1#1, %1#2] {in_bounds = [true ... true]}
+///    %0 = vector.transfer_read %1#0[%1#1, %1#2] {in_bounds = [true ...
+///    true]}
 /// ```
 /// where `alloc` is a top of the function alloca'ed buffer of one vector.
 ///
 /// Preconditions:
 ///  1. `xferOp.permutation_map()` must be a minor identity map
-///  2. the rank of the `xferOp.memref()` and the rank of the `xferOp.vector()`
-///  must be equal. This will be relaxed in the future but requires
-///  rank-reducing subviews.
+///  2. the rank of the `xferOp.memref()` and the rank of the
+///  `xferOp.vector()` must be equal. This will be relaxed in the future but
+///  requires rank-reducing subviews.
 LogicalResult splitFullAndPartialTransfer(
     RewriterBase &b, VectorTransferOpInterface xferOp,
     VectorTransformsOptions options = VectorTransformsOptions(),
@@ -67,7 +106,12 @@ LogicalResult splitFullAndPartialTransfer(
 
 /// Implements transfer op write to read forwarding and dead transfer write
 /// optimizations.
-void transferOpflowOpt(Operation *rootOp);
+void transferOpflowOpt(RewriterBase &rewriter, Operation *rootOp);
+
+/// Cast away the leading unit dim, if exists, for the given contract op.
+/// Return success if the transformation applies; return failure otherwise.
+LogicalResult castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
+                                               RewriterBase &rewriter);
 
 } // namespace vector
 } // namespace mlir

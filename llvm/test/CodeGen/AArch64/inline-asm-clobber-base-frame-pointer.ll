@@ -1,7 +1,7 @@
 ; Check that not only do we warn about clobbering x19 we also say
 ; what it is used for.
 
-; RUN: llc <%s -mtriple=aarch64-none-eabi 2>&1 | FileCheck %s
+; RUN: llc <%s -mtriple=aarch64 2>&1 | FileCheck %s
 
 ; CHECK: warning: inline asm clobber list contains reserved registers: X19
 ; CHECK-NEXT: note: Reserved registers on the clobber list

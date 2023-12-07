@@ -49,14 +49,12 @@ int test_cond(int y, int fooBar) { // expected-note {{here}}
 // CHECK: const typedef int int_t;
 const typedef typedef int int_t; // expected-warning {{duplicate 'typedef'}}
 
-// <rdar://problem/7159693>
 enum Color {
   Red // expected-error{{missing ',' between enumerators}}
   Green = 17 // expected-error{{missing ',' between enumerators}}
   Blue,
 };
 
-// rdar://9295072
 struct test_struct {
   // CHECK: struct test_struct *struct_ptr;
   test_struct *struct_ptr; // expected-error {{must use 'struct' tag to refer to type 'test_struct'}}

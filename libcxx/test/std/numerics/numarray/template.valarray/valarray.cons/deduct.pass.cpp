@@ -64,7 +64,7 @@ int main(int, char**)
     {
         // From (indirect_array<T>)
         std::valarray<long> v = {1, 2, 3, 4, 5};
-        std::valarray<size_t> i = {1, 2, 3};
+        std::valarray<std::size_t> i = {1, 2, 3};
         std::valarray v2 = v[i];
         static_assert(std::is_same_v<decltype(v2), std::valarray<long>>);
     }

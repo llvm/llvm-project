@@ -74,6 +74,11 @@ namespace json {
 //   - When retrieving strings from Values (e.g. asString()), the result will
 //     always be valid UTF-8.
 
+template <typename T>
+constexpr bool is_uint_64_bit_v =
+    std::is_integral_v<T> && std::is_unsigned_v<T> &&
+    sizeof(T) == sizeof(uint64_t);
+
 /// Returns true if \p S is valid UTF-8, which is required for use as JSON.
 /// If it returns false, \p Offset is set to a byte offset near the first error.
 bool isUTF8(llvm::StringRef S, size_t *ErrOffset = nullptr);
@@ -193,10 +198,9 @@ public:
   void push_back(Value &&E);
   template <typename... Args> void emplace_back(Args &&...A);
   void pop_back();
-  // FIXME: insert() takes const_iterator since C++11, old libstdc++ disagrees.
-  iterator insert(iterator P, const Value &E);
-  iterator insert(iterator P, Value &&E);
-  template <typename It> iterator insert(iterator P, It A, It Z);
+  iterator insert(const_iterator P, const Value &E);
+  iterator insert(const_iterator P, Value &&E);
+  template <typename It> iterator insert(const_iterator P, It A, It Z);
   template <typename... Args> iterator emplace(const_iterator P, Args &&...A);
 
   friend bool operator==(const Array &L, const Array &R);
@@ -330,40 +334,37 @@ public:
   Value(std::nullptr_t) : Type(T_Null) {}
   // Boolean (disallow implicit conversions).
   // (The last template parameter is a dummy to keep templates distinct.)
-  template <typename T,
-            typename = std::enable_if_t<std::is_same<T, bool>::value>,
+  template <typename T, typename = std::enable_if_t<std::is_same_v<T, bool>>,
             bool = false>
   Value(T B) : Type(T_Boolean) {
     create<bool>(B);
   }
 
-  // Unsigned 64-bit long integers.
-  template <typename T,
-            typename = std::enable_if_t<std::is_same<T, uint64_t>::value>,
-            bool = false, bool = false>
+  // Unsigned 64-bit integers.
+  template <typename T, typename = std::enable_if_t<is_uint_64_bit_v<T>>>
   Value(T V) : Type(T_UINT64) {
     create<uint64_t>(uint64_t{V});
   }
 
   // Integers (except boolean and uint64_t).
   // Must be non-narrowing convertible to int64_t.
-  template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>,
-            typename = std::enable_if_t<!std::is_same<T, bool>::value>,
-            typename = std::enable_if_t<!std::is_same<T, uint64_t>::value>>
+  template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>,
+            typename = std::enable_if_t<!std::is_same_v<T, bool>>,
+            typename = std::enable_if_t<!is_uint_64_bit_v<T>>>
   Value(T I) : Type(T_Integer) {
     create<int64_t>(int64_t{I});
   }
   // Floating point. Must be non-narrowing convertible to double.
   template <typename T,
-            typename = std::enable_if_t<std::is_floating_point<T>::value>,
+            typename = std::enable_if_t<std::is_floating_point_v<T>>,
             double * = nullptr>
   Value(T D) : Type(T_Double) {
     create<double>(double{D});
   }
   // Serializable types: with a toJSON(const T&)->Value function, found by ADL.
   template <typename T,
-            typename = std::enable_if_t<std::is_same<
-                Value, decltype(toJSON(*(const T *)nullptr))>::value>,
+            typename = std::enable_if_t<
+                std::is_same_v<Value, decltype(toJSON(*(const T *)nullptr))>>,
             Value * = nullptr>
   Value(const T &V) : Value(toJSON(V)) {}
 
@@ -425,6 +426,12 @@ public:
   std::optional<int64_t> getAsInteger() const {
     if (LLVM_LIKELY(Type == T_Integer))
       return as<int64_t>();
+    if (LLVM_LIKELY(Type == T_UINT64)) {
+      uint64_t U = as<uint64_t>();
+      if (LLVM_LIKELY(U <= uint64_t(std::numeric_limits<int64_t>::max()))) {
+        return U;
+      }
+    }
     if (LLVM_LIKELY(Type == T_Double)) {
       double D = as<double>();
       if (LLVM_LIKELY(std::modf(D, &D) == 0.0 &&
@@ -535,14 +542,14 @@ template <typename... Args> inline void Array::emplace_back(Args &&...A) {
   V.emplace_back(std::forward<Args>(A)...);
 }
 inline void Array::pop_back() { V.pop_back(); }
-inline typename Array::iterator Array::insert(iterator P, const Value &E) {
+inline typename Array::iterator Array::insert(const_iterator P, const Value &E) {
   return V.insert(P, E);
 }
-inline typename Array::iterator Array::insert(iterator P, Value &&E) {
+inline typename Array::iterator Array::insert(const_iterator P, Value &&E) {
   return V.insert(P, std::move(E));
 }
 template <typename It>
-inline typename Array::iterator Array::insert(iterator P, It A, It Z) {
+inline typename Array::iterator Array::insert(const_iterator P, It A, It Z) {
   return V.insert(P, A, Z);
 }
 template <typename... Args>
@@ -768,7 +775,7 @@ bool fromJSON(const Value &E, std::optional<T> &Out, Path P) {
     Out = std::nullopt;
     return true;
   }
-  T Result;
+  T Result = {};
   if (!fromJSON(E, Result, P))
     return false;
   Out = std::move(Result);

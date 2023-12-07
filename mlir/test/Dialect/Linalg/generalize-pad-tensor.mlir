@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file --test-linalg-transform-patterns="test-generalize-pad-tensor"  %s | FileCheck --check-prefix=CHECK %s
+// RUN: mlir-opt -split-input-file --test-linalg-transform-patterns="test-generalize-pad-tensor"  %s | FileCheck %s
 
 // CHECK-LABEL:   func @generalize_pad_tensor_static_shape(
 // CHECK-SAME:                                             %[[IN:.*]]: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1xf32> {

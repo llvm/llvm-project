@@ -1,8 +1,8 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-no-malloc %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: cppcoreguidelines-no-malloc.Allocations, value: "::malloc"},\
-// RUN:   {key: cppcoreguidelines-no-malloc.Reallocations, value: ""},\
-// RUN:   {key: cppcoreguidelines-no-malloc.Deallocations, value: ""}]}' \
+// RUN:  {cppcoreguidelines-no-malloc.Allocations: "::malloc",\
+// RUN:   cppcoreguidelines-no-malloc.Reallocations: "",\
+// RUN:   cppcoreguidelines-no-malloc.Deallocations: ""}}' \
 // RUN: --
 
 // Just ensure, the check will not crash, when no functions shall be checked.

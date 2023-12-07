@@ -98,7 +98,7 @@ k:
 // Check that the got has 3 entries, 1 for the TOC and 1 structure of 2 entries
 // for the tls variables. Also verify the address so we can check the offsets
 // we calculate for each relocation type.
-// CheckGot: got          00000018 0000000000020100
+// CheckGot: got          00000018 0000000000020110
 
 // got starts at 0x20100 so .TOC. will be 0x28100, and the tls_index struct is
 // at 0x20108.

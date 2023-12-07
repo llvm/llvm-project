@@ -55,12 +55,12 @@ entry:
 ; CHECK: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 64 offen glc
 define amdgpu_gs void @soffset_max_imm(ptr addrspace(4) inreg, ptr addrspace(4) inreg, ptr addrspace(4) inreg, ptr addrspace(4) inreg, i32 inreg, i32 inreg, i32, i32, i32, i32, i32, i32, i32, i32) {
 main_body:
-  %tmp1 = load <4 x i32>, ptr addrspace(4) %0
+  %tmp1 = load ptr addrspace(8), ptr addrspace(4) %0
   %tmp2 = shl i32 %6, 2
-  %tmp3 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %tmp1, i32 %tmp2, i32 64, i32 1)
+  %tmp3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %tmp1, i32 %tmp2, i32 64, i32 1)
   %tmp4 = add i32 %6, 16
-  %tmp1.4xi32 = bitcast <4 x i32> %tmp1 to <4 x i32>
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp3, <4 x i32> %tmp1.4xi32, i32 %tmp4, i32 %4, i32 68, i32 3)
+  %tmp1.4xi32 = bitcast ptr addrspace(8) %tmp1 to ptr addrspace(8)
+  call void @llvm.amdgcn.raw.ptr.tbuffer.store.i32(i32 %tmp3, ptr addrspace(8) %tmp1.4xi32, i32 %tmp4, i32 %4, i32 68, i32 3)
   ret void
 }
 
@@ -73,12 +73,12 @@ main_body:
 ; CHECK: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], [[SOFFSET]] offen glc
 define amdgpu_gs void @soffset_no_fold(ptr addrspace(4) inreg, ptr addrspace(4) inreg, ptr addrspace(4) inreg, ptr addrspace(4) inreg, i32 inreg, i32 inreg, i32, i32, i32, i32, i32, i32, i32, i32) {
 main_body:
-  %tmp1 = load <4 x i32>, ptr addrspace(4) %0
+  %tmp1 = load ptr addrspace(8), ptr addrspace(4) %0
   %tmp2 = shl i32 %6, 2
-  %tmp3 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %tmp1, i32 %tmp2, i32 65, i32 1)
+  %tmp3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %tmp1, i32 %tmp2, i32 65, i32 1)
   %tmp4 = add i32 %6, 16
-  %tmp1.4xi32 = bitcast <4 x i32> %tmp1 to <4 x i32>
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp3, <4 x i32> %tmp1.4xi32, i32 %tmp4, i32 %4, i32 68, i32 3)
+  %tmp1.4xi32 = bitcast ptr addrspace(8) %tmp1 to ptr addrspace(8)
+  call void @llvm.amdgcn.raw.ptr.tbuffer.store.i32(i32 %tmp3, ptr addrspace(8) %tmp1.4xi32, i32 %tmp4, i32 %4, i32 68, i32 3)
   ret void
 }
 
@@ -159,7 +159,7 @@ define amdgpu_kernel void @store_sgpr_ptr_large_offset(ptr addrspace(1) %out) {
 ; CHECK: buffer_atomic_add v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, [[SOFFSET]]
 define amdgpu_kernel void @store_sgpr_ptr_large_offset_atomic(ptr addrspace(1) %out) {
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 32768
-  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 5 seq_cst
+  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 5 syncscope("agent") seq_cst
   ret void
 }
 
@@ -174,8 +174,8 @@ define amdgpu_kernel void @store_vgpr_ptr(ptr addrspace(1) %out) {
 
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare void @llvm.amdgcn.raw.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg, i32 immarg) #2
-declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32 immarg) #3
+declare void @llvm.amdgcn.raw.ptr.tbuffer.store.i32(i32, ptr addrspace(8), i32, i32, i32 immarg, i32 immarg) #2
+declare i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8), i32, i32, i32 immarg) #3
 
 attributes #0 = { nounwind readonly }
 attributes #1 = { nounwind readnone speculatable willreturn }

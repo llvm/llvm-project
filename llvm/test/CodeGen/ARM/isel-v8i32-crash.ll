@@ -12,14 +12,12 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
 ; CHECK: func:
 ; CHECK: vcvt.s32.f32  q[[R:[0-9]]], q[[R]], #3
-define void @func(i16* nocapture %pb, float* nocapture readonly %pf) #0 {
+define void @func(ptr nocapture %pb, ptr nocapture readonly %pf) #0 {
 entry:
-  %0 = bitcast float* %pf to <8 x float>*
-  %1 = load <8 x float>, <8 x float>* %0, align 4
-  %2 = fmul <8 x float> %1, <float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00>
-  %3 = fptosi <8 x float> %2 to <8 x i16>
-  %4 = bitcast i16* %pb to <8 x i16>*
-  store <8 x i16> %3, <8 x i16>* %4, align 2
+  %0 = load <8 x float>, ptr %pf, align 4
+  %1 = fmul <8 x float> %0, <float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00>
+  %2 = fptosi <8 x float> %1 to <8 x i16>
+  store <8 x i16> %2, ptr %pb, align 2
   ret void
 }
 

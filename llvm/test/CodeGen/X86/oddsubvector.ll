@@ -139,9 +139,8 @@ define <16 x i32> @PR42819(ptr %a0) {
 ; AVX512-LABEL: PR42819:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqu (%rdi), %ymm0
-; AVX512-NEXT:    movw $-8192, %ax # imm = 0xE000
-; AVX512-NEXT:    kmovw %eax, %k1
-; AVX512-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    valignd {{.*#+}} zmm0 = zmm1[3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0,1,2]
 ; AVX512-NEXT:    retq
   %1 = load <8 x i32>, ptr %a0, align 4
   %2 = shufflevector <8 x i32> %1, <8 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>

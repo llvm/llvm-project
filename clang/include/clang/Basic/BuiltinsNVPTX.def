@@ -54,7 +54,11 @@
 #pragma push_macro("PTX76")
 #pragma push_macro("PTX77")
 #pragma push_macro("PTX78")
-#define PTX78 "ptx78"
+#pragma push_macro("PTX80")
+#pragma push_macro("PTX81")
+#define PTX81 "ptx81"
+#define PTX80 "ptx80|" PTX81
+#define PTX78 "ptx78|" PTX80
 #define PTX77 "ptx77|" PTX78
 #define PTX76 "ptx76|" PTX77
 #define PTX75 "ptx75|" PTX76
@@ -94,6 +98,31 @@ BUILTIN(__nvvm_read_ptx_sreg_nctaid_x, "i", "nc")
 BUILTIN(__nvvm_read_ptx_sreg_nctaid_y, "i", "nc")
 BUILTIN(__nvvm_read_ptx_sreg_nctaid_z, "i", "nc")
 BUILTIN(__nvvm_read_ptx_sreg_nctaid_w, "i", "nc")
+
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_clusterid_x, "i", "nc", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_clusterid_y, "i", "nc", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_clusterid_z, "i", "nc", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_clusterid_w, "i", "nc", AND(SM_90, PTX78))
+
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_nclusterid_x, "i", "nc", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_nclusterid_y, "i", "nc", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_nclusterid_z, "i", "nc", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_nclusterid_w, "i", "nc", AND(SM_90, PTX78))
+
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_cluster_ctaid_x, "i", "nc", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_cluster_ctaid_y, "i", "nc", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_cluster_ctaid_z, "i", "nc", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_cluster_ctaid_w, "i", "nc", AND(SM_90, PTX78))
+
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_cluster_nctaid_x, "i", "nc", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_cluster_nctaid_y, "i", "nc", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_cluster_nctaid_z, "i", "nc", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_cluster_nctaid_w, "i", "nc", AND(SM_90, PTX78))
+
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_cluster_ctarank, "i", "nc", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_read_ptx_sreg_cluster_nctarank, "i", "nc", AND(SM_90, PTX78))
+
+TARGET_BUILTIN(__nvvm_is_explicit_cluster, "b", "nc", AND(SM_90, PTX78))
 
 BUILTIN(__nvvm_read_ptx_sreg_laneid, "i", "nc")
 BUILTIN(__nvvm_read_ptx_sreg_warpid, "i", "nc")
@@ -144,16 +173,20 @@ TARGET_BUILTIN(__nvvm_fmin_nan_xorsign_abs_f16x2, "V2hV2hV2h", "",
                AND(SM_86, PTX72))
 TARGET_BUILTIN(__nvvm_fmin_ftz_nan_xorsign_abs_f16x2, "V2hV2hV2h", "",
                AND(SM_86, PTX72))
-TARGET_BUILTIN(__nvvm_fmin_bf16, "UsUsUs", "", AND(SM_80, PTX70))
-TARGET_BUILTIN(__nvvm_fmin_nan_bf16, "UsUsUs", "", AND(SM_80, PTX70))
-TARGET_BUILTIN(__nvvm_fmin_xorsign_abs_bf16, "UsUsUs", "", AND(SM_86, PTX72))
-TARGET_BUILTIN(__nvvm_fmin_nan_xorsign_abs_bf16, "UsUsUs", "",
+TARGET_BUILTIN(__nvvm_fmin_bf16, "yyy", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmin_ftz_bf16, "yyy", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmin_nan_bf16, "yyy", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmin_ftz_nan_bf16, "yyy", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmin_xorsign_abs_bf16, "yyy", "", AND(SM_86, PTX72))
+TARGET_BUILTIN(__nvvm_fmin_nan_xorsign_abs_bf16, "yyy", "",
                AND(SM_86, PTX72))
-TARGET_BUILTIN(__nvvm_fmin_bf16x2, "ZUiZUiZUi", "", AND(SM_80, PTX70))
-TARGET_BUILTIN(__nvvm_fmin_nan_bf16x2, "ZUiZUiZUi", "", AND(SM_80, PTX70))
-TARGET_BUILTIN(__nvvm_fmin_xorsign_abs_bf16x2, "ZUiZUiZUi", "",
+TARGET_BUILTIN(__nvvm_fmin_bf16x2, "V2yV2yV2y", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmin_ftz_bf16x2, "V2yV2yV2y", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmin_nan_bf16x2, "V2yV2yV2y", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmin_ftz_nan_bf16x2, "V2yV2yV2y", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmin_xorsign_abs_bf16x2, "V2yV2yV2y", "",
                AND(SM_86, PTX72))
-TARGET_BUILTIN(__nvvm_fmin_nan_xorsign_abs_bf16x2, "ZUiZUiZUi", "",
+TARGET_BUILTIN(__nvvm_fmin_nan_xorsign_abs_bf16x2, "V2yV2yV2y", "",
                AND(SM_86, PTX72))
 BUILTIN(__nvvm_fmin_f, "fff", "")
 BUILTIN(__nvvm_fmin_ftz_f, "fff", "")
@@ -186,16 +219,20 @@ TARGET_BUILTIN(__nvvm_fmax_nan_xorsign_abs_f16x2, "V2hV2hV2h", "",
                AND(SM_86, PTX72))
 TARGET_BUILTIN(__nvvm_fmax_ftz_nan_xorsign_abs_f16x2, "V2hV2hV2h", "",
                AND(SM_86, PTX72))
-TARGET_BUILTIN(__nvvm_fmax_bf16, "UsUsUs", "", AND(SM_80, PTX70))
-TARGET_BUILTIN(__nvvm_fmax_nan_bf16, "UsUsUs", "", AND(SM_80, PTX70))
-TARGET_BUILTIN(__nvvm_fmax_xorsign_abs_bf16, "UsUsUs", "", AND(SM_86, PTX72))
-TARGET_BUILTIN(__nvvm_fmax_nan_xorsign_abs_bf16, "UsUsUs", "",
+TARGET_BUILTIN(__nvvm_fmax_bf16, "yyy", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmax_ftz_bf16, "yyy", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmax_nan_bf16, "yyy", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmax_ftz_nan_bf16, "yyy", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmax_xorsign_abs_bf16, "yyy", "", AND(SM_86, PTX72))
+TARGET_BUILTIN(__nvvm_fmax_nan_xorsign_abs_bf16, "yyy", "",
                AND(SM_86, PTX72))
-TARGET_BUILTIN(__nvvm_fmax_bf16x2, "ZUiZUiZUi", "", AND(SM_80, PTX70))
-TARGET_BUILTIN(__nvvm_fmax_nan_bf16x2, "ZUiZUiZUi", "", AND(SM_80, PTX70))
-TARGET_BUILTIN(__nvvm_fmax_xorsign_abs_bf16x2, "ZUiZUiZUi", "",
+TARGET_BUILTIN(__nvvm_fmax_bf16x2, "V2yV2yV2y", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmax_ftz_bf16x2, "V2yV2yV2y", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmax_nan_bf16x2, "V2yV2yV2y", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmax_ftz_nan_bf16x2, "V2yV2yV2y", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fmax_xorsign_abs_bf16x2, "V2yV2yV2y", "",
                AND(SM_86, PTX72))
-TARGET_BUILTIN(__nvvm_fmax_nan_xorsign_abs_bf16x2, "ZUiZUiZUi", "",
+TARGET_BUILTIN(__nvvm_fmax_nan_xorsign_abs_bf16x2, "V2yV2yV2y", "",
                AND(SM_86, PTX72))
 BUILTIN(__nvvm_fmax_f, "fff", "")
 BUILTIN(__nvvm_fmax_ftz_f, "fff", "")
@@ -323,10 +360,10 @@ TARGET_BUILTIN(__nvvm_fma_rn_sat_f16x2, "V2hV2hV2hV2h", "", AND(SM_53, PTX42))
 TARGET_BUILTIN(__nvvm_fma_rn_ftz_sat_f16x2, "V2hV2hV2hV2h", "", AND(SM_53, PTX42))
 TARGET_BUILTIN(__nvvm_fma_rn_relu_f16x2, "V2hV2hV2hV2h", "", AND(SM_80, PTX70))
 TARGET_BUILTIN(__nvvm_fma_rn_ftz_relu_f16x2, "V2hV2hV2hV2h", "", AND(SM_80, PTX70))
-TARGET_BUILTIN(__nvvm_fma_rn_bf16, "UsUsUsUs", "", AND(SM_80, PTX70))
-TARGET_BUILTIN(__nvvm_fma_rn_relu_bf16, "UsUsUsUs", "", AND(SM_80, PTX70))
-TARGET_BUILTIN(__nvvm_fma_rn_bf16x2, "ZUiZUiZUiZUi", "", AND(SM_80, PTX70))
-TARGET_BUILTIN(__nvvm_fma_rn_relu_bf16x2, "ZUiZUiZUiZUi", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fma_rn_bf16, "yyyy", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fma_rn_relu_bf16, "yyyy", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fma_rn_bf16x2, "V2yV2yV2yV2y", "", AND(SM_80, PTX70))
+TARGET_BUILTIN(__nvvm_fma_rn_relu_bf16x2, "V2yV2yV2yV2y", "", AND(SM_80, PTX70))
 BUILTIN(__nvvm_fma_rn_ftz_f, "ffff", "")
 BUILTIN(__nvvm_fma_rn_f, "ffff", "")
 BUILTIN(__nvvm_fma_rz_ftz_f, "ffff", "")
@@ -514,20 +551,20 @@ BUILTIN(__nvvm_ull2d_rp, "dULLi", "")
 BUILTIN(__nvvm_f2h_rn_ftz, "Usf", "")
 BUILTIN(__nvvm_f2h_rn, "Usf", "")
 
-TARGET_BUILTIN(__nvvm_ff2bf16x2_rn, "ZUiff", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_ff2bf16x2_rn_relu, "ZUiff", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_ff2bf16x2_rz, "ZUiff", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_ff2bf16x2_rz_relu, "ZUiff", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_ff2bf16x2_rn, "V2yff", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_ff2bf16x2_rn_relu, "V2yff", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_ff2bf16x2_rz, "V2yff", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_ff2bf16x2_rz_relu, "V2yff", "", AND(SM_80,PTX70))
 
 TARGET_BUILTIN(__nvvm_ff2f16x2_rn, "V2hff", "", AND(SM_80,PTX70))
 TARGET_BUILTIN(__nvvm_ff2f16x2_rn_relu, "V2hff", "", AND(SM_80,PTX70))
 TARGET_BUILTIN(__nvvm_ff2f16x2_rz, "V2hff", "", AND(SM_80,PTX70))
 TARGET_BUILTIN(__nvvm_ff2f16x2_rz_relu, "V2hff", "", AND(SM_80,PTX70))
 
-TARGET_BUILTIN(__nvvm_f2bf16_rn, "ZUsf", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_f2bf16_rn_relu, "ZUsf", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_f2bf16_rz, "ZUsf", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_f2bf16_rz_relu, "ZUsf", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_f2bf16_rn, "yf", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_f2bf16_rn_relu, "yf", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_f2bf16_rz, "yf", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_f2bf16_rz_relu, "yf", "", AND(SM_80,PTX70))
 
 TARGET_BUILTIN(__nvvm_f2tf32_rna, "ZUif", "", AND(SM_80,PTX70))
 
@@ -552,6 +589,11 @@ BUILTIN(__nvvm_bar_sync, "vi", "n")
 TARGET_BUILTIN(__nvvm_bar_warp_sync, "vUi", "n", PTX60)
 TARGET_BUILTIN(__nvvm_barrier_sync, "vUi", "n", PTX60)
 TARGET_BUILTIN(__nvvm_barrier_sync_cnt, "vUiUi", "n", PTX60)
+
+TARGET_BUILTIN(__nvvm_barrier_cluster_arrive, "v", "n", AND(SM_90,PTX78))
+TARGET_BUILTIN(__nvvm_barrier_cluster_arrive_relaxed, "v", "n", AND(SM_90,PTX80))
+TARGET_BUILTIN(__nvvm_barrier_cluster_wait, "v", "n", AND(SM_90,PTX78))
+TARGET_BUILTIN(__nvvm_fence_sc_cluster, "v", "n", AND(SM_90,PTX78))
 
 // Shuffle
 
@@ -782,8 +824,50 @@ TARGET_BUILTIN(__nvvm_atom_sys_cas_gen_ll, "LLiLLiD*LLiLLi", "n", SM_60)
 BUILTIN(__nvvm_compiler_error, "vcC*4", "n")
 BUILTIN(__nvvm_compiler_warn, "vcC*4", "n")
 
-// __ldg.  This is not implemented as a builtin by nvcc.
+BUILTIN(__nvvm_ldu_c, "ccC*", "")
+BUILTIN(__nvvm_ldu_sc, "ScScC*", "")
+BUILTIN(__nvvm_ldu_s, "ssC*", "")
+BUILTIN(__nvvm_ldu_i, "iiC*", "")
+BUILTIN(__nvvm_ldu_l, "LiLiC*", "")
+BUILTIN(__nvvm_ldu_ll, "LLiLLiC*", "")
+
+BUILTIN(__nvvm_ldu_uc, "UcUcC*", "")
+BUILTIN(__nvvm_ldu_us, "UsUsC*", "")
+BUILTIN(__nvvm_ldu_ui, "UiUiC*", "")
+BUILTIN(__nvvm_ldu_ul, "ULiULiC*", "")
+BUILTIN(__nvvm_ldu_ull, "ULLiULLiC*", "")
+
+BUILTIN(__nvvm_ldu_h, "hhC*", "")
+BUILTIN(__nvvm_ldu_f, "ffC*", "")
+BUILTIN(__nvvm_ldu_d, "ddC*", "")
+
+BUILTIN(__nvvm_ldu_c2, "E2cE2cC*", "")
+BUILTIN(__nvvm_ldu_sc2, "E2ScE2ScC*", "")
+BUILTIN(__nvvm_ldu_c4, "E4cE4cC*", "")
+BUILTIN(__nvvm_ldu_sc4, "E4ScE4ScC*", "")
+BUILTIN(__nvvm_ldu_s2, "E2sE2sC*", "")
+BUILTIN(__nvvm_ldu_s4, "E4sE4sC*", "")
+BUILTIN(__nvvm_ldu_i2, "E2iE2iC*", "")
+BUILTIN(__nvvm_ldu_i4, "E4iE4iC*", "")
+BUILTIN(__nvvm_ldu_l2, "E2LiE2LiC*", "")
+BUILTIN(__nvvm_ldu_ll2, "E2LLiE2LLiC*", "")
+
+BUILTIN(__nvvm_ldu_uc2, "E2UcE2UcC*", "")
+BUILTIN(__nvvm_ldu_uc4, "E4UcE4UcC*", "")
+BUILTIN(__nvvm_ldu_us2, "E2UsE2UsC*", "")
+BUILTIN(__nvvm_ldu_us4, "E4UsE4UsC*", "")
+BUILTIN(__nvvm_ldu_ui2, "E2UiE2UiC*", "")
+BUILTIN(__nvvm_ldu_ui4, "E4UiE4UiC*", "")
+BUILTIN(__nvvm_ldu_ul2, "E2ULiE2ULiC*", "")
+BUILTIN(__nvvm_ldu_ull2, "E2ULLiE2ULLiC*", "")
+
+BUILTIN(__nvvm_ldu_h2, "E2hE2hC*", "")
+BUILTIN(__nvvm_ldu_f2, "E2fE2fC*", "")
+BUILTIN(__nvvm_ldu_f4, "E4fE4fC*", "")
+BUILTIN(__nvvm_ldu_d2, "E2dE2dC*", "")
+
 BUILTIN(__nvvm_ldg_c, "ccC*", "")
+BUILTIN(__nvvm_ldg_sc, "ScScC*", "")
 BUILTIN(__nvvm_ldg_s, "ssC*", "")
 BUILTIN(__nvvm_ldg_i, "iiC*", "")
 BUILTIN(__nvvm_ldg_l, "LiLiC*", "")
@@ -795,15 +879,19 @@ BUILTIN(__nvvm_ldg_ui, "UiUiC*", "")
 BUILTIN(__nvvm_ldg_ul, "ULiULiC*", "")
 BUILTIN(__nvvm_ldg_ull, "ULLiULLiC*", "")
 
+BUILTIN(__nvvm_ldg_h, "hhC*", "")
 BUILTIN(__nvvm_ldg_f, "ffC*", "")
 BUILTIN(__nvvm_ldg_d, "ddC*", "")
 
 BUILTIN(__nvvm_ldg_c2, "E2cE2cC*", "")
+BUILTIN(__nvvm_ldg_sc2, "E2ScE2ScC*", "")
 BUILTIN(__nvvm_ldg_c4, "E4cE4cC*", "")
+BUILTIN(__nvvm_ldg_sc4, "E4ScE4ScC*", "")
 BUILTIN(__nvvm_ldg_s2, "E2sE2sC*", "")
 BUILTIN(__nvvm_ldg_s4, "E4sE4sC*", "")
 BUILTIN(__nvvm_ldg_i2, "E2iE2iC*", "")
 BUILTIN(__nvvm_ldg_i4, "E4iE4iC*", "")
+BUILTIN(__nvvm_ldg_l2, "E2LiE2LiC*", "")
 BUILTIN(__nvvm_ldg_ll2, "E2LLiE2LLiC*", "")
 
 BUILTIN(__nvvm_ldg_uc2, "E2UcE2UcC*", "")
@@ -812,8 +900,10 @@ BUILTIN(__nvvm_ldg_us2, "E2UsE2UsC*", "")
 BUILTIN(__nvvm_ldg_us4, "E4UsE4UsC*", "")
 BUILTIN(__nvvm_ldg_ui2, "E2UiE2UiC*", "")
 BUILTIN(__nvvm_ldg_ui4, "E4UiE4UiC*", "")
+BUILTIN(__nvvm_ldg_ul2, "E2ULiE2ULiC*", "")
 BUILTIN(__nvvm_ldg_ull2, "E2ULLiE2ULLiC*", "")
 
+BUILTIN(__nvvm_ldg_h2, "E2hE2hC*", "")
 BUILTIN(__nvvm_ldg_f2, "E2fE2fC*", "")
 BUILTIN(__nvvm_ldg_f4, "E4fE4fC*", "")
 BUILTIN(__nvvm_ldg_d2, "E2dE2dC*", "")
@@ -823,6 +913,7 @@ BUILTIN(__nvvm_isspacep_const, "bvC*", "nc")
 BUILTIN(__nvvm_isspacep_global, "bvC*", "nc")
 BUILTIN(__nvvm_isspacep_local, "bvC*", "nc")
 BUILTIN(__nvvm_isspacep_shared, "bvC*", "nc")
+TARGET_BUILTIN(__nvvm_isspacep_shared_cluster,"bvC*", "nc", AND(SM_90,PTX78))
 
 // Builtins to support WMMA instructions on sm_70
 TARGET_BUILTIN(__hmma_m16n16k16_ld_a, "vi*iC*UiIi", "", AND(SM_70,PTX60))
@@ -930,10 +1021,10 @@ TARGET_BUILTIN(__nvvm_cp_async_mbarrier_arrive_shared, "vWi*3", "", AND(SM_80,PT
 TARGET_BUILTIN(__nvvm_cp_async_mbarrier_arrive_noinc, "vWi*", "", AND(SM_80,PTX70))
 TARGET_BUILTIN(__nvvm_cp_async_mbarrier_arrive_noinc_shared, "vWi*3", "", AND(SM_80,PTX70))
 
-TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_4, "vv*3vC*1", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_8, "vv*3vC*1", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_16, "vv*3vC*1", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_cp_async_cg_shared_global_16, "vv*3vC*1", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_4, "vv*3vC*1.", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_8, "vv*3vC*1.", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_16, "vv*3vC*1.", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_cg_shared_global_16, "vv*3vC*1.", "", AND(SM_80,PTX70))
 
 TARGET_BUILTIN(__nvvm_cp_async_commit_group, "v", "", AND(SM_80,PTX70))
 TARGET_BUILTIN(__nvvm_cp_async_wait_group, "vIi", "", AND(SM_80,PTX70))
@@ -941,10 +1032,15 @@ TARGET_BUILTIN(__nvvm_cp_async_wait_all, "v", "", AND(SM_80,PTX70))
 
 
 // bf16, bf16x2 abs, neg
-TARGET_BUILTIN(__nvvm_abs_bf16, "UsUs", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_abs_bf16x2, "ZUiZUi", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_neg_bf16, "UsUs", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_neg_bf16x2, "ZUiZUi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_abs_bf16, "yy", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_abs_bf16x2, "V2yV2y", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_neg_bf16, "yy", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_neg_bf16x2, "V2yV2y", "", AND(SM_80,PTX70))
+
+TARGET_BUILTIN(__nvvm_mapa, "v*v*i", "", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_mapa_shared_cluster, "v*3v*3i", "", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_getctarank, "iv*", "", AND(SM_90, PTX78))
+TARGET_BUILTIN(__nvvm_getctarank_shared_cluster, "iv*3", "", AND(SM_90,PTX78))
 
 #undef BUILTIN
 #undef TARGET_BUILTIN
@@ -974,3 +1070,5 @@ TARGET_BUILTIN(__nvvm_neg_bf16x2, "ZUiZUi", "", AND(SM_80,PTX70))
 #pragma pop_macro("PTX76")
 #pragma pop_macro("PTX77")
 #pragma pop_macro("PTX78")
+#pragma pop_macro("PTX80")
+#pragma pop_macro("PTX81")

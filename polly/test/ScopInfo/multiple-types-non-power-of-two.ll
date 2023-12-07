@@ -61,7 +61,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @multiple_types(i8* %A) {
+define void @multiple_types(ptr %A) {
 bb:
   br label %bb1
 
@@ -72,69 +72,58 @@ bb1:                                              ; preds = %bb20, %bb
 
 bb2:                                              ; preds = %bb1
   %load.i1.offset = mul i64 %i.0, 1
-  %load.i1.ptr = getelementptr inbounds i8, i8* %A, i64 %load.i1.offset
-  %load.i1.ptrcast = bitcast i8* %load.i1.ptr to i1*
-  %load.i1.val = load i1, i1* %load.i1.ptrcast
+  %load.i1.ptr = getelementptr inbounds i8, ptr %A, i64 %load.i1.offset
+  %load.i1.val = load i1, ptr %load.i1.ptr
   %load.i1.val.trunc = zext i1 %load.i1.val to i8
 
   %load.i16.offset = mul i64 %i.0, 2
-  %load.i16.ptr = getelementptr inbounds i8, i8* %A, i64 %load.i16.offset
-  %load.i16.ptrcast = bitcast i8* %load.i16.ptr to i16*
-  %load.i16.val = load i16, i16* %load.i16.ptrcast
+  %load.i16.ptr = getelementptr inbounds i8, ptr %A, i64 %load.i16.offset
+  %load.i16.val = load i16, ptr %load.i16.ptr
   %load.i16.val.trunc = trunc i16 %load.i16.val to i8
 
   %load.i24.offset = mul i64 %i.0, 4
-  %load.i24.ptr = getelementptr inbounds i8, i8* %A, i64 %load.i24.offset
-  %load.i24.ptrcast = bitcast i8* %load.i24.ptr to i24*
-  %load.i24.val = load i24, i24* %load.i24.ptrcast
+  %load.i24.ptr = getelementptr inbounds i8, ptr %A, i64 %load.i24.offset
+  %load.i24.val = load i24, ptr %load.i24.ptr
   %load.i24.val.trunc = trunc i24 %load.i24.val to i8
 
   %load.i32.offset = mul i64 %i.0, 4
-  %load.i32.ptr = getelementptr inbounds i8, i8* %A, i64 %load.i32.offset
-  %load.i32.ptrcast = bitcast i8* %load.i32.ptr to i32*
-  %load.i32.val = load i32, i32* %load.i32.ptrcast
+  %load.i32.ptr = getelementptr inbounds i8, ptr %A, i64 %load.i32.offset
+  %load.i32.val = load i32, ptr %load.i32.ptr
   %load.i32.val.trunc = trunc i32 %load.i32.val to i8
 
   %load.i40.offset = mul i64 %i.0, 8
-  %load.i40.ptr = getelementptr inbounds i8, i8* %A, i64 %load.i40.offset
-  %load.i40.ptrcast = bitcast i8* %load.i40.ptr to i40*
-  %load.i40.val = load i40, i40* %load.i40.ptrcast
+  %load.i40.ptr = getelementptr inbounds i8, ptr %A, i64 %load.i40.offset
+  %load.i40.val = load i40, ptr %load.i40.ptr
   %load.i40.val.trunc = trunc i40 %load.i40.val to i8
 
   %load.i48.offset = mul i64 %i.0, 8
-  %load.i48.ptr = getelementptr inbounds i8, i8* %A, i64 %load.i48.offset
-  %load.i48.ptrcast = bitcast i8* %load.i48.ptr to i48*
-  %load.i48.val = load i48, i48* %load.i48.ptrcast
+  %load.i48.ptr = getelementptr inbounds i8, ptr %A, i64 %load.i48.offset
+  %load.i48.val = load i48, ptr %load.i48.ptr
   %load.i48.val.trunc = trunc i48 %load.i48.val to i8
 
   %load.i56.offset = mul i64 %i.0, 8
-  %load.i56.ptr = getelementptr inbounds i8, i8* %A, i64 %load.i56.offset
-  %load.i56.ptrcast = bitcast i8* %load.i56.ptr to i56*
-  %load.i56.val = load i56, i56* %load.i56.ptrcast
+  %load.i56.ptr = getelementptr inbounds i8, ptr %A, i64 %load.i56.offset
+  %load.i56.val = load i56, ptr %load.i56.ptr
   %load.i56.val.trunc = trunc i56 %load.i56.val to i8
 
   %load.i64.offset = mul i64 %i.0, 8
-  %load.i64.ptr = getelementptr inbounds i8, i8* %A, i64 %load.i64.offset
-  %load.i64.ptrcast = bitcast i8* %load.i64.ptr to i64*
-  %load.i64.val = load i64, i64* %load.i64.ptrcast
+  %load.i64.ptr = getelementptr inbounds i8, ptr %A, i64 %load.i64.offset
+  %load.i64.val = load i64, ptr %load.i64.ptr
   %load.i64.val.trunc = trunc i64 %load.i64.val to i8
 
   %load.i120.offset = mul i64 %i.0, 16
-  %load.i120.ptr = getelementptr inbounds i8, i8* %A, i64 %load.i120.offset
-  %load.i120.ptrcast = bitcast i8* %load.i120.ptr to i120*
-  %load.i120.val = load i120, i120* %load.i120.ptrcast
+  %load.i120.ptr = getelementptr inbounds i8, ptr %A, i64 %load.i120.offset
+  %load.i120.val = load i120, ptr %load.i120.ptr
   %load.i120.val.trunc = trunc i120 %load.i120.val to i8
 
   %load.i192.offset = mul i64 %i.0, 24
-  %load.i192.ptr = getelementptr inbounds i8, i8* %A, i64 %load.i192.offset
-  %load.i192.ptrcast = bitcast i8* %load.i192.ptr to i192*
-  %load.i192.val = load i192, i192* %load.i192.ptrcast
+  %load.i192.ptr = getelementptr inbounds i8, ptr %A, i64 %load.i192.offset
+  %load.i192.val = load i192, ptr %load.i192.ptr
   %load.i192.val.trunc = trunc i192 %load.i192.val to i8
 
   %load.i248.offset = mul i64 %i.0, 32
-  %load.i248.ptr = getelementptr inbounds i8, i8* %A, i64 %load.i248.offset
-  %load.i248.ptrcast = bitcast i8* %load.i248.ptr to i248*
-  %load.i248.val = load i248, i248* %load.i248.ptrcast
+  %load.i248.ptr = getelementptr inbounds i8, ptr %A, i64 %load.i248.offset
+  %load.i248.val = load i248, ptr %load.i248.ptr
   %load.i248.val.trunc = trunc i248 %load.i248.val to i8
 
   %sum = add i8 %load.i1.val.trunc, %load.i16.val.trunc
@@ -147,8 +136,8 @@ bb2:                                              ; preds = %bb1
   %sum6 = add i8 %sum5, %load.i120.val.trunc
   %sum7 = add i8 %sum6, %load.i192.val.trunc
   %sum8 = add i8 %sum7, %load.i248.val.trunc
-  %tmp7 = getelementptr inbounds i8, i8* %A, i64 %i.0
-  store i8 %sum8, i8* %tmp7
+  %tmp7 = getelementptr inbounds i8, ptr %A, i64 %i.0
+  store i8 %sum8, ptr %tmp7
   br label %bb20
 
 bb20:                                             ; preds = %bb2

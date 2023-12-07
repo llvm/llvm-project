@@ -151,7 +151,7 @@ define void @f1(i8 %a) {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(a))>>
-  store i8 %a, i8 * @a
+  store i8 %a, ptr @a
   ret void
 }
 
@@ -285,7 +285,7 @@ define void @f2(i16 %a) {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(b))>>
-  store i16 %a, i16 * @b
+  store i16 %a, ptr @b
   ret void
 }
 
@@ -419,7 +419,7 @@ define void @f3(i32 %a) {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(c))>>
-  store i32 %a, i32 * @c
+  store i32 %a, ptr @c
   ret void
 }
 
@@ -601,7 +601,7 @@ define void @f4(i64 %a) {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Imm:4>>
-  store i64 %a, i64 * @d
+  store i64 %a, ptr @d
   ret void
 }
 
@@ -735,7 +735,7 @@ define void @f5(float %e) {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(e))>>
-  store float %e, float * @e
+  store float %e, ptr @e
   ret void
 }
 
@@ -869,6 +869,6 @@ define void @f6(double %f) {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(f))>>
-  store double %f, double * @f
+  store double %f, ptr @f
   ret void
 }

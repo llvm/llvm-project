@@ -166,7 +166,7 @@ void f(){
   typename F1<T>:: /*template*/ Iterator<0> Mypos; // expected-error {{use 'template' keyword to treat 'Iterator' as a dependent template name}}
 }
 
-// Tests for &/* fixits radar 7113438.
+// Tests for &/* fixits
 class AD {};
 class BD: public AD {};
 

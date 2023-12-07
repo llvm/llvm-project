@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
   // Add parameters to Parameters.
@@ -105,7 +103,7 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("Mark")) {
     const QualType T = VD->getType();
     if ((T->isPointerType() && !T->getPointeeType().isConstQualified()) ||
-        T->isArrayType())
+        T->isArrayType() || T->isRecordType())
       markCanNotBeConst(VD->getInit(), true);
     else if (T->isLValueReferenceType() &&
              !T->getPointeeType().isConstQualified())
@@ -233,6 +231,4 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
   }
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

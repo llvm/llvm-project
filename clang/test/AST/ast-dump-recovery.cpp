@@ -420,3 +420,15 @@ void RecoverToAnInvalidDecl() {
   // CHECK:      RecoveryExpr {{.*}} '<dependent type>' contains-errors lvalue
   // CHECK-NEXT: `-DeclRefExpr {{.*}} 'foo' 'int *'
 }
+
+void RecoveryToDoWhileStmtCond() {
+  // CHECK:       FunctionDecl {{.*}} RecoveryToDoWhileStmtCond
+  // CHECK:       `-DoStmt {{.*}}
+  // CHECK-NEXT:    |-CompoundStmt {{.*}}
+  // CHECK-NEXT:    `-BinaryOperator {{.*}} '<dependent type>' contains-errors '<'
+  // CHECK-NEXT:      |-BinaryOperator {{.*}} '<dependent type>' contains-errors '+'
+  // CHECK-NEXT:      | |-RecoveryExpr {{.*}} '<dependent type>' contains-errors lvalue
+  // CHECK-NEXT:      | `-IntegerLiteral {{.*}} 'int' 1
+  // CHECK-NEXT:      `-IntegerLiteral {{.*}} 'int' 10
+  do {} while (some_invalid_val + 1 < 10);
+}

@@ -62,7 +62,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @foo(float* %A, float* %B, i64 %p1, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6, i64 %p7, i64 %p8, i64 %p9, i64 %p10, i64 %p11, i64 %p12) #0 {
+define void @foo(ptr %A, ptr %B, i64 %p1, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6, i64 %p7, i64 %p8, i64 %p9, i64 %p10, i64 %p11, i64 %p12) #0 {
 entry:
   br label %entry.split
 
@@ -72,54 +72,54 @@ entry.split:                                      ; preds = %entry
 for.body:                                         ; preds = %entry.split, %for.body
   %i.01 = phi i64 [ 0, %entry.split ], [ %tmp25, %for.body ]
   %tmp = add i64 %p1, %i.01
-  %arrayidx = getelementptr float, float* %B, i64 %tmp
+  %arrayidx = getelementptr float, ptr %B, i64 %tmp
   %tmp2 = add i64 %p2, %i.01
-  %arrayidx2 = getelementptr float, float* %B, i64 %tmp2
+  %arrayidx2 = getelementptr float, ptr %B, i64 %tmp2
   %tmp3 = add i64 %p3, %i.01
-  %arrayidx5 = getelementptr float, float* %B, i64 %tmp3
+  %arrayidx5 = getelementptr float, ptr %B, i64 %tmp3
   %tmp4 = add i64 %p4, %i.01
-  %arrayidx8 = getelementptr float, float* %B, i64 %tmp4
+  %arrayidx8 = getelementptr float, ptr %B, i64 %tmp4
   %tmp5 = add i64 %p5, %i.01
-  %arrayidx11 = getelementptr float, float* %B, i64 %tmp5
+  %arrayidx11 = getelementptr float, ptr %B, i64 %tmp5
   %tmp6 = add i64 %p6, %i.01
-  %arrayidx14 = getelementptr float, float* %B, i64 %tmp6
+  %arrayidx14 = getelementptr float, ptr %B, i64 %tmp6
   %tmp7 = add i64 %p7, %i.01
-  %arrayidx17 = getelementptr float, float* %B, i64 %tmp7
+  %arrayidx17 = getelementptr float, ptr %B, i64 %tmp7
   %tmp8 = add i64 %p8, %i.01
-  %arrayidx20 = getelementptr float, float* %B, i64 %tmp8
+  %arrayidx20 = getelementptr float, ptr %B, i64 %tmp8
   %tmp9 = add i64 %p9, %i.01
-  %arrayidx23 = getelementptr float, float* %B, i64 %tmp9
+  %arrayidx23 = getelementptr float, ptr %B, i64 %tmp9
   %tmp10 = add i64 %p10, %i.01
-  %arrayidx26 = getelementptr float, float* %B, i64 %tmp10
+  %arrayidx26 = getelementptr float, ptr %B, i64 %tmp10
   %tmp11 = add i64 %p11, %i.01
-  %arrayidx29 = getelementptr float, float* %B, i64 %tmp11
+  %arrayidx29 = getelementptr float, ptr %B, i64 %tmp11
   %tmp12 = add i64 %p12, %i.01
-  %arrayidx32 = getelementptr float, float* %B, i64 %tmp12
-  %arrayidx34 = getelementptr float, float* %A, i64 %i.01
-  %tmp13 = load float, float* %arrayidx, align 4
-  %tmp14 = load float, float* %arrayidx2, align 4
+  %arrayidx32 = getelementptr float, ptr %B, i64 %tmp12
+  %arrayidx34 = getelementptr float, ptr %A, i64 %i.01
+  %tmp13 = load float, ptr %arrayidx, align 4
+  %tmp14 = load float, ptr %arrayidx2, align 4
   %add3 = fadd float %tmp13, %tmp14
-  %tmp15 = load float, float* %arrayidx5, align 4
+  %tmp15 = load float, ptr %arrayidx5, align 4
   %add6 = fadd float %add3, %tmp15
-  %tmp16 = load float, float* %arrayidx8, align 4
+  %tmp16 = load float, ptr %arrayidx8, align 4
   %add9 = fadd float %add6, %tmp16
-  %tmp17 = load float, float* %arrayidx11, align 4
+  %tmp17 = load float, ptr %arrayidx11, align 4
   %add12 = fadd float %add9, %tmp17
-  %tmp18 = load float, float* %arrayidx14, align 4
+  %tmp18 = load float, ptr %arrayidx14, align 4
   %add15 = fadd float %add12, %tmp18
-  %tmp19 = load float, float* %arrayidx17, align 4
+  %tmp19 = load float, ptr %arrayidx17, align 4
   %add18 = fadd float %add15, %tmp19
-  %tmp20 = load float, float* %arrayidx20, align 4
+  %tmp20 = load float, ptr %arrayidx20, align 4
   %add21 = fadd float %add18, %tmp20
-  %tmp21 = load float, float* %arrayidx23, align 4
+  %tmp21 = load float, ptr %arrayidx23, align 4
   %add24 = fadd float %add21, %tmp21
-  %tmp22 = load float, float* %arrayidx26, align 4
+  %tmp22 = load float, ptr %arrayidx26, align 4
   %add27 = fadd float %add24, %tmp22
-  %tmp23 = load float, float* %arrayidx29, align 4
+  %tmp23 = load float, ptr %arrayidx29, align 4
   %add30 = fadd float %add27, %tmp23
-  %tmp24 = load float, float* %arrayidx32, align 4
+  %tmp24 = load float, ptr %arrayidx32, align 4
   %add33 = fadd float %add30, %tmp24
-  store float %add33, float* %arrayidx34, align 4
+  store float %add33, ptr %arrayidx34, align 4
   %tmp25 = add nsw i64 %i.01, 1
   %exitcond = icmp ne i64 %tmp25, 100
   br i1 %exitcond, label %for.body, label %for.end

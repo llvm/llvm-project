@@ -7,9 +7,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: libcpp-has-no-incomplete-format
-// TODO FMT Evaluate gcc-12 status
-// UNSUPPORTED: gcc-12
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
+// XFAIL: availability-fp_to_chars-missing
 
 // <format>
 
@@ -32,7 +32,7 @@
 auto test =
     []<class CharT, class... Args>(
         std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) constexpr {
-      size_t size = std::formatted_size(std::locale(), fmt, std::forward<Args>(args)...);
+      std::size_t size = std::formatted_size(std::locale(), fmt, std::forward<Args>(args)...);
       assert(size == expected.size());
     };
 
@@ -44,11 +44,11 @@ auto test_exception = []<class CharT, class... Args>(std::string_view, std::basi
 };
 
 int main(int, char**) {
-  format_tests<char>(test, test_exception);
+  format_tests<char, execution_modus::partial>(test, test_exception);
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   format_tests_char_to_wchar_t(test);
-  format_tests<wchar_t>(test, test_exception);
+  format_tests<wchar_t, execution_modus::partial>(test, test_exception);
 #endif
 
   return 0;

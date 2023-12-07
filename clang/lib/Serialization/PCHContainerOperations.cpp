@@ -57,6 +57,11 @@ std::unique_ptr<ASTConsumer> RawPCHContainerWriter::CreatePCHContainerGenerator(
   return std::make_unique<RawPCHContainerGenerator>(std::move(OS), Buffer);
 }
 
+ArrayRef<llvm::StringRef> RawPCHContainerReader::getFormats() const {
+  static StringRef Raw("raw");
+  return ArrayRef(Raw);
+}
+
 StringRef
 RawPCHContainerReader::ExtractPCH(llvm::MemoryBufferRef Buffer) const {
   return Buffer.getBuffer();

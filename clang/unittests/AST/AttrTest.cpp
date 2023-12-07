@@ -157,7 +157,7 @@ TEST(Attr, AnnotateType) {
   AST = buildASTFromCodeWithArgs(R"c(
     __auto_type [[clang::annotate_type("auto")]] auto_var = 1;
   )c",
-                                 {"-fdouble-square-bracket-attributes"},
+                                 {},
                                  "input.c");
 
   {
@@ -166,6 +166,18 @@ TEST(Attr, AnnotateType) {
     AutoTypeLoc AutoTL;
     AssertAnnotatedAs(Var->getTypeSourceInfo()->getTypeLoc(), "auto", AutoTL);
   }
+}
+
+TEST(Attr, RegularKeywordAttribute) {
+  auto AST = clang::tooling::buildASTFromCode("");
+  auto &Ctx = AST->getASTContext();
+  auto Funcref = clang::WebAssemblyFuncrefAttr::CreateImplicit(Ctx);
+  EXPECT_EQ(Funcref->getSyntax(), clang::AttributeCommonInfo::AS_Keyword);
+  ASSERT_FALSE(Funcref->isRegularKeywordAttribute());
+
+  auto Streaming = clang::ArmStreamingAttr::CreateImplicit(Ctx);
+  EXPECT_EQ(Streaming->getSyntax(), clang::AttributeCommonInfo::AS_Keyword);
+  ASSERT_TRUE(Streaming->isRegularKeywordAttribute());
 }
 
 } // namespace

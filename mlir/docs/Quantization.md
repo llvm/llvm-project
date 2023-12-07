@@ -44,8 +44,8 @@ previous example, when $ scale = \pi $, the maximum rounding error will be $
 
 Multiplication can be performed on scaled values with different scales, using
 the same algorithm as multiplication of real values (note that product scaled
-value has $$ scale_{product} = scale_{left \mbox{ } operand} * scale_{right
-\mbox{ } operand} $$). Addition can be performed on scaled values, so long as
+value has $ scale_{product} = scale_{left \mbox{ } operand} * scale_{right
+\mbox{ } operand} $). Addition can be performed on scaled values, so long as
 they have the same scale, using the same algorithm for addition of real values.
 This makes it convenient to represent scaled values on a computer as signed
 integers, and perform arithmetic on those signed integers, because the results
@@ -115,17 +115,23 @@ not required that all representable values of the integral type are used):
 
 $$
 \begin{align*}
-af&fine\\_value_{uint8 \\, or \\, uint16} \\\\
-      &= clampToTargetSize(roundToNearestInteger( \frac{real\\_value_{Single}}{scale_{Single}})_{sint32} + zero\\_point_{uint8 \, or \, uint16})
+af&fine\\\_value \\\\
+  &= clampToTargetSize(roundToNearestInteger( \frac{real\\\_value}{scale}) + zero\\\_point \\\\
 \end{align*}
 $$
 
-In the above, we assume that $real\\_value$ is a Single, $scale$ is a Single,
-$roundToNearestInteger$ returns a signed 32-bit integer, and $zero\\_point$
-is an unsigned 8-bit or 16-bit integer. Note that bit depth and number of fixed
-point values are indicative of common types on typical hardware but is not
-constrained to particular bit depths or a requirement that the entire range of
-an N-bit integer is used.
+where we assume the following types:
+
+- `real_value`: Single
+- `scale`: Single
+- `roundToNearestInteger`: returns a 32-bit integer
+- `zero_point`: 8-bit or 16-bit integer
+- `affine_value`: 8-bit or 16-bit integer
+
+Note that bit depth and number of fixed point values are indicative
+of common types on typical hardware but is not constrained to
+particular bit depths or a requirement that the entire range of an
+N-bit integer is used.
 
 #### Affine to real
 
@@ -136,13 +142,19 @@ can be performed:
 
 $$
 \begin{align*}
-re&al\\_value_{Single} \\\\
-      &= roundToNearestFloat((affine\\_value_{uint8 \\, or \\, uint16} - zero\\_point_{uint8 \\, or \\, uint16})_{sint32})_{Single} * scale_{Single}
+re&al\\\_value \\\\
+      &= roundToNearestFloat(affine\\\_value - zero\\\_point) * scale
 \end{align*}
 $$
 
-In the above, we assume that the result of subtraction is in 32-bit signed
-integer format, and that $roundToNearestFloat$ returns a Single.
+where we assume the following types:
+
+- `real_value`: Single
+- `scale`: Single
+- `affine_value`: 8-bit or 16-bit integer
+- `zero_point`: 8-bit or 16-bit integer
+- `roundToNearestFloat`: returns a Single
+- `-` (subtraction): returns a 32-bit signed integer
 
 #### Affine to fixed point
 
@@ -151,7 +163,7 @@ from the affine value to get the equivalent fixed point value.
 
 $$
 \begin{align*}
-  scaled\\_value = affine\\_value_{non\mbox{-}negative} - zero\\_point_{non\mbox{-}negative}
+  scaled\\\_value = affine\\\_value_{non\mbox{-}negative} - zero\\\_point_{non\mbox{-}negative}
 \end{align*}
 $$
 
@@ -162,7 +174,7 @@ fixed point value to get the equivalent affine value.
 
 $$
 \begin{align*}
-  affine\\_value_{non\mbox{-}negative} = scaled\\_value + zero\\_point_{non\mbox{-}negative}
+  affine\\\_value_{non\mbox{-}negative} = scaled\\\_value + zero\\\_point_{non\mbox{-}negative}
 \end{align*}
 $$
 

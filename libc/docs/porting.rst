@@ -11,7 +11,7 @@ Bringup on a New OS or Architecture
 CI builders
 ===========
 
-If you are contributing a port for a operating system or architecture which
+If you are contributing a port for an operating system or architecture which
 is not covered by existing CI builders, you will also have to present a plan
 for testing and contribute a CI builder. See
 `this guide <https://llvm.org/docs/HowToAddABuilder.html>`_ for information
@@ -107,13 +107,13 @@ updated.
 The headers.txt file
 ====================
 
-Another important piece of config informtion is listed in a file named
+Another important piece of config information is listed in a file named
 ``headers.txt``. It lists the targets for the set of public headers that are
 provided by the libc. This is relevant only if the libc is to be used in the
 :ref:`fullbuild_mode` on the target operating system and architecture. As with
 the ``entrypoints.txt`` file, one ``headers.txt`` file should be listed for
 each individual target architecture if you are doing an architecture specific
-bring up. The Linux config has ``headers.txt`` file listed seperately for the
+bring up. The Linux config has ``headers.txt`` file listed separately for the
 `aarch64 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/aarch64>`_
 config and the
 `x86_64 <https://github.com/llvm/llvm-project/tree/main/libc/config/linux/x86_64>`_

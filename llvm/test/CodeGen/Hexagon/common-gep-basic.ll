@@ -18,20 +18,20 @@ entry:
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %arrayidx1 = getelementptr inbounds [100 x %struct.s_t], [100 x %struct.s_t]* @g, i32 0, i32 %x, i32 0, i32 1, i32 2
-  tail call void @bar(i32* %arrayidx1) #0
+  %arrayidx1 = getelementptr inbounds [100 x %struct.s_t], ptr @g, i32 0, i32 %x, i32 0, i32 1, i32 2
+  tail call void @bar(ptr %arrayidx1) #0
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %arrayidx5 = getelementptr inbounds [100 x %struct.s_t], [100 x %struct.s_t]* @g, i32 0, i32 %x, i32 0, i32 1, i32 3
-  tail call void @bar(i32* %arrayidx5) #0
+  %arrayidx5 = getelementptr inbounds [100 x %struct.s_t], ptr @g, i32 0, i32 %x, i32 0, i32 1, i32 3
+  tail call void @bar(ptr %arrayidx5) #0
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
   ret void
 }
 
-declare void @bar(i32*) #0
+declare void @bar(ptr) #0
 
 attributes #0 = { nounwind }
 

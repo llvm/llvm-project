@@ -2,42 +2,41 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-%struct.hoge = type { %struct.widget*, %struct.barney*, %struct.foo*, i32, i32, %struct.wibble*, i32, i32, i32, i32, double, i32, i32, i32, %struct.foo.1*, [4 x %struct.hoge.2*], [4 x %struct.blam*], [4 x %struct.blam*], [16 x i8], [16 x i8], [16 x i8], i32, %struct.barney.3*, i32, i32, i32, i32, i32, i32, i32, i32, i32, i8, i16, i16, i32, i32, i32, i32, i32, i32, i32, [4 x %struct.foo.1*], i32, i32, i32, [10 x i32], i32, i32, i32, i32, %struct.foo.4*, %struct.wombat.5*, %struct.blam.6*, %struct.foo.7*, %struct.bar*, %struct.wibble.8*, %struct.barney.9*, %struct.hoge.10*, %struct.bar.11* }
-%struct.widget = type { void (%struct.quux*)*, void (%struct.quux*, i32)*, void (%struct.quux*)*, void (%struct.quux*, i8*)*, void (%struct.quux*)*, i32, %struct.hoge.0, i32, i64, i8**, i32, i8**, i32, i32 }
-%struct.quux = type { %struct.widget*, %struct.barney*, %struct.foo*, i32, i32 }
+%struct.hoge = type { ptr, ptr, ptr, i32, i32, ptr, i32, i32, i32, i32, double, i32, i32, i32, ptr, [4 x ptr], [4 x ptr], [4 x ptr], [16 x i8], [16 x i8], [16 x i8], i32, ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i8, i16, i16, i32, i32, i32, i32, i32, i32, i32, [4 x ptr], i32, i32, i32, [10 x i32], i32, i32, i32, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
+%struct.widget = type { ptr, ptr, ptr, ptr, ptr, i32, %struct.hoge.0, i32, i64, ptr, i32, ptr, i32, i32 }
+%struct.quux = type { ptr, ptr, ptr, i32, i32 }
 %struct.hoge.0 = type { [8 x i32], [48 x i8] }
-%struct.barney = type { i8* (%struct.quux*, i32, i64)*, i8* (%struct.quux*, i32, i64)*, i8** (%struct.quux*, i32, i32, i32)*, [64 x i16]** (%struct.quux*, i32, i32, i32)*, %struct.ham* (%struct.quux*, i32, i32, i32, i32, i32)*, %struct.wombat* (%struct.quux*, i32, i32, i32, i32, i32)*, {}*, i8** (%struct.quux*, %struct.ham*, i32, i32, i32)*, [64 x i16]** (%struct.quux*, %struct.wombat*, i32, i32, i32)*, void (%struct.quux*, i32)*, {}*, i64 }
+%struct.barney = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i64 }
 %struct.ham = type opaque
 %struct.wombat = type opaque
-%struct.foo = type { {}*, i64, i64, i32, i32 }
-%struct.wibble = type { i8*, i64, void (%struct.hoge*)*, i32 (%struct.hoge*)*, void (%struct.hoge*)* }
-%struct.foo.1 = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, %struct.hoge.2*, i8* }
+%struct.foo = type { ptr, i64, i64, i32, i32 }
+%struct.wibble = type { ptr, i64, ptr, ptr, ptr }
+%struct.foo.1 = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, ptr, ptr }
 %struct.hoge.2 = type { [64 x i16], i32 }
 %struct.blam = type { [17 x i8], [256 x i8], i32 }
 %struct.barney.3 = type { i32, [4 x i32], i32, i32, i32, i32 }
-%struct.foo.4 = type { void (%struct.hoge*)*, void (%struct.hoge*)*, void (%struct.hoge*)*, i32, i32 }
-%struct.wombat.5 = type { void (%struct.hoge*, i32)*, void (%struct.hoge*, i8**, i32*, i32)* }
-%struct.blam.6 = type { void (%struct.hoge*, i32)*, void (%struct.hoge*, i8**, i32*, i32, i8***, i32*, i32)* }
-%struct.foo.7 = type { void (%struct.hoge*, i32)*, i32 (%struct.hoge*, i8***)* }
-%struct.bar = type { void (%struct.hoge*, i32, i8*, i32)*, void (%struct.hoge*)*, void (%struct.hoge*)*, void (%struct.hoge*)*, void (%struct.hoge*)*, void (%struct.hoge*)* }
-%struct.wibble.8 = type { void (%struct.hoge*)*, void (%struct.hoge*, i8**, i8***, i32, i32)* }
-%struct.barney.9 = type { void (%struct.hoge*)*, void (%struct.hoge*, i8***, i32, i8***, i32)*, i32 }
-%struct.hoge.10 = type { void (%struct.hoge*)*, void (%struct.hoge*, %struct.foo.1*, i8**, [64 x i16]*, i32, i32, i32)* }
-%struct.bar.11 = type { {}*, i32 (%struct.hoge*, [64 x i16]**)*, void (%struct.hoge*)* }
+%struct.foo.4 = type { ptr, ptr, ptr, i32, i32 }
+%struct.wombat.5 = type { ptr, ptr }
+%struct.blam.6 = type { ptr, ptr }
+%struct.foo.7 = type { ptr, ptr }
+%struct.bar = type { ptr, ptr, ptr, ptr, ptr, ptr }
+%struct.wibble.8 = type { ptr, ptr }
+%struct.barney.9 = type { ptr, ptr, i32 }
+%struct.hoge.10 = type { ptr, ptr }
+%struct.bar.11 = type { ptr, ptr, ptr }
 
 ; Function Attrs: nounwind uwtable
-define void @foo(%struct.hoge* %arg) #0 {
+define void @foo(ptr %arg) #0 {
 bb:
   br label %bb2
 
 bb2:                                              ; preds = %bb
-  %tmp3 = getelementptr inbounds %struct.hoge, %struct.hoge* %arg, i32 0, i32 42
-  %tmp4 = getelementptr inbounds [4 x %struct.foo.1*], [4 x %struct.foo.1*]* %tmp3, i64 0, i64 0
-  %tmp = load %struct.foo.1*, %struct.foo.1** %tmp4, align 8, !tbaa !1
-  %tmp5 = getelementptr inbounds %struct.foo.1, %struct.foo.1* %tmp, i32 0, i32 7
-  %tmp6 = load i32, i32* %tmp5, align 4, !tbaa !5
-  %tmp7 = getelementptr inbounds %struct.hoge, %struct.hoge* %arg, i32 0, i32 43
-  store i32 %tmp6, i32* %tmp7, align 8, !tbaa !8
+  %tmp3 = getelementptr inbounds %struct.hoge, ptr %arg, i32 0, i32 42
+  %tmp = load ptr, ptr %tmp3, align 8, !tbaa !1
+  %tmp5 = getelementptr inbounds %struct.foo.1, ptr %tmp, i32 0, i32 7
+  %tmp6 = load i32, ptr %tmp5, align 4, !tbaa !5
+  %tmp7 = getelementptr inbounds %struct.hoge, ptr %arg, i32 0, i32 43
+  store i32 %tmp6, ptr %tmp7, align 8, !tbaa !8
   br i1 false, label %bb8, label %bb9
 
 bb8:                                              ; preds = %bb2

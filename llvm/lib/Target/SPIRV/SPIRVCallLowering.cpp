@@ -21,6 +21,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/Support/ModRef.h"
 
 using namespace llvm;
 
@@ -49,19 +50,20 @@ bool SPIRVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 
 // Based on the LLVM function attributes, get a SPIR-V FunctionControl.
 static uint32_t getFunctionControl(const Function &F) {
+  MemoryEffects MemEffects = F.getMemoryEffects();
+
   uint32_t FuncControl = static_cast<uint32_t>(SPIRV::FunctionControl::None);
-  if (F.hasFnAttribute(Attribute::AttrKind::AlwaysInline)) {
-    FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Inline);
-  }
-  if (F.hasFnAttribute(Attribute::AttrKind::ReadNone)) {
-    FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Pure);
-  }
-  if (F.hasFnAttribute(Attribute::AttrKind::ReadOnly)) {
-    FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Const);
-  }
-  if (F.hasFnAttribute(Attribute::AttrKind::NoInline)) {
+
+  if (F.hasFnAttribute(Attribute::AttrKind::NoInline))
     FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::DontInline);
-  }
+  else if (F.hasFnAttribute(Attribute::AttrKind::AlwaysInline))
+    FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Inline);
+
+  if (MemEffects.doesNotAccessMemory())
+    FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Pure);
+  else if (MemEffects.onlyReadsMemory())
+    FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Const);
+
   return FuncControl;
 }
 
@@ -372,6 +374,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     FTy = getOriginalFunctionType(*CF);
   }
 
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   Register ResVReg =
       Info.OrigRet.Regs.empty() ? Register(0) : Info.OrigRet.Regs[0];
   std::string FuncName = Info.Callee.getGlobal()->getName().str();
@@ -408,8 +411,9 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     for (const Argument &Arg : CF->args()) {
       if (MIRBuilder.getDataLayout().getTypeStoreSize(Arg.getType()).isZero())
         continue; // Don't handle zero sized types.
-      ToInsert.push_back(
-          {MIRBuilder.getMRI()->createGenericVirtualRegister(LLT::scalar(32))});
+      Register Reg = MRI->createGenericVirtualRegister(LLT::scalar(32));
+      MRI->setRegClass(Reg, &SPIRV::IDRegClass);
+      ToInsert.push_back({Reg});
       VRegArgs.push_back(ToInsert.back());
     }
     // TODO: Reuse FunctionLoweringInfo

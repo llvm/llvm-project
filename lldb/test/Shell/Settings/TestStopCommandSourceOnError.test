@@ -12,10 +12,10 @@
 # RUN: %lldb -b -o 'settings set interpreter.stop-command-source-on-error false' -s %S/Inputs/StopCommandSource.in | FileCheck %s --check-prefix CONTINUE
 
 # FIXME: Should continue
-# RUN: not %lldb -b -s %S/Inputs/DontStopCommandSource.in -o 'bogus' -o 'print 111100000 + 11111' | FileCheck %s --check-prefix STOP
+# RUN: not %lldb -b -s %S/Inputs/DontStopCommandSource.in -o 'bogus' -o 'expression 111100000 + 11111' | FileCheck %s --check-prefix STOP
 
 # FIXME: Should continue
-# RUN: not %lldb -b -o 'settings set interpreter.stop-command-source-on-error false' -o 'bogus' -o 'print 123400000 + 56789'  | FileCheck %s --check-prefix STOP
+# RUN: not %lldb -b -o 'settings set interpreter.stop-command-source-on-error false' -o 'bogus' -o 'expression 123400000 + 56789'  | FileCheck %s --check-prefix STOP
 
 # FIXME: Should continue
 # RUN: not %lldb -b -s %S/Inputs/DontStopCommandSource.in | FileCheck %s --check-prefix STOP

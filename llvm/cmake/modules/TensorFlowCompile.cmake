@@ -114,20 +114,5 @@ function(tf_find_and_compile model default_url default_path test_model_generator
   set(GeneratedMLSources ${GeneratedMLSources} ${GENERATED_OBJS} ${GENERATED_HEADERS} PARENT_SCOPE)
   set(MLDeps ${MLDeps} tf_xla_runtime PARENT_SCOPE)
   set(MLLinkDeps ${MLLinkDeps} tf_xla_runtime PARENT_SCOPE)
-  add_definitions(-DLLVM_HAVE_TF_AOT_${fname_allcaps})
-endfunction()
-
-function(build_proto)
-  foreach (P ${ARGV})
-    set(PB_SRCS ${PB_SRCS} ${LLVM_PROTOBUF_OUT_DIR}/${P}.pb.cc)
-    set(PB_HDRS ${PB_HDRS} ${LLVM_PROTOBUF_OUT_DIR}/${P}.pb.h)
-    set(PBS ${PBS} ${TENSORFLOW_SRC_DIR}/${P}.proto)
-  endforeach()
-  add_custom_command(OUTPUT ${PB_SRCS} ${PB_HDRS}
-    COMMAND protobuf::protoc 
-    ARGS --proto_path=${TENSORFLOW_SRC_DIR} --cpp_out=${LLVM_PROTOBUF_OUT_DIR} ${PBS})
-  set_source_files_properties(${PB_SRCS} PROPERTIES
-    GENERATED 1)
-  set(GeneratedMLSources ${GeneratedMLSources} ${PB_SRCS} PARENT_SCOPE)
-  set(MLDeps ${MLDeps} ${MLDeps} PARENT_SCOPE)
+  add_compile_definitions(LLVM_HAVE_TF_AOT_${fname_allcaps})
 endfunction()

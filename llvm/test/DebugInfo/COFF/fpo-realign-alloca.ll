@@ -1,4 +1,5 @@
 ; RUN: llc < %s | FileCheck %s
+; RUN: llc -mtriple=i686-windows-msvc < %s -filetype=obj | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
 
 ; C source:
 ; void usethings(ptr, ptr p);
@@ -33,6 +34,15 @@
 ; CHECK:         retl
 ; CHECK:         .cv_fpo_endproc
 
+; OBJ-LABEL:     FunctionType: realign_and_alloca (0x1002)
+; OBJ-NEXT:      CodeOffset: _realign_and_alloca+0x0
+; OBJ-NEXT:      Segment: 0x0
+; OBJ-NEXT:      Flags [ (0x81)
+; OBJ-NEXT:        HasFP (0x1)
+; OBJ-NEXT:        HasOptimizedDebugInfo (0x80)
+; OBJ-NEXT:      ]
+; OBJ-NEXT:      DisplayName: realign_and_alloca
+; OBJ-NEXT:      LinkageName: _realign_and_alloca
 
 ; ModuleID = 't.c'
 source_filename = "t.c"

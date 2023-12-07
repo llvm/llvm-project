@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu z13 -fzvector -emit-llvm -o - -W -Wall -Werror %s | opt -S -passes=mem2reg | FileCheck %s
+// RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu z13 -fzvector \
+// RUN: -emit-llvm -o - -W -Wall -Werror \
+// RUN: %s | opt -S -passes=mem2reg | FileCheck %s
 
 volatile vector signed char sc, sc2;
 volatile vector unsigned char uc, uc2;
@@ -1924,7 +1926,7 @@ void test_xor_assign(void) {
 // CHECK:   store volatile <16 x i8> [[SHL1]], ptr @sc, align 8
 // CHECK:   [[TMP4:%.*]] = load volatile <16 x i8>, ptr @sc, align 8
 // CHECK:   [[TMP5:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[TMP5]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[TMP5]], i64 0
 // CHECK:   [[SPLAT_SPLAT:%.*]] = shufflevector <16 x i32> [[SPLAT_SPLAT:%.*]]insert, <16 x i32> poison, <16 x i32> zeroinitializer
 // CHECK:   [[SH_PROM:%.*]] = trunc <16 x i32> [[SPLAT_SPLAT]] to <16 x i8>
 // CHECK:   [[SHL2:%.*]] = shl <16 x i8> [[TMP4]], [[SH_PROM]]
@@ -1942,7 +1944,7 @@ void test_xor_assign(void) {
 // CHECK:   store volatile <16 x i8> [[SHL5]], ptr @uc, align 8
 // CHECK:   [[TMP11:%.*]] = load volatile <16 x i8>, ptr @uc, align 8
 // CHECK:   [[TMP12:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT6:%.*]] = insertelement <16 x i32> poison, i32 [[TMP12]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT6:%.*]] = insertelement <16 x i32> poison, i32 [[TMP12]], i64 0
 // CHECK:   [[SPLAT_SPLAT7:%.*]] = shufflevector <16 x i32> [[SPLAT_SPLATINSERT6]], <16 x i32> poison, <16 x i32> zeroinitializer
 // CHECK:   [[SH_PROM8:%.*]] = trunc <16 x i32> [[SPLAT_SPLAT7]] to <16 x i8>
 // CHECK:   [[SHL9:%.*]] = shl <16 x i8> [[TMP11]], [[SH_PROM8]]
@@ -1960,7 +1962,7 @@ void test_xor_assign(void) {
 // CHECK:   store volatile <8 x i16> [[SHL12]], ptr @ss, align 8
 // CHECK:   [[TMP18:%.*]] = load volatile <8 x i16>, ptr @ss, align 8
 // CHECK:   [[TMP19:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT13:%.*]] = insertelement <8 x i32> poison, i32 [[TMP19]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT13:%.*]] = insertelement <8 x i32> poison, i32 [[TMP19]], i64 0
 // CHECK:   [[SPLAT_SPLAT14:%.*]] = shufflevector <8 x i32> [[SPLAT_SPLATINSERT13]], <8 x i32> poison, <8 x i32> zeroinitializer
 // CHECK:   [[SH_PROM15:%.*]] = trunc <8 x i32> [[SPLAT_SPLAT14]] to <8 x i16>
 // CHECK:   [[SHL16:%.*]] = shl <8 x i16> [[TMP18]], [[SH_PROM15]]
@@ -1978,7 +1980,7 @@ void test_xor_assign(void) {
 // CHECK:   store volatile <8 x i16> [[SHL19]], ptr @us, align 8
 // CHECK:   [[TMP25:%.*]] = load volatile <8 x i16>, ptr @us, align 8
 // CHECK:   [[TMP26:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT20:%.*]] = insertelement <8 x i32> poison, i32 [[TMP26]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT20:%.*]] = insertelement <8 x i32> poison, i32 [[TMP26]], i64 0
 // CHECK:   [[SPLAT_SPLAT21:%.*]] = shufflevector <8 x i32> [[SPLAT_SPLATINSERT20]], <8 x i32> poison, <8 x i32> zeroinitializer
 // CHECK:   [[SH_PROM22:%.*]] = trunc <8 x i32> [[SPLAT_SPLAT21]] to <8 x i16>
 // CHECK:   [[SHL23:%.*]] = shl <8 x i16> [[TMP25]], [[SH_PROM22]]
@@ -1996,7 +1998,7 @@ void test_xor_assign(void) {
 // CHECK:   store volatile <4 x i32> [[SHL26]], ptr @si, align 8
 // CHECK:   [[TMP32:%.*]] = load volatile <4 x i32>, ptr @si, align 8
 // CHECK:   [[TMP33:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT27:%.*]] = insertelement <4 x i32> poison, i32 [[TMP33]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT27:%.*]] = insertelement <4 x i32> poison, i32 [[TMP33]], i64 0
 // CHECK:   [[SPLAT_SPLAT28:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT27]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK:   [[SHL29:%.*]] = shl <4 x i32> [[TMP32]], [[SPLAT_SPLAT28]]
 // CHECK:   store volatile <4 x i32> [[SHL29]], ptr @si, align 8
@@ -2013,7 +2015,7 @@ void test_xor_assign(void) {
 // CHECK:   store volatile <4 x i32> [[SHL32]], ptr @ui, align 8
 // CHECK:   [[TMP39:%.*]] = load volatile <4 x i32>, ptr @ui, align 8
 // CHECK:   [[TMP40:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT33:%.*]] = insertelement <4 x i32> poison, i32 [[TMP40]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT33:%.*]] = insertelement <4 x i32> poison, i32 [[TMP40]], i64 0
 // CHECK:   [[SPLAT_SPLAT34:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT33]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK:   [[SHL35:%.*]] = shl <4 x i32> [[TMP39]], [[SPLAT_SPLAT34]]
 // CHECK:   store volatile <4 x i32> [[SHL35]], ptr @ui, align 8
@@ -2030,7 +2032,7 @@ void test_xor_assign(void) {
 // CHECK:   store volatile <2 x i64> [[SHL38]], ptr @sl, align 8
 // CHECK:   [[TMP46:%.*]] = load volatile <2 x i64>, ptr @sl, align 8
 // CHECK:   [[TMP47:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT39:%.*]] = insertelement <2 x i32> poison, i32 [[TMP47]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT39:%.*]] = insertelement <2 x i32> poison, i32 [[TMP47]], i64 0
 // CHECK:   [[SPLAT_SPLAT40:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT39]], <2 x i32> poison, <2 x i32> zeroinitializer
 // CHECK:   [[SH_PROM41:%.*]] = zext <2 x i32> [[SPLAT_SPLAT40]] to <2 x i64>
 // CHECK:   [[SHL42:%.*]] = shl <2 x i64> [[TMP46]], [[SH_PROM41]]
@@ -2048,7 +2050,7 @@ void test_xor_assign(void) {
 // CHECK:   store volatile <2 x i64> [[SHL45]], ptr @ul, align 8
 // CHECK:   [[TMP53:%.*]] = load volatile <2 x i64>, ptr @ul, align 8
 // CHECK:   [[TMP54:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT46:%.*]] = insertelement <2 x i32> poison, i32 [[TMP54]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT46:%.*]] = insertelement <2 x i32> poison, i32 [[TMP54]], i64 0
 // CHECK:   [[SPLAT_SPLAT47:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT46]], <2 x i32> poison, <2 x i32> zeroinitializer
 // CHECK:   [[SH_PROM48:%.*]] = zext <2 x i32> [[SPLAT_SPLAT47]] to <2 x i64>
 // CHECK:   [[SHL49:%.*]] = shl <2 x i64> [[TMP53]], [[SH_PROM48]]
@@ -2106,7 +2108,7 @@ void test_sl(void) {
 // CHECK:   [[SHL1:%.*]] = shl <16 x i8> [[TMP3]], [[TMP2]]
 // CHECK:   store volatile <16 x i8> [[SHL1]], ptr @sc, align 8
 // CHECK:   [[TMP4:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[TMP4]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[TMP4]], i64 0
 // CHECK:   [[SPLAT_SPLAT:%.*]] = shufflevector <16 x i32> [[SPLAT_SPLAT:%.*]]insert, <16 x i32> poison, <16 x i32> zeroinitializer
 // CHECK:   [[TMP5:%.*]] = load volatile <16 x i8>, ptr @sc, align 8
 // CHECK:   [[SH_PROM:%.*]] = trunc <16 x i32> [[SPLAT_SPLAT]] to <16 x i8>
@@ -2124,7 +2126,7 @@ void test_sl(void) {
 // CHECK:   [[SHL5:%.*]] = shl <16 x i8> [[TMP10]], [[TMP9]]
 // CHECK:   store volatile <16 x i8> [[SHL5]], ptr @uc, align 8
 // CHECK:   [[TMP11:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT6:%.*]] = insertelement <16 x i32> poison, i32 [[TMP11]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT6:%.*]] = insertelement <16 x i32> poison, i32 [[TMP11]], i64 0
 // CHECK:   [[SPLAT_SPLAT7:%.*]] = shufflevector <16 x i32> [[SPLAT_SPLATINSERT6]], <16 x i32> poison, <16 x i32> zeroinitializer
 // CHECK:   [[TMP12:%.*]] = load volatile <16 x i8>, ptr @uc, align 8
 // CHECK:   [[SH_PROM8:%.*]] = trunc <16 x i32> [[SPLAT_SPLAT7]] to <16 x i8>
@@ -2142,7 +2144,7 @@ void test_sl(void) {
 // CHECK:   [[SHL12:%.*]] = shl <8 x i16> [[TMP17]], [[TMP16]]
 // CHECK:   store volatile <8 x i16> [[SHL12]], ptr @ss, align 8
 // CHECK:   [[TMP18:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT13:%.*]] = insertelement <8 x i32> poison, i32 [[TMP18]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT13:%.*]] = insertelement <8 x i32> poison, i32 [[TMP18]], i64 0
 // CHECK:   [[SPLAT_SPLAT14:%.*]] = shufflevector <8 x i32> [[SPLAT_SPLATINSERT13]], <8 x i32> poison, <8 x i32> zeroinitializer
 // CHECK:   [[TMP19:%.*]] = load volatile <8 x i16>, ptr @ss, align 8
 // CHECK:   [[SH_PROM15:%.*]] = trunc <8 x i32> [[SPLAT_SPLAT14]] to <8 x i16>
@@ -2160,7 +2162,7 @@ void test_sl(void) {
 // CHECK:   [[SHL19:%.*]] = shl <8 x i16> [[TMP24]], [[TMP23]]
 // CHECK:   store volatile <8 x i16> [[SHL19]], ptr @us, align 8
 // CHECK:   [[TMP25:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT20:%.*]] = insertelement <8 x i32> poison, i32 [[TMP25]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT20:%.*]] = insertelement <8 x i32> poison, i32 [[TMP25]], i64 0
 // CHECK:   [[SPLAT_SPLAT21:%.*]] = shufflevector <8 x i32> [[SPLAT_SPLATINSERT20]], <8 x i32> poison, <8 x i32> zeroinitializer
 // CHECK:   [[TMP26:%.*]] = load volatile <8 x i16>, ptr @us, align 8
 // CHECK:   [[SH_PROM22:%.*]] = trunc <8 x i32> [[SPLAT_SPLAT21]] to <8 x i16>
@@ -2178,7 +2180,7 @@ void test_sl(void) {
 // CHECK:   [[SHL26:%.*]] = shl <4 x i32> [[TMP31]], [[TMP30]]
 // CHECK:   store volatile <4 x i32> [[SHL26]], ptr @si, align 8
 // CHECK:   [[TMP32:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT27:%.*]] = insertelement <4 x i32> poison, i32 [[TMP32]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT27:%.*]] = insertelement <4 x i32> poison, i32 [[TMP32]], i64 0
 // CHECK:   [[SPLAT_SPLAT28:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT27]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK:   [[TMP33:%.*]] = load volatile <4 x i32>, ptr @si, align 8
 // CHECK:   [[SHL29:%.*]] = shl <4 x i32> [[TMP33]], [[SPLAT_SPLAT28]]
@@ -2195,7 +2197,7 @@ void test_sl(void) {
 // CHECK:   [[SHL32:%.*]] = shl <4 x i32> [[TMP38]], [[TMP37]]
 // CHECK:   store volatile <4 x i32> [[SHL32]], ptr @ui, align 8
 // CHECK:   [[TMP39:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT33:%.*]] = insertelement <4 x i32> poison, i32 [[TMP39]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT33:%.*]] = insertelement <4 x i32> poison, i32 [[TMP39]], i64 0
 // CHECK:   [[SPLAT_SPLAT34:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT33]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK:   [[TMP40:%.*]] = load volatile <4 x i32>, ptr @ui, align 8
 // CHECK:   [[SHL35:%.*]] = shl <4 x i32> [[TMP40]], [[SPLAT_SPLAT34]]
@@ -2212,7 +2214,7 @@ void test_sl(void) {
 // CHECK:   [[SHL38:%.*]] = shl <2 x i64> [[TMP45]], [[TMP44]]
 // CHECK:   store volatile <2 x i64> [[SHL38]], ptr @sl, align 8
 // CHECK:   [[TMP46:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT39:%.*]] = insertelement <2 x i32> poison, i32 [[TMP46]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT39:%.*]] = insertelement <2 x i32> poison, i32 [[TMP46]], i64 0
 // CHECK:   [[SPLAT_SPLAT40:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT39]], <2 x i32> poison, <2 x i32> zeroinitializer
 // CHECK:   [[TMP47:%.*]] = load volatile <2 x i64>, ptr @sl, align 8
 // CHECK:   [[SH_PROM41:%.*]] = zext <2 x i32> [[SPLAT_SPLAT40]] to <2 x i64>
@@ -2230,7 +2232,7 @@ void test_sl(void) {
 // CHECK:   [[SHL45:%.*]] = shl <2 x i64> [[TMP52]], [[TMP51]]
 // CHECK:   store volatile <2 x i64> [[SHL45]], ptr @ul, align 8
 // CHECK:   [[TMP53:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT46:%.*]] = insertelement <2 x i32> poison, i32 [[TMP53]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT46:%.*]] = insertelement <2 x i32> poison, i32 [[TMP53]], i64 0
 // CHECK:   [[SPLAT_SPLAT47:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT46]], <2 x i32> poison, <2 x i32> zeroinitializer
 // CHECK:   [[TMP54:%.*]] = load volatile <2 x i64>, ptr @ul, align 8
 // CHECK:   [[SH_PROM48:%.*]] = zext <2 x i32> [[SPLAT_SPLAT47]] to <2 x i64>
@@ -2290,7 +2292,7 @@ void test_sl_assign(void) {
 // CHECK:   store volatile <16 x i8> [[SHR1]], ptr @sc, align 8
 // CHECK:   [[TMP4:%.*]] = load volatile <16 x i8>, ptr @sc, align 8
 // CHECK:   [[TMP5:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[TMP5]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[TMP5]], i64 0
 // CHECK:   [[SPLAT_SPLAT:%.*]] = shufflevector <16 x i32> [[SPLAT_SPLAT:%.*]]insert, <16 x i32> poison, <16 x i32> zeroinitializer
 // CHECK:   [[SH_PROM:%.*]] = trunc <16 x i32> [[SPLAT_SPLAT]] to <16 x i8>
 // CHECK:   [[SHR2:%.*]] = ashr <16 x i8> [[TMP4]], [[SH_PROM]]
@@ -2308,7 +2310,7 @@ void test_sl_assign(void) {
 // CHECK:   store volatile <16 x i8> [[SHR5]], ptr @uc, align 8
 // CHECK:   [[TMP11:%.*]] = load volatile <16 x i8>, ptr @uc, align 8
 // CHECK:   [[TMP12:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT6:%.*]] = insertelement <16 x i32> poison, i32 [[TMP12]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT6:%.*]] = insertelement <16 x i32> poison, i32 [[TMP12]], i64 0
 // CHECK:   [[SPLAT_SPLAT7:%.*]] = shufflevector <16 x i32> [[SPLAT_SPLATINSERT6]], <16 x i32> poison, <16 x i32> zeroinitializer
 // CHECK:   [[SH_PROM8:%.*]] = trunc <16 x i32> [[SPLAT_SPLAT7]] to <16 x i8>
 // CHECK:   [[SHR9:%.*]] = lshr <16 x i8> [[TMP11]], [[SH_PROM8]]
@@ -2326,7 +2328,7 @@ void test_sl_assign(void) {
 // CHECK:   store volatile <8 x i16> [[SHR12]], ptr @ss, align 8
 // CHECK:   [[TMP18:%.*]] = load volatile <8 x i16>, ptr @ss, align 8
 // CHECK:   [[TMP19:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT13:%.*]] = insertelement <8 x i32> poison, i32 [[TMP19]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT13:%.*]] = insertelement <8 x i32> poison, i32 [[TMP19]], i64 0
 // CHECK:   [[SPLAT_SPLAT14:%.*]] = shufflevector <8 x i32> [[SPLAT_SPLATINSERT13]], <8 x i32> poison, <8 x i32> zeroinitializer
 // CHECK:   [[SH_PROM15:%.*]] = trunc <8 x i32> [[SPLAT_SPLAT14]] to <8 x i16>
 // CHECK:   [[SHR16:%.*]] = ashr <8 x i16> [[TMP18]], [[SH_PROM15]]
@@ -2344,7 +2346,7 @@ void test_sl_assign(void) {
 // CHECK:   store volatile <8 x i16> [[SHR19]], ptr @us, align 8
 // CHECK:   [[TMP25:%.*]] = load volatile <8 x i16>, ptr @us, align 8
 // CHECK:   [[TMP26:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT20:%.*]] = insertelement <8 x i32> poison, i32 [[TMP26]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT20:%.*]] = insertelement <8 x i32> poison, i32 [[TMP26]], i64 0
 // CHECK:   [[SPLAT_SPLAT21:%.*]] = shufflevector <8 x i32> [[SPLAT_SPLATINSERT20]], <8 x i32> poison, <8 x i32> zeroinitializer
 // CHECK:   [[SH_PROM22:%.*]] = trunc <8 x i32> [[SPLAT_SPLAT21]] to <8 x i16>
 // CHECK:   [[SHR23:%.*]] = lshr <8 x i16> [[TMP25]], [[SH_PROM22]]
@@ -2362,7 +2364,7 @@ void test_sl_assign(void) {
 // CHECK:   store volatile <4 x i32> [[SHR26]], ptr @si, align 8
 // CHECK:   [[TMP32:%.*]] = load volatile <4 x i32>, ptr @si, align 8
 // CHECK:   [[TMP33:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT27:%.*]] = insertelement <4 x i32> poison, i32 [[TMP33]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT27:%.*]] = insertelement <4 x i32> poison, i32 [[TMP33]], i64 0
 // CHECK:   [[SPLAT_SPLAT28:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT27]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK:   [[SHR29:%.*]] = ashr <4 x i32> [[TMP32]], [[SPLAT_SPLAT28]]
 // CHECK:   store volatile <4 x i32> [[SHR29]], ptr @si, align 8
@@ -2379,7 +2381,7 @@ void test_sl_assign(void) {
 // CHECK:   store volatile <4 x i32> [[SHR32]], ptr @ui, align 8
 // CHECK:   [[TMP39:%.*]] = load volatile <4 x i32>, ptr @ui, align 8
 // CHECK:   [[TMP40:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT33:%.*]] = insertelement <4 x i32> poison, i32 [[TMP40]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT33:%.*]] = insertelement <4 x i32> poison, i32 [[TMP40]], i64 0
 // CHECK:   [[SPLAT_SPLAT34:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT33]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK:   [[SHR35:%.*]] = lshr <4 x i32> [[TMP39]], [[SPLAT_SPLAT34]]
 // CHECK:   store volatile <4 x i32> [[SHR35]], ptr @ui, align 8
@@ -2396,7 +2398,7 @@ void test_sl_assign(void) {
 // CHECK:   store volatile <2 x i64> [[SHR38]], ptr @sl, align 8
 // CHECK:   [[TMP46:%.*]] = load volatile <2 x i64>, ptr @sl, align 8
 // CHECK:   [[TMP47:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT39:%.*]] = insertelement <2 x i32> poison, i32 [[TMP47]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT39:%.*]] = insertelement <2 x i32> poison, i32 [[TMP47]], i64 0
 // CHECK:   [[SPLAT_SPLAT40:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT39]], <2 x i32> poison, <2 x i32> zeroinitializer
 // CHECK:   [[SH_PROM41:%.*]] = zext <2 x i32> [[SPLAT_SPLAT40]] to <2 x i64>
 // CHECK:   [[SHR42:%.*]] = ashr <2 x i64> [[TMP46]], [[SH_PROM41]]
@@ -2414,7 +2416,7 @@ void test_sl_assign(void) {
 // CHECK:   store volatile <2 x i64> [[SHR45]], ptr @ul, align 8
 // CHECK:   [[TMP53:%.*]] = load volatile <2 x i64>, ptr @ul, align 8
 // CHECK:   [[TMP54:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT46:%.*]] = insertelement <2 x i32> poison, i32 [[TMP54]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT46:%.*]] = insertelement <2 x i32> poison, i32 [[TMP54]], i64 0
 // CHECK:   [[SPLAT_SPLAT47:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT46]], <2 x i32> poison, <2 x i32> zeroinitializer
 // CHECK:   [[SH_PROM48:%.*]] = zext <2 x i32> [[SPLAT_SPLAT47]] to <2 x i64>
 // CHECK:   [[SHR49:%.*]] = lshr <2 x i64> [[TMP53]], [[SH_PROM48]]
@@ -2472,7 +2474,7 @@ void test_sr(void) {
 // CHECK:   [[SHR1:%.*]] = ashr <16 x i8> [[TMP3]], [[TMP2]]
 // CHECK:   store volatile <16 x i8> [[SHR1]], ptr @sc, align 8
 // CHECK:   [[TMP4:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[TMP4]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[TMP4]], i64 0
 // CHECK:   [[SPLAT_SPLAT:%.*]] = shufflevector <16 x i32> [[SPLAT_SPLAT:%.*]]insert, <16 x i32> poison, <16 x i32> zeroinitializer
 // CHECK:   [[TMP5:%.*]] = load volatile <16 x i8>, ptr @sc, align 8
 // CHECK:   [[SH_PROM:%.*]] = trunc <16 x i32> [[SPLAT_SPLAT]] to <16 x i8>
@@ -2490,7 +2492,7 @@ void test_sr(void) {
 // CHECK:   [[SHR5:%.*]] = lshr <16 x i8> [[TMP10]], [[TMP9]]
 // CHECK:   store volatile <16 x i8> [[SHR5]], ptr @uc, align 8
 // CHECK:   [[TMP11:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT6:%.*]] = insertelement <16 x i32> poison, i32 [[TMP11]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT6:%.*]] = insertelement <16 x i32> poison, i32 [[TMP11]], i64 0
 // CHECK:   [[SPLAT_SPLAT7:%.*]] = shufflevector <16 x i32> [[SPLAT_SPLATINSERT6]], <16 x i32> poison, <16 x i32> zeroinitializer
 // CHECK:   [[TMP12:%.*]] = load volatile <16 x i8>, ptr @uc, align 8
 // CHECK:   [[SH_PROM8:%.*]] = trunc <16 x i32> [[SPLAT_SPLAT7]] to <16 x i8>
@@ -2508,7 +2510,7 @@ void test_sr(void) {
 // CHECK:   [[SHR12:%.*]] = ashr <8 x i16> [[TMP17]], [[TMP16]]
 // CHECK:   store volatile <8 x i16> [[SHR12]], ptr @ss, align 8
 // CHECK:   [[TMP18:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT13:%.*]] = insertelement <8 x i32> poison, i32 [[TMP18]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT13:%.*]] = insertelement <8 x i32> poison, i32 [[TMP18]], i64 0
 // CHECK:   [[SPLAT_SPLAT14:%.*]] = shufflevector <8 x i32> [[SPLAT_SPLATINSERT13]], <8 x i32> poison, <8 x i32> zeroinitializer
 // CHECK:   [[TMP19:%.*]] = load volatile <8 x i16>, ptr @ss, align 8
 // CHECK:   [[SH_PROM15:%.*]] = trunc <8 x i32> [[SPLAT_SPLAT14]] to <8 x i16>
@@ -2526,7 +2528,7 @@ void test_sr(void) {
 // CHECK:   [[SHR19:%.*]] = lshr <8 x i16> [[TMP24]], [[TMP23]]
 // CHECK:   store volatile <8 x i16> [[SHR19]], ptr @us, align 8
 // CHECK:   [[TMP25:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT20:%.*]] = insertelement <8 x i32> poison, i32 [[TMP25]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT20:%.*]] = insertelement <8 x i32> poison, i32 [[TMP25]], i64 0
 // CHECK:   [[SPLAT_SPLAT21:%.*]] = shufflevector <8 x i32> [[SPLAT_SPLATINSERT20]], <8 x i32> poison, <8 x i32> zeroinitializer
 // CHECK:   [[TMP26:%.*]] = load volatile <8 x i16>, ptr @us, align 8
 // CHECK:   [[SH_PROM22:%.*]] = trunc <8 x i32> [[SPLAT_SPLAT21]] to <8 x i16>
@@ -2544,7 +2546,7 @@ void test_sr(void) {
 // CHECK:   [[SHR26:%.*]] = ashr <4 x i32> [[TMP31]], [[TMP30]]
 // CHECK:   store volatile <4 x i32> [[SHR26]], ptr @si, align 8
 // CHECK:   [[TMP32:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT27:%.*]] = insertelement <4 x i32> poison, i32 [[TMP32]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT27:%.*]] = insertelement <4 x i32> poison, i32 [[TMP32]], i64 0
 // CHECK:   [[SPLAT_SPLAT28:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT27]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK:   [[TMP33:%.*]] = load volatile <4 x i32>, ptr @si, align 8
 // CHECK:   [[SHR29:%.*]] = ashr <4 x i32> [[TMP33]], [[SPLAT_SPLAT28]]
@@ -2561,7 +2563,7 @@ void test_sr(void) {
 // CHECK:   [[SHR32:%.*]] = lshr <4 x i32> [[TMP38]], [[TMP37]]
 // CHECK:   store volatile <4 x i32> [[SHR32]], ptr @ui, align 8
 // CHECK:   [[TMP39:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT33:%.*]] = insertelement <4 x i32> poison, i32 [[TMP39]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT33:%.*]] = insertelement <4 x i32> poison, i32 [[TMP39]], i64 0
 // CHECK:   [[SPLAT_SPLAT34:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT33]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK:   [[TMP40:%.*]] = load volatile <4 x i32>, ptr @ui, align 8
 // CHECK:   [[SHR35:%.*]] = lshr <4 x i32> [[TMP40]], [[SPLAT_SPLAT34]]
@@ -2578,7 +2580,7 @@ void test_sr(void) {
 // CHECK:   [[SHR38:%.*]] = ashr <2 x i64> [[TMP45]], [[TMP44]]
 // CHECK:   store volatile <2 x i64> [[SHR38]], ptr @sl, align 8
 // CHECK:   [[TMP46:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT39:%.*]] = insertelement <2 x i32> poison, i32 [[TMP46]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT39:%.*]] = insertelement <2 x i32> poison, i32 [[TMP46]], i64 0
 // CHECK:   [[SPLAT_SPLAT40:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT39]], <2 x i32> poison, <2 x i32> zeroinitializer
 // CHECK:   [[TMP47:%.*]] = load volatile <2 x i64>, ptr @sl, align 8
 // CHECK:   [[SH_PROM41:%.*]] = zext <2 x i32> [[SPLAT_SPLAT40]] to <2 x i64>
@@ -2596,7 +2598,7 @@ void test_sr(void) {
 // CHECK:   [[SHR45:%.*]] = lshr <2 x i64> [[TMP52]], [[TMP51]]
 // CHECK:   store volatile <2 x i64> [[SHR45]], ptr @ul, align 8
 // CHECK:   [[TMP53:%.*]] = load volatile i32, ptr @cnt, align 4
-// CHECK:   [[SPLAT_SPLATINSERT46:%.*]] = insertelement <2 x i32> poison, i32 [[TMP53]], i32 0
+// CHECK:   [[SPLAT_SPLATINSERT46:%.*]] = insertelement <2 x i32> poison, i32 [[TMP53]], i64 0
 // CHECK:   [[SPLAT_SPLAT47:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT46]], <2 x i32> poison, <2 x i32> zeroinitializer
 // CHECK:   [[TMP54:%.*]] = load volatile <2 x i64>, ptr @ul, align 8
 // CHECK:   [[SH_PROM48:%.*]] = zext <2 x i32> [[SPLAT_SPLAT47]] to <2 x i64>

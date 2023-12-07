@@ -3,7 +3,7 @@
 
 declare <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1>, <vscale x 2 x i32>, <vscale x 2 x i32>, i32)
 declare <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1>, <vscale x 2 x i32>, <vscale x 2 x i32>, i32)
-declare <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32> *, <vscale x 2 x i1>, i32)
+declare <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0(<vscale x 2 x i32> *, <vscale x 2 x i1>, i32)
 
 ; Test result has chain output of true operand of merge.vvm.
 define void @vpmerge_vpload_store(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> * %p, <vscale x 2 x i1> %m, i32 zeroext %vl) {
@@ -21,7 +21,7 @@ define void @vpmerge_vpload_store(<vscale x 2 x i32> %passthru, <vscale x 2 x i3
   ; CHECK-NEXT:   PseudoRET
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
   %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
+  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
   %b = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
   store <vscale x 2 x i32> %b, <vscale x 2 x i32> * %p
   ret void
@@ -42,7 +42,7 @@ define void @vpselect_vpload_store(<vscale x 2 x i32> %passthru, <vscale x 2 x i
   ; CHECK-NEXT:   PseudoRET
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
   %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
+  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
   %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
   store <vscale x 2 x i32> %b, <vscale x 2 x i32> * %p
   ret void

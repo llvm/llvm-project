@@ -73,7 +73,7 @@ class CombinationGenerator {
     SmallVector<WrappingIterator<choice_type>, variable_smallsize>
         VariablesState;
 
-    // 'increment' of the the whole VariablesState is defined identically to the
+    // 'increment' of the whole VariablesState is defined identically to the
     // increment of a number: starting from the least significant element,
     // increment it, and if it wrapped, then propagate that carry by also
     // incrementing next (more significant) element.

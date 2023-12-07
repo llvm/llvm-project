@@ -18,6 +18,16 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip --gpu-bundle-output \
 // RUN: 2>&1 | FileCheck -check-prefixes=COMMON,EMITBC %s
 
+// With `-fno-hip-emit-relocatable`, the output should be the same as the aforementioned line
+// as `-fgpu-rdc` in HIP implies `-fno-hip-emit-relocatable`.
+
+// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN:   -c -fno-hip-emit-relocatable -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
+// RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip --gpu-bundle-output \
+// RUN: 2>&1 | FileCheck -check-prefixes=COMMON,EMITBC %s
+
 // RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -S -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
@@ -48,7 +58,7 @@
 
 // Check output one file without bundling cause error.
 
-// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -S -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu -o %t.s --no-gpu-bundle-output \
@@ -117,7 +127,7 @@
 // SAVETEMP: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-E"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
-// SAVETEMP-SAME: {{.*}} "-o" [[A_GFX803_CUI:"a.*cui"]] "-x" "hip" {{".*a.cu"}}
+// SAVETEMP-SAME: {{.*}} "-o" [[A_GFX803_CUI:"a.*hipi"]] "-x" "hip" {{".*a.cu"}}
 // SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm-bc"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
@@ -130,7 +140,7 @@
 // SAVETEMP: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-E"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
-// SAVETEMP-SAME: {{.*}} "-o" [[A_GFX900_CUI:"a.*cui"]] "-x" "hip" {{".*a.cu"}}
+// SAVETEMP-SAME: {{.*}} "-o" [[A_GFX900_CUI:"a.*hipi"]] "-x" "hip" {{".*a.cu"}}
 // SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm-bc"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
@@ -147,7 +157,7 @@
 // SAVETEMP: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-E"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
-// SAVETEMP-SAME: {{.*}} "-o" [[B_GFX803_CUI:"b.*cui"]] "-x" "hip" {{".*b.hip"}}
+// SAVETEMP-SAME: {{.*}} "-o" [[B_GFX803_CUI:"b.*hipi"]] "-x" "hip" {{".*b.hip"}}
 // SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm-bc"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
@@ -160,7 +170,7 @@
 // SAVETEMP: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-E"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx900"
-// SAVETEMP-SAME: {{.*}} "-o" [[B_GFX900_CUI:"b.*cui"]] "-x" "hip" {{".*b.hip"}}
+// SAVETEMP-SAME: {{.*}} "-o" [[B_GFX900_CUI:"b.*hipi"]] "-x" "hip" {{".*b.hip"}}
 // SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm-bc"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx900"

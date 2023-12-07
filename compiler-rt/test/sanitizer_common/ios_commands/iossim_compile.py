@@ -3,20 +3,20 @@
 import os, sys, subprocess
 
 output = None
-output_type = 'executable'
+output_type = "executable"
 
 args = sys.argv[1:]
 while args:
     arg = args.pop(0)
-    if arg == '-shared':
-        output_type = 'shared'
-    elif arg == '-dynamiclib':
-        output_type = 'dylib'
-    elif arg == '-c':
-        output_type = 'object'
-    elif arg == '-S':
-        output_type = 'assembly'
-    elif arg == '-o':
+    if arg == "-shared":
+        output_type = "shared"
+    elif arg == "-dynamiclib":
+        output_type = "dylib"
+    elif arg == "-c":
+        output_type = "object"
+    elif arg == "-S":
+        output_type = "assembly"
+    elif arg == "-o":
         output = args.pop(0)
 
 if output == None:
@@ -28,5 +28,5 @@ if ret != 0:
     sys.exit(ret)
 
 # If we produce a dylib, ad-hoc sign it.
-if output_type in ['shared', 'dylib']:
+if output_type in ["shared", "dylib"]:
     ret = subprocess.call(["codesign", "-s", "-", output])

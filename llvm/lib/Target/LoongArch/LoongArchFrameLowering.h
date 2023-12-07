@@ -55,6 +55,8 @@ public:
   uint64_t getFirstSPAdjustAmount(const MachineFunction &MF,
                                   bool IsPrologue = false) const;
 
+  bool enableShrinkWrapping(const MachineFunction &MF) const override;
+
 private:
   void determineFrameLayout(MachineFunction &MF) const;
   void adjustReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,

@@ -41,6 +41,32 @@ std::string getEscapedName(const StringRef &Name);
 /// Return the unescaped name
 std::string getUnescapedName(const StringRef &Name);
 
+/// LTO-generated function names take a form:
+///
+///   <function_name>.lto_priv.<decimal_number>/...
+///     or
+///   <function_name>.constprop.<decimal_number>/...
+///
+/// they can also be:
+///
+///   <function_name>.lto_priv.<decimal_number1>.lto_priv.<decimal_number2>/...
+///
+/// The <decimal_number> is a global counter used for the whole program. As a
+/// result, a tiny change in a program may affect the naming of many LTO
+/// functions. For us this means that if we do a precise name matching, then
+/// a large set of functions could be left without a profile.
+///
+/// To solve this issue, we try to match a function to any profile:
+///
+///   <function_name>.(lto_priv|consprop).*
+///
+/// The name before an asterisk above represents a common LTO name for a family
+/// of functions. Later, out of all matching profiles we pick the one with the
+/// best match.
+///
+/// Return a common part of LTO name for a given \p Name.
+std::optional<StringRef> getLTOCommonName(const StringRef Name);
+
 // Determines which register a given DWARF expression is being assigned to.
 // If the expression is defining the CFA, return std::nullopt.
 std::optional<uint8_t> readDWARFExpressionTargetReg(StringRef ExprBytes);

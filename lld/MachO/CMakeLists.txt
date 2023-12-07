@@ -5,7 +5,6 @@ add_public_tablegen_target(MachOOptionsTableGen)
 include_directories(${LLVM_MAIN_SRC_DIR}/../libunwind/include)
 
 add_lld_library(lldMachO
-  Arch/ARM.cpp
   Arch/ARM64.cpp
   Arch/ARM64Common.cpp
   Arch/ARM64_32.cpp
@@ -38,6 +37,7 @@ add_lld_library(lldMachO
   ${LLVM_TARGETS_TO_BUILD}
   BinaryFormat
   BitReader
+  BitWriter
   Core
   DebugInfoDWARF
   Demangle
@@ -48,18 +48,14 @@ add_lld_library(lldMachO
   Option
   Passes
   Support
+  TargetParser
   TextAPI
 
   LINK_LIBS
   lldCommon
   ${LLVM_PTHREAD_LIB}
-  ${XAR_LIB}
 
   DEPENDS
   MachOOptionsTableGen
   ${tablegen_deps}
   )
-
-if(LLVM_HAVE_LIBXAR)
-  target_link_libraries(lldMachO PRIVATE ${XAR_LIB})
-endif()

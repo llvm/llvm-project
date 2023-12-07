@@ -134,8 +134,6 @@ void SPIRVAsmPrinter::emitFunctionBodyEnd() {
 }
 
 void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
-  if (MAI->MBBsToSkip.contains(&MBB))
-    return;
   MCInst LabelInst;
   LabelInst.setOpcode(SPIRV::OpLabel);
   LabelInst.addOperand(MCOperand::createReg(MAI->getOrCreateMBBRegister(MBB)));
@@ -143,6 +141,8 @@ void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
 }
 
 void SPIRVAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
+  assert(!MBB.empty() && "MBB is empty!");
+
   // If it's the first MBB in MF, it has OpFunction and OpFunctionParameter, so
   // OpLabel should be output after them.
   if (MBB.getNumber() == MF->front().getNumber()) {
@@ -445,6 +445,15 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       Inst.addOperand(MCOperand::createImm(EM));
       unsigned TypeCode = encodeVecTypeHint(getMDOperandAsType(Node, 0));
       Inst.addOperand(MCOperand::createImm(TypeCode));
+      outputMCInst(Inst);
+    }
+    if (!M.getNamedMetadata("spirv.ExecutionMode") &&
+        !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
+      MCInst Inst;
+      Inst.setOpcode(SPIRV::OpExecutionMode);
+      Inst.addOperand(MCOperand::createReg(FReg));
+      unsigned EM = static_cast<unsigned>(SPIRV::ExecutionMode::ContractionOff);
+      Inst.addOperand(MCOperand::createImm(EM));
       outputMCInst(Inst);
     }
   }

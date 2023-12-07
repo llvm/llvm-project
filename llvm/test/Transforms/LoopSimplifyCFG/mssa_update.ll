@@ -6,7 +6,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 ; Make sure we update MSSA properly.
-define void @test(i32* %a, i32* %b) {
+define void @test(ptr %a, ptr %b) {
 ; CHECK-LABEL: @test(
 
 entry:
@@ -28,8 +28,8 @@ default:
   unreachable
 
 latch:
-  store i32 %i, i32* %a
-  store i32 %i, i32* %b
+  store i32 %i, ptr %a
+  store i32 %i, ptr %b
   %i.inc = add nsw i32 %i, 1
   %exitcond = icmp eq i32 %i.inc, 4
   br i1 %exitcond, label %exit, label %for.body

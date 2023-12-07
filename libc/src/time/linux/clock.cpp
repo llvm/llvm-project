@@ -11,8 +11,8 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/errno/libc_errno.h"
 
-#include <errno.h>
 #include <sys/syscall.h> // For syscall numbers.
 #include <time.h>
 
@@ -20,15 +20,22 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(clock_t, clock, ()) {
   struct timespec ts;
-  long ret_val = __llvm_libc::syscall_impl(
+#if SYS_clock_gettime
+  int ret = __llvm_libc::syscall_impl<int>(
       SYS_clock_gettime, CLOCK_PROCESS_CPUTIME_ID, reinterpret_cast<long>(&ts));
-  if (ret_val < 0) {
-    errno = -ret_val;
+#elif defined(SYS_clock_gettime64)
+  int ret = __llvm_libc::syscall_impl<int>(SYS_clock_gettime64,
+                                           CLOCK_PROCESS_CPUTIME_ID,
+                                           reinterpret_cast<long>(&ts));
+#else
+#error "SYS_clock_gettime and SYS_clock_gettime64 syscalls not available."
+#endif
+  if (ret < 0) {
+    libc_errno = -ret;
     return clock_t(-1);
   }
 
-  // The above syscall gets the CPU time in seconds plus nanoseconds. We should
-  // make sure that corresponding clocks can actually be represented by clock-t.
+  // The above syscall gets the CPU time in seconds plus nanoseconds.
   // The standard requires that we return clock_t(-1) if we cannot represent
   // clocks as a clock_t value.
   constexpr clock_t CLOCK_SECS_MAX =

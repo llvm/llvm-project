@@ -11,5 +11,7 @@ add_lldb_unittest(ObjectFileELFTests
 
 set(test_inputs
   early-section-headers.so
+  liboffset-test.so
+  offset-test.bin
   )
 add_unittest_inputs(ObjectFileELFTests "${test_inputs}")

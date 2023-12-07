@@ -19,8 +19,8 @@ define void @f1(i32 %a1, i32 %a2) #0 {
 ; CHECK-NEXT:    add x8, x8, __MergedGlobals.2@PAGEOFF
 ; CHECK-NEXT:    stp w0, w1, [x8]
 ; CHECK-NEXT:    ret
-  store i32 %a1, i32* @m1, align 4
-  store i32 %a2, i32* @n1, align 4
+  store i32 %a1, ptr @m1, align 4
+  store i32 %a2, ptr @n1, align 4
   ret void
 }
 
@@ -36,9 +36,9 @@ define void @f2(i32 %a1, i32 %a2, i32 %a3) #0 {
 ; CHECK-NEXT:    stp w0, w1, [x8]
 ; CHECK-NEXT:    str w2, [x8, #8]
 ; CHECK-NEXT:    ret
-  store i32 %a1, i32* @m2, align 4
-  store i32 %a2, i32* @n2, align 4
-  store i32 %a3, i32* @o2, align 4
+  store i32 %a1, ptr @m2, align 4
+  store i32 %a2, ptr @n2, align 4
+  store i32 %a3, ptr @o2, align 4
   ret void
 }
 
@@ -57,8 +57,8 @@ define void @f3(i32 %a1, i32 %a2) #0 {
 ; CHECK-NEXT:    str w0, [x8, _m3@PAGEOFF]
 ; CHECK-NEXT:    str w1, [x9, __MergedGlobals@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 %a1, i32* @m3, align 4
-  store i32 %a2, i32* @n3, align 4
+  store i32 %a1, ptr @m3, align 4
+  store i32 %a2, ptr @n3, align 4
   ret void
 }
 
@@ -73,9 +73,9 @@ define void @f4(i32 %a1, i32 %a2, i32 %a3) #0 {
 ; CHECK-NEXT:    stp w0, w1, [x8, #4]
 ; CHECK-NEXT:    str w2, [x8]
 ; CHECK-NEXT:    ret
-  store i32 %a1, i32* @m4, align 4
-  store i32 %a2, i32* @n4, align 4
-  store i32 %a3, i32* @n3, align 4
+  store i32 %a1, ptr @m4, align 4
+  store i32 %a2, ptr @n4, align 4
+  store i32 %a3, ptr @n3, align 4
   ret void
 }
 
@@ -88,7 +88,7 @@ define void @f5(i32 %a1) #0 {
 ; CHECK-NEXT:    adrp x8, _o5@PAGE
 ; CHECK-NEXT:    str w0, [x8, _o5@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 %a1, i32* @o5, align 4
+  store i32 %a1, ptr @o5, align 4
   ret void
 }
 

@@ -685,8 +685,7 @@ label2:
 define i32 @brR0_sgt(i32 %x) {
 ; CHECK-LABEL: brR0_sgt:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmplti16 a0, 1
-; CHECK-NEXT:    bt32 .LBB18_2
+; CHECK-NEXT:    blsz32 a0, .LBB18_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
@@ -917,10 +916,7 @@ label2:
 define i32 @brR0_slt(i32 %x) {
 ; CHECK-LABEL: brR0_slt:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movih32 a1, 65535
-; CHECK-NEXT:    ori32 a1, a1, 65535
-; CHECK-NEXT:    cmplt16 a1, a0
-; CHECK-NEXT:    bf32 .LBB24_2
+; CHECK-NEXT:    blz32 a0, .LBB24_2
 ; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
@@ -2574,10 +2570,7 @@ label2:
 define i64 @brR0_i64_slt(i64 %x) {
 ; CHECK-LABEL: brR0_i64_slt:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movih32 a0, 65535
-; CHECK-NEXT:    ori32 a0, a0, 65535
-; CHECK-NEXT:    cmplt16 a0, a1
-; CHECK-NEXT:    bf32 .LBB53_2
+; CHECK-NEXT:    blz32 a1, .LBB53_2
 ; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    movi16 a1, 0
@@ -3787,8 +3780,7 @@ define i16 @brR0_i16_sgt(i16 %x) {
 ; CHECK-LABEL: brR0_i16_sgt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sexth16 a0, a0
-; CHECK-NEXT:    cmplti16 a0, 1
-; CHECK-NEXT:    bt32 .LBB76_2
+; CHECK-NEXT:    blsz32 a0, .LBB76_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
@@ -4035,10 +4027,7 @@ define i16 @brR0_i16_slt(i16 %x) {
 ; CHECK-LABEL: brR0_i16_slt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sexth16 a0, a0
-; CHECK-NEXT:    movih32 a1, 65535
-; CHECK-NEXT:    ori32 a1, a1, 65535
-; CHECK-NEXT:    cmplt16 a1, a0
-; CHECK-NEXT:    bf32 .LBB82_2
+; CHECK-NEXT:    blz32 a0, .LBB82_2
 ; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
@@ -4994,8 +4983,7 @@ define i8 @brR0_i8_sgt(i8 %x) {
 ; CHECK-LABEL: brR0_i8_sgt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sextb16 a0, a0
-; CHECK-NEXT:    cmplti16 a0, 1
-; CHECK-NEXT:    bt32 .LBB105_2
+; CHECK-NEXT:    blsz32 a0, .LBB105_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
@@ -5242,10 +5230,7 @@ define i8 @brR0_i8_slt(i8 %x) {
 ; CHECK-LABEL: brR0_i8_slt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sextb16 a0, a0
-; CHECK-NEXT:    movih32 a1, 65535
-; CHECK-NEXT:    ori32 a1, a1, 65535
-; CHECK-NEXT:    cmplt16 a1, a0
-; CHECK-NEXT:    bf32 .LBB111_2
+; CHECK-NEXT:    blz32 a0, .LBB111_2
 ; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
@@ -6625,4 +6610,229 @@ label1:
   ret i1 1
 label2:
   ret i1 0
+}
+
+define i32 @br_bit_test_eq_0(i32 %c) {
+; CHECK-LABEL: br_bit_test_eq_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    btsti16 a0, 17
+; CHECK-NEXT:    bt32 .LBB145_2
+; CHECK-NEXT:  # %bb.1: # %label1
+; CHECK-NEXT:    movi16 a0, 1
+; CHECK-NEXT:    rts16
+; CHECK-NEXT:  .LBB145_2: # %label2
+; CHECK-NEXT:    movi16 a0, 0
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: br_bit_test_eq_0:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    movi16 a3, 2
+; GENERIC-NEXT:    lsli16 a3, a3, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    lsli16 a2, a1, 8
+; GENERIC-NEXT:    or16 a2, a3
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    and16 a2, a0
+; GENERIC-NEXT:    cmpnei16 a2, 0
+; GENERIC-NEXT:    bt16 .LBB145_2
+; GENERIC-NEXT:  # %bb.1: # %label1
+; GENERIC-NEXT:    movi16 a0, 1
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+; GENERIC-NEXT:  .LBB145_2: # %label2
+; GENERIC-NEXT:    movi16 a0, 0
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+  %t0 = and i32 %c, 131072
+  %t1 = icmp eq i32 %t0, 0
+  br i1 %t1, label %label1, label %label2
+label1:
+  ret i32 1
+label2:
+  ret i32 0
+}
+
+define i32 @br_bit_test_ne_0(i32 %c) {
+; CHECK-LABEL: br_bit_test_ne_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    btsti16 a0, 17
+; CHECK-NEXT:    bf32 .LBB146_2
+; CHECK-NEXT:  # %bb.1: # %label1
+; CHECK-NEXT:    movi16 a0, 1
+; CHECK-NEXT:    rts16
+; CHECK-NEXT:  .LBB146_2: # %label2
+; CHECK-NEXT:    movi16 a0, 0
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: br_bit_test_ne_0:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    movi16 a3, 2
+; GENERIC-NEXT:    lsli16 a3, a3, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    lsli16 a2, a1, 8
+; GENERIC-NEXT:    or16 a2, a3
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    and16 a2, a0
+; GENERIC-NEXT:    cmpnei16 a2, 0
+; GENERIC-NEXT:    bf16 .LBB146_2
+; GENERIC-NEXT:  # %bb.1: # %label1
+; GENERIC-NEXT:    movi16 a0, 1
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+; GENERIC-NEXT:  .LBB146_2: # %label2
+; GENERIC-NEXT:    movi16 a0, 0
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+  %t0 = and i32 %c, 131072
+  %t1 = icmp ne i32 %t0, 0
+  br i1 %t1, label %label1, label %label2
+label1:
+  ret i32 1
+label2:
+  ret i32 0
+}
+
+define i32 @br_bit_test_eq_mask(i32 %c) {
+; CHECK-LABEL: br_bit_test_eq_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    btsti16 a0, 17
+; CHECK-NEXT:    bf32 .LBB147_2
+; CHECK-NEXT:  # %bb.1: # %label1
+; CHECK-NEXT:    movi16 a0, 1
+; CHECK-NEXT:    rts16
+; CHECK-NEXT:  .LBB147_2: # %label2
+; CHECK-NEXT:    movi16 a0, 0
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: br_bit_test_eq_mask:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    movi16 a3, 2
+; GENERIC-NEXT:    lsli16 a3, a3, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    lsli16 a2, a1, 8
+; GENERIC-NEXT:    or16 a2, a3
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    and16 a2, a0
+; GENERIC-NEXT:    cmpnei16 a2, 0
+; GENERIC-NEXT:    bf16 .LBB147_2
+; GENERIC-NEXT:  # %bb.1: # %label1
+; GENERIC-NEXT:    movi16 a0, 1
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+; GENERIC-NEXT:  .LBB147_2: # %label2
+; GENERIC-NEXT:    movi16 a0, 0
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+  %t0 = and i32 %c, 131072
+  %t1 = icmp eq i32 %t0, 131072
+  br i1 %t1, label %label1, label %label2
+label1:
+  ret i32 1
+label2:
+  ret i32 0
+}
+
+define i32 @br_bit_test_ne_mask(i32 %c) {
+; CHECK-LABEL: br_bit_test_ne_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    btsti16 a0, 17
+; CHECK-NEXT:    bt32 .LBB148_2
+; CHECK-NEXT:  # %bb.1: # %label1
+; CHECK-NEXT:    movi16 a0, 1
+; CHECK-NEXT:    rts16
+; CHECK-NEXT:  .LBB148_2: # %label2
+; CHECK-NEXT:    movi16 a0, 0
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: br_bit_test_ne_mask:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    movi16 a3, 2
+; GENERIC-NEXT:    lsli16 a3, a3, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    lsli16 a2, a1, 8
+; GENERIC-NEXT:    or16 a2, a3
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    and16 a2, a0
+; GENERIC-NEXT:    cmpnei16 a2, 0
+; GENERIC-NEXT:    bt16 .LBB148_2
+; GENERIC-NEXT:  # %bb.1: # %label1
+; GENERIC-NEXT:    movi16 a0, 1
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+; GENERIC-NEXT:  .LBB148_2: # %label2
+; GENERIC-NEXT:    movi16 a0, 0
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+  %t0 = and i32 %c, 131072
+  %t1 = icmp ne i32 %t0, 131072
+  br i1 %t1, label %label1, label %label2
+label1:
+  ret i32 1
+label2:
+  ret i32 0
+}
+
+define i32 @br_lowbit_test_ne_0(i32 %c) {
+; CHECK-LABEL: br_lowbit_test_ne_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi32 a0, a0, 256
+; CHECK-NEXT:    bez32 a0, .LBB149_2
+; CHECK-NEXT:  # %bb.1: # %label1
+; CHECK-NEXT:    movi16 a0, 1
+; CHECK-NEXT:    rts16
+; CHECK-NEXT:  .LBB149_2: # %label2
+; CHECK-NEXT:    movi16 a0, 0
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: br_lowbit_test_ne_0:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    lsli16 a3, a1, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    movi16 a2, 1
+; GENERIC-NEXT:    lsli16 a2, a2, 8
+; GENERIC-NEXT:    or16 a2, a3
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    and16 a2, a0
+; GENERIC-NEXT:    cmpnei16 a2, 0
+; GENERIC-NEXT:    bf16 .LBB149_2
+; GENERIC-NEXT:  # %bb.1: # %label1
+; GENERIC-NEXT:    movi16 a0, 1
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+; GENERIC-NEXT:  .LBB149_2: # %label2
+; GENERIC-NEXT:    movi16 a0, 0
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+  %t0 = and i32 %c, 256
+  %t1 = icmp ne i32 %t0, 0
+  br i1 %t1, label %label1, label %label2
+label1:
+  ret i32 1
+label2:
+  ret i32 0
 }

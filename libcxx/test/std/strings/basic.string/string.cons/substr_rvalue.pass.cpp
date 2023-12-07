@@ -14,6 +14,7 @@
 // constexpr basic_string(basic_string&& str, size_type pos, size_type n, const Allocator& a = Allocator());
 
 #include <cassert>
+#include <stdexcept>
 #include <string>
 
 #include "constexpr_char_traits.h"

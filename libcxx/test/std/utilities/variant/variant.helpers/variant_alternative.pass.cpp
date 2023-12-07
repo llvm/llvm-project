@@ -27,7 +27,7 @@
 #include "test_macros.h"
 #include "variant_test_helpers.h"
 
-template <class V, size_t I, class E> void test() {
+template <class V, std::size_t I, class E> void test() {
   static_assert(
       std::is_same_v<typename std::variant_alternative<I, V>::type, E>, "");
   static_assert(

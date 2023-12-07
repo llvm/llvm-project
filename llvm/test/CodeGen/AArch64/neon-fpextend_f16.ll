@@ -4,18 +4,18 @@
 ; This is testing that we can scalarize the v1f16 input to fp_extend even
 ; though the v1f64 result is legal.
 
-define <1 x double> @fpext_v1f16_v1f64(<1 x half>* %a) {
+define <1 x double> @fpext_v1f16_v1f64(ptr %a) {
 ; CHECK-LABEL: fpext_v1f16_v1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr h0, [x0]
 ; CHECK-NEXT:    fcvt d0, h0
 ; CHECK-NEXT:    ret
-  %b = load <1 x half>, <1 x half>* %a
+  %b = load <1 x half>, ptr %a
   %c = fpext <1 x half> %b to <1 x double>
   ret <1 x double> %c
 }
 
-define <1 x double> @strict_fpext_v1f32_v1f64(<1 x half> %x) #0 {
+define <1 x double> @strict_fpext_v1f32_v1f64(<1 x half> %x) strictfp {
 ; CHECK-LABEL: strict_fpext_v1f32_v1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvt d0, h0

@@ -11,15 +11,13 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Finds copy constructors where the ctor don't call the copy constructor of
 /// the base class.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/copy-constructor-init.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/copy-constructor-init.html
 class CopyConstructorInitCheck : public ClangTidyCheck {
 public:
   CopyConstructorInitCheck(StringRef Name, ClangTidyContext *Context)
@@ -31,8 +29,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_COPY_CONSTRUCTOR_INIT_H

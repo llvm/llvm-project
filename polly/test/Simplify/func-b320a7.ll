@@ -12,7 +12,7 @@ target triple = "x86_64-pc-windows-msvc19.26.28806"
 @"?var_28@@3HA" = external dso_local local_unnamed_addr global i32, align 4
 
 ; Function Attrs: nofree norecurse nounwind uwtable
-define dso_local void @"?test@@YAXHEQEAY3M@1BI@BJ@H@Z"(i32 %a, i8 %b, [12 x [2 x [24 x [25 x i32]]]]* nocapture readonly %c) local_unnamed_addr {
+define dso_local void @"?test@@YAXHEQEAY3M@1BI@BJ@H@Z"(i32 %a, i8 %b, ptr nocapture readonly %c) local_unnamed_addr {
 entry:
   br label %entry.split
 
@@ -36,9 +36,9 @@ for.cond8.preheader.us:                           ; preds = %for.cond8.preheader
 
 for.body14.us:                                    ; preds = %for.cond8.preheader.us, %for.body14.us
   %indvars.iv = phi i64 [ 0, %for.cond8.preheader.us ], [ %indvars.iv.next, %for.body14.us ]
-  %arrayidx19.us = getelementptr inbounds [12 x [2 x [24 x [25 x i32]]]], [12 x [2 x [24 x [25 x i32]]]]* %c, i64 6, i64 2, i64 1, i64 %idxprom.us, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx19.us, align 4, !tbaa !3
-  store i32 0, i32* @"?var_28@@3HA", align 4, !tbaa !3
+  %arrayidx19.us = getelementptr inbounds [12 x [2 x [24 x [25 x i32]]]], ptr %c, i64 6, i64 2, i64 1, i64 %idxprom.us, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx19.us, align 4, !tbaa !3
+  store i32 0, ptr @"?var_28@@3HA", align 4, !tbaa !3
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %sub11
   br i1 %exitcond.not, label %for.cond8.for.cond.cleanup13_crit_edge.us, label %for.body14.us
@@ -50,7 +50,7 @@ for.cond8.for.cond.cleanup13_crit_edge.us:        ; preds = %for.body14.us
   br i1 %cmp5.us, label %for.cond8.preheader.us, label %for.cond.cleanup.critedge.loopexit38
 
 for.cond.cleanup.critedge.loopexit38:             ; preds = %for.cond8.for.cond.cleanup13_crit_edge.us
-  store i32 %0, i32* @"?var_27@@3JA", align 4, !tbaa !7
+  store i32 %0, ptr @"?var_27@@3JA", align 4, !tbaa !7
   br label %for.cond.cleanup.critedge
 
 for.cond.cleanup.critedge:                        ; preds = %for.cond8.preheader, %for.cond.cleanup.critedge.loopexit38, %entry.split

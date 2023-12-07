@@ -16,11 +16,11 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 #include <memory>
@@ -52,7 +52,9 @@ const Function *getGlobalInit(llvm::Module *M) {
 
 TEST(IncrementalProcessing, EmitCXXGlobalInitFunc) {
   std::vector<const char *> ClangArgv = {"-Xclang", "-emit-llvm-only"};
-  auto CI = llvm::cantFail(IncrementalCompilerBuilder::create(ClangArgv));
+  auto CB = clang::IncrementalCompilerBuilder();
+  CB.SetCompilerArgs(ClangArgv);
+  auto CI = cantFail(CB.CreateCpp());
   auto Interp = llvm::cantFail(Interpreter::create(std::move(CI)));
 
   std::array<clang::PartialTranslationUnit *, 2> PTUs;

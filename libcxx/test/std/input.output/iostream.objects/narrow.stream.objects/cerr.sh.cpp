@@ -8,7 +8,7 @@
 
 // <iostream>
 
-// istream cerr;
+// ostream cerr;
 
 // UNSUPPORTED: executor-has-no-bash
 // FILE_DEPENDENCIES: ../check-stderr.sh

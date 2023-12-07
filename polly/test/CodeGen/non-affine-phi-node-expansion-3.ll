@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-codegen \
 ; RUN:     -S < %s | FileCheck %s
 
-define void @foo(float* %A, i1 %cond0, i1 %cond1) {
+define void @foo(ptr %A, i1 %cond0, i1 %cond1) {
 entry:
   br label %loop
 
@@ -36,7 +36,7 @@ branch2:
 backedge:
   %merge = phi float [%val0, %loop], [%val1, %branch1], [%val2, %branch2]
   %indvar.next = add i64 %indvar, 1
-  store float %merge, float* %A
+  store float %merge, ptr %A
   %cmp = icmp sle i64 %indvar.next, 100
   br i1 %cmp, label %loop, label %exit
 

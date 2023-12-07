@@ -14,7 +14,7 @@ body:             |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr24_agpr25_agpr26_agpr27, $agpr28_agpr29, $agpr30
 
     ; GCN-LABEL: name: partial_spill_v128_1_of_4
-    ; GCN: liveins: $agpr30, $agpr31, $agpr24_agpr25_agpr26_agpr27, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $agpr28_agpr29, $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN: liveins: $agpr30, $agpr31, $agpr28_agpr29, $agpr24_agpr25_agpr26_agpr27, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $vgpr0_vgpr1_vgpr2, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3 :: (store (s96) into %stack.0, align 4, addrspace 5)
@@ -39,13 +39,13 @@ body:             |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr24_agpr25_agpr26_agpr27, $agpr28_agpr29
 
     ; GCN-LABEL: name: partial_spill_v128_2_of_4
-    ; GCN: liveins: $agpr30, $agpr31, $agpr24_agpr25_agpr26_agpr27, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $agpr28_agpr29, $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN: liveins: $agpr30, $agpr31, $agpr28_agpr29, $agpr24_agpr25_agpr26_agpr27, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr2, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $vgpr0_vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3 :: (store (s64) into %stack.0, align 4, addrspace 5)
     ; GCN-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 $agpr30, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr31, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr31, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: $vgpr0_vgpr1 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3 :: (load (s64) from %stack.0, align 4, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24_agpr25_agpr26_agpr27, implicit $agpr28_agpr29
     SI_SPILL_V128_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
@@ -73,8 +73,8 @@ body:             |
     ; GCN-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3 :: (store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 $agpr29, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr30, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr31, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr30, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr31, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3 :: (load (s32) from %stack.0, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24_agpr25_agpr26_agpr27, implicit $agpr28
     SI_SPILL_V128_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
@@ -102,9 +102,9 @@ body:             |
     ; GCN-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: S_ENDPGM 0
     SI_SPILL_V128_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
     $vgpr0_vgpr1_vgpr2_vgpr3 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
@@ -124,7 +124,7 @@ body:             |
     liveins: $agpr0_agpr1_agpr2_agpr3, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51, $vgpr52_vgpr53, $vgpr54
 
     ; GCN-LABEL: name: partial_spill_a128_1_of_4
-    ; GCN: liveins: $vgpr54, $vgpr55, $agpr0_agpr1_agpr2_agpr3, $vgpr48_vgpr49_vgpr50_vgpr51, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr52_vgpr53
+    ; GCN: liveins: $vgpr54, $vgpr55, $agpr0_agpr1_agpr2_agpr3, $vgpr52_vgpr53, $vgpr48_vgpr49_vgpr50_vgpr51, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
     ; GCN-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $agpr0_agpr1_agpr2, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3 :: (store (s96) into %stack.0, align 4, addrspace 5)
@@ -149,13 +149,13 @@ body:             |
     liveins: $agpr0_agpr1_agpr2_agpr3, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51, $vgpr52_vgpr53
 
     ; GCN-LABEL: name: partial_spill_a128_2_of_4
-    ; GCN: liveins: $vgpr54, $vgpr55, $agpr0_agpr1_agpr2_agpr3, $vgpr48_vgpr49_vgpr50_vgpr51, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr52_vgpr53
+    ; GCN: liveins: $vgpr54, $vgpr55, $agpr0_agpr1_agpr2_agpr3, $vgpr52_vgpr53, $vgpr48_vgpr49_vgpr50_vgpr51, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
     ; GCN-NEXT: $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
     ; GCN-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $agpr0_agpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3 :: (store (s64) into %stack.0, align 4, addrspace 5)
     ; GCN-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr54, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr55, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
+    ; GCN-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr55, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
     ; GCN-NEXT: $agpr0_agpr1 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3 :: (load (s64) from %stack.0, align 4, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, implicit $vgpr48_vgpr49_vgpr50_vgpr51, implicit $vgpr52_vgpr53
     SI_SPILL_A128_SAVE killed $agpr0_agpr1_agpr2_agpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
@@ -183,8 +183,8 @@ body:             |
     ; GCN-NEXT: $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR killed $agpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3 :: (store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr53, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr54, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr55, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
+    ; GCN-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr54, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GCN-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr55, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
     ; GCN-NEXT: $agpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3 :: (load (s32) from %stack.0, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, implicit $vgpr48_vgpr49_vgpr50_vgpr51, implicit $vgpr52
     SI_SPILL_A128_SAVE killed $agpr0_agpr1_agpr2_agpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
@@ -212,9 +212,9 @@ body:             |
     ; GCN-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
     ; GCN-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3
     ; GCN-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
+    ; GCN-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GCN-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GCN-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
     ; GCN-NEXT: S_ENDPGM 0
     SI_SPILL_A128_SAVE killed $agpr0_agpr1_agpr2_agpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
     $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)

@@ -18,8 +18,8 @@
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/TargetParser/Triple.h"
 
 static bool GetPtr(char *cptr, uint64_t &ptr, lldb::SBFrame &frame,
                    lldb::SBCommandReturnObject &result) {

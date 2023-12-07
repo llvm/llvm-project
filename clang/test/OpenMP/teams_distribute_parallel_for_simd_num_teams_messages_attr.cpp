@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -fopenmp -fopenmp-version=51 -std=c++11 %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fsyntax-only -fopenmp-simd -fopenmp-version=51 -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fsyntax-only -fopenmp -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fsyntax-only -fopenmp-simd -std=c++11 %s -Wuninitialized
 
 void foo() {
 }

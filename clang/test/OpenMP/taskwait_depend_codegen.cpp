@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
 
 // CHECK-LABEL: tmain
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
-// CHECK: call void @__kmpc_omp_wait_deps(ptr @{{.+}}, i32 [[GTID]], i32 1, ptr %{{.}}, i32 0, ptr null)
+// CHECK: call void @__kmpc_omp_taskwait_deps_51(ptr @{{.+}}, i32 [[GTID]], i32 1, ptr %{{.}}, i32 0, ptr null, i32 0)
 
 
 #endif

@@ -20,6 +20,7 @@
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
 
@@ -289,6 +290,21 @@ public:
   ///     Set the usage mask for any copied options to \a dst_mask after
   ///     copying the option definition.
   void Append(OptionGroup *group, uint32_t src_mask, uint32_t dst_mask);
+
+  /// Append selected options from a OptionGroup class.
+  ///
+  /// Append the subset of options from \a group, where the "long_option" value
+  /// is _not_ in \a exclude_long_options.
+  ///
+  /// \param[in] group
+  ///     A group of options to take option values from and copy their
+  ///     definitions into this class.
+  ///
+  /// \param[in] exclude_long_options
+  ///     A set of long option strings which indicate which option values values
+  ///     to limit from \a group.
+  void Append(OptionGroup *group,
+              llvm::ArrayRef<llvm::StringRef> exclude_long_options);
 
   void Finalize();
 

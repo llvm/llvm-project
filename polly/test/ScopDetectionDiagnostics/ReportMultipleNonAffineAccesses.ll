@@ -57,7 +57,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @manyaccesses(float* noalias %A, i64 %n, float* noalias %B) !dbg !4 {
+define void @manyaccesses(ptr noalias %A, i64 %n, ptr noalias %B) !dbg !4 {
 entry:
   br label %entry.split
 
@@ -69,28 +69,28 @@ for.body:                                         ; preds = %entry.split, %for.b
   %tmp3 = phi i64 [ 0, %entry.split ], [ %tmp14, %for.body ], !dbg !15
   %mul = mul i64 %tmp3, 2, !dbg !17
   %tmp4 = mul i64 %tmp, %tmp3, !dbg !18
-  %arrayidx8 = getelementptr float, float* %B, i64 %tmp4, !dbg !19
+  %arrayidx8 = getelementptr float, ptr %B, i64 %tmp4, !dbg !19
   %mul9 = mul i64 %n, %tmp3, !dbg !15
-  %arrayidx12 = getelementptr float, float* %B, i64 %mul9, !dbg !20
-  %arrayidx15 = getelementptr float, float* %B, i64 %tmp3, !dbg !21
+  %arrayidx12 = getelementptr float, ptr %B, i64 %mul9, !dbg !20
+  %arrayidx15 = getelementptr float, ptr %B, i64 %tmp3, !dbg !21
   %mul1 = mul nsw i64 %mul, %tmp3, !dbg !17
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %mul1, !dbg !22
-  %tmp5 = load float, float* %arrayidx, align 4, !dbg !22
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %mul1, !dbg !22
+  %tmp5 = load float, ptr %arrayidx, align 4, !dbg !22
   %mul3 = mul nsw i64 %mul, %tmp3, !dbg !27
   %add1 = or i64 %mul3, 1, !dbg !27
-  %arrayidx4 = getelementptr inbounds float, float* %A, i64 %add1, !dbg !28
-  %tmp6 = load float, float* %arrayidx4, align 4, !dbg !28
-  %tmp7 = load float, float* %B, align 4, !dbg !29
-  %tmp8 = load float, float* %arrayidx8, align 4, !dbg !19
+  %arrayidx4 = getelementptr inbounds float, ptr %A, i64 %add1, !dbg !28
+  %tmp6 = load float, ptr %arrayidx4, align 4, !dbg !28
+  %tmp7 = load float, ptr %B, align 4, !dbg !29
+  %tmp8 = load float, ptr %arrayidx8, align 4, !dbg !19
   %tmp9 = mul i64 %mul9, %tmp3, !dbg !15
   %arrayidx10.sum = add i64 %tmp9, %tmp3, !dbg !15
-  %arrayidx11 = getelementptr inbounds float, float* %B, i64 %arrayidx10.sum, !dbg !15
-  %tmp10 = load float, float* %arrayidx11, align 4, !dbg !15
-  %tmp11 = load float, float* %arrayidx12, align 4, !dbg !20
-  %tmp12 = load float, float* %arrayidx15, align 4, !dbg !21
+  %arrayidx11 = getelementptr inbounds float, ptr %B, i64 %arrayidx10.sum, !dbg !15
+  %tmp10 = load float, ptr %arrayidx11, align 4, !dbg !15
+  %tmp11 = load float, ptr %arrayidx12, align 4, !dbg !20
+  %tmp12 = load float, ptr %arrayidx15, align 4, !dbg !21
   %mul16 = mul nsw i64 %tmp3, %tmp3, !dbg !30
-  %arrayidx18 = getelementptr inbounds float, float* %B, i64 %mul16, !dbg !31
-  %tmp13 = load float, float* %arrayidx18, align 4, !dbg !31
+  %arrayidx18 = getelementptr inbounds float, ptr %B, i64 %mul16, !dbg !31
+  %tmp13 = load float, ptr %arrayidx18, align 4, !dbg !31
   %add19 = fadd float %tmp5, %tmp6, !dbg !32
   %add20 = fadd float %add19, %tmp7, !dbg !33
   %add21 = fadd float %add20, %tmp8, !dbg !34
@@ -99,8 +99,8 @@ for.body:                                         ; preds = %entry.split, %for.b
   %add24 = fadd float %add23, %tmp12, !dbg !37
   %add25 = fadd float %add24, %tmp13, !dbg !38
   %mul26 = mul nsw i64 %tmp3, %tmp3, !dbg !39
-  %arrayidx27 = getelementptr inbounds float, float* %A, i64 %mul26, !dbg !40
-  store float %add25, float* %arrayidx27, align 4, !dbg !40
+  %arrayidx27 = getelementptr inbounds float, ptr %A, i64 %mul26, !dbg !40
+  store float %add25, ptr %arrayidx27, align 4, !dbg !40
   %tmp14 = add nsw i64 %tmp3, 1, !dbg !41
   %exitcond = icmp ne i64 %tmp14, 1024, !dbg !10
   br i1 %exitcond, label %for.body, label %for.end, !dbg !10

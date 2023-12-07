@@ -15,26 +15,26 @@ target triple = "thumbv7m-arm-none-eabi"
 ; CHECK: incdec.ptr1 =
 ; CHECK: incdec.ptr2 =
 ; CHECK: dec = 
-define void @f(float* nocapture readonly %a, float* nocapture readonly %b, float* nocapture %c, i32 %n) {
+define void @f(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %c, i32 %n) {
 entry:
   br label %while.cond
 
 while.cond:                                       ; preds = %while.body, %entry
-  %a.addr.0 = phi float* [ %a, %entry ], [ %incdec.ptr, %while.body ]
-  %b.addr.0 = phi float* [ %b, %entry ], [ %incdec.ptr1, %while.body ]
-  %c.addr.0 = phi float* [ %c, %entry ], [ %incdec.ptr2, %while.body ]
+  %a.addr.0 = phi ptr [ %a, %entry ], [ %incdec.ptr, %while.body ]
+  %b.addr.0 = phi ptr [ %b, %entry ], [ %incdec.ptr1, %while.body ]
+  %c.addr.0 = phi ptr [ %c, %entry ], [ %incdec.ptr2, %while.body ]
   %n.addr.0 = phi i32 [ %n, %entry ], [ %dec, %while.body ]
   %cmp = icmp sgt i32 %n.addr.0, 0
   br i1 %cmp, label %while.body, label %while.end
 
 while.body:                                       ; preds = %while.cond
-  %incdec.ptr = getelementptr inbounds float, float* %a.addr.0, i32 1
-  %tmp = load float, float* %a.addr.0, align 4
-  %incdec.ptr1 = getelementptr inbounds float, float* %b.addr.0, i32 1
-  %tmp1 = load float, float* %b.addr.0, align 4
+  %incdec.ptr = getelementptr inbounds float, ptr %a.addr.0, i32 1
+  %tmp = load float, ptr %a.addr.0, align 4
+  %incdec.ptr1 = getelementptr inbounds float, ptr %b.addr.0, i32 1
+  %tmp1 = load float, ptr %b.addr.0, align 4
   %add = fadd float %tmp, %tmp1
-  %incdec.ptr2 = getelementptr inbounds float, float* %c.addr.0, i32 1
-  store float %add, float* %c.addr.0, align 4
+  %incdec.ptr2 = getelementptr inbounds float, ptr %c.addr.0, i32 1
+  store float %add, ptr %c.addr.0, align 4
   %dec = add nsw i32 %n.addr.0, -1
   br label %while.cond
 

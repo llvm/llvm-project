@@ -3,7 +3,7 @@
 // --------------------------------------------------
 
 // RUN: %libomptarget-compile-generic \
-// RUN:   -fopenmp-version=51 -DEXTENDS=BEFORE
+// RUN:   -DEXTENDS=BEFORE
 // RUN: %libomptarget-run-fail-generic 2>&1 \
 // RUN: | %fcheck-generic
 
@@ -12,7 +12,7 @@
 // --------------------------------------------------
 
 // RUN: %libomptarget-compile-generic \
-// RUN:   -fopenmp-version=51 -DEXTENDS=AFTER
+// RUN:   -DEXTENDS=AFTER
 // RUN: %libomptarget-run-fail-generic 2>&1 \
 // RUN: | %fcheck-generic
 

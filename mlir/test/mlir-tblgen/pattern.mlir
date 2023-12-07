@@ -5,8 +5,8 @@ func.func @verifyFusedLocs(%arg0 : i32) -> i32 {
   %0 = "test.op_a"(%arg0) {attr = 10 : i32} : (i32) -> i32 loc("a")
   %result = "test.op_a"(%0) {attr = 20 : i32} : (i32) -> i32 loc("b")
 
-  // CHECK: "test.op_b"(%arg0) {attr = 10 : i32} : (i32) -> i32 loc("a")
-  // CHECK: "test.op_b"(%arg0) {attr = 20 : i32} : (i32) -> i32 loc(fused["b", "a"])
+  // CHECK: "test.op_b"(%arg0) <{attr = 10 : i32}> : (i32) -> i32 loc("a")
+  // CHECK: "test.op_b"(%arg0) <{attr = 20 : i32}> : (i32) -> i32 loc(fused["b", "a"])
   return %result : i32
 }
 
@@ -41,7 +41,7 @@ func.func @verifyZeroArg() -> i32 {
 // CHECK-LABEL: testIgnoreArgMatch
 // CHECK-SAME: (%{{[a-z0-9]*}}: i32 loc({{[^)]*}}), %[[ARG1:[a-z0-9]*]]: i32 loc({{[^)]*}}),
 func.func @testIgnoreArgMatch(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: f32) {
-  // CHECK: "test.ignore_arg_match_dst"(%[[ARG1]]) {f = 15 : i64}
+  // CHECK: "test.ignore_arg_match_dst"(%[[ARG1]]) <{f = 15 : i64}>
   "test.ignore_arg_match_src"(%arg0, %arg1, %arg2) {d = 42, e = 24, f = 15} : (i32, i32, i32) -> ()
 
   // CHECK: test.ignore_arg_match_src
@@ -57,7 +57,7 @@ func.func @testIgnoreArgMatch(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: f32) {
 // CHECK-LABEL: verifyInterleavedOperandAttribute
 // CHECK-SAME:    %[[ARG0:.*]]: i32 loc({{[^)]*}}), %[[ARG1:.*]]: i32 loc({{[^)]*}})
 func.func @verifyInterleavedOperandAttribute(%arg0: i32, %arg1: i32) {
-  // CHECK: "test.interleaved_operand_attr2"(%[[ARG0]], %[[ARG1]]) {attr1 = 15 : i64, attr2 = 42 : i64}
+  // CHECK: "test.interleaved_operand_attr2"(%[[ARG0]], %[[ARG1]]) <{attr1 = 15 : i64, attr2 = 42 : i64}>
   "test.interleaved_operand_attr1"(%arg0, %arg1) {attr1 = 15, attr2 = 42} : (i32, i32) -> ()
   return
 }
@@ -69,13 +69,13 @@ func.func @verifyBenefit(%arg0 : i32) -> i32 {
   %2 = "test.op_g"(%1) : (i32) -> i32
 
   // CHECK: "test.op_f"(%arg0)
-  // CHECK: "test.op_b"(%arg0) {attr = 34 : i32}
+  // CHECK: "test.op_b"(%arg0) <{attr = 34 : i32}>
   return %0 : i32
 }
 
 // CHECK-LABEL: verifyNativeCodeCall
 func.func @verifyNativeCodeCall(%arg0: i32, %arg1: i32) -> (i32, i32) {
-  // CHECK: %0 = "test.native_code_call2"(%arg0) {attr = [42, 24]} : (i32) -> i32
+  // CHECK: %0 = "test.native_code_call2"(%arg0) <{attr = [42, 24]}> : (i32) -> i32
   // CHECK:  return %0, %arg1
   %0 = "test.native_code_call1"(%arg0, %arg1) {choice = true, attr1 = 42, attr2 = 24} : (i32, i32) -> (i32)
   %1 = "test.native_code_call1"(%arg0, %arg1) {choice = false, attr1 = 42, attr2 = 24} : (i32, i32) -> (i32)
@@ -215,7 +215,7 @@ func.func @symbolBinding(%arg0: i32) -> i32 {
   // An op with one use is matched.
   // CHECK: %0 = "test.symbol_binding_b"(%arg0)
   // CHECK: %1 = "test.symbol_binding_c"(%0)
-  // CHECK: %2 = "test.symbol_binding_d"(%0, %1) {attr = 42 : i64}
+  // CHECK: %2 = "test.symbol_binding_d"(%0, %1) <{attr = 42 : i64}>
   %0 = "test.symbol_binding_a"(%arg0) {attr = 42} : (i32) -> (i32)
 
   // An op without any use is not matched.
@@ -239,21 +239,21 @@ func.func @symbolBindingNoResult(%arg0: i32) {
 
 // CHECK-LABEL: succeedMatchOpAttr
 func.func @succeedMatchOpAttr() -> i32 {
-  // CHECK: "test.match_op_attribute2"() {default_valued_attr = 3 : i32, more_attr = 4 : i32, optional_attr = 2 : i32, required_attr = 1 : i32}
+  // CHECK: "test.match_op_attribute2"() <{default_valued_attr = 3 : i32, more_attr = 4 : i32, optional_attr = 2 : i32, required_attr = 1 : i32}>
   %0 = "test.match_op_attribute1"() {required_attr = 1: i32, optional_attr = 2: i32, default_valued_attr = 3: i32, more_attr = 4: i32} : () -> (i32)
   return %0: i32
 }
 
 // CHECK-LABEL: succeedMatchMissingOptionalAttr
 func.func @succeedMatchMissingOptionalAttr() -> i32 {
-  // CHECK: "test.match_op_attribute2"() {default_valued_attr = 3 : i32, more_attr = 4 : i32, required_attr = 1 : i32}
+  // CHECK: "test.match_op_attribute2"() <{default_valued_attr = 3 : i32, more_attr = 4 : i32, required_attr = 1 : i32}>
   %0 = "test.match_op_attribute1"() {required_attr = 1: i32, default_valued_attr = 3: i32, more_attr = 4: i32} : () -> (i32)
   return %0: i32
 }
 
 // CHECK-LABEL: succeedMatchMissingDefaultValuedAttr
 func.func @succeedMatchMissingDefaultValuedAttr() -> i32 {
-  // CHECK: "test.match_op_attribute2"() {default_valued_attr = 42 : i32, more_attr = 4 : i32, optional_attr = 2 : i32, required_attr = 1 : i32}
+  // CHECK: "test.match_op_attribute2"() <{default_valued_attr = 42 : i32, more_attr = 4 : i32, optional_attr = 2 : i32, required_attr = 1 : i32}>
   %0 = "test.match_op_attribute1"() {required_attr = 1: i32, optional_attr = 2: i32, more_attr = 4: i32} : () -> (i32)
   return %0: i32
 }
@@ -267,7 +267,7 @@ func.func @failedMatchAdditionalConstraintNotSatisfied() -> i32 {
 
 // CHECK-LABEL: verifyConstantAttr
 func.func @verifyConstantAttr(%arg0 : i32) -> i32 {
-  // CHECK: "test.op_b"(%arg0) {attr = 17 : i32} : (i32) -> i32 loc("a")
+  // CHECK: "test.op_b"(%arg0) <{attr = 17 : i32}> : (i32) -> i32 loc("a")
   %0 = "test.op_c"(%arg0) : (i32) -> i32 loc("a")
   return %0 : i32
 }
@@ -275,12 +275,12 @@ func.func @verifyConstantAttr(%arg0 : i32) -> i32 {
 // CHECK-LABEL: verifyUnitAttr
 func.func @verifyUnitAttr() -> (i32, i32) {
   // Unit attribute present in the matched op is propagated as attr2.
-  // CHECK: "test.match_op_attribute4"() {attr1, attr2} : () -> i32
+  // CHECK: "test.match_op_attribute4"() <{attr1, attr2}> : () -> i32
   %0 = "test.match_op_attribute3"() {attr} : () -> i32
 
   // Since the original op doesn't have the unit attribute, the new op
   // only has the constant-constructed unit attribute attr1.
-  // CHECK: "test.match_op_attribute4"() {attr1} : () -> i32
+  // CHECK: "test.match_op_attribute4"() <{attr1}> : () -> i32
   %1 = "test.match_op_attribute3"() : () -> i32
   return %0, %1 : i32, i32
 }
@@ -291,7 +291,7 @@ func.func @verifyUnitAttr() -> (i32, i32) {
 
 // CHECK-LABEL: testConstOp
 func.func @testConstOp() -> (i32) {
-  // CHECK-NEXT: [[C0:%.+]] = "test.constant"() {value = 1
+  // CHECK-NEXT: [[C0:%.+]] = "test.constant"() <{value = 1
   %0 = "test.constant"() {value = 1 : i32} : () -> i32
 
   // CHECK-NEXT: return [[C0]]
@@ -300,7 +300,7 @@ func.func @testConstOp() -> (i32) {
 
 // CHECK-LABEL: testConstOpUsed
 func.func @testConstOpUsed() -> (i32) {
-  // CHECK-NEXT: [[C0:%.+]] = "test.constant"() {value = 1
+  // CHECK-NEXT: [[C0:%.+]] = "test.constant"() <{value = 1
   %0 = "test.constant"() {value = 1 : i32} : () -> i32
 
   // CHECK-NEXT: [[V0:%.+]] = "test.op_s"([[C0]])
@@ -312,11 +312,11 @@ func.func @testConstOpUsed() -> (i32) {
 
 // CHECK-LABEL: testConstOpReplaced
 func.func @testConstOpReplaced() -> (i32) {
-  // CHECK-NEXT: [[C0:%.+]] = "test.constant"() {value = 1
+  // CHECK-NEXT: [[C0:%.+]] = "test.constant"() <{value = 1
   %0 = "test.constant"() {value = 1 : i32} : () -> i32
   %1 = "test.constant"() {value = 2 : i32} : () -> i32
 
-  // CHECK: [[V0:%.+]] = "test.op_s"([[C0]]) {value = 2 : i32}
+  // CHECK: [[V0:%.+]] = "test.op_s"([[C0]]) <{value = 2 : i32}
   %2 = "test.op_r"(%0, %1) : (i32, i32) -> i32
 
   // CHECK: [[V0]]
@@ -325,10 +325,10 @@ func.func @testConstOpReplaced() -> (i32) {
 
 // CHECK-LABEL: testConstOpMatchFailure
 func.func @testConstOpMatchFailure() -> (i64) {
-  // CHECK-DAG: [[C0:%.+]] = "test.constant"() {value = 1
+  // CHECK-DAG: [[C0:%.+]] = "test.constant"() <{value = 1
   %0 = "test.constant"() {value = 1 : i64} : () -> i64
 
-  // CHECK-DAG: [[C1:%.+]] = "test.constant"() {value = 2
+  // CHECK-DAG: [[C1:%.+]] = "test.constant"() <{value = 2
   %1 = "test.constant"() {value = 2 : i64} : () -> i64
 
   // CHECK: [[V0:%.+]] = "test.op_r"([[C0]], [[C1]])
@@ -340,7 +340,7 @@ func.func @testConstOpMatchFailure() -> (i64) {
 
 // CHECK-LABEL: testConstOpMatchNonConst
 func.func @testConstOpMatchNonConst(%arg0 : i32) -> (i32) {
-  // CHECK-DAG: [[C0:%.+]] = "test.constant"() {value = 1
+  // CHECK-DAG: [[C0:%.+]] = "test.constant"() <{value = 1
   %0 = "test.constant"() {value = 1 : i32} : () -> i32
 
   // CHECK: [[V0:%.+]] = "test.op_r"([[C0]], %arg0)
@@ -358,14 +358,14 @@ func.func @testConstOpMatchNonConst(%arg0 : i32) -> (i32) {
 
 // CHECK-LABEL: verifyI32EnumAttr
 func.func @verifyI32EnumAttr() -> i32 {
-  // CHECK: "test.i32_enum_attr"() {attr = 10 : i32}
+  // CHECK: "test.i32_enum_attr"() <{attr = 10 : i32}
   %0 = "test.i32_enum_attr"() {attr = 5: i32} : () -> i32
   return %0 : i32
 }
 
 // CHECK-LABEL: verifyI64EnumAttr
 func.func @verifyI64EnumAttr() -> i32 {
-  // CHECK: "test.i64_enum_attr"() {attr = 10 : i64}
+  // CHECK: "test.i64_enum_attr"() <{attr = 10 : i64}
   %0 = "test.i64_enum_attr"() {attr = 5: i64} : () -> i32
   return %0 : i32
 }
@@ -515,6 +515,67 @@ func.func @generateVariadicOutputOpInNestedPattern() -> (i32) {
   return %0 : i32
 }
 
+// CHECK-LABEL: @testMatchVariadic
+func.func @testMatchVariadic(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> () {
+  // CHECK: "test.mixed_variadic_in5"(%arg0, %arg1, %arg2) <{attr1 = 0 : i32, pattern_name = "MatchVariadic"}> : (i32, i32, i32) -> ()
+  "test.mixed_variadic_in4"(%arg0, %arg1, %arg2) {attr1 = 0 : i32} : (i32, i32, i32) -> ()
+
+  // Note: Not rewritten because variadic operand size mismatches.
+  // CHECK: "test.mixed_variadic_in4"(%arg0, %arg1, %arg2, %arg3) <{attr1 = 0 : i32}> : (i32, i32, i32, i32) -> ()
+  "test.mixed_variadic_in4"(%arg0, %arg1, %arg2, %arg3) {attr1 = 0 : i32} : (i32, i32, i32, i32) -> ()
+
+  return
+}
+
+// CHECK-LABEL: @testMatchVariadicSubDag
+func.func @testMatchVariadicSubDag(%arg0: i32, %arg1: i32, %arg2: i32) -> () {
+  // CHECK: %[[IN0:.*]] = "test.mixed_variadic_in_out_i32"(%arg0) : (i32) -> i32
+  %0 = "test.mixed_variadic_in_out_i32"(%arg0) : (i32) -> i32
+  // CHECK: %[[IN1:.*]] = "test.mixed_variadic_in_out_i32"(%arg1) : (i32) -> i32
+  %1 = "test.mixed_variadic_in_out_i32"(%arg1) : (i32) -> i32
+
+  // CHECK: "test.mixed_variadic_in5"(%arg0, %arg1, %arg2) <{attr1 = 1 : i32, pattern_name = "MatchVariadicSubDag"}> : (i32, i32, i32) -> ()
+  "test.mixed_variadic_in4"(%0, %1, %arg2) {attr1 = 1 : i32} : (i32, i32, i32) -> ()
+
+  // Note: MatchVariadicSubDag doesn't apply
+  // CHECK: "test.mixed_variadic_in4"(%arg0, %arg1, %arg2) <{attr1 = 1 : i32}> : (i32, i32, i32) -> ()
+  "test.mixed_variadic_in4"(%arg0, %arg1, %arg2) {attr1 = 1 : i32} : (i32, i32, i32) -> ()
+
+  return
+}
+
+// CHECK-LABEL: @testMatchVariadicSameSymbol
+func.func @testMatchVariadicSameSymbol(%arg0: i32, %arg1: i32, %arg2: i32) -> () {
+  // CHECK: "test.mixed_variadic_in5"(%arg0, %arg0, %arg2) <{attr1 = 2 : i32, pattern_name = "MatchVariadicSameSymbol"}> : (i32, i32, i32) -> ()
+  "test.mixed_variadic_in4"(%arg0, %arg0, %arg2) {attr1 = 2 : i32} : (i32, i32, i32) -> ()
+
+  // Note: MatchVariadicSameSymbol doesn't apply.
+  // CHECK: "test.mixed_variadic_in4"(%arg0, %arg1, %arg2) <{attr1 = 2 : i32}> : (i32, i32, i32) -> ()
+  "test.mixed_variadic_in4"(%arg0, %arg1, %arg2) {attr1 = 2 : i32} : (i32, i32, i32) -> ()
+
+  return
+}
+
+// CHECK-LABEL: @testMatchAndRewriteVariadicFullRange
+func.func @testMatchAndRewriteVariadicFullRange(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> () {
+  // CHECK: "test.mixed_variadic_in6"(%arg2, %arg3, %arg0, %arg1) <{attr1 = -1 : i32}> : (i32, i32, i32, i32) -> ()
+  "test.mixed_variadic_in6"(%arg0, %arg1, %arg2, %arg3) {attr1 = 1 : i32} : (i32, i32, i32, i32) -> ()
+
+  // Note: MatchAndRewriteVariadicFullRange doesn't apply because the length of each variadic operand is not equal to 2.
+  // CHECK: "test.mixed_variadic_in6"(%arg0, %arg1) <{attr1 = 1 : i32}> : (i32, i32) -> ()
+  "test.mixed_variadic_in6"(%arg0, %arg1) {attr1 = 1 : i32} : (i32, i32) -> ()
+
+  return
+}
+
+// CHECK-LABEL: @testMatchMultiVariadicSubSymbol
+func.func @testMatchMultiVariadicSubSymbol(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> () {
+  // CHECK: "test.mixed_variadic_in5"(%arg2, %arg3, %arg1) <{attr1 = 2 : i32, pattern_name = "MatchMultiVariadicSubSymbol"}> : (i32, i32, i32) -> ()
+  "test.mixed_variadic_in6"(%arg0, %arg1, %arg2, %arg3) {attr1 = 2 : i32} : (i32, i32, i32, i32) -> ()
+
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // Test that natives calls are only called once during rewrites.
 //===----------------------------------------------------------------------===//
@@ -522,7 +583,7 @@ func.func @generateVariadicOutputOpInNestedPattern() -> (i32) {
 // CHECK-LABEL: redundantTest
 func.func @redundantTest(%arg0: i32) -> i32 {
   %0 = "test.op_m"(%arg0) : (i32) -> i32
-  // CHECK: "test.op_m"(%arg0) {optional_attr = 314159265 : i32} : (i32) -> i32
+  // CHECK: "test.op_m"(%arg0) <{optional_attr = 314159265 : i32}> : (i32) -> i32
   return %0 : i32
 }
 
@@ -532,30 +593,30 @@ func.func @redundantTest(%arg0: i32) -> i32 {
 
 // CHECK: @either_dag_leaf_only
 func.func @either_dag_leaf_only_1(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () {
-  // CHECK: "test.either_op_b"(%arg1) : (i16) -> i32
+  // CHECK: "test.either_op_b"(%arg1, %arg2) : (i16, i8) -> i32
   %0 = "test.either_op_a"(%arg0, %arg1, %arg2) : (i32, i16, i8) -> i32
-  // CHECK: "test.either_op_b"(%arg1) : (i16) -> i32
+  // CHECK: "test.either_op_b"(%arg1, %arg2) : (i16, i8) -> i32
   %1 = "test.either_op_a"(%arg1, %arg0, %arg2) : (i16, i32, i8) -> i32
   return
 }
 
 // CHECK: @either_dag_leaf_dag_node
 func.func @either_dag_leaf_dag_node(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () {
-  %0 = "test.either_op_b"(%arg0) : (i32) -> i32
-  // CHECK: "test.either_op_b"(%arg1) : (i16) -> i32
+  %0 = "test.either_op_b"(%arg0, %arg0) : (i32, i32) -> i32
+  // CHECK: "test.either_op_b"(%arg1, %arg2) : (i16, i8) -> i32
   %1 = "test.either_op_a"(%0, %arg1, %arg2) : (i32, i16, i8) -> i32
-  // CHECK: "test.either_op_b"(%arg1) : (i16) -> i32
+  // CHECK: "test.either_op_b"(%arg1, %arg2) : (i16, i8) -> i32
   %2 = "test.either_op_a"(%arg1, %0, %arg2) : (i16, i32, i8) -> i32
   return
 }
 
 // CHECK: @either_dag_node_dag_node
 func.func @either_dag_node_dag_node(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () {
-  %0 = "test.either_op_b"(%arg0) : (i32) -> i32
-  %1 = "test.either_op_b"(%arg1) : (i16) -> i32
-  // CHECK: "test.either_op_b"(%arg1) : (i16) -> i32
+  %0 = "test.either_op_b"(%arg0, %arg0) : (i32, i32) -> i32
+  %1 = "test.either_op_b"(%arg1, %arg1) : (i16, i16) -> i32
+  // CHECK: "test.either_op_b"(%arg1, %arg2) : (i16, i8) -> i32
   %2 = "test.either_op_a"(%0, %1, %arg2) : (i32, i32, i8) -> i32
-  // CHECK: "test.either_op_b"(%arg1) : (i16) -> i32
+  // CHECK: "test.either_op_b"(%arg1, %arg2) : (i16, i8) -> i32
   %3 = "test.either_op_a"(%1, %0, %arg2) : (i32, i32, i8) -> i32
   return
 }

@@ -34,7 +34,7 @@ static void validateTargetProfile(
     DiagnosticsEngine &Diags) {
   Driver TheDriver("/bin/clang", "", Diags, "", InMemoryFileSystem);
   std::unique_ptr<Compilation> C{TheDriver.BuildCompilation(
-      {"clang", "--driver-mode=dxc", TargetProfile.data(), "foo.hlsl"})};
+      {"clang", "--driver-mode=dxc", TargetProfile.data(), "foo.hlsl", "-Vd"})};
   EXPECT_TRUE(C);
   EXPECT_STREQ(TheDriver.getTargetTriple().c_str(), ExpectTriple.data());
   EXPECT_EQ(Diags.getNumErrors(), 0u);
@@ -47,7 +47,7 @@ static void validateTargetProfile(
     unsigned NumOfErrors) {
   Driver TheDriver("/bin/clang", "", Diags, "", InMemoryFileSystem);
   std::unique_ptr<Compilation> C{TheDriver.BuildCompilation(
-      {"clang", "--driver-mode=dxc", TargetProfile.data(), "foo.hlsl"})};
+      {"clang", "--driver-mode=dxc", TargetProfile.data(), "foo.hlsl", "-Vd"})};
   EXPECT_TRUE(C);
   EXPECT_EQ(Diags.getNumErrors(), NumOfErrors);
   EXPECT_STREQ(DiagConsumer->Errors.back().c_str(), ExpectError.data());
@@ -137,8 +137,9 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
     auto *A = TranslatedArgs->getLastArg(
         clang::driver::options::OPT_dxil_validator_version);
     EXPECT_NE(A, nullptr);
-    if (A)
+    if (A) {
       EXPECT_STREQ(A->getValue(), "1.1");
+    }
   }
   EXPECT_EQ(Diags.getNumErrors(), 0u);
 

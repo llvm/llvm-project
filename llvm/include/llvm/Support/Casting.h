@@ -66,7 +66,7 @@ template <typename To, typename From, typename Enabler = void> struct isa_impl {
 
 // Always allow upcasts, and perform no dynamic check for them.
 template <typename To, typename From>
-struct isa_impl<To, From, std::enable_if_t<std::is_base_of<To, From>::value>> {
+struct isa_impl<To, From, std::enable_if_t<std::is_base_of_v<To, From>>> {
   static inline bool doit(const From &) { return true; }
 };
 
@@ -231,7 +231,7 @@ struct cast_convert_val<To, FromTy *, FromTy *> {
 
 template <class X> struct is_simple_type {
   static const bool value =
-      std::is_same<X, typename simplify_type<X>::SimpleType>::value;
+      std::is_same_v<X, typename simplify_type<X>::SimpleType>;
 };
 
 // } // namespace detail
@@ -275,8 +275,7 @@ struct CastIsPossible<To, std::optional<From>> {
 /// Upcasting (from derived to base) and casting from a type to itself should
 /// always be possible.
 template <typename To, typename From>
-struct CastIsPossible<To, From,
-                      std::enable_if_t<std::is_base_of<To, From>::value>> {
+struct CastIsPossible<To, From, std::enable_if_t<std::is_base_of_v<To, From>>> {
   static inline bool isPossible(const From &f) { return true; }
 };
 
@@ -319,7 +318,7 @@ namespace detail {
 /// A helper to derive the type to use with `Self` for cast traits, when the
 /// provided CRTP derived type is allowed to be void.
 template <typename OptionalDerived, typename Default>
-using SelfType = std::conditional_t<std::is_same<OptionalDerived, void>::value,
+using SelfType = std::conditional_t<std::is_same_v<OptionalDerived, void>,
                                     Default, OptionalDerived>;
 } // namespace detail
 
@@ -352,10 +351,10 @@ struct UniquePtrCast : public CastIsPossible<To, From *> {
 
   static inline CastResultType castFailed() { return CastResultType(nullptr); }
 
-  static inline CastResultType doCastIfPossible(std::unique_ptr<From> &&f) {
-    if (!Self::isPossible(f))
+  static inline CastResultType doCastIfPossible(std::unique_ptr<From> &f) {
+    if (!Self::isPossible(f.get()))
       return castFailed();
-    return doCast(f);
+    return doCast(std::move(f));
   }
 };
 
@@ -390,8 +389,8 @@ struct ConstStrippingForwardingCast {
   // Remove the pointer if it exists, then we can get rid of consts/volatiles.
   using DecayedFrom = std::remove_cv_t<std::remove_pointer_t<From>>;
   // Now if it's a pointer, add it back. Otherwise, we want a ref.
-  using NonConstFrom = std::conditional_t<std::is_pointer<From>::value,
-                                          DecayedFrom *, DecayedFrom &>;
+  using NonConstFrom =
+      std::conditional_t<std::is_pointer_v<From>, DecayedFrom *, DecayedFrom &>;
 
   static inline bool isPossible(const From &f) {
     return ForwardTo::isPossible(const_cast<NonConstFrom>(f));
@@ -665,10 +664,9 @@ template <typename To, typename From>
 }
 
 template <typename To, typename From>
-[[nodiscard]] inline decltype(auto) dyn_cast(std::unique_ptr<From> &&Val) {
+[[nodiscard]] inline decltype(auto) dyn_cast(std::unique_ptr<From> &Val) {
   assert(detail::isPresent(Val) && "dyn_cast on a non-existent value");
-  return CastInfo<To, std::unique_ptr<From>>::doCastIfPossible(
-      std::forward<std::unique_ptr<From> &&>(Val));
+  return CastInfo<To, std::unique_ptr<From>>::doCastIfPossible(Val);
 }
 
 /// isa_and_present<X> - Functionally identical to isa, except that a null value

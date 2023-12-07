@@ -24,7 +24,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @GI = common global [256 x i32] zeroinitializer, align 16
 
-define void @f(i32* %A, i8 zeroext %c) {
+define void @f(ptr %A, i8 zeroext %c) {
 entry:
   br label %for.cond
 
@@ -36,12 +36,12 @@ for.cond:                                         ; preds = %for.inc, %entry
 for.body:                                         ; preds = %for.cond
   %add = add i8 %c, 1
   %idxprom = sext i8 %add to i64
-  %arrayidx = getelementptr inbounds i32, i32* getelementptr inbounds ([256 x i32], [256 x i32]* @GI, i64 0, i64 128), i64 %idxprom
-  %tmp = load i32, i32* %arrayidx, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp1 = load i32, i32* %arrayidx3, align 4
+  %arrayidx = getelementptr inbounds i32, ptr getelementptr inbounds ([256 x i32], ptr @GI, i64 0, i64 128), i64 %idxprom
+  %tmp = load i32, ptr %arrayidx, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp1 = load i32, ptr %arrayidx3, align 4
   %add4 = add nsw i32 %tmp1, %tmp
-  store i32 %add4, i32* %arrayidx3, align 4
+  store i32 %add4, ptr %arrayidx3, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

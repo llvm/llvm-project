@@ -25,3 +25,4 @@ macro(add_openmp_tool_symlink name)
 endmacro()
 
 add_subdirectory(deviceinfo)
+add_subdirectory(kernelreplay)

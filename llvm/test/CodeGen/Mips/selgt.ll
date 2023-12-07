@@ -14,71 +14,71 @@
 define i32 @calc_z() nounwind "target-cpu"="mips16" "target-features"="+mips16,+o32" {
 entry:
   %retval = alloca i32, align 4
-  %0 = load i32, i32* @a, align 4
-  %1 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @a, align 4
+  %1 = load i32, ptr @b, align 4
   %cmp = icmp sgt i32 %0, %1
   br i1 %cmp, label %cond.true, label %cond.false
 
 cond.true:                                        ; preds = %entry
-  %2 = load i32, i32* @f, align 4
+  %2 = load i32, ptr @f, align 4
   br label %cond.end
 
 cond.false:                                       ; preds = %entry
-  %3 = load i32, i32* @t, align 4
+  %3 = load i32, ptr @t, align 4
   br label %cond.end
 
 cond.end:                                         ; preds = %cond.false, %cond.true
   %cond = phi i32 [ %2, %cond.true ], [ %3, %cond.false ]
-  store i32 %cond, i32* @z1, align 4
-  %4 = load i32, i32* @b, align 4
-  %5 = load i32, i32* @a, align 4
+  store i32 %cond, ptr @z1, align 4
+  %4 = load i32, ptr @b, align 4
+  %5 = load i32, ptr @a, align 4
   %cmp1 = icmp sgt i32 %4, %5
   br i1 %cmp1, label %cond.true2, label %cond.false3
 
 cond.true2:                                       ; preds = %cond.end
-  %6 = load i32, i32* @t, align 4
+  %6 = load i32, ptr @t, align 4
   br label %cond.end4
 
 cond.false3:                                      ; preds = %cond.end
-  %7 = load i32, i32* @f, align 4
+  %7 = load i32, ptr @f, align 4
   br label %cond.end4
 
 cond.end4:                                        ; preds = %cond.false3, %cond.true2
   %cond5 = phi i32 [ %6, %cond.true2 ], [ %7, %cond.false3 ]
-  store i32 %cond5, i32* @z2, align 4
-  %8 = load i32, i32* @c, align 4
-  %9 = load i32, i32* @a, align 4
+  store i32 %cond5, ptr @z2, align 4
+  %8 = load i32, ptr @c, align 4
+  %9 = load i32, ptr @a, align 4
   %cmp6 = icmp sgt i32 %8, %9
   br i1 %cmp6, label %cond.true7, label %cond.false8
 
 cond.true7:                                       ; preds = %cond.end4
-  %10 = load i32, i32* @f, align 4
+  %10 = load i32, ptr @f, align 4
   br label %cond.end9
 
 cond.false8:                                      ; preds = %cond.end4
-  %11 = load i32, i32* @t, align 4
+  %11 = load i32, ptr @t, align 4
   br label %cond.end9
 
 cond.end9:                                        ; preds = %cond.false8, %cond.true7
   %cond10 = phi i32 [ %10, %cond.true7 ], [ %11, %cond.false8 ]
-  store i32 %cond10, i32* @z3, align 4
-  %12 = load i32, i32* @a, align 4
-  %13 = load i32, i32* @c, align 4
+  store i32 %cond10, ptr @z3, align 4
+  %12 = load i32, ptr @a, align 4
+  %13 = load i32, ptr @c, align 4
   %cmp11 = icmp sgt i32 %12, %13
   br i1 %cmp11, label %cond.true12, label %cond.false13
 
 cond.true12:                                      ; preds = %cond.end9
-  %14 = load i32, i32* @f, align 4
+  %14 = load i32, ptr @f, align 4
   br label %cond.end14
 
 cond.false13:                                     ; preds = %cond.end9
-  %15 = load i32, i32* @t, align 4
+  %15 = load i32, ptr @t, align 4
   br label %cond.end14
 
 cond.end14:                                       ; preds = %cond.false13, %cond.true12
   %cond15 = phi i32 [ %14, %cond.true12 ], [ %15, %cond.false13 ]
-  store i32 %cond15, i32* @z4, align 4
-  %16 = load i32, i32* %retval
+  store i32 %cond15, ptr @z4, align 4
+  %16 = load i32, ptr %retval
   ret i32 %16
 }
 

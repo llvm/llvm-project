@@ -5,7 +5,7 @@ define i1 @combine_setcc_eq_vecreduce_or_v8i1(<8 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_eq_vecreduce_or_v8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    umaxv b0, v0.8b
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    bic w0, w8, w9
@@ -20,7 +20,7 @@ define i1 @combine_setcc_eq_vecreduce_or_v16i1(<16 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_eq_vecreduce_or_v16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    umaxv b0, v0.16b
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    bic w0, w8, w9
@@ -35,8 +35,8 @@ define i1 @combine_setcc_eq_vecreduce_or_v32i1(<32 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_eq_vecreduce_or_v32i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmeq v1.16b, v1.16b, #0
-; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    umaxv b0, v0.16b
 ; CHECK-NEXT:    fmov w9, s0
@@ -52,16 +52,16 @@ define i1 @combine_setcc_eq_vecreduce_or_v64i1(<64 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_eq_vecreduce_or_v64i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmeq v2.16b, v2.16b, #0
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
+; CHECK-NEXT:    mov w9, #1 // =0x1
 ; CHECK-NEXT:    cmeq v3.16b, v3.16b, #0
 ; CHECK-NEXT:    cmeq v1.16b, v1.16b, #0
-; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
-; CHECK-NEXT:    orr v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    orr v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    umaxv b0, v0.16b
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    bic w0, w8, w9
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    bic w0, w9, w8
 ; CHECK-NEXT:    ret
   %cmp1 = icmp eq <64 x i8> %a, zeroinitializer
   %cast = bitcast <64 x i1> %cmp1 to i64
@@ -129,13 +129,141 @@ define i1 @combine_setcc_ne_vecreduce_or_v64i1(<64 x i8> %a) {
   ret i1 %cmp2
 }
 
+define i1 @combine_setcc_eq_vecreduce_and_v8i1(<8 x i8> %a) {
+; CHECK-LABEL: combine_setcc_eq_vecreduce_and_v8i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
+; CHECK-NEXT:    uminv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %cmp1 = icmp eq <8 x i8> %a, zeroinitializer
+  %cast = bitcast <8 x i1> %cmp1 to i8
+  %cmp2 = icmp eq i8 %cast, -1
+  ret i1 %cmp2
+}
+
+define i1 @combine_setcc_eq_vecreduce_and_v16i1(<16 x i8> %a) {
+; CHECK-LABEL: combine_setcc_eq_vecreduce_and_v16i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %cmp1 = icmp eq <16 x i8> %a, zeroinitializer
+  %cast = bitcast <16 x i1> %cmp1 to i16
+  %cmp2 = icmp eq i16 %cast, -1
+  ret i1 %cmp2
+}
+
+define i1 @combine_setcc_eq_vecreduce_and_v32i1(<32 x i8> %a) {
+; CHECK-LABEL: combine_setcc_eq_vecreduce_and_v32i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %cmp1 = icmp eq <32 x i8> %a, zeroinitializer
+  %cast = bitcast <32 x i1> %cmp1 to i32
+  %cmp2 = icmp eq i32 %cast, -1
+  ret i1 %cmp2
+}
+
+define i1 @combine_setcc_eq_vecreduce_and_v64i1(<64 x i8> %a) {
+; CHECK-LABEL: combine_setcc_eq_vecreduce_and_v64i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %cmp1 = icmp eq <64 x i8> %a, zeroinitializer
+  %cast = bitcast <64 x i1> %cmp1 to i64
+  %cmp2 = icmp eq i64 %cast, -1
+  ret i1 %cmp2
+}
+
+define i1 @combine_setcc_ne_vecreduce_and_v8i1(<8 x i8> %a) {
+; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v8i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmtst v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    uminv b0, v0.8b
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    bic w0, w8, w9
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ne <8 x i8> %a, zeroinitializer
+  %cast = bitcast <8 x i1> %cmp1 to i8
+  %cmp2 = icmp ne i8 %cast, -1
+  ret i1 %cmp2
+}
+
+define i1 @combine_setcc_ne_vecreduce_and_v16i1(<16 x i8> %a) {
+; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v16i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmtst v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    bic w0, w8, w9
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ne <16 x i8> %a, zeroinitializer
+  %cast = bitcast <16 x i1> %cmp1 to i16
+  %cmp2 = icmp ne i16 %cast, -1
+  ret i1 %cmp2
+}
+
+define i1 @combine_setcc_ne_vecreduce_and_v32i1(<32 x i8> %a) {
+; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v32i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmtst v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    cmeq v1.16b, v1.16b, #0
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    bic v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    bic w0, w8, w9
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ne <32 x i8> %a, zeroinitializer
+  %cast = bitcast <32 x i1> %cmp1 to i32
+  %cmp2 = icmp ne i32 %cast, -1
+  ret i1 %cmp2
+}
+
+define i1 @combine_setcc_ne_vecreduce_and_v64i1(<64 x i8> %a) {
+; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v64i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmtst v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    cmtst v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    mov w9, #1 // =0x1
+; CHECK-NEXT:    cmeq v2.16b, v2.16b, #0
+; CHECK-NEXT:    cmeq v3.16b, v3.16b, #0
+; CHECK-NEXT:    bic v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    bic v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    bic w0, w9, w8
+; CHECK-NEXT:    ret
+  %cmp1 = icmp ne <64 x i8> %a, zeroinitializer
+  %cast = bitcast <64 x i1> %cmp1 to i64
+  %cmp2 = icmp ne i64 %cast, -1
+  ret i1 %cmp2
+}
+
 define i1 @combine_setcc_eq0_conjunction_xor_or(ptr %a, ptr %b) {
 ; CHECK-LABEL: combine_setcc_eq0_conjunction_xor_or:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x9, [x0]
-; CHECK-NEXT:    ldp x10, x11, [x1]
-; CHECK-NEXT:    cmp x8, x10
-; CHECK-NEXT:    ccmp x9, x11, #0, eq
+; CHECK-NEXT:    ldp x8, x11, [x1]
+; CHECK-NEXT:    ldp x9, x10, [x0]
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    ccmp x10, x11, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %bcmp = tail call i32 @bcmp(ptr dereferenceable(16) %a, ptr dereferenceable(16) %b, i64 16)
@@ -146,10 +274,10 @@ define i1 @combine_setcc_eq0_conjunction_xor_or(ptr %a, ptr %b) {
 define i1 @combine_setcc_ne0_conjunction_xor_or(ptr %a, ptr %b) {
 ; CHECK-LABEL: combine_setcc_ne0_conjunction_xor_or:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x9, [x0]
-; CHECK-NEXT:    ldp x10, x11, [x1]
-; CHECK-NEXT:    cmp x8, x10
-; CHECK-NEXT:    ccmp x9, x11, #0, eq
+; CHECK-NEXT:    ldp x8, x11, [x1]
+; CHECK-NEXT:    ldp x9, x10, [x0]
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    ccmp x10, x11, #0, eq
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %bcmp = tail call i32 @bcmp(ptr dereferenceable(16) %a, ptr dereferenceable(16) %b, i64 16)
@@ -161,14 +289,14 @@ define i1 @combine_setcc_ne0_conjunction_xor_or(ptr %a, ptr %b) {
 define i32 @combine_setcc_multiuse(i32 %0, i32 %1, i32 %2, i32 %3) {
 ; CHECK-LABEL: combine_setcc_multiuse:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor w8, w1, w0
-; CHECK-NEXT:    eor w9, w3, w2
-; CHECK-NEXT:    orr w8, w9, w8
-; CHECK-NEXT:    cbz w8, .LBB10_2
+; CHECK-NEXT:    eor w8, w3, w2
+; CHECK-NEXT:    eor w9, w1, w0
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    cbz w8, .LBB18_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    b use
-; CHECK-NEXT:  .LBB10_2:
+; CHECK-NEXT:  .LBB18_2:
 ; CHECK-NEXT:    ret
   %5 = xor i32 %1, %0
   %6 = xor i32 %3, %2
@@ -209,19 +337,17 @@ define [2 x i64] @PR58675(i128 %a.addr, i128 %b.addr) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    mov x9, xzr
-; CHECK-NEXT:  .LBB12_1: // %do.body
+; CHECK-NEXT:  .LBB20_1: // %do.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmp x0, x8
+; CHECK-NEXT:    sbcs xzr, x1, x9
 ; CHECK-NEXT:    csel x10, x0, x8, lo
-; CHECK-NEXT:    cmp x1, x9
-; CHECK-NEXT:    csel x8, x0, x8, lo
 ; CHECK-NEXT:    csel x11, x1, x9, lo
-; CHECK-NEXT:    csel x10, x10, x8, eq
 ; CHECK-NEXT:    subs x8, x2, x10
 ; CHECK-NEXT:    sbc x9, x3, x11
 ; CHECK-NEXT:    cmp x3, x11
 ; CHECK-NEXT:    ccmp x2, x10, #0, eq
-; CHECK-NEXT:    b.ne .LBB12_1
+; CHECK-NEXT:    b.ne .LBB20_1
 ; CHECK-NEXT:  // %bb.2: // %do.end
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    mov x1, xzr

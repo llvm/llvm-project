@@ -15,7 +15,7 @@
 ;   A[0] = 42.0;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -25,7 +25,7 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 42.0, double* %A
+      store double 42.0, ptr %A
       br label %inc
 
 inc:
@@ -42,5 +42,5 @@ return:
 
 ; CHECK-LABEL: define void @func(
 ; ON:       polly.stmt.body.lr.ph:
-; ON-NEXT:    store double 4.200000e+01, double* %A, align 8
+; ON-NEXT:    store double 4.200000e+01, ptr %A, align 8
 ; OFF-NOT:  polly

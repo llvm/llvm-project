@@ -59,7 +59,7 @@ int main(int, char**)
     c.unique(std::ref(c.front()));
 #endif
     assert(c.size() == 6);
-    for (size_t i = 0; i < c.size(); ++i)
+    for (std::size_t i = 0; i < c.size(); ++i)
     {
         assert(c.front() == a2[i]);
         c.pop_front();

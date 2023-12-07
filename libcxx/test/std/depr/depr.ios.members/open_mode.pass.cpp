@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: c++03 || c++11 || c++14
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // <ios>
 //
 // class ios_base
@@ -22,10 +26,8 @@
 
 int main(int, char**)
 {
-#if TEST_STD_VER <= 14
     std::strstream::open_mode b = std::strstream::app;
     assert(b == std::ios::app);
-#endif
 
   return 0;
 }

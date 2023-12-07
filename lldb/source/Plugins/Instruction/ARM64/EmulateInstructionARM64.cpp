@@ -12,7 +12,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Stream.h"
 
@@ -22,7 +21,9 @@
 #include "Plugins/Process/Utility/ARMUtils.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
 
+#include <algorithm>
 #include <cstdlib>
+#include <optional>
 
 #define GPR_OFFSET(idx) ((idx)*8)
 #define GPR_OFFSET_NAME(reg) 0
@@ -35,7 +36,7 @@
   "na", nullptr, 8, 0, lldb::eEncodingUint, lldb::eFormatHex,                  \
       {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},                              \
-      nullptr, nullptr
+      nullptr, nullptr, nullptr
 
 #define DECLARE_REGISTER_INFOS_ARM64_STRUCT
 
@@ -51,7 +52,7 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionARM64, InstructionARM64)
 
-static llvm::Optional<RegisterInfo> LLDBTableGetRegisterInfo(uint32_t reg_num) {
+static std::optional<RegisterInfo> LLDBTableGetRegisterInfo(uint32_t reg_num) {
   if (reg_num >= std::size(g_register_infos_arm64_le))
     return {};
   return g_register_infos_arm64_le[reg_num];
@@ -143,7 +144,7 @@ bool EmulateInstructionARM64::SetTargetTriple(const ArchSpec &arch) {
   return false;
 }
 
-llvm::Optional<RegisterInfo>
+std::optional<RegisterInfo>
 EmulateInstructionARM64::GetRegisterInfo(RegisterKind reg_kind,
                                          uint32_t reg_num) {
   if (reg_kind == eRegisterKindGeneric) {
@@ -663,7 +664,7 @@ bool EmulateInstructionARM64::EmulateADDSUBImm(const uint32_t opcode) {
   }
 
   Context context;
-  llvm::Optional<RegisterInfo> reg_info_Rn =
+  std::optional<RegisterInfo> reg_info_Rn =
       GetRegisterInfo(eRegisterKindLLDB, n);
   if (reg_info_Rn)
     context.SetRegisterPlusOffset(*reg_info_Rn, imm);
@@ -768,13 +769,13 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
   uint64_t address;
   uint64_t wb_address;
 
-  llvm::Optional<RegisterInfo> reg_info_base =
+  std::optional<RegisterInfo> reg_info_base =
       GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + n);
   if (!reg_info_base)
     return false;
 
-  llvm::Optional<RegisterInfo> reg_info_Rt;
-  llvm::Optional<RegisterInfo> reg_info_Rt2;
+  std::optional<RegisterInfo> reg_info_Rt;
+  std::optional<RegisterInfo> reg_info_Rt2;
 
   if (vector) {
     reg_info_Rt = GetRegisterInfo(eRegisterKindLLDB, fpu_d0_arm64 + t);
@@ -803,7 +804,7 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
   Context context_t;
   Context context_t2;
 
-  uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
+  RegisterValue::BytesContainer buffer;
   Status error;
 
   switch (memop) {
@@ -822,27 +823,31 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
     context_t2.SetRegisterToRegisterPlusOffset(*reg_info_Rt2, *reg_info_base,
                                                size);
 
-    llvm::Optional<RegisterValue> data_Rt = ReadRegister(*reg_info_Rt);
+    std::optional<RegisterValue> data_Rt = ReadRegister(*reg_info_Rt);
     if (!data_Rt)
       return false;
 
-    if (data_Rt->GetAsMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
-                                 eByteOrderLittle, error) == 0)
+    buffer.resize(reg_info_Rt->byte_size);
+    if (data_Rt->GetAsMemoryData(*reg_info_Rt, buffer.data(),
+                                 reg_info_Rt->byte_size, eByteOrderLittle,
+                                 error) == 0)
       return false;
 
-    if (!WriteMemory(context_t, address + 0, buffer, reg_info_Rt->byte_size))
+    if (!WriteMemory(context_t, address + 0, buffer.data(),
+                     reg_info_Rt->byte_size))
       return false;
 
-    llvm::Optional<RegisterValue> data_Rt2 = ReadRegister(*reg_info_Rt2);
+    std::optional<RegisterValue> data_Rt2 = ReadRegister(*reg_info_Rt2);
     if (!data_Rt2)
       return false;
 
-    if (data_Rt2->GetAsMemoryData(*reg_info_Rt2, buffer,
+    buffer.resize(reg_info_Rt2->byte_size);
+    if (data_Rt2->GetAsMemoryData(*reg_info_Rt2, buffer.data(),
                                   reg_info_Rt2->byte_size, eByteOrderLittle,
                                   error) == 0)
       return false;
 
-    if (!WriteMemory(context_t2, address + size, buffer,
+    if (!WriteMemory(context_t2, address + size, buffer.data(),
                      reg_info_Rt2->byte_size))
       return false;
   } break;
@@ -861,16 +866,19 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
     context_t.SetAddress(address);
     context_t2.SetAddress(address + size);
 
+    buffer.resize(reg_info_Rt->byte_size);
     if (rt_unknown)
-      memset(buffer, 'U', reg_info_Rt->byte_size);
+      std::fill(buffer.begin(), buffer.end(), 'U');
     else {
-      if (!ReadMemory(context_t, address, buffer, reg_info_Rt->byte_size))
+      if (!ReadMemory(context_t, address, buffer.data(),
+                      reg_info_Rt->byte_size))
         return false;
     }
 
     RegisterValue data_Rt;
-    if (data_Rt.SetFromMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
-                                  eByteOrderLittle, error) == 0)
+    if (data_Rt.SetFromMemoryData(*reg_info_Rt, buffer.data(),
+                                  reg_info_Rt->byte_size, eByteOrderLittle,
+                                  error) == 0)
       return false;
 
     if (!vector && is_signed && !data_Rt.SignExtend(datasize))
@@ -879,14 +887,14 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
     if (!WriteRegister(context_t, *reg_info_Rt, data_Rt))
       return false;
 
-    if (!rt_unknown) {
-      if (!ReadMemory(context_t2, address + size, buffer,
+    buffer.resize(reg_info_Rt2->byte_size);
+    if (!rt_unknown)
+      if (!ReadMemory(context_t2, address + size, buffer.data(),
                       reg_info_Rt2->byte_size))
         return false;
-    }
 
     RegisterValue data_Rt2;
-    if (data_Rt2.SetFromMemoryData(*reg_info_Rt2, buffer,
+    if (data_Rt2.SetFromMemoryData(*reg_info_Rt2, buffer.data(),
                                    reg_info_Rt2->byte_size, eByteOrderLittle,
                                    error) == 0)
       return false;
@@ -958,7 +966,7 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
   Status error;
   bool success = false;
   uint64_t address;
-  uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
+  RegisterValue::BytesContainer buffer;
 
   if (n == 31)
     address =
@@ -973,12 +981,12 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
   if (!postindex)
     address += offset;
 
-  llvm::Optional<RegisterInfo> reg_info_base =
+  std::optional<RegisterInfo> reg_info_base =
       GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + n);
   if (!reg_info_base)
     return false;
 
-  llvm::Optional<RegisterInfo> reg_info_Rt =
+  std::optional<RegisterInfo> reg_info_Rt =
       GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + t);
   if (!reg_info_Rt)
     return false;
@@ -995,15 +1003,17 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
     context.SetRegisterToRegisterPlusOffset(*reg_info_Rt, *reg_info_base,
                                             postindex ? 0 : offset);
 
-    llvm::Optional<RegisterValue> data_Rt = ReadRegister(*reg_info_Rt);
+    std::optional<RegisterValue> data_Rt = ReadRegister(*reg_info_Rt);
     if (!data_Rt)
       return false;
 
-    if (data_Rt->GetAsMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
-                                 eByteOrderLittle, error) == 0)
+    buffer.resize(reg_info_Rt->byte_size);
+    if (data_Rt->GetAsMemoryData(*reg_info_Rt, buffer.data(),
+                                 reg_info_Rt->byte_size, eByteOrderLittle,
+                                 error) == 0)
       return false;
 
-    if (!WriteMemory(context, address, buffer, reg_info_Rt->byte_size))
+    if (!WriteMemory(context, address, buffer.data(), reg_info_Rt->byte_size))
       return false;
   } break;
 
@@ -1016,12 +1026,14 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
       context.type = eContextRegisterLoad;
     context.SetAddress(address);
 
-    if (!ReadMemory(context, address, buffer, reg_info_Rt->byte_size))
+    buffer.resize(reg_info_Rt->byte_size);
+    if (!ReadMemory(context, address, buffer.data(), reg_info_Rt->byte_size))
       return false;
 
     RegisterValue data_Rt;
-    if (data_Rt.SetFromMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
-                                  eByteOrderLittle, error) == 0)
+    if (data_Rt.SetFromMemoryData(*reg_info_Rt, buffer.data(),
+                                  reg_info_Rt->byte_size, eByteOrderLittle,
+                                  error) == 0)
       return false;
 
     if (!WriteRegister(context, *reg_info_Rt, data_Rt))

@@ -8,8 +8,10 @@
 
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Dialect.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
@@ -56,9 +58,23 @@ AttrOrTypeDef::AttrOrTypeDef(const llvm::Record *def) : def(def) {
   if (auto *traitList = def->getValueAsListInit("traits")) {
     SmallPtrSet<const llvm::Init *, 32> traitSet;
     traits.reserve(traitSet.size());
-    for (auto *traitInit : *traitList)
-      if (traitSet.insert(traitInit).second)
-        traits.push_back(Trait::create(traitInit));
+    llvm::unique_function<void(llvm::ListInit *)> processTraitList =
+        [&](llvm::ListInit *traitList) {
+          for (auto *traitInit : *traitList) {
+            if (!traitSet.insert(traitInit).second)
+              continue;
+
+            // If this is an interface, add any bases to the trait list.
+            auto *traitDef = cast<llvm::DefInit>(traitInit)->getDef();
+            if (traitDef->isSubClassOf("Interface")) {
+              if (auto *bases = traitDef->getValueAsListInit("baseInterfaces"))
+                processTraitList(bases);
+            }
+
+            traits.push_back(Trait::create(traitInit));
+          }
+        };
+    processTraitList(traitList);
   }
 
   // Populate the parameters.
@@ -242,7 +258,18 @@ StringRef AttrOrTypeParameter::getComparator() const {
 StringRef AttrOrTypeParameter::getCppType() const {
   if (auto *stringType = dyn_cast<llvm::StringInit>(getDef()))
     return stringType->getValue();
-  return *getDefValue<llvm::StringInit>("cppType");
+  auto cppType = getDefValue<llvm::StringInit>("cppType");
+  if (cppType)
+    return *cppType;
+  if (auto *init = dyn_cast<llvm::DefInit>(getDef()))
+    llvm::PrintFatalError(
+        init->getDef()->getLoc(),
+        Twine("Missing `cppType` field in Attribute/Type parameter: ") +
+            init->getAsString());
+  llvm::report_fatal_error(
+      Twine("Missing `cppType` field in Attribute/Type parameter: ") +
+          getDef()->getAsString(),
+      /*gen_crash_diag=*/false);
 }
 
 StringRef AttrOrTypeParameter::getCppAccessorType() const {

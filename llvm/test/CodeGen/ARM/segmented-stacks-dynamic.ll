@@ -4,11 +4,11 @@
 ; RUN: llc < %s -mtriple=arm-linux-unknown-gnueabi -mattr=+v4t -filetype=obj
 
 ; Just to prevent the alloca from being optimized away
-declare void @dummy_use(i32*, i32)
+declare void @dummy_use(ptr, i32)
 
 define i32 @test_basic(i32 %l) #0 {
         %mem = alloca i32, i32 %l
-        call void @dummy_use (i32* %mem, i32 %l)
+        call void @dummy_use (ptr %mem, i32 %l)
         %terminate = icmp eq i32 %l, 0
         br i1 %terminate, label %true, label %false
 
@@ -27,7 +27,7 @@ false:
 ; ARM-linux-NEXT: mov     r5, sp
 ; ARM-linux-NEXT: ldr     r4, [r4, #4]
 ; ARM-linux-NEXT: cmp     r4, r5
-; ARM-linux-NEXT: blo     .LBB0_2
+; ARM-linux-NEXT: bls     .LBB0_2
 
 ; ARM-linux:      mov     r4, #16
 ; ARM-linux-NEXT: mov     r5, #0
@@ -47,7 +47,7 @@ false:
 ; ARM-android-NEXT: mov     r5, sp
 ; ARM-android-NEXT: ldr     r4, [r4, #252]
 ; ARM-android-NEXT: cmp     r4, r5
-; ARM-android-NEXT: blo     .LBB0_2
+; ARM-android-NEXT: bls     .LBB0_2
 
 ; ARM-android:      mov     r4, #16
 ; ARM-android-NEXT: mov     r5, #0

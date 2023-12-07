@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: no-filesystem
 
-// Filesystem is supported on Apple platforms starting with macosx10.15.
-// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+// UNSUPPORTED: availability-filesystem-missing
 
 // FILE_DEPENDENCIES: test.dat
 
@@ -22,9 +20,10 @@
 // explicit basic_ifstream(const filesystem::path& s,
 //     ios_base::openmode mode = ios_base::in);
 
-#include <fstream>
-#include <filesystem>
 #include <cassert>
+#include <filesystem>
+#include <fstream>
+#include <type_traits>
 
 #include "test_macros.h"
 

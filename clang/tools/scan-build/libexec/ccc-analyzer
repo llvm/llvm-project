@@ -201,7 +201,13 @@ sub GetCCArgs {
   $line =~ s/^\s+|\s+$//g;
   my @items = quotewords('\s+', 0, $line);
   my $cmd = shift @items;
-  die "cannot find 'clang' in 'clang' command\n" if (!($cmd =~ /clang/));
+  die "cannot find 'clang' in 'clang' command\n" if (!($cmd =~ /clang/ || basename($cmd) =~ /llvm/));
+  # If this is the llvm-driver the internal command will look like "llvm clang ...".
+  # Later this will be invoked like "clang clang ...", so skip over it.
+  if (basename($cmd) =~ /llvm/) {
+    die "Expected first arg to llvm driver to be 'clang'" if $items[0] ne "clang";
+    shift @items;
+  }
   return \@items;
 }
 

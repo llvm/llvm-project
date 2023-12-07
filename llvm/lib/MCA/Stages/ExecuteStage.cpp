@@ -196,7 +196,7 @@ Error ExecuteStage::execute(InstRef &IR) {
 
   // Reserve a slot in each buffered resource. Also, mark units with
   // BufferSize=0 as reserved. Resources with a buffer size of zero will only
-  // be released after MCIS is issued, and all the ResourceCycles for those
+  // be released after MCIS is issued, and all the ReleaseAtCycles for those
   // units have been consumed.
   bool IsReadyInstruction = HWS.dispatch(IR);
   const Instruction &Inst = *IR.getInstruction();
@@ -274,7 +274,7 @@ void ExecuteStage::notifyReservedOrReleasedBuffers(const InstRef &IR,
   if (!UsedBuffers)
     return;
 
-  SmallVector<unsigned, 4> BufferIDs(countPopulation(UsedBuffers), 0);
+  SmallVector<unsigned, 4> BufferIDs(llvm::popcount(UsedBuffers), 0);
   for (unsigned I = 0, E = BufferIDs.size(); I < E; ++I) {
     uint64_t CurrentBufferMask = UsedBuffers & (-UsedBuffers);
     BufferIDs[I] = HWS.getResourceID(CurrentBufferMask);

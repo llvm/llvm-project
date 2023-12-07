@@ -76,7 +76,7 @@ static ELFKind getELFKind(MemoryBufferRef mb, StringRef archiveName) {
       fatal(archiveName + "(" + filename + "): " + msg);
   };
 
-  if (!mb.getBuffer().startswith(ElfMagic))
+  if (!mb.getBuffer().starts_with(ElfMagic))
     report("not an ELF file");
   if (endian != ELFDATA2LSB && endian != ELFDATA2MSB)
     report("corrupted ELF file: invalid data encoding");
@@ -177,6 +177,15 @@ static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
       config->armHasMovtMovw = true;
     break;
   }
+
+  // Only ARMv8-M or later architectures have CMSE support.
+  std::optional<unsigned> profile =
+      attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
+  if (!profile)
+    return;
+  if (arch >= ARMBuildAttrs::CPUArch::v8_M_Base &&
+      profile == ARMBuildAttrs::MicroControllerProfile)
+    config->armCMSESupport = true;
 }
 
 InputFile::InputFile(Kind k, MemoryBufferRef m)
@@ -192,8 +201,31 @@ std::optional<MemoryBufferRef> elf::readFile(StringRef path) {
 
   // The --chroot option changes our virtual root directory.
   // This is useful when you are dealing with files created by --reproduce.
-  if (!config->chroot.empty() && path.startswith("/"))
+  if (!config->chroot.empty() && path.starts_with("/"))
     path = saver().save(config->chroot + path);
+
+  bool remapped = false;
+  auto it = config->remapInputs.find(path);
+  if (it != config->remapInputs.end()) {
+    path = it->second;
+    remapped = true;
+  } else {
+    for (const auto &[pat, toFile] : config->remapInputsWildcards) {
+      if (pat.match(path)) {
+        path = toFile;
+        remapped = true;
+        break;
+      }
+    }
+  }
+  if (remapped) {
+    // Use /dev/null to indicate an input file that should be ignored. Change
+    // the path to NUL on Windows.
+#ifdef _WIN32
+    if (path == "/dev/null")
+      path = "NUL";
+#endif
+  }
 
   log(path);
   config->dependencyFiles.insert(llvm::CachedHashString(path));
@@ -293,6 +325,14 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 
 // Add symbols in File to the symbol table.
 void elf::parseFile(InputFile *file) { invokeELFT(doParseFile, file); }
+
+template <class ELFT> static void doParseArmCMSEImportLib(InputFile *file) {
+  cast<ObjFile<ELFT>>(file)->importCmseSymbols();
+}
+
+void elf::parseArmCMSEImportLib(InputFile *file) {
+  invokeELFT(doParseArmCMSEImportLib, file);
+}
 
 // Concatenates arguments to construct a string representing an error location.
 static std::string createFileLineMsg(StringRef path, unsigned line) {
@@ -862,12 +902,13 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
   while (!data.empty()) {
     // Read one NOTE record.
     auto *nhdr = reinterpret_cast<const Elf_Nhdr *>(data.data());
-    if (data.size() < sizeof(Elf_Nhdr) || data.size() < nhdr->getSize())
+    if (data.size() < sizeof(Elf_Nhdr) ||
+        data.size() < nhdr->getSize(sec.addralign))
       reportFatal(data.data(), "data is too short");
 
     Elf_Note note(*nhdr);
     if (nhdr->n_type != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU") {
-      data = data.slice(nhdr->getSize());
+      data = data.slice(nhdr->getSize(sec.addralign));
       continue;
     }
 
@@ -876,7 +917,7 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
                                   : GNU_PROPERTY_X86_FEATURE_1_AND;
 
     // Read a body of a NOTE record, which consists of type-length-value fields.
-    ArrayRef<uint8_t> desc = note.getDesc();
+    ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
     while (!desc.empty()) {
       const uint8_t *place = desc.data();
       if (desc.size() < 8)
@@ -901,7 +942,7 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
     }
 
     // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
-    data = data.slice(nhdr->getSize());
+    data = data.slice(nhdr->getSize(sec.addralign));
   }
 
   return featuresSet;
@@ -935,7 +976,7 @@ template <class ELFT>
 InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
                                                     const Elf_Shdr &sec,
                                                     StringRef name) {
-  if (name.startswith(".n")) {
+  if (name.starts_with(".n")) {
     // The GNU linker uses .note.GNU-stack section as a marker indicating
     // that the code in the object file does not expect that the stack is
     // executable (in terms of NX bit). If all input files have the marker,
@@ -1007,8 +1048,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   return makeThreadLocal<InputSection>(*this, sec, name);
 }
 
-// Initialize this->Symbols. this->Symbols is a parallel array as
-// its corresponding ELF symbol table.
+// Initialize symbols. symbols is a parallel array to the corresponding ELF
+// symbol table.
 template <class ELFT>
 void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
@@ -1317,7 +1358,7 @@ static uint64_t getAlignment(ArrayRef<typename ELFT::Shdr> sections,
                              const typename ELFT::Sym &sym) {
   uint64_t ret = UINT64_MAX;
   if (sym.st_value)
-    ret = 1ULL << countTrailingZeros((uint64_t)sym.st_value);
+    ret = 1ULL << llvm::countr_zero((uint64_t)sym.st_value);
   if (0 < sym.st_shndx && sym.st_shndx < sections.size())
     ret = std::min<uint64_t>(ret, sections[sym.st_shndx].sh_addralign);
   return (ret > UINT32_MAX) ? 0 : ret;
@@ -1534,6 +1575,9 @@ static uint16_t getBitcodeMachineKind(StringRef path, const Triple &t) {
     return EM_AVR;
   case Triple::hexagon:
     return EM_HEXAGON;
+  case Triple::loongarch32:
+  case Triple::loongarch64:
+    return EM_LOONGARCH;
   case Triple::mips:
   case Triple::mipsel:
   case Triple::mips64:
@@ -1706,9 +1750,9 @@ void BinaryFile::parse() {
   // user programs can access blobs by name. Non-alphanumeric
   // characters in a filename are replaced with underscore.
   std::string s = "_binary_" + mb.getBufferIdentifier().str();
-  for (size_t i = 0; i < s.size(); ++i)
-    if (!isAlnum(s[i]))
-      s[i] = '_';
+  for (char &c : s)
+    if (!isAlnum(c))
+      c = '_';
 
   llvm::StringSaver &saver = lld::saver();
 
@@ -1773,9 +1817,7 @@ bool InputFile::shouldExtractForCommon(StringRef name) {
 }
 
 std::string elf::replaceThinLTOSuffix(StringRef path) {
-  StringRef suffix = config->thinLTOObjectSuffixReplace.first;
-  StringRef repl = config->thinLTOObjectSuffixReplace.second;
-
+  auto [suffix, repl] = config->thinLTOObjectSuffixReplace;
   if (path.consume_back(suffix))
     return (path + repl).str();
   return std::string(path);

@@ -7,9 +7,9 @@
 
 #include <format>
 
-#include <iterator>
 #include <algorithm>
 #include <array>
+#include <iterator>
 #include <list>
 #include <span>
 #include <string>
@@ -26,7 +26,7 @@ template <class Container>
 static void BM_format_to_string_back_inserter(benchmark::State& state) {
   using CharT = typename Container::value_type;
   size_t size = state.range(0);
-  auto str = std::basic_string<CharT>(size, CharT('*'));
+  auto str    = std::basic_string<CharT>(size, CharT('*'));
 
   for (auto _ : state) {
     Container output;
@@ -41,7 +41,7 @@ template <class Container>
 static void BM_format_to_string_begin(benchmark::State& state) {
   using CharT = typename Container::value_type;
   size_t size = state.range(0);
-  auto str = std::basic_string<CharT>(size, CharT('*'));
+  auto str    = std::basic_string<CharT>(size, CharT('*'));
 
   Container output(size, CharT('-'));
   for (auto _ : state)
@@ -55,7 +55,7 @@ static void BM_format_to_string_begin(benchmark::State& state) {
 template <class CharT>
 static void BM_format_to_string_span(benchmark::State& state) {
   size_t size = state.range(0);
-  auto str = std::basic_string<CharT>(size, CharT('*'));
+  auto str    = std::basic_string<CharT>(size, CharT('*'));
 
   auto buffer = std::basic_string<CharT>(size, CharT('-'));
   std::span<CharT> output{buffer};
@@ -68,9 +68,9 @@ static void BM_format_to_string_span(benchmark::State& state) {
 template <class CharT>
 static void BM_format_to_string_pointer(benchmark::State& state) {
   size_t size = state.range(0);
-  auto str = std::basic_string<CharT>(size, CharT('*'));
+  auto str    = std::basic_string<CharT>(size, CharT('*'));
 
-  auto buffer = std::basic_string<CharT>(size, CharT('-'));
+  auto buffer   = std::basic_string<CharT>(size, CharT('-'));
   CharT* output = buffer.data();
   for (auto _ : state)
     benchmark::DoNotOptimize(std::format_to(output, CSTR("{}"), str));

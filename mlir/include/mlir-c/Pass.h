@@ -70,9 +70,9 @@ static inline bool mlirPassManagerIsNull(MlirPassManager passManager) {
 MLIR_CAPI_EXPORTED MlirOpPassManager
 mlirPassManagerGetAsOpPassManager(MlirPassManager passManager);
 
-/// Run the provided `passManager` on the given `module`.
+/// Run the provided `passManager` on the given `op`.
 MLIR_CAPI_EXPORTED MlirLogicalResult
-mlirPassManagerRun(MlirPassManager passManager, MlirModule module);
+mlirPassManagerRunOnOp(MlirPassManager passManager, MlirOperation op);
 
 MLIR_CAPI_EXPORTED MlirLogicalResult
 mlirPassManagerEmitKokkos(MlirPassManager passManager, MlirModule module, const char* cxxSourceFile, const char* pySourceFile);

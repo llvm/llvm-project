@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -fblocks -fno-escaping-block-tail-calls -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fblocks -fno-escaping-block-tail-calls -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: define{{.*}} void @test(
-// CHECK: store i8* bitcast (void (i8*)* @[[TEST_BLOCK_INVOKE0:.*]] to i8*)
-// CHECK: store i8* bitcast (void (i8*)* @[[TEST_BLOCK_INVOKE1:.*]] to i8*)
-// CHECK: store i8* bitcast (void (i8*)* @[[TEST_BLOCK_INVOKE2:.*]] to i8*)
-// CHECK: store i8* bitcast (void (i8*)* @[[TEST_BLOCK_INVOKE3:.*]] to i8*)
-// CHECK: store i8* bitcast (void (i8*)* @[[TEST_BLOCK_INVOKE4:.*]] to i8*)
-// CHECK: store i8* bitcast (void (i8*)* @[[TEST_BLOCK_INVOKE5:.*]] to i8*)
-// CHECK: store i8* bitcast (void (i8*)* @[[TEST_BLOCK_INVOKE6:.*]] to i8*)
+// CHECK: store ptr @[[TEST_BLOCK_INVOKE0:.*invoke.*]], ptr
+// CHECK: store ptr @[[TEST_BLOCK_INVOKE1:.*invoke.*]], ptr
+// CHECK: store ptr @[[TEST_BLOCK_INVOKE2:.*invoke.*]], ptr
+// CHECK: store ptr @[[TEST_BLOCK_INVOKE3:.*invoke.*]], ptr
+// CHECK: store ptr @[[TEST_BLOCK_INVOKE4:.*invoke.*]], ptr
+// CHECK: store ptr @[[TEST_BLOCK_INVOKE5:.*invoke.*]], ptr
+// CHECK: store ptr @[[TEST_BLOCK_INVOKE6:.*invoke.*]], ptr
 
 // CHECK: define internal void @[[TEST_BLOCK_INVOKE0]]({{.*}}) #[[DISABLEATTR:.*]] {
 // CHECK: define internal void @[[TEST_BLOCK_INVOKE1]]({{.*}}) #[[ENABLEATTR:.*]] {

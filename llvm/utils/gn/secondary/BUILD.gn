@@ -22,9 +22,14 @@ group("default") {
       "//libcxxabi",
     ]
   }
-  if (current_os == "linux" || current_os == "win") {
+  if (current_os == "linux" || current_os == "win" || current_os=="mac") {
     deps += [ "//compiler-rt/test/asan" ]
   }
+
+  if (current_os == "linux" || current_os == "mac") {
+    deps += [ "//compiler-rt/test/lsan"]
+  }
+
   if (current_os == "linux" || current_os == "android") {
     deps += [ "//compiler-rt/test/hwasan" ]
   }
@@ -32,8 +37,8 @@ group("default") {
     deps += [ "//libunwind" ]
   }
 
-  # FIXME: Add this on linux/win after testing that it builds.
-  if (current_os == "mac") {
+  # FIXME: Add this on win after testing that it builds.
+  if (current_os != "win") {
     deps += [ "//bolt/test" ]
   }
 

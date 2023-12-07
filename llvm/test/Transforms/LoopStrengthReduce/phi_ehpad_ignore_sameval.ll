@@ -12,19 +12,19 @@ target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:6:
 %"class.std::allocator" = type { i8 }
 %"class.absl::Storage" = type {}
 
-define void @0() personality i8* undef {
+define void @0() personality ptr undef {
 init1:
-  %i14 = invoke i8* undef(i8* null, i8 0)
+  %i14 = invoke ptr undef(ptr null, i8 0)
           to label %init2 unwind label %unwind
 
 init2:                                            ; preds = %init1
-  %i19 = select i1 undef, %"class.std::allocator"* null, %"class.std::allocator"* null
+  %i19 = select i1 undef, ptr null, ptr null
   br label %loop
 
 loop:                                             ; preds = %loop.increment, %init2
   %i21 = phi i64 [ %i24, %loop.increment ], [ 0, %init2 ]
-  %i22 = getelementptr %"class.std::allocator", %"class.std::allocator"* %i19, i64 %i21
-  invoke void undef(i8* null, %"class.std::allocator"* null, %"class.std::allocator"* %i22)
+  %i22 = getelementptr %"class.std::allocator", ptr %i19, i64 %i21
+  invoke void undef(ptr null, ptr null, ptr %i22)
           to label %loop.increment unwind label %loop.unwind
 
 loop.increment:                                   ; preds = %loop
@@ -39,7 +39,7 @@ loop.catch:                                       ; preds = %loop.unwind
   catchret from %i28 to label %caught
 
 caught:                                           ; preds = %loop.catch
-  invoke void undef(%"class.absl::Storage"* null)
+  invoke void undef(ptr null)
           to label %unreach unwind label %unwind
 
 unreach:                                          ; preds = %caught
@@ -49,7 +49,7 @@ unwind:                                           ; preds = %caught, %loop.unwin
   ; This phi node triggers the issue in combination with the optimizable loop
   ; above. It contains %i19 twice, once from %caught (which doesn't have an
   ; EHPad) and once from %loop.unwind, which does have one.
-  %i32 = phi %"class.std::allocator"* [ %i19, %loop.unwind ], [ %i19, %caught ], [ null, %init1 ]
+  %i32 = phi ptr [ %i19, %loop.unwind ], [ %i19, %caught ], [ null, %init1 ]
   %i33 = cleanuppad within none []
   cleanupret from %i33 unwind to caller
 }

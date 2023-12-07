@@ -16,7 +16,7 @@
 ; CHECK: Max Loop Depth: 1
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i32* %A, i32* %B, i64 %N, i64 %M) {
+define void @foo(ptr %A, ptr %B, i64 %N, i64 %M) {
 entry:
   %cmp1 = icmp slt i64 0, %M
   br i1 %cmp1, label %for.body1, label %for.end1
@@ -29,10 +29,10 @@ entry:
 
   for.body2:                                        ; preds = %for.body1, %for.inc2
     %i.1 = phi i64 [ 0, %for.body1 ], [ %i.next.1, %for.inc2 ]
-    %arrayidx = getelementptr inbounds i32, i32* %A, i64 %i.1
-    %tmp = load i32, i32* %arrayidx, align 4
+    %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.1
+    %tmp = load i32, ptr %arrayidx, align 4
     %add = add nsw i32 %tmp, 1
-    store i32 %add, i32* %arrayidx, align 4
+    store i32 %add, ptr %arrayidx, align 4
     br label %for.inc2
 
   for.inc2:                                          ; preds = %for.body2
@@ -47,10 +47,10 @@ entry:
 
   for.body3:					   ; preds = %for.end2
     %i.2 = phi i64 [ 0, %for.end2 ], [ %i.next.2, %for.inc3 ]
-    %arrayidx1 = getelementptr inbounds i32, i32* %A, i64 %i.2
-    %tmp1 = load i32, i32* %arrayidx1, align 4
+    %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %i.2
+    %tmp1 = load i32, ptr %arrayidx1, align 4
     %add1 = add nsw i32 %tmp1, 1
-    store i32 %add1, i32* %arrayidx1, align 4
+    store i32 %add1, ptr %arrayidx1, align 4
     br label %for.inc3
 
   for.inc3:					  ; preds = %for.body3

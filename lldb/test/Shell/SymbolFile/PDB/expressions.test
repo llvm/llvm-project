@@ -2,34 +2,34 @@ REQUIRES: system-windows, msvc
 RUN: %build --compiler=msvc --nodefaultlib --output=%t.exe %S/Inputs/ExpressionsTest.cpp
 RUN: not %lldb -b -s %S/Inputs/ExpressionsTest0.script -s %S/Inputs/ExpressionsTest1.script -s %S/Inputs/ExpressionsTest2.script -- %t.exe 2>&1 | FileCheck %s
 
-// Check the variable value through `print`
-CHECK: (lldb) print result
+// Check the variable value through `expression`
+CHECK: (lldb) expression result
 CHECK: (char) $0 = '\x1c'
 
 // Call the function just like in the code
-CHECK: (lldb) print N0::N1::sum(N0::N1::buf1, sizeof(N0::N1::buf1))
+CHECK: (lldb) expression N0::N1::sum(N0::N1::buf1, sizeof(N0::N1::buf1))
 CHECK: (char) $1 = '\x1c'
 
 // Try the relaxed namespaces search
-CHECK: (lldb) print N1::sum(N1::buf1, sizeof(N1::buf1))
+CHECK: (lldb) expression N1::sum(N1::buf1, sizeof(N1::buf1))
 CHECK: (char) $2 = '\x1c'
 
 // Try the relaxed variables and functions search
-CHECK: (lldb) print sum(buf1, sizeof(buf1))
+CHECK: (lldb) expression sum(buf1, sizeof(buf1))
 CHECK: (char) $3 = '\x1c'
 
 // Make a crash during expression calculation
-CHECK: (lldb) print sum(buf1, 1000000000)
+CHECK: (lldb) expression sum(buf1, 1000000000)
 CHECK: The process has been returned to the state before expression evaluation.
 
 // Make one more crash
-CHECK: (lldb) print sum(buf0, 1)
+CHECK: (lldb) expression sum(buf0, 1)
 CHECK: The process has been returned to the state before expression evaluation.
 
 // Check if the process state was restored succesfully
-CHECK: (lldb) print sum(buf0, result - 28)
+CHECK: (lldb) expression sum(buf0, result - 28)
 CHECK: (char) $4 = '\0'
 
 // Call the function with arbitrary parameters
-CHECK: (lldb) print sum(buf1 + 3, 3)
+CHECK: (lldb) expression sum(buf1 + 3, 3)
 CHECK: (char) $5 = '\f'

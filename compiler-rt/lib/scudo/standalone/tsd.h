@@ -12,6 +12,7 @@
 #include "atomic_helpers.h"
 #include "common.h"
 #include "mutex.h"
+#include "thread_annotations.h"
 
 #include <limits.h> // for PTHREAD_DESTRUCTOR_ITERATIONS
 #include <pthread.h>
@@ -24,41 +25,61 @@
 namespace scudo {
 
 template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
-  typename Allocator::CacheT Cache;
-  typename Allocator::QuarantineCacheT QuarantineCache;
   using ThisT = TSD<Allocator>;
   u8 DestructorIterations = 0;
 
-  void init(Allocator *Instance) {
+  void init(Allocator *Instance) NO_THREAD_SAFETY_ANALYSIS {
     DCHECK_EQ(DestructorIterations, 0U);
     DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
     Instance->initCache(&Cache);
     DestructorIterations = PTHREAD_DESTRUCTOR_ITERATIONS;
   }
 
-  void commitBack(Allocator *Instance) { Instance->commitBack(this); }
-
-  inline bool tryLock() {
+  inline bool tryLock() NO_THREAD_SAFETY_ANALYSIS {
     if (Mutex.tryLock()) {
       atomic_store_relaxed(&Precedence, 0);
       return true;
     }
     if (atomic_load_relaxed(&Precedence) == 0)
-      atomic_store_relaxed(
-          &Precedence,
-          static_cast<uptr>(getMonotonicTime() >> FIRST_32_SECOND_64(16, 0)));
+      atomic_store_relaxed(&Precedence,
+                           static_cast<uptr>(getMonotonicTimeFast() >>
+                                             FIRST_32_SECOND_64(16, 0)));
     return false;
   }
-  inline void lock() {
+  inline void lock() NO_THREAD_SAFETY_ANALYSIS {
     atomic_store_relaxed(&Precedence, 0);
     Mutex.lock();
   }
-  inline void unlock() { Mutex.unlock(); }
+  inline void unlock() NO_THREAD_SAFETY_ANALYSIS { Mutex.unlock(); }
   inline uptr getPrecedence() { return atomic_load_relaxed(&Precedence); }
+
+  void commitBack(Allocator *Instance) ASSERT_CAPABILITY(Mutex) {
+    Instance->commitBack(this);
+  }
+
+  // Ideally, we may want to assert that all the operations on
+  // Cache/QuarantineCache always have the `Mutex` acquired. However, the
+  // current architecture of accessing TSD is not easy to cooperate with the
+  // thread-safety analysis because of pointer aliasing. So now we just add the
+  // assertion on the getters of Cache/QuarantineCache.
+  //
+  // TODO(chiahungduan): Ideally, we want to do `Mutex.assertHeld` but acquiring
+  // TSD doesn't always require holding the lock. Add this assertion while the
+  // lock is always acquired.
+  typename Allocator::CacheT &getCache() ASSERT_CAPABILITY(Mutex) {
+    return Cache;
+  }
+  typename Allocator::QuarantineCacheT &getQuarantineCache()
+      ASSERT_CAPABILITY(Mutex) {
+    return QuarantineCache;
+  }
 
 private:
   HybridMutex Mutex;
   atomic_uptr Precedence = {};
+
+  typename Allocator::CacheT Cache GUARDED_BY(Mutex);
+  typename Allocator::QuarantineCacheT QuarantineCache GUARDED_BY(Mutex);
 };
 
 } // namespace scudo

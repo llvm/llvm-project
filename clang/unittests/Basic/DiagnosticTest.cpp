@@ -9,7 +9,9 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticError.h"
 #include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/DiagnosticLex.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 using namespace clang;
@@ -116,7 +118,7 @@ TEST(DiagnosticTest, diagnosticError) {
                             << "error");
   ASSERT_TRUE(!Value);
   llvm::Error Err = Value.takeError();
-  Optional<PartialDiagnosticAt> ErrDiag = DiagnosticError::take(Err);
+  std::optional<PartialDiagnosticAt> ErrDiag = DiagnosticError::take(Err);
   llvm::cantFail(std::move(Err));
   ASSERT_FALSE(!ErrDiag);
   EXPECT_EQ(ErrDiag->first, SourceLocation());
@@ -126,5 +128,27 @@ TEST(DiagnosticTest, diagnosticError) {
   ASSERT_FALSE(!Value);
   EXPECT_EQ(*Value, std::make_pair(20, 1));
   EXPECT_EQ(Value->first, 20);
+}
+
+TEST(DiagnosticTest, storedDiagEmptyWarning) {
+  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions);
+
+  class CaptureDiagnosticConsumer : public DiagnosticConsumer {
+  public:
+    SmallVector<StoredDiagnostic> StoredDiags;
+
+    void HandleDiagnostic(DiagnosticsEngine::Level level,
+                          const Diagnostic &Info) override {
+      StoredDiags.push_back(StoredDiagnostic(level, Info));
+    }
+  };
+
+  CaptureDiagnosticConsumer CaptureConsumer;
+  Diags.setClient(&CaptureConsumer, /*ShouldOwnClient=*/false);
+  Diags.Report(diag::pp_hash_warning) << "";
+  ASSERT_TRUE(CaptureConsumer.StoredDiags.size() == 1);
+
+  // Make sure an empty warning can round-trip with \c StoredDiagnostic.
+  Diags.Report(CaptureConsumer.StoredDiags.front());
 }
 }

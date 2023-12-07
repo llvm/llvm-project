@@ -1,4 +1,5 @@
-; RUN: opt -passes=sroa -S -o - %s -experimental-assignment-tracking | FileCheck %s
+; RUN: opt -passes=sroa -S -o - %s \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 ;
 ;; Based on llvm/test/DebugInfo/ARM/sroa-complex.ll
 ;; generated from:
@@ -16,8 +17,8 @@
 ;; dbg.assigns for the split (then promoted) stores.
 ; CHECK: %c.coerce.fca.0.extract = extractvalue [2 x i64] %c.coerce, 0
 ; CHECK: %c.coerce.fca.1.extract = extractvalue [2 x i64] %c.coerce, 1
-; CHECK: call void @llvm.dbg.assign(metadata i64 %c.coerce.fca.0.extract,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64),{{.+}}, metadata ptr undef, metadata !DIExpression())
-; CHECK: call void @llvm.dbg.assign(metadata i64 %c.coerce.fca.1.extract,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64),{{.+}}, metadata ptr undef, {{.+}})
+; CHECK: call void @llvm.dbg.value(metadata i64 %c.coerce.fca.0.extract,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))
+; CHECK: call void @llvm.dbg.value(metadata i64 %c.coerce.fca.1.extract,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7-apple-unknown"
@@ -43,7 +44,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5, !6}
+!llvm.module.flags = !{!3, !4, !5, !6, !1000}
 !llvm.ident = !{!7}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
@@ -67,3 +68,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !18 = distinct !DIAssignID()
 !19 = distinct !DIAssignID()
 !20 = !DILocation(line: 2, column: 36, scope: !8)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

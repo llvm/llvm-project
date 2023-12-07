@@ -6,45 +6,46 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestGDBServerTargetXML(GDBRemoteTestBase):
-
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_x86_64_regs(self):
         """Test grabbing various x86_64 registers from gdbserver."""
+
         class MyResponder(MockGDBServerResponder):
             reg_data = (
-                "0102030405060708"  # rcx
-                "1112131415161718"  # rdx
-                "2122232425262728"  # rsi
-                "3132333435363738"  # rdi
-                "4142434445464748"  # rbp
-                "5152535455565758"  # rsp
-                "6162636465666768"  # r8
-                "7172737475767778"  # r9
-                "8182838485868788"  # rip
-                "91929394"  # eflags
-                "0102030405060708090a"  # st0
-                "1112131415161718191a"  # st1
-            ) + 6 * (
-                "2122232425262728292a"  # st2..st7
-            ) + (
-                "8182838485868788898a8b8c8d8e8f90"  # xmm0
-                "9192939495969798999a9b9c9d9e9fa0"  # xmm1
-            ) + 14 * (
-                "a1a2a3a4a5a6a7a8a9aaabacadaeafb0"  # xmm2..xmm15
-            ) + (
-                "00000000"  # mxcsr
-            ) + (
-                "b1b2b3b4b5b6b7b8b9babbbcbdbebfc0"  # ymm0h
-                "c1c2c3c4c5c6c7c8c9cacbcccdcecfd0"  # ymm1h
-            ) + 14 * (
-                "d1d2d3d4d5d6d7d8d9dadbdcdddedfe0"  # ymm2h..ymm15h
+                (
+                    "0102030405060708"  # rcx
+                    "1112131415161718"  # rdx
+                    "2122232425262728"  # rsi
+                    "3132333435363738"  # rdi
+                    "4142434445464748"  # rbp
+                    "5152535455565758"  # rsp
+                    "6162636465666768"  # r8
+                    "7172737475767778"  # r9
+                    "8182838485868788"  # rip
+                    "91929394"  # eflags
+                    "0102030405060708090a"  # st0
+                    "1112131415161718191a"  # st1
+                )
+                + 6 * ("2122232425262728292a")  # st2..st7
+                + (
+                    "8182838485868788898a8b8c8d8e8f90"  # xmm0
+                    "9192939495969798999a9b9c9d9e9fa0"  # xmm1
+                )
+                + 14 * ("a1a2a3a4a5a6a7a8a9aaabacadaeafb0")  # xmm2..xmm15
+                + ("00000000")  # mxcsr
+                + (
+                    "b1b2b3b4b5b6b7b8b9babbbcbdbebfc0"  # ymm0h
+                    "c1c2c3c4c5c6c7c8c9cacbcccdcecfd0"  # ymm1h
+                )
+                + 14 * ("d1d2d3d4d5d6d7d8d9dadbdcdddedfe0")  # ymm2h..ymm15h
             )
 
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
                         <!DOCTYPE feature SYSTEM "gdb-target.dtd">
                         <target>
                           <architecture>i386:x86-64</architecture>
@@ -106,7 +107,9 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                             <reg name="ymm14h" bitsize="128" type="uint128" regnum="74"/>
                             <reg name="ymm15h" bitsize="128" type="uint128" regnum="75"/>
                           </feature>
-                        </target>""", False
+                        </target>""",
+                        False,
+                    )
                 else:
                     return None, False
 
@@ -127,140 +130,157 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
 
         target = self.createTarget("basic_eh_frame.yaml")
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateStopped])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
 
         # test generic aliases
-        self.match("register read arg4",
-                   ["rcx = 0x0807060504030201"])
-        self.match("register read arg3",
-                   ["rdx = 0x1817161514131211"])
-        self.match("register read arg2",
-                   ["rsi = 0x2827262524232221"])
-        self.match("register read arg1",
-                   ["rdi = 0x3837363534333231"])
-        self.match("register read fp",
-                   ["rbp = 0x4847464544434241"])
-        self.match("register read sp",
-                   ["rsp = 0x5857565554535251"])
-        self.match("register read arg5",
-                   ["r8 = 0x6867666564636261"])
-        self.match("register read arg6",
-                   ["r9 = 0x7877767574737271"])
-        self.match("register read pc",
-                   ["rip = 0x8887868584838281"])
-        self.match("register read flags",
-                   ["eflags = 0x94939291"])
+        self.match("register read arg4", ["rcx = 0x0807060504030201"])
+        self.match("register read arg3", ["rdx = 0x1817161514131211"])
+        self.match("register read arg2", ["rsi = 0x2827262524232221"])
+        self.match("register read arg1", ["rdi = 0x3837363534333231"])
+        self.match("register read fp", ["rbp = 0x4847464544434241"])
+        self.match("register read sp", ["rsp = 0x5857565554535251"])
+        self.match("register read arg5", ["r8 = 0x6867666564636261"])
+        self.match("register read arg6", ["r9 = 0x7877767574737271"])
+        self.match("register read pc", ["rip = 0x8887868584838281"])
+        self.match("register read flags", ["eflags = 0x94939291"])
 
         # both stX and xmmX should be displayed as vectors
-        self.match("register read st0",
-                   ["st0 = {0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09 0x0a}"])
-        self.match("register read st1",
-                   ["st1 = {0x11 0x12 0x13 0x14 0x15 0x16 0x17 0x18 0x19 0x1a}"])
-        self.match("register read xmm0",
-                   ["xmm0 = {0x81 0x82 0x83 0x84 0x85 0x86 0x87 0x88 "
-                    "0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"])
-        self.match("register read xmm1",
-                   ["xmm1 = {0x91 0x92 0x93 0x94 0x95 0x96 0x97 0x98 "
-                    "0x99 0x9a 0x9b 0x9c 0x9d 0x9e 0x9f 0xa0}"])
+        self.match(
+            "register read st0",
+            ["st0 = {0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09 0x0a}"],
+        )
+        self.match(
+            "register read st1",
+            ["st1 = {0x11 0x12 0x13 0x14 0x15 0x16 0x17 0x18 0x19 0x1a}"],
+        )
+        self.match(
+            "register read xmm0",
+            [
+                "xmm0 = {0x81 0x82 0x83 0x84 0x85 0x86 0x87 0x88 "
+                "0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"
+            ],
+        )
+        self.match(
+            "register read xmm1",
+            [
+                "xmm1 = {0x91 0x92 0x93 0x94 0x95 0x96 0x97 0x98 "
+                "0x99 0x9a 0x9b 0x9c 0x9d 0x9e 0x9f 0xa0}"
+            ],
+        )
 
         # test pseudo-registers
-        self.filecheck("register read --all",
-                       os.path.join(os.path.dirname(__file__),
-                                    "amd64-partial-regs.FileCheck"))
+        self.filecheck(
+            "register read --all",
+            os.path.join(os.path.dirname(__file__), "amd64-partial-regs.FileCheck"),
+        )
 
         # test writing into pseudo-registers
         self.runCmd("register write ecx 0xfffefdfc")
-        self.match("register read rcx",
-                   ["rcx = 0x08070605fffefdfc"])
+        self.match("register read rcx", ["rcx = 0x08070605fffefdfc"])
 
         self.runCmd("register write cx 0xfbfa")
-        self.match("register read ecx",
-                   ["ecx = 0xfffefbfa"])
-        self.match("register read rcx",
-                   ["rcx = 0x08070605fffefbfa"])
+        self.match("register read ecx", ["ecx = 0xfffefbfa"])
+        self.match("register read rcx", ["rcx = 0x08070605fffefbfa"])
 
         self.runCmd("register write ch 0xf9")
-        self.match("register read cx",
-                   ["cx = 0xf9fa"])
-        self.match("register read ecx",
-                   ["ecx = 0xfffef9fa"])
-        self.match("register read rcx",
-                   ["rcx = 0x08070605fffef9fa"])
+        self.match("register read cx", ["cx = 0xf9fa"])
+        self.match("register read ecx", ["ecx = 0xfffef9fa"])
+        self.match("register read rcx", ["rcx = 0x08070605fffef9fa"])
 
         self.runCmd("register write cl 0xf8")
-        self.match("register read cx",
-                   ["cx = 0xf9f8"])
-        self.match("register read ecx",
-                   ["ecx = 0xfffef9f8"])
-        self.match("register read rcx",
-                   ["rcx = 0x08070605fffef9f8"])
+        self.match("register read cx", ["cx = 0xf9f8"])
+        self.match("register read ecx", ["ecx = 0xfffef9f8"])
+        self.match("register read rcx", ["rcx = 0x08070605fffef9f8"])
 
         self.runCmd("register write mm0 0xfffefdfcfbfaf9f8")
-        self.match("register read st0",
-                   ["st0 = {0xf8 0xf9 0xfa 0xfb 0xfc 0xfd 0xfe 0xff 0x09 0x0a}"])
+        self.match(
+            "register read st0",
+            ["st0 = {0xf8 0xf9 0xfa 0xfb 0xfc 0xfd 0xfe 0xff 0x09 0x0a}"],
+        )
 
-        self.runCmd("register write xmm0 \"{0xff 0xfe 0xfd 0xfc 0xfb 0xfa 0xf9 "
-                    "0xf8 0xf7 0xf6 0xf5 0xf4 0xf3 0xf2 0xf1 0xf0}\"")
-        self.match("register read ymm0",
-                   ["ymm0 = {0xff 0xfe 0xfd 0xfc 0xfb 0xfa 0xf9 0xf8 0xf7 0xf6 "
-                    "0xf5 0xf4 0xf3 0xf2 0xf1 0xf0 0xb1 0xb2 0xb3 0xb4 0xb5 "
-                    "0xb6 0xb7 0xb8 0xb9 0xba 0xbb 0xbc 0xbd 0xbe 0xbf 0xc0}"])
+        self.runCmd(
+            'register write xmm0 "{0xff 0xfe 0xfd 0xfc 0xfb 0xfa 0xf9 '
+            '0xf8 0xf7 0xf6 0xf5 0xf4 0xf3 0xf2 0xf1 0xf0}"'
+        )
+        self.match(
+            "register read ymm0",
+            [
+                "ymm0 = {0xff 0xfe 0xfd 0xfc 0xfb 0xfa 0xf9 0xf8 0xf7 0xf6 "
+                "0xf5 0xf4 0xf3 0xf2 0xf1 0xf0 0xb1 0xb2 0xb3 0xb4 0xb5 "
+                "0xb6 0xb7 0xb8 0xb9 0xba 0xbb 0xbc 0xbd 0xbe 0xbf 0xc0}"
+            ],
+        )
 
-        self.runCmd("register write ymm0h \"{0xef 0xee 0xed 0xec 0xeb 0xea 0xe9 "
-                    "0xe8 0xe7 0xe6 0xe5 0xe4 0xe3 0xe2 0xe1 0xe0}\"")
-        self.match("register read ymm0",
-                   ["ymm0 = {0xff 0xfe 0xfd 0xfc 0xfb 0xfa 0xf9 0xf8 0xf7 0xf6 "
-                    "0xf5 0xf4 0xf3 0xf2 0xf1 0xf0 0xef 0xee 0xed 0xec 0xeb "
-                    "0xea 0xe9 0xe8 0xe7 0xe6 0xe5 0xe4 0xe3 0xe2 0xe1 0xe0}"])
+        self.runCmd(
+            'register write ymm0h "{0xef 0xee 0xed 0xec 0xeb 0xea 0xe9 '
+            '0xe8 0xe7 0xe6 0xe5 0xe4 0xe3 0xe2 0xe1 0xe0}"'
+        )
+        self.match(
+            "register read ymm0",
+            [
+                "ymm0 = {0xff 0xfe 0xfd 0xfc 0xfb 0xfa 0xf9 0xf8 0xf7 0xf6 "
+                "0xf5 0xf4 0xf3 0xf2 0xf1 0xf0 0xef 0xee 0xed 0xec 0xeb "
+                "0xea 0xe9 0xe8 0xe7 0xe6 0xe5 0xe4 0xe3 0xe2 0xe1 0xe0}"
+            ],
+        )
 
-        self.runCmd("register write ymm0 \"{0xd0 0xd1 0xd2 0xd3 0xd4 0xd5 0xd6 "
-                    "0xd7 0xd8 0xd9 0xda 0xdb 0xdc 0xdd 0xde 0xdf 0xe0 0xe1 "
-                    "0xe2 0xe3 0xe4 0xe5 0xe6 0xe7 0xe8 0xe9 0xea 0xeb 0xec "
-                    "0xed 0xee 0xef}\"")
-        self.match("register read ymm0",
-                   ["ymm0 = {0xd0 0xd1 0xd2 0xd3 0xd4 0xd5 0xd6 0xd7 0xd8 0xd9 "
-                    "0xda 0xdb 0xdc 0xdd 0xde 0xdf 0xe0 0xe1 0xe2 0xe3 0xe4 "
-                    "0xe5 0xe6 0xe7 0xe8 0xe9 0xea 0xeb 0xec 0xed 0xee 0xef}"])
+        self.runCmd(
+            'register write ymm0 "{0xd0 0xd1 0xd2 0xd3 0xd4 0xd5 0xd6 '
+            "0xd7 0xd8 0xd9 0xda 0xdb 0xdc 0xdd 0xde 0xdf 0xe0 0xe1 "
+            "0xe2 0xe3 0xe4 0xe5 0xe6 0xe7 0xe8 0xe9 0xea 0xeb 0xec "
+            '0xed 0xee 0xef}"'
+        )
+        self.match(
+            "register read ymm0",
+            [
+                "ymm0 = {0xd0 0xd1 0xd2 0xd3 0xd4 0xd5 0xd6 0xd7 0xd8 0xd9 "
+                "0xda 0xdb 0xdc 0xdd 0xde 0xdf 0xe0 0xe1 0xe2 0xe3 0xe4 "
+                "0xe5 0xe6 0xe7 0xe8 0xe9 0xea 0xeb 0xec 0xed 0xee 0xef}"
+            ],
+        )
 
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_i386_regs(self):
         """Test grabbing various i386 registers from gdbserver."""
+
         class MyResponder(MockGDBServerResponder):
             reg_data = (
-                "01020304"  # eax
-                "11121314"  # ecx
-                "21222324"  # edx
-                "31323334"  # ebx
-                "41424344"  # esp
-                "51525354"  # ebp
-                "61626364"  # esi
-                "71727374"  # edi
-                "81828384"  # eip
-                "91929394"  # eflags
-                "0102030405060708090a"  # st0
-                "1112131415161718191a"  # st1
-            ) + 6 * (
-                "2122232425262728292a"  # st2..st7
-            ) + (
-                "8182838485868788898a8b8c8d8e8f90"  # xmm0
-                "9192939495969798999a9b9c9d9e9fa0"  # xmm1
-            ) + 6 * (
-                "a1a2a3a4a5a6a7a8a9aaabacadaeafb0"  # xmm2..xmm7
-            ) + (
-                "00000000"  # mxcsr
-            ) + (
-                "b1b2b3b4b5b6b7b8b9babbbcbdbebfc0"  # ymm0h
-                "c1c2c3c4c5c6c7c8c9cacbcccdcecfd0"  # ymm1h
-            ) + 6 * (
-                "d1d2d3d4d5d6d7d8d9dadbdcdddedfe0"  # ymm2h..ymm7h
+                (
+                    "01020304"  # eax
+                    "11121314"  # ecx
+                    "21222324"  # edx
+                    "31323334"  # ebx
+                    "41424344"  # esp
+                    "51525354"  # ebp
+                    "61626364"  # esi
+                    "71727374"  # edi
+                    "81828384"  # eip
+                    "91929394"  # eflags
+                    "0102030405060708090a"  # st0
+                    "1112131415161718191a"  # st1
+                )
+                + 6 * ("2122232425262728292a")  # st2..st7
+                + (
+                    "8182838485868788898a8b8c8d8e8f90"  # xmm0
+                    "9192939495969798999a9b9c9d9e9fa0"  # xmm1
+                )
+                + 6 * ("a1a2a3a4a5a6a7a8a9aaabacadaeafb0")  # xmm2..xmm7
+                + ("00000000")  # mxcsr
+                + (
+                    "b1b2b3b4b5b6b7b8b9babbbcbdbebfc0"  # ymm0h
+                    "c1c2c3c4c5c6c7c8c9cacbcccdcecfd0"  # ymm1h
+                )
+                + 6 * ("d1d2d3d4d5d6d7d8d9dadbdcdddedfe0")  # ymm2h..ymm7h
             )
 
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
                         <!DOCTYPE feature SYSTEM "gdb-target.dtd">
                         <target>
                           <architecture>i386</architecture>
@@ -306,7 +326,9 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                             <reg name="ymm6h" bitsize="128" type="uint128" regnum="48"/>
                             <reg name="ymm7h" bitsize="128" type="uint128" regnum="49"/>
                           </feature>
-                        </target>""", False
+                        </target>""",
+                        False,
+                    )
                 else:
                     return None, False
 
@@ -327,116 +349,133 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
 
         target = self.createTarget("basic_eh_frame-i386.yaml")
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateStopped])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
 
         # test generic aliases
-        self.match("register read fp",
-                   ["ebp = 0x54535251"])
-        self.match("register read sp",
-                   ["esp = 0x44434241"])
-        self.match("register read pc",
-                   ["eip = 0x84838281"])
-        self.match("register read flags",
-                   ["eflags = 0x94939291"])
+        self.match("register read fp", ["ebp = 0x54535251"])
+        self.match("register read sp", ["esp = 0x44434241"])
+        self.match("register read pc", ["eip = 0x84838281"])
+        self.match("register read flags", ["eflags = 0x94939291"])
 
         # test pseudo-registers
-        self.match("register read cx",
-                   ["cx = 0x1211"])
-        self.match("register read ch",
-                   ["ch = 0x12"])
-        self.match("register read cl",
-                   ["cl = 0x11"])
-        self.match("register read mm0",
-                   ["mm0 = 0x0807060504030201"])
-        self.match("register read mm1",
-                   ["mm1 = 0x1817161514131211"])
+        self.match("register read cx", ["cx = 0x1211"])
+        self.match("register read ch", ["ch = 0x12"])
+        self.match("register read cl", ["cl = 0x11"])
+        self.match("register read mm0", ["mm0 = 0x0807060504030201"])
+        self.match("register read mm1", ["mm1 = 0x1817161514131211"])
 
         # both stX and xmmX should be displayed as vectors
-        self.match("register read st0",
-                   ["st0 = {0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09 0x0a}"])
-        self.match("register read st1",
-                   ["st1 = {0x11 0x12 0x13 0x14 0x15 0x16 0x17 0x18 0x19 0x1a}"])
-        self.match("register read xmm0",
-                   ["xmm0 = {0x81 0x82 0x83 0x84 0x85 0x86 0x87 0x88 "
-                    "0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"])
-        self.match("register read xmm1",
-                   ["xmm1 = {0x91 0x92 0x93 0x94 0x95 0x96 0x97 0x98 "
-                    "0x99 0x9a 0x9b 0x9c 0x9d 0x9e 0x9f 0xa0}"])
+        self.match(
+            "register read st0",
+            ["st0 = {0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09 0x0a}"],
+        )
+        self.match(
+            "register read st1",
+            ["st1 = {0x11 0x12 0x13 0x14 0x15 0x16 0x17 0x18 0x19 0x1a}"],
+        )
+        self.match(
+            "register read xmm0",
+            [
+                "xmm0 = {0x81 0x82 0x83 0x84 0x85 0x86 0x87 0x88 "
+                "0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"
+            ],
+        )
+        self.match(
+            "register read xmm1",
+            [
+                "xmm1 = {0x91 0x92 0x93 0x94 0x95 0x96 0x97 0x98 "
+                "0x99 0x9a 0x9b 0x9c 0x9d 0x9e 0x9f 0xa0}"
+            ],
+        )
 
         # test writing into pseudo-registers
         self.runCmd("register write cx 0xfbfa")
-        self.match("register read ecx",
-                   ["ecx = 0x1413fbfa"])
+        self.match("register read ecx", ["ecx = 0x1413fbfa"])
 
         self.runCmd("register write ch 0xf9")
-        self.match("register read cx",
-                   ["cx = 0xf9fa"])
-        self.match("register read ecx",
-                   ["ecx = 0x1413f9fa"])
+        self.match("register read cx", ["cx = 0xf9fa"])
+        self.match("register read ecx", ["ecx = 0x1413f9fa"])
 
         self.runCmd("register write cl 0xf8")
-        self.match("register read cx",
-                   ["cx = 0xf9f8"])
-        self.match("register read ecx",
-                   ["ecx = 0x1413f9f8"])
+        self.match("register read cx", ["cx = 0xf9f8"])
+        self.match("register read ecx", ["ecx = 0x1413f9f8"])
 
         self.runCmd("register write mm0 0xfffefdfcfbfaf9f8")
-        self.match("register read st0",
-                   ["st0 = {0xf8 0xf9 0xfa 0xfb 0xfc 0xfd 0xfe 0xff 0x09 0x0a}"])
+        self.match(
+            "register read st0",
+            ["st0 = {0xf8 0xf9 0xfa 0xfb 0xfc 0xfd 0xfe 0xff 0x09 0x0a}"],
+        )
 
-        self.runCmd("register write xmm0 \"{0xff 0xfe 0xfd 0xfc 0xfb 0xfa 0xf9 "
-                    "0xf8 0xf7 0xf6 0xf5 0xf4 0xf3 0xf2 0xf1 0xf0}\"")
-        self.match("register read ymm0",
-                   ["ymm0 = {0xff 0xfe 0xfd 0xfc 0xfb 0xfa 0xf9 0xf8 0xf7 0xf6 "
-                    "0xf5 0xf4 0xf3 0xf2 0xf1 0xf0 0xb1 0xb2 0xb3 0xb4 0xb5 "
-                    "0xb6 0xb7 0xb8 0xb9 0xba 0xbb 0xbc 0xbd 0xbe 0xbf 0xc0}"])
+        self.runCmd(
+            'register write xmm0 "{0xff 0xfe 0xfd 0xfc 0xfb 0xfa 0xf9 '
+            '0xf8 0xf7 0xf6 0xf5 0xf4 0xf3 0xf2 0xf1 0xf0}"'
+        )
+        self.match(
+            "register read ymm0",
+            [
+                "ymm0 = {0xff 0xfe 0xfd 0xfc 0xfb 0xfa 0xf9 0xf8 0xf7 0xf6 "
+                "0xf5 0xf4 0xf3 0xf2 0xf1 0xf0 0xb1 0xb2 0xb3 0xb4 0xb5 "
+                "0xb6 0xb7 0xb8 0xb9 0xba 0xbb 0xbc 0xbd 0xbe 0xbf 0xc0}"
+            ],
+        )
 
-        self.runCmd("register write ymm0h \"{0xef 0xee 0xed 0xec 0xeb 0xea 0xe9 "
-                    "0xe8 0xe7 0xe6 0xe5 0xe4 0xe3 0xe2 0xe1 0xe0}\"")
-        self.match("register read ymm0",
-                   ["ymm0 = {0xff 0xfe 0xfd 0xfc 0xfb 0xfa 0xf9 0xf8 0xf7 0xf6 "
-                    "0xf5 0xf4 0xf3 0xf2 0xf1 0xf0 0xef 0xee 0xed 0xec 0xeb "
-                    "0xea 0xe9 0xe8 0xe7 0xe6 0xe5 0xe4 0xe3 0xe2 0xe1 0xe0}"])
+        self.runCmd(
+            'register write ymm0h "{0xef 0xee 0xed 0xec 0xeb 0xea 0xe9 '
+            '0xe8 0xe7 0xe6 0xe5 0xe4 0xe3 0xe2 0xe1 0xe0}"'
+        )
+        self.match(
+            "register read ymm0",
+            [
+                "ymm0 = {0xff 0xfe 0xfd 0xfc 0xfb 0xfa 0xf9 0xf8 0xf7 0xf6 "
+                "0xf5 0xf4 0xf3 0xf2 0xf1 0xf0 0xef 0xee 0xed 0xec 0xeb "
+                "0xea 0xe9 0xe8 0xe7 0xe6 0xe5 0xe4 0xe3 0xe2 0xe1 0xe0}"
+            ],
+        )
 
-        self.runCmd("register write ymm0 \"{0xd0 0xd1 0xd2 0xd3 0xd4 0xd5 0xd6 "
-                    "0xd7 0xd8 0xd9 0xda 0xdb 0xdc 0xdd 0xde 0xdf 0xe0 0xe1 "
-                    "0xe2 0xe3 0xe4 0xe5 0xe6 0xe7 0xe8 0xe9 0xea 0xeb 0xec "
-                    "0xed 0xee 0xef}\"")
-        self.match("register read ymm0",
-                   ["ymm0 = {0xd0 0xd1 0xd2 0xd3 0xd4 0xd5 0xd6 0xd7 0xd8 0xd9 "
-                    "0xda 0xdb 0xdc 0xdd 0xde 0xdf 0xe0 0xe1 0xe2 0xe3 0xe4 "
-                    "0xe5 0xe6 0xe7 0xe8 0xe9 0xea 0xeb 0xec 0xed 0xee 0xef}"])
+        self.runCmd(
+            'register write ymm0 "{0xd0 0xd1 0xd2 0xd3 0xd4 0xd5 0xd6 '
+            "0xd7 0xd8 0xd9 0xda 0xdb 0xdc 0xdd 0xde 0xdf 0xe0 0xe1 "
+            "0xe2 0xe3 0xe4 0xe5 0xe6 0xe7 0xe8 0xe9 0xea 0xeb 0xec "
+            '0xed 0xee 0xef}"'
+        )
+        self.match(
+            "register read ymm0",
+            [
+                "ymm0 = {0xd0 0xd1 0xd2 0xd3 0xd4 0xd5 0xd6 0xd7 0xd8 0xd9 "
+                "0xda 0xdb 0xdc 0xdd 0xde 0xdf 0xe0 0xe1 0xe2 0xe3 0xe4 "
+                "0xe5 0xe6 0xe7 0xe8 0xe9 0xea 0xeb 0xec 0xed 0xee 0xef}"
+            ],
+        )
 
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_regs(self):
         """Test grabbing various aarch64 registers from gdbserver."""
+
         class MyResponder(MockGDBServerResponder):
             reg_data = (
-                "0102030405060708"  # x0
-                "1112131415161718"  # x1
-            ) + 27 * (
-                "2122232425262728"  # x2..x28
-            ) + (
-                "3132333435363738"  # x29 (fp)
-                "4142434445464748"  # x30 (lr)
-                "5152535455565758"  # x31 (sp)
-                "6162636465666768"  # pc
-                "71727374"  # cpsr
-                "8182838485868788898a8b8c8d8e8f90"  # v0
-                "9192939495969798999a9b9c9d9e9fa0"  # v1
-            ) + 30 * (
-                "a1a2a3a4a5a6a7a8a9aaabacadaeafb0"  # v2..v31
-            ) + (
-                "00000000"  # fpsr
-                "00000000"  # fpcr
+                ("0102030405060708" "1112131415161718")  # x0  # x1
+                + 27 * ("2122232425262728")  # x2..x28
+                + (
+                    "3132333435363738"  # x29 (fp)
+                    "4142434445464748"  # x30 (lr)
+                    "5152535455565758"  # x31 (sp)
+                    "6162636465666768"  # pc
+                    "71727374"  # cpsr
+                    "8182838485868788898a8b8c8d8e8f90"  # v0
+                    "9192939495969798999a9b9c9d9e9fa0"  # v1
+                )
+                + 30 * ("a1a2a3a4a5a6a7a8a9aaabacadaeafb0")  # v2..v31
+                + ("00000000" "00000000")  # fpsr  # fpcr
             )
 
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
                         <!DOCTYPE feature SYSTEM "gdb-target.dtd">
                         <target>
                           <architecture>aarch64</architecture>
@@ -512,7 +551,9 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                             <reg name="fpsr" bitsize="32" type="int" regnum="66"/>
                             <reg name="fpcr" bitsize="32" type="int" regnum="67"/>
                           </feature>
-                        </target>""", False
+                        </target>""",
+                        False,
+                    )
                 else:
                     return None, False
 
@@ -533,92 +574,90 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
 
         target = self.createTarget("basic_eh_frame-aarch64.yaml")
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateStopped])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
 
         # test GPRs
-        self.match("register read x0",
-                   ["x0 = 0x0807060504030201"])
-        self.match("register read x1",
-                   ["x1 = 0x1817161514131211"])
-        self.match("register read x29",
-                   ["x29 = 0x3837363534333231"])
-        self.match("register read x30",
-                   ["x30 = 0x4847464544434241"])
-        self.match("register read x31",
-                   ["sp = 0x5857565554535251"])
-        self.match("register read sp",
-                   ["sp = 0x5857565554535251"])
-        self.match("register read pc",
-                   ["pc = 0x6867666564636261"])
-        self.match("register read cpsr",
-                   ["cpsr = 0x74737271"])
+        self.match("register read x0", ["x0 = 0x0807060504030201"])
+        self.match("register read x1", ["x1 = 0x1817161514131211"])
+        self.match("register read x29", ["x29 = 0x3837363534333231"])
+        self.match("register read x30", ["x30 = 0x4847464544434241"])
+        self.match("register read x31", ["sp = 0x5857565554535251"])
+        self.match("register read sp", ["sp = 0x5857565554535251"])
+        self.match("register read pc", ["pc = 0x6867666564636261"])
+        self.match("register read cpsr", ["cpsr = 0x74737271"])
 
         # test generic aliases
-        self.match("register read arg1",
-                   ["x0 = 0x0807060504030201"])
-        self.match("register read arg2",
-                   ["x1 = 0x1817161514131211"])
-        self.match("register read fp",
-                   ["x29 = 0x3837363534333231"])
-        self.match("register read lr",
-                   ["x30 = 0x4847464544434241"])
-        self.match("register read ra",
-                   ["x30 = 0x4847464544434241"])
-        self.match("register read flags",
-                   ["cpsr = 0x74737271"])
+        self.match("register read arg1", ["x0 = 0x0807060504030201"])
+        self.match("register read arg2", ["x1 = 0x1817161514131211"])
+        self.match("register read fp", ["x29 = 0x3837363534333231"])
+        self.match("register read lr", ["x30 = 0x4847464544434241"])
+        self.match("register read ra", ["x30 = 0x4847464544434241"])
+        self.match("register read flags", ["cpsr = 0x74737271"])
 
         # test vector registers
-        self.match("register read v0",
-                   ["v0 = {0x81 0x82 0x83 0x84 0x85 0x86 0x87 0x88 0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"])
-        self.match("register read v31",
-                   ["v31 = {0xa1 0xa2 0xa3 0xa4 0xa5 0xa6 0xa7 0xa8 0xa9 0xaa 0xab 0xac 0xad 0xae 0xaf 0xb0}"])
+        self.match(
+            "register read v0",
+            [
+                "v0 = {0x81 0x82 0x83 0x84 0x85 0x86 0x87 0x88 0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"
+            ],
+        )
+        self.match(
+            "register read v31",
+            [
+                "v31 = {0xa1 0xa2 0xa3 0xa4 0xa5 0xa6 0xa7 0xa8 0xa9 0xaa 0xab 0xac 0xad 0xae 0xaf 0xb0}"
+            ],
+        )
 
         # test partial registers
-        self.match("register read w0",
-                   ["w0 = 0x04030201"])
+        self.match("register read w0", ["w0 = 0x04030201"])
         self.runCmd("register write w0 0xfffefdfc")
-        self.match("register read x0",
-                   ["x0 = 0x08070605fffefdfc"])
+        self.match("register read x0", ["x0 = 0x08070605fffefdfc"])
 
-        self.match("register read w1",
-                   ["w1 = 0x14131211"])
+        self.match("register read w1", ["w1 = 0x14131211"])
         self.runCmd("register write w1 0xefeeedec")
-        self.match("register read x1",
-                   ["x1 = 0x18171615efeeedec"])
+        self.match("register read x1", ["x1 = 0x18171615efeeedec"])
 
-        self.match("register read w30",
-                   ["w30 = 0x44434241"])
+        self.match("register read w30", ["w30 = 0x44434241"])
         self.runCmd("register write w30 0xdfdedddc")
-        self.match("register read x30",
-                   ["x30 = 0x48474645dfdedddc"])
+        self.match("register read x30", ["x30 = 0x48474645dfdedddc"])
 
-        self.match("register read w31",
-                   ["w31 = 0x54535251"])
+        self.match("register read w31", ["w31 = 0x54535251"])
         self.runCmd("register write w31 0xcfcecdcc")
-        self.match("register read x31",
-                   ["sp = 0x58575655cfcecdcc"])
+        self.match("register read x31", ["sp = 0x58575655cfcecdcc"])
 
         # test FPU registers (overlapping with vector registers)
         self.runCmd("register write d0 16")
-        self.match("register read v0",
-                   ["v0 = {0x00 0x00 0x00 0x00 0x00 0x00 0x30 0x40 0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"])
-        self.runCmd("register write v31 '{0x00 0x00 0x00 0x00 0x00 0x00 0x50 0x40 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff}'")
-        self.match("register read d31",
-                   ["d31 = 64"])
+        self.match(
+            "register read v0",
+            [
+                "v0 = {0x00 0x00 0x00 0x00 0x00 0x00 0x30 0x40 0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"
+            ],
+        )
+        self.runCmd(
+            "register write v31 '{0x00 0x00 0x00 0x00 0x00 0x00 0x50 0x40 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff}'"
+        )
+        self.match("register read d31", ["d31 = 64"])
 
         self.runCmd("register write s0 32")
-        self.match("register read v0",
-                   ["v0 = {0x00 0x00 0x00 0x42 0x00 0x00 0x30 0x40 0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"])
-        self.runCmd("register write v31 '{0x00 0x00 0x00 0x43 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff}'")
-        self.match("register read s31",
-                   ["s31 = 128"])
+        self.match(
+            "register read v0",
+            [
+                "v0 = {0x00 0x00 0x00 0x42 0x00 0x00 0x30 0x40 0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90}"
+            ],
+        )
+        self.runCmd(
+            "register write v31 '{0x00 0x00 0x00 0x43 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0xff}'"
+        )
+        self.match("register read s31", ["s31 = 128"])
 
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_x86_64_no_duplicate_subregs(self):
         """Test that duplicate subregisters are not added (on x86_64)."""
+
         class MyResponder(MockGDBServerResponder):
             reg_data = (
                 "0102030405060708"  # rcx
@@ -635,7 +674,8 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
 
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
                         <!DOCTYPE feature SYSTEM "gdb-target.dtd">
                         <target>
                           <architecture>i386:x86-64</architecture>
@@ -653,7 +693,9 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                             <reg name="eflags" bitsize="32" type="i386_eflags" regnum="17"/>
                             <reg name="ecx" bitsize="32" type="int" regnum="18" value_regnums="2"/>
                           </feature>
-                        </target>""", False
+                        </target>""",
+                        False,
+                    )
                 else:
                     return None, False
 
@@ -670,26 +712,25 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
 
         target = self.createTarget("basic_eh_frame.yaml")
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateStopped])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
 
-        self.match("register read rcx",
-                   ["rcx = 0x0807060504030201"])
+        self.match("register read rcx", ["rcx = 0x0807060504030201"])
         # ecx is supplied via target.xml
-        self.match("register read ecx",
-                   ["ecx = 0x04030201"])
-        self.match("register read rdx",
-                   ["rdx = 0x1817161514131211"])
+        self.match("register read ecx", ["ecx = 0x04030201"])
+        self.match("register read rdx", ["rdx = 0x1817161514131211"])
         # edx should not be added
-        self.match("register read edx",
-                   ["error: Invalid register name 'edx'."],
-                   error=True)
+        self.match(
+            "register read edx", ["error: Invalid register name 'edx'."], error=True
+        )
 
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_i386_no_duplicate_subregs(self):
         """Test that duplicate subregisters are not added (on i386)."""
+
         class MyResponder(MockGDBServerResponder):
             reg_data = (
                 "01020304"  # eax
@@ -706,7 +747,8 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
 
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
                         <!DOCTYPE feature SYSTEM "gdb-target.dtd">
                         <target>
                           <architecture>i386</architecture>
@@ -724,7 +766,9 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                             <reg name="eflags" bitsize="32" type="i386_eflags" regnum="9"/>
                             <reg name="ax" bitsize="16" type="int" regnum="10" value_regnums="0"/>
                           </feature>
-                        </target>""", False
+                        </target>""",
+                        False,
+                    )
                 else:
                     return None, False
 
@@ -741,43 +785,42 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
 
         target = self.createTarget("basic_eh_frame-i386.yaml")
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateStopped])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
 
-        self.match("register read eax",
-                   ["eax = 0x04030201"])
+        self.match("register read eax", ["eax = 0x04030201"])
         # cx is supplied via target.xml
-        self.match("register read ax",
-                   ["ax = 0x0201"])
-        self.match("register read ecx",
-                   ["ecx = 0x14131211"])
+        self.match("register read ax", ["ax = 0x0201"])
+        self.match("register read ecx", ["ecx = 0x14131211"])
         # dx should not be added
-        self.match("register read cx",
-                   ["error: Invalid register name 'cx'."],
-                   error=True)
+        self.match(
+            "register read cx", ["error: Invalid register name 'cx'."], error=True
+        )
 
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_no_duplicate_subregs(self):
         """Test that duplicate subregisters are not added."""
+
         class MyResponder(MockGDBServerResponder):
             reg_data = (
-                "0102030405060708"  # x0
-                "1112131415161718"  # x1
-            ) + 27 * (
-                "2122232425262728"  # x2..x28
-            ) + (
-                "3132333435363738"  # x29 (fp)
-                "4142434445464748"  # x30 (lr)
-                "5152535455565758"  # x31 (sp)
-                "6162636465666768"  # pc
-                "71727374"  # cpsr
+                ("0102030405060708" "1112131415161718")  # x0  # x1
+                + 27 * ("2122232425262728")  # x2..x28
+                + (
+                    "3132333435363738"  # x29 (fp)
+                    "4142434445464748"  # x30 (lr)
+                    "5152535455565758"  # x31 (sp)
+                    "6162636465666768"  # pc
+                    "71727374"  # cpsr
+                )
             )
 
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
                         <!DOCTYPE feature SYSTEM "gdb-target.dtd">
                         <target>
                           <architecture>aarch64</architecture>
@@ -818,7 +861,9 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                             <reg name="cpsr" bitsize="32" type="cpsr_flags" regnum="33"/>
                             <reg name="w0" bitsize="32" type="int" regnum="34" value_regnums="0"/>
                           </feature>
-                        </target>""", False
+                        </target>""",
+                        False,
+                    )
                 else:
                     return None, False
 
@@ -835,17 +880,15 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
 
         target = self.createTarget("basic_eh_frame-aarch64.yaml")
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateStopped])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
 
-        self.match("register read x0",
-                   ["x0 = 0x0807060504030201"])
+        self.match("register read x0", ["x0 = 0x0807060504030201"])
         # w0 comes from target.xml
-        self.match("register read w0",
-                   ["w0 = 0x04030201"])
-        self.match("register read x1",
-                   ["x1 = 0x1817161514131211"])
+        self.match("register read w0", ["w0 = 0x04030201"])
+        self.match("register read x1", ["x1 = 0x1817161514131211"])
         # w1 should not be added
-        self.match("register read w1",
-                   ["error: Invalid register name 'w1'."],
-                   error=True)
+        self.match(
+            "register read w1", ["error: Invalid register name 'w1'."], error=True
+        )

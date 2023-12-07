@@ -219,7 +219,7 @@ COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
   }
   // Walk call-site table looking for range that includes current PC.
   uint8_t callSiteEncoding = *lsda++;
-  uint32_t callSiteTableLength = readULEB128(&lsda);
+  size_t callSiteTableLength = readULEB128(&lsda);
   const uint8_t *callSiteTableStart = lsda;
   const uint8_t *callSiteTableEnd = callSiteTableStart + callSiteTableLength;
   const uint8_t *p = callSiteTableStart;

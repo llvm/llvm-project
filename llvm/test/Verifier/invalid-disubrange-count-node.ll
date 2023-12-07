@@ -4,7 +4,7 @@ define void @foo(i32 %n) {
 entry:
   %0 = zext i32 %n to i64
   %vla = alloca i32, i64 %0, align 16
-  call void @llvm.dbg.declare(metadata i32* %vla, metadata !19, metadata !12), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %vla, metadata !19, metadata !12), !dbg !18
   ret void
 }
 

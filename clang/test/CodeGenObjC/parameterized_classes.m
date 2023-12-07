@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fblocks -fobjc-arc -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fblocks -fobjc-arc -emit-llvm -o - %s | FileCheck %s
 
 // Parameterized classes have no effect on code generation; this test
 // mainly verifies that CodeGen doesn't assert when substituted types
@@ -61,26 +61,22 @@ void printMe(NSString *name) { }
 // CHECK-LABEL: define{{.*}} void @blockTest
 void blockTest(NSMutableArray<void (^)(void)> *array, NSString *name) {
   // CHECK-NOT: ret void
-  // CHECK: call i8* @llvm.objc.retainBlock
+  // CHECK: call ptr @llvm.objc.retainBlock
   [array addObject: ^ { printMe(name); }];
   // CHECK-NOT: ret void
   array[0] = ^ { printMe(name); };
-  // CHECK: call i8* @llvm.objc.retainBlock
+  // CHECK: call ptr @llvm.objc.retainBlock
   // CHECK: ret void
 }
 
 // CHECK-LABEL: define internal void @"\01-[Derived setDest:]
-// CHECK: %[[SELFADDR:.*]] = alloca %[[SELFTY:.*]]*
-// CHECK: %[[AADDR:.*]] = alloca %[[IVARTY:.*]]*
-// CHECK: %[[V2:.*]] = load %[[IVARTY]]*, %[[IVARTY]]** %[[AADDR]]
-// CHECK: %[[V3:.*]] = load %[[SELFTY]]*, %[[SELFTY]]** %[[SELFADDR]]
-// CHECK: %[[IVAR:.*]] = load i64, i64* @"OBJC_IVAR_$_Base._destination"
-// CHECK: %[[V4:.*]] = bitcast %[[SELFTY]]* %[[V3]] to i8*
-// CHECK: %[[ADDPTR:.*]] = getelementptr inbounds i8, i8* %[[V4]], i64 %[[IVAR]]
-// CHECK: %[[V5:.*]] = bitcast i8* %[[ADDPTR]] to %[[IVARTY]]**
-// CHECK: %[[V6:.*]] = bitcast %[[IVARTY]]** %[[V5]] to i8**
-// CHECK: %[[V7:.*]] = bitcast %[[IVARTY]]* %[[V2]] to i8*
-// CHECK: call void @llvm.objc.storeStrong(i8** %[[V6]], i8* %[[V7]])
+// CHECK: %[[SELFADDR:.*]] = alloca ptr
+// CHECK: %[[AADDR:a.addr]] = alloca ptr
+// CHECK: %[[V2:.*]] = load ptr, ptr %[[AADDR]]
+// CHECK: %[[V3:.*]] = load ptr, ptr %[[SELFADDR]]
+// CHECK: %[[IVAR:.*]] = load i64, ptr @"OBJC_IVAR_$_Base._destination"
+// CHECK: %[[ADDPTR:.*]] = getelementptr inbounds i8, ptr %[[V3]], i64 %[[IVAR]]
+// CHECK: call void @llvm.objc.storeStrong(ptr %[[ADDPTR]], ptr %[[V2]])
 
 @interface Base<DestType> : NSObject {
   DestType _destination;
@@ -100,12 +96,11 @@ void blockTest(NSMutableArray<void (^)(void)> *array, NSString *name) {
 // CHECK-LABEL: define internal void @"\01-[C0 foo1]"(
 // CHECK: {{.*}} = alloca
 // CHECK: {{.*}} = alloca
-// CHECK: %[[D:.*]] = alloca %[[TY:.*]]*
-// CHECK: %[[TEMP:.*]] = alloca %[[TY]]*
-// CHECK: %[[V4:.*]] = load %[[TY]]*, %[[TY]]** %[[D]]
-// CHECK: store %[[TY]]* %[[V4]], %[[TY]]** %[[TEMP]]
-// CHECK: %[[V7:.*]] = bitcast %[[TY]]** %[[TEMP]] to i8**
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8**)*)(i8* noundef %{{.*}}, i8* noundef %{{.*}}, i8** noundef %[[V7]])
+// CHECK: %[[D:.*]] = alloca ptr
+// CHECK: %[[TEMP:.*]] = alloca ptr
+// CHECK: %[[V4:.*]] = load ptr, ptr %[[D]]
+// CHECK: store ptr %[[V4]], ptr %[[TEMP]]
+// CHECK: call void @objc_msgSend(ptr noundef %{{.*}}, ptr noundef %{{.*}}, ptr noundef %[[TEMP]])
 
 @interface P0<ObjectType> : NSObject
 - (void)m0:(ObjectType *)first;

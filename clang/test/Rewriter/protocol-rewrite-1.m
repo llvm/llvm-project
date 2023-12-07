@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -x objective-c -Wno-objc-root-class -fms-extensions -rewrite-objc %s -o %t-rw.cpp
 // RUN: FileCheck  --input-file=%t-rw.cpp %s
-// rdar://9846759
-// rdar://15517895
 
 typedef struct MyWidget {
   int a;
@@ -50,7 +48,6 @@ int main(void) {
   return 0;
 }
 
-// rdar://15517895
 @class NSObject;
 
 @interface NSProtocolChecker

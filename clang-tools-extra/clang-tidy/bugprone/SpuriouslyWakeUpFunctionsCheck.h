@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Finds ``cnd_wait``, ``cnd_timedwait``, ``wait``, ``wait_for``, or 
 /// ``wait_until`` function calls when the function is not invoked from a loop 
@@ -30,8 +28,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SPURIOUSLYWAKEUPFUNCTIONSCHECK_H

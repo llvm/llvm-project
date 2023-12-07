@@ -8,6 +8,9 @@
 
 ; RUN: opt -passes=insert-gcov-profiling -S < %t/2 | FileCheck --check-prefix GCDA %s
 ; RUN: llvm-cov gcov -n -dump %t/function-numbering.gcno 2>&1 | FileCheck --check-prefix GCNO %s
+; RUN: opt -passes=insert-gcov-profiling -S < %t/2 -mtriple=s390x-unknown-linux | FileCheck --check-prefix EXT %s
+; RUN: opt -passes=insert-gcov-profiling -S < %t/2 -mtriple=mips-linux-gnu | FileCheck --check-prefix MIPS_EXT %s
+; REQUIRES: x86-registered-target, systemz-registered-target, mips-registered-target
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
@@ -76,6 +79,18 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; GCNO: == foo (0) @
 ; GCNO-NOT: == bar ({{[0-9]+}}) @
 ; GCNO: == baz (1) @
+
+; GCDA:     declare void @llvm_gcda_start_file(ptr, i32, i32)
+; EXT:      declare void @llvm_gcda_start_file(ptr, i32 zeroext, i32 zeroext)
+; MIPS_EXT: declare void @llvm_gcda_start_file(ptr, i32 signext, i32 signext)
+
+; GCDA:     declare void @llvm_gcda_emit_function(i32, i32, i32)
+; EXT:      declare void @llvm_gcda_emit_function(i32 zeroext, i32 zeroext, i32 zeroext)
+; MIPS_EXT: declare void @llvm_gcda_emit_function(i32 signext, i32 signext, i32 signext)
+
+; GCDA:     declare void @llvm_gcda_emit_arcs(i32, ptr)
+; EXT:      declare void @llvm_gcda_emit_arcs(i32 zeroext, ptr)
+; MIPS_EXT: declare void @llvm_gcda_emit_arcs(i32 signext, ptr)
 
 define void @foo() !dbg !4 {
   ret void, !dbg !12

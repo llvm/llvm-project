@@ -3,9 +3,6 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected-cpp20 %s
 // RUN: %clang_cc1 -std=c++20 -verify=ref %s
 
-// ref-no-diagnostics
-// expected-no-diagnostics
-
 namespace WhileLoop {
   constexpr int f() {
     int i = 0;
@@ -165,8 +162,6 @@ namespace DoWhileLoop {
   static_assert(f5(true) == 8, "");
   static_assert(f5(false) == 5, "");
 
-  /// FIXME: This should be accepted in C++20 but is currently being rejected
-  ///   because the variable declaration doesn't have an initializier.
 #if __cplusplus >= 202002L
   constexpr int f6() {
     int i;
@@ -176,7 +171,7 @@ namespace DoWhileLoop {
     } while (true);
     return i;
   }
-  static_assert(f6() == 5, ""); // expected-cpp20-error {{not an integral constant}}
+  static_assert(f6() == 5, "");
 #endif
 
 #if 0
@@ -275,3 +270,57 @@ namespace ForLoop {
 #endif
 
 };
+
+namespace RangeForLoop {
+  constexpr int localArray() {
+    int a[] = {1,2,3,4};
+    int s = 0;
+    for(int i : a) {
+      s += i;
+    }
+    return s;
+  }
+  static_assert(localArray() == 10, "");
+
+  constexpr int localArray2() {
+    int a[] = {1,2,3,4};
+    int s = 0;
+    for(const int &i : a) {
+      s += i;
+    }
+    return s;
+  }
+  static_assert(localArray2() == 10, "");
+
+  constexpr int nested() {
+    int s = 0;
+    for (const int i : (int[]){1,2,3,4}) {
+      int a[] = {i, i};
+      for(int m : a) {
+        s += m;
+      }
+    }
+    return s;
+  }
+  static_assert(nested() == 20, "");
+
+  constexpr int withBreak() {
+    int s = 0;
+    for (const int &i: (bool[]){false, true}) {
+      if (i)
+        break;
+      s++;
+    }
+    return s;
+  }
+  static_assert(withBreak() == 1, "");
+
+  constexpr void NoBody() {
+    for (const int &i: (bool[]){false, true}); // expected-warning {{empty body}} \
+                                               // expected-note {{semicolon on a separate line}} \
+                                               // expected-cpp20-warning {{empty body}} \
+                                               // expected-cpp20-note {{semicolon on a separate line}} \
+                                               // ref-warning {{empty body}} \
+                                               // ref-note {{semicolon on a separate line}}
+  }
+}

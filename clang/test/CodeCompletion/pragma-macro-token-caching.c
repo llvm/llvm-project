@@ -7,7 +7,7 @@ void completeParam(int param) {
     param;
 }
 
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:7:1 %s | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-3):1 %s | FileCheck %s
 // CHECK: param : [#int#]param
 
 void completeParamPragmaError(int param) {
@@ -15,4 +15,4 @@ void completeParamPragmaError(int param) {
     param;
 }
 
-// RUN: %clang_cc1 -fsyntax-only -verify -code-completion-at=%s:16:1 %s | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -verify -code-completion-at=%s:%(line-2):1 %s | FileCheck %s

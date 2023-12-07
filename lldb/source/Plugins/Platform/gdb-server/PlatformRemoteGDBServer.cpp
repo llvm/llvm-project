@@ -15,7 +15,6 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -33,6 +32,7 @@
 
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -151,13 +151,13 @@ bool PlatformRemoteGDBServer::GetRemoteOSVersion() {
   return !m_os_version.empty();
 }
 
-llvm::Optional<std::string> PlatformRemoteGDBServer::GetRemoteOSBuildString() {
+std::optional<std::string> PlatformRemoteGDBServer::GetRemoteOSBuildString() {
   if (!m_gdb_client_up)
     return std::nullopt;
   return m_gdb_client_up->GetOSBuildString();
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 PlatformRemoteGDBServer::GetRemoteOSKernelDescription() {
   if (!m_gdb_client_up)
     return std::nullopt;
@@ -226,7 +226,7 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
   if (!url)
     return Status("URL is null.");
 
-  llvm::Optional<URI> parsed_url = URI::Parse(url);
+  std::optional<URI> parsed_url = URI::Parse(url);
   if (!parsed_url)
     return Status("Invalid URL: %s", url);
 
@@ -283,7 +283,7 @@ const char *PlatformRemoteGDBServer::GetHostname() {
   return m_hostname.c_str();
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 PlatformRemoteGDBServer::DoGetUserName(UserIDResolver::id_t uid) {
   std::string name;
   if (m_gdb_client_up && m_gdb_client_up->GetUserName(uid, name))
@@ -291,7 +291,7 @@ PlatformRemoteGDBServer::DoGetUserName(UserIDResolver::id_t uid) {
   return std::nullopt;
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 PlatformRemoteGDBServer::DoGetGroupName(UserIDResolver::id_t gid) {
   std::string name;
   if (m_gdb_client_up && m_gdb_client_up->GetGroupName(gid, name))
@@ -422,6 +422,7 @@ PlatformRemoteGDBServer::DebugProcess(ProcessLaunchInfo &launch_info,
 
         if (process_sp) {
           process_sp->HijackProcessEvents(launch_info.GetHijackListener());
+          process_sp->SetShadowListener(launch_info.GetShadowListener());
 
           error = process_sp->ConnectRemote(connect_url.c_str());
           // Retry the connect remote one time...
@@ -514,6 +515,7 @@ lldb::ProcessSP PlatformRemoteGDBServer::Attach(
               ListenerSP listener_sp = attach_info.GetHijackListener();
               if (listener_sp)
                 process_sp->HijackProcessEvents(listener_sp);
+              process_sp->SetShadowListener(attach_info.GetShadowListener());
               error = process_sp->Attach(attach_info);
             }
 
@@ -698,8 +700,7 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
       response.GetResponseType() != response.eResponse)
     return m_remote_signals_sp;
 
-  auto object_sp =
-      StructuredData::ParseJSON(std::string(response.GetStringRef()));
+  auto object_sp = StructuredData::ParseJSON(response.GetStringRef());
   if (!object_sp || !object_sp->IsValid())
     return m_remote_signals_sp;
 
@@ -719,7 +720,7 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
           return false;
 
         // Signal number and signal name are required.
-        int signo;
+        uint64_t signo;
         if (!dict->GetValueForKeyAsInteger("signo", signo))
           return false;
 

@@ -18,6 +18,11 @@
 #include <string>
 #include <type_traits>
 
+#if __cplusplus >= 201703L
+#include <any>
+#include <optional>
+#endif
+
 /* ISL_USE_EXCEPTIONS should be defined to 1 if exceptions are available.
  * gcc and clang define __cpp_exceptions; MSVC and xlC define _CPPUNWIND.
  * Older versions of gcc (e.g., 4.9) only define __EXCEPTIONS.
@@ -46,6 +51,12 @@ public:
 	isl_ctx *get() {
 		return ptr;
 	}
+#if __cplusplus >= 201703L
+	static void free_user(void *user) {
+		std::any *p = static_cast<std::any *>(user);
+		delete p;
+	}
+#endif
 };
 
 /* Macros hiding try/catch.

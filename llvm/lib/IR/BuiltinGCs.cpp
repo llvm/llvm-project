@@ -66,6 +66,7 @@ class StatepointGC : public GCStrategy {
 public:
   StatepointGC() {
     UseStatepoints = true;
+    UseRS4GC = true;
     // These options are all gc.root specific, we specify them so that the
     // gc.root lowering code doesn't run.
     NeededSafePoints = false;
@@ -98,6 +99,7 @@ class CoreCLRGC : public GCStrategy {
 public:
   CoreCLRGC() {
     UseStatepoints = true;
+    UseRS4GC = true;
     // These options are all gc.root specific, we specify them so that the
     // gc.root lowering code doesn't run.
     NeededSafePoints = false;

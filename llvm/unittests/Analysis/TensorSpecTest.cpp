@@ -59,3 +59,10 @@ TEST(TensorSpecTest, TensorSpecSizesAndTypes) {
   EXPECT_EQ(Spec3DLarge.getElementByteSize(), sizeof(float));
   EXPECT_EQ(Spec1D.getElementByteSize(), sizeof(int16_t));
 }
+
+TEST(TensorSpecTest, PrintValueForDebug) {
+  std::vector<int32_t> Values{1, 3};
+  EXPECT_EQ(tensorValueToString(reinterpret_cast<const char *>(Values.data()),
+                                TensorSpec::createSpec<int32_t>("name", {2})),
+            "1,3");
+}

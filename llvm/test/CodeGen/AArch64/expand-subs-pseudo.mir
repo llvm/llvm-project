@@ -3,8 +3,8 @@
 ---
 # CHECK-LABEL:  name: test
 # CHECK-LABEL:  bb.0:
-# CHECK:          $w5 = SUBSWrs renamable $w3, renamable $w2, 0, implicit-def dead $nzcv
-# CHECK-NEXT:     $w6 = SUBSWrs renamable $w5, renamable $w3, 0, implicit-def $nzcv
+# CHECK:          $w5 = SUBSWrs renamable $w3, renamable $w2, 0, implicit-def dead $nzcv, debug-instr-number 1
+# CHECK-NEXT:     $w6 = SUBSWrs renamable $w5, renamable $w3, 0, implicit-def $nzcv, debug-instr-number 2
 # CHECK-NEXT:     RET undef $lr
 #
 name:            test
@@ -14,8 +14,8 @@ body:             |
   bb.0:
     liveins: $w5, $w6, $x2, $x3
 
-    renamable $w5 = nsw SUBSWrr renamable $w3, renamable $w2, implicit-def dead $nzcv
-    renamable $w6 = nsw SUBSWrr renamable $w5, renamable $w3, implicit-def $nzcv
+    renamable $w5 = nsw SUBSWrr renamable $w3, renamable $w2, implicit-def dead $nzcv, debug-instr-number 1
+    renamable $w6 = nsw SUBSWrr renamable $w5, renamable $w3, implicit-def $nzcv, debug-instr-number 2
     RET_ReallyLR
 
 ...

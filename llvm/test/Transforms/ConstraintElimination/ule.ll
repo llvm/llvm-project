@@ -9,7 +9,6 @@ define void @test_1_variable_constraint(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[X]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
@@ -19,9 +18,7 @@ define void @test_1_variable_constraint(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[Y]], [[X]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i8 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i8 [[X]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C_5]])
@@ -62,9 +59,7 @@ define void @test_1_constant_constraint(i8 %x) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[X:%.*]], 10
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[X]], 10
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[X]], 11
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[X]], 9
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
@@ -72,11 +67,8 @@ define void @test_1_constant_constraint(i8 %x) {
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i8 10, [[X]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i8 [[X]], 9
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[F_1_1:%.*]] = icmp ule i8 [[X]], 10
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i8 [[X]], 11
 ; CHECK-NEXT:    call void @use(i1 [[C_5]])
@@ -125,7 +117,6 @@ define i8 @test1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    br i1 [[C_2]], label [[BB2:%.*]], label [[EXIT]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i8 [[X]], [[Z]]
 ; CHECK-NEXT:    br i1 true, label [[BB3:%.*]], label [[EXIT]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i8 10
@@ -225,7 +216,6 @@ define i8 @test4(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    br i1 [[C_2]], label [[BB2:%.*]], label [[EXIT]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[X]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[U_1:%.*]] = icmp eq i8 [[X]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[U_1]])

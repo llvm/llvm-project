@@ -18,5 +18,5 @@ int main()
 }
 
 // CHECK: %call = call double @modf(double noundef 1.000000e+00, ptr noundef %DummyLongDouble) #3
-// CHECK: %call1 = call double @frexp(double noundef 0.000000e+00, ptr noundef %DummyInt) #3
-// CHECK: %call2 = call double @ldexp(double noundef 1.000000e+00, i32 noundef {{(signext )?}}1) #4
+// CHECK: %{{.+}} = call { double, i32 } @llvm.frexp.f64.i32(double 0.000000e+00)
+// CHECK: %{{.+}} = call double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 1)

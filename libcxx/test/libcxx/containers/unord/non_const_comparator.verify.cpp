@@ -17,7 +17,7 @@
 
 struct BadHash {
   template <class T>
-  size_t operator()(T const& t) {
+  std::size_t operator()(T const& t) {
     return std::hash<T>{}(t);
   }
 };
@@ -29,7 +29,7 @@ struct BadEqual {
   }
 };
 
-int main(int, char**) {
+void f() {
   static_assert(!std::__invokable<BadEqual const&, int const&, int const&>::value, "");
   static_assert(std::__invokable<BadEqual&, int const&, int const&>::value, "");
 
@@ -54,6 +54,4 @@ int main(int, char**) {
     using C = std::unordered_multimap<long, int, BadHash, BadEqual>;
     C s;
   }
-
-  return 0;
 }

@@ -228,17 +228,25 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::coff_object;
     break;
 
-  case 0x2d: // YAML '-'
+  case 0x2d: // YAML '-' MachO TBD.
     if (startswith(Magic, "--- !tapi") || startswith(Magic, "---\narchs:"))
       return file_magic::tapi_file;
     break;
-  
+  case 0x7b: // JSON '{' MachO TBD.
+    return file_magic::tapi_file;
+    break;
+
   case 'D': // DirectX container file - DXBC
     if (startswith(Magic, "DXBC"))
       return file_magic::dxcontainer_object;
     break;
 
   case 0x41: // ARM64EC windows
+    if (Magic[1] == char(0xA6))
+      return file_magic::coff_object;
+    break;
+
+  case 0x4e: // ARM64X windows
     if (Magic[1] == char(0xA6))
       return file_magic::coff_object;
     break;

@@ -36,7 +36,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define double @mse(double* %A, double* %B) {
+define double @mse(ptr %A, ptr %B) {
 entry:
   br label %entry.split
 
@@ -52,19 +52,17 @@ for.body3:                                        ; preds = %for.body, %for.body
   %0 = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %0 to double
   %1 = add nsw i64 %indvars.iv, -1
-  %arrayidx = getelementptr inbounds double, double* %B, i64 %1
-  store double %conv, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %B, i64 %1
+  store double %conv, ptr %arrayidx, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 3000
   br i1 %exitcond, label %for.body3, label %for.end
 
 for.end:                                          ; preds = %for.body3
-  %arrayidx5 = getelementptr inbounds double, double* %B, i64 %indvars.iv4
-  %2 = bitcast double* %arrayidx5 to i64*
-  %3 = load i64, i64* %2, align 8
-  %arrayidx7 = getelementptr inbounds double, double* %A, i64 %indvars.iv4
-  %4 = bitcast double* %arrayidx7 to i64*
-  store i64 %3, i64* %4, align 8
+  %arrayidx5 = getelementptr inbounds double, ptr %B, i64 %indvars.iv4
+  %2 = load i64, ptr %arrayidx5, align 8
+  %arrayidx7 = getelementptr inbounds double, ptr %A, i64 %indvars.iv4
+  store i64 %2, ptr %arrayidx7, align 8
   %indvars.iv.next5 = add nuw nsw i64 %indvars.iv4, 1
   %exitcond6 = icmp ne i64 %indvars.iv.next5, 2000
   br i1 %exitcond6, label %for.body, label %for.end10

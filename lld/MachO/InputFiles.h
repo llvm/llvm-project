@@ -140,6 +140,9 @@ protected:
 
   InputFile(Kind, const llvm::MachO::InterfaceFile &);
 
+  // If true, this input's arch is compatiable with target.
+  bool compatArch = true;
+
 private:
   const Kind fileKind;
   const StringRef name;
@@ -157,10 +160,13 @@ struct FDE {
 class ObjFile final : public InputFile {
 public:
   ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
-          bool lazy = false, bool forceHidden = false);
+          bool lazy = false, bool forceHidden = false, bool compatArch = true,
+          bool builtFromBitcode = false);
   ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
   ArrayRef<uint8_t> getOptimizationHints() const;
   template <class LP> void parse();
+  template <class LP>
+  void parseLinkerOptions(llvm::SmallVectorImpl<StringRef> &LinkerOptions);
 
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
 
@@ -174,6 +180,7 @@ public:
   Section *addrSigSection = nullptr;
   const uint32_t modTime;
   bool forceHidden;
+  bool builtFromBitcode;
   std::vector<ConcatInputSection *> debugSections;
   std::vector<CallGraphEntry> callGraph;
   llvm::DenseMap<ConcatInputSection *, FDE> fdes;
@@ -269,6 +276,8 @@ private:
   void handleLDHideSymbol(StringRef name, StringRef originalName);
   void checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const;
   void parseExportedSymbols(uint32_t offset, uint32_t size);
+  void loadReexport(StringRef path, DylibFile *umbrella,
+                    const llvm::MachO::InterfaceFile *currentTopLevelTapi);
 
   llvm::DenseSet<llvm::CachedHashStringRef> hiddenSymbols;
 };
@@ -299,7 +308,7 @@ class BitcodeFile final : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                        uint64_t offsetInArchive, bool lazy = false,
-                       bool forceHidden = false);
+                       bool forceHidden = false, bool compatArch = true);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   void parse();
 
@@ -312,6 +321,7 @@ private:
 
 extern llvm::SetVector<InputFile *> inputFiles;
 extern llvm::DenseMap<llvm::CachedHashStringRef, MemoryBufferRef> cachedReads;
+extern llvm::SmallVector<StringRef> unprocessedLCLinkerOptions;
 
 std::optional<MemoryBufferRef> readFile(StringRef path);
 
@@ -355,6 +365,7 @@ std::vector<const CommandType *> findCommands(const void *anyHdr,
   return detail::findCommands<CommandType>(anyHdr, 0, types...);
 }
 
+std::string replaceThinLTOSuffix(StringRef path);
 } // namespace macho
 
 std::string toString(const macho::InputFile *file);

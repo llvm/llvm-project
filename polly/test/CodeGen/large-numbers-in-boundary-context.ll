@@ -14,17 +14,17 @@ target triple = "x86_64-unknown-linux-gnu"
 @global1 = external global i32, align 4
 
 ; Function Attrs: nounwind uwtable
-define void @hoge(i8* %arg) #0 {
+define void @hoge(ptr %arg) #0 {
 bb:
   br label %bb5
 
 bb5:                                              ; preds = %bb
-  %tmp = load i32, i32* @global, align 4
+  %tmp = load i32, ptr @global, align 4
   %tmp6 = sext i32 %tmp to i64
   br label %bb11
 
 bb7:                                              ; preds = %bb19
-  %tmp8 = load i32, i32* @global1, align 4
+  %tmp8 = load i32, ptr @global1, align 4
   %tmp9 = sext i32 %tmp8 to i64
   %tmp10 = icmp slt i64 %tmp13, %tmp9
   br i1 %tmp10, label %bb11, label %bb20
@@ -32,8 +32,8 @@ bb7:                                              ; preds = %bb19
 bb11:                                             ; preds = %bb7, %bb5
   %tmp12 = phi i64 [ %tmp6, %bb5 ], [ %tmp13, %bb7 ]
   %tmp13 = add i64 %tmp12, 1
-  %tmp14 = getelementptr inbounds i8, i8* %arg, i64 %tmp13
-  %tmp15 = load i8, i8* %tmp14, align 1
+  %tmp14 = getelementptr inbounds i8, ptr %arg, i64 %tmp13
+  %tmp15 = load i8, ptr %tmp14, align 1
   br i1 false, label %bb16, label %bb17
 
 bb16:                                             ; preds = %bb11

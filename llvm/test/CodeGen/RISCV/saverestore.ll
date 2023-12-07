@@ -35,8 +35,8 @@ define void @callee_saved0() nounwind {
 ; RV64I-FP-SR-LABEL: callee_saved0:
 ; RV64I-FP-SR:         call t0, __riscv_save_5
 ; RV64I-FP-SR:         tail __riscv_restore_5
-  %val = load [18 x i32], [18 x i32]* @var0
-  store volatile [18 x i32] %val, [18 x i32]* @var0
+  %val = load [18 x i32], ptr @var0
+  store volatile [18 x i32] %val, ptr @var0
   ret void
 }
 
@@ -64,8 +64,8 @@ define void @callee_saved1() nounwind {
 ; RV64I-FP-SR-LABEL: callee_saved1:
 ; RV64I-FP-SR:         call t0, __riscv_save_11
 ; RV64I-FP-SR:         tail __riscv_restore_11
-  %val = load [24 x i32], [24 x i32]* @var1
-  store volatile [24 x i32] %val, [24 x i32]* @var1
+  %val = load [24 x i32], ptr @var1
+  store volatile [24 x i32] %val, ptr @var1
   ret void
 }
 
@@ -93,8 +93,8 @@ define void @callee_saved2() nounwind {
 ; RV64I-FP-SR-LABEL: callee_saved2:
 ; RV64I-FP-SR:         call t0, __riscv_save_12
 ; RV64I-FP-SR:         tail __riscv_restore_12
-  %val = load [30 x i32], [30 x i32]* @var2
-  store volatile [30 x i32] %val, [30 x i32]* @var2
+  %val = load [30 x i32], ptr @var2
+  store volatile [30 x i32] %val, ptr @var2
   ret void
 }
 
@@ -172,18 +172,18 @@ define i32 @tail_call(i32 %i) nounwind {
 ; RV64I-FP-SR:         tail tail_callee
 ; RV64I-FP-SR-NOT:     tail __riscv_restore
 entry:
-  %val = load [18 x i32], [18 x i32]* @var0
-  store volatile [18 x i32] %val, [18 x i32]* @var0
+  %val = load [18 x i32], ptr @var0
+  store volatile [18 x i32] %val, ptr @var0
   %r = tail call i32 @tail_callee(i32 %i)
   ret i32 %r
 }
 
 ; Check that functions with varargs do not use save/restore code
 
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_end(ptr)
 
-define i32 @varargs(i8* %fmt, ...) nounwind {
+define i32 @varargs(ptr %fmt, ...) nounwind {
 ; RV32I-LABEL: varargs:
 ; RV32I-NOT:     call t0, __riscv_save
 ; RV32I-NOT:     tail __riscv_restore
@@ -207,16 +207,14 @@ define i32 @varargs(i8* %fmt, ...) nounwind {
 ; RV64I-FP-SR-LABEL: varargs:
 ; RV64I-FP-SR-NOT:     call t0, __riscv_save
 ; RV64I-FP-SR-NOT:     tail __riscv_restore
-  %va = alloca i8*, align 4
-  %1 = bitcast i8** %va to i8*
-  call void @llvm.va_start(i8* %1)
-  %argp.cur = load i8*, i8** %va, align 4
-  %argp.next = getelementptr inbounds i8, i8* %argp.cur, i32 4
-  store i8* %argp.next, i8** %va, align 4
-  %2 = bitcast i8* %argp.cur to i32*
-  %3 = load i32, i32* %2, align 4
-  call void @llvm.va_end(i8* %1)
-  ret i32 %3
+  %va = alloca ptr, align 4
+  call void @llvm.va_start(ptr %va)
+  %argp.cur = load ptr, ptr %va, align 4
+  %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
+  store ptr %argp.next, ptr %va, align 4
+  %1 = load i32, ptr %argp.cur, align 4
+  call void @llvm.va_end(ptr %va)
+  ret i32 %1
 }
 
 define void @many_args(i32, i32, i32, i32, i32, i32, i32, i32, i32) nounwind {
@@ -244,16 +242,16 @@ define void @many_args(i32, i32, i32, i32, i32, i32, i32, i32, i32) nounwind {
 ; RV64I-FP-SR:         call t0, __riscv_save_5
 ; RV64I-FP-SR:         tail __riscv_restore_5
 entry:
-  %val = load [18 x i32], [18 x i32]* @var0
-  store volatile [18 x i32] %val, [18 x i32]* @var0
+  %val = load [18 x i32], ptr @var0
+  store volatile [18 x i32] %val, ptr @var0
   ret void
 }
 
 ; Check that dynamic allocation calculations remain correct
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
-declare void @notdead(i8*)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)
+declare void @notdead(ptr)
 
 define void @alloca(i32 %n) nounwind {
 ; RV32I-LABEL: alloca:
@@ -291,17 +289,17 @@ define void @alloca(i32 %n) nounwind {
 ; RV64I-FP-SR:         addi s0, sp, 32
 ; RV64I-FP-SR:         addi sp, s0, -32
 ; RV64I-FP-SR:         tail __riscv_restore_2
-  %sp = call i8* @llvm.stacksave()
+  %sp = call ptr @llvm.stacksave()
   %addr = alloca i8, i32 %n
-  call void @notdead(i8* %addr)
-  call void @llvm.stackrestore(i8* %sp)
+  call void @notdead(ptr %addr)
+  call void @llvm.stackrestore(ptr %sp)
   ret void
 }
 
 ; Check that functions with interrupt attribute do not use save/restore code
 
 declare i32 @foo(...)
-define void @interrupt() nounwind "interrupt"="user" {
+define void @interrupt() nounwind "interrupt"="supervisor" {
 ; RV32I-LABEL: interrupt:
 ; RV32I-NOT:     call t0, __riscv_save
 ; RV32I-NOT:     tail __riscv_restore
@@ -325,6 +323,6 @@ define void @interrupt() nounwind "interrupt"="user" {
 ; RV64I-FP-SR-LABEL: interrupt:
 ; RV64I-FP-SR-NOT:     call t0, __riscv_save
 ; RV64I-FP-SR-NOT:     tail __riscv_restore
-  %call = call i32 bitcast (i32 (...)* @foo to i32 ()*)()
+  %call = call i32 @foo()
   ret void
 }

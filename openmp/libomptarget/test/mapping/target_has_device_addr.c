@@ -3,7 +3,6 @@
 // RUN: | %fcheck-generic
 
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-LTO
 
 #include <omp.h>
 #include <stdio.h>

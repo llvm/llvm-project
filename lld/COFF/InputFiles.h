@@ -177,7 +177,10 @@ public:
   bool hasSafeSEH() { return feat00Flags & 0x1; }
 
   // True if this file was compiled with /guard:cf.
-  bool hasGuardCF() { return feat00Flags & 0x4800; }
+  bool hasGuardCF() { return feat00Flags & 0x800; }
+
+  // True if this file was compiled with /guard:ehcont.
+  bool hasGuardEHCont() { return feat00Flags & 0x4000; }
 
   // Pointer to the PDB module descriptor builder. Various debug info records
   // will reference object files by "module index", which is here. Things like
@@ -319,7 +322,7 @@ public:
                                           StringRef path, ObjFile *fromFile);
 
   // Record possible errors while opening the PDB file
-  std::optional<Error> loadErr;
+  std::optional<std::string> loadErrorStr;
 
   // This is the actual interface to the PDB (if it was opened successfully)
   std::unique_ptr<llvm::pdb::NativeSession> session;
@@ -333,8 +336,7 @@ public:
 // for details about the format.
 class ImportFile : public InputFile {
 public:
-  explicit ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m)
-      : InputFile(ctx, ImportKind, m) {}
+  explicit ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m);
 
   static bool classof(const InputFile *f) { return f->kind() == ImportKind; }
 
@@ -358,8 +360,8 @@ public:
   // symbols provided by this import library member. We also track whether the
   // imported symbol is used separately from whether the thunk is used in order
   // to avoid creating unnecessary thunks.
-  bool live = !config->doGC;
-  bool thunkLive = !config->doGC;
+  bool live;
+  bool thunkLive;
 };
 
 // Used for LTO.
@@ -408,7 +410,8 @@ inline bool isBitcode(MemoryBufferRef mb) {
   return identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode;
 }
 
-std::string replaceThinLTOSuffix(StringRef path);
+std::string replaceThinLTOSuffix(StringRef path, StringRef suffix,
+                                 StringRef repl);
 } // namespace coff
 
 std::string toString(const coff::InputFile *file);

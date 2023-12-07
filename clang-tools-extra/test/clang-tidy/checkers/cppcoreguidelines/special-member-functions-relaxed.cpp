@@ -1,13 +1,25 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-special-member-functions %t -- -config="{CheckOptions: [{key: cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions, value: true}, {key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor, value: true}]}" --
+// RUN: %check_clang_tidy %s cppcoreguidelines-special-member-functions %t -- -config="{CheckOptions: {cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions: true, cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true}}" --
+
+// Don't warn on destructors without definitions, they might be defaulted in another TU.
+class DeclaresDestructor {
+  ~DeclaresDestructor();
+};
 
 class DefinesDestructor {
   ~DefinesDestructor();
 };
-// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesDestructor' defines a non-default destructor but does not define a copy constructor or a copy assignment operator [cppcoreguidelines-special-member-functions]
+DefinesDestructor::~DefinesDestructor() {}
+// CHECK-MESSAGES: [[@LINE-4]]:7: warning: class 'DefinesDestructor' defines a non-default destructor but does not define a copy constructor or a copy assignment operator [cppcoreguidelines-special-member-functions]
 
 class DefinesDefaultedDestructor {
   ~DefinesDefaultedDestructor() = default;
 };
+
+class DefinesDefaultedDestructorOutside {
+  ~DefinesDefaultedDestructorOutside();
+};
+
+DefinesDefaultedDestructorOutside::~DefinesDefaultedDestructorOutside() = default;
 
 class DefinesCopyConstructor {
   DefinesCopyConstructor(const DefinesCopyConstructor &);

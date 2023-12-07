@@ -7,7 +7,6 @@ always enables.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -15,25 +14,29 @@ from lldbsuite.test import lldbutil
 
 
 class AArch64LinuxTaggedMemoryReadTestCase(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def setup_test(self):
         self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line(self, "main.c",
-            line_number('main.c', '// Set break point at this line.'),
-            num_expected_locations=1)
+        lldbutil.run_break_set_by_file_and_line(
+            self,
+            "main.c",
+            line_number("main.c", "// Set break point at this line."),
+            num_expected_locations=1,
+        )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         if self.process().GetState() == lldb.eStateExited:
             self.fail("Test program failed to run.")
 
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs=['stopped',
-                     'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
@@ -50,11 +53,15 @@ class AArch64LinuxTaggedMemoryReadTestCase(TestBase):
         # either of the tags we set. Those bits are a property of the
         # pointer not of the memory it points to.
         tagged_addr_pattern = "0x(34|46)[0-9A-Fa-f]{14}:.*"
-        self.expect("memory read ptr1 ptr2+16", patterns=[tagged_addr_pattern], matching=False)
+        self.expect(
+            "memory read ptr1 ptr2+16", patterns=[tagged_addr_pattern], matching=False
+        )
         # Check that the stored previous end address is stripped
         self.expect("memory read", patterns=[tagged_addr_pattern], matching=False)
         # Would fail if we don't remove non address bits because 0x56... > 0x34...
-        self.expect("memory read ptr2 ptr1+16", patterns=[tagged_addr_pattern], matching=False)
+        self.expect(
+            "memory read ptr2 ptr1+16", patterns=[tagged_addr_pattern], matching=False
+        )
         self.expect("memory read", patterns=[tagged_addr_pattern], matching=False)
 
     @skipUnlessArch("aarch64")
@@ -78,4 +85,6 @@ class AArch64LinuxTaggedMemoryReadTestCase(TestBase):
         # First check we actually got something.
         self.assertRegexpMatches(out, "data found at location: 0x[0-9A-Fa-f]+")
         # Then that the location found does not display the tag bits.
-        self.assertNotRegexpMatches(out, "data found at location: 0x(34|56)[0-9A-Fa-f]+")
+        self.assertNotRegexpMatches(
+            out, "data found at location: 0x(34|56)[0-9A-Fa-f]+"
+        )

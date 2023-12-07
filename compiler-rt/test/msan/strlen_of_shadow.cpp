@@ -3,7 +3,7 @@
 // Check that strlen() and similar intercepted functions can be called on shadow
 // memory.
 // The mem_to_shadow's part might need rework
-// XFAIL: freebsd
+// XFAIL: target={{.*freebsd.*}}
 
 #include <assert.h>
 #include <stdint.h>
@@ -14,6 +14,8 @@
 
 const char *mem_to_shadow(const char *p) {
 #if defined(__x86_64__)
+  return (char *)((uintptr_t)p ^ 0x500000000000ULL);
+#elif defined(__loongarch_lp64)
   return (char *)((uintptr_t)p ^ 0x500000000000ULL);
 #elif defined (__mips64)
   return (char *)((uintptr_t)p ^ 0x8000000000ULL);

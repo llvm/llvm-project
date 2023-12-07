@@ -2,9 +2,9 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=regbankselect -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define void @load_store_i8(i8* %px, i8* %py) {entry: ret void}
-  define void @load_store_i16(i16* %px, i16* %py) {entry: ret void}
-  define void @load_store_i32(i32* %px, i32* %py) {entry: ret void}
+  define void @load_store_i8(ptr %px, ptr %py) {entry: ret void}
+  define void @load_store_i16(ptr %px, ptr %py) {entry: ret void}
+  define void @load_store_i32(ptr %px, ptr %py) {entry: ret void}
 
 ...
 ---

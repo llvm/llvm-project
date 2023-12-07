@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -pedantic -verify=expected,cxx11 -fcxx-exceptions %s -fconstexpr-depth 128 -triple i686-pc-linux-gnu
-// RUN: %clang_cc1 -fsyntax-only -std=c++2a -pedantic -verify=expected,cxx20 -fcxx-exceptions %s -fconstexpr-depth 128 -triple i686-pc-linux-gnu
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -pedantic -verify=expected,cxx11 -fcxx-exceptions %s -fconstexpr-depth=128 -triple i686-pc-linux-gnu
+// RUN: %clang_cc1 -fsyntax-only -std=c++2a -pedantic -verify=expected,cxx20 -fcxx-exceptions %s -fconstexpr-depth=128 -triple i686-pc-linux-gnu
 
 // A conditional-expression is a core constant expression unless it involves one
 // of the following as a potentially evaluated subexpression [...]:
@@ -146,6 +146,7 @@ namespace UndefinedBehavior {
 
   constexpr int int_min = ~0x7fffffff;
   constexpr int minus_int_min = -int_min; // expected-error {{constant expression}} expected-note {{value 2147483648 is outside the range}}
+  constexpr int minus_int_min_from_shift = -(1<<31); // expected-error {{constant expression}} expected-note {{value 2147483648 is outside the range}}
   constexpr int div0 = 3 / 0; // expected-error {{constant expression}} expected-note {{division by zero}}
   constexpr int mod0 = 3 % 0; // expected-error {{constant expression}} expected-note {{division by zero}}
   constexpr int int_min_div_minus_1 = int_min / -1; // expected-error {{constant expression}} expected-note {{value 2147483648 is outside the range}}
@@ -298,6 +299,15 @@ constexpr float negpi = -pi; // expect no error on unary operator
     static_assert(isinf(f6), "");
     static_assert(isinf(f9), "");
   }
+
+#if __cplusplus >= 201703L
+namespace CompoundAssignment {
+constexpr int rem() { // expected-error {{constexpr function never produces a constant expression}}
+    int x = ~__INT_MAX__;
+    return x%=-1; // cxx20-note {{value 2147483648 is outside the range of representable values of type 'int'}}
+}
+}
+#endif
 }
 
 // - a lambda-expression (5.1.2);

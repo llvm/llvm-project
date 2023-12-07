@@ -37,13 +37,13 @@ declare <16 x i32> @llvm.hexagon.V6.vmpyiwb.acc(<16 x i32>, <16 x i32>, i32) #0
 declare <16 x i32> @llvm.hexagon.V6.vshuffob(<16 x i32>, <16 x i32>) #0
 
 ; Function Attrs: nounwind
-define void @f0(i8* noalias nocapture readonly %a0, i32 %a1, i32 %a2) #1 {
+define void @f0(ptr noalias nocapture readonly %a0, i32 %a1, i32 %a2) #1 {
 b0:
   %v0 = mul nsw i32 %a1, 2
   br i1 undef, label %b1, label %b5
 
 b1:                                               ; preds = %b0
-  %v1 = getelementptr inbounds i8, i8* %a0, i32 %v0
+  %v1 = getelementptr inbounds i8, ptr %a0, i32 %v0
   %v2 = icmp sgt i32 %a2, 64
   %v3 = add i32 %v0, 64
   %v4 = add i32 %a1, 64
@@ -52,38 +52,33 @@ b1:                                               ; preds = %b0
   br i1 %v2, label %b2, label %b4
 
 b2:                                               ; preds = %b1
-  %v7 = getelementptr inbounds i8, i8* %v1, i32 %v3
-  %v8 = getelementptr inbounds i8, i8* %v1, i32 %v4
-  %v9 = getelementptr inbounds i8, i8* %v1, i32 64
-  %v10 = getelementptr inbounds i8, i8* %v1, i32 %v5
-  %v11 = getelementptr inbounds i8, i8* %v1, i32 %v6
-  %v12 = bitcast i8* %v7 to <16 x i32>*
-  %v13 = bitcast i8* %v8 to <16 x i32>*
-  %v14 = bitcast i8* %v9 to <16 x i32>*
-  %v15 = bitcast i8* %v10 to <16 x i32>*
-  %v16 = bitcast i8* %v11 to <16 x i32>*
+  %v7 = getelementptr inbounds i8, ptr %v1, i32 %v3
+  %v8 = getelementptr inbounds i8, ptr %v1, i32 %v4
+  %v9 = getelementptr inbounds i8, ptr %v1, i32 64
+  %v10 = getelementptr inbounds i8, ptr %v1, i32 %v5
+  %v11 = getelementptr inbounds i8, ptr %v1, i32 %v6
   br label %b3
 
 b3:                                               ; preds = %b3, %b2
-  %v17 = phi <16 x i32>* [ null, %b2 ], [ %v52, %b3 ]
-  %v18 = phi <16 x i32>* [ %v12, %b2 ], [ %v34, %b3 ]
-  %v19 = phi <16 x i32>* [ %v13, %b2 ], [ %v32, %b3 ]
-  %v20 = phi <16 x i32>* [ %v14, %b2 ], [ %v30, %b3 ]
-  %v21 = phi <16 x i32>* [ %v15, %b2 ], [ %v28, %b3 ]
-  %v22 = phi <16 x i32>* [ %v16, %b2 ], [ %v26, %b3 ]
+  %v17 = phi ptr [ null, %b2 ], [ %v52, %b3 ]
+  %v18 = phi ptr [ %v7, %b2 ], [ %v34, %b3 ]
+  %v19 = phi ptr [ %v8, %b2 ], [ %v32, %b3 ]
+  %v20 = phi ptr [ %v9, %b2 ], [ %v30, %b3 ]
+  %v21 = phi ptr [ %v10, %b2 ], [ %v28, %b3 ]
+  %v22 = phi ptr [ %v11, %b2 ], [ %v26, %b3 ]
   %v23 = phi <32 x i32> [ undef, %b2 ], [ %v37, %b3 ]
   %v24 = phi <32 x i32> [ zeroinitializer, %b2 ], [ %v23, %b3 ]
   %v25 = phi i32 [ %a2, %b2 ], [ %v53, %b3 ]
-  %v26 = getelementptr inbounds <16 x i32>, <16 x i32>* %v22, i32 1
-  %v27 = load <16 x i32>, <16 x i32>* %v22, align 64
-  %v28 = getelementptr inbounds <16 x i32>, <16 x i32>* %v21, i32 1
-  %v29 = load <16 x i32>, <16 x i32>* %v21, align 64
-  %v30 = getelementptr inbounds <16 x i32>, <16 x i32>* %v20, i32 1
-  %v31 = load <16 x i32>, <16 x i32>* %v20, align 64
-  %v32 = getelementptr inbounds <16 x i32>, <16 x i32>* %v19, i32 1
-  %v33 = load <16 x i32>, <16 x i32>* %v19, align 64
-  %v34 = getelementptr inbounds <16 x i32>, <16 x i32>* %v18, i32 1
-  %v35 = load <16 x i32>, <16 x i32>* %v18, align 64
+  %v26 = getelementptr inbounds <16 x i32>, ptr %v22, i32 1
+  %v27 = load <16 x i32>, ptr %v22, align 64
+  %v28 = getelementptr inbounds <16 x i32>, ptr %v21, i32 1
+  %v29 = load <16 x i32>, ptr %v21, align 64
+  %v30 = getelementptr inbounds <16 x i32>, ptr %v20, i32 1
+  %v31 = load <16 x i32>, ptr %v20, align 64
+  %v32 = getelementptr inbounds <16 x i32>, ptr %v19, i32 1
+  %v33 = load <16 x i32>, ptr %v19, align 64
+  %v34 = getelementptr inbounds <16 x i32>, ptr %v18, i32 1
+  %v35 = load <16 x i32>, ptr %v18, align 64
   %v36 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %v33, <16 x i32> %v29) #3
   %v37 = tail call <32 x i32> @llvm.hexagon.V6.vmpabus.acc(<32 x i32> undef, <32 x i32> %v36, i32 67372036) #3
   %v38 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v23) #3
@@ -100,8 +95,8 @@ b3:                                               ; preds = %b3, %b2
   %v49 = tail call <16 x i32> @llvm.hexagon.V6.vmpyiwb.acc(<16 x i32> %v48, <16 x i32> undef, i32 101058054) #3
   %v50 = tail call <16 x i32> @llvm.hexagon.V6.vmpyiwb.acc(<16 x i32> %v49, <16 x i32> zeroinitializer, i32 67372036) #3
   %v51 = tail call <16 x i32> @llvm.hexagon.V6.vshuffob(<16 x i32> %v50, <16 x i32> %v47) #3
-  %v52 = getelementptr inbounds <16 x i32>, <16 x i32>* %v17, i32 1
-  store <16 x i32> %v51, <16 x i32>* %v17, align 64
+  %v52 = getelementptr inbounds <16 x i32>, ptr %v17, i32 1
+  store <16 x i32> %v51, ptr %v17, align 64
   %v53 = add nsw i32 %v25, -64
   %v54 = icmp sgt i32 %v53, 64
   br i1 %v54, label %b3, label %b4
@@ -114,9 +109,9 @@ b5:                                               ; preds = %b0
 }
 
 ; Function Attrs: nounwind
-define void @f1(i32 %a0, i32* %a1) #1 {
+define void @f1(i32 %a0, ptr %a1) #1 {
 b0:
-  %v0 = ptrtoint i32* %a1 to i32
+  %v0 = ptrtoint ptr %a1 to i32
   %v1 = ashr i32 %a0, 1
   %v2 = tail call i32 @llvm.hexagon.A2.combine.ll(i32 undef, i32 undef)
   br i1 undef, label %b1, label %b2
@@ -143,10 +138,9 @@ b3:                                               ; preds = %b2
   %v15 = phi i64 [ %v7, %b2 ]
   %v16 = trunc i64 %v14 to i32
   %v17 = trunc i64 %v15 to i32
-  %v18 = inttoptr i32 %v0 to i32*
-  store i32 %v17, i32* %v18, align 4
-  %v19 = bitcast i8* undef to i32*
-  store i32 %v16, i32* %v19, align 4
+  %v18 = inttoptr i32 %v0 to ptr
+  store i32 %v17, ptr %v18, align 4
+  store i32 %v16, ptr undef, align 4
   call void @llvm.trap()
   unreachable
 }

@@ -10,7 +10,7 @@
 #define _LIBCPP___CONCEPTS_SAME_AS_H
 
 #include <__config>
-#include <type_traits>
+#include <__type_traits/is_same.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -18,17 +18,17 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [concept.same]
 
-template<class _Tp, class _Up>
+template <class _Tp, class _Up>
 concept __same_as_impl = _IsSame<_Tp, _Up>::value;
 
-template<class _Tp, class _Up>
+template <class _Tp, class _Up>
 concept same_as = __same_as_impl<_Tp, _Up> && __same_as_impl<_Up, _Tp>;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

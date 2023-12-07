@@ -128,3 +128,106 @@ define <vscale x 4 x i64> @ld1w_i32_zext(<vscale x 4 x i32> *%base) {
   %res = zext <vscale x 4 x i32> %wide.load to <vscale x 4 x i64>
   ret <vscale x 4 x i64> %res
 }
+
+
+; Extending loads from unpacked to wide illegal types
+
+define <vscale x 4 x i64> @zload_4i8_4i64(ptr %a) {
+; CHECK-LABEL: zload_4i8_4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1b { z1.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ret
+  %aval = load <vscale x 4 x i8>, ptr %a
+  %aext = zext <vscale x 4 x i8> %aval to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %aext
+}
+
+define <vscale x 4 x i64> @zload_4i16_4i64(ptr %a) {
+; CHECK-LABEL: zload_4i16_4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ret
+  %aval = load <vscale x 4 x i16>, ptr %a
+  %aext = zext <vscale x 4 x i16> %aval to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %aext
+}
+
+define <vscale x 8 x i32> @zload_8i8_8i32(ptr %a) {
+; CHECK-LABEL: zload_8i8_8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ret
+  %aval = load <vscale x 8 x i8>, ptr %a
+  %aext = zext <vscale x 8 x i8> %aval to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %aext
+}
+
+define <vscale x 8 x i64> @zload_8i8_8i64(ptr %a) {
+; CHECK-LABEL: zload_8i8_8i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1b { z1.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1b { z2.d }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld1b { z3.d }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ret
+  %aval = load <vscale x 8 x i8>, ptr %a
+  %aext = zext <vscale x 8 x i8> %aval to <vscale x 8 x i64>
+  ret <vscale x 8 x i64> %aext
+}
+
+define <vscale x 4 x i64> @sload_4i8_4i64(ptr %a) {
+; CHECK-LABEL: sload_4i8_4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1sb { z1.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ret
+  %aval = load <vscale x 4 x i8>, ptr %a
+  %aext = sext <vscale x 4 x i8> %aval to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %aext
+}
+
+define <vscale x 4 x i64> @sload_4i16_4i64(ptr %a) {
+; CHECK-LABEL: sload_4i16_4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1sh { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1sh { z1.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ret
+  %aval = load <vscale x 4 x i16>, ptr %a
+  %aext = sext <vscale x 4 x i16> %aval to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %aext
+}
+
+define <vscale x 8 x i32> @sload_8i8_8i32(ptr %a) {
+; CHECK-LABEL: sload_8i8_8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1sb { z1.s }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ret
+  %aval = load <vscale x 8 x i8>, ptr %a
+  %aext = sext <vscale x 8 x i8> %aval to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %aext
+}
+
+define <vscale x 8 x i64> @sload_8i8_8i64(ptr %a) {
+; CHECK-LABEL: sload_8i8_8i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1sb { z1.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z2.d }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld1sb { z3.d }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ret
+  %aval = load <vscale x 8 x i8>, ptr %a
+  %aext = sext <vscale x 8 x i8> %aval to <vscale x 8 x i64>
+  ret <vscale x 8 x i64> %aext
+}

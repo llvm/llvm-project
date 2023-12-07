@@ -68,10 +68,10 @@ struct PointerLikeTypeTraits<ReachingDef> {
 /// This class provides the reaching def analysis.
 class ReachingDefAnalysis : public MachineFunctionPass {
 private:
-  MachineFunction *MF;
-  const TargetRegisterInfo *TRI;
+  MachineFunction *MF = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
   LoopTraversal::TraversalOrder TraversedMBBOrder;
-  unsigned NumRegUnits;
+  unsigned NumRegUnits = 0;
   /// Instruction that defined each register, relative to the beginning of the
   /// current basic block.  When a LiveRegsDefInfo is used to represent a
   /// live-out register, this value is relative to the end of the basic block,
@@ -87,7 +87,7 @@ private:
 
   /// Current instruction number.
   /// The first instruction in each basic block is 0.
-  int CurInstr;
+  int CurInstr = -1;
 
   /// Maps instructions to their instruction Ids, relative to the beginning of
   /// their basic blocks.
@@ -102,7 +102,7 @@ private:
   MBBReachingDefsInfo MBBReachingDefs;
 
   /// Default values are 'nothing happened a long time ago'.
-  const int ReachingDefDefaultVal = -(1 << 20);
+  const int ReachingDefDefaultVal = -(1 << 21);
 
   using InstSet = SmallPtrSetImpl<MachineInstr*>;
   using BlockSet = SmallPtrSetImpl<MachineBasicBlock*>;

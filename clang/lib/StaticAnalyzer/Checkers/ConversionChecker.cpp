@@ -42,7 +42,7 @@ public:
   void checkPreStmt(const ImplicitCastExpr *Cast, CheckerContext &C) const;
 
 private:
-  mutable std::unique_ptr<BuiltinBug> BT;
+  mutable std::unique_ptr<BugType> BT;
 
   bool isLossOfPrecision(const ImplicitCastExpr *Cast, QualType DestType,
                          CheckerContext &C) const;
@@ -127,8 +127,7 @@ void ConversionChecker::checkPreStmt(const ImplicitCastExpr *Cast,
 void ConversionChecker::reportBug(ExplodedNode *N, const Expr *E,
                                   CheckerContext &C, const char Msg[]) const {
   if (!BT)
-    BT.reset(
-        new BuiltinBug(this, "Conversion", "Possible loss of sign/precision."));
+    BT.reset(new BugType(this, "Conversion"));
 
   // Generate a report for this bug.
   auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);

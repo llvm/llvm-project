@@ -7,7 +7,7 @@ define i32 @test_thread_local() {
 ; CHECK: ldr w[[DEST:[0-9]+]], [x0]
 ; CHECK: blr x[[DEST]]
 
-  %val = load i32, i32* @var
+  %val = load i32, ptr @var
   ret i32 %val
 }
 

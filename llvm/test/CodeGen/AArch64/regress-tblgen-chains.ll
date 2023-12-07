@@ -10,13 +10,12 @@
 
 ; This was obviously a Bad Thing.
 
-declare void @bar(i8*)
+declare void @bar(ptr)
 
 define i64 @test_chains() {
 ; CHECK-LABEL: test_chains:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
@@ -26,24 +25,24 @@ define i64 @test_chains() {
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    ldurb w8, [x29, #-1]
 ; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    and x0, x8, #0xff
 ; CHECK-NEXT:    sturb w8, [x29, #-1]
 ; CHECK-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; CHECK-NEXT:    and x0, x8, #0xff
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 
   %locvar = alloca i8
 
-  call void @bar(i8* %locvar)
+  call void @bar(ptr %locvar)
 
-  %inc.1 = load i8, i8* %locvar
+  %inc.1 = load i8, ptr %locvar
   %inc.2 = zext i8 %inc.1 to i64
   %inc.3 = add i64 %inc.2, 1
   %inc.4 = trunc i64 %inc.3 to i8
-  store i8 %inc.4, i8* %locvar
+  store i8 %inc.4, ptr %locvar
 
 
-  %ret.1 = load i8, i8* %locvar
+  %ret.1 = load i8, ptr %locvar
   %ret.2 = zext i8 %ret.1 to i64
   ret i64 %ret.2
 }

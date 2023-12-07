@@ -95,6 +95,7 @@ vandps %xmm4, %xmm1, %xmm0
 # CHECK-NEXT: [1,1]     .    .    .    .   D=================eeeE-------------------------------------R.   vaddps	%xmm0, %xmm1, %xmm3
 # CHECK-NEXT: [1,2]     .    .    .    .    D===================eeeE-----------------------------------R   vaddps	%ymm3, %ymm1, %ymm4
 # CHECK-NEXT: [1,3]     .    .    .    .    .D====================eeeE---------------------------------R   vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: Truncated display due to cycle limit
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

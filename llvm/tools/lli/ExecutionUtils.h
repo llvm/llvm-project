@@ -48,8 +48,8 @@ private:
   std::unique_ptr<ToolOutputFile> TestOut;
 
   template <typename T> void expose(orc::SymbolStringPtr Name, T *Handler) {
-    BuiltinFunctions[Name] = JITEvaluatedSymbol(
-        pointerToJITTargetAddress(Handler), JITSymbolFlags::Exported);
+    BuiltinFunctions[Name] = {orc::ExecutorAddr::fromPtr(Handler),
+                              JITSymbolFlags::Exported};
   }
 
   static std::unique_ptr<ToolOutputFile> createToolOutput();

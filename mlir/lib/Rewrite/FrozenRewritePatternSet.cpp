@@ -13,6 +13,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -33,7 +34,7 @@ convertPDLToPDLInterp(ModuleOp pdlModule,
   pdlModule.getBody()->walk(simplifyFn);
 
   /// Lower the PDL pattern module to the interpreter dialect.
-  PassManager pdlPipeline(pdlModule.getContext());
+  PassManager pdlPipeline(pdlModule->getName());
 #ifdef NDEBUG
   // We don't want to incur the hit of running the verifier when in release
   // mode.
@@ -105,13 +106,13 @@ FrozenRewritePatternSet::FrozenRewritePatternSet(
       impl->nativeOpSpecificPatternList.push_back(std::move(pat));
       continue;
     }
-    if (Optional<TypeID> interfaceID = pat->getRootInterfaceID()) {
+    if (std::optional<TypeID> interfaceID = pat->getRootInterfaceID()) {
       addToOpsWhen(pat, [&](RegisteredOperationName info) {
         return info.hasInterface(*interfaceID);
       });
       continue;
     }
-    if (Optional<TypeID> traitID = pat->getRootTraitID()) {
+    if (std::optional<TypeID> traitID = pat->getRootTraitID()) {
       addToOpsWhen(pat, [&](RegisteredOperationName info) {
         return info.hasTrait(*traitID);
       });

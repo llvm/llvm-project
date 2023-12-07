@@ -7,7 +7,7 @@ target triple = "x86_64-pc-windows-msvc19.11.0"
 @"?var_hook@@3HA" = extern_weak dllimport global i32, align 4
 
 ; Function Attrs: noinline optnone uwtable
-define dso_local zeroext i1 @"?foo@@YA_NPEAHH@Z"(i32* %0, i32 %1) #0 {
+define dso_local zeroext i1 @"?foo@@YA_NPEAHH@Z"(ptr %0, i32 %1) #0 {
    ret i1 0
 }
 

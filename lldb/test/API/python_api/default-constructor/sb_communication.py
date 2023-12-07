@@ -9,6 +9,7 @@ def fuzz_obj(obj):
     broadcaster = obj.GetBroadcaster()
     # Do fuzz testing on the broadcaster obj, it should not crash lldb.
     import sb_broadcaster
+
     sb_broadcaster.fuzz_obj(broadcaster)
     obj.AdoptFileDesriptor(0, False)
     obj.AdoptFileDesriptor(1, False)
@@ -20,8 +21,8 @@ def fuzz_obj(obj):
     obj.GetCloseOnEOF()
     obj.SetCloseOnEOF(True)
     obj.SetCloseOnEOF(False)
-    #obj.Write(None, sys.maxint, None)
-    #obj.Read(None, sys.maxint, 0xffffffff, None)
+    # obj.Write(None, sys.maxint, None)
+    # obj.Read(None, sys.maxint, 0xffffffff, None)
     obj.ReadThreadStart()
     obj.ReadThreadStop()
     obj.ReadThreadIsRunning()

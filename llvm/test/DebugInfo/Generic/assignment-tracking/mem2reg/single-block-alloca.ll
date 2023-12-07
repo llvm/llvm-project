@@ -1,4 +1,4 @@
-; RUN: opt -passes=mem2reg -S %s -o - -experimental-assignment-tracking \
+; RUN: opt -passes=mem2reg -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Test assignment tracking debug info when mem2reg promotes a single-block
@@ -8,10 +8,10 @@
 
 ; CHECK: entry:
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[B:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %a, metadata ![[A:[0-9]+]], {{.*}}, metadata ptr undef
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[A:[0-9]+]]
 ; CHECK-NEXT: %add =
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata ![[B]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %add, metadata ![[A]], {{.*}}, metadata ptr undef
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata ![[A]]
 
 ; CHECK-DAG: ![[A]] = !DILocalVariable(name: "a",
 ; CHECK-DAG: ![[B]] = !DILocalVariable(name: "b",
@@ -40,7 +40,7 @@ entry:
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!2, !3, !4, !5}
+!llvm.module.flags = !{!2, !3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 14.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
@@ -64,3 +64,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !22 = !DILocation(line: 3, column: 10, scope: !7)
 !23 = !DILocation(line: 3, column: 3, scope: !7)
 !24 = !DILocalVariable(name: "b", scope: !7, file: !1, line: 1, type: !10)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

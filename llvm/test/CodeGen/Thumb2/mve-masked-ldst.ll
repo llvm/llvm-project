@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve,+fullfp16 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LE
 ; RUN: llc -mtriple=thumbebv8.1m.main-none-none-eabi -mattr=+mve,+fullfp16 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BE
 
-define void @foo_v4i32_v4i32(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i32> *%src) {
+define void @foo_v4i32_v4i32(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_v4i32_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
@@ -11,14 +11,14 @@ define void @foo_v4i32_v4i32(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i32> *%src
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %mask, align 4
+  %0 = load <4 x i32>, ptr %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %src, i32 4, <4 x i1> %1, <4 x i32> undef)
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %2, <4 x i32>* %dest, i32 4, <4 x i1> %1)
+  %2 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %src, i32 4, <4 x i1> %1, <4 x i32> undef)
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> %2, ptr %dest, i32 4, <4 x i1> %1)
   ret void
 }
 
-define void @foo_sext_v4i32_v4i8(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i8> *%src) {
+define void @foo_sext_v4i32_v4i8(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_sext_v4i32_v4i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
@@ -27,15 +27,15 @@ define void @foo_sext_v4i32_v4i8(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i8> *%
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %mask, align 4
+  %0 = load <4 x i32>, ptr %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* %src, i32 1, <4 x i1> %1, <4 x i8> undef)
+  %2 = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr %src, i32 1, <4 x i1> %1, <4 x i8> undef)
   %3 = sext <4 x i8> %2 to <4 x i32>
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %3, <4 x i32>* %dest, i32 4, <4 x i1> %1)
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> %3, ptr %dest, i32 4, <4 x i1> %1)
   ret void
 }
 
-define void @foo_sext_v4i32_v4i16(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i16> *%src) {
+define void @foo_sext_v4i32_v4i16(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_sext_v4i32_v4i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
@@ -44,15 +44,15 @@ define void @foo_sext_v4i32_v4i16(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i16> 
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %mask, align 4
+  %0 = load <4 x i32>, ptr %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %src, i32 2, <4 x i1> %1, <4 x i16> undef)
+  %2 = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %src, i32 2, <4 x i1> %1, <4 x i16> undef)
   %3 = sext <4 x i16> %2 to <4 x i32>
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %3, <4 x i32>* %dest, i32 4, <4 x i1> %1)
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> %3, ptr %dest, i32 4, <4 x i1> %1)
   ret void
 }
 
-define void @foo_zext_v4i32_v4i8(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i8> *%src) {
+define void @foo_zext_v4i32_v4i8(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_zext_v4i32_v4i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
@@ -61,15 +61,15 @@ define void @foo_zext_v4i32_v4i8(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i8> *%
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %mask, align 4
+  %0 = load <4 x i32>, ptr %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* %src, i32 1, <4 x i1> %1, <4 x i8> undef)
+  %2 = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr %src, i32 1, <4 x i1> %1, <4 x i8> undef)
   %3 = zext <4 x i8> %2 to <4 x i32>
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %3, <4 x i32>* %dest, i32 4, <4 x i1> %1)
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> %3, ptr %dest, i32 4, <4 x i1> %1)
   ret void
 }
 
-define void @foo_zext_v4i32_v4i16(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i16> *%src) {
+define void @foo_zext_v4i32_v4i16(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_zext_v4i32_v4i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
@@ -78,15 +78,15 @@ define void @foo_zext_v4i32_v4i16(<4 x i32> *%dest, <4 x i32> *%mask, <4 x i16> 
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %mask, align 4
+  %0 = load <4 x i32>, ptr %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %src, i32 2, <4 x i1> %1, <4 x i16> undef)
+  %2 = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %src, i32 2, <4 x i1> %1, <4 x i16> undef)
   %3 = zext <4 x i16> %2 to <4 x i32>
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %3, <4 x i32>* %dest, i32 4, <4 x i1> %1)
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> %3, ptr %dest, i32 4, <4 x i1> %1)
   ret void
 }
 
-define void @foo_sext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> *%src) {
+define void @foo_sext_v2i64_v2i32(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-LABEL: foo_sext_v2i64_v2i32:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r4, r5, r7, lr}
@@ -94,22 +94,22 @@ define void @foo_sext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    ldrd r12, lr, [r1]
-; CHECK-LE-NEXT:    movs r3, #0
+; CHECK-LE-NEXT:    movs r1, #0
 ; CHECK-LE-NEXT:    @ implicit-def: $q1
-; CHECK-LE-NEXT:    rsbs.w r1, r12, #0
+; CHECK-LE-NEXT:    rsbs.w r3, r12, #0
 ; CHECK-LE-NEXT:    vmov q0[2], q0[0], r12, lr
-; CHECK-LE-NEXT:    sbcs.w r1, r3, r12, asr #31
-; CHECK-LE-NEXT:    csetm r1, lt
+; CHECK-LE-NEXT:    sbcs.w r3, r1, r12, asr #31
+; CHECK-LE-NEXT:    csetm r3, lt
 ; CHECK-LE-NEXT:    rsbs.w r4, lr, #0
-; CHECK-LE-NEXT:    sbcs.w r4, r3, lr, asr #31
-; CHECK-LE-NEXT:    bfi r3, r1, #0, #1
-; CHECK-LE-NEXT:    csetm r1, lt
-; CHECK-LE-NEXT:    bfi r3, r1, #1, #1
-; CHECK-LE-NEXT:    lsls r1, r3, #31
+; CHECK-LE-NEXT:    sbcs.w r4, r1, lr, asr #31
+; CHECK-LE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-LE-NEXT:    csetm r3, lt
+; CHECK-LE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-LE-NEXT:    lsls r3, r1, #31
 ; CHECK-LE-NEXT:    itt ne
-; CHECK-LE-NEXT:    ldrne r1, [r2]
-; CHECK-LE-NEXT:    vmovne.32 q1[0], r1
-; CHECK-LE-NEXT:    lsls r1, r3, #30
+; CHECK-LE-NEXT:    ldrne r3, [r2]
+; CHECK-LE-NEXT:    vmovne.32 q1[0], r3
+; CHECK-LE-NEXT:    lsls r1, r1, #30
 ; CHECK-LE-NEXT:    itt mi
 ; CHECK-LE-NEXT:    ldrmi r1, [r2, #4]
 ; CHECK-LE-NEXT:    vmovmi.32 q1[2], r1
@@ -202,15 +202,15 @@ define void @foo_sext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    pop {r4, r5, r7, pc}
 entry:
-  %0 = load <2 x i32>, <2 x i32>* %mask, align 4
+  %0 = load <2 x i32>, ptr %mask, align 4
   %1 = icmp sgt <2 x i32> %0, zeroinitializer
-  %2 = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* %src, i32 4, <2 x i1> %1, <2 x i32> undef)
+  %2 = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %src, i32 4, <2 x i1> %1, <2 x i32> undef)
   %3 = sext <2 x i32> %2 to <2 x i64>
-  call void @llvm.masked.store.v2i64.p0v2i64(<2 x i64> %3, <2 x i64>* %dest, i32 8, <2 x i1> %1)
+  call void @llvm.masked.store.v2i64.p0(<2 x i64> %3, ptr %dest, i32 8, <2 x i1> %1)
   ret void
 }
 
-define void @foo_sext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> *%src) {
+define void @foo_sext_v2i64_v2i32_unaligned(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-LABEL: foo_sext_v2i64_v2i32_unaligned:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r4, r5, r7, lr}
@@ -218,22 +218,22 @@ define void @foo_sext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    ldrd r12, lr, [r1]
-; CHECK-LE-NEXT:    movs r3, #0
+; CHECK-LE-NEXT:    movs r1, #0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
-; CHECK-LE-NEXT:    rsbs.w r1, r12, #0
+; CHECK-LE-NEXT:    rsbs.w r3, r12, #0
 ; CHECK-LE-NEXT:    vmov q1[2], q1[0], r12, lr
-; CHECK-LE-NEXT:    sbcs.w r1, r3, r12, asr #31
-; CHECK-LE-NEXT:    csetm r1, lt
+; CHECK-LE-NEXT:    sbcs.w r3, r1, r12, asr #31
+; CHECK-LE-NEXT:    csetm r3, lt
 ; CHECK-LE-NEXT:    rsbs.w r4, lr, #0
-; CHECK-LE-NEXT:    sbcs.w r4, r3, lr, asr #31
-; CHECK-LE-NEXT:    bfi r3, r1, #0, #1
-; CHECK-LE-NEXT:    csetm r1, lt
-; CHECK-LE-NEXT:    bfi r3, r1, #1, #1
-; CHECK-LE-NEXT:    lsls r1, r3, #31
+; CHECK-LE-NEXT:    sbcs.w r4, r1, lr, asr #31
+; CHECK-LE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-LE-NEXT:    csetm r3, lt
+; CHECK-LE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-LE-NEXT:    lsls r3, r1, #31
 ; CHECK-LE-NEXT:    itt ne
-; CHECK-LE-NEXT:    ldrne r1, [r2]
-; CHECK-LE-NEXT:    vmovne.32 q0[0], r1
-; CHECK-LE-NEXT:    lsls r1, r3, #30
+; CHECK-LE-NEXT:    ldrne r3, [r2]
+; CHECK-LE-NEXT:    vmovne.32 q0[0], r3
+; CHECK-LE-NEXT:    lsls r1, r1, #30
 ; CHECK-LE-NEXT:    itt mi
 ; CHECK-LE-NEXT:    ldrmi r1, [r2, #4]
 ; CHECK-LE-NEXT:    vmovmi.32 q0[2], r1
@@ -330,15 +330,15 @@ define void @foo_sext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    pop {r4, r5, r7, pc}
 entry:
-  %0 = load <2 x i32>, <2 x i32>* %mask, align 4
+  %0 = load <2 x i32>, ptr %mask, align 4
   %1 = icmp sgt <2 x i32> %0, zeroinitializer
-  %2 = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* %src, i32 2, <2 x i1> %1, <2 x i32> undef)
+  %2 = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %src, i32 2, <2 x i1> %1, <2 x i32> undef)
   %3 = sext <2 x i32> %2 to <2 x i64>
-  call void @llvm.masked.store.v2i64.p0v2i64(<2 x i64> %3, <2 x i64>* %dest, i32 4, <2 x i1> %1)
+  call void @llvm.masked.store.v2i64.p0(<2 x i64> %3, ptr %dest, i32 4, <2 x i1> %1)
   ret void
 }
 
-define void @foo_zext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> *%src) {
+define void @foo_zext_v2i64_v2i32(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-LABEL: foo_zext_v2i64_v2i32:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r4, lr}
@@ -346,23 +346,23 @@ define void @foo_zext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    ldrd r12, lr, [r1]
-; CHECK-LE-NEXT:    movs r3, #0
+; CHECK-LE-NEXT:    movs r1, #0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
 ; CHECK-LE-NEXT:    vmov.i64 q2, #0xffffffff
-; CHECK-LE-NEXT:    rsbs.w r1, r12, #0
+; CHECK-LE-NEXT:    rsbs.w r3, r12, #0
 ; CHECK-LE-NEXT:    vmov q1[2], q1[0], r12, lr
-; CHECK-LE-NEXT:    sbcs.w r1, r3, r12, asr #31
-; CHECK-LE-NEXT:    csetm r1, lt
+; CHECK-LE-NEXT:    sbcs.w r3, r1, r12, asr #31
+; CHECK-LE-NEXT:    csetm r3, lt
 ; CHECK-LE-NEXT:    rsbs.w r4, lr, #0
-; CHECK-LE-NEXT:    sbcs.w r4, r3, lr, asr #31
-; CHECK-LE-NEXT:    bfi r3, r1, #0, #1
-; CHECK-LE-NEXT:    csetm r1, lt
-; CHECK-LE-NEXT:    bfi r3, r1, #1, #1
-; CHECK-LE-NEXT:    lsls r1, r3, #31
+; CHECK-LE-NEXT:    sbcs.w r4, r1, lr, asr #31
+; CHECK-LE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-LE-NEXT:    csetm r3, lt
+; CHECK-LE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-LE-NEXT:    lsls r3, r1, #31
 ; CHECK-LE-NEXT:    itt ne
-; CHECK-LE-NEXT:    ldrne r1, [r2]
-; CHECK-LE-NEXT:    vmovne.32 q0[0], r1
-; CHECK-LE-NEXT:    lsls r1, r3, #30
+; CHECK-LE-NEXT:    ldrne r3, [r2]
+; CHECK-LE-NEXT:    vmovne.32 q0[0], r3
+; CHECK-LE-NEXT:    lsls r1, r1, #30
 ; CHECK-LE-NEXT:    itt mi
 ; CHECK-LE-NEXT:    ldrmi r1, [r2, #4]
 ; CHECK-LE-NEXT:    vmovmi.32 q0[2], r1
@@ -444,15 +444,15 @@ define void @foo_zext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    pop {r7, pc}
 entry:
-  %0 = load <2 x i32>, <2 x i32>* %mask, align 4
+  %0 = load <2 x i32>, ptr %mask, align 4
   %1 = icmp sgt <2 x i32> %0, zeroinitializer
-  %2 = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* %src, i32 4, <2 x i1> %1, <2 x i32> undef)
+  %2 = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %src, i32 4, <2 x i1> %1, <2 x i32> undef)
   %3 = zext <2 x i32> %2 to <2 x i64>
-  call void @llvm.masked.store.v2i64.p0v2i64(<2 x i64> %3, <2 x i64>* %dest, i32 8, <2 x i1> %1)
+  call void @llvm.masked.store.v2i64.p0(<2 x i64> %3, ptr %dest, i32 8, <2 x i1> %1)
   ret void
 }
 
-define void @foo_zext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> *%src) {
+define void @foo_zext_v2i64_v2i32_unaligned(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-LABEL: foo_zext_v2i64_v2i32_unaligned:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r4, lr}
@@ -460,23 +460,23 @@ define void @foo_zext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    ldrd r12, lr, [r1]
-; CHECK-LE-NEXT:    movs r3, #0
+; CHECK-LE-NEXT:    movs r1, #0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
 ; CHECK-LE-NEXT:    vmov.i64 q2, #0xffffffff
-; CHECK-LE-NEXT:    rsbs.w r1, r12, #0
+; CHECK-LE-NEXT:    rsbs.w r3, r12, #0
 ; CHECK-LE-NEXT:    vmov q1[2], q1[0], r12, lr
-; CHECK-LE-NEXT:    sbcs.w r1, r3, r12, asr #31
-; CHECK-LE-NEXT:    csetm r1, lt
+; CHECK-LE-NEXT:    sbcs.w r3, r1, r12, asr #31
+; CHECK-LE-NEXT:    csetm r3, lt
 ; CHECK-LE-NEXT:    rsbs.w r4, lr, #0
-; CHECK-LE-NEXT:    sbcs.w r4, r3, lr, asr #31
-; CHECK-LE-NEXT:    bfi r3, r1, #0, #1
-; CHECK-LE-NEXT:    csetm r1, lt
-; CHECK-LE-NEXT:    bfi r3, r1, #1, #1
-; CHECK-LE-NEXT:    lsls r1, r3, #31
+; CHECK-LE-NEXT:    sbcs.w r4, r1, lr, asr #31
+; CHECK-LE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-LE-NEXT:    csetm r3, lt
+; CHECK-LE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-LE-NEXT:    lsls r3, r1, #31
 ; CHECK-LE-NEXT:    itt ne
-; CHECK-LE-NEXT:    ldrne r1, [r2]
-; CHECK-LE-NEXT:    vmovne.32 q0[0], r1
-; CHECK-LE-NEXT:    lsls r1, r3, #30
+; CHECK-LE-NEXT:    ldrne r3, [r2]
+; CHECK-LE-NEXT:    vmovne.32 q0[0], r3
+; CHECK-LE-NEXT:    lsls r1, r1, #30
 ; CHECK-LE-NEXT:    itt mi
 ; CHECK-LE-NEXT:    ldrmi r1, [r2, #4]
 ; CHECK-LE-NEXT:    vmovmi.32 q0[2], r1
@@ -562,15 +562,15 @@ define void @foo_zext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    pop {r7, pc}
 entry:
-  %0 = load <2 x i32>, <2 x i32>* %mask, align 4
+  %0 = load <2 x i32>, ptr %mask, align 4
   %1 = icmp sgt <2 x i32> %0, zeroinitializer
-  %2 = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* %src, i32 2, <2 x i1> %1, <2 x i32> undef)
+  %2 = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %src, i32 2, <2 x i1> %1, <2 x i32> undef)
   %3 = zext <2 x i32> %2 to <2 x i64>
-  call void @llvm.masked.store.v2i64.p0v2i64(<2 x i64> %3, <2 x i64>* %dest, i32 4, <2 x i1> %1)
+  call void @llvm.masked.store.v2i64.p0(<2 x i64> %3, ptr %dest, i32 4, <2 x i1> %1)
   ret void
 }
 
-define void @foo_v8i16_v8i16(<8 x i16> *%dest, <8 x i16> *%mask, <8 x i16> *%src) {
+define void @foo_v8i16_v8i16(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_v8i16_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
@@ -579,14 +579,14 @@ define void @foo_v8i16_v8i16(<8 x i16> *%dest, <8 x i16> *%mask, <8 x i16> *%src
 ; CHECK-NEXT:    vstrht.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <8 x i16>, <8 x i16>* %mask, align 2
+  %0 = load <8 x i16>, ptr %mask, align 2
   %1 = icmp sgt <8 x i16> %0, zeroinitializer
-  %2 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %src, i32 2, <8 x i1> %1, <8 x i16> undef)
-  call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %2, <8 x i16>* %dest, i32 2, <8 x i1> %1)
+  %2 = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %src, i32 2, <8 x i1> %1, <8 x i16> undef)
+  call void @llvm.masked.store.v8i16.p0(<8 x i16> %2, ptr %dest, i32 2, <8 x i1> %1)
   ret void
 }
 
-define void @foo_sext_v8i16_v8i8(<8 x i16> *%dest, <8 x i16> *%mask, <8 x i8> *%src) {
+define void @foo_sext_v8i16_v8i8(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_sext_v8i16_v8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
@@ -595,15 +595,15 @@ define void @foo_sext_v8i16_v8i8(<8 x i16> *%dest, <8 x i16> *%mask, <8 x i8> *%
 ; CHECK-NEXT:    vstrht.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <8 x i16>, <8 x i16>* %mask, align 2
+  %0 = load <8 x i16>, ptr %mask, align 2
   %1 = icmp sgt <8 x i16> %0, zeroinitializer
-  %2 = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %src, i32 1, <8 x i1> %1, <8 x i8> undef)
+  %2 = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %src, i32 1, <8 x i1> %1, <8 x i8> undef)
   %3 = sext <8 x i8> %2 to <8 x i16>
-  call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %3, <8 x i16>* %dest, i32 2, <8 x i1> %1)
+  call void @llvm.masked.store.v8i16.p0(<8 x i16> %3, ptr %dest, i32 2, <8 x i1> %1)
   ret void
 }
 
-define void @foo_zext_v8i16_v8i8(<8 x i16> *%dest, <8 x i16> *%mask, <8 x i8> *%src) {
+define void @foo_zext_v8i16_v8i8(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_zext_v8i16_v8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
@@ -612,15 +612,15 @@ define void @foo_zext_v8i16_v8i8(<8 x i16> *%dest, <8 x i16> *%mask, <8 x i8> *%
 ; CHECK-NEXT:    vstrht.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <8 x i16>, <8 x i16>* %mask, align 2
+  %0 = load <8 x i16>, ptr %mask, align 2
   %1 = icmp sgt <8 x i16> %0, zeroinitializer
-  %2 = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %src, i32 1, <8 x i1> %1, <8 x i8> undef)
+  %2 = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %src, i32 1, <8 x i1> %1, <8 x i8> undef)
   %3 = zext <8 x i8> %2 to <8 x i16>
-  call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %3, <8 x i16>* %dest, i32 2, <8 x i1> %1)
+  call void @llvm.masked.store.v8i16.p0(<8 x i16> %3, ptr %dest, i32 2, <8 x i1> %1)
   ret void
 }
 
-define void @foo_v16i8_v16i8(<16 x i8> *%dest, <16 x i8> *%mask, <16 x i8> *%src) {
+define void @foo_v16i8_v16i8(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_v16i8_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q0, [r1]
@@ -629,14 +629,14 @@ define void @foo_v16i8_v16i8(<16 x i8> *%dest, <16 x i8> *%mask, <16 x i8> *%src
 ; CHECK-NEXT:    vstrbt.8 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <16 x i8>, <16 x i8>* %mask, align 1
+  %0 = load <16 x i8>, ptr %mask, align 1
   %1 = icmp sgt <16 x i8> %0, zeroinitializer
-  %2 = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %src, i32 1, <16 x i1> %1, <16 x i8> undef)
-  call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %2, <16 x i8>* %dest, i32 1, <16 x i1> %1)
+  %2 = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %src, i32 1, <16 x i1> %1, <16 x i8> undef)
+  call void @llvm.masked.store.v16i8.p0(<16 x i8> %2, ptr %dest, i32 1, <16 x i1> %1)
   ret void
 }
 
-define void @foo_trunc_v8i8_v8i16(<8 x i8> *%dest, <8 x i16> *%mask, <8 x i16> *%src) {
+define void @foo_trunc_v8i8_v8i16(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_trunc_v8i8_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
@@ -645,15 +645,15 @@ define void @foo_trunc_v8i8_v8i16(<8 x i8> *%dest, <8 x i16> *%mask, <8 x i16> *
 ; CHECK-NEXT:    vstrbt.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <8 x i16>, <8 x i16>* %mask, align 2
+  %0 = load <8 x i16>, ptr %mask, align 2
   %1 = icmp sgt <8 x i16> %0, zeroinitializer
-  %2 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %src, i32 2, <8 x i1> %1, <8 x i16> undef)
+  %2 = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %src, i32 2, <8 x i1> %1, <8 x i16> undef)
   %3 = trunc <8 x i16> %2 to <8 x i8>
-  call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %3, <8 x i8>* %dest, i32 1, <8 x i1> %1)
+  call void @llvm.masked.store.v8i8.p0(<8 x i8> %3, ptr %dest, i32 1, <8 x i1> %1)
   ret void
 }
 
-define void @foo_trunc_v4i8_v4i32(<4 x i8> *%dest, <4 x i32> *%mask, <4 x i32> *%src) {
+define void @foo_trunc_v4i8_v4i32(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_trunc_v4i8_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
@@ -662,15 +662,15 @@ define void @foo_trunc_v4i8_v4i32(<4 x i8> *%dest, <4 x i32> *%mask, <4 x i32> *
 ; CHECK-NEXT:    vstrbt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %mask, align 4
+  %0 = load <4 x i32>, ptr %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %src, i32 4, <4 x i1> %1, <4 x i32> undef)
+  %2 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %src, i32 4, <4 x i1> %1, <4 x i32> undef)
   %3 = trunc <4 x i32> %2 to <4 x i8>
-  call void @llvm.masked.store.v4i8.p0v4i8(<4 x i8> %3, <4 x i8>* %dest, i32 1, <4 x i1> %1)
+  call void @llvm.masked.store.v4i8.p0(<4 x i8> %3, ptr %dest, i32 1, <4 x i1> %1)
   ret void
 }
 
-define void @foo_trunc_v4i16_v4i32(<4 x i16> *%dest, <4 x i32> *%mask, <4 x i32> *%src) {
+define void @foo_trunc_v4i16_v4i32(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_trunc_v4i16_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
@@ -679,15 +679,15 @@ define void @foo_trunc_v4i16_v4i32(<4 x i16> *%dest, <4 x i32> *%mask, <4 x i32>
 ; CHECK-NEXT:    vstrht.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %mask, align 4
+  %0 = load <4 x i32>, ptr %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %src, i32 4, <4 x i1> %1, <4 x i32> undef)
+  %2 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %src, i32 4, <4 x i1> %1, <4 x i32> undef)
   %3 = trunc <4 x i32> %2 to <4 x i16>
-  call void @llvm.masked.store.v4i16.p0v4i16(<4 x i16> %3, <4 x i16>* %dest, i32 2, <4 x i1> %1)
+  call void @llvm.masked.store.v4i16.p0(<4 x i16> %3, ptr %dest, i32 2, <4 x i1> %1)
   ret void
 }
 
-define void @foo_v4f32_v4f32(<4 x float> *%dest, <4 x i32> *%mask, <4 x float> *%src) {
+define void @foo_v4f32_v4f32(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_v4f32_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
@@ -696,14 +696,14 @@ define void @foo_v4f32_v4f32(<4 x float> *%dest, <4 x i32> *%mask, <4 x float> *
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %mask, align 4
+  %0 = load <4 x i32>, ptr %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
-  %2 = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %src, i32 4, <4 x i1> %1, <4 x float> undef)
-  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %2, <4 x float>* %dest, i32 4, <4 x i1> %1)
+  %2 = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %src, i32 4, <4 x i1> %1, <4 x float> undef)
+  call void @llvm.masked.store.v4f32.p0(<4 x float> %2, ptr %dest, i32 4, <4 x i1> %1)
   ret void
 }
 
-define void @foo_v8f16_v8f16(<8 x half> *%dest, <8 x i16> *%mask, <8 x half> *%src) {
+define void @foo_v8f16_v8f16(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LABEL: foo_v8f16_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
@@ -712,14 +712,14 @@ define void @foo_v8f16_v8f16(<8 x half> *%dest, <8 x i16> *%mask, <8 x half> *%s
 ; CHECK-NEXT:    vstrht.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load <8 x i16>, <8 x i16>* %mask, align 2
+  %0 = load <8 x i16>, ptr %mask, align 2
   %1 = icmp sgt <8 x i16> %0, zeroinitializer
-  %2 = call <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* %src, i32 2, <8 x i1> %1, <8 x half> undef)
-  call void @llvm.masked.store.v8f16.p0v8f16(<8 x half> %2, <8 x half>* %dest, i32 2, <8 x i1> %1)
+  %2 = call <8 x half> @llvm.masked.load.v8f16.p0(ptr %src, i32 2, <8 x i1> %1, <8 x half> undef)
+  call void @llvm.masked.store.v8f16.p0(<8 x half> %2, ptr %dest, i32 2, <8 x i1> %1)
   ret void
 }
 
-define void @foo_v4f32_v4f16(<4 x float> *%dest, <4 x i16> *%mask, <4 x half> *%src) {
+define void @foo_v4f32_v4f16(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-LABEL: foo_v4f32_v4f16:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r7, lr}
@@ -902,15 +902,15 @@ define void @foo_v4f32_v4f16(<4 x float> *%dest, <4 x i16> *%mask, <4 x half> *%
 ; CHECK-BE-NEXT:    bne .LBB18_4
 ; CHECK-BE-NEXT:    b .LBB18_5
 entry:
-  %0 = load <4 x i16>, <4 x i16>* %mask, align 2
+  %0 = load <4 x i16>, ptr %mask, align 2
   %1 = icmp sgt <4 x i16> %0, zeroinitializer
-  %2 = call <4 x half> @llvm.masked.load.v4f16.p0v4f16(<4 x half>* %src, i32 2, <4 x i1> %1, <4 x half> undef)
+  %2 = call <4 x half> @llvm.masked.load.v4f16.p0(ptr %src, i32 2, <4 x i1> %1, <4 x half> undef)
   %3 = fpext <4 x half> %2 to <4 x float>
-  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %3, <4 x float>* %dest, i32 2, <4 x i1> %1)
+  call void @llvm.masked.store.v4f32.p0(<4 x float> %3, ptr %dest, i32 2, <4 x i1> %1)
   ret void
 }
 
-define void @foo_v4f32_v4f16_unaligned(<4 x float> *%dest, <4 x i16> *%mask, <4 x half> *%src) {
+define void @foo_v4f32_v4f16_unaligned(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-LABEL: foo_v4f32_v4f16_unaligned:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r7, lr}
@@ -1093,31 +1093,31 @@ define void @foo_v4f32_v4f16_unaligned(<4 x float> *%dest, <4 x i16> *%mask, <4 
 ; CHECK-BE-NEXT:    bne .LBB19_4
 ; CHECK-BE-NEXT:    b .LBB19_5
 entry:
-  %0 = load <4 x i16>, <4 x i16>* %mask, align 2
+  %0 = load <4 x i16>, ptr %mask, align 2
   %1 = icmp sgt <4 x i16> %0, zeroinitializer
-  %2 = call <4 x half> @llvm.masked.load.v4f16.p0v4f16(<4 x half>* %src, i32 2, <4 x i1> %1, <4 x half> undef)
+  %2 = call <4 x half> @llvm.masked.load.v4f16.p0(ptr %src, i32 2, <4 x i1> %1, <4 x half> undef)
   %3 = fpext <4 x half> %2 to <4 x float>
-  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %3, <4 x float>* %dest, i32 1, <4 x i1> %1)
+  call void @llvm.masked.store.v4f32.p0(<4 x float> %3, ptr %dest, i32 1, <4 x i1> %1)
   ret void
 }
 
-declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v8i16.p0v8i16(<8 x i16>, <8 x i16>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v16i8.p0v16i8(<16 x i8>, <16 x i8>*, i32, <16 x i1>)
-declare void @llvm.masked.store.v8f16.p0v8f16(<8 x half>, <8 x half>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32, <4 x i1>)
-declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32, <16 x i1>, <16 x i8>)
-declare <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>*, i32, <8 x i1>, <8 x i16>)
-declare <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>*, i32, <2 x i1>, <2 x i32>)
-declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
-declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32, <4 x i1>, <4 x float>)
-declare <4 x half> @llvm.masked.load.v4f16.p0v4f16(<4 x half>*, i32, <4 x i1>, <4 x half>)
-declare <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>*, i32, <8 x i1>, <8 x half>)
+declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32, <4 x i1>)
+declare void @llvm.masked.store.v8i16.p0(<8 x i16>, ptr, i32, <8 x i1>)
+declare void @llvm.masked.store.v16i8.p0(<16 x i8>, ptr, i32, <16 x i1>)
+declare void @llvm.masked.store.v8f16.p0(<8 x half>, ptr, i32, <8 x i1>)
+declare void @llvm.masked.store.v4f32.p0(<4 x float>, ptr, i32, <4 x i1>)
+declare <16 x i8> @llvm.masked.load.v16i8.p0(ptr, i32, <16 x i1>, <16 x i8>)
+declare <8 x i16> @llvm.masked.load.v8i16.p0(ptr, i32, <8 x i1>, <8 x i16>)
+declare <2 x i32> @llvm.masked.load.v2i32.p0(ptr, i32, <2 x i1>, <2 x i32>)
+declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32, <4 x i1>, <4 x i32>)
+declare <4 x float> @llvm.masked.load.v4f32.p0(ptr, i32, <4 x i1>, <4 x float>)
+declare <4 x half> @llvm.masked.load.v4f16.p0(ptr, i32, <4 x i1>, <4 x half>)
+declare <8 x half> @llvm.masked.load.v8f16.p0(ptr, i32, <8 x i1>, <8 x half>)
 
-declare void @llvm.masked.store.v8i8.p0v8i8(<8 x i8>, <8 x i8>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v4i8.p0v4i8(<4 x i8>, <4 x i8>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v4i16.p0v4i16(<4 x i16>, <4 x i16>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v2i64.p0v2i64(<2 x i64>, <2 x i64>*, i32, <2 x i1>)
-declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32, <4 x i1>, <4 x i16>)
-declare <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>*, i32, <4 x i1>, <4 x i8>)
-declare <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>*, i32, <8 x i1>, <8 x i8>)
+declare void @llvm.masked.store.v8i8.p0(<8 x i8>, ptr, i32, <8 x i1>)
+declare void @llvm.masked.store.v4i8.p0(<4 x i8>, ptr, i32, <4 x i1>)
+declare void @llvm.masked.store.v4i16.p0(<4 x i16>, ptr, i32, <4 x i1>)
+declare void @llvm.masked.store.v2i64.p0(<2 x i64>, ptr, i32, <2 x i1>)
+declare <4 x i16> @llvm.masked.load.v4i16.p0(ptr, i32, <4 x i1>, <4 x i16>)
+declare <4 x i8> @llvm.masked.load.v4i8.p0(ptr, i32, <4 x i1>, <4 x i8>)
+declare <8 x i8> @llvm.masked.load.v8i8.p0(ptr, i32, <8 x i1>, <8 x i8>)

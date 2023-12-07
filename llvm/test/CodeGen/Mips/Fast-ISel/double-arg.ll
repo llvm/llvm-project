@@ -9,6 +9,6 @@ entry:
 ; CHECK-LABEL: f:
 ; CHECK: sdc1
   %value.addr = alloca double, align 8
-  store double %value, double* %value.addr, align 8
+  store double %value, ptr %value.addr, align 8
   ret i1 false
 }

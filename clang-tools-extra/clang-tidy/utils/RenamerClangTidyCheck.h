@@ -13,7 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/Optional.h"
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -102,36 +102,38 @@ public:
     NamingCheckFailure() = default;
   };
 
-  using NamingCheckId = std::pair<SourceLocation, std::string>;
+  using NamingCheckId = std::pair<SourceLocation, StringRef>;
 
   using NamingCheckFailureMap =
       llvm::DenseMap<NamingCheckId, NamingCheckFailure>;
 
   /// Check Macros for style violations.
-  void checkMacro(SourceManager &SourceMgr, const Token &MacroNameTok,
+  void checkMacro(const SourceManager &SourceMgr, const Token &MacroNameTok,
                   const MacroInfo *MI);
 
   /// Add a usage of a macro if it already has a violation.
   void expandMacro(const Token &MacroNameTok, const MacroInfo *MI);
 
   void addUsage(const RenamerClangTidyCheck::NamingCheckId &Decl,
-                SourceRange Range, SourceManager *SourceMgr = nullptr);
+                SourceRange Range, const SourceManager *SourceMgr = nullptr);
 
   /// Convenience method when the usage to be added is a NamedDecl.
   void addUsage(const NamedDecl *Decl, SourceRange Range,
-                SourceManager *SourceMgr = nullptr);
+                const SourceManager *SourceMgr = nullptr);
+
+  void checkNamedDecl(const NamedDecl *Decl, const SourceManager &SourceMgr);
 
 protected:
   /// Overridden by derived classes, returns information about if and how a Decl
   /// failed the check. A 'std::nullopt' result means the Decl did not fail the
   /// check.
-  virtual llvm::Optional<FailureInfo>
+  virtual std::optional<FailureInfo>
   getDeclFailureInfo(const NamedDecl *Decl, const SourceManager &SM) const = 0;
 
   /// Overridden by derived classes, returns information about if and how a
   /// macro failed the check. A 'std::nullopt' result means the macro did not
   /// fail the check.
-  virtual llvm::Optional<FailureInfo>
+  virtual std::optional<FailureInfo>
   getMacroFailureInfo(const Token &MacroNameTok,
                       const SourceManager &SM) const = 0;
 

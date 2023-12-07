@@ -14,10 +14,13 @@
 // XFAIL: ubsan
 
 // THUMB starts background thead only for Asan.
-// XFAIL: thumb && !asan
+// XFAIL: target=thumb{{.*}} && !asan
 
 // https://github.com/google/sanitizers/issues/981
 // UNSUPPORTED: android-26
+
+// Symbolizer needs to allocated memory when reporting.
+// UNSUPPORTED: internal_symbolizer
 
 #include <stdlib.h>
 #include <stdio.h>

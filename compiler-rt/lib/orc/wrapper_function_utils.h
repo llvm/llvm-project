@@ -27,66 +27,66 @@ namespace __orc_rt {
 class WrapperFunctionResult {
 public:
   /// Create a default WrapperFunctionResult.
-  WrapperFunctionResult() { __orc_rt_CWrapperFunctionResultInit(&R); }
+  WrapperFunctionResult() { orc_rt_CWrapperFunctionResultInit(&R); }
 
   /// Create a WrapperFunctionResult from a CWrapperFunctionResult. This
   /// instance takes ownership of the result object and will automatically
   /// call dispose on the result upon destruction.
-  WrapperFunctionResult(__orc_rt_CWrapperFunctionResult R) : R(R) {}
+  WrapperFunctionResult(orc_rt_CWrapperFunctionResult R) : R(R) {}
 
   WrapperFunctionResult(const WrapperFunctionResult &) = delete;
   WrapperFunctionResult &operator=(const WrapperFunctionResult &) = delete;
 
   WrapperFunctionResult(WrapperFunctionResult &&Other) {
-    __orc_rt_CWrapperFunctionResultInit(&R);
+    orc_rt_CWrapperFunctionResultInit(&R);
     std::swap(R, Other.R);
   }
 
   WrapperFunctionResult &operator=(WrapperFunctionResult &&Other) {
-    __orc_rt_CWrapperFunctionResult Tmp;
-    __orc_rt_CWrapperFunctionResultInit(&Tmp);
+    orc_rt_CWrapperFunctionResult Tmp;
+    orc_rt_CWrapperFunctionResultInit(&Tmp);
     std::swap(Tmp, Other.R);
     std::swap(R, Tmp);
     return *this;
   }
 
-  ~WrapperFunctionResult() { __orc_rt_DisposeCWrapperFunctionResult(&R); }
+  ~WrapperFunctionResult() { orc_rt_DisposeCWrapperFunctionResult(&R); }
 
   /// Relinquish ownership of and return the
-  /// __orc_rt_CWrapperFunctionResult.
-  __orc_rt_CWrapperFunctionResult release() {
-    __orc_rt_CWrapperFunctionResult Tmp;
-    __orc_rt_CWrapperFunctionResultInit(&Tmp);
+  /// orc_rt_CWrapperFunctionResult.
+  orc_rt_CWrapperFunctionResult release() {
+    orc_rt_CWrapperFunctionResult Tmp;
+    orc_rt_CWrapperFunctionResultInit(&Tmp);
     std::swap(R, Tmp);
     return Tmp;
   }
 
   /// Get a pointer to the data contained in this instance.
-  char *data() { return __orc_rt_CWrapperFunctionResultData(&R); }
+  char *data() { return orc_rt_CWrapperFunctionResultData(&R); }
 
   /// Returns the size of the data contained in this instance.
-  size_t size() const { return __orc_rt_CWrapperFunctionResultSize(&R); }
+  size_t size() const { return orc_rt_CWrapperFunctionResultSize(&R); }
 
   /// Returns true if this value is equivalent to a default-constructed
   /// WrapperFunctionResult.
-  bool empty() const { return __orc_rt_CWrapperFunctionResultEmpty(&R); }
+  bool empty() const { return orc_rt_CWrapperFunctionResultEmpty(&R); }
 
   /// Create a WrapperFunctionResult with the given size and return a pointer
   /// to the underlying memory.
   static WrapperFunctionResult allocate(size_t Size) {
     WrapperFunctionResult R;
-    R.R = __orc_rt_CWrapperFunctionResultAllocate(Size);
+    R.R = orc_rt_CWrapperFunctionResultAllocate(Size);
     return R;
   }
 
   /// Copy from the given char range.
   static WrapperFunctionResult copyFrom(const char *Source, size_t Size) {
-    return __orc_rt_CreateCWrapperFunctionResultFromRange(Source, Size);
+    return orc_rt_CreateCWrapperFunctionResultFromRange(Source, Size);
   }
 
   /// Copy from the given null-terminated string (includes the null-terminator).
   static WrapperFunctionResult copyFrom(const char *Source) {
-    return __orc_rt_CreateCWrapperFunctionResultFromString(Source);
+    return orc_rt_CreateCWrapperFunctionResultFromString(Source);
   }
 
   /// Copy from the given std::string (includes the null terminator).
@@ -96,7 +96,7 @@ public:
 
   /// Create an out-of-band error by copying the given string.
   static WrapperFunctionResult createOutOfBandError(const char *Msg) {
-    return __orc_rt_CreateCWrapperFunctionResultFromOutOfBandError(Msg);
+    return orc_rt_CreateCWrapperFunctionResultFromOutOfBandError(Msg);
   }
 
   /// Create an out-of-band error by copying the given string.
@@ -117,11 +117,11 @@ public:
   /// If this value is an out-of-band error then this returns the error message,
   /// otherwise returns nullptr.
   const char *getOutOfBandError() const {
-    return __orc_rt_CWrapperFunctionResultGetOutOfBandError(&R);
+    return orc_rt_CWrapperFunctionResultGetOutOfBandError(&R);
   }
 
 private:
-  __orc_rt_CWrapperFunctionResult R;
+  orc_rt_CWrapperFunctionResult R;
 };
 
 namespace detail {
@@ -434,7 +434,7 @@ public:
   /// Run call returning raw WrapperFunctionResult.
   WrapperFunctionResult run() const {
     using FnTy =
-        __orc_rt_CWrapperFunctionResult(const char *ArgData, size_t ArgSize);
+        orc_rt_CWrapperFunctionResult(const char *ArgData, size_t ArgSize);
     return WrapperFunctionResult(
         FnAddr.toPtr<FnTy *>()(ArgData.data(), ArgData.size()));
   }

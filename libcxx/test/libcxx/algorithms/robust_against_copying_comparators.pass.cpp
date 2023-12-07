@@ -79,12 +79,13 @@ struct BinaryTransform {
 };
 
 #if TEST_STD_VER > 17
+template <class T>
 struct ThreeWay {
     int *copies_;
     constexpr explicit ThreeWay(int *copies) : copies_(copies) {}
     constexpr ThreeWay(const ThreeWay& rhs) : copies_(rhs.copies_) { *copies_ += 1; }
     constexpr ThreeWay& operator=(const ThreeWay&) = default;
-    constexpr std::strong_ordering operator()(void*, void*) const { return std::strong_ordering::equal; }
+    constexpr std::strong_ordering operator()(T, T) const { return std::strong_ordering::equal; }
 };
 #endif
 
@@ -142,7 +143,7 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     if (!TEST_IS_CONSTANT_EVALUATED) { (void)std::inplace_merge(first, mid, last, Less<T>(&copies)); assert(copies == 0); }
     (void)std::lexicographical_compare(first, last, first2, last2, Less<T>(&copies)); assert(copies == 0);
 #if TEST_STD_VER > 17
-    //(void)std::lexicographical_compare_three_way(first, last, first2, last2, ThreeWay(&copies)); assert(copies == 0);
+    (void)std::lexicographical_compare_three_way(first, last, first2, last2, ThreeWay<T>(&copies)); assert(copies == 0);
 #endif
     (void)std::lower_bound(first, last, value, Less<T>(&copies)); assert(copies == 0);
     (void)std::make_heap(first, last, Less<T>(&copies)); assert(copies == 0);

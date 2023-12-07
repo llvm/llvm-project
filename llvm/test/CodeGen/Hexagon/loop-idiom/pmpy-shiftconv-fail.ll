@@ -35,8 +35,8 @@ b3:                                               ; preds = %b3, %b1
 
 b13:                                              ; preds = %b3
   %v14 = phi i32 [ %v10, %b3 ]
-  %v15 = getelementptr inbounds [256 x i32], [256 x i32]* @A, i32 0, i32 %v2
-  store i32 %v14, i32* %v15, align 4
+  %v15 = getelementptr inbounds [256 x i32], ptr @A, i32 0, i32 %v2
+  store i32 %v14, ptr %v15, align 4
   %v16 = add nuw nsw i32 %v2, 1
   %v17 = icmp ne i32 %v16, 256
   br i1 %v17, label %b1, label %b18

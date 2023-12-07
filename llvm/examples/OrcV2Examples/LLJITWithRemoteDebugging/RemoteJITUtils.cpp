@@ -8,6 +8,7 @@
 
 #include "RemoteJITUtils.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -37,8 +38,8 @@ Error addDebugSupport(ObjectLayer &ObjLayer) {
     return createStringError(inconvertibleErrorCode(),
                              "No debug support for given object layer type");
 
-  ObjLinkingLayer->addPlugin(
-      std::make_unique<DebugObjectManagerPlugin>(ES, std::move(*Registrar)));
+  ObjLinkingLayer->addPlugin(std::make_unique<DebugObjectManagerPlugin>(
+      ES, std::move(*Registrar), true, true));
   return Error::success();
 }
 

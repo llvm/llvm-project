@@ -33,7 +33,7 @@
 ; CHECK-NEXT:    plbz r3, _ZL13StaticBoolVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, ptr @_ZL13StaticBoolVar, align 1, !range !0
+  %0 = load i8, ptr @_ZL13StaticBoolVar, align 1, !range !0, !noundef !{}
   %tobool = icmp ne i8 %0, 0
   ret i1 %tobool
 }

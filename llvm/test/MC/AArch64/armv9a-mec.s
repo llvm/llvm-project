@@ -49,8 +49,8 @@
 // CHECK-NO-MEC: [[@LINE-2]]:15: error: expected writable system register or pstate
 
           dc cigdpae, x0
-// CHECK: dc cigdpae, x0             // encoding: [0x00,0x7e,0x0c,0xd5]
+// CHECK: dc cigdpae, x0             // encoding: [0xe0,0x7e,0x0c,0xd5]
 // CHECK-NO-MEC: [[@LINE-2]]:14: error: DC CIGDPAE requires: mec
           dc cipae, x0
-// CHECK: dc cipae, x0               // encoding: [0xe0,0x7e,0x0c,0xd5]
+// CHECK: dc cipae, x0               // encoding: [0x00,0x7e,0x0c,0xd5]
 // CHECK-NO-MEC: [[@LINE-2]]:14: error: DC CIPAE requires: mec

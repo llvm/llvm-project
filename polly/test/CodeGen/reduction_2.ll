@@ -28,43 +28,42 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define i32 @main() nounwind {
 entry:
-  %A = alloca [1021 x i32], align 4               ; <[1021 x i32]*> [#uses=6]
-  %RED = alloca [1 x i32], align 4                ; <[1 x i32]*> [#uses=3]
-  %arraydecay = getelementptr inbounds [1021 x i32], [1021 x i32]* %A, i32 0, i32 0 ; <i32*> [#uses=1]
-  %conv = bitcast i32* %arraydecay to i8*         ; <i8*> [#uses=1]
-  call void @llvm.memset.p0i8.i64(i8* %conv, i8 0, i64 4084, i32 1, i1 false)
-  %arraydecay1 = getelementptr inbounds [1021 x i32], [1021 x i32]* %A, i32 0, i32 0 ; <i32*> [#uses=1]
-  %arrayidx = getelementptr inbounds i32, i32* %arraydecay1, i64 0 ; <i32*> [#uses=1]
-  store i32 1, i32* %arrayidx
-  %arraydecay2 = getelementptr inbounds [1021 x i32], [1021 x i32]* %A, i32 0, i32 0 ; <i32*> [#uses=1]
-  %arrayidx3 = getelementptr inbounds i32, i32* %arraydecay2, i64 1 ; <i32*> [#uses=1]
-  store i32 1, i32* %arrayidx3
-  %arraydecay4 = getelementptr inbounds [1 x i32], [1 x i32]* %RED, i32 0, i32 0 ; <i32*> [#uses=1]
-  %arrayidx5 = getelementptr inbounds i32, i32* %arraydecay4, i64 0 ; <i32*> [#uses=1]
-  store i32 0, i32* %arrayidx5
+  %A = alloca [1021 x i32], align 4               ; <ptr> [#uses=6]
+  %RED = alloca [1 x i32], align 4                ; <ptr> [#uses=3]
+  %arraydecay = getelementptr inbounds [1021 x i32], ptr %A, i32 0, i32 0 ; <ptr> [#uses=1]
+  call void @llvm.memset.p0.i64(ptr %arraydecay, i8 0, i64 4084, i32 1, i1 false)
+  %arraydecay1 = getelementptr inbounds [1021 x i32], ptr %A, i32 0, i32 0 ; <ptr> [#uses=1]
+  %arrayidx = getelementptr inbounds i32, ptr %arraydecay1, i64 0 ; <ptr> [#uses=1]
+  store i32 1, ptr %arrayidx
+  %arraydecay2 = getelementptr inbounds [1021 x i32], ptr %A, i32 0, i32 0 ; <ptr> [#uses=1]
+  %arrayidx3 = getelementptr inbounds i32, ptr %arraydecay2, i64 1 ; <ptr> [#uses=1]
+  store i32 1, ptr %arrayidx3
+  %arraydecay4 = getelementptr inbounds [1 x i32], ptr %RED, i32 0, i32 0 ; <ptr> [#uses=1]
+  %arrayidx5 = getelementptr inbounds i32, ptr %arraydecay4, i64 0 ; <ptr> [#uses=1]
+  store i32 0, ptr %arrayidx5
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
   %indvar = phi i64 [ %indvar.next, %for.inc ], [ 0, %entry ] ; <i64> [#uses=5]
-  %arrayidx15 = getelementptr [1021 x i32], [1021 x i32]* %A, i64 0, i64 %indvar ; <i32*> [#uses=2]
+  %arrayidx15 = getelementptr [1021 x i32], ptr %A, i64 0, i64 %indvar ; <ptr> [#uses=2]
   %tmp = add i64 %indvar, 2                       ; <i64> [#uses=1]
-  %arrayidx20 = getelementptr [1021 x i32], [1021 x i32]* %A, i64 0, i64 %tmp ; <i32*> [#uses=1]
+  %arrayidx20 = getelementptr [1021 x i32], ptr %A, i64 0, i64 %tmp ; <ptr> [#uses=1]
   %tmp1 = add i64 %indvar, 1                      ; <i64> [#uses=1]
-  %arrayidx9 = getelementptr [1021 x i32], [1021 x i32]* %A, i64 0, i64 %tmp1 ; <i32*> [#uses=1]
+  %arrayidx9 = getelementptr [1021 x i32], ptr %A, i64 0, i64 %tmp1 ; <ptr> [#uses=1]
   %exitcond = icmp ne i64 %indvar, 1019           ; <i1> [#uses=1]
   br i1 %exitcond, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %tmp10 = load i32, i32* %arrayidx9                   ; <i32> [#uses=1]
-  %tmp16 = load i32, i32* %arrayidx15                  ; <i32> [#uses=1]
+  %tmp10 = load i32, ptr %arrayidx9                   ; <i32> [#uses=1]
+  %tmp16 = load i32, ptr %arrayidx15                  ; <i32> [#uses=1]
   %add = add nsw i32 %tmp10, %tmp16               ; <i32> [#uses=1]
-  store i32 %add, i32* %arrayidx20
-  %tmp26 = load i32, i32* %arrayidx15                  ; <i32> [#uses=1]
-  %arraydecay27 = getelementptr inbounds [1 x i32], [1 x i32]* %RED, i32 0, i32 0 ; <i32*> [#uses=1]
-  %arrayidx28 = getelementptr inbounds i32, i32* %arraydecay27, i64 0 ; <i32*> [#uses=2]
-  %tmp29 = load i32, i32* %arrayidx28                  ; <i32> [#uses=1]
+  store i32 %add, ptr %arrayidx20
+  %tmp26 = load i32, ptr %arrayidx15                  ; <i32> [#uses=1]
+  %arraydecay27 = getelementptr inbounds [1 x i32], ptr %RED, i32 0, i32 0 ; <ptr> [#uses=1]
+  %arrayidx28 = getelementptr inbounds i32, ptr %arraydecay27, i64 0 ; <ptr> [#uses=2]
+  %tmp29 = load i32, ptr %arrayidx28                  ; <i32> [#uses=1]
   %add30 = add nsw i32 %tmp29, %tmp26             ; <i32> [#uses=1]
-  store i32 %add30, i32* %arrayidx28
+  store i32 %add30, ptr %arrayidx28
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -72,9 +71,9 @@ for.inc:                                          ; preds = %for.body
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  %arraydecay32 = getelementptr inbounds [1 x i32], [1 x i32]* %RED, i32 0, i32 0 ; <i32*> [#uses=1]
-  %arrayidx33 = getelementptr inbounds i32, i32* %arraydecay32, i64 0 ; <i32*> [#uses=1]
-  %tmp34 = load i32, i32* %arrayidx33                  ; <i32> [#uses=1]
+  %arraydecay32 = getelementptr inbounds [1 x i32], ptr %RED, i32 0, i32 0 ; <ptr> [#uses=1]
+  %arrayidx33 = getelementptr inbounds i32, ptr %arraydecay32, i64 0 ; <ptr> [#uses=1]
+  %tmp34 = load i32, ptr %arrayidx33                  ; <i32> [#uses=1]
   %cmp35 = icmp ne i32 %tmp34, 382399368          ; <i1> [#uses=1]
   br i1 %cmp35, label %if.then, label %if.end
 
@@ -86,7 +85,7 @@ if.end:                                           ; preds = %if.then, %for.end
   ret i32 %retval.0
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i32, i1) nounwind
 
 ; This is a negative test. We can prove that RED[0] in the conditional after
 ; the loop is dereferencable and consequently expand the SCoP from the

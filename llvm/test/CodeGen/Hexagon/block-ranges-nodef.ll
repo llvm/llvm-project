@@ -10,7 +10,7 @@ entry:
   %cmp17 = icmp ne i64 %c, 0
   %conv19 = zext i1 %cmp17 to i64
   %or = or i64 %conv19, %b
-  store i64 %or, i64* undef, align 8
+  store i64 %or, ptr undef, align 8
   br i1 undef, label %if.then44, label %if.end96
 
 if.then44:                                        ; preds = %entry

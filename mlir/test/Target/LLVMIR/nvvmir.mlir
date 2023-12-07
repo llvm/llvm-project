@@ -30,6 +30,35 @@ llvm.func @nvvm_special_regs() -> i32 {
   %13 = nvvm.read.ptx.sreg.warpsize : i32
   // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.laneid()
   %14 = nvvm.read.ptx.sreg.laneid : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clusterid.x
+  %15 = nvvm.read.ptx.sreg.clusterid.x : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clusterid.y
+  %16 = nvvm.read.ptx.sreg.clusterid.y : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clusterid.z
+  %17 = nvvm.read.ptx.sreg.clusterid.z : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nclusterid.x
+  %18 = nvvm.read.ptx.sreg.nclusterid.x : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nclusterid.y
+  %19 = nvvm.read.ptx.sreg.nclusterid.y : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nclusterid.z
+  %20 = nvvm.read.ptx.sreg.nclusterid.z : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid
+  %21 = nvvm.read.ptx.sreg.cluster.ctaid.x : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid
+  %22 = nvvm.read.ptx.sreg.cluster.ctaid.y : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid
+  %23 = nvvm.read.ptx.sreg.cluster.ctaid.z : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid
+  %24 = nvvm.read.ptx.sreg.cluster.nctaid.x : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid
+  %25 = nvvm.read.ptx.sreg.cluster.nctaid.y : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid
+  %26 = nvvm.read.ptx.sreg.cluster.nctaid.z : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctarank
+  %27 = nvvm.read.ptx.sreg.cluster.ctarank : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank
+  %28 = nvvm.read.ptx.sreg.cluster.nctarank : i32
+  
   llvm.return %1 : i32
 }
 
@@ -309,13 +338,13 @@ llvm.func @nvvm_wmma_mma(%0 : i32, %1 : i32, %2 : i32, %3 : i32, %4 : i32, %5 : 
 // CHECK-LABEL: @cp_async
 llvm.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
 // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.4(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 4
+  nvvm.cp.async.shared.global %arg0, %arg1, 4, cache =  ca : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
 // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.8(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 8
+  nvvm.cp.async.shared.global %arg0, %arg1, 8, cache =  ca : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
 // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 16
+  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  ca : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
 // CHECK: call void @llvm.nvvm.cp.async.cg.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 16 {bypass_l1}
+  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  cg : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
 // CHECK: call void @llvm.nvvm.cp.async.commit.group()
   nvvm.cp.async.commit.group
 // CHECK: call void @llvm.nvvm.cp.async.wait.group(i32 0)

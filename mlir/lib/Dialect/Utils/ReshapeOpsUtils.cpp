@@ -12,10 +12,11 @@
 #include "mlir/IR/Builders.h"
 
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 
-Optional<SmallVector<ReassociationIndices>>
+std::optional<SmallVector<ReassociationIndices>>
 mlir::getReassociationIndicesForReshape(ShapedType sourceType,
                                         ShapedType targetType) {
   if (sourceType.getRank() > targetType.getRank())
@@ -27,7 +28,7 @@ mlir::getReassociationIndicesForReshape(ShapedType sourceType,
   return std::nullopt;
 }
 
-Optional<SmallVector<ReassociationIndices>>
+std::optional<SmallVector<ReassociationIndices>>
 mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
                                          ArrayRef<int64_t> targetShape) {
   if (sourceShape.size() <= targetShape.size())
@@ -46,9 +47,9 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
       break;
 
     int64_t currTargetShape = targetShape[targetDim];
-    while (sourceShape[sourceDim] != ShapedType::kDynamic &&
-           prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape &&
-           sourceDim < sourceShape.size()) {
+    while (sourceDim < sourceShape.size() &&
+           sourceShape[sourceDim] != ShapedType::kDynamic &&
+           prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape) {
       prodOfCollapsedDims *= sourceShape[sourceDim];
       currIndices.push_back(sourceDim++);
     }
@@ -92,7 +93,8 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   return reassociationMap;
 }
 
-Optional<SmallVector<ReassociationIndices>> mlir::composeReassociationIndices(
+std::optional<SmallVector<ReassociationIndices>>
+mlir::composeReassociationIndices(
     ArrayRef<ReassociationIndices> producerReassociations,
     ArrayRef<ReassociationIndices> consumerReassociations,
     MLIRContext *context) {
@@ -160,7 +162,7 @@ ArrayAttr mlir::getReassociationIndicesAttribute(
   SmallVector<Attribute, 4> reassociationAttr =
       llvm::to_vector<4>(llvm::map_range(
           reassociation, [&](const ReassociationIndices &indices) -> Attribute {
-            return b.getI64ArrayAttr(indices).cast<Attribute>();
+            return cast<Attribute>(b.getI64ArrayAttr(indices));
           }));
   return b.getArrayAttr(reassociationAttr);
 }
@@ -265,7 +267,7 @@ LogicalResult mlir::reshapeLikeShapesAreCompatible(
 }
 
 bool mlir::hasNonIdentityLayout(Type type) {
-  if (auto memrefType = type.dyn_cast<MemRefType>())
+  if (auto memrefType = dyn_cast<MemRefType>(type))
     return !memrefType.getLayout().isIdentity();
   return false;
 }
@@ -354,11 +356,11 @@ SliceFromCollapseHelper::getInsertSliceParams(MLIRContext *ctx,
 
 /// Returns the index of the only non-unit dimension among `indices` of `shape`,
 /// if such a dimension exists and `indices` has more than one element.
-/// Otherwise, return none.
-static Optional<int64_t> getUniqueNonUnitDim(ArrayRef<int64_t> indices,
-                                             ArrayRef<int64_t> shape) {
+/// Otherwise, return std::nullopt.
+static std::optional<int64_t> getUniqueNonUnitDim(ArrayRef<int64_t> indices,
+                                                  ArrayRef<int64_t> shape) {
   // Return false if more than one of the dimensions in this group are not 1.
-  Optional<int64_t> dimIndex = std::nullopt;
+  std::optional<int64_t> dimIndex;
   if (indices.size() < 2)
     return std::nullopt;
   for (int64_t idx : indices) {
@@ -374,10 +376,10 @@ static Optional<int64_t> getUniqueNonUnitDim(ArrayRef<int64_t> indices,
 // For each segment in the reassociation indices, check whether we can
 // simplify that segment with a rank-reducing extract slice. We can do this if
 // all but (exactly) one of the corresponding source dims is 1.
-static SmallVector<Optional<int64_t>> getCollapseShapeTrivialSegments(
+static SmallVector<std::optional<int64_t>> getCollapseShapeTrivialSegments(
     RankedTensorType sourceType,
     ArrayRef<ReassociationIndices> reassociationIndices) {
-  SmallVector<Optional<int64_t>> trivialSegments;
+  SmallVector<std::optional<int64_t>> trivialSegments;
   for (const auto &indices : reassociationIndices)
     trivialSegments.push_back(
         getUniqueNonUnitDim(indices, sourceType.getShape()));
@@ -386,13 +388,13 @@ static SmallVector<Optional<int64_t>> getCollapseShapeTrivialSegments(
 
 /// Returns true if any of the segments of the reassociation indices for a
 /// collapsing reshape can be simplified using a rank-reducing slice.
-static FailureOr<SmallVector<Optional<int64_t>>>
+static FailureOr<SmallVector<std::optional<int64_t>>>
 canCollapseShapeBeSimplifiedByRankReducingSlice(
     RankedTensorType sourceType,
     ArrayRef<ReassociationIndices> reassociationIndices) {
-  SmallVector<Optional<int64_t>> trivialSegments =
+  SmallVector<std::optional<int64_t>> trivialSegments =
       getCollapseShapeTrivialSegments(sourceType, reassociationIndices);
-  if (!llvm::any_of(trivialSegments, [](const Optional<int64_t> &idx) {
+  if (!llvm::any_of(trivialSegments, [](const std::optional<int64_t> &idx) {
         return idx.has_value();
       }))
     return failure();
@@ -403,7 +405,7 @@ FailureOr<CollapseShapeRankReducingSliceSimplificationInfo>
 mlir::getSimplifyCollapseShapeWithRankReducingSliceInfo(
     RankedTensorType sourceType,
     ArrayRef<ReassociationIndices> reassociationIndices) {
-  FailureOr<SmallVector<Optional<int64_t>>> trivialSegments =
+  FailureOr<SmallVector<std::optional<int64_t>>> trivialSegments =
       canCollapseShapeBeSimplifiedByRankReducingSlice(sourceType,
                                                       reassociationIndices);
   if (failed(trivialSegments))
@@ -447,4 +449,44 @@ mlir::getSimplifyCollapseShapeWithRankReducingSliceInfo(
 
   return CollapseShapeRankReducingSliceSimplificationInfo{
       sliceType, newReassociationIndices};
+}
+
+PackingMetadata mlir::computePackingMetadata(int64_t packedRank,
+                                             ArrayRef<int64_t> innerDimPos) {
+  PackingMetadata res;
+  res.insertPositions.reserve(innerDimPos.size());
+  // The pack insert position is the position + the number of previously
+  // inserted positions + offset.
+  // The offset controls whether the packing dimension is the first or last.
+  //
+  // Example
+  // =======
+  // Consider packing from a hypothetical ABCD layout to ABCDba whose
+  // pack.inner_dims is [1, 0]. The first step consists in undoing the
+  // permutation and producing AaBbCD. This is achieved purely by computing the
+  // insert positions of `b` and `a` into `ABCD`, starting from [1, 0]. One
+  // possibility, is to produce insert positions [2, 0], this would result in an
+  // aAbBCD layout (i.e. offset 0). The other possibility, is to produce insert
+  // positions [3, 1], this would result in an AaBbCD layout (i.e. offset 1).
+  // The latter is what we expect from packing.
+  int64_t offset = 1;
+  for (int64_t pos : innerDimPos) {
+    int64_t numInsertedBefore = llvm::count_if(
+        innerDimPos, [&pos](int64_t pos2) { return pos > pos2; });
+    res.insertPositions.push_back(pos + numInsertedBefore + offset);
+  }
+
+  DenseSet<int64_t> posSet(res.insertPositions.begin(),
+                           res.insertPositions.end());
+  res.reassociations.reserve(packedRank);
+  for (int64_t i = 1; i <= packedRank; ++i) {
+    res.outerPositions.push_back(i - 1);
+    if (!posSet.contains(i)) {
+      res.reassociations.push_back(ReassociationIndices{i - 1});
+      continue;
+    }
+    res.reassociations.push_back(ReassociationIndices{i - 1, i});
+    ++i;
+  }
+  return res;
 }

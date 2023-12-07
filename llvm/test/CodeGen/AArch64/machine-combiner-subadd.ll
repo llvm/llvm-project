@@ -9,12 +9,12 @@
 define i32 @test1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add w9, w0, #100
-; CHECK-NEXT:    orr w8, w2, #0x80
-; CHECK-NEXT:    sub w8, w8, w9
-; CHECK-NEXT:    eor w9, w1, w9, lsl #8
-; CHECK-NEXT:    sub w8, w8, w9
-; CHECK-NEXT:    eor w0, w8, w9, asr #13
+; CHECK-NEXT:    add w8, w0, #100
+; CHECK-NEXT:    orr w9, w2, #0x80
+; CHECK-NEXT:    eor w10, w1, w8, lsl #8
+; CHECK-NEXT:    sub w8, w9, w8
+; CHECK-NEXT:    sub w8, w8, w10
+; CHECK-NEXT:    eor w0, w8, w10, asr #13
 ; CHECK-NEXT:    ret
 entry:
   %c1  = or  i32 %c, 128
@@ -32,12 +32,12 @@ entry:
 define i64 @test2(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add x9, x0, #100
-; CHECK-NEXT:    orr x8, x2, #0x80
-; CHECK-NEXT:    sub x8, x8, x9
-; CHECK-NEXT:    eor x9, x1, x9, lsl #8
-; CHECK-NEXT:    sub x8, x8, x9
-; CHECK-NEXT:    eor x0, x8, x9, asr #13
+; CHECK-NEXT:    add x8, x0, #100
+; CHECK-NEXT:    orr x9, x2, #0x80
+; CHECK-NEXT:    eor x10, x1, x8, lsl #8
+; CHECK-NEXT:    sub x8, x9, x8
+; CHECK-NEXT:    sub x8, x8, x10
+; CHECK-NEXT:    eor x0, x8, x10, asr #13
 ; CHECK-NEXT:    ret
 entry:
   %c1  = or  i64 %c, 128
@@ -55,12 +55,12 @@ entry:
 define i32 @test3(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add w9, w0, #100
-; CHECK-NEXT:    orr w8, w2, #0x80
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    eor w9, w1, w9, lsl #8
-; CHECK-NEXT:    sub w8, w9, w8
-; CHECK-NEXT:    eor w0, w8, w9, asr #13
+; CHECK-NEXT:    add w8, w0, #100
+; CHECK-NEXT:    orr w9, w2, #0x80
+; CHECK-NEXT:    eor w10, w1, w8, lsl #8
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    sub w8, w10, w8
+; CHECK-NEXT:    eor w0, w8, w10, asr #13
 ; CHECK-NEXT:    ret
 entry:
   %c1  = or  i32 %c, 128

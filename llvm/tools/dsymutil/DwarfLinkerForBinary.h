@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkLinker.h"
+#include <mutex>
 
 namespace llvm {
 namespace dsymutil {
@@ -35,14 +36,21 @@ namespace dsymutil {
 class DwarfLinkerForBinary {
 public:
   DwarfLinkerForBinary(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
-                       LinkOptions Options)
-      : OutFile(OutFile), BinHolder(BinHolder), Options(std::move(Options)) {}
+                       LinkOptions Options, std::mutex &ErrorHandlerMutex)
+      : OutFile(OutFile), BinHolder(BinHolder), Options(std::move(Options)),
+        ErrorHandlerMutex(ErrorHandlerMutex) {}
 
   /// Link the contents of the DebugMap.
   bool link(const DebugMap &);
 
-  void reportWarning(const Twine &Warning, StringRef Context,
+  void reportWarning(Twine Warning, Twine Context = {},
                      const DWARFDie *DIE = nullptr) const;
+  void reportError(Twine Error, Twine Context = {},
+                   const DWARFDie *DIE = nullptr) const;
+
+  /// Returns true if input verification is enabled and verification errors were
+  /// found.
+  bool InputVerificationFailed() const { return HasVerificationErrors; }
 
   /// Flags passed to DwarfLinker::lookForDIEsToKeep
   enum TraversalFlags {
@@ -57,7 +65,8 @@ public:
 private:
 
   /// Keeps track of relocations.
-  class AddressManager : public AddressesMap {
+  template <typename AddressesMapBase>
+  class AddressManager : public AddressesMapBase {
     struct ValidReloc {
       uint64_t Offset;
       uint32_t Size;
@@ -83,8 +92,6 @@ private:
     std::vector<ValidReloc> ValidDebugAddrRelocs;
     /// }
 
-    RangesTy AddressRanges;
-
     StringRef SrcFileName;
 
     /// Returns list of valid relocations from \p Relocs,
@@ -100,8 +107,8 @@ private:
     /// \returns resolved value.
     uint64_t relocate(const ValidReloc &Reloc) const;
 
-    /// Fill \p Info with address information for the specified \p Reloc.
-    void fillDieInfo(const ValidReloc &Reloc, CompileUnit::DIEInfo &Info);
+    /// \returns value for the specified \p Reloc.
+    int64_t getRelocValue(const ValidReloc &Reloc);
 
     /// Print contents of debug map entry for the specified \p Reloc.
     void printReloc(const ValidReloc &Reloc);
@@ -111,31 +118,6 @@ private:
                    const DebugMapObject &DMO)
         : Linker(Linker), SrcFileName(DMO.getObjectFilename()) {
       findValidRelocsInDebugSections(Obj, DMO);
-
-      // Iterate over the debug map entries and put all the ones that are
-      // functions (because they have a size) into the Ranges map. This map is
-      // very similar to the FunctionRanges that are stored in each unit, with 2
-      // notable differences:
-      //
-      //  1. Obviously this one is global, while the other ones are per-unit.
-      //
-      //  2. This one contains not only the functions described in the DIE
-      //     tree, but also the ones that are only in the debug map.
-      //
-      // The latter information is required to reproduce dsymutil's logic while
-      // linking line tables. The cases where this information matters look like
-      // bugs that need to be investigated, but for now we need to reproduce
-      // dsymutil's behavior.
-      // FIXME: Once we understood exactly if that information is needed,
-      // maybe totally remove this (or try to use it to do a real
-      // -gline-tables-only on Darwin.
-      for (const auto &Entry : DMO.symbols()) {
-        const auto &Mapping = Entry.getValue();
-        if (Mapping.Size && Mapping.ObjectAddress)
-          AddressRanges.insert(
-              {*Mapping.ObjectAddress, *Mapping.ObjectAddress + Mapping.Size},
-              int64_t(Mapping.BinaryAddress) - *Mapping.ObjectAddress);
-      }
     }
     ~AddressManager() override { clear(); }
 
@@ -164,26 +146,22 @@ private:
     /// Checks that there is a relocation in the \p Relocs array against a
     /// debug map entry between \p StartOffset and \p NextOffset.
     ///
-    /// \returns true and sets Info.InDebugMap if it is the case.
-    bool hasValidRelocationAt(const std::vector<ValidReloc> &Relocs,
-                              uint64_t StartOffset, uint64_t EndOffset,
-                              CompileUnit::DIEInfo &Info);
+    /// \returns relocation value if relocation exist, otherwise std::nullopt.
+    std::optional<int64_t>
+    hasValidRelocationAt(const std::vector<ValidReloc> &Relocs,
+                         uint64_t StartOffset, uint64_t EndOffset);
 
-    bool isLiveVariable(const DWARFDie &DIE,
-                        CompileUnit::DIEInfo &Info) override;
-    bool isLiveSubprogram(const DWARFDie &DIE,
-                          CompileUnit::DIEInfo &Info) override;
+    std::optional<int64_t> getExprOpAddressRelocAdjustment(
+        DWARFUnit &U, const DWARFExpression::Operation &Op,
+        uint64_t StartOffset, uint64_t EndOffset) override;
+
+    std::optional<int64_t>
+    getSubprogramRelocAdjustment(const DWARFDie &DIE) override;
 
     bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                           bool IsLittleEndian) override;
 
-    llvm::Expected<uint64_t> relocateIndexedAddr(uint64_t StartOffset,
-                                                 uint64_t EndOffset) override;
-
-    RangesTy &getValidAddressRanges() override { return AddressRanges; }
-
     void clear() override {
-      AddressRanges.clear();
       ValidDebugInfoRelocs.clear();
       ValidDebugAddrRelocs.clear();
     }
@@ -193,14 +171,20 @@ private:
   /// \defgroup Helpers Various helper methods.
   ///
   /// @{
-  bool createStreamer(const Triple &TheTriple, raw_fd_ostream &OutFile);
+  template <typename OutStreamer>
+  bool createStreamer(const Triple &TheTriple,
+                      typename OutStreamer::OutputFileType FileType,
+                      std::unique_ptr<OutStreamer> &Streamer,
+                      raw_fd_ostream &OutFile);
 
   /// Attempt to load a debug object from disk.
   ErrorOr<const object::ObjectFile &> loadObject(const DebugMapObject &Obj,
                                                  const Triple &triple);
-  ErrorOr<DWARFFile &> loadObject(const DebugMapObject &Obj,
-                                  const DebugMap &DebugMap,
-                                  remarks::RemarkLinker &RL);
+
+  template <typename OutDWARFFile, typename AddressesMap>
+  ErrorOr<std::unique_ptr<OutDWARFFile>> loadObject(const DebugMapObject &Obj,
+                                                    const DebugMap &DebugMap,
+                                                    remarks::RemarkLinker &RL);
 
   void collectRelocationsToApplyToSwiftReflectionSections(
       const object::SectionRef &Section, StringRef &Contents,
@@ -210,19 +194,24 @@ private:
       std::vector<MachOUtils::DwarfRelocationApplicationInfo>
           &RelocationsToApply) const;
 
+  Error copySwiftInterfaces(StringRef Architecture) const;
+
+  template <typename OutStreamer>
   void copySwiftReflectionMetadata(
-      const llvm::dsymutil::DebugMapObject *Obj, DwarfStreamer *Streamer,
+      const llvm::dsymutil::DebugMapObject *Obj, OutStreamer *Streamer,
       std::vector<uint64_t> &SectionToOffsetInDwarf,
       std::vector<MachOUtils::DwarfRelocationApplicationInfo>
           &RelocationsToApply);
 
+  template <typename Linker, typename OutDwarfFile, typename AddressMapBase>
+  bool linkImpl(const DebugMap &Map,
+                typename Linker::OutputFileType ObjectType);
+
   raw_fd_ostream &OutFile;
   BinaryHolder &BinHolder;
   LinkOptions Options;
-  std::unique_ptr<DwarfStreamer> Streamer;
-  std::vector<std::unique_ptr<DWARFFile>> ObjectsForLinking;
-  std::vector<std::unique_ptr<DWARFContext>> ContextForLinking;
-  std::vector<std::unique_ptr<AddressManager>> AddressMapForLinking;
+  std::mutex &ErrorHandlerMutex;
+
   std::vector<std::string> EmptyWarnings;
 
   /// A list of all .swiftinterface files referenced by the debug
@@ -233,6 +222,7 @@ private:
 
   bool ModuleCacheHintDisplayed = false;
   bool ArchiveHintDisplayed = false;
+  bool HasVerificationErrors = false;
 };
 
 } // end namespace dsymutil

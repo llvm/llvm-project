@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/GlobalIFunc.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <utility> // for std::pair
@@ -26,6 +27,7 @@ template <typename T> class ArrayRef;
 class Module;
 class Function;
 class FunctionCallee;
+class GlobalIFunc;
 class GlobalValue;
 class Constant;
 class Value;
@@ -42,8 +44,13 @@ void appendToGlobalCtors(Module &M, Function *F, int Priority,
 void appendToGlobalDtors(Module &M, Function *F, int Priority,
                          Constant *Data = nullptr);
 
+/// Sets the KCFI type for the function. Used for compiler-generated functions
+/// that are indirectly called in instrumented code.
+void setKCFIType(Module &M, Function &F, StringRef MangledType);
+
 FunctionCallee declareSanitizerInitFunction(Module &M, StringRef InitName,
-                                            ArrayRef<Type *> InitArgTypes);
+                                            ArrayRef<Type *> InitArgTypes,
+                                            bool Weak = false);
 
 /// Creates sanitizer constructor function.
 /// \return Returns pointer to constructor.
@@ -56,7 +63,7 @@ Function *createSanitizerCtor(Module &M, StringRef CtorName);
 std::pair<Function *, FunctionCallee> createSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
-    StringRef VersionCheckName = StringRef());
+    StringRef VersionCheckName = StringRef(), bool Weak = false);
 
 /// Creates sanitizer constructor function lazily. If a constructor and init
 /// function already exist, this function returns it. Otherwise it calls \c
@@ -69,7 +76,7 @@ std::pair<Function *, FunctionCallee> getOrCreateSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
     function_ref<void(Function *, FunctionCallee)> FunctionsCreatedCallback,
-    StringRef VersionCheckName = StringRef());
+    StringRef VersionCheckName = StringRef(), bool Weak = false);
 
 /// Rename all the anon globals in the module using a hash computed from
 /// the list of public globals in the module.
@@ -120,6 +127,21 @@ std::string getUniqueModuleId(Module *M);
 /// module using the same section name.
 void embedBufferInModule(Module &M, MemoryBufferRef Buf, StringRef SectionName,
                          Align Alignment = Align(1));
+
+/// Lower all calls to ifuncs by replacing uses with indirect calls loaded out
+/// of a global table initialized in a global constructor. This will introduce
+/// one constructor function and adds it to llvm.global_ctors. The constructor
+/// will call the resolver function once for each ifunc.
+///
+/// Leaves any unhandled constant initializer uses as-is.
+///
+/// If \p IFuncsToLower is empty, all ifuncs in the module will be lowered.
+/// If \p IFuncsToLower is non-empty, only the selected ifuncs will be lowered.
+///
+/// The processed ifuncs without remaining users will be removed from the
+/// module.
+bool lowerGlobalIFuncUsersAsGlobalCtor(
+    Module &M, ArrayRef<GlobalIFunc *> IFuncsToLower = {});
 
 class CallInst;
 namespace VFABI {

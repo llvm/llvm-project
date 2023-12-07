@@ -8,53 +8,40 @@ target triple = "thumbv7-apple-ios"
 %struct.MMMMMMMMMMMM = type { [4 x %struct.RRRRRRRR] }
 %struct.RRRRRRRR = type { [78 x i32] }
 
-@kkkkkk = external constant i8*
+@kkkkkk = external constant ptr
 @__PRETTY_FUNCTION__._ZN12CLGll = private unnamed_addr constant [62 x i8] c"static void tttttttttttt::lllllllllllll(const MMMMMMMMMMMM &)\00"
 @.str = private unnamed_addr constant [75 x i8] c"\09GGGGGGGGGGGGGGGGGGGGGGG:,BE:0x%08lx,ALM:0x%08lx,LTO:0x%08lx,CBEE:0x%08lx\0A\00"
 
-define void @_ZN12CLGll(%struct.MMMMMMMMMMMM* %aidData) ssp align 2 {
+define void @_ZN12CLGll(ptr %aidData) ssp align 2 {
 entry:
-  %aidData.addr = alloca %struct.MMMMMMMMMMMM*, align 4
+  %aidData.addr = alloca ptr, align 4
   %agg.tmp = alloca %struct.RRRRRRRR, align 4
   %agg.tmp4 = alloca %struct.RRRRRRRR, align 4
   %agg.tmp10 = alloca %struct.RRRRRRRR, align 4
   %agg.tmp16 = alloca %struct.RRRRRRRR, align 4
-  store %struct.MMMMMMMMMMMM* %aidData, %struct.MMMMMMMMMMMM** %aidData.addr, align 4
+  store ptr %aidData, ptr %aidData.addr, align 4
   br label %do.body
 
 do.body:                                          ; preds = %entry
-  %tmp = load i8*, i8** @kkkkkk, align 4
-  %tmp1 = load %struct.MMMMMMMMMMMM*, %struct.MMMMMMMMMMMM** %aidData.addr
-  %eph = getelementptr inbounds %struct.MMMMMMMMMMMM, %struct.MMMMMMMMMMMM* %tmp1, i32 0, i32 0
-  %arrayidx = getelementptr inbounds [4 x %struct.RRRRRRRR], [4 x %struct.RRRRRRRR]* %eph, i32 0, i32 0
-  %tmp2 = bitcast %struct.RRRRRRRR* %agg.tmp to i8*
-  %tmp3 = bitcast %struct.RRRRRRRR* %arrayidx to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %tmp2, i8* align 4 %tmp3, i32 312, i1 false)
-  %tmp5 = load %struct.MMMMMMMMMMMM*, %struct.MMMMMMMMMMMM** %aidData.addr
-  %eph6 = getelementptr inbounds %struct.MMMMMMMMMMMM, %struct.MMMMMMMMMMMM* %tmp5, i32 0, i32 0
-  %arrayidx7 = getelementptr inbounds [4 x %struct.RRRRRRRR], [4 x %struct.RRRRRRRR]* %eph6, i32 0, i32 1
-  %tmp8 = bitcast %struct.RRRRRRRR* %agg.tmp4 to i8*
-  %tmp9 = bitcast %struct.RRRRRRRR* %arrayidx7 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %tmp8, i8* align 4 %tmp9, i32 312, i1 false)
-  %tmp11 = load %struct.MMMMMMMMMMMM*, %struct.MMMMMMMMMMMM** %aidData.addr
-  %eph12 = getelementptr inbounds %struct.MMMMMMMMMMMM, %struct.MMMMMMMMMMMM* %tmp11, i32 0, i32 0
-  %arrayidx13 = getelementptr inbounds [4 x %struct.RRRRRRRR], [4 x %struct.RRRRRRRR]* %eph12, i32 0, i32 2
-  %tmp14 = bitcast %struct.RRRRRRRR* %agg.tmp10 to i8*
-  %tmp15 = bitcast %struct.RRRRRRRR* %arrayidx13 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %tmp14, i8* align 4 %tmp15, i32 312, i1 false)
-  %tmp17 = load %struct.MMMMMMMMMMMM*, %struct.MMMMMMMMMMMM** %aidData.addr
-  %eph18 = getelementptr inbounds %struct.MMMMMMMMMMMM, %struct.MMMMMMMMMMMM* %tmp17, i32 0, i32 0
-  %arrayidx19 = getelementptr inbounds [4 x %struct.RRRRRRRR], [4 x %struct.RRRRRRRR]* %eph18, i32 0, i32 3
-  %tmp20 = bitcast %struct.RRRRRRRR* %agg.tmp16 to i8*
-  %tmp21 = bitcast %struct.RRRRRRRR* %arrayidx19 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %tmp20, i8* align 4 %tmp21, i32 312, i1 false)
-  call void (i8*, i32, i8*, i8*, ...) @CLLoggingLog(i8* %tmp, i32 2, i8* getelementptr inbounds ([62 x i8], [62 x i8]* @__PRETTY_FUNCTION__._ZN12CLGll, i32 0, i32 0), i8* getelementptr inbounds ([75 x i8], [75 x i8]* @.str, i32 0, i32 0), %struct.RRRRRRRR* byval(%struct.RRRRRRRR) %agg.tmp, %struct.RRRRRRRR* byval(%struct.RRRRRRRR) %agg.tmp4, %struct.RRRRRRRR* byval(%struct.RRRRRRRR) %agg.tmp10, %struct.RRRRRRRR* byval(%struct.RRRRRRRR) %agg.tmp16)
+  %tmp = load ptr, ptr @kkkkkk, align 4
+  %tmp1 = load ptr, ptr %aidData.addr
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.tmp, ptr align 4 %tmp1, i32 312, i1 false)
+  %tmp5 = load ptr, ptr %aidData.addr
+  %arrayidx7 = getelementptr inbounds [4 x %struct.RRRRRRRR], ptr %tmp5, i32 0, i32 1
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.tmp4, ptr align 4 %arrayidx7, i32 312, i1 false)
+  %tmp11 = load ptr, ptr %aidData.addr
+  %arrayidx13 = getelementptr inbounds [4 x %struct.RRRRRRRR], ptr %tmp11, i32 0, i32 2
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.tmp10, ptr align 4 %arrayidx13, i32 312, i1 false)
+  %tmp17 = load ptr, ptr %aidData.addr
+  %arrayidx19 = getelementptr inbounds [4 x %struct.RRRRRRRR], ptr %tmp17, i32 0, i32 3
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.tmp16, ptr align 4 %arrayidx19, i32 312, i1 false)
+  call void (ptr, i32, ptr, ptr, ...) @CLLoggingLog(ptr %tmp, i32 2, ptr @__PRETTY_FUNCTION__._ZN12CLGll, ptr @.str, ptr byval(%struct.RRRRRRRR) %agg.tmp, ptr byval(%struct.RRRRRRRR) %agg.tmp4, ptr byval(%struct.RRRRRRRR) %agg.tmp10, ptr byval(%struct.RRRRRRRR) %agg.tmp16)
   br label %do.end
 
 do.end:                                           ; preds = %do.body
   ret void
 }
 
-declare void @CLLoggingLog(i8*, i32, i8*, i8*, ...)
+declare void @CLLoggingLog(ptr, i32, ptr, ptr, ...)
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind

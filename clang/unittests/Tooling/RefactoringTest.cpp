@@ -29,6 +29,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {
@@ -104,8 +105,8 @@ TEST_F(ReplacementTest, ReturnsInvalidPath) {
 // error code, expected new replacement, and expected existing replacement.
 static bool checkReplacementError(llvm::Error &&Error,
                                   replacement_error ExpectedErr,
-                                  llvm::Optional<Replacement> ExpectedExisting,
-                                  llvm::Optional<Replacement> ExpectedNew) {
+                                  std::optional<Replacement> ExpectedExisting,
+                                  std::optional<Replacement> ExpectedNew) {
   if (!Error) {
     llvm::errs() << "Error is a success.";
     return false;
@@ -1288,7 +1289,7 @@ TEST_F(AtomicChangeTest, InsertAfterWithInvalidLocation) {
 TEST_F(AtomicChangeTest, Metadata) {
   AtomicChange Change(Context.Sources, DefaultLoc, 17);
   const llvm::Any &Metadata = Change.getMetadata();
-  ASSERT_TRUE(llvm::any_isa<int>(Metadata));
+  ASSERT_TRUE(llvm::any_cast<int>(&Metadata));
   EXPECT_EQ(llvm::any_cast<int>(Metadata), 17);
 }
 

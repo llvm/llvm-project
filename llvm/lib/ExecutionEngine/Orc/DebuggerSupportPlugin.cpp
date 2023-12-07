@@ -348,11 +348,12 @@ public:
       Writer.write(SecCmd);
     }
 
+    static constexpr bool AutoRegisterCode = true;
     SectionRange R(MachOContainerBlock->getSection());
     G.allocActions().push_back(
         {cantFail(shared::WrapperFunctionCall::Create<
-                  shared::SPSArgList<shared::SPSExecutorAddrRange>>(
-             RegisterActionAddr, R.getRange())),
+                  shared::SPSArgList<shared::SPSExecutorAddrRange, bool>>(
+             RegisterActionAddr, R.getRange(), AutoRegisterCode)),
          {}});
     return Error::success();
   }
@@ -377,11 +378,11 @@ GDBJITDebugInfoRegistrationPlugin::Create(ExecutionSession &ES,
           ? ES.intern("_llvm_orc_registerJITLoaderGDBAllocAction")
           : ES.intern("llvm_orc_registerJITLoaderGDBAllocAction");
 
-  if (auto Addr = ES.lookup({&ProcessJD}, RegisterActionAddr))
+  if (auto RegisterSym = ES.lookup({&ProcessJD}, RegisterActionAddr))
     return std::make_unique<GDBJITDebugInfoRegistrationPlugin>(
-        ExecutorAddr(Addr->getAddress()));
+        RegisterSym->getAddress());
   else
-    return Addr.takeError();
+    return RegisterSym.takeError();
 }
 
 Error GDBJITDebugInfoRegistrationPlugin::notifyFailed(
@@ -390,12 +391,12 @@ Error GDBJITDebugInfoRegistrationPlugin::notifyFailed(
 }
 
 Error GDBJITDebugInfoRegistrationPlugin::notifyRemovingResources(
-    ResourceKey K) {
+    JITDylib &JD, ResourceKey K) {
   return Error::success();
 }
 
 void GDBJITDebugInfoRegistrationPlugin::notifyTransferringResources(
-    ResourceKey DstKey, ResourceKey SrcKey) {}
+    JITDylib &JD, ResourceKey DstKey, ResourceKey SrcKey) {}
 
 void GDBJITDebugInfoRegistrationPlugin::modifyPassConfig(
     MaterializationResponsibility &MR, LinkGraph &LG,

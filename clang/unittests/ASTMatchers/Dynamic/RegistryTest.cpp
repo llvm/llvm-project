@@ -9,6 +9,7 @@
 #include "../ASTMatchersTest.h"
 #include "clang/ASTMatchers/Dynamic/Registry.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -34,7 +35,7 @@ public:
     return Out;
   }
 
-  llvm::Optional<MatcherCtor> lookupMatcherCtor(StringRef MatcherName) {
+  std::optional<MatcherCtor> lookupMatcherCtor(StringRef MatcherName) {
     return Registry::lookupMatcherCtor(MatcherName);
   }
 
@@ -42,7 +43,7 @@ public:
                                   Diagnostics *Error = nullptr) {
     Diagnostics DummyError;
     if (!Error) Error = &DummyError;
-    llvm::Optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName);
+    std::optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName);
     VariantMatcher Out;
     if (Ctor)
       Out = Registry::constructMatcher(*Ctor, SourceRange(), Args(), Error);
@@ -55,7 +56,7 @@ public:
                                   Diagnostics *Error = nullptr) {
     Diagnostics DummyError;
     if (!Error) Error = &DummyError;
-    llvm::Optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName);
+    std::optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName);
     VariantMatcher Out;
     if (Ctor)
       Out = Registry::constructMatcher(*Ctor, SourceRange(), Args(Arg1), Error);
@@ -69,7 +70,7 @@ public:
                                   Diagnostics *Error = nullptr) {
     Diagnostics DummyError;
     if (!Error) Error = &DummyError;
-    llvm::Optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName);
+    std::optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName);
     VariantMatcher Out;
     if (Ctor)
       Out = Registry::constructMatcher(*Ctor, SourceRange(), Args(Arg1, Arg2),
@@ -88,7 +89,7 @@ public:
 
   CompVector getCompletions(StringRef MatcherName1, unsigned ArgNo1) {
     std::vector<std::pair<MatcherCtor, unsigned> > Context;
-    llvm::Optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName1);
+    std::optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName1);
     if (!Ctor)
       return CompVector();
     Context.push_back(std::make_pair(*Ctor, ArgNo1));
@@ -99,7 +100,7 @@ public:
   CompVector getCompletions(StringRef MatcherName1, unsigned ArgNo1,
                             StringRef MatcherName2, unsigned ArgNo2) {
     std::vector<std::pair<MatcherCtor, unsigned> > Context;
-    llvm::Optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName1);
+    std::optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName1);
     if (!Ctor)
       return CompVector();
     Context.push_back(std::make_pair(*Ctor, ArgNo1));

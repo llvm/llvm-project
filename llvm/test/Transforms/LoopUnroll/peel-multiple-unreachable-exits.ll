@@ -3,7 +3,7 @@
 
 declare void @foo()
 
-define void @peel_unreachable_exit_and_latch_exit(i32* %ptr, i32 %N, i32 %x) {
+define void @peel_unreachable_exit_and_latch_exit(ptr %ptr, i32 %N, i32 %x) {
 ; CHECK-LABEL: @peel_unreachable_exit_and_latch_exit(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER_PEEL_BEGIN:%.*]]
@@ -19,8 +19,8 @@ define void @peel_unreachable_exit_and_latch_exit(i32* %ptr, i32 %N, i32 %x) {
 ; CHECK-NEXT:    br label [[LOOP_LATCH_PEEL]]
 ; CHECK:       loop.latch.peel:
 ; CHECK-NEXT:    [[M_PEEL:%.*]] = phi i32 [ 0, [[THEN_PEEL]] ], [ [[X]], [[ELSE_PEEL]] ]
-; CHECK-NEXT:    [[GEP_PEEL:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 1
-; CHECK-NEXT:    store i32 [[M_PEEL]], i32* [[GEP_PEEL]], align 4
+; CHECK-NEXT:    [[GEP_PEEL:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i32 1
+; CHECK-NEXT:    store i32 [[M_PEEL]], ptr [[GEP_PEEL]], align 4
 ; CHECK-NEXT:    [[IV_NEXT_PEEL:%.*]] = add nuw nsw i32 1, 1
 ; CHECK-NEXT:    [[C_3_PEEL:%.*]] = icmp ult i32 1, 1000
 ; CHECK-NEXT:    br i1 [[C_3_PEEL]], label [[LOOP_HEADER_PEEL_NEXT:%.*]], label [[EXIT:%.*]]
@@ -40,8 +40,8 @@ define void @peel_unreachable_exit_and_latch_exit(i32* %ptr, i32 %N, i32 %x) {
 ; CHECK-NEXT:    br i1 [[C_2]], label [[UNREACHABLE_EXIT_LOOPEXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[M:%.*]] = phi i32 [ 0, [[THEN]] ], [ [[X]], [[ELSE]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR]], i32 [[IV]]
-; CHECK-NEXT:    store i32 [[M]], i32* [[GEP]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i32 [[IV]]
+; CHECK-NEXT:    store i32 [[M]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[IV]], 1000
 ; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_HEADER]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -72,8 +72,8 @@ else:
 
 loop.latch:
   %m = phi i32 [ 0, %then ], [ %x, %else ]
-  %gep = getelementptr i32, i32* %ptr, i32 %iv
-  store i32 %m, i32* %gep
+  %gep = getelementptr i32, ptr %ptr, i32 %iv
+  store i32 %m, ptr %gep
   %iv.next = add nuw nsw i32  %iv, 1
   %c.3 = icmp ult i32 %iv, 1000
   br i1 %c.3, label %loop.header, label %exit
@@ -86,7 +86,7 @@ unreachable.exit:
   unreachable
 }
 
-define void @peel_unreachable_exit_and_header_exit(i32* %ptr, i32 %N, i32 %x) {
+define void @peel_unreachable_exit_and_header_exit(ptr %ptr, i32 %N, i32 %x) {
 ; CHECK-LABEL: @peel_unreachable_exit_and_header_exit(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
@@ -96,8 +96,8 @@ define void @peel_unreachable_exit_and_header_exit(i32* %ptr, i32 %N, i32 %x) {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i32 1, [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[C_2]], label [[UNREACHABLE_EXIT:%.*]], label [[LOOP_LATCH:%.*]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 1
-; CHECK-NEXT:    store i32 [[X]], i32* [[GEP]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i32 1
+; CHECK-NEXT:    store i32 [[X]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -118,8 +118,8 @@ else:
   br i1 %c.2, label %unreachable.exit, label %loop.latch
 
 loop.latch:
-  %gep = getelementptr i32, i32* %ptr, i32 %iv
-  store i32 %x, i32* %gep
+  %gep = getelementptr i32, ptr %ptr, i32 %iv
+  store i32 %x, ptr %gep
   %iv.next = add nuw nsw i32  %iv, 1
   br label %loop.header
 
@@ -131,7 +131,7 @@ unreachable.exit:
   unreachable
 }
 
-define void @peel_unreachable_and_multiple_reachable_exits(i32* %ptr, i32 %N, i32 %x) {
+define void @peel_unreachable_and_multiple_reachable_exits(ptr %ptr, i32 %N, i32 %x) {
 ; CHECK-LABEL: @peel_unreachable_and_multiple_reachable_exits(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER_PEEL_BEGIN:%.*]]
@@ -148,8 +148,8 @@ define void @peel_unreachable_and_multiple_reachable_exits(i32* %ptr, i32 %N, i3
 ; CHECK-NEXT:    br i1 [[C_2_PEEL]], label [[EXIT:%.*]], label [[LOOP_LATCH_PEEL]]
 ; CHECK:       loop.latch.peel:
 ; CHECK-NEXT:    [[M_PEEL:%.*]] = phi i32 [ 0, [[THEN_PEEL]] ], [ [[X]], [[ELSE_PEEL]] ]
-; CHECK-NEXT:    [[GEP_PEEL:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 1
-; CHECK-NEXT:    store i32 [[M_PEEL]], i32* [[GEP_PEEL]], align 4
+; CHECK-NEXT:    [[GEP_PEEL:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i32 1
+; CHECK-NEXT:    store i32 [[M_PEEL]], ptr [[GEP_PEEL]], align 4
 ; CHECK-NEXT:    [[IV_NEXT_PEEL:%.*]] = add nuw nsw i32 1, 1
 ; CHECK-NEXT:    [[C_4_PEEL:%.*]] = icmp ult i32 1, 1000
 ; CHECK-NEXT:    br i1 [[C_4_PEEL]], label [[LOOP_HEADER_PEEL_NEXT:%.*]], label [[EXIT]]
@@ -169,8 +169,8 @@ define void @peel_unreachable_and_multiple_reachable_exits(i32* %ptr, i32 %N, i3
 ; CHECK-NEXT:    br i1 [[C_3]], label [[UNREACHABLE_EXIT_LOOPEXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[M:%.*]] = phi i32 [ 0, [[THEN]] ], [ [[X]], [[ELSE]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR]], i32 [[IV]]
-; CHECK-NEXT:    store i32 [[M]], i32* [[GEP]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i32 [[IV]]
+; CHECK-NEXT:    store i32 [[M]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i32 [[IV]], 1000
 ; CHECK-NEXT:    br i1 [[C_4]], label [[LOOP_HEADER]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP2:![0-9]+]]
@@ -202,8 +202,8 @@ else:
 
 loop.latch:
   %m = phi i32 [ 0, %then ], [ %x, %else ]
-  %gep = getelementptr i32, i32* %ptr, i32 %iv
-  store i32 %m, i32* %gep
+  %gep = getelementptr i32, ptr %ptr, i32 %iv
+  store i32 %m, ptr %gep
   %iv.next = add nuw nsw i32  %iv, 1
   %c.4 = icmp ult i32 %iv, 1000
   br i1 %c.4, label %loop.header, label %exit
@@ -216,7 +216,7 @@ unreachable.exit:
   unreachable
 }
 
-define void @peel_exits_to_blocks_branch_to_unreachable_block(i32* %ptr, i32 %N, i32 %x, i1 %c.1) {
+define void @peel_exits_to_blocks_branch_to_unreachable_block(ptr %ptr, i32 %N, i32 %x, i1 %c.1) {
 ; CHECK-LABEL: @peel_exits_to_blocks_branch_to_unreachable_block(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER_PEEL_BEGIN:%.*]]
@@ -232,8 +232,8 @@ define void @peel_exits_to_blocks_branch_to_unreachable_block(i32* %ptr, i32 %N,
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[EXIT_1:%.*]], label [[LOOP_LATCH_PEEL]]
 ; CHECK:       loop.latch.peel:
 ; CHECK-NEXT:    [[M_PEEL:%.*]] = phi i32 [ 0, [[THEN_PEEL]] ], [ [[X]], [[ELSE_PEEL]] ]
-; CHECK-NEXT:    [[GEP_PEEL:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 1
-; CHECK-NEXT:    store i32 [[M_PEEL]], i32* [[GEP_PEEL]], align 4
+; CHECK-NEXT:    [[GEP_PEEL:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i32 1
+; CHECK-NEXT:    store i32 [[M_PEEL]], ptr [[GEP_PEEL]], align 4
 ; CHECK-NEXT:    [[IV_NEXT_PEEL:%.*]] = add nuw nsw i32 1, 1
 ; CHECK-NEXT:    [[C_3_PEEL:%.*]] = icmp ult i32 1, 1000
 ; CHECK-NEXT:    br i1 [[C_3_PEEL]], label [[LOOP_HEADER_PEEL_NEXT:%.*]], label [[EXIT:%.*]]
@@ -253,8 +253,8 @@ define void @peel_exits_to_blocks_branch_to_unreachable_block(i32* %ptr, i32 %N,
 ; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT_2_LOOPEXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[M:%.*]] = phi i32 [ 0, [[THEN]] ], [ [[X]], [[ELSE]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR]], i32 [[IV]]
-; CHECK-NEXT:    store i32 [[M]], i32* [[GEP]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i32 [[IV]]
+; CHECK-NEXT:    store i32 [[M]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[IV]], 1000
 ; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_HEADER]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -293,8 +293,8 @@ else:
 
 loop.latch:
   %m = phi i32 [ 0, %then ], [ %x, %else ]
-  %gep = getelementptr i32, i32* %ptr, i32 %iv
-  store i32 %m, i32* %gep
+  %gep = getelementptr i32, ptr %ptr, i32 %iv
+  store i32 %m, ptr %gep
   %iv.next = add nuw nsw i32  %iv, 1
   %c.3 = icmp ult i32 %iv, 1000
   br i1 %c.3, label %loop.header, label %exit
@@ -315,7 +315,7 @@ unreachable.term:
   unreachable
 }
 
-define void @peel_exits_to_blocks_branch_to_unreachable_block_with_invariant_load(i32* %ptr, i32 %N, i32 %x, i1 %c.1, i32 %y, i32* %size_ptr) {
+define void @peel_exits_to_blocks_branch_to_unreachable_block_with_invariant_load(ptr %ptr, i32 %N, i32 %x, i1 %c.1, i32 %y, ptr %size_ptr) {
 ; CHECK-LABEL: @peel_exits_to_blocks_branch_to_unreachable_block_with_invariant_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
@@ -330,10 +330,10 @@ define void @peel_exits_to_blocks_branch_to_unreachable_block_with_invariant_loa
 ; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT_2:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[M:%.*]] = phi i32 [ 0, [[THEN]] ], [ [[X]], [[ELSE]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 [[IV]]
-; CHECK-NEXT:    store i32 [[M]], i32* [[GEP]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i32 [[IV]]
+; CHECK-NEXT:    store i32 [[M]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[SIZE:%.*]] = load i32, i32* [[SIZE_PTR:%.*]], align 4
+; CHECK-NEXT:    [[SIZE:%.*]] = load i32, ptr [[SIZE_PTR:%.*]], align 4
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[IV_NEXT]], [[SIZE]]
 ; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_HEADER]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -365,10 +365,10 @@ else:
 
 loop.latch:
   %m = phi i32 [ 0, %then ], [ %x, %else ]
-  %gep = getelementptr i32, i32* %ptr, i32 %iv
-  store i32 %m, i32* %gep
+  %gep = getelementptr i32, ptr %ptr, i32 %iv
+  store i32 %m, ptr %gep
   %iv.next = add nuw nsw i32 %iv, 1
-  %size = load i32, i32* %size_ptr, align 4
+  %size = load i32, ptr %size_ptr, align 4
   %c.3 = icmp ult i32 %iv.next, %size
   br i1 %c.3, label %loop.header, label %exit
 
@@ -388,7 +388,7 @@ unreachable.term:
   unreachable
 }
 
-define void @peel_exits_to_blocks_branch_to_unreachable_block_with_profile(i32* %ptr, i32 %N, i32 %x, i1 %c.1) !prof !0 {
+define void @peel_exits_to_blocks_branch_to_unreachable_block_with_profile(ptr %ptr, i32 %N, i32 %x, i1 %c.1) !prof !0 {
 ; CHECK-LABEL: @peel_exits_to_blocks_branch_to_unreachable_block_with_profile(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
@@ -403,8 +403,8 @@ define void @peel_exits_to_blocks_branch_to_unreachable_block_with_profile(i32* 
 ; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT_2:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[M:%.*]] = phi i32 [ 0, [[THEN]] ], [ [[X]], [[ELSE]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 [[IV]]
-; CHECK-NEXT:    store i32 [[M]], i32* [[GEP]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i32 [[IV]]
+; CHECK-NEXT:    store i32 [[M]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_HEADER]], label [[EXIT:%.*]], !prof [[PROF5]]
@@ -437,8 +437,8 @@ else:
 
 loop.latch:
   %m = phi i32 [ 0, %then ], [ %x, %else ]
-  %gep = getelementptr i32, i32* %ptr, i32 %iv
-  store i32 %m, i32* %gep
+  %gep = getelementptr i32, ptr %ptr, i32 %iv
+  store i32 %m, ptr %gep
   %iv.next = add nuw nsw i32  %iv, 1
   %c.3 = icmp ult i32 %iv.next, %N
   br i1 %c.3, label %loop.header, label %exit, !prof !2

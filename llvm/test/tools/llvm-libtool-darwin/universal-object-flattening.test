@@ -104,7 +104,7 @@
 # RUN: not llvm-libtool-darwin -static -o %t.lib %t-universal.o -arch_only 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=REQUIRE-ARCH
 
-# REQUIRE-ARCH: for the --arch_only option: requires a value!
+# REQUIRE-ARCH: -arch_only: missing argument
 
 ## x86_64-arm64-universal.yaml
 --- !fat-mach-o

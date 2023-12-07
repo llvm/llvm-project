@@ -4,36 +4,36 @@
 define void @bfmopa(<vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x bfloat> %zn, <vscale x 8 x bfloat> %zm) {
 ; CHECK-LABEL: bfmopa:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfmopa za0.s, p0/m, p1/m, z0.h, z1.h
+; CHECK-NEXT:    bfmopa za3.s, p0/m, p1/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.mopa.wide.nxv8bf16(i32 0, <vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x bfloat> %zn, <vscale x 8 x bfloat> %zm)
+  call void @llvm.aarch64.sme.mopa.wide.nxv8bf16(i32 3, <vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x bfloat> %zn, <vscale x 8 x bfloat> %zm)
   ret void
 }
 
 define void @fmopa(<vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x half> %zn, <vscale x 8 x half> %zm) {
 ; CHECK-LABEL: fmopa:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmopa za1.s, p0/m, p1/m, z0.h, z1.h
+; CHECK-NEXT:    fmopa za3.s, p0/m, p1/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.mopa.wide.nxv8f16(i32 1, <vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x half> %zn, <vscale x 8 x half> %zm)
+  call void @llvm.aarch64.sme.mopa.wide.nxv8f16(i32 3, <vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x half> %zn, <vscale x 8 x half> %zm)
   ret void
 }
 
 define void @smopa_s(<vscale x 16 x i1> %pn, <vscale x 16 x i1> %pm, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) {
 ; CHECK-LABEL: smopa_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smopa za2.s, p0/m, p1/m, z0.b, z1.b
+; CHECK-NEXT:    smopa za3.s, p0/m, p1/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.smopa.wide.nxv16i8(i32 2, <vscale x 16 x i1> %pn, <vscale x 16 x i1> %pm, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
+  call void @llvm.aarch64.sme.smopa.wide.nxv16i8(i32 3, <vscale x 16 x i1> %pn, <vscale x 16 x i1> %pm, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
   ret void
 }
 
 define void @smopa_d(<vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm) #0 {
 ; CHECK-LABEL: smopa_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smopa za0.d, p0/m, p1/m, z0.h, z1.h
+; CHECK-NEXT:    smopa za7.d, p0/m, p1/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.smopa.wide.nxv8i16(i32 0, <vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm)
+  call void @llvm.aarch64.sme.smopa.wide.nxv8i16(i32 7, <vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm)
   ret void
 }
 
@@ -49,54 +49,54 @@ define void @umopa_s(<vscale x 16 x i1> %pn, <vscale x 16 x i1> %pm, <vscale x 1
 define void @umopa_d(<vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm) #0 {
 ; CHECK-LABEL: umopa_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umopa za1.d, p0/m, p1/m, z0.h, z1.h
+; CHECK-NEXT:    umopa za7.d, p0/m, p1/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.umopa.wide.nxv8i16(i32 1, <vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm)
+  call void @llvm.aarch64.sme.umopa.wide.nxv8i16(i32 7, <vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm)
   ret void
 }
 
 define void @fmopa_s(<vscale x 4 x i1> %pn, <vscale x 4 x i1> %pm, <vscale x 4 x float> %zn, <vscale x 4 x float> %zm) {
 ; CHECK-LABEL: fmopa_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmopa za0.s, p0/m, p1/m, z0.s, z1.s
+; CHECK-NEXT:    fmopa za3.s, p0/m, p1/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.mopa.nxv4f32(i32 0, <vscale x 4 x i1> %pn, <vscale x 4 x i1> %pm, <vscale x 4 x float> %zn, <vscale x 4 x float> %zm)
+  call void @llvm.aarch64.sme.mopa.nxv4f32(i32 3, <vscale x 4 x i1> %pn, <vscale x 4 x i1> %pm, <vscale x 4 x float> %zn, <vscale x 4 x float> %zm)
   ret void
 }
 
 define void @fmopa_d(<vscale x 2 x i1> %pn, <vscale x 2 x i1> %pm, <vscale x 2 x double> %zn, <vscale x 2 x double> %zm) #1 {
 ; CHECK-LABEL: fmopa_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmopa za2.d, p0/m, p1/m, z0.d, z1.d
+; CHECK-NEXT:    fmopa za7.d, p0/m, p1/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.mopa.nxv2f64(i32 2, <vscale x 2 x i1> %pn, <vscale x 2 x i1> %pm, <vscale x 2 x double> %zn, <vscale x 2 x double> %zm)
+  call void @llvm.aarch64.sme.mopa.nxv2f64(i32 7, <vscale x 2 x i1> %pn, <vscale x 2 x i1> %pm, <vscale x 2 x double> %zn, <vscale x 2 x double> %zm)
   ret void
 }
 
 define void @sumopa_s(<vscale x 16 x i1> %pn, <vscale x 16 x i1> %pm, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) {
 ; CHECK-LABEL: sumopa_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sumopa za1.s, p0/m, p1/m, z0.b, z1.b
+; CHECK-NEXT:    sumopa za3.s, p0/m, p1/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.sumopa.wide.nxv16i8(i32 1, <vscale x 16 x i1> %pn, <vscale x 16 x i1> %pm, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
+  call void @llvm.aarch64.sme.sumopa.wide.nxv16i8(i32 3, <vscale x 16 x i1> %pn, <vscale x 16 x i1> %pm, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
   ret void
 }
 
 define void @sumopa_d(<vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm) #0 {
 ; CHECK-LABEL: sumopa_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sumopa za3.d, p0/m, p1/m, z0.h, z1.h
+; CHECK-NEXT:    sumopa za7.d, p0/m, p1/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.sumopa.wide.nxv8i16(i32 3, <vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm)
+  call void @llvm.aarch64.sme.sumopa.wide.nxv8i16(i32 7, <vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm)
   ret void
 }
 
 define void @usmopa_s(<vscale x 16 x i1> %pn, <vscale x 16 x i1> %pm, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) {
 ; CHECK-LABEL: usmopa_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    usmopa za2.s, p0/m, p1/m, z0.b, z1.b
+; CHECK-NEXT:    usmopa za3.s, p0/m, p1/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.usmopa.wide.nxv16i8(i32 2, <vscale x 16 x i1> %pn, <vscale x 16 x i1> %pm, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
+  call void @llvm.aarch64.sme.usmopa.wide.nxv16i8(i32 3, <vscale x 16 x i1> %pn, <vscale x 16 x i1> %pm, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
   ret void
 }
 

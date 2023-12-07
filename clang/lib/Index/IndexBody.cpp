@@ -144,6 +144,17 @@ public:
                                     Parent, ParentDC, Roles, Relations, E);
   }
 
+  bool VisitGotoStmt(GotoStmt *S) {
+    return IndexCtx.handleReference(S->getLabel(), S->getLabelLoc(), Parent,
+                                    ParentDC);
+  }
+
+  bool VisitLabelStmt(LabelStmt *S) {
+    if (IndexCtx.shouldIndexFunctionLocalSymbols())
+      return IndexCtx.handleDecl(S->getDecl());
+    return true;
+  }
+
   bool VisitMemberExpr(MemberExpr *E) {
     SourceLocation Loc = E->getMemberLoc();
     if (Loc.isInvalid())
@@ -203,9 +214,12 @@ public:
 
   bool VisitDesignatedInitExpr(DesignatedInitExpr *E) {
     for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {
-      if (D.isFieldDesignator() && D.getField())
-        return IndexCtx.handleReference(D.getField(), D.getFieldLoc(), Parent,
-                                        ParentDC, SymbolRoleSet(), {}, E);
+      if (D.isFieldDesignator()) {
+        if (const FieldDecl *FD = D.getFieldDecl()) {
+          return IndexCtx.handleReference(FD, D.getFieldLoc(), Parent,
+                                          ParentDC, SymbolRoleSet(), {}, E);
+        }
+      }
     }
     return true;
   }
@@ -417,10 +431,13 @@ public:
 
     auto visitSyntacticDesignatedInitExpr = [&](DesignatedInitExpr *E) -> bool {
       for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {
-        if (D.isFieldDesignator() && D.getField())
-          return IndexCtx.handleReference(D.getField(), D.getFieldLoc(),
-                                          Parent, ParentDC, SymbolRoleSet(),
-                                          {}, E);
+        if (D.isFieldDesignator()) {
+          if (const FieldDecl *FD = D.getFieldDecl()) {
+            return IndexCtx.handleReference(FD, D.getFieldLoc(), Parent,
+                                            ParentDC, SymbolRoleSet(),
+                                            /*Relations=*/{}, E);
+          }
+        }
       }
       return true;
     };

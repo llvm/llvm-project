@@ -30,6 +30,7 @@ driver_executable("llvm-size") {
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "llvm-size.cpp" ]
 }

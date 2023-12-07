@@ -5,8 +5,8 @@
 
 import lldb
 
-class PushPlanStack:
 
+class PushPlanStack:
     def __init__(self, thread_plan, dict):
         pass
 

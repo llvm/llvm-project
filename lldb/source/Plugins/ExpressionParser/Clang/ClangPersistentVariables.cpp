@@ -20,14 +20,17 @@
 #include "clang/AST/Decl.h"
 
 #include "llvm/ADT/StringMap.h"
+#include <optional>
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
 
+char ClangPersistentVariables::ID;
+
 ClangPersistentVariables::ClangPersistentVariables(
     std::shared_ptr<Target> target_sp)
-    : lldb_private::PersistentExpressionState(LLVMCastKind::eKindClang),
-      m_target_sp(target_sp) {}
+    : m_target_sp(target_sp) {}
 
 ExpressionVariableSP ClangPersistentVariables::CreatePersistentVariable(
     const lldb::ValueObjectSP &valobj_sp) {
@@ -68,7 +71,7 @@ void ClangPersistentVariables::RemovePersistentVariable(
     m_next_persistent_variable_id--;
 }
 
-llvm::Optional<CompilerType>
+std::optional<CompilerType>
 ClangPersistentVariables::GetCompilerTypeFromPersistentDecl(
     ConstString type_name) {
   PersistentDecl p = m_persistent_decls.lookup(type_name.GetCString());
@@ -84,15 +87,15 @@ ClangPersistentVariables::GetCompilerTypeFromPersistentDecl(
   return std::nullopt;
 }
 
-void ClangPersistentVariables::RegisterPersistentDecl(ConstString name,
-                                                      clang::NamedDecl *decl,
-                                                      TypeSystemClang *ctx) {
-  PersistentDecl p = {decl, ctx->weak_from_this()};
+void ClangPersistentVariables::RegisterPersistentDecl(
+    ConstString name, clang::NamedDecl *decl,
+    std::shared_ptr<TypeSystemClang> ctx) {
+  PersistentDecl p = {decl, ctx};
   m_persistent_decls.insert(std::make_pair(name.GetCString(), p));
 
   if (clang::EnumDecl *enum_decl = llvm::dyn_cast<clang::EnumDecl>(decl)) {
     for (clang::EnumConstantDecl *enumerator_decl : enum_decl->enumerators()) {
-      p = {enumerator_decl, ctx->weak_from_this()};
+      p = {enumerator_decl, ctx};
       m_persistent_decls.insert(std::make_pair(
           ConstString(enumerator_decl->getNameAsString()).GetCString(), p));
     }
@@ -116,7 +119,7 @@ std::shared_ptr<ClangModulesDeclVendor>
 ClangPersistentVariables::GetClangModulesDeclVendor() {
   if (!m_modules_decl_vendor_sp) {
     m_modules_decl_vendor_sp.reset(
-        ClangModulesDeclVendor::Create(*m_target_sp.get()));
+        ClangModulesDeclVendor::Create(*m_target_sp));
   }
   return m_modules_decl_vendor_sp;
 }

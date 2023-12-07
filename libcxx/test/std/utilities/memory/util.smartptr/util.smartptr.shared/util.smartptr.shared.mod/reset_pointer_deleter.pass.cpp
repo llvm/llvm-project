@@ -12,10 +12,11 @@
 
 // template<class Y, class D> void reset(Y* p, D d);
 
-#include <memory>
 #include <cassert>
-#include "test_macros.h"
+#include <memory>
 #include "deleter_types.h"
+#include "reset_helper.h"
+#include "test_macros.h"
 
 struct B
 {
@@ -39,6 +40,29 @@ struct A
 };
 
 int A::count = 0;
+
+struct bad_ty { };
+struct bad_deleter
+{
+    void operator()(bad_ty) { }
+};
+
+struct Base { };
+struct Derived : Base { };
+
+static_assert( HasReset<std::shared_ptr<int>,  int*, test_deleter<int> >::value, "");
+static_assert(!HasReset<std::shared_ptr<int>,  int*, bad_deleter>::value, "");
+static_assert( HasReset<std::shared_ptr<Base>,  Derived*, test_deleter<Base> >::value, "");
+static_assert(!HasReset<std::shared_ptr<A>,  int*, test_deleter<A> >::value, "");
+
+#if TEST_STD_VER >= 17
+static_assert( HasReset<std::shared_ptr<int[]>,  int*, test_deleter<int>>::value, "");
+static_assert(!HasReset<std::shared_ptr<int[]>,  int*, bad_deleter>::value, "");
+static_assert(!HasReset<std::shared_ptr<int[]>,  int(*)[], test_deleter<int>>::value, "");
+static_assert( HasReset<std::shared_ptr<int[5]>, int*, test_deleter<int>>::value, "");
+static_assert(!HasReset<std::shared_ptr<int[5]>, int*, bad_deleter>::value, "");
+static_assert(!HasReset<std::shared_ptr<int[5]>, int(*)[5], test_deleter<int>>::value, "");
+#endif
 
 int main(int, char**)
 {

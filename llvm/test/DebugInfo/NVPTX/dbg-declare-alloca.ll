@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda | %ptxas-verify %}
 
-; CHECK: .target sm_20, debug
+; CHECK: .target sm_30, debug
 
 ; CHECK: .visible .func use_dbg_declare()
 ; CHECK: .local .align 8 .b8 __local_depot0[8];
@@ -221,7 +221,7 @@
 ; Function Attrs: noinline nounwind uwtable
 define void @use_dbg_declare() #0 !dbg !7 {
 entry:
-  %o = alloca %struct.Foo, align 4
+  %o = alloca %struct.Foo, align 8
   call void @llvm.dbg.declare(metadata ptr %o, metadata !10, metadata !15), !dbg !16
   call void @escape_foo(ptr %o), !dbg !17
   ret void, !dbg !18

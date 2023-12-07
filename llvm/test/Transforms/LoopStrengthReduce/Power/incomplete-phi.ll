@@ -15,8 +15,8 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ;
 ; Make sure two incomplete phis will not be marked as congruent.
 ;
-; CHECK: One incomplete PHI is found:   %[[IV:.*]] = phi [0 x %0]*
-; CHECK: One incomplete PHI is found:   %[[IV2:.*]] = phi [0 x %0]*
+; CHECK: One incomplete PHI is found:   %[[IV:.*]] = phi ptr
+; CHECK: One incomplete PHI is found:   %[[IV2:.*]] = phi ptr
 ; CHECK-NOT: Eliminated congruent iv:  %[[IV]]
 ; CHECK-NOT: Original iv: %[[IV2]]
 ; CHECK-NOT: Eliminated congruent iv:  %[[IV2]]
@@ -24,11 +24,10 @@ target triple = "powerpc64le-unknown-linux-gnu"
 
 %0 = type <{ float }>
 
-define void @foo([0 x %0]* %arg) {
+define void @foo(ptr %arg) {
 bb:
-  %i = getelementptr inbounds [0 x %0], [0 x %0]* %arg, i64 0, i64 -1
-  %i1 = bitcast %0* %i to i8*
-  %i2 = getelementptr i8, i8* %i1, i64 4
+  %i = getelementptr inbounds [0 x %0], ptr %arg, i64 0, i64 -1
+  %i2 = getelementptr i8, ptr %i, i64 4
   br label %bb3
 
 bb3:                                              ; preds = %bb18, %bb
@@ -40,10 +39,8 @@ bb9:                                              ; preds = %bb9, %bb3
   %i10 = phi i64 [ 0, %bb3 ], [ %i16, %bb9 ]
   %i11 = add i64 %i10, %i4
   %i12 = shl i64 %i11, 2
-  %i13 = getelementptr i8, i8* %i2, i64 %i12
-  %i14 = bitcast i8* %i13 to float*
-  %i15 = bitcast float* %i14 to <4 x float>*
-  store <4 x float> undef, <4 x float>* %i15, align 4
+  %i13 = getelementptr i8, ptr %i2, i64 %i12
+  store <4 x float> undef, ptr %i13, align 4
   %i16 = add i64 %i10, 32
   br i1 true, label %bb17, label %bb9
 
@@ -59,8 +56,8 @@ bb18:                                             ; preds = %bb17
 bb22:                                             ; preds = %bb22, %bb17, %bb3
   %i23 = phi i64 [ %i26, %bb22 ], [ undef, %bb17 ], [ 100, %bb3 ]
   %i24 = add nsw i64 %i23, %i4
-  %i25 = getelementptr %0, %0* %i, i64 %i24, i32 0
-  store float undef, float* %i25, align 4
+  %i25 = getelementptr %0, ptr %i, i64 %i24, i32 0
+  store float undef, ptr %i25, align 4
   %i26 = add nuw nsw i64 %i23, 1
   br label %bb22
 }

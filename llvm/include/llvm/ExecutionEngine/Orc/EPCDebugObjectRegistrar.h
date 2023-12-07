@@ -31,7 +31,8 @@ class ExecutionSession;
 /// Abstract interface for registering debug objects in the executor process.
 class DebugObjectRegistrar {
 public:
-  virtual Error registerDebugObject(ExecutorAddrRange TargetMem) = 0;
+  virtual Error registerDebugObject(ExecutorAddrRange TargetMem,
+                                    bool AutoRegisterCode) = 0;
   virtual ~DebugObjectRegistrar() = default;
 };
 
@@ -42,7 +43,8 @@ public:
   EPCDebugObjectRegistrar(ExecutionSession &ES, ExecutorAddr RegisterFn)
       : ES(ES), RegisterFn(RegisterFn) {}
 
-  Error registerDebugObject(ExecutorAddrRange TargetMem) override;
+  Error registerDebugObject(ExecutorAddrRange TargetMem,
+                            bool AutoRegisterCode) override;
 
 private:
   ExecutionSession &ES;
@@ -51,7 +53,7 @@ private:
 
 /// Create a ExecutorProcessControl-based DebugObjectRegistrar that emits debug
 /// objects to the GDB JIT interface. This will use the EPC's lookupSymbols
-/// method to find the registration/deregistration  funciton addresses by name.
+/// method to find the registration/deregistration  function addresses by name.
 ///
 /// If RegistrationFunctionsDylib is non-None then it will be searched to find
 /// the registration functions. If it is None then the process dylib will be

@@ -14,7 +14,9 @@
 
 using namespace llvm;
 
-static void clearModuleData(Oracle &O, Module &Program) {
+static void clearModuleData(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
+
   if (!Program.getModuleIdentifier().empty() && !O.shouldKeep())
     Program.setModuleIdentifier("");
   if (!Program.getSourceFileName().empty() && !O.shouldKeep())

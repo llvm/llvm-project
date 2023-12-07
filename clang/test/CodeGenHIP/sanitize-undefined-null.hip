@@ -20,12 +20,12 @@
 // CHECK-NEXT:    [[P_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[P_ADDR]] to ptr
 // CHECK-NEXT:    store ptr [[P:%.*]], ptr [[P_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[TMP0]], null, !nosanitize !3
-// CHECK-NEXT:    br i1 [[TMP1]], label [[CONT:%.*]], label [[HANDLER_TYPE_MISMATCH:%.*]], !prof [[PROF4:![0-9]+]], !nosanitize !3
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[TMP0]], null, !nosanitize !4
+// CHECK-NEXT:    br i1 [[TMP1]], label [[CONT:%.*]], label [[HANDLER_TYPE_MISMATCH:%.*]], !prof [[PROF4:![0-9]+]], !nosanitize !4
 // CHECK:       handler.type_mismatch:
-// CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP0]] to i64, !nosanitize !3
-// CHECK-NEXT:    call void @__ubsan_handle_type_mismatch_v1_abort(ptr addrspace(1) @[[GLOB1:[0-9]+]], i64 [[TMP2]]) #[[ATTR2:[0-9]+]], !nosanitize !3
-// CHECK-NEXT:    unreachable, !nosanitize !3
+// CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP0]] to i64, !nosanitize !4
+// CHECK-NEXT:    call void @__ubsan_handle_type_mismatch_v1_abort(ptr addrspace(1) @[[GLOB1:[0-9]+]], i64 [[TMP2]]) #[[ATTR2:[0-9]+]], !nosanitize !4
+// CHECK-NEXT:    unreachable, !nosanitize !4
 // CHECK:       cont:
 // CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1
 // CHECK-NEXT:    ret i32 3

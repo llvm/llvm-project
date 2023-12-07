@@ -13,13 +13,13 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
 namespace {
@@ -119,6 +119,7 @@ static void addByteCountSuffix(raw_ostream &OS, const Function *F,
 void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
                                 bool CannotUsePrivateLabel) const {
   ManglerPrefixTy PrefixTy = Default;
+  assert(GV != nullptr && "Invalid Global Value");
   if (GV->hasPrivateLinkage()) {
     if (CannotUsePrivateLabel)
       PrefixTy = LinkerPrivate;

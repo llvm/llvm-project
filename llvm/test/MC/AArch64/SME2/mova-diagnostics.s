@@ -71,3 +71,47 @@ mov {z0.h-z3.h}, za.d[w8, 0]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid matrix operand, expected suffix .h
 // CHECK-NEXT: mov {z0.h-z3.h}, za.d[w8, 0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Tile-to-vector and vector-to-tile should not accept the VG suffix
+
+mov za0h.b[w12, 0:1, vgx2], { z0.b, z1.b }
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov za0h.b[w12, 0:1, vgx2], { z0.b, z1.b }
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov { z0.b, z1.b }, za0h.b[w12, 0:1, vgx2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov { z0.b, z1.b }, za0h.b[w12, 0:1, vgx2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov za0h.b[w12, 0:3, vgx4], { z0.b - z3.b }
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov za0h.b[w12, 0:3, vgx4], { z0.b - z3.b }
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov { z0.b - z3.b }, za0h.b[w12, 0:3, vgx4]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov { z0.b - z3.b }, za0h.b[w12, 0:3, vgx4]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mova za0h.b[w12, 0:1, vgx2], { z0.b, z1.b }
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mova za0h.b[w12, 0:1, vgx2], { z0.b, z1.b }
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mova { z0.b, z1.b }, za0h.b[w12, 0:1, vgx2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mova { z0.b, z1.b }, za0h.b[w12, 0:1, vgx2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mova za0h.b[w12, 0:3, vgx4], { z0.b - z3.b }
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mova za0h.b[w12, 0:3, vgx4], { z0.b - z3.b }
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mova { z0.b - z3.b }, za0h.b[w12, 0:3, vgx4]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mova { z0.b - z3.b }, za0h.b[w12, 0:3, vgx4]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

@@ -5,6 +5,7 @@
 #include "llvm/HeaderGuardCheck.h"
 #include "llvm/IncludeOrderCheck.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace clang::tidy::llvm_check;
 
@@ -14,7 +15,7 @@ namespace test {
 
 template <typename T>
 static std::string runCheck(StringRef Code, const Twine &Filename,
-                            Optional<StringRef> ExpectedWarning,
+                            std::optional<StringRef> ExpectedWarning,
                             std::map<StringRef, StringRef> PathsToContent =
                                 std::map<StringRef, StringRef>()) {
   std::vector<ClangTidyError> Errors;
@@ -29,15 +30,16 @@ static std::string runCheck(StringRef Code, const Twine &Filename,
   return Result;
 }
 
-static std::string runHeaderGuardCheck(StringRef Code, const Twine &Filename,
-                                       Optional<StringRef> ExpectedWarning) {
+static std::string
+runHeaderGuardCheck(StringRef Code, const Twine &Filename,
+                    std::optional<StringRef> ExpectedWarning) {
   return runCheck<LLVMHeaderGuardCheck>(Code, Filename,
                                         std::move(ExpectedWarning));
 }
 
 static std::string
 runIncludeOrderCheck(StringRef Code, const Twine &Filename,
-                     Optional<StringRef> ExpectedWarning,
+                     std::optional<StringRef> ExpectedWarning,
                      llvm::ArrayRef<llvm::StringLiteral> Includes) {
   std::map<StringRef, StringRef> PathsToContent;
   for (auto Include : Includes)
@@ -55,7 +57,7 @@ struct WithEndifComment : public LLVMHeaderGuardCheck {
 
 static std::string
 runHeaderGuardCheckWithEndif(StringRef Code, const Twine &Filename,
-                             Optional<StringRef> ExpectedWarning) {
+                             std::optional<StringRef> ExpectedWarning) {
   return runCheck<WithEndifComment>(Code, Filename, std::move(ExpectedWarning));
 }
 } // namespace

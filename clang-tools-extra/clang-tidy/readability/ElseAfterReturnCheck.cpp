@@ -16,9 +16,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 namespace {
 
@@ -324,6 +322,4 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
   removeElseAndBrackets(Diag, *Result.Context, Else, ElseLoc);
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

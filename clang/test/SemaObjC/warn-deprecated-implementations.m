@@ -1,6 +1,4 @@
 // RUN: %clang_cc1 -triple=x86_64-apple-macos10.10 -fsyntax-only -Wdeprecated-implementations -verify -Wno-objc-root-class %s
-// rdar://8973810
-// rdar://12717705
 
 @protocol P
 - (void) D __attribute__((deprecated)); // expected-note {{method 'D' declared here}}

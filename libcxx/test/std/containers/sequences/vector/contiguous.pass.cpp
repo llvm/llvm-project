@@ -20,7 +20,7 @@
 template <class C>
 TEST_CONSTEXPR_CXX20 void test_contiguous(const C &c)
 {
-    for ( size_t i = 0; i < c.size(); ++i )
+    for ( std::size_t i = 0; i < c.size(); ++i )
         assert ( *(c.begin() + static_cast<typename C::difference_type>(i)) == *(std::addressof(*c.begin()) + i));
 }
 
@@ -47,6 +47,13 @@ TEST_CONSTEXPR_CXX20 bool tests()
     typedef std::vector<T, A> C;
     test_contiguous(C(A{}));
     test_contiguous(C(9, 11.0, A{}));
+    }
+    {
+      typedef double T;
+      typedef safe_allocator<T> A;
+      typedef std::vector<T, A> C;
+      test_contiguous(C(A{}));
+      test_contiguous(C(9, 11.0, A{}));
     }
 #endif
 

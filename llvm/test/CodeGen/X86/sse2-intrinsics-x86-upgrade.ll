@@ -402,13 +402,13 @@ define <4 x i32> @test_x86_sse2_pshuf_d(<4 x i32> %a) {
 ;
 ; AVX1-LABEL: test_x86_sse2_pshuf_d:
 ; AVX1:       ## %bb.0: ## %entry
-; AVX1-NEXT:    vpermilps $27, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0x1b]
+; AVX1-NEXT:    vshufps $27, %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0xc6,0xc0,0x1b]
 ; AVX1-NEXT:    ## xmm0 = xmm0[3,2,1,0]
 ; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
 ;
 ; AVX512-LABEL: test_x86_sse2_pshuf_d:
 ; AVX512:       ## %bb.0: ## %entry
-; AVX512-NEXT:    vpermilps $27, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc0,0x1b]
+; AVX512-NEXT:    vshufps $27, %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0xc6,0xc0,0x1b]
 ; AVX512-NEXT:    ## xmm0 = xmm0[3,2,1,0]
 ; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
 entry:

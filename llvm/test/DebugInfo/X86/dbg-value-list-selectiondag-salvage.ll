@@ -1,4 +1,4 @@
-; RUN: llc %s -start-after=codegenprepare -stop-before=finalize-isel -o - | FileCheck %s
+; RUN: llc %s -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - | FileCheck %s
 
 ;; Generated from clang -O2 -emit-llvm -S -g reduce.c -o -
 ;; $ cat reduce.c

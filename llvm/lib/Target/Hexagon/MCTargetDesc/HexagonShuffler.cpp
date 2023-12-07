@@ -16,6 +16,7 @@
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
@@ -48,7 +49,7 @@ class HexagonBid {
 
 public:
   HexagonBid() = default;
-  HexagonBid(unsigned B) { Bid = B ? MAX / countPopulation(B) : 0; }
+  HexagonBid(unsigned B) { Bid = B ? MAX / llvm::popcount(B) : 0; }
 
   // Check if the insn priority is overflowed.
   bool isSold() const { return (Bid >= MAX); }
@@ -100,8 +101,8 @@ unsigned HexagonResource::setWeight(unsigned s) {
   if (Key == 0 || Units == 0 || (SlotWeight * s >= 32))
     return Weight = 0;
 
-  unsigned Ctpop = countPopulation(Units);
-  unsigned Cttz = countTrailingZeros(Units);
+  unsigned Ctpop = llvm::popcount(Units);
+  unsigned Cttz = llvm::countr_zero(Units);
   Weight = (1u << (SlotWeight * s)) * ((MaskWeight - Ctpop) << Cttz);
   return Weight;
 }
@@ -652,7 +653,7 @@ HexagonShuffler::tryAuction(HexagonPacketSummary const &Summary) {
 
 bool HexagonShuffler::shuffle() {
   if (size() > HEXAGON_PACKET_SIZE) {
-    // Ignore a packet with with more than what a packet can hold
+    // Ignore a packet with more than what a packet can hold
     // or with compound or duplex insns for now.
     reportError("invalid instruction packet");
     return false;

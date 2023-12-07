@@ -53,6 +53,9 @@ private:
 
   std::unique_ptr<llvm::Module> loadModule(llvm::MemoryBufferRef MBRef);
 
+  /// Load bitcode modules to link into our module from the options.
+  bool loadLinkModules(CompilerInstance &CI);
+
 protected:
   /// Create a new code generation action.  If the optional \p _VMContext
   /// parameter is supplied, the action uses it without taking ownership,
@@ -80,7 +83,7 @@ public:
 
   CodeGenerator *getCodeGenerator() const;
 
-  BackendConsumer *BEConsumer;
+  BackendConsumer *BEConsumer = nullptr;
 };
 
 class EmitAssemblyAction : public CodeGenAction {

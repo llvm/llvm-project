@@ -42,3 +42,37 @@ expect further improvements to get implemented in 2022. Many of the potential
 improvements end up being discussed on the `monthly public call on LLVM's
 security group <https://llvm.org/docs/GettingInvolved.html#online-sync-ups>`_.
 
+
+2022
+----
+
+In this section we report on the issues the group received in 2022, or on issues
+that were received earlier, but were disclosed in 2022.
+
+In 2022, the llvm security group received 15 issues that have been disclosed at
+the time of writing this transparency report.
+
+5 of these were judged to be security issues:
+
+* https://bugs.chromium.org/p/llvm/issues/detail?id=17 reports a miscompile in
+  LLVM that can result in the frame pointer and return address being
+  overwritten. This was fixed.
+
+* https://bugs.chromium.org/p/llvm/issues/detail?id=19 reports a vulnerability
+  in `std::filesystem::remove_all` in libc++. This was fixed.
+
+* https://bugs.chromium.org/p/llvm/issues/detail?id=23 reports a new Spectre
+  gadget variant that Speculative Load Hardening (SLH) does not mitigate. No
+  extension to SLH was implemented to also mitigate against this variant.
+
+* https://bugs.chromium.org/p/llvm/issues/detail?id=30 reports missing memory
+  safety protection on the (C++) exception handling path. A number of fixes
+  were implemented.
+
+* https://bugs.chromium.org/p/llvm/issues/detail?id=33 reports the RETBLEED
+  vulnerability. The outcome was clang growing a new security hardening feature
+  `-mfunction-return=thunk-extern`, see https://reviews.llvm.org/D129572.
+
+
+No dedicated LLVM releases were made for any of the above issues.
+

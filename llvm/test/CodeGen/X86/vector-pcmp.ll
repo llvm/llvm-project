@@ -255,11 +255,23 @@ define <16 x i8> @cmpeq_zext_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: cmpeq_zext_v16i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: cmpeq_zext_v16i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: cmpeq_zext_v16i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: cmpeq_zext_v16i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %cmp = icmp eq <16 x i8> %a, %b
   %zext = zext <16 x i1> %cmp to <16 x i8>
   ret <16 x i8> %zext
@@ -322,12 +334,12 @@ define <4 x i64> @cmpeq_zext_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,0,3,2]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1,1]
-; SSE2-NEXT:    pand %xmm4, %xmm2
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,1]
 ; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm3, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,3,2]
-; SSE2-NEXT:    pand %xmm4, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,0,3,2]
+; SSE2-NEXT:    pand %xmm3, %xmm1
 ; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
@@ -394,7 +406,7 @@ define <32 x i8> @cmpgt_zext_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX512-LABEL: cmpgt_zext_v32i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpgtb %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %cmp = icmp sgt <32 x i8> %a, %b
   %zext = zext <32 x i1> %cmp to <32 x i8>
@@ -1589,8 +1601,8 @@ define <4 x i1> @is_positive_mask_v4i64_v4i1(<4 x i64> %x, <4 x i1> %y) {
 ; SSE42-NEXT:    pcmpeqd %xmm3, %xmm3
 ; SSE42-NEXT:    pcmpgtq %xmm3, %xmm1
 ; SSE42-NEXT:    pcmpgtq %xmm3, %xmm0
-; SSE42-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; SSE42-NEXT:    andps %xmm2, %xmm0
+; SSE42-NEXT:    packssdw %xmm1, %xmm0
+; SSE42-NEXT:    pand %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: is_positive_mask_v4i64_v4i1:

@@ -27,9 +27,9 @@ namespace {
 /// Process IMPLICIT_DEF instructions and make sure there is one implicit_def
 /// for each use. Add isUndef marker to implicit_def defs and their uses.
 class ProcessImplicitDefs : public MachineFunctionPass {
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
-  MachineRegisterInfo *MRI;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
 
   SmallSetVector<MachineInstr*, 16> WorkList;
 
@@ -72,8 +72,8 @@ bool ProcessImplicitDefs::canTurnIntoImplicitDef(MachineInstr *MI) {
       !MI->isRegSequence() &&
       !MI->isPHI())
     return false;
-  for (const MachineOperand &MO : MI->operands())
-    if (MO.isReg() && MO.isUse() && MO.readsReg())
+  for (const MachineOperand &MO : MI->all_uses())
+    if (MO.readsReg())
       return false;
   return true;
 }
@@ -82,7 +82,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "Processing " << *MI);
   Register Reg = MI->getOperand(0).getReg();
 
-  if (Register::isVirtualRegister(Reg)) {
+  if (Reg.isVirtual()) {
     // For virtual registers, mark all uses as <undef>, and convert users to
     // implicit-def when possible.
     for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
@@ -108,8 +108,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
       if (!MO.isReg())
         continue;
       Register UserReg = MO.getReg();
-      if (!Register::isPhysicalRegister(UserReg) ||
-          !TRI->regsOverlap(Reg, UserReg))
+      if (!UserReg.isPhysical() || !TRI->regsOverlap(Reg, UserReg))
         continue;
       // UserMI uses or redefines Reg. Set <undef> flags on all uses.
       Found = true;

@@ -17,15 +17,15 @@
 @i64First   = global i64 0, align 8
 @i64Second  = global i64 0, align 8
 @i64Result  = global i64 0, align 8
-@ptrFirst   = global %struct.Obj* null, align 4
-@ptrSecond  = global %struct.Obj* null, align 4
-@ptrResult  = global %struct.Obj* null, align 4
+@ptrFirst   = global ptr null, align 4
+@ptrSecond  = global ptr null, align 4
+@ptrResult  = global ptr null, align 4
 
 define void @atomicrmw_op_i32() #0 {
 BINARY_OP_entry:
-  %i32First = load i32, i32* @i32First, align 4
-  %i32Result = atomicrmw BINARY_OP i32* @i32Second, i32 %i32First ORDER
-  store i32 %i32Result, i32* @i32Result, align 4
+  %i32First = load i32, ptr @i32First, align 4
+  %i32Result = atomicrmw BINARY_OP ptr @i32Second, i32 %i32First ORDER
+  store i32 %i32Result, ptr @i32Result, align 4
   ret void
 }
 ; CHECK-LABEL: atomicrmw_op_i32:
@@ -45,9 +45,9 @@ BINARY_OP_entry:
 
 define void @atomicrmw_op_i64() #0 {
 entry:
-  %i64First = load i64, i64* @i64First, align 8
-  %i64Result = atomicrmw BINARY_OP i64* @i64Second, i64 %i64First ORDER
-  store i64 %i64Result, i64* @i64Result, align 8
+  %i64First = load i64, ptr @i64First, align 8
+  %i64Result = atomicrmw BINARY_OP ptr @i64Second, i64 %i64First ORDER
+  store i64 %i64Result, ptr @i64Result, align 8
   ret void
 }
 ; CHECK-LABEL: atomicrmw_op_i64:
@@ -66,9 +66,9 @@ entry:
 
 define void @atomicrmw_op_ptr() #0 {
 entry:
-  %ptrFirst = load i32, i32* bitcast (%struct.Obj** @ptrFirst to i32*), align 4
-  %ptrResult = atomicrmw BINARY_OP i32* bitcast (%struct.Obj** @ptrSecond to i32*), i32 %ptrFirst ORDER
-  store i32 %ptrResult, i32* bitcast (%struct.Obj** @ptrResult to i32*), align 4
+  %ptrFirst = load i32, ptr @ptrFirst, align 4
+  %ptrResult = atomicrmw BINARY_OP ptr @ptrSecond, i32 %ptrFirst ORDER
+  store i32 %ptrResult, ptr @ptrResult, align 4
   ret void
 }
 ; CHECK-LABEL: atomicrmw_op_ptr:

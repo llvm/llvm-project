@@ -11,9 +11,9 @@
 #include "src/stdio/fread.h"
 #include "src/stdio/fwrite.h"
 #include "src/stdio/setvbuf.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 
 TEST(LlvmLibcSetvbufTest, SetNBFBuffer) {
@@ -99,8 +99,8 @@ TEST(LlvmLibcSetbufTest, InvalidBufferMode) {
   ASSERT_FALSE(f == nullptr);
   char buf[BUFSIZ];
   ASSERT_NE(__llvm_libc::setvbuf(f, buf, _IOFBF + _IOLBF + _IONBF, BUFSIZ), 0);
-  ASSERT_EQ(errno, EINVAL);
+  ASSERT_EQ(libc_errno, EINVAL);
 
-  errno = 0;
+  libc_errno = 0;
   ASSERT_EQ(0, __llvm_libc::fclose(f));
 }

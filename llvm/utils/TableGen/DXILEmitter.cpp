@@ -17,8 +17,8 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/DXILOperationCommon.h"
-#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -26,8 +26,8 @@ using namespace llvm::dxil;
 namespace {
 
 struct DXILShaderModel {
-  int Major;
-  int Minor;
+  int Major = 0;
+  int Minor = 0;
 };
 
 struct DXILParam {
@@ -56,12 +56,13 @@ struct DXILOperationData {
                                  // memory,ro=only reads from memory
   StringRef Intrinsic; // The llvm intrinsic map to DXILOp. Default is "" which
                        // means no map exist
-  bool IsDeriv;        // whether this is some kind of derivative
-  bool IsGradient;               // whether this requires a gradient calculation
-  bool IsFeedback;               // whether this is a sampler feedback op
-  bool IsWave; // whether this requires in-wave, cross-lane functionality
-  bool RequiresUniformInputs; // whether this operation requires that all
-                              // of its inputs are uniform across the wave
+  bool IsDeriv = false;    // whether this is some kind of derivative
+  bool IsGradient = false; // whether this requires a gradient calculation
+  bool IsFeedback = false; // whether this is a sampler feedback op
+  bool IsWave = false;     // whether this requires in-wave, cross-lane functionality
+  bool RequiresUniformInputs = false; // whether this operation requires that
+                                      // all of its inputs are uniform across
+                                      // the wave
   SmallVector<StringRef, 4>
       ShaderStages; // shader stages to which this applies, empty for all.
   DXILShaderModel ShaderModel;           // minimum shader model required
@@ -322,7 +323,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
   for (auto &DXILOp : DXILOps) {
     OpStrings.add(DXILOp.DXILOp.str());
 
-    if (ClassSet.find(DXILOp.DXILClass) != ClassSet.end())
+    if (ClassSet.contains(DXILOp.DXILClass))
       continue;
     ClassSet.insert(DXILOp.DXILClass);
     OpClassStrings.add(getDXILOpClassName(DXILOp.DXILClass));
@@ -411,9 +412,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
   OS << "}\n ";
 }
 
-namespace llvm {
-
-void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
+static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
   std::vector<Record *> Ops = Records.getAllDerivedDefinitions("dxil_op");
   OS << "// Generated code, do not edit.\n";
   OS << "\n";
@@ -439,4 +438,5 @@ void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n";
 }
 
-} // namespace llvm
+static TableGen::Emitter::Opt X("gen-dxil-operation", EmitDXILOperation,
+                                "Generate DXIL operation information");

@@ -3,38 +3,38 @@
 
 ; Make sure volatile and atomic loads are not promoted.
 
-define internal i32 @callee_volatile(i32* %p) {
+define internal i32 @callee_volatile(ptr %p) {
 ; CHECK-LABEL: @callee_volatile(
-; CHECK-NEXT:    [[V:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
-  %v = load volatile i32, i32* %p
+  %v = load volatile i32, ptr %p
   ret i32 %v
 }
 
-define void @caller_volatile(i32* %p) {
+define void @caller_volatile(ptr %p) {
 ; CHECK-LABEL: @caller_volatile(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_volatile(i32* [[P:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_volatile(ptr [[P:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  call i32 @callee_volatile(i32* %p)
+  call i32 @callee_volatile(ptr %p)
   ret void
 }
 
-define internal i32 @callee_atomic(i32* %p) {
+define internal i32 @callee_atomic(ptr %p) {
 ; CHECK-LABEL: @callee_atomic(
-; CHECK-NEXT:    [[V:%.*]] = load atomic i32, i32* [[P:%.*]] seq_cst, align 4
+; CHECK-NEXT:    [[V:%.*]] = load atomic i32, ptr [[P:%.*]] seq_cst, align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
-  %v = load atomic i32, i32* %p seq_cst, align 4
+  %v = load atomic i32, ptr %p seq_cst, align 4
   ret i32 %v
 }
 
-define void @caller_atomic(i32* %p) {
+define void @caller_atomic(ptr %p) {
 ; CHECK-LABEL: @caller_atomic(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_atomic(i32* [[P:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_atomic(ptr [[P:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  call i32 @callee_atomic(i32* %p)
+  call i32 @callee_atomic(ptr %p)
   ret void
 }

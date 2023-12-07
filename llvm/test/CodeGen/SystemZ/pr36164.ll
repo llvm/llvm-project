@@ -17,18 +17,18 @@ define void @main() local_unnamed_addr #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lhi %r0, 1
 ; CHECK-NEXT:    larl %r1, g_938
-; CHECK-NEXT:    lhi %r2, 0
+; CHECK-NEXT:    lhi %r2, 3
 ; CHECK-NEXT:    lhi %r3, 4
 ; CHECK-NEXT:    larl %r4, g_11
 ; CHECK-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    strl %r0, g_73
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
 ; CHECK-NEXT:    strl %r2, g_69
-; CHECK-NEXT:    lrl %r5, g_832
-; CHECK-NEXT:    lrl %r5, g_832
-; CHECK-NEXT:    lrl %r5, g_832
-; CHECK-NEXT:    lrl %r5, g_832
-; CHECK-NEXT:    lrl %r5, g_832
-; CHECK-NEXT:    lrl %r5, g_832
 ; CHECK-NEXT:    lrl %r5, g_832
 ; CHECK-NEXT:    lrl %r5, g_832
 ; CHECK-NEXT:    lrl %r5, g_832

@@ -50,7 +50,6 @@
 #include "clang/Analysis/Analyses/ThreadSafetyUtil.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -59,6 +58,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -319,6 +319,7 @@ public:
 protected:
   SExpr(TIL_Opcode Op) : Opcode(Op) {}
   SExpr(const SExpr &E) : Opcode(E.Opcode), Flags(E.Flags) {}
+  SExpr &operator=(const SExpr &) = delete;
 
   const TIL_Opcode Opcode;
   unsigned char Reserved = 0;
@@ -488,6 +489,10 @@ public:
   Undefined(const Stmt *S = nullptr) : SExpr(COP_Undefined), Cstmt(S) {}
   Undefined(const Undefined &U) : SExpr(U), Cstmt(U.Cstmt) {}
 
+  // The copy assignment operator is defined as deleted pending further
+  // motivation.
+  Undefined &operator=(const Undefined &) = delete;
+
   static bool classof(const SExpr *E) { return E->opcode() == COP_Undefined; }
 
   template <class V>
@@ -565,6 +570,10 @@ class LiteralT : public Literal {
 public:
   LiteralT(T Dat) : Literal(ValueType::getValueType<T>()), Val(Dat) {}
   LiteralT(const LiteralT<T> &L) : Literal(L), Val(L.Val) {}
+
+  // The copy assignment operator is defined as deleted pending further
+  // motivation.
+  LiteralT &operator=(const LiteralT<T> &) = delete;
 
   T value() const { return Val;}
   T& value() { return Val; }
@@ -957,7 +966,7 @@ public:
 
 private:
   SExpr* Rec;
-  mutable llvm::Optional<std::string> SlotName;
+  mutable std::optional<std::string> SlotName;
   const ValueDecl *Cvdecl;
 };
 
@@ -1430,9 +1439,7 @@ public:
   BasicBlock *elseBlock() { return Branches[1]; }
 
   /// Return the list of basic blocks that this terminator can branch to.
-  ArrayRef<BasicBlock*> successors() {
-    return llvm::makeArrayRef(Branches);
-  }
+  ArrayRef<BasicBlock *> successors() { return llvm::ArrayRef(Branches); }
 
   template <class V>
   typename V::R_SExpr traverse(V &Vs, typename V::R_Ctx Ctx) {

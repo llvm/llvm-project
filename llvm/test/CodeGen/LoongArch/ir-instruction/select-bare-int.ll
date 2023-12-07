@@ -106,3 +106,35 @@ define i64 @bare_select_i64(i1 %a, i64 %b, i64 %c) {
   %res = select i1 %a, i64 %b, i64 %c
   ret i64 %res
 }
+
+define i16 @bare_select_zero_i16(i1 %a, i16 %b) {
+; LA32-LABEL: bare_select_zero_i16:
+; LA32:       # %bb.0:
+; LA32-NEXT:    andi $a0, $a0, 1
+; LA32-NEXT:    masknez	$a0, $a1, $a0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: bare_select_zero_i16:
+; LA64:       # %bb.0:
+; LA64-NEXT:    andi $a0, $a0, 1
+; LA64-NEXT:    masknez	$a0, $a1, $a0
+; LA64-NEXT:    ret
+  %res = select i1 %a, i16 0, i16 %b
+  ret i16 %res
+}
+
+define i32 @bare_select_zero_i32(i1 %a, i32 %b) {
+; LA32-LABEL: bare_select_zero_i32:
+; LA32:       # %bb.0:
+; LA32-NEXT:    andi $a0, $a0, 1
+; LA32-NEXT:    maskeqz $a0, $a1, $a0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: bare_select_zero_i32:
+; LA64:       # %bb.0:
+; LA64-NEXT:    andi $a0, $a0, 1
+; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    ret
+  %res = select i1 %a, i32 %b, i32 0
+  ret i32 %res
+}

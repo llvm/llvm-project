@@ -9,7 +9,6 @@
 #include "InferiorCallPOSIX.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Host/Config.h"

@@ -10,10 +10,10 @@
 ; CHECK: @T1G2
 ; CHECK: @T1G3
 
-define void @test1(i32** %P1, i32** %P2, i32** %P3) {
-        store i32* @T1G1, i32** %P1
-        store i32* @T1G2, i32** %P2
-        store i32* @T1G3, i32** %P3
+define void @test1(ptr %P1, ptr %P2, ptr %P3) {
+        store ptr @T1G1, ptr %P1
+        store ptr @T1G2, ptr %P2
+        store ptr @T1G3, ptr %P3
         ret void
 }
 
@@ -23,9 +23,9 @@ define void @test1(i32** %P1, i32** %P2, i32** %P3) {
 ; CHECK: @T2a
 ; CHECK: @T2b
 
-define void @test2(i32** %P1, i32 addrspace(30)** %P2) {
-        store i32* @T2a, i32** %P1
-        store i32 addrspace(30)*  @T2b, i32 addrspace(30)** %P2
+define void @test2(ptr %P1, ptr %P2) {
+        store ptr @T2a, ptr %P1
+        store ptr addrspace(30)  @T2b, ptr %P2
         ret void
 }
 
@@ -35,7 +35,7 @@ define void @test2(i32** %P1, i32 addrspace(30)** %P2) {
 
 @T3A = internal constant i32 0
 @T3B = internal constant i32 0
-@llvm.used = appending global [2 x i32*] [i32* @T3A, i32* @T3B], section
+@llvm.used = appending global [2 x ptr] [ptr @T3A, ptr @T3B], section
 "llvm.metadata"
 
 define void @test3() {
@@ -69,15 +69,15 @@ define void @test3() {
 ; CHECK: @T4D1
 ; CHECK: @T4D2
 
-define void @test4(i32** %P1, i32** %P2, i32** %P3, i32** %P4, i32** %P5, i32** %P6, i32** %P7, i32** %P8) {
-        store i32* @T4A1, i32** %P1
-        store i32* @T4A2, i32** %P2
-        store i32* @T4B1, i32** %P3
-        store i32* @T4B2, i32** %P4
-        store i32* @T4C1, i32** %P5
-        store i32* @T4C2, i32** %P6
-        store i32* @T4D1, i32** %P7
-        store i32* @T4D2, i32** %P8
+define void @test4(ptr %P1, ptr %P2, ptr %P3, ptr %P4, ptr %P5, ptr %P6, ptr %P7, ptr %P8) {
+        store ptr @T4A1, ptr %P1
+        store ptr @T4A2, ptr %P2
+        store ptr @T4B1, ptr %P3
+        store ptr @T4B2, ptr %P4
+        store ptr @T4C1, ptr %P5
+        store ptr @T4C2, ptr %P6
+        store ptr @T4D1, ptr %P7
+        store ptr @T4D2, ptr %P8
         ret void
 }
 
@@ -87,8 +87,8 @@ define void @test4(i32** %P1, i32** %P2, i32** %P3, i32** %P4, i32** %P5, i32** 
 @T5tls = private thread_local constant i32 555
 @T5ua = private unnamed_addr constant i32 555
 
-define void @test5(i32** %P1, i32** %P2) {
-        store i32* @T5tls, i32** %P1
-        store i32* @T5ua, i32** %P2
+define void @test5(ptr %P1, ptr %P2) {
+        store ptr @T5tls, ptr %P1
+        store ptr @T5ua, ptr %P2
         ret void
 }

@@ -21,6 +21,7 @@
 #include "lldb/Target/Runtime.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -65,6 +66,12 @@ public:
   static void InitializeCommands(CommandObject *parent);
 
   virtual lldb::LanguageType GetLanguageType() const = 0;
+
+  /// Return the preferred language runtime instance, which in most cases will
+  /// be the current instance.
+  virtual LanguageRuntime *GetPreferredLanguageRuntime(ValueObject &in_value) {
+    return nullptr;
+  }
 
   virtual bool GetObjectDescription(Stream &str, ValueObject &object) = 0;
 
@@ -150,7 +157,7 @@ public:
   /// from the user interface.
   virtual bool IsAllowedRuntimeValue(ConstString name) { return false; }
 
-  virtual llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) {
+  virtual std::optional<CompilerType> GetRuntimeType(CompilerType base_type) {
     return std::nullopt;
   }
 

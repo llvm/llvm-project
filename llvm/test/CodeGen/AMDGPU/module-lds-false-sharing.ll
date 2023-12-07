@@ -19,7 +19,7 @@ define amdgpu_kernel void @nocall_ideal() {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    ds_write_b32 v0, v0
 ; CHECK-NEXT:    s_endpgm
-store i32 0, i32 addrspace(3)* @used_by_kernel
+store i32 0, ptr addrspace(3) @used_by_kernel
   ret void
 }
 ; CHECK: ; LDSByteSize: 4 bytes
@@ -115,7 +115,7 @@ define amdgpu_kernel void @withcall() {
 ; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX10-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; G_GFX10-NEXT:    s_endpgm
-  store i32 0, i32 addrspace(3)* @used_by_both
+  store i32 0, ptr addrspace(3) @used_by_both
   call void @nonkernel()
   ret void
 }
@@ -130,7 +130,7 @@ define amdgpu_kernel void @nocall_false_sharing() {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    ds_write_b32 v0, v0
 ; CHECK-NEXT:    s_endpgm
-  store i32 0, i32 addrspace(3)* @used_by_both
+  store i32 0, ptr addrspace(3) @used_by_both
   ret void
 }
 ; CHECK: ; LDSByteSize: 4 bytes
@@ -150,7 +150,6 @@ define void @nonkernel() {
 ; GFX10-LABEL: nonkernel:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-NEXT:    ds_write_b32 v0, v0 offset:8
@@ -173,7 +172,6 @@ define void @nonkernel() {
 ; G_GFX10-LABEL: nonkernel:
 ; G_GFX10:       ; %bb.0:
 ; G_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; G_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; G_GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; G_GFX10-NEXT:    v_mov_b32_e32 v3, 8
 ; G_GFX10-NEXT:    v_mov_b32_e32 v0, 0
@@ -182,7 +180,7 @@ define void @nonkernel() {
 ; G_GFX10-NEXT:    ds_write_b64 v2, v[0:1]
 ; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX10-NEXT:    s_setpc_b64 s[30:31]
-  store i32 0, i32 addrspace(3)* @used_by_both
-  store double 0.0, double addrspace(3)* @used_by_function
+  store i32 0, ptr addrspace(3) @used_by_both
+  store double 0.0, ptr addrspace(3) @used_by_function
   ret void
 }

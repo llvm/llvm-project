@@ -5,5 +5,5 @@ import os
 
 sorted_environment = sorted(os.environ.items())
 
-for name,value in sorted_environment:
-    print(name,'=',value)
+for name, value in sorted_environment:
+    print(name, "=", value)

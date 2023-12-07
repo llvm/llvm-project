@@ -1,27 +1,27 @@
 ; RUN: llc -mtriple=armv7-none-linux-gnueabi -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
-@_ZTVN10__cxxabiv117__class_type_infoE = external global i8*
+@_ZTVN10__cxxabiv117__class_type_infoE = external global ptr
 @_ZTS3Foo = linkonce_odr constant [5 x i8] c"3Foo\00"
-@_ZTI3Foo = linkonce_odr unnamed_addr constant { i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv117__class_type_infoE, i32 2) to i8*), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @_ZTS3Foo, i32 0, i32 0) }
+@_ZTI3Foo = linkonce_odr unnamed_addr constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i32 2), ptr @_ZTS3Foo }
 
-define i32 @main() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @main() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z3foov()
           to label %return unwind label %lpad
 
 lpad:                                             ; preds = %entry
-  %0 = landingpad { i8*, i32 }
-          catch i8* bitcast ({ i8*, i8* }* @_ZTI3Foo to i8*)
-  %1 = extractvalue { i8*, i32 } %0, 1
-  %2 = tail call i32 @llvm.eh.typeid.for(i8* bitcast ({ i8*, i8* }* @_ZTI3Foo to i8*)) nounwind
+  %0 = landingpad { ptr, i32 }
+          catch ptr @_ZTI3Foo
+  %1 = extractvalue { ptr, i32 } %0, 1
+  %2 = tail call i32 @llvm.eh.typeid.for(ptr @_ZTI3Foo) nounwind
 ; CHECK: _ZTI3Foo(target2)
 
   %matches = icmp eq i32 %1, %2
   br i1 %matches, label %catch, label %eh.resume
 
 catch:                                            ; preds = %lpad
-  %3 = extractvalue { i8*, i32 } %0, 0
-  %4 = tail call i8* @__cxa_begin_catch(i8* %3) nounwind
+  %3 = extractvalue { ptr, i32 } %0, 0
+  %4 = tail call ptr @__cxa_begin_catch(ptr %3) nounwind
   tail call void @__cxa_end_catch()
   br label %return
 
@@ -30,15 +30,15 @@ return:                                           ; preds = %entry, %catch
   ret i32 %retval.0
 
 eh.resume:                                        ; preds = %lpad
-  resume { i8*, i32 } %0
+  resume { ptr, i32 } %0
 }
 
 declare void @_Z3foov()
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i32 @llvm.eh.typeid.for(i8*) nounwind readnone
+declare i32 @llvm.eh.typeid.for(ptr) nounwind readnone
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()

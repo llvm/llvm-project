@@ -1,0 +1,158 @@
+# REQUIRES: shell
+# UNSUPPORTED: system-windows
+
+# RUN: rm -rf %T/baremetal_multilib
+# RUN: mkdir -p %T/baremetal_multilib/bin
+# RUN: mkdir -p %T/baremetal_multilib/lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/lib
+# RUN: touch %T/baremetal_multilib/lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/lib/libclang_rt.builtins.a
+# RUN: ln -s %clang %T/baremetal_multilib/bin/clang
+# RUN: ln -s %s %T/baremetal_multilib/lib/clang-runtimes/multilib.yaml
+
+# RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
+# RUN:     --target=thumbv8m.main-none-eabihf --sysroot= \
+# RUN:   | FileCheck -DSYSROOT=%T/baremetal_multilib %s
+# CHECK:      "-cc1" "-triple" "thumbv8m.main-none-unknown-eabihf"
+# CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/include/c++/v1"
+# CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/include"
+# CHECK-SAME: "-x" "c++" "{{.*}}baremetal-multilib.yaml"
+# CHECK-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
+# CHECK-SAME: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/lib"
+# CHECK-SAME: "-lc" "-lm" "-lclang_rt.builtins"
+# CHECK-SAME: "-o" "{{.*}}.tmp.out"
+
+# RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
+# RUN:     --target=thumbv7em-none-eabi -mfpu=fpv4-sp-d16 --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-NO-MATCH %s
+# CHECK-NO-MATCH: warning: no multilib found matching flags:
+# CHECK-NO-MATCH-SAME: --target=thumbv7em-none-unknown-eabi
+# CHECK-NO-MATCH: note: available multilibs are:
+# CHECK-NO-MATCH: --target=thumbv6m-none-unknown-eabi -mfpu=none
+# CHECK-NO-MATCH: --target=thumbv7m-none-unknown-eabi -mfpu=none
+# CHECK-NO-MATCH: --target=thumbv7em-none-unknown-eabi -mfpu=none
+
+# RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -print-multi-directory 2>&1 \
+# RUN:     --target=thumbv8m.main-none-eabihf --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-PRINT-MULTI-DIRECTORY %s
+# CHECK-PRINT-MULTI-DIRECTORY: arm-none-eabi/thumb/v8-m.main/fp
+
+# RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -print-multi-lib 2>&1 \
+# RUN:     --target=arm-none-eabi --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-PRINT-MULTI-LIB %s
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v6-m/nofp;@-target=thumbv6m-none-unknown-eabi@mfpu=none
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7-m/nofp;@-target=thumbv7m-none-unknown-eabi@mfpu=none
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7e-m/nofp;@-target=thumbv7em-none-unknown-eabi@mfpu=none
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8-m.main/nofp;@-target=thumbv8m.main-none-unknown-eabi@mfpu=none
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8.1-m.main/nofp/nomve;@-target=thumbv8.1m.main-none-unknown-eabi@mfpu=none
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7e-m/fpv4_sp_d16;@-target=thumbv7em-none-unknown-eabihf@mfpu=fpv4-sp-d16
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7e-m/fpv5_d16;@-target=thumbv7em-none-unknown-eabihf@mfpu=fpv5-d16
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8-m.main/fp;@-target=thumbv8m.main-none-unknown-eabihf@mfpu=fpv5-d16
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8.1-m.main/fp;@-target=thumbv8.1m.main-none-unknown-eabihf@mfpu=fp-armv8-fullfp16-sp-d16
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8.1-m.main/nofp/mve;@-target=thumbv8.1m.main-none-unknown-eabihf@march=thumbv8.1m.main+mve@mfpu=none
+
+# RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -x assembler -mexecute-only \
+# RUN:     --target=arm-none-eabi --sysroot= %s -c -### 2>&1 \
+# RUN:    | FileCheck %s --check-prefix=CHECK-NO-EXECUTE-ONLY-ASM
+# CHECK-NO-EXECUTE-ONLY-ASM: warning: argument unused during compilation: '-mexecute-only'
+
+---
+# This file is in two parts:
+# 1. A list of library variants.
+# 2. A mapping from flags generated from command line arguments to further
+#    flags.
+
+# How does clang use this file?
+# 1. If the ToolChain class for the architecture supports this form of
+#    multilib it then it loads the file if present in sysroot.
+# 2. Generate flags from the user provided arguments.
+#    (Use `clang -print-multi-flags-experimental` to see which flags are
+#    generated).
+# 3. Compare the arguments against each regular expression and store
+#    associated flags if there's a match.
+# 4. Find the last library variant whose flags are a subset of the
+#    flags derived from the user provided arguments.
+# 5. Use the directory for the library variant as the sysroot.
+
+# Clang will emit an error if this number is greater than its current multilib
+# version or if its major version differs, but will accept lesser minor
+# versions.
+MultilibVersion: 1.0
+
+# The first section of the file is the list of library variants.
+# A library is considered compatible if the are a subset of the flags derived
+# from the arguments provided by the user.
+# If multiple libraries are deemed compatible then the one that appears
+# last in the list wins. A ToolChain may instead opt to use more than one
+# multilib, layered on top of each other.
+
+Variants:
+- Dir: arm-none-eabi/arm/v4t
+  Flags: [--target=armv4t-none-unknown-eabi]
+
+- Dir: arm-none-eabi/thumb/v6-m/nofp
+  Flags: [--target=thumbv6m-none-unknown-eabi, -mfpu=none]
+
+- Dir: arm-none-eabi/thumb/v7-m/nofp
+  Flags: [--target=thumbv7m-none-unknown-eabi, -mfpu=none]
+
+- Dir: arm-none-eabi/thumb/v7e-m/nofp
+  Flags: [--target=thumbv7em-none-unknown-eabi, -mfpu=none]
+
+- Dir: arm-none-eabi/thumb/v8-m.main/nofp
+  Flags: [--target=thumbv8m.main-none-unknown-eabi, -mfpu=none]
+
+- Dir: arm-none-eabi/thumb/v8.1-m.main/nofp/nomve
+  Flags: [--target=thumbv8.1m.main-none-unknown-eabi, -mfpu=none]
+
+- Dir: arm-none-eabi/thumb/v7e-m/fpv4_sp_d16
+  Flags: [--target=thumbv7em-none-unknown-eabihf, -mfpu=fpv4-sp-d16]
+
+- Dir: arm-none-eabi/thumb/v7e-m/fpv5_d16
+  Flags: [--target=thumbv7em-none-unknown-eabihf, -mfpu=fpv5-d16]
+
+- Dir: arm-none-eabi/thumb/v8-m.main/fp
+  Flags: [--target=thumbv8m.main-none-unknown-eabihf, -mfpu=fpv5-d16]
+
+- Dir: arm-none-eabi/thumb/v8.1-m.main/fp
+  Flags: [--target=thumbv8.1m.main-none-unknown-eabihf, -mfpu=fp-armv8-fullfp16-sp-d16]
+
+- Dir: arm-none-eabi/thumb/v8.1-m.main/nofp/mve
+  Flags: [--target=thumbv8.1m.main-none-unknown-eabihf, -march=thumbv8.1m.main+mve, -mfpu=none]
+
+
+# The second section of the file is a map from auto-detected flags
+# to custom flags. The auto-detected flags can be printed out
+# by running clang with `-print-multi-flags-experimental`.
+# The regex must match a whole flag string.
+# All flags in the "Flags" list will be added if an argument matches.
+Mappings:
+# For v8m.base (and potential later v8m baseline versions) use v6m
+- Match: --target=thumbv8(\.[0-9]+)?m\.base-none-unknown-eabi
+  Flags: [--target=thumbv6m-none-unknown-eabi]
+# Match versions after v8.1m.main. We assume that v8.2m (if/when it exists) will
+# be backwards compatible with v8.1m.
+# The alternative is to not recognise later versions, and require that
+# this multilib spec is updated before it can be used with newer
+# architecture versions.
+- Match: --target=thumbv8\.[1-9]m\.main-none-unknown-eabi
+  Flags: [--target=thumbv8.1m.main-none-unknown-eabi]
+- Match: --target=thumbv8\.[1-9]m\.main-none-unknown-eabihf
+  Flags: [--target=thumbv8.1m.main-none-unknown-eabihf]
+
+- Match: -march=thumbv8\.[1-9]m\.main.*\+mve($|\+).*
+  Flags: [-march=thumbv8.1m.main+mve]
+
+# Hierarchy among FPUs: fpvN-d16 is a superset of fpvN-sp-d16, and
+# fpvN-d16 is a superset of fpv[N-1]-d16, for all N.
+- Match: -mfpu=fpv5-d16
+  Flags:
+  - -mfpu=fpv4-d16
+  - -mfpu=fpv5-sp-d16
+  - -mfpu=fpv4-sp-d16
+- Match: -mfpu=fpv5-sp-d16
+  Flags:
+  - -mfpu=fpv4-sp-d16
+- Match: -mfpu=fpv4-d16
+  Flags:
+  - -mfpu=fpv4-sp-d16
+
+...

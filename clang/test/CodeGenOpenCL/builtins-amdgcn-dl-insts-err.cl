@@ -16,15 +16,15 @@ kernel void builtins_amdgcn_dl_insts_err(
     short2 v2ssA, short2 v2ssB, short sC, int siA, int siB, int siC,
     ushort2 v2usA, ushort2 v2usB, uint uiA, uint uiB, uint uiC,
     int A, int B, int C) {
-  fOut[0] = __builtin_amdgcn_fdot2(v2hA, v2hB, fC, false);          // expected-error {{'__builtin_amdgcn_fdot2' needs target feature dot7-insts}}
-  fOut[1] = __builtin_amdgcn_fdot2(v2hA, v2hB, fC, true);           // expected-error {{'__builtin_amdgcn_fdot2' needs target feature dot7-insts}}
+  fOut[0] = __builtin_amdgcn_fdot2(v2hA, v2hB, fC, false);          // expected-error {{'__builtin_amdgcn_fdot2' needs target feature dot10-insts}}
+  fOut[1] = __builtin_amdgcn_fdot2(v2hA, v2hB, fC, true);           // expected-error {{'__builtin_amdgcn_fdot2' needs target feature dot10-insts}}
 
-  hOut[0] = __builtin_amdgcn_fdot2_f16_f16(v2hA, v2hB, hC);           // expected-error {{'__builtin_amdgcn_fdot2_f16_f16' needs target feature dot8-insts}}
+  hOut[0] = __builtin_amdgcn_fdot2_f16_f16(v2hA, v2hB, hC);           // expected-error {{'__builtin_amdgcn_fdot2_f16_f16' needs target feature dot9-insts}}
 
-  sOut[0] = __builtin_amdgcn_fdot2_bf16_bf16(v2ssA, v2ssB, sC);       // expected-error {{'__builtin_amdgcn_fdot2_bf16_bf16' needs target feature dot8-insts}}
+  sOut[0] = __builtin_amdgcn_fdot2_bf16_bf16(v2ssA, v2ssB, sC);       // expected-error {{'__builtin_amdgcn_fdot2_bf16_bf16' needs target feature dot9-insts}}
 
-  fOut[3] = __builtin_amdgcn_fdot2_f32_bf16(v2ssA, v2ssB, fC, false); // expected-error {{'__builtin_amdgcn_fdot2_f32_bf16' needs target feature dot8-insts}}
-  fOut[4] = __builtin_amdgcn_fdot2_f32_bf16(v2ssA, v2ssB, fC, true);  // expected-error {{'__builtin_amdgcn_fdot2_f32_bf16' needs target feature dot8-insts}}
+  fOut[3] = __builtin_amdgcn_fdot2_f32_bf16(v2ssA, v2ssB, fC, false); // expected-error {{'__builtin_amdgcn_fdot2_f32_bf16' needs target feature dot9-insts}}
+  fOut[4] = __builtin_amdgcn_fdot2_f32_bf16(v2ssA, v2ssB, fC, true);  // expected-error {{'__builtin_amdgcn_fdot2_f32_bf16' needs target feature dot9-insts}}
 
   siOut[0] = __builtin_amdgcn_sdot2(v2ssA, v2ssB, siC, false);      // expected-error {{'__builtin_amdgcn_sdot2' needs target feature dot2-insts}}
   siOut[1] = __builtin_amdgcn_sdot2(v2ssA, v2ssB, siC, true);       // expected-error {{'__builtin_amdgcn_sdot2' needs target feature dot2-insts}}

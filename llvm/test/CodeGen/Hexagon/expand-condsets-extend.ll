@@ -8,7 +8,7 @@ target triple = "hexagon"
 
 define void @fred() local_unnamed_addr #0 {
 entry:
-  %0 = load i64, i64* undef, align 8
+  %0 = load i64, ptr undef, align 8
   %shr.i465 = lshr i64 %0, 48
   %trunc = trunc i64 %shr.i465 to i15
   switch i15 %trunc, label %if.end26 [

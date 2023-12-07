@@ -17,14 +17,14 @@
 @g0 = common global [10 x i32] zeroinitializer, align 8
 
 ; Function Attrs: nounwind
-define void @f0(i32* nocapture %a0) #0 {
+define void @f0(ptr nocapture %a0) #0 {
 b0:
-  %v0 = load i32, i32* %a0, align 4, !tbaa !0
+  %v0 = load i32, ptr %a0, align 4, !tbaa !0
   %v1 = add nsw i32 %v0, 3
-  store i32 %v1, i32* %a0, align 4, !tbaa !0
-  %v2 = getelementptr inbounds i32, i32* %a0, i32 1
-  %v3 = load i32, i32* %v2, align 4, !tbaa !0
-  store i32 %v3, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @g0, i32 0, i32 0), align 8, !tbaa !0
+  store i32 %v1, ptr %a0, align 4, !tbaa !0
+  %v2 = getelementptr inbounds i32, ptr %a0, i32 1
+  %v3 = load i32, ptr %v2, align 4, !tbaa !0
+  store i32 %v3, ptr @g0, align 8, !tbaa !0
   ret void
 }
 

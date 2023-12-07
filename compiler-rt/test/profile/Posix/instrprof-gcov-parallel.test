@@ -1,8 +1,8 @@
 RUN: mkdir -p %t.d
 RUN: cd %t.d
 
-RUN: %clang -o %t.driver %S/../Inputs/instrprof-gcov-parallel.driver.c
-RUN: %clang --coverage -o %t.target %S/../Inputs/instrprof-gcov-parallel.target.c
+RUN: %clang -o %t.driver %S/../Inputs/instrprof-gcov-parallel.driver.c -dumpdir ./
+RUN: %clang --coverage -o %t.target %S/../Inputs/instrprof-gcov-parallel.target.c -dumpdir ./
 RUN: test -f instrprof-gcov-parallel.target.gcno
 
 RUN: rm -f instrprof-gcov-parallel.target.gcda

@@ -18,7 +18,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -30,6 +30,7 @@ namespace mlir {
 } // namespace mlir
 
 using namespace mlir;
+using namespace mlir::affine;
 using namespace mlir::vector;
 
 /// Given a range of values, emit the code that reduces them with "min" or "max"
@@ -225,7 +226,7 @@ public:
       Type resultType = std::get<1>(pair);
       std::optional<arith::AtomicRMWKind> reductionOp =
           arith::symbolizeAtomicRMWKind(
-              static_cast<uint64_t>(reduction.cast<IntegerAttr>().getInt()));
+              static_cast<uint64_t>(cast<IntegerAttr>(reduction).getInt()));
       assert(reductionOp && "Reduction operation cannot be of None Type");
       arith::AtomicRMWKind reductionOpValue = *reductionOp;
       identityVals.push_back(
@@ -245,7 +246,7 @@ public:
       // For each of the reduction operations get the respective mlir::Value.
       std::optional<arith::AtomicRMWKind> reductionOp =
           arith::symbolizeAtomicRMWKind(
-              reductions[i].cast<IntegerAttr>().getInt());
+              cast<IntegerAttr>(reductions[i]).getInt());
       assert(reductionOp && "Reduction Operation cannot be of None Type");
       arith::AtomicRMWKind reductionOpValue = *reductionOp;
       rewriter.setInsertionPoint(&parOp.getBody()->back());
@@ -275,7 +276,7 @@ public:
     auto integerSet = op.getIntegerSet();
     Value zeroConstant = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     SmallVector<Value, 8> operands(op.getOperands());
-    auto operandsRef = llvm::makeArrayRef(operands);
+    auto operandsRef = llvm::ArrayRef(operands);
 
     // Calculate cond as a conjunction without short-circuiting.
     Value cond = nullptr;
@@ -419,7 +420,7 @@ public:
   LogicalResult matchAndRewrite(AffineDmaStartOp op,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Value, 8> operands(op.getOperands());
-    auto operandsRef = llvm::makeArrayRef(operands);
+    auto operandsRef = llvm::ArrayRef(operands);
 
     // Expand affine map for DMA source memref.
     auto maybeExpandedSrcMap = expandAffineMap(

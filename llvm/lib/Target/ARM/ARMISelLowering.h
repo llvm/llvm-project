@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -29,7 +30,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/MachineValueType.h"
 #include <optional>
 #include <utility>
 
@@ -74,9 +74,9 @@ class VectorType;
     BRCOND,      // Conditional branch.
     BR_JT,       // Jumptable branch.
     BR2_JT,      // Jumptable branch (2 level - jumptable entry is a jump).
-    RET_FLAG,    // Return with a flag operand.
-    SERET_FLAG,  // CMSE Entry function return with a flag operand.
-    INTRET_FLAG, // Interrupt return with an LR-offset and a flag operand.
+    RET_GLUE,    // Return with a flag operand.
+    SERET_GLUE,  // CMSE Entry function return with a flag operand.
+    INTRET_GLUE, // Interrupt return with an LR-offset and a flag operand.
 
     PIC_ADD, // Add with a PC operand and a PIC label.
 
@@ -102,8 +102,8 @@ class VectorType;
 
     BCC_i64,
 
-    SRL_FLAG, // V,Flag = srl_flag X -> srl X, 1 + save carry out.
-    SRA_FLAG, // V,Flag = sra_flag X -> sra X, 1 + save carry out.
+    SRL_GLUE, // V,Flag = srl_flag X -> srl X, 1 + save carry out.
+    SRA_GLUE, // V,Flag = sra_flag X -> sra X, 1 + save carry out.
     RRX,      // V = RRX X, Flag     -> srl X, 1 + shift in carry flag.
 
     ADDC, // Add with carry
@@ -244,8 +244,7 @@ class VectorType;
     VADDLVAps, // Same as VADDLVp[su] but with a v4i1 predicate mask
     VADDLVApu,
     VMLAVs, // sign- or zero-extend the elements of two vectors to i32, multiply
-            // them
-    VMLAVu, //   and add the results together, returning an i32 of their sum
+    VMLAVu, //   them and add the results together, returning an i32 of their sum
     VMLAVps, // Same as VMLAV[su] with a v4i1 predicate mask
     VMLAVpu,
     VMLALVs,  // Same as VMLAV but with i64, returning the low and
@@ -618,6 +617,10 @@ class VectorType;
       return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
     }
 
+    bool shouldReassociateReduction(unsigned Opc, EVT VT) const override {
+      return Opc != ISD::VECREDUCE_ADD;
+    }
+
     /// Returns true if an argument of type Ty needs to be passed in a
     /// contiguous block of registers in calling convention CallConv.
     bool functionArgumentNeedsConsecutiveRegisters(
@@ -697,7 +700,9 @@ class VectorType;
       return HasStandaloneRem;
     }
 
-    bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override;
+    ShiftLegalizationStrategy
+    preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
+                                       unsigned ExpansionFactor) const override;
 
     CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
     CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool isVarArg) const;
@@ -733,6 +738,9 @@ class VectorType;
     bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                            CombineLevel Level) const override;
 
+    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
+                                              EVT VT) const override;
+
     bool preferIncOfAddToSubOfNot(EVT VT) const override;
 
     bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
@@ -742,7 +750,7 @@ class VectorType;
         ComplexDeinterleavingOperation Operation, Type *Ty) const override;
 
     Value *createComplexDeinterleavingIR(
-        Instruction *I, ComplexDeinterleavingOperation OperationType,
+        IRBuilderBase &B, ComplexDeinterleavingOperation OperationType,
         ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
         Value *Accumulator = nullptr) const override;
 
@@ -759,9 +767,6 @@ class VectorType;
     const TargetRegisterInfo *RegInfo;
 
     const InstrItineraryData *Itins;
-
-    /// ARMPCLabelIndex - Keep track of the number of ARM PC labels created.
-    unsigned ARMPCLabelIndex;
 
     // TODO: remove this, and have shouldInsertFencesForAtomic do the proper
     // check.
@@ -816,7 +821,6 @@ class VectorType;
                                  TLSModel::Model model) const;
     SDValue LowerGlobalTLSAddressDarwin(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalTLSAddressWindows(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerGLOBAL_OFFSET_TABLE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSignedALUO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerUnsignedALUO(SDValue Op, SelectionDAG &DAG) const;
@@ -872,7 +876,7 @@ class VectorType;
 
     SDValue ReconstructShuffle(SDValue Op, SelectionDAG &DAG) const;
 
-    SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
+    SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                             CallingConv::ID CallConv, bool isVarArg,
                             const SmallVectorImpl<ISD::InputArg> &Ins,
                             const SDLoc &dl, SelectionDAG &DAG,
@@ -965,8 +969,6 @@ class VectorType;
                                 MachineBasicBlock *DispatchBB, int FI) const;
 
     void EmitSjLjDispatchBlock(MachineInstr &MI, MachineBasicBlock *MBB) const;
-
-    bool RemapAddSubWithFlags(MachineInstr &MI, MachineBasicBlock *BB) const;
 
     MachineBasicBlock *EmitStructByval(MachineInstr &MI,
                                        MachineBasicBlock *MBB) const;

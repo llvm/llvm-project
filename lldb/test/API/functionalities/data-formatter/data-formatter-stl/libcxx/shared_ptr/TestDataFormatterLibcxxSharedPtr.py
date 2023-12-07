@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
     @add_test_categories(["libc++"])
     def test_shared_ptr_variables(self):
         """Test `frame variable` output for `std::shared_ptr` types."""
@@ -58,9 +57,16 @@ class TestCase(TestBase):
         self.assertRegex(valobj.summary, r"^10( strong=1)? weak=1$")
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
+            [">", "16.0"]
+        ):
+            string_type = "std::string"
+        else:
+            string_type = "std::basic_string<char, std::char_traits<char>, std::allocator<char> > "
+
         valobj = self.expect_var_path(
             "sp_str",
-            type="std::shared_ptr<std::basic_string<char, std::char_traits<char>, std::allocator<char> > >",
+            type="std::shared_ptr<" + string_type + ">",
             children=[ValueCheck(name="__ptr_", summary='"hello"')],
         )
         self.assertRegex(valobj.summary, r'^"hello"( strong=1)? weak=1$')

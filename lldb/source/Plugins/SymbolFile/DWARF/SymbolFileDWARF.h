@@ -12,6 +12,7 @@
 #include <list>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -39,8 +40,6 @@
 
 // Forward Declarations for this DWARF plugin
 class DebugMapModule;
-class DWARFAbbreviationDeclaration;
-class DWARFAbbreviationDeclarationSet;
 class DWARFCompileUnit;
 class DWARFDebugAbbrev;
 class DWARFDebugAranges;
@@ -54,11 +53,11 @@ class DWARFTypeUnit;
 class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
+class UserID;
 
 #define DIE_IS_BEING_PARSED ((lldb_private::Type *)1)
 
-class SymbolFileDWARF : public lldb_private::SymbolFileCommon,
-                        public lldb_private::UserID {
+class SymbolFileDWARF : public lldb_private::SymbolFileCommon {
   /// LLVM RTTI support.
   static char ID;
 
@@ -138,7 +137,7 @@ public:
   ParseVariablesForContext(const lldb_private::SymbolContext &sc) override;
 
   lldb_private::Type *ResolveTypeUID(lldb::user_id_t type_uid) override;
-  llvm::Optional<ArrayInfo> GetDynamicArrayInfoForUID(
+  std::optional<ArrayInfo> GetDynamicArrayInfoForUID(
       lldb::user_id_t type_uid,
       const lldb_private::ExecutionContext *exe_ctx) override;
 
@@ -213,9 +212,10 @@ public:
   llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
-  lldb_private::CompilerDeclContext FindNamespace(
-      lldb_private::ConstString name,
-      const lldb_private::CompilerDeclContext &parent_decl_ctx) override;
+  lldb_private::CompilerDeclContext
+  FindNamespace(lldb_private::ConstString name,
+                const lldb_private::CompilerDeclContext &parent_decl_ctx,
+                bool only_root_namespaces) override;
 
   void PreloadSymbols() override;
 
@@ -264,31 +264,19 @@ public:
 
   DWARFDIE GetDIE(lldb::user_id_t uid);
 
-  lldb::user_id_t GetUID(const DWARFBaseDIE &die) {
-    return GetUID(die.GetDIERef());
-  }
-
-  lldb::user_id_t GetUID(const llvm::Optional<DIERef> &ref) {
-    return ref ? GetUID(*ref) : LLDB_INVALID_UID;
-  }
-
-  lldb::user_id_t GetUID(DIERef ref);
-
   std::shared_ptr<SymbolFileDWARFDwo>
   GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
                                  const DWARFDebugInfoEntry &cu_die);
 
-  virtual llvm::Optional<uint32_t> GetDwoNum() { return std::nullopt; }
-
   /// If this is a DWARF object with a single CU, return its DW_AT_dwo_id.
-  llvm::Optional<uint64_t> GetDWOId();
+  std::optional<uint64_t> GetDWOId();
 
   static bool
   DIEInDeclContext(const lldb_private::CompilerDeclContext &parent_decl_ctx,
-                   const DWARFDIE &die);
+                   const DWARFDIE &die, bool only_root_namespaces = false);
 
   std::vector<std::unique_ptr<lldb_private::CallEdge>>
-  ParseCallEdgesInFunction(UserID func_id) override;
+  ParseCallEdgesInFunction(lldb_private::UserID func_id) override;
 
   void Dump(lldb_private::Stream &s) override;
 
@@ -345,6 +333,11 @@ public:
   }
 
   lldb_private::ConstString ConstructFunctionDemangledName(const DWARFDIE &die);
+
+  std::optional<uint64_t> GetFileIndex() const { return m_file_index; }
+  void SetFileIndex(std::optional<uint64_t> file_index) {
+    m_file_index = file_index;
+  }
 
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
@@ -518,13 +511,7 @@ protected:
   }
 
   void BuildCuTranslationTable();
-  llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
-
-  struct DecodedUID {
-    SymbolFileDWARF &dwarf;
-    DIERef ref;
-  };
-  llvm::Optional<DecodedUID> DecodeUID(lldb::user_id_t uid);
+  std::optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
   void FindDwpSymbolFile();
 
@@ -534,6 +521,9 @@ protected:
       const lldb_private::SectionList &section_list);
 
   void InitializeFirstCodeAddress();
+
+  void GetCompileOptions(
+      std::unordered_map<lldb::CompUnitSP, lldb_private::Args> &args) override;
 
   lldb::ModuleWP m_debug_map_module_wp;
   SymbolFileDWARFDebugMap *m_debug_map_symfile;
@@ -579,6 +569,11 @@ protected:
   lldb::addr_t m_first_code_address = LLDB_INVALID_ADDRESS;
   lldb_private::StatsDuration m_parse_time;
   std::atomic_flag m_dwo_warning_issued = ATOMIC_FLAG_INIT;
+  /// If this DWARF file a .DWO file or a DWARF .o file on mac when
+  /// no dSYM file is being used, this file index will be set to a
+  /// valid value that can be used in DIERef objects which will contain
+  /// an index that identifies the .DWO or .o file.
+  std::optional<uint64_t> m_file_index;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H

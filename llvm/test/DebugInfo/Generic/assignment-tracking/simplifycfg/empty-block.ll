@@ -1,4 +1,4 @@
-; RUN: opt -S %s -passes=simplifycfg -o - -experimental-assignment-tracking \
+; RUN: opt -S %s -passes=simplifycfg -o - \
 ; RUN: | FileCheck %s
 
 ;; $ cat test.cpp
@@ -80,7 +80,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!7, !8, !9}
+!llvm.module.flags = !{!7, !8, !9, !1000}
 !llvm.ident = !{!10}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -130,3 +130,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !50 = !DISubroutineType(types: !51)
 !51 = !{null, !19, !52}
 !52 = !DIDerivedType(tag: DW_TAG_reference_type, baseType: !23, size: 64)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

@@ -92,8 +92,8 @@ define i32 @test10(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[X:%.*]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[SHR]], 1431655765
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[TMP1]]
-; CHECK-NEXT:    ret i32 [[SUB]]
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i32 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[ADD1]]
 ;
   %shr = ashr i32 %x, 3
   %shr.not = or i32 %shr, -1431655766
@@ -107,8 +107,8 @@ define i32 @test10(i32 %x, i32 %y) {
 define i32 @test11(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1431655765
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[TMP1]]
-; CHECK-NEXT:    ret i32 [[SUB]]
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i32 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[ADD1]]
 ;
   %x.not = or i32 %x, -1431655766
   %neg = xor i32 %x.not, 1431655765
@@ -121,8 +121,8 @@ define i32 @test11(i32 %x, i32 %y) {
 define i32 @test12(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1431655765
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[TMP1]]
-; CHECK-NEXT:    ret i32 [[SUB]]
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i32 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[ADD1]]
 ;
   %add = add nsw i32 %y, 1
   %x.not = or i32 %x, -1431655766
@@ -135,8 +135,8 @@ define i32 @test12(i32 %x, i32 %y) {
 define i32 @test13(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1431655766
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[TMP1]]
-; CHECK-NEXT:    ret i32 [[SUB]]
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i32 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[ADD1]]
 ;
   %x.not = or i32 %x, -1431655767
   %neg = xor i32 %x.not, 1431655766
@@ -149,8 +149,8 @@ define i32 @test13(i32 %x, i32 %y) {
 define i32 @test14(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1431655766
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[TMP1]]
-; CHECK-NEXT:    ret i32 [[SUB]]
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i32 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[ADD1]]
 ;
   %add = add nsw i32 %y, 1
   %x.not = or i32 %x, -1431655767
@@ -329,7 +329,7 @@ define i16 @mul_add_to_mul_9(i16 %a) {
 ; ValueTracking uses that range.
 define i16 @add_cttz(i16 %a) {
 ; CHECK-LABEL: @add_cttz(
-; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[A:%.*]], i1 true), !range !0
+; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[A:%.*]], i1 true), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[B:%.*]] = or i16 [[CTTZ]], -8
 ; CHECK-NEXT:    ret i16 [[B]]
 ;
@@ -351,7 +351,7 @@ declare i16 @llvm.cttz.i16(i16, i1)
 ; intrinsic is more strict. Therefore, ValueTracking uses that range.
 define i16 @add_cttz_2(i16 %a) {
 ; CHECK-LABEL: @add_cttz_2(
-; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[A:%.*]], i1 true), !range !1
+; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[A:%.*]], i1 true), !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    [[B:%.*]] = or i16 [[CTTZ]], -16
 ; CHECK-NEXT:    ret i16 [[B]]
 ;

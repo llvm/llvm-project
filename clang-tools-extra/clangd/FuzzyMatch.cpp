@@ -56,8 +56,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "FuzzyMatch.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Format.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -86,10 +86,10 @@ FuzzyMatcher::FuzzyMatcher(llvm::StringRef Pattern)
       for (Action A : {Miss, Match})
         Scores[P][W][A] = {AwfulScore, Miss};
   PatTypeSet = calculateRoles(llvm::StringRef(Pat, PatN),
-                              llvm::makeMutableArrayRef(PatRole, PatN));
+                              llvm::MutableArrayRef(PatRole, PatN));
 }
 
-llvm::Optional<float> FuzzyMatcher::match(llvm::StringRef Word) {
+std::optional<float> FuzzyMatcher::match(llvm::StringRef Word) {
   if (!(WordContainsPattern = init(Word)))
     return std::nullopt;
   if (!PatN)
@@ -200,7 +200,7 @@ bool FuzzyMatcher::init(llvm::StringRef NewWord) {
   // e.g. vsprintf is V S Print F, and should match [pri] but not [int].
   // We could add a tokenization dictionary for common stdlib names.
   WordTypeSet = calculateRoles(llvm::StringRef(Word, WordN),
-                               llvm::makeMutableArrayRef(WordRole, WordN));
+                               llvm::MutableArrayRef(WordRole, WordN));
   return true;
 }
 

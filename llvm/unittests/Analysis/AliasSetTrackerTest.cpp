@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/AliasSetTracker.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -15,6 +14,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -83,7 +83,7 @@ TEST(AliasSetTracker, AliasUnknownInst) {
     for (AliasSet &AS : AST) {
       if (!Inst.mayReadOrWriteMemory())
         continue;
-      if (!AS.aliasesUnknownInst(&Inst, BatchAA))
+      if (!isModOrRefSet(AS.aliasesUnknownInst(&Inst, BatchAA)))
         continue;
       ASSERT_NE(FoundAS, true);
       FoundAS = true;

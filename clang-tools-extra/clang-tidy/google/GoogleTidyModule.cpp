@@ -31,8 +31,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace google {
 
 class GoogleModule : public ClangTidyModule {
@@ -103,5 +102,4 @@ static ClangTidyModuleRegistry::Add<GoogleModule> X("google-module",
 // and thus register the GoogleModule.
 volatile int GoogleModuleAnchorSource = 0;
 
-}  // namespace tidy
-}  // namespace clang
+} // namespace clang::tidy

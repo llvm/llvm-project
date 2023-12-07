@@ -8,7 +8,7 @@
 // This test only makes sense for the 64-bit allocator. The 32-bit allocator
 // does not have a fixed mapping. Exclude platforms that use the 32-bit
 // allocator.
-// UNSUPPORTED: target-is-mips64,target-is-mips64el,aarch64
+// UNSUPPORTED: target-is-mips64,target-is-mips64el,target=aarch64{{.*}}
 
 #include <assert.h>
 #include <stdio.h>

@@ -13,6 +13,7 @@
 
 namespace lldb_private {
 class SBLaunchInfoImpl;
+class ScriptInterpreter;
 }
 
 namespace lldb {
@@ -26,7 +27,14 @@ public:
 
   ~SBLaunchInfo();
 
+#ifndef SWIG
+  // The copy constructor for SBLaunchInfo presents some problems on some
+  // supported versions of swig (e.g. 3.0.2). When trying to create an
+  // SBLaunchInfo from python with the argument `None`, swig will try to call
+  // the copy constructor instead of SBLaunchInfo(const char **). For that
+  // reason, we avoid exposing the copy constructor to python.
   SBLaunchInfo(const SBLaunchInfo &rhs);
+#endif
 
   SBLaunchInfo &operator=(const SBLaunchInfo &rhs);
 
@@ -83,6 +91,25 @@ public:
   /// belongs to will listen for the process events. Calling this function
   /// allows a different listener to be used to listen for process events.
   void SetListener(SBListener &listener);
+
+  /// Get the shadow listener that receive public process events,
+  /// additionally to the default process event listener.
+  ///
+  /// If no listener has been set via a call to
+  /// SBLaunchInfo::SetShadowListener(), then an invalid SBListener will
+  /// be returned (SBListener::IsValid() will return false). If a listener
+  /// has been set, then the valid listener object will be returned.
+  SBListener GetShadowListener();
+
+  /// Set the shadow listener that will receive public process events,
+  /// additionally to the default process event listener.
+  ///
+  /// By default a process have no shadow event listener.
+  /// Calling this function allows public process events to be broadcasted to an
+  /// additional listener on top of the default process event listener.
+  /// If the `listener` argument is invalid (SBListener::IsValid() will
+  /// return false), this will clear the shadow listener.
+  void SetShadowListener(SBListener &listener);
 
   uint32_t GetNumArguments();
 
@@ -182,6 +209,8 @@ public:
 protected:
   friend class SBPlatform;
   friend class SBTarget;
+
+  friend class lldb_private::ScriptInterpreter;
 
   const lldb_private::ProcessLaunchInfo &ref() const;
   void set_ref(const lldb_private::ProcessLaunchInfo &info);

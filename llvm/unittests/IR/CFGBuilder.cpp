@@ -126,13 +126,13 @@ void CFGBuilder::buildCFG(const std::vector<Arc> &NewArcs) {
   }
 }
 
-Optional<CFGBuilder::Update> CFGBuilder::getNextUpdate() const {
+std::optional<CFGBuilder::Update> CFGBuilder::getNextUpdate() const {
   if (UpdateIdx == Updates.size())
     return std::nullopt;
   return Updates[UpdateIdx];
 }
 
-Optional<CFGBuilder::Update> CFGBuilder::applyUpdate() {
+std::optional<CFGBuilder::Update> CFGBuilder::applyUpdate() {
   if (UpdateIdx == Updates.size())
     return std::nullopt;
   Update NextUpdate = Updates[UpdateIdx++];

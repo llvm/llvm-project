@@ -9,11 +9,11 @@
 
 # CHECK: 		DW_TAG_inlined_subroutine
 # CHECK: 		DW_AT_low_pc [DW_FORM_addr] (0x[[#%.16x,ADDR:]])
-# CHECK:		DW_AT_ranges [DW_FORM_sec_offset]
-# CHECK-NEXT:	[0x[[#ADDR]], 0x[[#ADDR]])
+# CHECK:		DW_AT_high_pc [DW_FORM_data4] (0x00000000)
 
 # CHECK:		DW_TAG_inlined_subroutine
 # CHECK-NOT:	DW_AT_low_pc [DW_FORM_addr] (0x[[#ADDR]])
+# CHECK:		DW_AT_high_pc [DW_FORM_data4] (0x00000000)
 
 
 # Testing BOLT handles correctly when size of DW_AT_inlined_subroutine is 0.

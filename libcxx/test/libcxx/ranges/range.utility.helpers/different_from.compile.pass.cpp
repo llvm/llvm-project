@@ -10,9 +10,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include <concepts>
+// Check that different_from.h is self-contained
 
-#include "test_macros.h"
+#include <__concepts/different_from.h>
 
 static_assert(std::__different_from<int, char>);
 static_assert(std::__different_from<const int, char>);
@@ -25,4 +25,3 @@ static_assert(!std::__different_from<int, int&>);
 static_assert(!std::__different_from<int&, const int&>);
 static_assert(!std::__different_from<int(&)(), int()>);
 static_assert(std::__different_from<int(&)(), int(*)()>);
-

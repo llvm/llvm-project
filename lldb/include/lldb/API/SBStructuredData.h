@@ -11,6 +11,16 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBModule.h"
+#include "lldb/API/SBScriptObject.h"
+
+namespace lldb_private {
+namespace python {
+class SWIGBridge;
+}
+namespace lua {
+class SWIGBridge;
+}
+} // namespace lldb_private
 
 namespace lldb {
 
@@ -20,9 +30,8 @@ public:
 
   SBStructuredData(const lldb::SBStructuredData &rhs);
 
-  SBStructuredData(const lldb::EventSP &event_sp);
-
-  SBStructuredData(const lldb_private::StructuredDataImpl &impl);
+  SBStructuredData(const lldb::SBScriptObject obj,
+                   const lldb::SBDebugger &debugger);
 
   ~SBStructuredData();
 
@@ -52,7 +61,7 @@ public:
 
   /// Fill keys with the keys in this object and return true if this data
   /// structure is a dictionary.  Returns false otherwise.
-   bool GetKeys(lldb::SBStringList &keys) const;
+  bool GetKeys(lldb::SBStringList &keys) const;
 
   /// Return the value corresponding to a key if this data structure
   /// is a dictionary type.
@@ -63,6 +72,13 @@ public:
   lldb::SBStructuredData GetItemAtIndex(size_t idx) const;
 
   /// Return the integer value if this data structure is an integer type.
+  uint64_t GetUnsignedIntegerValue(uint64_t fail_value = 0) const;
+  /// Return the integer value if this data structure is an integer type.
+  int64_t GetSignedIntegerValue(int64_t fail_value = 0) const;
+
+  LLDB_DEPRECATED_FIXME(
+      "Specify if the value is signed or unsigned",
+      "uint64_t GetUnsignedIntegerValue(uint64_t fail_value = 0)")
   uint64_t GetIntegerValue(uint64_t fail_value = 0) const;
 
   /// Return the floating point value if this data structure is a floating
@@ -89,7 +105,11 @@ public:
   ///     \a dst in all cases.
   size_t GetStringValue(char *dst, size_t dst_len) const;
 
+  /// Return the generic pointer if this data structure is a generic type.
+  lldb::SBScriptObject GetGenericValue() const;
+
 protected:
+  friend class SBAttachInfo;
   friend class SBLaunchInfo;
   friend class SBDebugger;
   friend class SBTarget;
@@ -100,6 +120,12 @@ protected:
   friend class SBBreakpointLocation;
   friend class SBBreakpointName;
   friend class SBTrace;
+  friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::lua::SWIGBridge;
+
+  SBStructuredData(const lldb_private::StructuredDataImpl &impl);
+
+  SBStructuredData(const lldb::EventSP &event_sp);
 
   StructuredDataImplUP m_impl_up;
 };

@@ -15,9 +15,10 @@
 //
 // RUN: stat "%{include}/__config"
 
-// Make sure we install libc++.1.dylib in the right location.
+// Make sure we install libc++.1.dylib and libc++experimental.a in the right location.
 //
 // RUN: stat "%{lib}/libc++.1.dylib"
+// RUN: stat "%{lib}/libc++experimental.a"
 
 // Make sure we install a symlink from libc++.dylib to libc++.1.dylib.
 //
@@ -41,3 +42,7 @@
 // when they are loaded by dyld, if the compatibility version was bumped.
 //
 // RUN: otool -L "%{lib}/libc++.1.dylib" | grep "libc++.1.dylib" | grep "compatibility version 1.0.0"
+
+// Make sure we use the libdispatch backend for the PSTL.
+//
+// RUN: grep "%{include}/__config_site" -e '#define _LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH'

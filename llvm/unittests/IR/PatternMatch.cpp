@@ -1756,21 +1756,19 @@ TEST_F(PatternMatchTest, VScale) {
   DataLayout DL = M->getDataLayout();
 
   Type *VecTy = ScalableVectorType::get(IRB.getInt8Ty(), 1);
-  Type *VecPtrTy = VecTy->getPointerTo();
-  Value *NullPtrVec = Constant::getNullValue(VecPtrTy);
+  Value *NullPtrVec =
+      Constant::getNullValue(PointerType::getUnqual(VecTy->getContext()));
   Value *GEP = IRB.CreateGEP(VecTy, NullPtrVec, IRB.getInt64(1));
   Value *PtrToInt = IRB.CreatePtrToInt(GEP, DL.getIntPtrType(GEP->getType()));
-  EXPECT_TRUE(match(PtrToInt, m_VScale(DL)));
+  EXPECT_TRUE(match(PtrToInt, m_VScale()));
 
-  // This used to cause assertion failures when attempting to match m_VScale.
-  // With opaque pointers the bitcast is no longer present.
   Type *VecTy2 = ScalableVectorType::get(IRB.getInt8Ty(), 2);
-  Value *NullPtrVec2 = Constant::getNullValue(VecTy2->getPointerTo());
-  Value *BitCast = IRB.CreateBitCast(NullPtrVec2, VecPtrTy);
-  Value *GEP2 = IRB.CreateGEP(VecTy, BitCast, IRB.getInt64(1));
+  Value *NullPtrVec2 =
+      Constant::getNullValue(PointerType::getUnqual(VecTy2->getContext()));
+  Value *GEP2 = IRB.CreateGEP(VecTy, NullPtrVec2, IRB.getInt64(1));
   Value *PtrToInt2 =
       IRB.CreatePtrToInt(GEP2, DL.getIntPtrType(GEP2->getType()));
-  EXPECT_TRUE(match(PtrToInt2, m_VScale(DL)));
+  EXPECT_TRUE(match(PtrToInt2, m_VScale()));
 }
 
 TEST_F(PatternMatchTest, NotForbidUndef) {

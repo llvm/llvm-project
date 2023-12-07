@@ -16,8 +16,8 @@
 #include <__concepts/same_as.h>
 #include <__concepts/totally_ordered.h>
 #include <__config>
+#include <__type_traits/common_reference.h>
 #include <__type_traits/make_const_lvalue_ref.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -25,7 +25,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template<class _Tp, class _Cat>
 concept __compares_as =
@@ -52,7 +52,7 @@ concept three_way_comparable_with =
     { __u <=> __t } -> __compares_as<_Cat>;
   };
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

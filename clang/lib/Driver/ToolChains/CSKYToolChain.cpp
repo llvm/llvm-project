@@ -38,13 +38,13 @@ CSKYToolChain::CSKYToolChain(const Driver &D, const llvm::Triple &Triple,
   GCCInstallation.init(Triple, Args);
   if (GCCInstallation.isValid()) {
     Multilibs = GCCInstallation.getMultilibs();
-    SelectedMultilib = GCCInstallation.getMultilib();
+    SelectedMultilibs.assign({GCCInstallation.getMultilib()});
     path_list &Paths = getFilePaths();
     // Add toolchain/multilib specific file paths.
-    addMultilibsFilePaths(D, Multilibs, SelectedMultilib,
+    addMultilibsFilePaths(D, Multilibs, SelectedMultilibs.back(),
                           GCCInstallation.getInstallPath(), Paths);
     getFilePaths().push_back(GCCInstallation.getInstallPath().str() +
-                             SelectedMultilib.osSuffix());
+                             SelectedMultilibs.back().osSuffix());
     ToolChain::path_list &PPaths = getProgramPaths();
     // Multilib cross-compiler GCC installations put ld in a triple-prefixed
     // directory off of the parent of the GCC installation.
@@ -52,11 +52,12 @@ CSKYToolChain::CSKYToolChain(const Driver &D, const llvm::Triple &Triple,
                            GCCInstallation.getTriple().str() + "/bin")
                          .str());
     PPaths.push_back((GCCInstallation.getParentLibPath() + "/../bin").str());
+    getFilePaths().push_back(computeSysRoot() + "/lib" +
+                             SelectedMultilibs.back().osSuffix());
   } else {
     getProgramPaths().push_back(D.Dir);
+    getFilePaths().push_back(computeSysRoot() + "/lib");
   }
-  getFilePaths().push_back(computeSysRoot() + "/lib" +
-                           SelectedMultilib.osSuffix());
 }
 
 Tool *CSKYToolChain::buildLinker() const {
@@ -169,8 +170,8 @@ void CSKY::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
   Args.AddAllArgs(CmdArgs,
-                  {options::OPT_T_Group, options::OPT_e, options::OPT_s,
-                   options::OPT_t, options::OPT_Z_Flag, options::OPT_r});
+                  {options::OPT_T_Group, options::OPT_s, options::OPT_t,
+                   options::OPT_Z_Flag, options::OPT_r});
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 

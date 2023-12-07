@@ -62,10 +62,8 @@ typedef id BYObjectIdentifier;
 @property int treeController;  // expected-error {{property has a previous declaration}}
 @end
 
-// rdar://10127639
 @synthesize window; // expected-error {{missing context for property implementation declaration}}
 
-// rdar://10408414
 Class test6_getClass(void);
 @interface Test6
 @end
@@ -78,5 +76,5 @@ Class test6_getClass(void);
 @property unsigned length;
 @end
 void test7(Test7 *t) {
-  char data[t.length] = {}; // expected-error {{variable-sized object may not be initialized}}
+  char data[t.length] = {};
 }

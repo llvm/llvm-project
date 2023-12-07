@@ -5,7 +5,7 @@
 ; subregion. In particulat, it must be dominated by %polly.stmt.subregion.enter,
 ; the generated subregion's entry block.
 
-define void @func(i32 %n, i32* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %loop
 
@@ -24,7 +24,7 @@ subregion.skip:
 subregion.enter:
   %sqr = mul i32 %i, %i
   %cond = icmp eq i32 %sqr, 0
-  store i32 %i, i32* %A
+  store i32 %i, ptr %A
   br i1 %cond, label %subregion.true, label %subregion.false
 
 subregion.true:

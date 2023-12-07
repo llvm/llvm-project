@@ -28,5 +28,11 @@ GetAvailableLogicalCoreIDs(llvm::StringRef cpuinfo);
 ///     if errors didn't happen.
 llvm::Expected<llvm::ArrayRef<lldb::cpu_id_t>> GetAvailableLogicalCoreIDs();
 
+/// \return
+///     The current value of /proc/sys/kernel/yama/ptrace_scope, parsed as an
+///     integer, or an error if the proc file cannot be read or has non-integer
+///     contents.
+llvm::Expected<int> GetPtraceScope();
+
 } // namespace process_linux
 } // namespace lldb_private

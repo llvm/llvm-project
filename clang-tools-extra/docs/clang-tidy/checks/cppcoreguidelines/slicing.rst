@@ -20,6 +20,8 @@ misleading especially for member function slicing, for example:
   D d;
   use(d);  // Slice.
 
-See the relevant C++ Core Guidelines sections for details:
-https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es63-dont-slice
-https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#c145-access-polymorphic-objects-through-pointers-and-references
+This check implements `ES.63
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es63-dont-slice>`_
+and `C.145
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c145-access-polymorphic-objects-through-pointers-and-references>`_
+from the C++ Core Guidelines.

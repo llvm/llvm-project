@@ -3,10 +3,10 @@
 
 declare void @clobber()
 
-define i32 @partial_unswitch_true_successor(i32* %ptr, i32 %N) {
+define i32 @partial_unswitch_true_successor(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @partial_unswitch_true_successor(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 100
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
@@ -26,7 +26,7 @@ define i32 @partial_unswitch_true_successor(i32* %ptr, i32 %N) {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:
@@ -48,7 +48,7 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load i32, i32* %ptr
+  %lv = load i32, ptr %ptr
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 
@@ -68,10 +68,10 @@ exit:
   ret i32 10
 }
 
-define i32 @partial_unswitch_false_successor(i32* %ptr, i32 %N) {
+define i32 @partial_unswitch_false_successor(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @partial_unswitch_false_successor(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 100
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT:%.*]], label [[ENTRY_SPLIT_US:%.*]]
 ; CHECK:       entry.split.us:
@@ -91,7 +91,7 @@ define i32 @partial_unswitch_false_successor(i32* %ptr, i32 %N) {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[CLOBBER:%.*]], label [[NOCLOBBER:%.*]]
 ; CHECK:       clobber:
@@ -113,7 +113,7 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load i32, i32* %ptr
+  %lv = load i32, ptr %ptr
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %clobber, label %noclobber
 
@@ -133,12 +133,12 @@ exit:
   ret i32 10
 }
 
-define i32 @partial_unswtich_gep_load_icmp(i32** %ptr, i32 %N) {
+define i32 @partial_unswtich_gep_load_icmp(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @partial_unswtich_gep_load_icmp(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32*, i32** [[PTR:%.*]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr ptr, ptr [[PTR:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 100
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
@@ -158,9 +158,9 @@ define i32 @partial_unswtich_gep_load_icmp(i32** %ptr, i32 %N) {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32*, i32** [[PTR]], i32 1
-; CHECK-NEXT:    [[LV_1:%.*]] = load i32*, i32** [[GEP]], align 8
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[LV_1]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[LV_1:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[LV_1]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:
@@ -182,9 +182,9 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %gep = getelementptr i32*, i32** %ptr, i32 1
-  %lv.1 = load i32*, i32** %gep
-  %lv = load i32, i32* %lv.1
+  %gep = getelementptr ptr, ptr %ptr, i32 1
+  %lv.1 = load ptr, ptr %gep
+  %lv = load i32, ptr %lv.1
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 
@@ -204,10 +204,10 @@ exit:
   ret i32 10
 }
 
-define i32 @partial_unswitch_reduction_phi(i32* %ptr, i32 %N) {
+define i32 @partial_unswitch_reduction_phi(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @partial_unswitch_reduction_phi(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 100
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT:%.*]], label [[ENTRY_SPLIT_US:%.*]]
 ; CHECK:       entry.split.us:
@@ -232,7 +232,7 @@ define i32 @partial_unswitch_reduction_phi(i32* %ptr, i32 %N) {
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ 20, [[ENTRY_SPLIT]] ], [ [[RED_NEXT:%.*]], [[LOOP_LATCH]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[CLOBBER:%.*]], label [[NOCLOBBER:%.*]]
 ; CHECK:       clobber:
@@ -260,7 +260,7 @@ entry:
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %red = phi i32 [ 20, %entry ], [ %red.next, %loop.latch ]
-  %lv = load i32, i32* %ptr
+  %lv = load i32, ptr %ptr
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %clobber, label %noclobber
 
@@ -286,21 +286,21 @@ exit:
 
 ; Partial unswitching is possible, because the store in %noclobber does not
 ; alias the load of the condition.
-define i32 @partial_unswitch_true_successor_noclobber(i32* noalias %ptr.1, i32* noalias %ptr.2, i32 %N) {
+define i32 @partial_unswitch_true_successor_noclobber(ptr noalias %ptr.1, ptr noalias %ptr.2, i32 %N) {
 ; CHECK-LABEL: @partial_unswitch_true_successor_noclobber(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[PTR_1:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR_1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 100
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[LOOP_HEADER_US:%.*]]
 ; CHECK:       loop.header.us:
 ; CHECK-NEXT:    [[IV_US:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT_US]] ], [ [[IV_NEXT_US:%.*]], [[LOOP_LATCH_US:%.*]] ]
-; CHECK-NEXT:    [[LV_US:%.*]] = load i32, i32* [[PTR_1]], align 4
+; CHECK-NEXT:    [[LV_US:%.*]] = load i32, ptr [[PTR_1]], align 4
 ; CHECK-NEXT:    br label [[NOCLOBBER_US:%.*]]
 ; CHECK:       noclobber.us:
-; CHECK-NEXT:    [[GEP_1_US:%.*]] = getelementptr i32, i32* [[PTR_2:%.*]], i32 [[IV_US]]
-; CHECK-NEXT:    store i32 [[LV_US]], i32* [[GEP_1_US]], align 4
+; CHECK-NEXT:    [[GEP_1_US:%.*]] = getelementptr i32, ptr [[PTR_2:%.*]], i32 [[IV_US]]
+; CHECK-NEXT:    store i32 [[LV_US]], ptr [[GEP_1_US]], align 4
 ; CHECK-NEXT:    br label [[LOOP_LATCH_US]]
 ; CHECK:       loop.latch.us:
 ; CHECK-NEXT:    [[C_US:%.*]] = icmp ult i32 [[IV_US]], [[N:%.*]]
@@ -312,12 +312,12 @@ define i32 @partial_unswitch_true_successor_noclobber(i32* noalias %ptr.1, i32* 
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR_1]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR_1]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i32, i32* [[PTR_2]], i32 [[IV]]
-; CHECK-NEXT:    store i32 [[LV]], i32* [[GEP_1]], align 4
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[PTR_2]], i32 [[IV]]
+; CHECK-NEXT:    store i32 [[LV]], ptr [[GEP_1]], align 4
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       clobber:
 ; CHECK-NEXT:    call void @clobber()
@@ -336,13 +336,13 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load i32, i32* %ptr.1
+  %lv = load i32, ptr %ptr.1
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 
 noclobber:
-  %gep.1 = getelementptr i32, i32* %ptr.2, i32 %iv
-  store i32 %lv, i32* %gep.1
+  %gep.1 = getelementptr i32, ptr %ptr.2, i32 %iv
+  store i32 %lv, ptr %gep.1
   br label %loop.latch
 
 clobber:
@@ -402,13 +402,13 @@ exit:
   ret void
 }
 
-define void @no_partial_unswitch_clobber_latch(i32* %ptr, i32 %N) {
+define void @no_partial_unswitch_clobber_latch(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @no_partial_unswitch_clobber_latch(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:
@@ -429,7 +429,7 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load i32, i32* %ptr
+  %lv = load i32, ptr %ptr
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 
@@ -450,14 +450,14 @@ exit:
   ret void
 }
 
-define void @no_partial_unswitch_clobber_header(i32* %ptr, i32 %N) {
+define void @no_partial_unswitch_clobber_header(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @no_partial_unswitch_clobber_header(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:
@@ -478,7 +478,7 @@ entry:
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
   call void @clobber()
-  %lv = load i32, i32* %ptr
+  %lv = load i32, ptr %ptr
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 
@@ -498,13 +498,13 @@ exit:
   ret void
 }
 
-define void @no_partial_unswitch_clobber_both(i32* %ptr, i32 %N) {
+define void @no_partial_unswitch_clobber_both(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @no_partial_unswitch_clobber_both(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:
@@ -525,7 +525,7 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load i32, i32* %ptr
+  %lv = load i32, ptr %ptr
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 
@@ -546,18 +546,18 @@ exit:
   ret void
 }
 
-define i32 @no_partial_unswitch_true_successor_storeclobber(i32* %ptr.1, i32* %ptr.2, i32 %N) {
+define i32 @no_partial_unswitch_true_successor_storeclobber(ptr %ptr.1, ptr %ptr.2, i32 %N) {
 ; CHECK-LABEL: @no_partial_unswitch_true_successor_storeclobber(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR_1:%.*]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR_1:%.*]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i32, i32* [[PTR_2:%.*]], i32 [[IV]]
-; CHECK-NEXT:    store i32 [[LV]], i32* [[GEP_1]], align 4
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[PTR_2:%.*]], i32 [[IV]]
+; CHECK-NEXT:    store i32 [[LV]], ptr [[GEP_1]], align 4
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       clobber:
 ; CHECK-NEXT:    call void @clobber()
@@ -574,13 +574,13 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load i32, i32* %ptr.1
+  %lv = load i32, ptr %ptr.1
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 
 noclobber:
-  %gep.1 = getelementptr i32, i32* %ptr.2, i32 %iv
-  store i32 %lv, i32* %gep.1
+  %gep.1 = getelementptr i32, ptr %ptr.2, i32 %iv
+  store i32 %lv, ptr %gep.1
   br label %loop.latch
 
 clobber:
@@ -600,13 +600,13 @@ exit:
 ; executes when the loop body also executes. Do not check the unswitched code,
 ; because it is already checked in the @partial_unswitch_true_successor test
 ; case.
-define i32 @partial_unswitch_true_successor_preheader_insertion(i32* %ptr, i32 %N) {
+define i32 @partial_unswitch_true_successor_preheader_insertion(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @partial_unswitch_true_successor_preheader_insertion(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32* [[PTR:%.*]], null
+; CHECK-NEXT:    [[EC:%.*]] = icmp ne ptr [[PTR:%.*]], null
 ; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_PH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 100
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_PH_SPLIT_US:%.*]], label [[LOOP_PH_SPLIT:%.*]]
 ; CHECK:       loop.ph.split.us:
@@ -626,7 +626,7 @@ define i32 @partial_unswitch_true_successor_preheader_insertion(i32* %ptr, i32 %
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[LOOP_PH_SPLIT]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:
@@ -647,7 +647,7 @@ define i32 @partial_unswitch_true_successor_preheader_insertion(i32* %ptr, i32 %
 ;
 
 entry:
-  %ec = icmp ne i32* %ptr, null
+  %ec = icmp ne ptr %ptr, null
   br i1 %ec, label %loop.ph, label %exit
 
 loop.ph:
@@ -655,7 +655,7 @@ loop.ph:
 
 loop.header:
   %iv = phi i32 [ 0, %loop.ph ], [ %iv.next, %loop.latch ]
-  %lv = load i32, i32* %ptr
+  %lv = load i32, ptr %ptr
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 
@@ -678,11 +678,11 @@ exit:
 ; Make sure the duplicated instructions are hoisted just before the branch of
 ; the preheader. Do not check the unswitched code, because it is already checked
 ; in the @partial_unswitch_true_successor test case
-define i32 @partial_unswitch_true_successor_insert_point(i32* %ptr, i32 %N) {
+define i32 @partial_unswitch_true_successor_insert_point(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @partial_unswitch_true_successor_insert_point(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 100
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
@@ -702,7 +702,7 @@ define i32 @partial_unswitch_true_successor_insert_point(i32* %ptr, i32 %N) {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:
@@ -725,7 +725,7 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load i32, i32* %ptr
+  %lv = load i32, ptr %ptr
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 
@@ -748,11 +748,11 @@ exit:
 ; Make sure invariant instructions in the loop are also hoisted to the preheader.
 ; Do not check the unswitched code, because it is already checked in the
 ; @partial_unswitch_true_successor test case
-define i32 @partial_unswitch_true_successor_hoist_invariant(i32* %ptr, i32 %N) {
+define i32 @partial_unswitch_true_successor_hoist_invariant(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @partial_unswitch_true_successor_hoist_invariant(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 100
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
@@ -772,8 +772,8 @@ define i32 @partial_unswitch_true_successor_hoist_invariant(i32* %ptr, i32 %N) {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR]], i64 1
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:
@@ -795,8 +795,8 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %gep = getelementptr i32, i32* %ptr, i64 1
-  %lv = load i32, i32* %gep
+  %gep = getelementptr i32, ptr %ptr, i64 1
+  %lv = load i32, ptr %gep
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 
@@ -818,13 +818,13 @@ exit:
 
 ; Do not unswitch if the condition depends on an atomic load. Duplicating such
 ; loads is not safe.
-define i32 @no_partial_unswitch_atomic_load_unordered(i32* %ptr, i32 %N) {
+define i32 @no_partial_unswitch_atomic_load_unordered(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @no_partial_unswitch_atomic_load_unordered(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load atomic i32, i32* [[PTR:%.*]] unordered, align 4
+; CHECK-NEXT:    [[LV:%.*]] = load atomic i32, ptr [[PTR:%.*]] unordered, align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:
@@ -844,7 +844,7 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load atomic i32, i32* %ptr unordered, align 4
+  %lv = load atomic i32, ptr %ptr unordered, align 4
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 
@@ -866,13 +866,13 @@ exit:
 
 ; Do not unswitch if the condition depends on an atomic load. Duplicating such
 ; loads is not safe.
-define i32 @no_partial_unswitch_atomic_load_monotonic(i32* %ptr, i32 %N) {
+define i32 @no_partial_unswitch_atomic_load_monotonic(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @no_partial_unswitch_atomic_load_monotonic(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load atomic i32, i32* [[PTR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[LV:%.*]] = load atomic i32, ptr [[PTR:%.*]] monotonic, align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:
@@ -892,7 +892,7 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load atomic i32, i32* %ptr monotonic, align 4
+  %lv = load atomic i32, ptr %ptr monotonic, align 4
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 
@@ -917,7 +917,7 @@ declare i32 @get_value()
 
 ; Do not unswitch if the condition depends on a call, that may clobber memory.
 ; Duplicating such a call is not safe.
-define i32 @no_partial_unswitch_cond_call(i32* %ptr, i32 %N) {
+define i32 @no_partial_unswitch_cond_call(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @no_partial_unswitch_cond_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
@@ -963,13 +963,13 @@ exit:
   ret i32 10
 }
 
-define i32 @no_partial_unswitch_true_successor_exit(i32* %ptr, i32 %N) {
+define i32 @no_partial_unswitch_true_successor_exit(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @no_partial_unswitch_true_successor_exit(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[EXIT:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       clobber:
@@ -987,7 +987,7 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load i32, i32* %ptr
+  %lv = load i32, ptr %ptr
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %exit, label %clobber
 
@@ -1004,13 +1004,13 @@ exit:
   ret i32 10
 }
 
-define i32 @no_partial_unswitch_true_same_successor(i32* %ptr, i32 %N) {
+define i32 @no_partial_unswitch_true_same_successor(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @no_partial_unswitch_true_same_successor(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[NOCLOBBER]]
 ; CHECK:       noclobber:
@@ -1027,7 +1027,7 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load i32, i32* %ptr
+  %lv = load i32, ptr %ptr
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %noclobber
 
@@ -1043,10 +1043,10 @@ exit:
   ret i32 10
 }
 
-define i32 @partial_unswitch_true_to_latch(i32* %ptr, i32 %N) {
+define i32 @partial_unswitch_true_to_latch(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @partial_unswitch_true_to_latch(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 100
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
@@ -1064,7 +1064,7 @@ define i32 @partial_unswitch_true_to_latch(i32* %ptr, i32 %N) {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[LOOP_LATCH]], label [[CLOBBER:%.*]]
 ; CHECK:       clobber:
@@ -1084,7 +1084,7 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load i32, i32* %ptr
+  %lv = load i32, ptr %ptr
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %loop.latch, label %clobber
 
@@ -1104,11 +1104,11 @@ exit:
 ; There could be multiple unswitch candidates which include partially invariant
 ; condition. When the exiting block is selected as best unswitch one, clone loop
 ; blocks.
-define i32 @partial_unswitch_exiting_block_with_multiple_unswitch_candidates(i32 %0, i32 %1, i32* %ptr) {
+define i32 @partial_unswitch_exiting_block_with_multiple_unswitch_candidates(i32 %0, i32 %1, ptr %ptr) {
 ; CHECK-LABEL: @partial_unswitch_exiting_block_with_multiple_unswitch_candidates(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[PTR:%.*]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[PTR:%.*]], align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 41
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[ENTRY_SPLIT:%.*]], label [[ENTRY_SPLIT_US:%.*]]
 ; CHECK:       entry.split.us:
@@ -1131,11 +1131,11 @@ define i32 @partial_unswitch_exiting_block_with_multiple_unswitch_candidates(i32
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[PTR]], align 16
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR]], align 16
 ; CHECK-NEXT:    [[IF_COND:%.*]] = icmp ult i32 [[VAL]], 41
 ; CHECK-NEXT:    br i1 [[IF_COND]], label [[IF_THEN:%.*]], label [[EXITING:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[TMP1:%.*]], i32* [[PTR]], align 16
+; CHECK-NEXT:    store i32 [[TMP1:%.*]], ptr [[PTR]], align 16
 ; CHECK-NEXT:    br label [[EXITING]]
 ; CHECK:       exiting:
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[LOOP]], label [[EXIT_SPLIT:%.*]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -1151,12 +1151,12 @@ entry:
   br label %loop
 
 loop:
-  %val = load i32, i32* %ptr, align 16
+  %val = load i32, ptr %ptr, align 16
   %if.cond = icmp ult i32 %val, 41
   br i1 %if.cond, label %if.then, label %exiting
 
 if.then:
-  store i32 %1, i32* %ptr, align 16
+  store i32 %1, ptr %ptr, align 16
   br label %exiting
 
 exiting:
@@ -1169,10 +1169,10 @@ exit:
 
 ; The path with noclobber block is only duplicated so we need to calculate only
 ; the cost of the path with noclobber.
-define i32 @partial_unswitch_true_successor_for_cost_calculation(i32* %ptr, i32 %N) {
+define i32 @partial_unswitch_true_successor_for_cost_calculation(ptr %ptr, i32 %N) {
 ; CHECK-LABEL: @partial_unswitch_true_successor_for_cost_calculation(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 100
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
@@ -1192,7 +1192,7 @@ define i32 @partial_unswitch_true_successor_for_cost_calculation(i32* %ptr, i32 
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
 ; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
 ; CHECK:       noclobber:
@@ -1260,7 +1260,7 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load i32, i32* %ptr
+  %lv = load i32, ptr %ptr
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 

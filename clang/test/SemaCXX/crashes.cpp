@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
-// <rdar://problem/8124080>
 template<typename _Alloc> class allocator;
 template<class _CharT> struct char_traits;
 template<typename _CharT, typename _Traits = char_traits<_CharT>,
@@ -29,7 +28,6 @@ template<typename T> struct a : T {
  };
 };
 
-// rdar://8605381
 namespace rdar8605381 {
 struct X {};
 

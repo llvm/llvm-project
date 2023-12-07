@@ -9,7 +9,6 @@
 #ifndef PYTHON_BINDINGS_ARITH_OPS
 #define PYTHON_BINDINGS_ARITH_OPS
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/Arith/IR/ArithOps.td"
 
 #endif

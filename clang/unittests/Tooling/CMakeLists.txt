@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   Option
   FrontendOpenMP
   Support
+  TargetParser
   )
 
 
@@ -89,6 +90,7 @@ clang_target_link_libraries(ToolingTests
 
 target_link_libraries(ToolingTests
   PRIVATE
+  LLVMTestingAnnotations
   LLVMTestingSupport
   clangTesting
 )

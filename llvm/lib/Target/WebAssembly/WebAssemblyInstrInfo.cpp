@@ -14,10 +14,10 @@
 
 #include "WebAssemblyInstrInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -46,11 +46,11 @@ bool WebAssemblyInstrInfo::isReallyTriviallyReMaterializable(
   case WebAssembly::CONST_I64:
   case WebAssembly::CONST_F32:
   case WebAssembly::CONST_F64:
-    // isReallyTriviallyReMaterializableGeneric misses these because of the
-    // ARGUMENTS implicit def, so we manualy override it here.
+    // TargetInstrInfo::isReallyTriviallyReMaterializable misses these
+    // because of the ARGUMENTS implicit def, so we manualy override it here.
     return true;
   default:
-    return false;
+    return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
   }
 }
 
@@ -197,10 +197,37 @@ WebAssemblyInstrInfo::getSerializableTargetIndices() const {
       {WebAssembly::TI_OPERAND_STACK, "wasm-operand-stack"},
       {WebAssembly::TI_GLOBAL_RELOC, "wasm-global-reloc"},
       {WebAssembly::TI_LOCAL_INDIRECT, "wasm-local-indirect"}};
-  return makeArrayRef(TargetIndices);
+  return ArrayRef(TargetIndices);
 }
 
 const MachineOperand &
 WebAssemblyInstrInfo::getCalleeOperand(const MachineInstr &MI) const {
   return WebAssembly::getCalleeOp(MI);
+}
+
+// This returns true when the instruction defines a value of a TargetIndex
+// operand that can be tracked by offsets. For Wasm, this returns true for only
+// local.set/local.tees. This is currently used by LiveDebugValues analysis.
+//
+// These are not included:
+// - In theory we need to add global.set here too, but we don't have global
+//   indices at this point because they are relocatable and we address them by
+//   names until linking, so we don't have 'offsets' (which are used to store
+//   local/global indices) to deal with in LiveDebugValues. And we don't
+//   associate debug info in values in globals anyway.
+// - All other value-producing instructions, i.e. instructions with defs, can
+//   define values in the Wasm stack, which is represented by TI_OPERAND_STACK
+//   TargetIndex. But they don't have offset info within the instruction itself,
+//   and debug info analysis for them is handled separately in
+//   WebAssemblyDebugFixup pass, so we don't worry about them here.
+bool WebAssemblyInstrInfo::isExplicitTargetIndexDef(const MachineInstr &MI,
+                                                    int &Index,
+                                                    int64_t &Offset) const {
+  unsigned Opc = MI.getOpcode();
+  if (WebAssembly::isLocalSet(Opc) || WebAssembly::isLocalTee(Opc)) {
+    Index = WebAssembly::TI_LOCAL;
+    Offset = MI.explicit_uses().begin()->getImm();
+    return true;
+  }
+  return false;
 }

@@ -58,7 +58,7 @@ class RABasic : public MachineFunctionPass,
                 public RegAllocBase,
                 private LiveRangeEdit::Delegate {
   // context
-  MachineFunction *MF;
+  MachineFunction *MF = nullptr;
 
   // state
   std::unique_ptr<Spiller> SpillerInstance;
@@ -213,8 +213,8 @@ bool RABasic::spillInterferences(const LiveInterval &VirtReg,
   SmallVector<const LiveInterval *, 8> Intfs;
 
   // Collect interferences assigned to any alias of the physical register.
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
     for (const auto *Intf : reverse(Q.interferingVRegs())) {
       if (!Intf->isSpillable() || Intf->weight() > VirtReg.weight())
         return false;

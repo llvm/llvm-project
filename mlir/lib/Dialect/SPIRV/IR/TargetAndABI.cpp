@@ -10,9 +10,10 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -47,7 +48,7 @@ bool spirv::TargetEnv::allows(spirv::Capability capability) const {
   return givenCapabilities.count(capability);
 }
 
-Optional<spirv::Capability>
+std::optional<spirv::Capability>
 spirv::TargetEnv::allows(ArrayRef<spirv::Capability> caps) const {
   const auto *chosen = llvm::find_if(caps, [this](spirv::Capability cap) {
     return givenCapabilities.count(cap);
@@ -61,7 +62,7 @@ bool spirv::TargetEnv::allows(spirv::Extension extension) const {
   return givenExtensions.count(extension);
 }
 
-Optional<spirv::Extension>
+std::optional<spirv::Extension>
 spirv::TargetEnv::allows(ArrayRef<spirv::Extension> exts) const {
   const auto *chosen = llvm::find_if(exts, [this](spirv::Extension ext) {
     return givenExtensions.count(ext);
@@ -101,7 +102,7 @@ StringRef spirv::getInterfaceVarABIAttrName() {
 
 spirv::InterfaceVarABIAttr
 spirv::getInterfaceVarABIAttr(unsigned descriptorSet, unsigned binding,
-                              Optional<spirv::StorageClass> storageClass,
+                              std::optional<spirv::StorageClass> storageClass,
                               MLIRContext *context) {
   return spirv::InterfaceVarABIAttr::get(descriptorSet, binding, storageClass,
                                          context);
@@ -122,7 +123,7 @@ StringRef spirv::getEntryPointABIAttrName() { return "spirv.entry_point_abi"; }
 spirv::EntryPointABIAttr
 spirv::getEntryPointABIAttr(MLIRContext *context,
                             ArrayRef<int32_t> workgroupSize,
-                            llvm::Optional<int> subgroupSize) {
+                            std::optional<int> subgroupSize) {
   DenseI32ArrayAttr workgroupSizeAttr;
   if (!workgroupSize.empty()) {
     assert(workgroupSize.size() == 3);
@@ -204,12 +205,12 @@ spirv::TargetEnvAttr spirv::lookupTargetEnvOrDefault(Operation *op) {
 }
 
 spirv::AddressingModel
-spirv::getAddressingModel(spirv::TargetEnvAttr targetAttr) {
+spirv::getAddressingModel(spirv::TargetEnvAttr targetAttr,
+                          bool use64bitAddress) {
   for (spirv::Capability cap : targetAttr.getCapabilities()) {
-    // TODO: Physical64 is hard-coded here, but some information should come
-    // from TargetEnvAttr to selected between Physical32 and Physical64.
     if (cap == Capability::Kernel)
-      return spirv::AddressingModel::Physical64;
+      return use64bitAddress ? spirv::AddressingModel::Physical64
+                             : spirv::AddressingModel::Physical32;
     // TODO PhysicalStorageBuffer64 is hard-coded here, but some information
     // should come from TargetEnvAttr to select between PhysicalStorageBuffer64
     // and PhysicalStorageBuffer64EXT
@@ -234,7 +235,7 @@ spirv::getExecutionModel(spirv::TargetEnvAttr targetAttr) {
 FailureOr<spirv::MemoryModel>
 spirv::getMemoryModel(spirv::TargetEnvAttr targetAttr) {
   for (spirv::Capability cap : targetAttr.getCapabilities()) {
-    if (cap == spirv::Capability::Addresses)
+    if (cap == spirv::Capability::Kernel)
       return spirv::MemoryModel::OpenCL;
     if (cap == spirv::Capability::Shader)
       return spirv::MemoryModel::GLSL450;

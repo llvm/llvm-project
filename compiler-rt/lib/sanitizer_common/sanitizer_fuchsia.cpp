@@ -226,13 +226,14 @@ static uptr DoMmapFixedOrDie(zx_handle_t vmar, uptr fixed_addr, uptr map_size,
 
 uptr ReservedAddressRange::Map(uptr fixed_addr, uptr map_size,
                                const char *name) {
-  return DoMmapFixedOrDie(os_handle_, fixed_addr, map_size, base_, name_,
-                          false);
+  return DoMmapFixedOrDie(os_handle_, fixed_addr, map_size, base_,
+                          name ? name : name_, false);
 }
 
 uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr map_size,
                                     const char *name) {
-  return DoMmapFixedOrDie(os_handle_, fixed_addr, map_size, base_, name_, true);
+  return DoMmapFixedOrDie(os_handle_, fixed_addr, map_size, base_,
+                          name ? name : name_, true);
 }
 
 void UnmapOrDieVmar(void *addr, uptr size, zx_handle_t target_vmar) {
@@ -283,6 +284,12 @@ bool MprotectNoAccess(uptr addr, uptr size) {
 bool MprotectReadOnly(uptr addr, uptr size) {
   return _zx_vmar_protect(_zx_vmar_root_self(), ZX_VM_PERM_READ, addr, size) ==
          ZX_OK;
+}
+
+bool MprotectReadWrite(uptr addr, uptr size) {
+  return _zx_vmar_protect(_zx_vmar_root_self(),
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, addr,
+                          size) == ZX_OK;
 }
 
 void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,

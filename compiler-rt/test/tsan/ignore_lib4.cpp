@@ -8,10 +8,10 @@
 
 // powerpc64 big endian bots failed with "FileCheck error: '-' is empty" due
 // to a segmentation fault.
-// UNSUPPORTED: powerpc64-unknown-linux-gnu
+// UNSUPPORTED: target=powerpc64-unknown-linux-gnu{{.*}}
 // aarch64 bots failed with "called_from_lib suppression 'libignore_lib4.so'
 //                           is matched against 2 libraries".
-// UNSUPPORTED: aarch64
+// UNSUPPORTED: target=aarch64{{.*}}
 
 // Test longjmp in ignored lib.
 // It used to crash since we jumped out of ScopedInterceptor scope.

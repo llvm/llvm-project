@@ -5,7 +5,7 @@
 ; slots. This happens because the kill flag wasn't added to the appropriate
 ; operands for the spill code.
 
-define void @f0(i32 %a0, i8* noalias nocapture %a1) #0 {
+define void @f0(i32 %a0, ptr noalias nocapture %a1) #0 {
 b0:
   %v0 = tail call <32 x i32> @llvm.hexagon.V6.vshuffh.128B(<32 x i32> undef)
   %v1 = sdiv i32 %a0, 128
@@ -13,11 +13,10 @@ b0:
   br i1 %v2, label %b1, label %b3
 
 b1:                                               ; preds = %b0
-  %v3 = bitcast i8* %a1 to <32 x i32>*
   br label %b2
 
 b2:                                               ; preds = %b2, %b1
-  %v4 = phi <32 x i32>* [ %v3, %b1 ], [ undef, %b2 ]
+  %v4 = phi ptr [ %a1, %b1 ], [ undef, %b2 ]
   %v5 = tail call <32 x i32> @llvm.hexagon.V6.vlalignbi.128B(<32 x i32> undef, <32 x i32> zeroinitializer, i32 2)
   %v6 = tail call <32 x i32> @llvm.hexagon.V6.vabsdiffub.128B(<32 x i32> %v5, <32 x i32> zeroinitializer)
   %v7 = tail call <32 x i32> @llvm.hexagon.V6.vaddbnq.128B(<128 x i1> zeroinitializer, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer)
@@ -34,9 +33,8 @@ b2:                                               ; preds = %b2, %b1
   %v18 = tail call <32 x i32> @llvm.hexagon.V6.vaddbnq.128B(<128 x i1> %v14, <32 x i32> %v17, <32 x i32> zeroinitializer)
   %v19 = tail call <32 x i32> @llvm.hexagon.V6.vaddbnq.128B(<128 x i1> %v15, <32 x i32> %v18, <32 x i32> zeroinitializer)
   %v20 = tail call <32 x i32> @llvm.hexagon.V6.vaddbnq.128B(<128 x i1> %v16, <32 x i32> %v19, <32 x i32> zeroinitializer)
-  %v21 = getelementptr inbounds i8, i8* null, i32 undef
-  %v22 = bitcast i8* %v21 to <32 x i32>*
-  %v23 = load <32 x i32>, <32 x i32>* %v22, align 128, !tbaa !0
+  %v21 = getelementptr inbounds i8, ptr null, i32 undef
+  %v23 = load <32 x i32>, ptr %v21, align 128, !tbaa !0
   %v24 = tail call <32 x i32> @llvm.hexagon.V6.vabsdiffub.128B(<32 x i32> %v23, <32 x i32> zeroinitializer)
   %v25 = tail call <128 x i1> @llvm.hexagon.V6.vgtub.128B(<32 x i32> %v24, <32 x i32> undef)
   %v26 = tail call <32 x i32> @llvm.hexagon.V6.vaddbnq.128B(<128 x i1> %v25, <32 x i32> %v20, <32 x i32> zeroinitializer)
@@ -85,7 +83,7 @@ b2:                                               ; preds = %b2, %b1
   %v69 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %v65)
   %v70 = tail call <32 x i32> @llvm.hexagon.V6.vasrwh.128B(<32 x i32> %v69, <32 x i32> undef, i32 14)
   %v71 = tail call <32 x i32> @llvm.hexagon.V6.vshuffeb.128B(<32 x i32> %v70, <32 x i32> %v68)
-  store <32 x i32> %v71, <32 x i32>* %v4, align 128, !tbaa !0
+  store <32 x i32> %v71, ptr %v4, align 128, !tbaa !0
   %v72 = icmp slt i32 0, %v1
   br i1 %v72, label %b2, label %b3
 

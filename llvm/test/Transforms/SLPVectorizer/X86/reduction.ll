@@ -4,14 +4,14 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128-n8:16:32-S128"
 target triple = "i386-apple-macosx10.8.0"
 
-; int foo(double *A, int n, int m) {
+; int foo(ptr A, int n, int m) {
 ;   double sum = 0, v1 = 2, v0 = 3;
 ;   for (int i=0; i < n; ++i)
 ;     sum += 7*A[i*2] + 7*A[i*2+1];
 ;   return sum;
 ; }
 
-define i32 @reduce(double* nocapture %A, i32 %n, i32 %m) {
+define i32 @reduce(ptr nocapture %A, i32 %n, i32 %m) {
 ; CHECK-LABEL: @reduce(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP13:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -20,9 +20,8 @@ define i32 @reduce(double* nocapture %A, i32 %n, i32 %m) {
 ; CHECK-NEXT:    [[I_015:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[SUM_014:%.*]] = phi double [ [[ADD6:%.*]], [[FOR_BODY]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i32 [[I_015]], 1
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i32 [[MUL]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i32 [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 7.000000e+00, double 7.000000e+00>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
@@ -46,12 +45,12 @@ for.body:                                         ; preds = %entry, %for.body
   %i.015 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %sum.014 = phi double [ %add6, %for.body ], [ 0.000000e+00, %entry ]
   %mul = shl nsw i32 %i.015, 1
-  %arrayidx = getelementptr inbounds double, double* %A, i32 %mul
-  %0 = load double, double* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds double, ptr %A, i32 %mul
+  %0 = load double, ptr %arrayidx, align 4
   %mul1 = fmul double %0, 7.000000e+00
   %add12 = or i32 %mul, 1
-  %arrayidx3 = getelementptr inbounds double, double* %A, i32 %add12
-  %1 = load double, double* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds double, ptr %A, i32 %add12
+  %1 = load double, ptr %arrayidx3, align 4
   %mul4 = fmul double %1, 7.000000e+00
   %add5 = fadd double %mul1, %mul4
   %add6 = fadd double %sum.014, %add5
@@ -71,37 +70,34 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 ; PR43948 - https://bugs.llvm.org/show_bug.cgi?id=43948
 ; The extra use of a non-vectorized element of a reduction must not be killed.
 
-define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
+define i32 @horiz_max_multiple_uses(ptr %x, ptr %p) {
 ; CHECK-LABEL: @horiz_max_multiple_uses(
-; CHECK-NEXT:    [[X0:%.*]] = getelementptr [32 x i32], [32 x i32]* [[X:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[X4:%.*]] = getelementptr [32 x i32], [32 x i32]* [[X]], i64 0, i64 4
-; CHECK-NEXT:    [[X5:%.*]] = getelementptr [32 x i32], [32 x i32]* [[X]], i64 0, i64 5
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[X0]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
-; CHECK-NEXT:    [[T4:%.*]] = load i32, i32* [[X4]], align 4
-; CHECK-NEXT:    [[T5:%.*]] = load i32, i32* [[X5]], align 4
+; CHECK-NEXT:    [[X4:%.*]] = getelementptr [32 x i32], ptr [[X:%.*]], i64 0, i64 4
+; CHECK-NEXT:    [[X5:%.*]] = getelementptr [32 x i32], ptr [[X]], i64 0, i64 5
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X]], align 4
+; CHECK-NEXT:    [[T4:%.*]] = load i32, ptr [[X4]], align 4
+; CHECK-NEXT:    [[T5:%.*]] = load i32, ptr [[X5]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[MAX_ROOT_CMP:%.*]] = icmp sgt i32 [[TMP3]], [[T4]]
 ; CHECK-NEXT:    [[MAX_ROOT_SEL:%.*]] = select i1 [[MAX_ROOT_CMP]], i32 [[TMP3]], i32 [[T4]]
 ; CHECK-NEXT:    [[C012345:%.*]] = icmp sgt i32 [[MAX_ROOT_SEL]], [[T5]]
 ; CHECK-NEXT:    [[T17:%.*]] = select i1 [[C012345]], i32 [[MAX_ROOT_SEL]], i32 [[T5]]
 ; CHECK-NEXT:    [[THREE_OR_FOUR:%.*]] = select i1 [[MAX_ROOT_CMP]], i32 3, i32 4
-; CHECK-NEXT:    store i32 [[THREE_OR_FOUR]], i32* [[P:%.*]], align 8
+; CHECK-NEXT:    store i32 [[THREE_OR_FOUR]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret i32 [[T17]]
 ;
-  %x0 = getelementptr [32 x i32], [32 x i32]* %x, i64 0, i64 0
-  %x1 = getelementptr [32 x i32], [32 x i32]* %x, i64 0, i64 1
-  %x2 = getelementptr [32 x i32], [32 x i32]* %x, i64 0, i64 2
-  %x3 = getelementptr [32 x i32], [32 x i32]* %x, i64 0, i64 3
-  %x4 = getelementptr [32 x i32], [32 x i32]* %x, i64 0, i64 4
-  %x5 = getelementptr [32 x i32], [32 x i32]* %x, i64 0, i64 5
+  %x1 = getelementptr [32 x i32], ptr %x, i64 0, i64 1
+  %x2 = getelementptr [32 x i32], ptr %x, i64 0, i64 2
+  %x3 = getelementptr [32 x i32], ptr %x, i64 0, i64 3
+  %x4 = getelementptr [32 x i32], ptr %x, i64 0, i64 4
+  %x5 = getelementptr [32 x i32], ptr %x, i64 0, i64 5
 
-  %t0 = load i32, i32* %x0
-  %t1 = load i32, i32* %x1
-  %t2 = load i32, i32* %x2
-  %t3 = load i32, i32* %x3
-  %t4 = load i32, i32* %x4
-  %t5 = load i32, i32* %x5
+  %t0 = load i32, ptr %x
+  %t1 = load i32, ptr %x1
+  %t2 = load i32, ptr %x2
+  %t3 = load i32, ptr %x3
+  %t4 = load i32, ptr %x4
+  %t5 = load i32, ptr %x5
 
   %c01 = icmp sgt i32 %t0, %t1
   %s5 = select i1 %c01, i32 %t0, i32 %t1
@@ -114,32 +110,30 @@ define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
   %c012345 = icmp sgt i32 %MAX_ROOT_SEL, %t5
   %t17 = select i1 %c012345, i32 %MAX_ROOT_SEL, i32 %t5
   %three_or_four = select i1 %MAX_ROOT_CMP, i32 3, i32 4
-  store i32 %three_or_four, i32* %p, align 8
+  store i32 %three_or_four, ptr %p, align 8
   ret i32 %t17
 }
 
 ; This is a miscompile (see the undef operand) and/or test for invalid IR.
 
-define i1 @bad_insertpoint_rdx([8 x i32]* %p) #0 {
+define i1 @bad_insertpoint_rdx(ptr %p) #0 {
 ; CHECK-LABEL: @bad_insertpoint_rdx(
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* [[P:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[T0:%.*]] = load i32, i32* [[ARRAYIDX22]], align 16
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    [[CMP23:%.*]] = icmp sgt i32 [[T0]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP23]], i32 [[T0]], i32 0
-; CHECK-NEXT:    [[ARRAYIDX22_1:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* [[P]], i64 0, i64 1
-; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[ARRAYIDX22_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX22_1:%.*]] = getelementptr inbounds [8 x i32], ptr [[P]], i64 0, i64 1
+; CHECK-NEXT:    [[T1:%.*]] = load i32, ptr [[ARRAYIDX22_1]], align 4
 ; CHECK-NEXT:    [[CMP23_1:%.*]] = icmp sgt i32 [[T1]], [[SPEC_SELECT]]
 ; CHECK-NEXT:    [[SPEC_STORE_SELECT87:%.*]] = zext i1 [[CMP23_1]] to i32
 ; CHECK-NEXT:    [[SPEC_SELECT88:%.*]] = select i1 [[CMP23_1]], i32 [[T1]], i32 [[SPEC_SELECT]]
 ; CHECK-NEXT:    [[CMP23_2:%.*]] = icmp sgt i32 [[SPEC_STORE_SELECT87]], [[SPEC_SELECT88]]
 ; CHECK-NEXT:    ret i1 [[CMP23_2]]
 ;
-  %arrayidx22 = getelementptr inbounds [8 x i32], [8 x i32]* %p, i64 0, i64 0
-  %t0 = load i32, i32* %arrayidx22, align 16
+  %t0 = load i32, ptr %p, align 16
   %cmp23 = icmp sgt i32 %t0, 0
   %spec.select = select i1 %cmp23, i32 %t0, i32 0
-  %arrayidx22.1 = getelementptr inbounds [8 x i32], [8 x i32]* %p, i64 0, i64 1
-  %t1 = load i32, i32* %arrayidx22.1, align 4
+  %arrayidx22.1 = getelementptr inbounds [8 x i32], ptr %p, i64 0, i64 1
+  %t1 = load i32, ptr %arrayidx22.1, align 4
   %cmp23.1 = icmp sgt i32 %t1, %spec.select
   %spec.store.select87 = zext i1 %cmp23.1 to i32
   %spec.select88 = select i1 %cmp23.1, i32 %t1, i32 %spec.select

@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
+namespace clang::tidy::google {
 
 void ExplicitConstructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -40,7 +38,7 @@ static SourceRange findToken(const SourceManager &Sources,
                              SourceLocation StartLoc, SourceLocation EndLoc,
                              bool (*Pred)(const Token &)) {
   if (StartLoc.isMacroID() || EndLoc.isMacroID())
-    return SourceRange();
+    return {};
   FileID File = Sources.getFileID(Sources.getSpellingLoc(StartLoc));
   StringRef Buf = Sources.getBufferData(File);
   const char *StartChar = Sources.getCharacterData(StartLoc);
@@ -52,11 +50,11 @@ static SourceRange findToken(const SourceManager &Sources,
     if (Pred(Tok)) {
       Token NextTok;
       Lex.LexFromRawLexer(NextTok);
-      return SourceRange(Tok.getLocation(), NextTok.getLocation());
+      return {Tok.getLocation(), NextTok.getLocation()};
     }
   } while (Tok.isNot(tok::eof) && Tok.getLocation() < EndLoc);
 
-  return SourceRange();
+  return {};
 }
 
 static bool declIsStdInitializerList(const NamedDecl *D) {
@@ -146,6 +144,4 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
       << FixItHint::CreateInsertion(Loc, "explicit ");
 }
 
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google

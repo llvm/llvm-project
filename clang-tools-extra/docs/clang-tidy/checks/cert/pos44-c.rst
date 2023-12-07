@@ -5,5 +5,5 @@
 cert-pos44-c
 ============
 
-The cert-pos44-c check is an alias, please see
-`bugprone-bad-signal-to-kill-thread <../bugprone/bad-signal-to-kill-thread.html>`_ for more information.
+The `cert-pos44-c` check is an alias, please see
+:doc:`bugprone-bad-signal-to-kill-thread <../bugprone/bad-signal-to-kill-thread>` for more information.

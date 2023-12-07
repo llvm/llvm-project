@@ -1,0 +1,47 @@
+# If binary input file is not specified, llvm-symbolizer assumes it is the first
+# item in the command.
+
+# No input items at all, complain about missing input file.
+RUN: echo | llvm-symbolizer 2>%t.1.err | FileCheck %s --check-prefix=NOSOURCE
+RUN: FileCheck --input-file=%t.1.err --check-prefix=NOFILE %s
+
+# Only one input item, complain about missing addresses.
+RUN: llvm-symbolizer "foo" 2>%t.2.err | FileCheck %s --check-prefix=NOSOURCE
+RUN: FileCheck --input-file=%t.2.err --check-prefix=NOADDR %s
+
+# Two items specified, check if the first one is an existing file.
+RUN: llvm-symbolizer "foo 400" 2>%t.3.err | FileCheck %s --check-prefix=NOSOURCE
+RUN: FileCheck --input-file=%t.3.err --check-prefix=NOTFOUND %s
+
+# FILE: must be followed by a file name.
+RUN: llvm-symbolizer "FILE:" 2>%t.4.err | FileCheck %s --check-prefix=NOSOURCE
+RUN: FileCheck --input-file=%t.4.err --check-prefix=MISSING-FILE %s
+
+# BUILDID: must be followed by a hash.
+RUN: llvm-symbolizer "BUILDID:" 2>%t.5.err | FileCheck %s --check-prefix=NOSOURCE
+RUN: FileCheck --input-file=%t.5.err --check-prefix=MISSING-HASH %s
+
+# Wrong build-id.
+RUN: llvm-symbolizer "BUILDID: foo" 2>%t.6.err | FileCheck %s --check-prefix=NOSOURCE
+RUN: FileCheck --input-file=%t.6.err --check-prefix=BAD-HASH %s
+
+# Unbalanced string quotes in the file name.
+RUN: llvm-symbolizer "FILE:\"foo" 2>%t.7.err | FileCheck %s --check-prefix=NOSOURCE
+RUN: FileCheck --input-file=%t.7.err --check-prefix=BAD-QUOTE %s
+
+NOSOURCE:      ??
+NOSOURCE-NEXT: ??:0:0
+
+NOFILE: error: no input filename has been specified
+
+NOADDR: error: 'foo': no module offset has been specified
+
+NOTFOUND:  error: 'foo': {{[nN]}}o such file or directory
+
+MISSING-FILE: error: 'FILE:': must be followed by an input file
+
+MISSING-HASH: error: 'BUILDID:': must be followed by a hash
+
+BAD-HASH:  error: 'BUILDID: foo': wrong format of build-id
+
+BAD-QUOTE: error: 'FILE:"foo': unbalanced quotes in input file name

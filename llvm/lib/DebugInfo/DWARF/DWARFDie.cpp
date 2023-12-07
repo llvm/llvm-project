@@ -39,7 +39,7 @@ using namespace object;
 static void dumpApplePropertyAttribute(raw_ostream &OS, uint64_t Val) {
   OS << " (";
   do {
-    uint64_t Shift = countTrailingZeros(Val);
+    uint64_t Shift = llvm::countr_zero(Val);
     assert(Shift < 64 && "undefined behavior");
     uint64_t Bit = 1ULL << Shift;
     auto PropName = ApplePropertyString(Bit);

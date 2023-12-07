@@ -7,9 +7,9 @@
 ; GCN: v_min_f32_e32 [[RESULT:v[0-9]+]], [[QUIET1]], [[QUIET0]]
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_dword [[RESULT]]
-define amdgpu_kernel void @test_fmin_f32_ieee_mode_on(float addrspace(1)* %out, float %a, float %b) #0 {
+define amdgpu_kernel void @test_fmin_f32_ieee_mode_on(ptr addrspace(1) %out, float %a, float %b) #0 {
   %val = call float @llvm.minnum.f32(float %a, float %b) #1
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -43,9 +43,9 @@ define amdgpu_ps float @test_fmin_f32_ieee_mode_off(float %a, float %b) #0 {
 ; GCN-LABEL: {{^}}test_fmin_v2f32:
 ; GCN: v_min_f32_e32
 ; GCN: v_min_f32_e32
-define amdgpu_kernel void @test_fmin_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x float> %b) #0 {
+define amdgpu_kernel void @test_fmin_v2f32(ptr addrspace(1) %out, <2 x float> %a, <2 x float> %b) #0 {
   %val = call <2 x float> @llvm.minnum.v2f32(<2 x float> %a, <2 x float> %b)
-  store <2 x float> %val, <2 x float> addrspace(1)* %out, align 8
+  store <2 x float> %val, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -54,9 +54,9 @@ define amdgpu_kernel void @test_fmin_v2f32(<2 x float> addrspace(1)* %out, <2 x 
 ; GCN: v_min_f32_e32
 ; GCN: v_min_f32_e32
 ; GCN: v_min_f32_e32
-define amdgpu_kernel void @test_fmin_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %a, <4 x float> %b) #0 {
+define amdgpu_kernel void @test_fmin_v4f32(ptr addrspace(1) %out, <4 x float> %a, <4 x float> %b) #0 {
   %val = call <4 x float> @llvm.minnum.v4f32(<4 x float> %a, <4 x float> %b)
-  store <4 x float> %val, <4 x float> addrspace(1)* %out, align 16
+  store <4 x float> %val, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -69,9 +69,9 @@ define amdgpu_kernel void @test_fmin_v4f32(<4 x float> addrspace(1)* %out, <4 x 
 ; GCN: v_min_f32_e32
 ; GCN: v_min_f32_e32
 ; GCN: v_min_f32_e32
-define amdgpu_kernel void @test_fmin_v8f32(<8 x float> addrspace(1)* %out, <8 x float> %a, <8 x float> %b) #0 {
+define amdgpu_kernel void @test_fmin_v8f32(ptr addrspace(1) %out, <8 x float> %a, <8 x float> %b) #0 {
   %val = call <8 x float> @llvm.minnum.v8f32(<8 x float> %a, <8 x float> %b)
-  store <8 x float> %val, <8 x float> addrspace(1)* %out, align 32
+  store <8 x float> %val, ptr addrspace(1) %out, align 32
   ret void
 }
 
@@ -92,9 +92,9 @@ define amdgpu_kernel void @test_fmin_v8f32(<8 x float> addrspace(1)* %out, <8 x 
 ; GCN: v_min_f32_e32
 ; GCN: v_min_f32_e32
 ; GCN: v_min_f32_e32
-define amdgpu_kernel void @test_fmin_v16f32(<16 x float> addrspace(1)* %out, <16 x float> %a, <16 x float> %b) #0 {
+define amdgpu_kernel void @test_fmin_v16f32(ptr addrspace(1) %out, <16 x float> %a, <16 x float> %b) #0 {
   %val = call <16 x float> @llvm.minnum.v16f32(<16 x float> %a, <16 x float> %b)
-  store <16 x float> %val, <16 x float> addrspace(1)* %out, align 64
+  store <16 x float> %val, ptr addrspace(1) %out, align 64
   ret void
 }
 
@@ -102,9 +102,9 @@ define amdgpu_kernel void @test_fmin_v16f32(<16 x float> addrspace(1)* %out, <16
 ; GCN-NOT: v_min_f32_e32
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 1.0
 ; GCN: buffer_store_dword [[REG]]
-define amdgpu_kernel void @constant_fold_fmin_f32(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @constant_fold_fmin_f32(ptr addrspace(1) %out) #0 {
   %val = call float @llvm.minnum.f32(float 1.0, float 2.0)
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -112,9 +112,9 @@ define amdgpu_kernel void @constant_fold_fmin_f32(float addrspace(1)* %out) #0 {
 ; GCN-NOT: v_min_f32_e32
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000
 ; GCN: buffer_store_dword [[REG]]
-define amdgpu_kernel void @constant_fold_fmin_f32_nan_nan(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @constant_fold_fmin_f32_nan_nan(ptr addrspace(1) %out) #0 {
   %val = call float @llvm.minnum.f32(float 0x7FF8000000000000, float 0x7FF8000000000000)
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -122,9 +122,9 @@ define amdgpu_kernel void @constant_fold_fmin_f32_nan_nan(float addrspace(1)* %o
 ; GCN-NOT: v_min_f32_e32
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 1.0
 ; GCN: buffer_store_dword [[REG]]
-define amdgpu_kernel void @constant_fold_fmin_f32_val_nan(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @constant_fold_fmin_f32_val_nan(ptr addrspace(1) %out) #0 {
   %val = call float @llvm.minnum.f32(float 1.0, float 0x7FF8000000000000)
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -132,9 +132,9 @@ define amdgpu_kernel void @constant_fold_fmin_f32_val_nan(float addrspace(1)* %o
 ; GCN-NOT: v_min_f32_e32
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 1.0
 ; GCN: buffer_store_dword [[REG]]
-define amdgpu_kernel void @constant_fold_fmin_f32_nan_val(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @constant_fold_fmin_f32_nan_val(ptr addrspace(1) %out) #0 {
   %val = call float @llvm.minnum.f32(float 0x7FF8000000000000, float 1.0)
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -142,9 +142,9 @@ define amdgpu_kernel void @constant_fold_fmin_f32_nan_val(float addrspace(1)* %o
 ; GCN-NOT: v_min_f32_e32
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0
 ; GCN: buffer_store_dword [[REG]]
-define amdgpu_kernel void @constant_fold_fmin_f32_p0_p0(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @constant_fold_fmin_f32_p0_p0(ptr addrspace(1) %out) #0 {
   %val = call float @llvm.minnum.f32(float 0.0, float 0.0)
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -152,9 +152,9 @@ define amdgpu_kernel void @constant_fold_fmin_f32_p0_p0(float addrspace(1)* %out
 ; GCN-NOT: v_min_f32_e32
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0
 ; GCN: buffer_store_dword [[REG]]
-define amdgpu_kernel void @constant_fold_fmin_f32_p0_n0(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @constant_fold_fmin_f32_p0_n0(ptr addrspace(1) %out) #0 {
   %val = call float @llvm.minnum.f32(float 0.0, float -0.0)
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -162,9 +162,9 @@ define amdgpu_kernel void @constant_fold_fmin_f32_p0_n0(float addrspace(1)* %out
 ; GCN-NOT: v_min_f32_e32
 ; GCN: v_bfrev_b32_e32 [[REG:v[0-9]+]], 1{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define amdgpu_kernel void @constant_fold_fmin_f32_n0_p0(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @constant_fold_fmin_f32_n0_p0(ptr addrspace(1) %out) #0 {
   %val = call float @llvm.minnum.f32(float -0.0, float 0.0)
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -172,9 +172,9 @@ define amdgpu_kernel void @constant_fold_fmin_f32_n0_p0(float addrspace(1)* %out
 ; GCN-NOT: v_min_f32_e32
 ; GCN: v_bfrev_b32_e32 [[REG:v[0-9]+]], 1{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define amdgpu_kernel void @constant_fold_fmin_f32_n0_n0(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @constant_fold_fmin_f32_n0_n0(ptr addrspace(1) %out) #0 {
   %val = call float @llvm.minnum.f32(float -0.0, float -0.0)
-  store float %val, float addrspace(1)* %out, align 4
+  store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
 

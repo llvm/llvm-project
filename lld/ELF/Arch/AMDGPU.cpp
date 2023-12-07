@@ -51,7 +51,7 @@ uint32_t AMDGPU::calcEFlagsV3() const {
   uint32_t ret = getEFlags(ctx.objectFiles[0]);
 
   // Verify that all input files have the same e_flags.
-  for (InputFile *f : makeArrayRef(ctx.objectFiles).slice(1)) {
+  for (InputFile *f : ArrayRef(ctx.objectFiles).slice(1)) {
     if (ret == getEFlags(f))
       continue;
     error("incompatible e_flags: " + toString(f));
@@ -69,7 +69,7 @@ uint32_t AMDGPU::calcEFlagsV4() const {
 
   // Verify that all input files have compatible e_flags (same mach, all
   // features in the same category are either ANY, ANY and ON, or ANY and OFF).
-  for (InputFile *f : makeArrayRef(ctx.objectFiles).slice(1)) {
+  for (InputFile *f : ArrayRef(ctx.objectFiles).slice(1)) {
     if (retMach != (getEFlags(f) & EF_AMDGPU_MACH)) {
       error("incompatible mach: " + toString(f));
       return 0;

@@ -60,7 +60,7 @@ public:
     if (isValidIndex(Index))
       return Index;
     size_t Value = Entries.size();
-    ValueType *Entry = ValueType::Create(Key, Allocator, std::move(Value));
+    ValueType *Entry = ValueType::create(Key, Allocator, std::move(Value));
     StringTable.insert(Entry);
     Entries.push_back(Entry);
     return Value;
@@ -69,11 +69,6 @@ public:
   // Given the index, return its corresponding string.
   StringRef getString(size_t Index) const {
     return (Index >= Entries.size()) ? StringRef() : Entries[Index]->getKey();
-  }
-
-  static LVStringPool &getInstance() {
-    static LVStringPool Instance;
-    return Instance;
   }
 
   void print(raw_ostream &OS) const {
@@ -89,8 +84,6 @@ public:
   void dump() const { print(dbgs()); }
 #endif
 };
-
-inline LVStringPool &getStringPool() { return LVStringPool::getInstance(); }
 
 } // namespace logicalview
 } // end namespace llvm

@@ -55,14 +55,20 @@ def err_expected_colon_after_setter_name : Error<
 def err_expected_string_literal : Error<"expected string literal "
   "%select{in %1|for diagnostic message in static_assert|"
           "for optional message in 'availability' attribute|"
-          "for %select{language|source container}1 name in "
-          "'external_source_symbol' attribute}0">;
+          "for %select{language name|source container name|USR}1 in "
+          "'external_source_symbol' attribute|"
+          "as argument of '%1' attribute}0">;
+
 def err_invalid_string_udl : Error<
   "string literal with user-defined suffix cannot be used here">;
 def err_invalid_character_udl : Error<
   "character literal with user-defined suffix cannot be used here">;
 def err_invalid_numeric_udl : Error<
   "numeric literal with user-defined suffix cannot be used here">;
+def warn_pragma_debug_missing_argument : Warning<
+  "missing argument to debug command '%0'">, InGroup<IgnoredPragmas>;
+def warn_pragma_debug_unexpected_argument : Warning<
+  "unexpected argument to debug command">, InGroup<IgnoredPragmas>;
 
 }
 
@@ -117,7 +123,7 @@ def note_pragma_entered_here : Note<"#pragma entered here">;
 def note_decl_hiding_tag_type : Note<
   "%1 %0 is hidden by a non-type declaration of %0 here">;
 def err_attribute_not_type_attr : Error<
-  "%0 attribute cannot be applied to types">;
+  "%0%select{ attribute|}1 cannot be applied to types">;
 def err_enum_template : Error<"enumeration cannot be a template">;
 
 def warn_cxx20_compat_consteval : Warning<
@@ -126,6 +132,12 @@ def warn_cxx20_compat_consteval : Warning<
 def warn_missing_type_specifier : Warning<
   "type specifier missing, defaults to 'int'">,
   InGroup<ImplicitInt>, DefaultIgnore;
+
+def ext_c_empty_initializer : Extension<
+  "use of an empty initializer is a C23 extension">, InGroup<C23>;
+def warn_c23_compat_empty_initializer : Warning<
+  "use of an empty initializer is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 }
 
 let CategoryName = "Nullability Issue" in {
@@ -165,6 +177,8 @@ def warn_unknown_attribute_ignored : Warning<
   "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;
 def warn_attribute_ignored : Warning<"%0 attribute ignored">,
   InGroup<IgnoredAttributes>;
+def err_keyword_not_supported_on_target : Error<
+  "%0 is not supported on this target">;
 def err_use_of_tag_name_without_tag : Error<
   "must use '%1' tag to refer to type %0%select{| in this scope}2">;
 
@@ -200,23 +214,23 @@ def ext_cxx11_longlong : Extension<
 def warn_cxx98_compat_longlong : Warning<
   "'long long' is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
-def ext_cxx2b_size_t_suffix : ExtWarn<
-  "'size_t' suffix for literals is a C++2b extension">,
-  InGroup<CXX2b>;
+def ext_cxx23_size_t_suffix : ExtWarn<
+  "'size_t' suffix for literals is a C++23 extension">,
+  InGroup<CXX23>;
 def warn_cxx20_compat_size_t_suffix : Warning<
   "'size_t' suffix for literals is incompatible with C++ standards before "
-  "C++2b">, InGroup<CXXPre2bCompat>, DefaultIgnore;
-def err_cxx2b_size_t_suffix: Error<
-  "'size_t' suffix for literals is a C++2b feature">;
+  "C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
+def err_cxx23_size_t_suffix: Error<
+  "'size_t' suffix for literals is a C++23 feature">;
 def err_size_t_literal_too_large: Error<
   "%select{signed |}0'size_t' literal is out of range of possible "
   "%select{signed |}0'size_t' values">;
-def ext_c2x_bitint_suffix : ExtWarn<
-  "'_BitInt' suffix for literals is a C2x extension">,
-  InGroup<C2x>;
-def warn_c2x_compat_bitint_suffix : Warning<
-  "'_BitInt' suffix for literals is incompatible with C standards before C2x">,
-  InGroup<CPre2xCompat>, DefaultIgnore;
+def ext_c23_bitint_suffix : ExtWarn<
+  "'_BitInt' suffix for literals is a C23 extension">,
+  InGroup<C23>;
+def warn_c23_compat_bitint_suffix : Warning<
+  "'_BitInt' suffix for literals is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def err_integer_literal_too_large : Error<
   "integer literal is too large to be represented in any %select{signed |}0"
   "integer type">;
@@ -293,12 +307,13 @@ def warn_slh_does_not_support_asm_goto : Warning<
 
 // Sema && Serialization
 def warn_dup_category_def : Warning<
-  "duplicate definition of category %1 on interface %0">;
+  "duplicate definition of category %1 on interface %0">,
+  InGroup<DiagGroup<"objc-duplicate-category-definition">>;
 
 // Targets
 
 def err_target_unknown_triple : Error<
-  "unknown target triple '%0', please use -triple or -arch">;
+  "unknown target triple '%0'">;
 def err_target_unknown_cpu : Error<"unknown target CPU '%0'">;
 def note_valid_options : Note<"valid target CPU values are: %0">;
 def err_target_unsupported_cpu_for_micromips : Error<
@@ -323,12 +338,17 @@ def err_target_unsupported_mcmse : Error<
   "-mcmse is not supported for %0">;
 def err_opt_not_valid_with_opt : Error<
   "option '%0' cannot be specified with '%1'">;
+def err_opt_not_valid_with_opt_on_target : Error<
+  "option '%0' cannot be specified with '%1' for the %2 sub-architecture">;
 def err_opt_not_valid_without_opt : Error<
   "option '%0' cannot be specified without '%1'">;
 def err_opt_not_valid_on_target : Error<
   "option '%0' cannot be specified on this target">;
 def err_invalid_feature_combination : Error<
   "invalid feature combination: %0">;
+def warn_target_unrecognized_env : Warning<
+  "mismatch between architecture and environment in target triple '%0'; did you mean '%1'?">,
+  InGroup<InvalidCommandLineArgument>;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
@@ -405,4 +425,13 @@ def err_opencl_extension_and_feature_differs : Error<
   "options %0 and %1 are set to different values">;
 def err_opencl_feature_requires : Error<
   "feature %0 requires support of %1 feature">;
+
+def warn_throw_not_valid_on_target : Warning<
+  "target '%0' does not support exception handling;"
+  " 'throw' is assumed to be never reached">,
+  InGroup<OpenMPTargetException>;
+def warn_try_not_valid_on_target : Warning<
+  "target '%0' does not support exception handling;"
+  " 'catch' block is ignored">,
+  InGroup<OpenMPTargetException>;
 }

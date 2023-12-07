@@ -76,6 +76,10 @@ def : Pat<(fcopysign F32:$lhs, F64:$rhs),
 def : Pat<(frint f32:$src), (NEAREST_F32 f32:$src)>;
 def : Pat<(frint f64:$src), (NEAREST_F64 f64:$src)>;
 
+// WebAssembly always rounds ties-to-even, so map froundeven to fnearbyint.
+def : Pat<(froundeven f32:$src), (NEAREST_F32 f32:$src)>;
+def : Pat<(froundeven f64:$src), (NEAREST_F64 f64:$src)>;
+
 let isCommutable = 1 in {
 defm EQ : ComparisonFP<SETOEQ, "eq  ", 0x5b, 0x61>;
 defm NE : ComparisonFP<SETUNE, "ne  ", 0x5c, 0x62>;

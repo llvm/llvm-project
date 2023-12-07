@@ -18,6 +18,7 @@
 #include "mlir/Support/TypeID.h"
 #include <functional>
 #include <utility>
+#include <optional>
 
 namespace mlir {
 class OpPassManager;
@@ -104,6 +105,10 @@ public:
       std::function<void(function_ref<void(const detail::PassOptions &)>)>
           optHandler)
       : PassRegistryEntry(arg, description, builder, std::move(optHandler)) {}
+
+  /// Returns the pass pipeline info for the specified pass pipeline or null if
+  /// unknown.
+  static const PassPipelineInfo *lookup(StringRef pipelineArg);
 };
 
 /// A structure to represent the information for a derived pass class.
@@ -113,6 +118,9 @@ public:
   /// PassRegistration or registerPass.
   PassInfo(StringRef arg, StringRef description,
            const PassAllocatorFunction &allocator);
+
+  /// Returns the pass info for the specified pass class or null if unknown.
+  static const PassInfo *lookup(StringRef passArg);
 };
 
 //===----------------------------------------------------------------------===//
@@ -259,7 +267,7 @@ private:
   std::unique_ptr<detail::PassPipelineCLParserImpl> impl;
 
   llvm::cl::opt<std::string> passPipeline;
-  Optional<llvm::cl::alias> passPipelineAlias;
+  std::optional<llvm::cl::alias> passPipelineAlias;
 };
 
 /// This class implements a command-line parser specifically for MLIR pass
@@ -295,9 +303,9 @@ struct PassReproducerOptions {
   LogicalResult apply(PassManager &pm) const;
 
 private:
-  Optional<std::string> pipeline;
-  Optional<bool> verifyEach;
-  Optional<bool> disableThreading;
+  std::optional<std::string> pipeline;
+  std::optional<bool> verifyEach;
+  std::optional<bool> disableThreading;
 };
 
 } // namespace mlir

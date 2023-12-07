@@ -51,7 +51,7 @@ void markLive(COFFLinkerContext &ctx) {
   };
 
   // Add GC root chunks.
-  for (Symbol *b : config->gcroot)
+  for (Symbol *b : ctx.config.gcroot)
     addSym(b);
 
   while (!worklist.empty()) {

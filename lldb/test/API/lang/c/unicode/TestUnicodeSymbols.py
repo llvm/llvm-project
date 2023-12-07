@@ -6,8 +6,7 @@ from lldbsuite.test.decorators import *
 
 
 class TestUnicodeSymbols(TestBase):
-
-    @skipIf(compiler="clang", compiler_version=['<', '7.0'])
+    @skipIf(compiler="clang", compiler_version=["<", "7.0"])
     def test_union_members(self):
         self.build()
         spec = lldb.SBModuleSpec()

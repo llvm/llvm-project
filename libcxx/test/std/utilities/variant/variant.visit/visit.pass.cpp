@@ -8,8 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Throwing bad_variant_access is supported starting in macosx10.13
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}} && !no-exceptions
+// XFAIL: availability-bad_variant_access-missing && !no-exceptions
 
 // <variant>
 // template <class Visitor, class... Variants>
@@ -347,7 +346,7 @@ void test_caller_accepts_nonconst() {
 struct MyVariant : std::variant<short, long, float> {};
 
 namespace std {
-template <size_t Index>
+template <std::size_t Index>
 void get(const MyVariant&) {
   assert(false);
 }

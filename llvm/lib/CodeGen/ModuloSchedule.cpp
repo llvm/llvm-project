@@ -74,10 +74,7 @@ void ModuloScheduleExpander::expand() {
   // stage difference for each use.  Keep the maximum value.
   for (MachineInstr *MI : Schedule.getInstructions()) {
     int DefStage = Schedule.getStage(MI);
-    for (const MachineOperand &Op : MI->operands()) {
-      if (!Op.isReg() || !Op.isDef())
-        continue;
-
+    for (const MachineOperand &Op : MI->all_defs()) {
       Register Reg = Op.getReg();
       unsigned MaxDiff = 0;
       bool PhiIsSwapped = false;
@@ -624,8 +621,7 @@ void ModuloScheduleExpander::generatePhis(
        BBI != BBE; ++BBI) {
     for (unsigned i = 0, e = BBI->getNumOperands(); i != e; ++i) {
       MachineOperand &MO = BBI->getOperand(i);
-      if (!MO.isReg() || !MO.isDef() ||
-          !Register::isVirtualRegister(MO.getReg()))
+      if (!MO.isReg() || !MO.isDef() || !MO.getReg().isVirtual())
         continue;
 
       int StageScheduled = Schedule.getStage(&*BBI);
@@ -744,12 +740,10 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
         continue;
       }
       bool used = true;
-      for (const MachineOperand &MO : MI->operands()) {
-        if (!MO.isReg() || !MO.isDef())
-          continue;
+      for (const MachineOperand &MO : MI->all_defs()) {
         Register reg = MO.getReg();
         // Assume physical registers are used, unless they are marked dead.
-        if (Register::isPhysicalRegister(reg)) {
+        if (reg.isPhysical()) {
           used = !MO.isDead();
           if (used)
             break;
@@ -1032,7 +1026,7 @@ void ModuloScheduleExpander::updateInstruction(MachineInstr *NewMI,
                                                unsigned InstrStageNum,
                                                ValueMapTy *VRMap) {
   for (MachineOperand &MO : NewMI->operands()) {
-    if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
     Register reg = MO.getReg();
     if (MO.isDef()) {

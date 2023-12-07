@@ -15,6 +15,7 @@
 #ifndef SUPPORT_DELETER_TYPES_H
 #define SUPPORT_DELETER_TYPES_H
 
+#include <cstddef>
 #include <type_traits>
 #include <utility>
 #include <cassert>
@@ -385,13 +386,13 @@ void swap(test_deleter<T>& x, test_deleter<T>& y) {
 
 #if TEST_STD_VER >= 11
 
-template <class T, size_t ID = 0>
+template <class T, std::size_t ID = 0>
 class PointerDeleter {
   PointerDeleter(const PointerDeleter&);
   PointerDeleter& operator=(const PointerDeleter&);
 
 public:
-  typedef min_pointer<T, std::integral_constant<size_t, ID>> pointer;
+  typedef min_pointer<T, std::integral_constant<std::size_t, ID>> pointer;
 
   TEST_CONSTEXPR_CXX23 PointerDeleter()                            = default;
   TEST_CONSTEXPR_CXX23 PointerDeleter(PointerDeleter&&)            = default;
@@ -413,13 +414,13 @@ private:
   PointerDeleter(const PointerDeleter<U, ID>&, typename std::enable_if<!std::is_same<U, T>::value>::type* = 0);
 };
 
-template <class T, size_t ID>
+template <class T, std::size_t ID>
 class PointerDeleter<T[], ID> {
   PointerDeleter(const PointerDeleter&);
   PointerDeleter& operator=(const PointerDeleter&);
 
 public:
-  typedef min_pointer<T, std::integral_constant<size_t, ID> > pointer;
+  typedef min_pointer<T, std::integral_constant<std::size_t, ID> > pointer;
 
   TEST_CONSTEXPR_CXX23 PointerDeleter()                            = default;
   TEST_CONSTEXPR_CXX23 PointerDeleter(PointerDeleter&&)            = default;

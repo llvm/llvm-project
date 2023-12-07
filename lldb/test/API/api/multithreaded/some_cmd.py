@@ -3,9 +3,11 @@ import lldb
 
 did_run = False
 
+
 class SomeCommand:
     def __init__(self, debugger, unused):
         self.dbg = debugger
+
     def __call__(self, debugger, command, exe_ctx, result):
         global did_run
         did_run = True
@@ -14,9 +16,11 @@ class SomeCommand:
     def get_short_help(self):
         return "Test command - sets a variable."
 
+
 class OtherCommand:
     def __init__(self, debugger, unused):
         self.dbg = debugger
+
     def __call__(self, debugger, command, exe_ctx, result):
         global did_run
         if did_run:
@@ -26,6 +30,7 @@ class OtherCommand:
 
     def get_short_help(self):
         return "Test command - sets a variable."
+
 
 def __lldb_init_module(debugger, unused):
     print("Adding command some-cmd and report-cmd")

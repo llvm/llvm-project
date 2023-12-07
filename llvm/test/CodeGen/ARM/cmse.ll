@@ -13,7 +13,7 @@
 ; RUN: llc %s -o - -mtriple=thumbebv8.1m.main | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-81M
 
-define void @func1(void ()* nocapture %fptr) #0 {
+define void @func1(ptr nocapture %fptr) #0 {
 ; CHECK-8B-LABEL: func1:
 ; CHECK-8B:       @ %bb.0: @ %entry
 ; CHECK-8B-NEXT:    push {r7, lr}
@@ -117,7 +117,7 @@ entry:
 attributes #0 = { "cmse_nonsecure_entry" nounwind }
 attributes #1 = { "cmse_nonsecure_call" nounwind }
 
-define void @func2(void ()* nocapture %fptr) #2 {
+define void @func2(ptr nocapture %fptr) #2 {
 ; CHECK-8B-LABEL: func2:
 ; CHECK-8B:       @ %bb.0: @ %entry
 ; CHECK-8B-NEXT:    push {r7, lr}
@@ -276,7 +276,7 @@ entry:
   ret void
 }
 
-declare void @func51(i8 *);
+declare void @func51(ptr);
 
 define void @func5() #4 {
 ; CHECK-8B-LABEL: func5:
@@ -290,9 +290,9 @@ define void @func5() #4 {
 ; CHECK-8B-NEXT:    mov sp, r4
 ; CHECK-8B-NEXT:    mov r0, sp
 ; CHECK-8B-NEXT:    bl func51
-; CHECK-8B-NEXT:    subs r4, r7, #7
-; CHECK-8B-NEXT:    subs r4, #1
-; CHECK-8B-NEXT:    mov sp, r4
+; CHECK-8B-NEXT:    subs r6, r7, #7
+; CHECK-8B-NEXT:    subs r6, #1
+; CHECK-8B-NEXT:    mov sp, r6
 ; CHECK-8B-NEXT:    pop {r4, r6, r7}
 ; CHECK-8B-NEXT:    pop {r0}
 ; CHECK-8B-NEXT:    mov lr, r0
@@ -344,7 +344,7 @@ define void @func5() #4 {
 ; CHECK-81M-NEXT:    clrm {r0, r1, r2, r3, r12, apsr}
 ; CHECK-81M-NEXT:    bxns lr
   %1 = alloca i8, align 16
-  call void @func51(i8* nonnull %1) #5
+  call void @func51(ptr nonnull %1) #5
   ret void
 }
 

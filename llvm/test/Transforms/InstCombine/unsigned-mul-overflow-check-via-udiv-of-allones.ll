@@ -8,9 +8,9 @@
 
 define i1 @t0_basic(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t0_basic(
-; CHECK-NEXT:    [[UMUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i8, i1 } [[UMUL]], 1
-; CHECK-NEXT:    ret i1 [[UMUL_OV]]
+; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[MUL_OV:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
+; CHECK-NEXT:    ret i1 [[MUL_OV]]
 ;
   %t0 = udiv i8 -1, %x
   %r = icmp ult i8 %t0, %y
@@ -19,9 +19,9 @@ define i1 @t0_basic(i8 %x, i8 %y) {
 
 define <2 x i1> @t1_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t1_vec(
-; CHECK-NEXT:    [[UMUL:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.umul.with.overflow.v2i8(<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]])
-; CHECK-NEXT:    [[UMUL_OV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[UMUL]], 1
-; CHECK-NEXT:    ret <2 x i1> [[UMUL_OV]]
+; CHECK-NEXT:    [[MUL:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.umul.with.overflow.v2i8(<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]])
+; CHECK-NEXT:    [[MUL_OV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[MUL]], 1
+; CHECK-NEXT:    ret <2 x i1> [[MUL_OV]]
 ;
   %t0 = udiv <2 x i8> <i8 -1, i8 -1>, %x
   %r = icmp ult <2 x i8> %t0, %y
@@ -30,9 +30,9 @@ define <2 x i1> @t1_vec(<2 x i8> %x, <2 x i8> %y) {
 
 define <3 x i1> @t2_vec_undef(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @t2_vec_undef(
-; CHECK-NEXT:    [[UMUL:%.*]] = call { <3 x i8>, <3 x i1> } @llvm.umul.with.overflow.v3i8(<3 x i8> [[X:%.*]], <3 x i8> [[Y:%.*]])
-; CHECK-NEXT:    [[UMUL_OV:%.*]] = extractvalue { <3 x i8>, <3 x i1> } [[UMUL]], 1
-; CHECK-NEXT:    ret <3 x i1> [[UMUL_OV]]
+; CHECK-NEXT:    [[MUL:%.*]] = call { <3 x i8>, <3 x i1> } @llvm.umul.with.overflow.v3i8(<3 x i8> [[X:%.*]], <3 x i8> [[Y:%.*]])
+; CHECK-NEXT:    [[MUL_OV:%.*]] = extractvalue { <3 x i8>, <3 x i1> } [[MUL]], 1
+; CHECK-NEXT:    ret <3 x i1> [[MUL_OV]]
 ;
   %t0 = udiv <3 x i8> <i8 -1, i8 undef, i8 -1>, %x
   %r = icmp ult <3 x i8> %t0, %y
@@ -44,9 +44,9 @@ declare i8 @gen8()
 define i1 @t3_commutative(i8 %x) {
 ; CHECK-LABEL: @t3_commutative(
 ; CHECK-NEXT:    [[Y:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[UMUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[X:%.*]], i8 [[Y]])
-; CHECK-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i8, i1 } [[UMUL]], 1
-; CHECK-NEXT:    ret i1 [[UMUL_OV]]
+; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[X:%.*]], i8 [[Y]])
+; CHECK-NEXT:    [[MUL_OV:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
+; CHECK-NEXT:    ret i1 [[MUL_OV]]
 ;
   %t0 = udiv i8 -1, %x
   %y = call i8 @gen8()

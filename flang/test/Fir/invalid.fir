@@ -360,9 +360,8 @@ func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived{a:i32,b
     %c1_i64 = arith.constant 1 : i64
     %11 = arith.subi %10, %c1_i64 : i64
     %12 = fir.coordinate_of %arg0, %11 : (!fir.class<!fir.array<10x!fir.type<derived{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<derived{a:i32,b:i32}>>
-    %tdesc = fir.box_tdesc %arg0 : (!fir.class<!fir.array<10x!fir.type<derived{a:i32,b:i32}>>>) -> (!fir.tdesc<!fir.type<derived{a:i32,b:i32}>>)
-    // expected-error@+1 {{'fir.embox' op tdesc must be used with fir.class result type}}
-    %13 = fir.embox %12 tdesc %tdesc : (!fir.ref<!fir.type<derived{a:i32,b:i32}>>, !fir.tdesc<!fir.type<derived{a:i32,b:i32}>>) -> !fir.box<!fir.type<derived{a:i32,b:i32}>>
+    // expected-error@+1 {{'fir.embox' op source_box must be used with fir.class result type}}
+    %13 = fir.embox %12 source_box %arg0 : (!fir.ref<!fir.type<derived{a:i32,b:i32}>>, !fir.class<!fir.array<10x!fir.type<derived{a:i32,b:i32}>>>) -> !fir.box<!fir.type<derived{a:i32,b:i32}>>
     %14 = arith.addi %arg2, %c1 : index
     %15 = fir.convert %c1 : (index) -> i32
     %16 = fir.load %0 : !fir.ref<i32>
@@ -946,4 +945,20 @@ func.func @invalid_selector(%arg : !fir.box<!fir.ref<i32>>) -> i32 {
 ^bb5 :
   %zero = arith.constant 0 : i32
   return %zero : i32
+}
+
+// -----
+
+func.func @logical_to_fp(%arg0: !fir.logical<4>) -> f32 {
+  // expected-error@+1{{'fir.convert' op invalid type conversion}}
+  %0 = fir.convert %arg0 : (!fir.logical<4>) -> f32
+  return %0 : f32
+}
+
+// -----
+
+func.func @fp_to_logical(%arg0: f32) -> !fir.logical<4> {
+  // expected-error@+1{{'fir.convert' op invalid type conversion}}
+  %0 = fir.convert %arg0 : (f32) -> !fir.logical<4>
+  return %0 : !fir.logical<4>
 }

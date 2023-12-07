@@ -28,6 +28,7 @@ template <typename T> class SSAUpdaterTraits;
 class Type;
 class Use;
 class Value;
+class DbgValueInst;
 
 /// Helper class for SSA formation on a set of values defined in
 /// multiple blocks.
@@ -114,6 +115,15 @@ public:
   /// be below it.
   void RewriteUse(Use &U);
 
+  /// Rewrite debug value intrinsics to conform to a new SSA form.
+  ///
+  /// This will scout out all the debug value instrinsics associated with
+  /// the instruction. Anything outside of its block will have its
+  /// value set to the new SSA value if available, and undef if not.
+  void UpdateDebugValues(Instruction *I);
+  void UpdateDebugValues(Instruction *I,
+                         SmallVectorImpl<DbgValueInst *> &DbgValues);
+
   /// Rewrite a use like \c RewriteUse but handling in-block definitions.
   ///
   /// This version of the method can rewrite uses in the same block as
@@ -123,6 +133,7 @@ public:
 
 private:
   Value *GetValueAtEndOfBlockInternal(BasicBlock *BB);
+  void UpdateDebugValue(Instruction *I, DbgValueInst *DbgValue);
 };
 
 /// Helper class for promoting a collection of loads and stores into SSA

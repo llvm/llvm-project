@@ -13,8 +13,8 @@
 #include "ARMRegisterBankInfo.h"
 #include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/IntrinsicsARM.h"
@@ -212,7 +212,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                        const RegisterBankInfo &RBI) {
   Register DstReg = I.getOperand(0).getReg();
-  if (Register::isPhysicalRegister(DstReg))
+  if (DstReg.isPhysical())
     return true;
 
   const TargetRegisterClass *RC = guessRegClass(DstReg, MRI, TRI, RBI);

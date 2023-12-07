@@ -237,8 +237,6 @@ private:
 };
 
 void std::__libcpp_verbose_abort(char const* format, ...) {
-  assert(!GlobalMatcher().empty());
-
   // Extract information from the error message. This has to stay synchronized with
   // how we format assertions in the library.
   va_list list;

@@ -73,9 +73,9 @@ bb3:
 ; NOOPT: tbnz [[R2]], #0, [[L:\.LBB[0-9_]+]]
 ; NOOPT: ldr [[R3:w[0-9]+]], [sp, #[[SLOT2]]]
 ; NOOPT: tbz [[R3]], #0, [[L]]
-define void @test_cmp_other_block(i32* %p, i1 %c) {
+define void @test_cmp_other_block(ptr %p, i1 %c) {
 entry:
-  %l = load i32, i32* %p
+  %l = load i32, ptr %p
   %cmp = icmp sgt i32 %l, 0
   br label %bb1
 

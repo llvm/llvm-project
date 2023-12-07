@@ -16,7 +16,7 @@ using namespace llvm;
 TEST(AMDGPU, ExecMayBeModifiedBeforeAnyUse) {
   auto TM = createAMDGPUTargetMachine("amdgcn-amd-", "gfx906", "");
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   GCNSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()), *TM);

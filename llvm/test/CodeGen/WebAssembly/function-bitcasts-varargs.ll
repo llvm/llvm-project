@@ -7,8 +7,8 @@ target triple = "wasm32-unknown-unknown"
 
 define void @callWithArgs() {
 entry:
-  call void bitcast (void (...)* @underspecified to void (i32, i32)*)(i32 0, i32 1)
-  call void(...) bitcast (void (i32, i32)* @specified to void (...)*)(i32 0, i32 1)
+  call void @underspecified(i32 0, i32 1)
+  call void(...) @specified(i32 0, i32 1)
   ret void
 }
 

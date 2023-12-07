@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -code-completion-at=%s:3:1 %s | FileCheck %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line+2):1 %s | FileCheck %s
 void func() {
 
 }

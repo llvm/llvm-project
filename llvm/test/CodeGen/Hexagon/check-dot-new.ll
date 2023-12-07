@@ -9,7 +9,7 @@
 define void @f0(i32 %a0) #0 {
 b0:
   %v0 = add i32 %a0, 1
-  store i32 %v0, i32* @g0, align 4
+  store i32 %v0, ptr @g0, align 4
   ret void
 }
 

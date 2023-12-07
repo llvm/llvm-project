@@ -1,4 +1,4 @@
-; RUN: opt -passes=inline %s -S -o - -experimental-assignment-tracking \
+; RUN: opt -passes=inline %s -S -o - \
 ; RUN: | FileCheck %s
 
 ;; $ cat test.cpp
@@ -230,7 +230,7 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 ; CHECK-DAG: [[ID_6]] = distinct !DIAssignID()
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5}
+!llvm.module.flags = !{!3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 12.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
@@ -338,3 +338,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !106 = !DILocation(line: 39, column: 10, scope: !99)
 !107 = !DILocation(line: 40, column: 1, scope: !99)
 !108 = !DILocation(line: 39, column: 3, scope: !99)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

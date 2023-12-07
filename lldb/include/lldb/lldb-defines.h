@@ -125,4 +125,13 @@
 
 #define UNUSED_IF_ASSERT_DISABLED(x) ((void)(x))
 
+#define LLDB_DEPRECATED(MSG)                                                   \
+  [[deprecated("This method is no longer supported: " MSG)]]
+
+#if defined(__clang__)
+#define LLDB_DEPRECATED_FIXME(MSG, FIX) __attribute__((deprecated(MSG, FIX)))
+#else
+#define LLDB_DEPRECATED_FIXME(MSG, FIX) LLDB_DEPRECATED(MSG)
+#endif
+
 #endif // LLDB_LLDB_DEFINES_H

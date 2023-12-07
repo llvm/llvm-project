@@ -428,12 +428,28 @@ bool AVRTargetInfo::setCPU(const std::string &Name) {
   return false;
 }
 
+std::optional<std::string>
+AVRTargetInfo::handleAsmEscapedChar(char EscChar) const {
+  switch (EscChar) {
+  // "%~" represents for 'r' depends on the device has long jump/call.
+  case '~':
+    return ArchHasJMPCALL(Arch) ? std::string("") : std::string(1, 'r');
+
+  // "%!" represents for 'e' depends on the PC register size.
+  case '!':
+    return ArchHas3BytePC(Arch) ? std::string(1, 'e') : std::string("");
+
+  // This is an invalid escape character for AVR.
+  default:
+    return std::nullopt;
+  }
+}
+
 void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
   Builder.defineMacro("AVR");
   Builder.defineMacro("__AVR");
   Builder.defineMacro("__AVR__");
-  Builder.defineMacro("__ELF__");
 
   if (ABI == "avrtiny")
     Builder.defineMacro("__AVR_TINY__", "1");
@@ -468,15 +484,15 @@ void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   if (NumFlashBanks >= 1)
-    Builder.defineMacro("__flash", "__attribute__((address_space(1)))");
+    Builder.defineMacro("__flash", "__attribute__((__address_space__(1)))");
   if (NumFlashBanks >= 2)
-    Builder.defineMacro("__flash1", "__attribute__((address_space(2)))");
+    Builder.defineMacro("__flash1", "__attribute__((__address_space__(2)))");
   if (NumFlashBanks >= 3)
-    Builder.defineMacro("__flash2", "__attribute__((address_space(3)))");
+    Builder.defineMacro("__flash2", "__attribute__((__address_space__(3)))");
   if (NumFlashBanks >= 4)
-    Builder.defineMacro("__flash3", "__attribute__((address_space(4)))");
+    Builder.defineMacro("__flash3", "__attribute__((__address_space__(4)))");
   if (NumFlashBanks >= 5)
-    Builder.defineMacro("__flash4", "__attribute__((address_space(5)))");
+    Builder.defineMacro("__flash4", "__attribute__((__address_space__(5)))");
   if (NumFlashBanks >= 6)
-    Builder.defineMacro("__flash5", "__attribute__((address_space(6)))");
+    Builder.defineMacro("__flash5", "__attribute__((__address_space__(6)))");
 }

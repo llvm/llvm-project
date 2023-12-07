@@ -30,6 +30,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
@@ -1022,6 +1023,28 @@ bool Decl::isInExportDeclContext() const {
   return DC && isa<ExportDecl>(DC);
 }
 
+bool Decl::isInAnotherModuleUnit() const {
+  auto *M = getOwningModule();
+
+  if (!M)
+    return false;
+
+  M = M->getTopLevelModule();
+  // FIXME: It is problematic if the header module lives in another module
+  // unit. Consider to fix this by techniques like
+  // ExternalASTSource::hasExternalDefinitions.
+  if (M->isHeaderLikeModule())
+    return false;
+
+  // A global module without parent implies that we're parsing the global
+  // module. So it can't be in another module unit.
+  if (M->isGlobalModule())
+    return false;
+
+  assert(M->isModulePurview() && "New module kind?");
+  return M != getASTContext().getCurrentNamedModule();
+}
+
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
 static Decl::Kind getKind(const DeclContext *DC) { return DC->getDeclKind(); }
 
@@ -1046,6 +1069,18 @@ const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
     Ty = Ty->castAs<BlockPointerType>()->getPointeeType();
 
   return Ty->getAs<FunctionType>();
+}
+
+bool Decl::isFunctionPointerType() const {
+  QualType Ty;
+  if (const auto *D = dyn_cast<ValueDecl>(this))
+    Ty = D->getType();
+  else if (const auto *D = dyn_cast<TypedefNameDecl>(this))
+    Ty = D->getUnderlyingType();
+  else
+    return false;
+
+  return Ty.getCanonicalType()->isFunctionPointerType();
 }
 
 DeclContext *Decl::getNonTransparentDeclContext() {

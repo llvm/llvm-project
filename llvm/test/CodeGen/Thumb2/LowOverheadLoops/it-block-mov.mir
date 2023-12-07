@@ -3,7 +3,7 @@
 
 --- |
   ; Function Attrs: nounwind
-  define hidden arm_aapcs_vfpcc void @cond_trip_count(float* %0, i32 %1, float* nocapture %2) local_unnamed_addr #1 {
+  define hidden arm_aapcs_vfpcc void @cond_trip_count(ptr %0, i32 %1, ptr nocapture %2) local_unnamed_addr #1 {
     ret void
   }
 

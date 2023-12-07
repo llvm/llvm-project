@@ -52,6 +52,7 @@ add_lldb_library(lldbPluginPlatformMacOSX PLUGIN
     clangBasic
   LINK_COMPONENTS
     Support
+    TargetParser
     )
 
 add_dependencies(lldbPluginPlatformMacOSX

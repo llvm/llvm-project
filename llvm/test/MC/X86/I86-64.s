@@ -224,6 +224,22 @@ adcw %r14w, (%rdx)
 // CHECK: encoding: [0x66,0x44,0x13,0x32]        
 adcw (%rdx), %r14w 
 
+// CHECK: adcxl	%edx, %r14d
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0xf6,0xf2]
+adcxl %edx, %r14d
+
+// CHECK: adcxl	(%rdx), %r14d
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0xf6,0x32]
+adcxl (%rdx), %r14d
+
+// CHECK: adcxq	%rdx, %r14
+// CHECK: encoding: [0x66,0x4c,0x0f,0x38,0xf6,0xf2]
+adcxq %rdx, %r14
+
+// CHECK: adcxq	(%rdx), %r14
+// CHECK: encoding: [0x66,0x4c,0x0f,0x38,0xf6,0x32]
+adcxq (%rdx), %r14
+
 // CHECK: addb $0, 485498096 
 // CHECK: encoding: [0x80,0x04,0x25,0xf0,0x1c,0xf0,0x1c,0x00]        
 addb $0, 485498096 
@@ -447,6 +463,22 @@ addw %r14w, (%rdx)
 // CHECK: addw (%rdx), %r14w 
 // CHECK: encoding: [0x66,0x44,0x03,0x32]        
 addw (%rdx), %r14w 
+
+// CHECK: adoxl	%edx, %r14d
+// CHECK: encoding: [0xf3,0x44,0x0f,0x38,0xf6,0xf2]
+adoxl %edx, %r14d
+
+// CHECK: adoxl	(%rdx), %r14d
+// CHECK: encoding: [0xf3,0x44,0x0f,0x38,0xf6,0x32]
+adoxl (%rdx), %r14d
+
+// CHECK: adoxq	%rdx, %r14
+// CHECK: encoding: [0xf3,0x4c,0x0f,0x38,0xf6,0xf2]
+adoxq %rdx, %r14
+
+// CHECK: adoxq	(%rdx), %r14
+// CHECK: encoding: [0xf3,0x4c,0x0f,0x38,0xf6,0x32]
+adoxq (%rdx), %r14
 
 // CHECK: andb $0, 485498096 
 // CHECK: encoding: [0x80,0x24,0x25,0xf0,0x1c,0xf0,0x1c,0x00]        
@@ -675,10 +707,6 @@ andw (%rdx), %r14w
 // CHECK: callq 64 
 // CHECK: encoding: [0xe8,A,A,A,A]         
 callq 64 
-
-// CHECK: callw 64 
-// CHECK: encoding: [0x66,0xe8,A,A]         
-callw 64 
 
 // CHECK: cbtw 
 // CHECK: encoding: [0x66,0x98]          

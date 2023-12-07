@@ -10,13 +10,16 @@
 
 // The following platforms have sizeof(long double) == sizeof(double), so this test doesn't apply to them.
 // This test does apply to aarch64 where Arm's AAPCS64 is followed. There they are different sizes.
-// UNSUPPORTED: target={{arm64|armv(7|8)(l|m)?|powerpc|powerpc64}}-{{.+}}
+// UNSUPPORTED: target={{arm64|arm64e|armv(7|8)(l|m)?|powerpc|powerpc64}}-{{.+}}
+
 // MSVC configurations have long double equal to regular double on all
 // architectures.
 // UNSUPPORTED: target={{.+}}-pc-windows-msvc
+
 // ARM/AArch64 MinGW also has got long double equal to regular double, just
 // like MSVC (thus match both MinGW and MSVC here, for those architectures).
 // UNSUPPORTED: target={{aarch64|armv7}}-{{.*}}-windows-{{.+}}
+
 // Android's 32-bit x86 target has long double equal to regular double.
 // UNSUPPORTED: target=i686-{{.+}}-android{{.*}}
 

@@ -2,8 +2,6 @@
 // REQUIRES: asserts
 // Verify there is no assertion.
 
-// rdar://30111891
-
 typedef unsigned long long uint64_t;
 typedef enum AnEnum : uint64_t AnEnum;
 enum AnEnum: uint64_t {

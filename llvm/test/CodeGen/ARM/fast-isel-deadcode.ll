@@ -3,7 +3,7 @@
 ; Target-specific selector can't properly handle the double because it isn't
 ; being passed via a register, so the materialized arguments become dead code.
 
-define i32 @main(i32 %argc, i8** %argv) nounwind {
+define i32 @main(i32 %argc, ptr %argv) nounwind {
 entry:
 ; THUMB: main
   call void @printArgsNoRet(i32 1, float 0x4000CCCCC0000000, i8 signext 99, double 4.100000e+00)

@@ -23,7 +23,7 @@ template <class _ForwardIterator1, class _ForwardIterator2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 void iter_swap(_ForwardIterator1 __a,
                                                                               _ForwardIterator2 __b)
     //                                  _NOEXCEPT_(_NOEXCEPT_(swap(*__a, *__b)))
-    _NOEXCEPT_(_NOEXCEPT_(swap(*declval<_ForwardIterator1>(), *declval<_ForwardIterator2>()))) {
+    _NOEXCEPT_(_NOEXCEPT_(swap(*std::declval<_ForwardIterator1>(), *std::declval<_ForwardIterator2>()))) {
   swap(*__a, *__b);
 }
 

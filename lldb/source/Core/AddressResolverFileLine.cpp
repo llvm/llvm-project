@@ -45,24 +45,20 @@ AddressResolverFileLine::SearchCallback(SearchFilter &filter,
   // TODO: Handle SourceLocationSpec column information
   cu->ResolveSymbolContext(m_src_location_spec, eSymbolContextEverything,
                            sc_list);
-  uint32_t sc_list_size = sc_list.GetSize();
-  for (uint32_t i = 0; i < sc_list_size; i++) {
-    SymbolContext sc;
-    if (sc_list.GetContextAtIndex(i, sc)) {
-      Address line_start = sc.line_entry.range.GetBaseAddress();
-      addr_t byte_size = sc.line_entry.range.GetByteSize();
-      if (line_start.IsValid()) {
-        AddressRange new_range(line_start, byte_size);
-        m_address_ranges.push_back(new_range);
-      } else {
-        LLDB_LOGF(log,
-                  "error: Unable to resolve address at file address 0x%" PRIx64
-                  " for %s:%d\n",
-                  line_start.GetFileAddress(),
-                  m_src_location_spec.GetFileSpec().GetFilename().AsCString(
-                      "<Unknown>"),
-                  m_src_location_spec.GetLine().value_or(0));
-      }
+  for (const SymbolContext &sc : sc_list) {
+    Address line_start = sc.line_entry.range.GetBaseAddress();
+    addr_t byte_size = sc.line_entry.range.GetByteSize();
+    if (line_start.IsValid()) {
+      AddressRange new_range(line_start, byte_size);
+      m_address_ranges.push_back(new_range);
+    } else {
+      LLDB_LOGF(log,
+                "error: Unable to resolve address at file address 0x%" PRIx64
+                " for %s:%d\n",
+                line_start.GetFileAddress(),
+                m_src_location_spec.GetFileSpec().GetFilename().AsCString(
+                    "<Unknown>"),
+                m_src_location_spec.GetLine().value_or(0));
     }
   }
   return Searcher::eCallbackReturnContinue;

@@ -55,10 +55,8 @@ the best statically available at compile time.
 `!fir.class` is a new type introduced for polymorphic entities. It's similar to
 a box type but allows the distinction between a monomorphic and a polymorphic
 descriptor.
-A specific `BoxTypeInterface` (TypeInterface) can be introduced to share the
-same API for both types where it is necessary. `!fir.class` and `!fir.box` can
-also be based on a same `BaseBoxType` similar to the `BaseMemRefType` done for
-MemRef.
+`!fir.class` and `!fir.box` are based on a same `BaseBoxType` similar to the
+`BaseMemRefType` done for MemRef.
 
 **Fortran**
 ```fortran
@@ -140,7 +138,7 @@ class is (point)
 type is (point_3d)
   print*, a%x, a%y, a%z
 class default
-  print*,
+  print*,'default'
 end select
 ```
 
@@ -165,9 +163,9 @@ The `CLASS DEFAULT` type guard statement is represented by a `unit` attribute.
 
 **FIR**
 ```
-fir.select_type %p : !fir.class<!fir.type<_QTpoint{x:f32,y:f32}>> [
-  #fir.class_is<!fir.type<_QTpoint{x:f32,y:f32}>>, ^bb1,
-  #fir.type_is<!fir.type<_QTpoint_3d{x:f32,y:f32,z:f32}>>, ^bb2,
+fir.select_type %6 : !fir.class<!fir.ptr<!fir.type<_QFTpoint{x:f32,y:f32}>>> [
+  #fir.class_is<!fir.type<_QFTpoint{x:f32,y:f32}>>, ^bb1,
+  #fir.type_is<!fir.type<_QFTpoint_3d{x:f32,y:f32,z:f32}>>, ^bb2,
   unit, ^bb3]
 ```
 
@@ -175,55 +173,81 @@ Lowering of the `fir.select_type` operation will produce a if-then-else ladder.
 The testing of the dynamic type of the selector is done by calling runtime
 functions.
 
-The runtime has two functions to compare dynamic types . Note that this two
-functions _ignore_ the values of `KIND` type parameters. A version of these
-functions that does not _ignore_ the value of the `KIND` type parameters will
-be implemented for the  `SELECT TYPE` type guards testing.
+The runtime has two functions to compare dynamic types. Note that these two
+functions _ignore_ the values of `KIND` type parameters.
 
-Currently available functions for the `EXTENDS_TYPE_OF` and `SAME_TYPE_AS`
-intrinsics (`flang/include/flang/Evaluate/type.h`).
+The functions for the `EXTENDS_TYPE_OF` and `SAME_TYPE_AS`
+intrinsics (`flang/include/flang/Runtime/derived-api.h`).
 ```cpp
-std::optional<bool> ExtendsTypeOf(const DynamicType &) const;
-std::optional<bool> SameTypeAs(const DynamicType &) const;
+// Perform the test of the SAME_TYPE_AS intrinsic.
+bool RTNAME(SameTypeAs)(const Descriptor &, const Descriptor &);
+
+// Perform the test of the EXTENDS_TYPE_OF intrinsic.
+bool RTNAME(ExtendsTypeOf)(const Descriptor &, const Descriptor &);
+```
+
+For the `SELECT TYPE` construct, the `KIND` type parameter is not ignored. The
+`TYPE IS` type guard statement is lowered to an inlined comparison. The
+`CLASS IS` type guard statement is lowered to a runtime function call.
+
+The function `ClassIs` implements the dynamic type comparison.
+(`flang/include/flang/Runtime/derived-api.h`).
+```cpp
+// Perform the test of the CLASS IS type guard statement of the SELECT TYPE
+// construct.
+bool RTNAME(ClassIs)(const Descriptor &, const typeInfo::DerivedType &);
 ```
 
 **FIR** (lower level FIR/MLIR after conversion to an if-then-else ladder)
 ```
 module  {
-  func @f(%arg0: !fir.class<*>) -> i32 {
-    %c4_i32 = arith.constant 4 : i32
-    %c8_i32 = arith.constant 8 : i32
-    %c16_i32 = arith.constant 16 : i32
-    %0 = fir.gentypedesc !fir.tdesc<!fir.type<!fir.type<_QTpoint{x:f32,y:f32}>>>
-    %1 = fir.convert %arg0 : (!fir.class<!fir.type<_QTpoint{x:f32,y:f32}>>) -> !fir.box<none>
-    %2 = fir.convert %0 : (!fir.tdesc<!fir.type<!fir.type<_QTpoint{x:f32,y:f32}>>>) -> !fir.ref<none>
-    %3 = fir.call @ExtendsTypeOfWithKind(%1, %2) : (!fir.box<none>, !fir.ref<none>) -> i1
-    cond_br %3, ^bb2(%c4_i32 : i32), ^bb1
-  ^bb1:  // pred: ^bb0
-    %4 = fir.gentypedesc !fir.type<_QTpoint_3d{x:f32,y:f32,z:f32}>
-    %5 = fir.convert %arg0 : (!fir.class<!fir.type<_QTpoint{x:f32,y:f32}>>) -> !fir.box<none>
-    %6 = fir.convert %4 : (!fir.tdesc<!fir.type<_QTpoint_3d{x:f32,y:f32,z:f32}>>) -> !fir.ref<none>
-    %7 = fir.call @SameTypeAsWithKind(%5, %6) : (!fir.box<none>, !fir.ref<none>) -> i1
-    cond_br %7, ^bb4(%c16_i32 : i32), ^bb3
-  ^bb2(%8: i32):  // pred: ^bb0
-    return %8 : i32
-  ^bb3:  // pred: ^bb1
-    br ^bb5(%c8_i32 : i32)
-  ^bb4(%9: i32):  // pred: ^bb1
-    %10 = arith.addi %9, %9 : i32
-    return %10 : i32
-  ^bb5(%11: i32):  // pred: ^bb3
-    %12 = arith.muli %11, %11 : i32
-    return %12 : i32
+  func @f(%arg0: !fir.class<!fir.ptr<!fir.type<_QFTpoint{x:f32,y:f32}>>>) -> () {
+    // TYPE IS comparison done inlined.
+    %0 = fir.address_of(@_QFE.dt.point_3d) : !fir.ref<!fir type<_QM__fortran_type_infoTderivedtype{}>>
+    %1 = fir.box_tdesc %arg0 : (!fir.class<!fir.ptr<!fir.type<_QFTpoint{x:f32,y:f32}>>>) -> !fir.tdesc<none>
+    %2 = fir.convert %0 : (!fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{}>>) -> index
+    %3 = fir.convert %1 : (!fir.tdesc<none>) -> index
+    %4 = arith.cmpi eq, %2, %3 : index
+    cf.cond_br %4, ^bb4, ^bb3
+  ^bb1:  // pred: ^bb3
+    cf.br ^bb5
+  ^bb2:  // pred: ^bb3
+    // CLASS IS block.
+    cf.br ^bb6
+  ^bb3:  // pred: ^bb0
+    // CLASS IS comparison done with a runtime function call.
+    %24 = fir.address_of(@_QFE.dt.point) : !fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{}>>
+    %25 = fir.convert %24 : (!fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{}>>) -> !fir.ref<none>
+    %26 = fir.convert %6 : (!fir.class<!fir.ptr<!fir.type<_QFTpoint{x:f32,y:f32}>>>) -> !fir.box<none>
+    %27 = fir.call @_FortranAClassIs(%26, %25) : (!fir.box<none>, !fir.ref<none>) -> i1
+    cf.cond_br %27, ^bb2, ^bb1
+  ^bb4:  // pred: ^bb0
+    // TYPE IS block
+    cf.br ^bb6
+  ^bb5:  // pred: ^bb1
+    // CLASS DEFAULT block.
+    cf.br ^bb6
+  ^bb6:  // 3 preds: ^bb2, ^bb4, ^bb5
+    return
   }
-  func private @ExactSameTypeAsWithKind(!fir.box<none>, !fir.ref<none>) -> i1
-  func private @SameTypeAsWithKind(!fir.box<none>, !fir.ref<none>) -> i1
+  func.func private @_FortranAClassIs(!fir.box<none>, !fir.ref<none>) -> i1
 }
 ```
 
-Note: some dynamic type checks can be inlined for performance. Type check with
-intrinsic types when dealing with unlimited polymorphic entities is an ideal
-candidate for inlined checks.
+Dynamic type comparisons are inlined for performance whenever possible.
+Dynamic type comparison for the `TYPE IS` type guard is inlined and
+intrinsic types comparison when dealing with unlimited polymorphic entities are
+also inlined.
+
+```fortran
+type is (integer(4))
+```
+
+```
+%i32typecode = arith.constant 9 : i8
+%typecode = fir.box_typecode %selector : (!fir.class<none>) -> i8
+%isi32 = arith.cmpi eq, %typecode, %i32typecode : i8
+```
 
 ---
 
@@ -433,39 +457,49 @@ Representation of the derived type information with the bindings.
 %_QM__fortran_builtinsT__builtin_c_funptr = type { i64 }
 ```
 
-The `fir.dispatch` is then lowered to use the runtime information to extract the
+The `fir.dispatch` is lowered to FIR operations by the `PolymorphicOpConversion`
+pass. It uses the runtime information to extract the
 correct function from the vtable and to perform the actual call. Here is
 what it can look like in pseudo LLVM IR code.
 
-**LLVMIR**
+**FIR**
 ```c
-// Retrieve the bindings (vtable) from the type information from the descriptor
-%1 = call %_QM__fortran_type_infoTbinding* @_FortranAGetBindings(%desc)
-// Retrieve the position of the specific bindings in the table
-%2 = call i32 @_FortranAGetBindingOffset(%1, "get_area")
-// Get the binding from the table
-%3 = getelementptr %_QM__fortran_type_infoTbinding, %_QM__fortran_type_infoTbinding* %1, i32 0, i32 %2
-// Get the function pointer from the binding
-%4 = getelementptr %_QM__fortran_builtinsT__builtin_c_funptr, %_QM__fortran_type_infoTbinding %3, i32 0, i32 0
-// Cast func pointer
-%5 = inttoptr i64 %4 to <procedure pointer>
-// Load the function
-%6 = load f32(%_QMgeometryTshape*)*, %5
-// Perform the actual function call
-%7 = call f32 %6(%_QMgeometryTshape* %shape)
+  %2 = fir.box_tdesc %arg0 : (!fir.class<!fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32>>) -> !fir.tdesc<none>
+  %3 = fir.box_tdesc %arg0 : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> !fir.tdesc<none>
+  %4 = fir.convert %3 : (!fir.tdesc<none>) -> !fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{}>>
+  %5 = fir.field_index binding, !fir.type<_QM__fortran_type_infoTderivedtype{}>
+  %6 = fir.coordinate_of %4, %5 : (!fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>>>>
+  %7 = fir.load %6 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>>>>
+  %8 = fir.box_addr %7 : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>>>) -> !fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>>
+  %c0 = arith.constant 0 : index
+  %9 = fir.coordinate_of %8, %c0 : (!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{}>>
+  %10 = fir.field_index proc, !fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>
+  %11 = fir.coordinate_of %9, %10 : (!fir.ref<!fir.type<_QM__fortran_type_infoTbinding{}>>, !fir.field) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>
+  %12 = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>
+  %13 = fir.coordinate_of %11, %12 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+  %14 = fir.load %13 : !fir.ref<i64>
+  %15 = fir.convert %14 : (i64) -> ((!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ())
+  fir.call %15(%arg0) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
 ```
 
-_Note:_ functions `@_FortranAGetBindings` and `@_FortranAGetBindingOffset` are
-not available in the runtime and will need to be implemented.
-
-- `@_FortranAGetBindings` retrieves the bindings from the descriptor. The
-  descriptor holds the type information that holds the bindings.
-- `@_FortranAGetBindingOffset` retrieves the procedure offset in the bindings
-  based on the binding name provided.
-
-Retrieving the binding table and the offset are done separately so multiple
-dynamic dispatch on the same polymorphic entities can be optimized (the binding
-table is retrieved only once for multiple call).
+**LLVMIR**
+```c
+// Retrieve the derived type runtime information and the vtable.
+%14 = getelementptr %_QM__fortran_type_infoTderivedtype, ptr %13, i32 0, i32 0
+%15 = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %14
+store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] } %15, ptr %8
+%16 = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %8, i32 0, i32 0
+%17 = load ptr, ptr %16
+%18 = getelementptr %_QM__fortran_type_infoTbinding, ptr %17, i64 0
+%19 = getelementptr %_QM__fortran_type_infoTbinding, ptr %18, i32 0, i32 0
+%20 = getelementptr %_QM__fortran_builtinsT__builtin_c_funptr, ptr %19, i32 0, i32 0
+// Load func address
+%21 = load i64, ptr %20
+// Cast to func pointer
+%22 = inttoptr i64 %21 to ptr
+// Perform the actual function call
+call void %22(ptr %0)
+```
 
 ### Passing polymorphic entities as argument
 
@@ -850,15 +884,9 @@ dynamic type of polymorphic entities.
 
 # Current TODOs
 Current list of TODOs in lowering:
-- `flang/lib/Lower/Allocatable.cpp:465` not yet implemented: SOURCE allocation
-- `flang/lib/Lower/Allocatable.cpp:468` not yet implemented: MOLD allocation
 - `flang/lib/Lower/Bridge.cpp:448` not yet implemented: create polymorphic host associated copy
 - `flang/lib/Lower/CallInterface.cpp:795` not yet implemented: support for polymorphic types
 - `flang/lib/Lower/ConvertType.cpp:237` not yet implemented: support for polymorphic types
-
-Current list of TODOs in code generation:
-
-- `flang/lib/Optimizer/CodeGen/CodeGen.cpp:2651` not yet implemented: fir.gentypedesc codegen
 
 ---
 

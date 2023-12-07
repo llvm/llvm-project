@@ -1234,8 +1234,8 @@ define half @PR40273(half) #0 {
 ; P8-NEXT:    fcmpu cr0, f1, f0
 ; P8-NEXT:    beq cr0, .LBB20_2
 ; P8-NEXT:  # %bb.1:
-; P8-NEXT:    addis r3, r2, .LCPI20_0@toc@ha
-; P8-NEXT:    lfs f0, .LCPI20_0@toc@l(r3)
+; P8-NEXT:    vspltisw v2, 1
+; P8-NEXT:    xvcvsxwdp vs0, vs34
 ; P8-NEXT:  .LBB20_2:
 ; P8-NEXT:    fmr f1, f0
 ; P8-NEXT:    addi r1, r1, 32
@@ -1252,10 +1252,12 @@ define half @PR40273(half) #0 {
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    xscvhpdp f0, f0
 ; CHECK-NEXT:    fcmpu cr0, f0, f1
-; CHECK-NEXT:    beqlr cr0
+; CHECK-NEXT:    beq cr0, .LBB20_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    addis r3, r2, .LCPI20_0@toc@ha
-; CHECK-NEXT:    lfs f1, .LCPI20_0@toc@l(r3)
+; CHECK-NEXT:    vspltisw v2, 1
+; CHECK-NEXT:    xvcvsxwdp vs1, vs34
+; CHECK-NEXT:  .LBB20_2:
+; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; SOFT-LABEL: PR40273:

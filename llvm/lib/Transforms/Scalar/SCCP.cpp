@@ -41,7 +41,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -104,8 +103,8 @@ static bool runSCCP(Function &F, const DataLayout &DL,
       continue;
     }
 
-    MadeChanges |= simplifyInstsInBlock(Solver, BB, InsertedValues,
-                                        NumInstRemoved, NumInstReplaced);
+    MadeChanges |= Solver.simplifyInstsInBlock(BB, InsertedValues,
+                                               NumInstRemoved, NumInstReplaced);
   }
 
   // Remove unreachable blocks and non-feasible edges.
@@ -115,7 +114,7 @@ static bool runSCCP(Function &F, const DataLayout &DL,
 
   BasicBlock *NewUnreachableBB = nullptr;
   for (BasicBlock &BB : F)
-    MadeChanges |= removeNonFeasibleEdges(Solver, &BB, DTU, NewUnreachableBB);
+    MadeChanges |= Solver.removeNonFeasibleEdges(&BB, DTU, NewUnreachableBB);
 
   for (BasicBlock *DeadBB : BlocksToErase)
     if (!DeadBB->hasAddressTaken())
@@ -136,54 +135,3 @@ PreservedAnalyses SCCPPass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }
-
-namespace {
-
-//===--------------------------------------------------------------------===//
-//
-/// SCCP Class - This class uses the SCCPSolver to implement a per-function
-/// Sparse Conditional Constant Propagator.
-///
-class SCCPLegacyPass : public FunctionPass {
-public:
-  // Pass identification, replacement for typeid
-  static char ID;
-
-  SCCPLegacyPass() : FunctionPass(ID) {
-    initializeSCCPLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-
-  // runOnFunction - Run the Sparse Conditional Constant Propagation
-  // algorithm, and return true if the function was modified.
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    const DataLayout &DL = F.getParent()->getDataLayout();
-    const TargetLibraryInfo *TLI =
-        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-    DomTreeUpdater DTU(DTWP ? &DTWP->getDomTree() : nullptr,
-                       DomTreeUpdater::UpdateStrategy::Lazy);
-    return runSCCP(F, DL, TLI, DTU);
-  }
-};
-
-} // end anonymous namespace
-
-char SCCPLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(SCCPLegacyPass, "sccp",
-                      "Sparse Conditional Constant Propagation", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(SCCPLegacyPass, "sccp",
-                    "Sparse Conditional Constant Propagation", false, false)
-
-// createSCCPPass - This is the public interface to this file.
-FunctionPass *llvm::createSCCPPass() { return new SCCPLegacyPass(); }
-

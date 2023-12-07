@@ -2,11 +2,13 @@ set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   AsmPrinter
   BinaryFormat
+  CodeGenTypes
   DebugInfoDWARF
   MC
   Object
   ObjectYAML
   Support
+  TargetParser
   )
 
 add_llvm_unittest(DebugInfoDWARFTests
@@ -14,6 +16,7 @@ add_llvm_unittest(DebugInfoDWARFTests
   DwarfUtils.cpp
   DWARFAcceleratorTableTest.cpp
   DWARFDataExtractorTest.cpp
+  DWARFDebugAbbrevTest.cpp
   DWARFDebugArangeSetTest.cpp
   DWARFDebugFrameTest.cpp
   DWARFDebugInfoTest.cpp

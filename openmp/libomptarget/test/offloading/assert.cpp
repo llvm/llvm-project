@@ -1,5 +1,5 @@
-// RUN: %libomptarget-compilexx-nvptx64-nvidia-cuda && %libomptarget-run-fail-nvptx64-nvidia-cuda
-// REQUIRES: nvptx64-nvidia-cuda
+// RUN: %libomptarget-compilexx-generic && %libomptarget-run-fail-generic
+// RUN: %libomptarget-compileoptxx-generic && %libomptarget-run-fail-generic
 
 int main(int argc, char *argv[]) {
 #pragma omp target

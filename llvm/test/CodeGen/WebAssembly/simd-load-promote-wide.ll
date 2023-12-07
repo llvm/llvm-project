@@ -6,7 +6,7 @@
 
 target triple = "wasm32-unknown-unknown"
 
-define <4 x double> @load_promote_v2f64(<4 x float>* %p) {
+define <4 x double> @load_promote_v2f64(ptr %p) {
 ; CHECK-LABEL: load_promote_v2f64:
 ; CHECK:         .functype load_promote_v2f64 (i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -23,12 +23,12 @@ define <4 x double> @load_promote_v2f64(<4 x float>* %p) {
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load <4 x float>, <4 x float>* %p
+  %e = load <4 x float>, ptr %p
   %v = fpext <4 x float> %e to <4 x double>
   ret <4 x double> %v
 }
 
-define <4 x double> @load_promote_v2f64_with_folded_offset(<4 x float>* %p) {
+define <4 x double> @load_promote_v2f64_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_promote_v2f64_with_folded_offset:
 ; CHECK:         .functype load_promote_v2f64_with_folded_offset (i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -47,15 +47,15 @@ define <4 x double> @load_promote_v2f64_with_folded_offset(<4 x float>* %p) {
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x float>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x float>*
-  %e = load <4 x float>, <4 x float>* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load <4 x float>, ptr %s
   %v = fpext <4 x float> %e to <4 x double>
   ret <4 x double> %v
 }
 
-define <4 x double> @load_promote_v2f64_with_folded_gep_offset(<4 x float>* %p) {
+define <4 x double> @load_promote_v2f64_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_promote_v2f64_with_folded_gep_offset:
 ; CHECK:         .functype load_promote_v2f64_with_folded_gep_offset (i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -74,13 +74,13 @@ define <4 x double> @load_promote_v2f64_with_folded_gep_offset(<4 x float>* %p) 
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x float>, <4 x float>* %p, i32 1
-  %e = load <4 x float>, <4 x float>* %s
+  %s = getelementptr inbounds <4 x float>, ptr %p, i32 1
+  %e = load <4 x float>, ptr %s
   %v = fpext <4 x float> %e to <4 x double>
   ret <4 x double> %v
 }
 
-define <4 x double> @load_promote_v2f64_with_unfolded_gep_negative_offset(<4 x float>* %p) {
+define <4 x double> @load_promote_v2f64_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_promote_v2f64_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_promote_v2f64_with_unfolded_gep_negative_offset (i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -100,13 +100,13 @@ define <4 x double> @load_promote_v2f64_with_unfolded_gep_negative_offset(<4 x f
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x float>, <4 x float>* %p, i32 -1
-  %e = load <4 x float>, <4 x float>* %s
+  %s = getelementptr inbounds <4 x float>, ptr %p, i32 -1
+  %e = load <4 x float>, ptr %s
   %v = fpext <4 x float> %e to <4 x double>
   ret <4 x double> %v
 }
 
-define <4 x double> @load_promote_v2f64_with_unfolded_offset(<4 x float>* %p) {
+define <4 x double> @load_promote_v2f64_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_promote_v2f64_with_unfolded_offset:
 ; CHECK:         .functype load_promote_v2f64_with_unfolded_offset (i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -125,15 +125,15 @@ define <4 x double> @load_promote_v2f64_with_unfolded_offset(<4 x float>* %p) {
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x float>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x float>*
-  %e = load <4 x float>, <4 x float>* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load <4 x float>, ptr %s
   %v = fpext <4 x float> %e to <4 x double>
   ret <4 x double> %v
 }
 
-define <4 x double> @load_promote_v2f64_with_unfolded_gep_offset(<4 x float>* %p) {
+define <4 x double> @load_promote_v2f64_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_promote_v2f64_with_unfolded_gep_offset:
 ; CHECK:         .functype load_promote_v2f64_with_unfolded_gep_offset (i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -152,8 +152,8 @@ define <4 x double> @load_promote_v2f64_with_unfolded_gep_offset(<4 x float>* %p
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <4 x float>, <4 x float>* %p, i32 1
-  %e = load <4 x float>, <4 x float>* %s
+  %s = getelementptr <4 x float>, ptr %p, i32 1
+  %e = load <4 x float>, ptr %s
   %v = fpext <4 x float> %e to <4 x double>
   ret <4 x double> %v
 }
@@ -173,8 +173,8 @@ define <4 x double> @load_promote_v2f64_from_numeric_address() {
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <4 x float>*
-  %e = load <4 x float>, <4 x float>* %s
+  %s = inttoptr i32 32 to ptr
+  %e = load <4 x float>, ptr %s
   %v = fpext <4 x float> %e to <4 x double>
   ret <4 x double> %v
 }
@@ -197,7 +197,7 @@ define <4 x double> @load_promote_v2f64_from_global_address() {
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load <4 x float>, <4 x float>* @gv_v4f32
+  %e = load <4 x float>, ptr @gv_v4f32
   %v = fpext <4 x float> %e to <4 x double>
   ret <4 x double> %v
 }

@@ -15,7 +15,6 @@
 #define LLVM_BINARYFORMAT_WASM_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
@@ -206,11 +205,11 @@ struct WasmSymbolInfo {
   uint8_t Kind;
   uint32_t Flags;
   // For undefined symbols the module of the import
-  Optional<StringRef> ImportModule;
+  std::optional<StringRef> ImportModule;
   // For undefined symbols the name of the import
-  Optional<StringRef> ImportName;
+  std::optional<StringRef> ImportName;
   // For symbols to be exported from the final module
-  Optional<StringRef> ExportName;
+  std::optional<StringRef> ExportName;
   union {
     // For function, table, or global symbols, the index in function, table, or
     // global index space.
@@ -349,6 +348,7 @@ enum : uint8_t {
 
 // Kind codes used in the custom "name" section
 enum : unsigned {
+  WASM_NAMES_MODULE = 0,
   WASM_NAMES_FUNCTION = 1,
   WASM_NAMES_LOCAL = 2,
   WASM_NAMES_GLOBAL = 7,

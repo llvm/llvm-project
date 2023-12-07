@@ -1,9 +1,9 @@
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 ; This file mainly tests that one of the ISEL instruction in the group uses the same register for operand RT, RA, RB
-; This redudant ISEL is introduced during simple register coalescing stage.
+; This redudant ISEL is introduced during register coalescing stage.
 
-; Simple register coalescing first create the foldable ISEL instruction as we have seen in expand-foldable-isel.ll:
+; Register coalescing first create the foldable ISEL instruction as we have seen in expand-foldable-isel.ll:
 ; %vreg85<def> = ISEL8 %vreg83, %vreg83, %vreg33:sub_eq
 
 ; Later the register coalescer figures out it could further coalesce %vreg85 with %vreg83:

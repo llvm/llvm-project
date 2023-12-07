@@ -94,10 +94,12 @@ EXTERN_C void test_ld64b(void)
 // CHECK-C-LABEL: define {{[^@]+}}@test_st64b(
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[__ADDR_ADDR_I:%.*]] = alloca ptr, align 8
+// CHECK-C-NEXT:    [[VALUE_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-C-NEXT:    [[BYVAL_TEMP:%.*]] = alloca [[STRUCT_DATA512_T:%.*]], align 8
 // CHECK-C-NEXT:    [[TMP0:%.*]] = load ptr, ptr @addr, align 8
 // CHECK-C-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 @val, i64 64, i1 false)
 // CHECK-C-NEXT:    store ptr [[TMP0]], ptr [[__ADDR_ADDR_I]], align 8
+// CHECK-C-NEXT:    store ptr [[BYVAL_TEMP]], ptr [[VALUE_INDIRECT_ADDR]], align 8
 // CHECK-C-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__ADDR_ADDR_I]], align 8
 // CHECK-C-NEXT:    [[TMP2:%.*]] = load i64, ptr [[BYVAL_TEMP]], align 8
 // CHECK-C-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[BYVAL_TEMP]], i32 1
@@ -120,10 +122,12 @@ EXTERN_C void test_ld64b(void)
 // CHECK-CXX-LABEL: define {{[^@]+}}@test_st64b(
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[__ADDR_ADDR_I:%.*]] = alloca ptr, align 8
+// CHECK-CXX-NEXT:    [[VALUE_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-CXX-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_DATA512_T:%.*]], align 8
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = load ptr, ptr @addr, align 8
 // CHECK-CXX-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP]], ptr align 8 @val, i64 64, i1 false)
 // CHECK-CXX-NEXT:    store ptr [[TMP0]], ptr [[__ADDR_ADDR_I]], align 8
+// CHECK-CXX-NEXT:    store ptr [[AGG_TMP]], ptr [[VALUE_INDIRECT_ADDR]], align 8
 // CHECK-CXX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__ADDR_ADDR_I]], align 8
 // CHECK-CXX-NEXT:    [[TMP2:%.*]] = load i64, ptr [[AGG_TMP]], align 8
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[AGG_TMP]], i32 1
@@ -151,10 +155,12 @@ EXTERN_C void test_st64b(void)
 // CHECK-C-LABEL: define {{[^@]+}}@test_st64bv(
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[__ADDR_ADDR_I:%.*]] = alloca ptr, align 8
+// CHECK-C-NEXT:    [[VALUE_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-C-NEXT:    [[BYVAL_TEMP:%.*]] = alloca [[STRUCT_DATA512_T:%.*]], align 8
 // CHECK-C-NEXT:    [[TMP0:%.*]] = load ptr, ptr @addr, align 8
 // CHECK-C-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 @val, i64 64, i1 false)
 // CHECK-C-NEXT:    store ptr [[TMP0]], ptr [[__ADDR_ADDR_I]], align 8
+// CHECK-C-NEXT:    store ptr [[BYVAL_TEMP]], ptr [[VALUE_INDIRECT_ADDR]], align 8
 // CHECK-C-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__ADDR_ADDR_I]], align 8
 // CHECK-C-NEXT:    [[TMP2:%.*]] = load i64, ptr [[BYVAL_TEMP]], align 8
 // CHECK-C-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[BYVAL_TEMP]], i32 1
@@ -178,10 +184,12 @@ EXTERN_C void test_st64b(void)
 // CHECK-CXX-LABEL: define {{[^@]+}}@test_st64bv(
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[__ADDR_ADDR_I:%.*]] = alloca ptr, align 8
+// CHECK-CXX-NEXT:    [[VALUE_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-CXX-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_DATA512_T:%.*]], align 8
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = load ptr, ptr @addr, align 8
 // CHECK-CXX-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP]], ptr align 8 @val, i64 64, i1 false)
 // CHECK-CXX-NEXT:    store ptr [[TMP0]], ptr [[__ADDR_ADDR_I]], align 8
+// CHECK-CXX-NEXT:    store ptr [[AGG_TMP]], ptr [[VALUE_INDIRECT_ADDR]], align 8
 // CHECK-CXX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__ADDR_ADDR_I]], align 8
 // CHECK-CXX-NEXT:    [[TMP2:%.*]] = load i64, ptr [[AGG_TMP]], align 8
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[AGG_TMP]], i32 1
@@ -210,10 +218,12 @@ EXTERN_C void test_st64bv(void)
 // CHECK-C-LABEL: define {{[^@]+}}@test_st64bv0(
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[__ADDR_ADDR_I:%.*]] = alloca ptr, align 8
+// CHECK-C-NEXT:    [[VALUE_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-C-NEXT:    [[BYVAL_TEMP:%.*]] = alloca [[STRUCT_DATA512_T:%.*]], align 8
 // CHECK-C-NEXT:    [[TMP0:%.*]] = load ptr, ptr @addr, align 8
 // CHECK-C-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 @val, i64 64, i1 false)
 // CHECK-C-NEXT:    store ptr [[TMP0]], ptr [[__ADDR_ADDR_I]], align 8
+// CHECK-C-NEXT:    store ptr [[BYVAL_TEMP]], ptr [[VALUE_INDIRECT_ADDR]], align 8
 // CHECK-C-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__ADDR_ADDR_I]], align 8
 // CHECK-C-NEXT:    [[TMP2:%.*]] = load i64, ptr [[BYVAL_TEMP]], align 8
 // CHECK-C-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[BYVAL_TEMP]], i32 1
@@ -237,10 +247,12 @@ EXTERN_C void test_st64bv(void)
 // CHECK-CXX-LABEL: define {{[^@]+}}@test_st64bv0(
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[__ADDR_ADDR_I:%.*]] = alloca ptr, align 8
+// CHECK-CXX-NEXT:    [[VALUE_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-CXX-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_DATA512_T:%.*]], align 8
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = load ptr, ptr @addr, align 8
 // CHECK-CXX-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP]], ptr align 8 @val, i64 64, i1 false)
 // CHECK-CXX-NEXT:    store ptr [[TMP0]], ptr [[__ADDR_ADDR_I]], align 8
+// CHECK-CXX-NEXT:    store ptr [[AGG_TMP]], ptr [[VALUE_INDIRECT_ADDR]], align 8
 // CHECK-CXX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__ADDR_ADDR_I]], align 8
 // CHECK-CXX-NEXT:    [[TMP2:%.*]] = load i64, ptr [[AGG_TMP]], align 8
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[AGG_TMP]], i32 1

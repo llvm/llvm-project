@@ -3,6 +3,7 @@ static_library("MCParser") {
   deps = [
     "//llvm/lib/MC",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   sources = [

@@ -1,7 +1,6 @@
 ; RUN: opt < %s -S -passes="default<O1>" | FileCheck %s -check-prefixes=TRIVIAL,CHECK
 ; RUN: opt < %s -S -passes="default<O2>" | FileCheck %s -check-prefixes=TRIVIAL,CHECK
 ; RUN: opt < %s -S -passes="default<O3>" | FileCheck %s -check-prefixes=NONTRIVIAL,CHECK
-; RUN: opt < %s -S -passes="default<O3>" -enable-npm-O3-nontrivial-unswitch=0 | FileCheck %s -check-prefixes=TRIVIAL,CHECK
 ; RUN: opt < %s -S -passes="default<Os>" | FileCheck %s -check-prefixes=TRIVIAL,CHECK
 ; RUN: opt < %s -S -passes="default<Oz>" | FileCheck %s -check-prefixes=TRIVIAL,CHECK
 
@@ -12,7 +11,7 @@ declare i32 @c()
 ; TRIVIAL-NOT: loop_begin.us:
 ; NONTRIVIAL: loop_begin.us:
 
-define i32 @test1(i1* %ptr, i1 %cond1, i1 %cond2) {
+define i32 @test1(ptr %ptr, i1 %cond1, i1 %cond2) {
 entry:
   br label %loop_begin
 
@@ -35,7 +34,7 @@ loop_b_b:
   br label %latch
 
 latch:
-  %v = load i1, i1* %ptr
+  %v = load i1, ptr %ptr
   br i1 %v, label %loop_begin, label %loop_exit
 
 loop_exit:
@@ -43,7 +42,7 @@ loop_exit:
 }
 
 ; CHECK-NOT: loop2_begin.us:
-define i32 @test2(i1* %ptr, i1 %cond1, i1 %cond2) optsize {
+define i32 @test2(ptr %ptr, i1 %cond1, i1 %cond2) optsize {
 entry:
   br label %loop2_begin
 
@@ -66,7 +65,7 @@ loop2_b_b:
   br label %latch2
 
 latch2:
-  %v = load i1, i1* %ptr
+  %v = load i1, ptr %ptr
   br i1 %v, label %loop2_begin, label %loop2_exit
 
 loop2_exit:

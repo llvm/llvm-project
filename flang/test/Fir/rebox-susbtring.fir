@@ -19,10 +19,10 @@ func.func @char_section(%arg0: !fir.box<!fir.array<?x!fir.char<1,20>>>) {
 // Only test the computation of the base address offset computation accounting for the substring
 
 // CHECK:         %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:         %[[VAL_30:.*]] = llvm.mlir.constant(0 : i64) : i64
 
 // CHECK:         %[[VAL_37:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}0, 0] : (!llvm.ptr<[[char20_descriptor_t]]>)>>) -> !llvm.ptr<ptr<array<20 x i8>>>
 // CHECK:         %[[VAL_38:.*]] = llvm.load %[[VAL_37]] : !llvm.ptr<ptr<array<20 x i8>>>
+// CHECK:         %[[VAL_30:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[VAL_39:.*]] = llvm.bitcast %[[VAL_38]] : !llvm.ptr<array<20 x i8>> to !llvm.ptr<array<20 x i8>>
 // CHECK:         %[[VAL_40:.*]] = llvm.getelementptr %[[VAL_39]]{{\[}}%[[VAL_30]], %[[VAL_4]]] : (!llvm.ptr<array<20 x i8>>, i64, i64) -> !llvm.ptr<i8>
 // CHECK:         llvm.bitcast %[[VAL_40]] : !llvm.ptr<i8> to !llvm.ptr<i8>
@@ -51,10 +51,10 @@ func.func @foo(%arg0: !fir.box<!fir.array<?x!fir.type<t{i:i32,c:!fir.char<1,10>}
 // Only test the computation of the base address offset computation accounting for the substring of the component
 
 // CHECK:         %[[VAL_1:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK:         %[[VAL_21:.*]] = llvm.mlir.constant(0 : i64) : i64
 
 // CHECK:         %[[VAL_30:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}0, 0] : (!llvm.ptr<[[struct_t_descriptor:.*]]>) -> !llvm.ptr<ptr<[[struct_t]]>>
 // CHECK:         %[[VAL_31:.*]] = llvm.load %[[VAL_30]] : !llvm.ptr<ptr<[[struct_t]]>>
+// CHECK:         %[[VAL_21:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[VAL_32:.*]] = llvm.bitcast %[[VAL_31]] : !llvm.ptr<[[struct_t]]> to !llvm.ptr<[[struct_t]]>
 // CHECK:         %[[VAL_33:.*]] = llvm.getelementptr %[[VAL_32]]{{\[}}%[[VAL_21]], 1, %[[VAL_4]]] : (!llvm.ptr<[[struct_t]]>, i64, i64) -> !llvm.ptr<i8>
 // CHECK:         llvm.bitcast %[[VAL_33]] : !llvm.ptr<i8> to !llvm.ptr<i8>
@@ -62,6 +62,26 @@ func.func @foo(%arg0: !fir.box<!fir.array<?x!fir.type<t{i:i32,c:!fir.char<1,10>}
 // More offset computation with descriptor strides and triplets that is not character specific ...
 
   %2 = fir.rebox %arg0 [%1] : (!fir.box<!fir.array<?x!fir.type<t{i:i32,c:!fir.char<1,10>}>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+  fir.call @bar(%2) : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> ()
+  return
+}
+
+// Test that a rebox with `index` substring parameter is converted
+// to legal IR. It used to produce:
+//   %63 = "llvm.mul"(%62, <<NULL VALUE>>) : (i64, <<NULL TYPE>>) -> i64
+// because the substr was not accessed via the adaptor's operands.
+
+// CHECK-LABEL: llvm.func @index_substr(
+// CHECK-NOT: NULL_VALUE
+// CHECK-NOT: NULL_TYPE
+func.func @index_substr(%arg0: !fir.box<!fir.array<?x!fir.char<1,20>>>) {
+  %c7_index = arith.constant 7 : index
+  %c1_i64 = arith.constant 1 : i64
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x!fir.char<1,20>>>, index) -> (index, index, index)
+  %1 = fir.slice %c1, %0#1, %c1_i64 substr %c1_i64, %c7_index : (index, index, i64, i64, index) -> !fir.slice<1>
+  %2 = fir.rebox %arg0 [%1] : (!fir.box<!fir.array<?x!fir.char<1,20>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
   fir.call @bar(%2) : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> ()
   return
 }

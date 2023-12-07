@@ -14,6 +14,7 @@
 #include "WriterUtils.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/Object/Wasm.h"
+#include <optional>
 
 namespace lld {
 namespace wasm {
@@ -39,7 +40,7 @@ public:
 
 protected:
   StringRef name;
-  llvm::Optional<uint32_t> assignedIndex;
+  std::optional<uint32_t> assignedIndex;
 };
 
 inline WasmInitExpr intConst(uint64_t value, bool is64) {

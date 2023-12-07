@@ -120,8 +120,8 @@ define i32 @test_too_big_stack() {
   ; DARWIN-NEXT:   $x6 = COPY [[DEF]](s64)
   ; DARWIN-NEXT:   $x7 = COPY [[DEF]](s64)
   ; DARWIN-NEXT:   BL @too_big_stack, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $w0
-  ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
   ; DARWIN-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $sp, implicit $sp
+  ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
   ; DARWIN-NEXT:   $w0 = COPY [[COPY1]](s32)
   ; DARWIN-NEXT:   RET_ReallyLR implicit $w0
   ; WINDOWS-LABEL: name: test_too_big_stack
@@ -146,8 +146,8 @@ define i32 @test_too_big_stack() {
   ; WINDOWS-NEXT:   $x6 = COPY [[DEF]](s64)
   ; WINDOWS-NEXT:   $x7 = COPY [[DEF]](s64)
   ; WINDOWS-NEXT:   BL @too_big_stack, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $w0
-  ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
   ; WINDOWS-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+  ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
   ; WINDOWS-NEXT:   $w0 = COPY [[COPY1]](s32)
   ; WINDOWS-NEXT:   RET_ReallyLR implicit $w0
 entry:
@@ -420,8 +420,8 @@ define hidden swiftcc i64 @swiftself_indirect_tail(ptr swiftself %arg) {
   ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x20
   ; DARWIN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   BL @pluto, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $x0
-  ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:tcgpr64(p0) = COPY $x0
   ; DARWIN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:tcgpr64(p0) = COPY $x0
   ; DARWIN-NEXT:   $x20 = COPY [[COPY]](p0)
   ; DARWIN-NEXT:   TCRETURNri [[COPY1]](p0), 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $x20
   ; WINDOWS-LABEL: name: swiftself_indirect_tail
@@ -431,8 +431,8 @@ define hidden swiftcc i64 @swiftself_indirect_tail(ptr swiftself %arg) {
   ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x20
   ; WINDOWS-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; WINDOWS-NEXT:   BL @pluto, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $x0
-  ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:tcgpr64(p0) = COPY $x0
   ; WINDOWS-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:tcgpr64(p0) = COPY $x0
   ; WINDOWS-NEXT:   $x20 = COPY [[COPY]](p0)
   ; WINDOWS-NEXT:   TCRETURNri [[COPY1]](p0), 0, csr_aarch64_aapcs, implicit $sp, implicit $x20
   %tmp = call ptr @pluto()

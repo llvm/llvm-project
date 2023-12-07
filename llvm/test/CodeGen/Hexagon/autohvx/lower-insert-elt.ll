@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -disable-cgp-delete-phis < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check that this testcase compiles successfully.
@@ -9,7 +9,7 @@ target triple = "hexagon-unknown--elf"
 
 define void @fred() local_unnamed_addr #0 {
 b0:
-  %v1 = load <64 x i8>, <64 x i8>* undef, align 64
+  %v1 = load <64 x i8>, ptr undef, align 64
   %v2 = insertelement <64 x i8> %v1, i8 0, i32 0
   br label %b3
 

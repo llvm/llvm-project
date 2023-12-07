@@ -4,7 +4,7 @@
 // When built as C on Linux, strndup is transformed to __strndup.
 // RUN: %clangxx_msan -O3 -xc %s -o %t && not %run %t 2>&1 | FileCheck --check-prefix=ON %s
 
-// UNSUPPORTED: windows-msvc
+// UNSUPPORTED: target={{.*windows-msvc.*}}
 
 #include <assert.h>
 #include <stdlib.h>
@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
   assert(__msan_test_shadow(copy, 4) == 2); // Poisoning is preserved.
   free(copy);
   return 0;
-  // ON: Uninitialized bytes in __interceptor_{{(__)?}}strndup at offset 2 inside [{{.*}}, 4)
+  // ON: Uninitialized bytes in {{(__)?}}strndup at offset 2 inside [{{.*}}, 4)
   // ON: MemorySanitizer: use-of-uninitialized-value
   // ON: #0 {{.*}}main {{.*}}strndup.cpp:[[@LINE-6]]
   // ON-LABEL: SUMMARY

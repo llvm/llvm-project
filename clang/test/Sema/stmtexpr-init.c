@@ -6,7 +6,7 @@ void T1(void) {
   int *x[1] = {({ static int _x = 10; &_x; })}; // expected-no-error
 
   /* Before commit
-     683e83c5 [Clang][C++2b] P2242R3: Non-literal variables [...] in constexpr
+     683e83c5 [Clang][C++23] P2242R3: Non-literal variables [...] in constexpr
      (i.e in clang-14 and earlier)
      this was silently accepted, but generated incorrect code.
   */

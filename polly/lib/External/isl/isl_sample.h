@@ -18,8 +18,6 @@ extern "C" {
 #endif
 
 __isl_give isl_vec *isl_basic_set_sample_vec(__isl_take isl_basic_set *bset);
-__isl_give isl_vec *isl_basic_set_sample_bounded(
-	__isl_take isl_basic_set *bset);
 __isl_give isl_vec *isl_basic_set_sample_with_cone(
 	__isl_take isl_basic_set *bset, __isl_take isl_basic_set *cone);
 

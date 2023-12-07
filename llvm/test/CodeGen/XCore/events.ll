@@ -1,20 +1,20 @@
 ; RUN: llc < %s -march=xcore | FileCheck %s
 
-declare void @llvm.xcore.setv.p1i8(i8 addrspace(1)* %r, i8* %p)
-declare i8* @llvm.xcore.waitevent()
-declare i8* @llvm.xcore.checkevent(i8*)
+declare void @llvm.xcore.setv.p1(ptr addrspace(1) %r, ptr %p)
+declare ptr @llvm.xcore.waitevent()
+declare ptr @llvm.xcore.checkevent(ptr)
 declare void @llvm.xcore.clre()
 
-define i32 @f(i8 addrspace(1)* %r) nounwind {
+define i32 @f(ptr addrspace(1) %r) nounwind {
 ; CHECK-LABEL: f:
 entry:
 ; CHECK: clre
   call void @llvm.xcore.clre()
-  call void @llvm.xcore.setv.p1i8(i8 addrspace(1)* %r, i8* blockaddress(@f, %L1))
-  call void @llvm.xcore.setv.p1i8(i8 addrspace(1)* %r, i8* blockaddress(@f, %L2))
-  %goto_addr = call i8* @llvm.xcore.waitevent()
+  call void @llvm.xcore.setv.p1(ptr addrspace(1) %r, ptr blockaddress(@f, %L1))
+  call void @llvm.xcore.setv.p1(ptr addrspace(1) %r, ptr blockaddress(@f, %L2))
+  %goto_addr = call ptr @llvm.xcore.waitevent()
 ; CHECK: waiteu
-  indirectbr i8* %goto_addr, [label %L1, label %L2]
+  indirectbr ptr %goto_addr, [label %L1, label %L2]
 L1:
   br label %ret
 L2:
@@ -24,16 +24,16 @@ ret:
   ret i32 %retval
 }
 
-define i32 @g(i8 addrspace(1)* %r) nounwind {
+define i32 @g(ptr addrspace(1) %r) nounwind {
 ; CHECK-LABEL: g:
 entry:
 ; CHECK: clre
   call void @llvm.xcore.clre()
-  call void @llvm.xcore.setv.p1i8(i8 addrspace(1)* %r, i8* blockaddress(@f, %L1))
-  %goto_addr = call i8* @llvm.xcore.checkevent(i8 *blockaddress(@f, %L2))
+  call void @llvm.xcore.setv.p1(ptr addrspace(1) %r, ptr blockaddress(@f, %L1))
+  %goto_addr = call ptr @llvm.xcore.checkevent(ptr blockaddress(@f, %L2))
 ; CHECK: setsr 1
 ; CHECK: clrsr 1
-  indirectbr i8* %goto_addr, [label %L1, label %L2]
+  indirectbr ptr %goto_addr, [label %L1, label %L2]
 L1:
   br label %ret
 L2:

@@ -15,7 +15,7 @@
 #include "src/threads/thrd_equal.h"
 #include "src/threads/thrd_join.h"
 
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <threads.h>
 

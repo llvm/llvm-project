@@ -45,7 +45,7 @@ static bool startsWithInitStatement(const AnnotatedLine &Line) {
 /// invokes @selector(...)). So, we allow treat any identifier or
 /// keyword as a potential Objective-C selector component.
 static bool canBeObjCSelectorComponent(const FormatToken &Tok) {
-  return Tok.Tok.getIdentifierInfo() != nullptr;
+  return Tok.Tok.getIdentifierInfo();
 }
 
 /// With `Left` being '(', check if we're at either `[...](` or
@@ -111,14 +111,29 @@ static bool isCppAttribute(bool IsCpp, const FormatToken &Tok) {
 class AnnotatingParser {
 public:
   AnnotatingParser(const FormatStyle &Style, AnnotatedLine &Line,
-                   const AdditionalKeywords &Keywords)
+                   const AdditionalKeywords &Keywords,
+                   SmallVector<ScopeType> &Scopes)
       : Style(Style), Line(Line), CurrentToken(Line.First), AutoFound(false),
-        Keywords(Keywords) {
+        Keywords(Keywords), Scopes(Scopes) {
     Contexts.push_back(Context(tok::unknown, 1, /*IsExpression=*/false));
     resetTokenMetadata();
   }
 
 private:
+  ScopeType getScopeType(const FormatToken &Token) const {
+    switch (Token.getType()) {
+    case TT_FunctionLBrace:
+    case TT_LambdaLBrace:
+      return ST_Function;
+    case TT_ClassLBrace:
+    case TT_StructLBrace:
+    case TT_UnionLBrace:
+      return ST_Class;
+    default:
+      return ST_Other;
+    }
+  }
+
   bool parseAngle() {
     if (!CurrentToken || !CurrentToken->Previous)
       return false;
@@ -129,9 +144,11 @@ private:
     if (Previous.Previous) {
       if (Previous.Previous->Tok.isLiteral())
         return false;
+      if (Previous.Previous->is(tok::r_brace))
+        return false;
       if (Previous.Previous->is(tok::r_paren) && Contexts.size() > 1 &&
           (!Previous.Previous->MatchingParen ||
-           !Previous.Previous->MatchingParen->is(
+           Previous.Previous->MatchingParen->isNot(
                TT_OverloadedOperatorLParen))) {
         return false;
       }
@@ -166,10 +183,9 @@ private:
         // parameter cases, but should not alter program semantics.
         if (CurrentToken->Next && CurrentToken->Next->is(tok::greater) &&
             Left->ParentBracket != tok::less &&
-            (isKeywordWithCondition(*Line.First) ||
-             CurrentToken->getStartOfNonWhitespace() ==
-                 CurrentToken->Next->getStartOfNonWhitespace().getLocWithOffset(
-                     -1))) {
+            CurrentToken->getStartOfNonWhitespace() ==
+                CurrentToken->Next->getStartOfNonWhitespace().getLocWithOffset(
+                    -1)) {
           return false;
         }
         Left->MatchingParen = CurrentToken;
@@ -185,7 +201,10 @@ private:
           CurrentToken->setType(TT_DictLiteral);
         } else {
           CurrentToken->setType(TT_TemplateCloser);
+          CurrentToken->Tok.setLength(1);
         }
+        if (CurrentToken->Next && CurrentToken->Next->Tok.isLiteral())
+          return false;
         next();
         return true;
       }
@@ -283,7 +302,7 @@ private:
     if (OpeningParen.is(TT_OverloadedOperatorLParen)) {
       // Find the previous kw_operator token.
       FormatToken *Prev = &OpeningParen;
-      while (!Prev->is(tok::kw_operator)) {
+      while (Prev->isNot(tok::kw_operator)) {
         Prev = Prev->Previous;
         assert(Prev && "Expect a kw_operator prior to the OperatorLParen!");
       }
@@ -294,6 +313,9 @@ private:
       bool OperatorCalledAsMemberFunction =
           Prev->Previous && Prev->Previous->isOneOf(tok::period, tok::arrow);
       Contexts.back().IsExpression = OperatorCalledAsMemberFunction;
+    } else if (OpeningParen.is(TT_VerilogInstancePortLParen)) {
+      Contexts.back().IsExpression = true;
+      Contexts.back().ContextType = Context::VerilogInstancePortList;
     } else if (Style.isJavaScript() &&
                (Line.startsWith(Keywords.kw_type, tok::identifier) ||
                 Line.startsWith(tok::kw_export, Keywords.kw_type,
@@ -302,9 +324,10 @@ private:
       // export type X = (...);
       Contexts.back().IsExpression = false;
     } else if (OpeningParen.Previous &&
-               (OpeningParen.Previous->isOneOf(tok::kw_static_assert,
-                                               tok::kw_while, tok::l_paren,
-                                               tok::comma, TT_BinaryOperator) ||
+               (OpeningParen.Previous->isOneOf(
+                    tok::kw_static_assert, tok::kw_noexcept, tok::kw_explicit,
+                    tok::kw_while, tok::l_paren, tok::comma,
+                    TT_BinaryOperator) ||
                 OpeningParen.Previous->isIf())) {
       // static_assert, if and while usually contain expressions.
       Contexts.back().IsExpression = true;
@@ -321,9 +344,15 @@ private:
     } else if (isLambdaParameterList(&OpeningParen)) {
       // This is a parameter list of a lambda expression.
       Contexts.back().IsExpression = false;
+    } else if (OpeningParen.is(TT_RequiresExpressionLParen)) {
+      Contexts.back().IsExpression = false;
+    } else if (OpeningParen.Previous &&
+               OpeningParen.Previous->is(tok::kw__Generic)) {
+      Contexts.back().ContextType = Context::C11GenericSelection;
+      Contexts.back().IsExpression = true;
     } else if (Line.InPPDirective &&
                (!OpeningParen.Previous ||
-                !OpeningParen.Previous->is(tok::identifier))) {
+                OpeningParen.Previous->isNot(tok::identifier))) {
       Contexts.back().IsExpression = true;
     } else if (Contexts[Contexts.size() - 2].CaretFound) {
       // This is the parameter list of an ObjC block.
@@ -393,9 +422,9 @@ private:
           FormatToken *PrevPrev = Prev->getPreviousNonComment();
           FormatToken *Next = CurrentToken->Next;
           if (PrevPrev && PrevPrev->is(tok::identifier) &&
+              PrevPrev->isNot(TT_TypeName) &&
               Prev->isOneOf(tok::star, tok::amp, tok::ampamp) &&
-              CurrentToken->is(tok::identifier) &&
-              !Next->isOneOf(tok::equal, tok::l_brace)) {
+              CurrentToken->is(tok::identifier) && Next->isNot(tok::equal)) {
             Prev->setType(TT_BinaryOperator);
             LookForDecls = false;
           }
@@ -569,10 +598,6 @@ private:
     return false;
   }
 
-  bool isCpp11AttributeSpecifier(const FormatToken &Tok) {
-    return isCppAttribute(Style.isCpp(), Tok);
-  }
-
   bool parseSquare() {
     if (!CurrentToken)
       return false;
@@ -593,8 +618,9 @@ private:
         (Contexts.back().CanBeExpression || Contexts.back().IsExpression ||
          Contexts.back().ContextType == Context::TemplateArgument);
 
-    bool IsCpp11AttributeSpecifier = isCpp11AttributeSpecifier(*Left) ||
-                                     Contexts.back().InCpp11AttributeSpecifier;
+    const bool IsInnerSquare = Contexts.back().InCpp11AttributeSpecifier;
+    const bool IsCpp11AttributeSpecifier =
+        isCppAttribute(Style.isCpp(), *Left) || IsInnerSquare;
 
     // Treat C# Attributes [STAThread] much like C++ attributes [[...]].
     bool IsCSharpAttributeSpecifier =
@@ -629,6 +655,8 @@ private:
         Left->setType(TT_InlineASMSymbolicNameLSquare);
       } else if (IsCpp11AttributeSpecifier) {
         Left->setType(TT_AttributeSquare);
+        if (!IsInnerSquare && Left->Previous)
+          Left->Previous->EndsCppAttributeGroup = false;
       } else if (Style.isJavaScript() && Parent &&
                  Contexts.back().ContextKind == tok::l_brace &&
                  Parent->isOneOf(tok::l_brace, tok::comma)) {
@@ -702,8 +730,11 @@ private:
 
     while (CurrentToken) {
       if (CurrentToken->is(tok::r_square)) {
-        if (IsCpp11AttributeSpecifier)
+        if (IsCpp11AttributeSpecifier) {
           CurrentToken->setType(TT_AttributeSquare);
+          if (!IsInnerSquare)
+            CurrentToken->EndsCppAttributeGroup = true;
+        }
         if (IsCSharpAttributeSpecifier) {
           CurrentToken->setType(TT_AttributeSquare);
         } else if (((CurrentToken->Next &&
@@ -832,10 +863,18 @@ private:
         OpeningBrace.Previous->is(TT_JsTypeColon)) {
       Contexts.back().IsExpression = false;
     }
+    if (Style.isVerilog() &&
+        (!OpeningBrace.getPreviousNonComment() ||
+         OpeningBrace.getPreviousNonComment()->isNot(Keywords.kw_apostrophe))) {
+      Contexts.back().VerilogMayBeConcatenation = true;
+    }
 
     unsigned CommaCount = 0;
     while (CurrentToken) {
       if (CurrentToken->is(tok::r_brace)) {
+        assert(!Scopes.empty());
+        assert(Scopes.back() == getScopeType(OpeningBrace));
+        Scopes.pop_back();
         assert(OpeningBrace.Optional == CurrentToken->Optional);
         OpeningBrace.MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = &OpeningBrace;
@@ -939,6 +978,10 @@ private:
     case tok::colon:
       if (!Tok->Previous)
         return false;
+      // Goto labels and case labels are already identified in
+      // UnwrappedLineParser.
+      if (Tok->isTypeFinalized())
+        break;
       // Colons from ?: are handled in parseConditional().
       if (Style.isJavaScript()) {
         if (Contexts.back().ColonIsForRangeExpr || // colon in for loop
@@ -977,7 +1020,7 @@ private:
           // In Verilog a case label doesn't have the case keyword. We
           // assume a colon following an expression is a case label.
           // Colons from ?: are annotated in parseConditional().
-          Tok->setType(TT_GotoLabelColon);
+          Tok->setType(TT_CaseLabelColon);
           if (Line.Level > 1 || (!Line.InPPDirective && Line.Level > 0))
             --Line.Level;
         }
@@ -1026,6 +1069,8 @@ private:
         }
       } else if (Contexts.back().ColonIsForRangeExpr) {
         Tok->setType(TT_RangeBasedForLoopColon);
+      } else if (Contexts.back().ContextType == Context::C11GenericSelection) {
+        Tok->setType(TT_GenericSelectionColon);
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
@@ -1112,6 +1157,52 @@ private:
         Tok->setType(TT_OverloadedOperatorLParen);
       }
 
+      if (Style.isVerilog()) {
+        // Identify the parameter list and port list in a module instantiation.
+        // This is still needed when we already have
+        // UnwrappedLineParser::parseVerilogHierarchyHeader because that
+        // function is only responsible for the definition, not the
+        // instantiation.
+        auto IsInstancePort = [&]() {
+          const FormatToken *Prev = Tok->getPreviousNonComment();
+          const FormatToken *PrevPrev;
+          // In the following example all 4 left parentheses will be treated as
+          // 'TT_VerilogInstancePortLParen'.
+          //
+          //   module_x instance_1(port_1); // Case A.
+          //   module_x #(parameter_1)      // Case B.
+          //       instance_2(port_1),      // Case C.
+          //       instance_3(port_1);      // Case D.
+          if (!Prev || !(PrevPrev = Prev->getPreviousNonComment()))
+            return false;
+          // Case A.
+          if (Keywords.isVerilogIdentifier(*Prev) &&
+              Keywords.isVerilogIdentifier(*PrevPrev)) {
+            return true;
+          }
+          // Case B.
+          if (Prev->is(Keywords.kw_verilogHash) &&
+              Keywords.isVerilogIdentifier(*PrevPrev)) {
+            return true;
+          }
+          // Case C.
+          if (Keywords.isVerilogIdentifier(*Prev) && PrevPrev->is(tok::r_paren))
+            return true;
+          // Case D.
+          if (Keywords.isVerilogIdentifier(*Prev) && PrevPrev->is(tok::comma)) {
+            const FormatToken *PrevParen = PrevPrev->getPreviousNonComment();
+            if (PrevParen->is(tok::r_paren) && PrevParen->MatchingParen &&
+                PrevParen->MatchingParen->is(TT_VerilogInstancePortLParen)) {
+              return true;
+            }
+          }
+          return false;
+        };
+
+        if (IsInstancePort())
+          Tok->setFinalizedType(TT_VerilogInstancePortLParen);
+      }
+
       if (!parseParens())
         return false;
       if (Line.MustBeDeclaration && Contexts.size() == 1 &&
@@ -1133,6 +1224,7 @@ private:
         if (Previous && Previous->getType() != TT_DictLiteral)
           Previous->setType(TT_SelectorName);
       }
+      Scopes.push_back(getScopeType(*Tok));
       if (!parseBrace())
         return false;
       break;
@@ -1163,6 +1255,9 @@ private:
     case tok::r_square:
       return false;
     case tok::r_brace:
+      // Don't pop scope when encountering unbalanced r_brace.
+      if (!Scopes.empty())
+        Scopes.pop_back();
       // Lines can start with '}'.
       if (Tok->Previous)
         return false;
@@ -1182,19 +1277,26 @@ private:
              !CurrentToken->isOneOf(tok::l_paren, tok::semi, tok::r_paren)) {
         if (CurrentToken->isOneOf(tok::star, tok::amp))
           CurrentToken->setType(TT_PointerOrReference);
-        consumeToken();
-        if (!CurrentToken)
-          continue;
-        if (CurrentToken->is(tok::comma) &&
-            CurrentToken->Previous->isNot(tok::kw_operator)) {
+        auto Next = CurrentToken->getNextNonComment();
+        if (!Next)
           break;
-        }
-        if (CurrentToken->Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator,
-                                            tok::comma, tok::star, tok::arrow,
-                                            tok::amp, tok::ampamp) ||
+        if (Next->is(tok::less))
+          next();
+        else
+          consumeToken();
+        if (!CurrentToken)
+          break;
+        auto Previous = CurrentToken->getPreviousNonComment();
+        assert(Previous);
+        if (CurrentToken->is(tok::comma) && Previous->isNot(tok::kw_operator))
+          break;
+        if (Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator, tok::comma,
+                              tok::star, tok::arrow, tok::amp, tok::ampamp) ||
             // User defined literal.
-            CurrentToken->Previous->TokenText.startswith("\"\"")) {
-          CurrentToken->Previous->setType(TT_OverloadedOperator);
+            Previous->TokenText.startswith("\"\"")) {
+          Previous->setType(TT_OverloadedOperator);
+          if (CurrentToken->isOneOf(tok::less, tok::greater))
+            break;
         }
       }
       if (CurrentToken && CurrentToken->is(tok::l_paren))
@@ -1205,7 +1307,7 @@ private:
     case tok::question:
       if (Style.isJavaScript() && Tok->Next &&
           Tok->Next->isOneOf(tok::semi, tok::comma, tok::colon, tok::r_paren,
-                             tok::r_brace)) {
+                             tok::r_brace, tok::r_square)) {
         // Question marks before semicolons, colons, etc. indicate optional
         // types (fields, parameters), e.g.
         //   function(x?: string, y?) {...}
@@ -1222,11 +1324,34 @@ private:
       if (Style.isCSharp()) {
         // `Type?)`, `Type?>`, `Type? name;` and `Type? name =` can only be
         // nullable types.
+
+        // `Type?)`, `Type?>`, `Type? name;`
+        if (Tok->Next &&
+            (Tok->Next->startsSequence(tok::question, tok::r_paren) ||
+             Tok->Next->startsSequence(tok::question, tok::greater) ||
+             Tok->Next->startsSequence(tok::question, tok::identifier,
+                                       tok::semi))) {
+          Tok->setType(TT_CSharpNullable);
+          break;
+        }
+
+        // `Type? name =`
+        if (Tok->Next && Tok->Next->is(tok::identifier) && Tok->Next->Next &&
+            Tok->Next->Next->is(tok::equal)) {
+          Tok->setType(TT_CSharpNullable);
+          break;
+        }
+
         // Line.MustBeDeclaration will be true for `Type? name;`.
-        if ((!Contexts.back().IsExpression && Line.MustBeDeclaration) ||
-            (Tok->Next && Tok->Next->isOneOf(tok::r_paren, tok::greater)) ||
-            (Tok->Next && Tok->Next->is(tok::identifier) && Tok->Next->Next &&
-             Tok->Next->Next->is(tok::equal))) {
+        // But not
+        // cond ? "A" : "B";
+        // cond ? id : "B";
+        // cond ? cond2 ? "A" : "B" : "C";
+        if (!Contexts.back().IsExpression && Line.MustBeDeclaration &&
+            (!Tok->Next ||
+             !Tok->Next->isOneOf(tok::identifier, tok::string_literal) ||
+             !Tok->Next->Next ||
+             !Tok->Next->Next->isOneOf(tok::colon, tok::question))) {
           Tok->setType(TT_CSharpNullable);
           break;
         }
@@ -1244,9 +1369,15 @@ private:
       case Context::InheritanceList:
         Tok->setType(TT_InheritanceComma);
         break;
+      case Context::VerilogInstancePortList:
+        Tok->setFinalizedType(TT_VerilogInstancePortComma);
+        break;
       default:
-        if (Contexts.back().FirstStartOfName &&
-            (Contexts.size() == 1 || startsWithInitStatement(Line))) {
+        if (Style.isVerilog() && Contexts.size() == 1 &&
+            Line.startsWith(Keywords.kw_assign)) {
+          Tok->setFinalizedType(TT_VerilogAssignComma);
+        } else if (Contexts.back().FirstStartOfName &&
+                   (Contexts.size() == 1 || startsWithInitStatement(Line))) {
           Contexts.back().FirstStartOfName->PartOfMultiVariableDeclStmt = true;
           Line.IsMultiVariableDeclStmt = true;
         }
@@ -1271,7 +1402,7 @@ private:
           Tok->Next->isNot(tok::l_paren)) {
         Tok->setType(TT_CSharpGenericTypeConstraint);
         parseCSharpGenericTypeConstraint();
-        if (Tok->getPreviousNonComment() == nullptr)
+        if (!Tok->getPreviousNonComment())
           Line.IsContinuation = true;
       }
       break;
@@ -1280,6 +1411,10 @@ private:
           Tok->Previous->is(tok::kw_noexcept)) {
         Tok->setType(TT_TrailingReturnArrow);
       }
+      break;
+    case tok::eof:
+      if (Style.InsertNewlineAtEOF && Tok->NewlinesBefore == 0)
+        Tok->NewlinesBefore = 1;
       break;
     default:
       break;
@@ -1360,7 +1495,7 @@ private:
   }
 
   void parseHasInclude() {
-    if (!CurrentToken || !CurrentToken->is(tok::l_paren))
+    if (!CurrentToken || CurrentToken->isNot(tok::l_paren))
       return;
     next(); // '('
     parseIncludeDirective();
@@ -1606,6 +1741,10 @@ private:
     bool CaretFound = false;
     bool InCpp11AttributeSpecifier = false;
     bool InCSharpAttributeSpecifier = false;
+    bool VerilogAssignmentFound = false;
+    // Whether the braces may mean concatenation instead of structure or array
+    // literal.
+    bool VerilogMayBeConcatenation = false;
     enum {
       Unknown,
       // Like the part after `:` in a constructor.
@@ -1621,6 +1760,10 @@ private:
       StructArrayInitializer,
       // Like in `static_cast<int>`.
       TemplateArgument,
+      // C11 _Generic selection.
+      C11GenericSelection,
+      // Like in the outer parentheses in `ffnand ff1(.q());`.
+      VerilogInstancePortList,
     } ContextType = Unknown;
   };
 
@@ -1671,6 +1814,14 @@ private:
           return false;
         }
 
+        // This is the default value of a template parameter, determine if it's
+        // type or non-type.
+        if (Contexts.back().ContextKind == tok::less) {
+          assert(Current.Previous->Previous);
+          return !Current.Previous->Previous->isOneOf(tok::kw_typename,
+                                                      tok::kw_class);
+        }
+
         Tok = Tok->MatchingParen;
         if (!Tok)
           return false;
@@ -1678,8 +1829,8 @@ private:
         if (!Tok)
           return false;
 
-        if (Tok->isOneOf(tok::kw_class, tok::kw_enum, tok::kw_concept,
-                         tok::kw_struct, tok::kw_using)) {
+        if (Tok->isOneOf(tok::kw_class, tok::kw_enum, tok::kw_struct,
+                         tok::kw_using)) {
           return false;
         }
 
@@ -1705,7 +1856,7 @@ private:
              Previous && Previous->Previous &&
              !Previous->Previous->isOneOf(tok::comma, tok::semi);
              Previous = Previous->Previous) {
-          if (Previous->isOneOf(tok::r_square, tok::r_paren)) {
+          if (Previous->isOneOf(tok::r_square, tok::r_paren, tok::greater)) {
             Previous = Previous->MatchingParen;
             if (!Previous)
               break;
@@ -1720,7 +1871,8 @@ private:
         }
       }
     } else if (Current.is(tok::lessless) &&
-               (!Current.Previous || !Current.Previous->is(tok::kw_operator))) {
+               (!Current.Previous ||
+                Current.Previous->isNot(tok::kw_operator))) {
       Contexts.back().IsExpression = true;
     } else if (Current.isOneOf(tok::kw_return, tok::kw_throw)) {
       Contexts.back().IsExpression = true;
@@ -1748,7 +1900,7 @@ private:
       Contexts.back().CanBeExpression = false;
     } else if (Current.is(tok::semi) ||
                (Current.is(tok::exclaim) && Current.Previous &&
-                !Current.Previous->is(tok::kw_operator))) {
+                Current.Previous->isNot(tok::kw_operator))) {
       // This should be the condition or increment in a for-loop.
       // But not operator !() (can't use TT_OverloadedOperator here as its not
       // been annotated yet).
@@ -1812,7 +1964,7 @@ private:
   }
 
   void determineTokenType(FormatToken &Current) {
-    if (!Current.is(TT_Unknown)) {
+    if (Current.isNot(TT_Unknown)) {
       // The token type is already known.
       return;
     }
@@ -1861,7 +2013,8 @@ private:
     } else if (Current.is(tok::arrow) &&
                Style.Language == FormatStyle::LK_Java) {
       Current.setType(TT_LambdaArrow);
-    } else if (Current.is(tok::arrow) && AutoFound && Line.MustBeDeclaration &&
+    } else if (Current.is(tok::arrow) && AutoFound &&
+               (Line.MightBeFunctionDecl || Line.InPPDirective) &&
                Current.NestingLevel == 0 &&
                !Current.Previous->isOneOf(tok::kw_operator, tok::identifier)) {
       // not auto operator->() -> xxx;
@@ -1899,8 +2052,19 @@ private:
       }
     } else if (Current.isBinaryOperator() &&
                (!Current.Previous || Current.Previous->isNot(tok::l_square)) &&
-               (!Current.is(tok::greater) &&
+               (Current.isNot(tok::greater) &&
                 Style.Language != FormatStyle::LK_TextProto)) {
+      if (Style.isVerilog()) {
+        if (Current.is(tok::lessequal) && Contexts.size() == 1 &&
+            !Contexts.back().VerilogAssignmentFound) {
+          // In Verilog `<=` is assignment if in its own statement. It is a
+          // statement instead of an expression, that is it can not be chained.
+          Current.ForcedPrecedence = prec::Assignment;
+          Current.setFinalizedType(TT_BinaryOperator);
+        }
+        if (Current.getPrecedence() == prec::Assignment)
+          Contexts.back().VerilogAssignmentFound = true;
+      }
       Current.setType(TT_BinaryOperator);
     } else if (Current.is(tok::comment)) {
       if (Current.TokenText.startswith("/*")) {
@@ -1913,6 +2077,14 @@ private:
         }
       } else {
         Current.setType(TT_LineComment);
+      }
+    } else if (Current.is(tok::string_literal)) {
+      if (Style.isVerilog() && Contexts.back().VerilogMayBeConcatenation &&
+          Current.getPreviousNonComment() &&
+          Current.getPreviousNonComment()->isOneOf(tok::comma, tok::l_brace) &&
+          Current.getNextNonComment() &&
+          Current.getNextNonComment()->isOneOf(tok::comma, tok::r_brace)) {
+        Current.setType(TT_StringInConcatenation);
       }
     } else if (Current.is(tok::l_paren)) {
       if (lParenStartsCppCast(Current))
@@ -1930,7 +2102,7 @@ private:
           if (AfterParen->isNot(tok::caret)) {
             if (FormatToken *BeforeParen = Current.MatchingParen->Previous) {
               if (BeforeParen->is(tok::identifier) &&
-                  !BeforeParen->is(TT_TypenameMacro) &&
+                  BeforeParen->isNot(TT_TypenameMacro) &&
                   BeforeParen->TokenText == BeforeParen->TokenText.upper() &&
                   (!BeforeParen->Previous ||
                    BeforeParen->Previous->ClosesTemplateDeclaration)) {
@@ -2013,6 +2185,10 @@ private:
   /// This is a heuristic based on whether \p Tok is an identifier following
   /// something that is likely a type.
   bool isStartOfName(const FormatToken &Tok) {
+    // Handled in ExpressionParser for Verilog.
+    if (Style.isVerilog())
+      return false;
+
     if (Tok.isNot(tok::identifier) || !Tok.Previous)
       return false;
 
@@ -2183,7 +2359,7 @@ private:
     if (Tok.Next->isOneOf(tok::kw_noexcept, tok::kw_volatile, tok::kw_const,
                           tok::kw_requires, tok::kw_throw, tok::arrow,
                           Keywords.kw_override, Keywords.kw_final) ||
-        isCpp11AttributeSpecifier(*Tok.Next)) {
+        isCppAttribute(Style.isCpp(), *Tok.Next)) {
       return false;
     }
 
@@ -2270,10 +2446,14 @@ private:
     // If the next token after the parenthesis is a unary operator, assume
     // that this is cast, unless there are unexpected tokens inside the
     // parenthesis.
-    bool NextIsUnary =
-        Tok.Next->isUnaryOperator() || Tok.Next->isOneOf(tok::amp, tok::star);
-    if (!NextIsUnary || Tok.Next->is(tok::plus) ||
+    const bool NextIsAmpOrStar = Tok.Next->isOneOf(tok::amp, tok::star);
+    if (!(Tok.Next->isUnaryOperator() || NextIsAmpOrStar) ||
+        Tok.Next->is(tok::plus) ||
         !Tok.Next->Next->isOneOf(tok::identifier, tok::numeric_constant)) {
+      return false;
+    }
+    if (NextIsAmpOrStar &&
+        (Tok.Next->Next->is(tok::numeric_constant) || Line.InPPDirective)) {
       return false;
     }
     // Search for unexpected tokens.
@@ -2332,9 +2512,22 @@ private:
     if (Style.isCSharp() && Tok.is(tok::ampamp))
       return TT_BinaryOperator;
 
+    if (Style.isVerilog()) {
+      // In Verilog, `*` can only be a binary operator.  `&` can be either unary
+      // or binary.  `*` also includes `*>` in module path declarations in
+      // specify blocks because merged tokens take the type of the first one by
+      // default.
+      if (Tok.is(tok::star))
+        return TT_BinaryOperator;
+      return determineUnaryOperatorByUsage(Tok) ? TT_UnaryOperator
+                                                : TT_BinaryOperator;
+    }
+
     const FormatToken *PrevToken = Tok.getPreviousNonComment();
     if (!PrevToken)
       return TT_UnaryOperator;
+    if (PrevToken->is(TT_TypeName))
+      return TT_PointerOrReference;
 
     const FormatToken *NextToken = Tok.getNextNonComment();
 
@@ -2343,7 +2536,7 @@ private:
 
     if (!NextToken ||
         NextToken->isOneOf(tok::arrow, tok::equal, tok::kw_noexcept, tok::comma,
-                           tok::r_paren) ||
+                           tok::r_paren, TT_RequiresClause) ||
         NextToken->canBePointerOrReferenceQualifier() ||
         (NextToken->is(tok::l_brace) && !NextToken->getNextNonComment())) {
       return TT_PointerOrReference;
@@ -2377,12 +2570,6 @@ private:
     // presence of the matching brace to distinguish between those.
     if (PrevToken->is(tok::r_brace) && Tok.is(tok::star) &&
         !PrevToken->MatchingParen) {
-      return TT_PointerOrReference;
-    }
-
-    // if (Class* obj { function() })
-    if (PrevToken->Tok.isAnyIdentifier() && NextToken->Tok.isAnyIdentifier() &&
-        NextToken->Next && NextToken->Next->is(tok::l_brace)) {
       return TT_PointerOrReference;
     }
 
@@ -2427,6 +2614,28 @@ private:
     if (IsExpression && !Contexts.back().CaretFound)
       return TT_BinaryOperator;
 
+    // Opeartors at class scope are likely pointer or reference members.
+    if (!Scopes.empty() && Scopes.back() == ST_Class)
+      return TT_PointerOrReference;
+
+    // Tokens that indicate member access or chained operator& use.
+    auto IsChainedOperatorAmpOrMember = [](const FormatToken *token) {
+      return !token || token->isOneOf(tok::amp, tok::period, tok::arrow,
+                                      tok::arrowstar, tok::periodstar);
+    };
+
+    // It's more likely that & represents operator& than an uninitialized
+    // reference.
+    if (Tok.is(tok::amp) && PrevToken && PrevToken->Tok.isAnyIdentifier() &&
+        IsChainedOperatorAmpOrMember(PrevToken->getPreviousNonComment()) &&
+        NextToken && NextToken->Tok.isAnyIdentifier()) {
+      if (auto NextNext = NextToken->getNextNonComment();
+          NextNext &&
+          (IsChainedOperatorAmpOrMember(NextNext) || NextNext->is(tok::semi))) {
+        return TT_BinaryOperator;
+      }
+    }
+
     return TT_PointerOrReference;
   }
 
@@ -2463,6 +2672,8 @@ private:
   FormatToken *CurrentToken;
   bool AutoFound;
   const AdditionalKeywords &Keywords;
+
+  SmallVector<ScopeType> &Scopes;
 
   // Set of "<" tokens that do not open a template parameter list. If parseAngle
   // determines that a specific token can't be a template opener, it will make
@@ -2511,10 +2722,30 @@ public:
     FormatToken *Start = Current;
     FormatToken *LatestOperator = nullptr;
     unsigned OperatorIndex = 0;
+    // The first name of the current type in a port list.
+    FormatToken *VerilogFirstOfType = nullptr;
 
     while (Current) {
+      // In Verilog ports in a module header that don't have a type take the
+      // type of the previous one.  For example,
+      //   module a(output b,
+      //                   c,
+      //            output d);
+      // In this case there need to be fake parentheses around b and c.
+      if (Style.isVerilog() && Precedence == prec::Comma) {
+        VerilogFirstOfType =
+            verilogGroupDecl(VerilogFirstOfType, LatestOperator);
+      }
+
       // Consume operators with higher precedence.
       parse(Precedence + 1);
+
+      // Do not assign fake parenthesis to tokens that are part of an
+      // unexpanded macro call. The line within the macro call contains
+      // the parenthesis and commas, and we will not find operators within
+      // that structure.
+      if (Current && Current->MacroParent)
+        break;
 
       int CurrentPrecedence = getCurrentPrecedence();
 
@@ -2525,7 +2756,20 @@ public:
         Start = Current;
       }
 
-      // At the end of the line or when an operator with higher precedence is
+      if ((Style.isCSharp() || Style.isJavaScript() ||
+           Style.Language == FormatStyle::LK_Java) &&
+          Precedence == prec::Additive && Current) {
+        // A string can be broken without parentheses around it when it is
+        // already in a sequence of strings joined by `+` signs.
+        FormatToken *Prev = Current->getPreviousNonComment();
+        if (Prev && Prev->is(tok::string_literal) &&
+            (Prev == Start || Prev->endsSequence(tok::string_literal, tok::plus,
+                                                 TT_StringInConcatenation))) {
+          Prev->setType(TT_StringInConcatenation);
+        }
+      }
+
+      // At the end of the line or when an operator with lower precedence is
       // found, insert fake parenthesis and return.
       if (!Current ||
           (Current->closesScope() &&
@@ -2561,6 +2805,10 @@ public:
         next(/*SkipPastLeadingComments=*/Precedence > 0);
       }
     }
+
+    // Group variables of the same type.
+    if (Style.isVerilog() && Precedence == prec::Comma && VerilogFirstOfType)
+      addFakeParenthesis(VerilogFirstOfType, prec::Comma);
 
     if (LatestOperator && (Current || Precedence > 0)) {
       // The requires clauses do not neccessarily end in a semicolon or a brace,
@@ -2676,7 +2924,7 @@ private:
       next();
     FormatToken *Start = Current;
     parse(prec::LogicalOr);
-    if (!Current || !Current->is(tok::question))
+    if (!Current || Current->isNot(tok::question))
       return;
     next();
     parse(prec::Assignment);
@@ -2697,6 +2945,140 @@ private:
     }
   }
 
+  // Add fake parenthesis around declarations of the same type for example in a
+  // module prototype. Return the first port / variable of the current type.
+  FormatToken *verilogGroupDecl(FormatToken *FirstOfType,
+                                FormatToken *PreviousComma) {
+    if (!Current)
+      return nullptr;
+
+    FormatToken *Start = Current;
+
+    // Skip attributes.
+    while (Start->startsSequence(tok::l_paren, tok::star)) {
+      if (!(Start = Start->MatchingParen) ||
+          !(Start = Start->getNextNonComment())) {
+        return nullptr;
+      }
+    }
+
+    FormatToken *Tok = Start;
+
+    if (Tok->is(Keywords.kw_assign))
+      Tok = Tok->getNextNonComment();
+
+    // Skip any type qualifiers to find the first identifier. It may be either a
+    // new type name or a variable name. There can be several type qualifiers
+    // preceding a variable name, and we can not tell them apart by looking at
+    // the word alone since a macro can be defined as either a type qualifier or
+    // a variable name. Thus we use the last word before the dimensions instead
+    // of the first word as the candidate for the variable or type name.
+    FormatToken *First = nullptr;
+    while (Tok) {
+      FormatToken *Next = Tok->getNextNonComment();
+
+      if (Tok->is(tok::hash)) {
+        // Start of a macro expansion.
+        First = Tok;
+        Tok = Next;
+        if (Tok)
+          Tok = Tok->getNextNonComment();
+      } else if (Tok->is(tok::hashhash)) {
+        // Concatenation. Skip.
+        Tok = Next;
+        if (Tok)
+          Tok = Tok->getNextNonComment();
+      } else if (Keywords.isVerilogQualifier(*Tok) ||
+                 Keywords.isVerilogIdentifier(*Tok)) {
+        First = Tok;
+        Tok = Next;
+        // The name may have dots like `interface_foo.modport_foo`.
+        while (Tok && Tok->isOneOf(tok::period, tok::coloncolon) &&
+               (Tok = Tok->getNextNonComment())) {
+          if (Keywords.isVerilogIdentifier(*Tok))
+            Tok = Tok->getNextNonComment();
+        }
+      } else if (!Next) {
+        Tok = nullptr;
+      } else if (Tok->is(tok::l_paren)) {
+        // Make sure the parenthesized list is a drive strength. Otherwise the
+        // statement may be a module instantiation in which case we have already
+        // found the instance name.
+        if (Next->isOneOf(
+                Keywords.kw_highz0, Keywords.kw_highz1, Keywords.kw_large,
+                Keywords.kw_medium, Keywords.kw_pull0, Keywords.kw_pull1,
+                Keywords.kw_small, Keywords.kw_strong0, Keywords.kw_strong1,
+                Keywords.kw_supply0, Keywords.kw_supply1, Keywords.kw_weak0,
+                Keywords.kw_weak1)) {
+          Tok->setType(TT_VerilogStrength);
+          Tok = Tok->MatchingParen;
+          if (Tok) {
+            Tok->setType(TT_VerilogStrength);
+            Tok = Tok->getNextNonComment();
+          }
+        } else {
+          break;
+        }
+      } else if (Tok->is(tok::hash)) {
+        if (Next->is(tok::l_paren))
+          Next = Next->MatchingParen;
+        if (Next)
+          Tok = Next->getNextNonComment();
+      } else {
+        break;
+      }
+    }
+
+    // Find the second identifier. If it exists it will be the name.
+    FormatToken *Second = nullptr;
+    // Dimensions.
+    while (Tok && Tok->is(tok::l_square) && (Tok = Tok->MatchingParen))
+      Tok = Tok->getNextNonComment();
+    if (Tok && (Tok->is(tok::hash) || Keywords.isVerilogIdentifier(*Tok)))
+      Second = Tok;
+
+    // If the second identifier doesn't exist and there are qualifiers, the type
+    // is implied.
+    FormatToken *TypedName = nullptr;
+    if (Second) {
+      TypedName = Second;
+      if (First && First->is(TT_Unknown))
+        First->setType(TT_VerilogDimensionedTypeName);
+    } else if (First != Start) {
+      // If 'First' is null, then this isn't a declaration, 'TypedName' gets set
+      // to null as intended.
+      TypedName = First;
+    }
+
+    if (TypedName) {
+      // This is a declaration with a new type.
+      if (TypedName->is(TT_Unknown))
+        TypedName->setType(TT_StartOfName);
+      // Group variables of the previous type.
+      if (FirstOfType && PreviousComma) {
+        PreviousComma->setType(TT_VerilogTypeComma);
+        addFakeParenthesis(FirstOfType, prec::Comma, PreviousComma->Previous);
+      }
+
+      FirstOfType = TypedName;
+
+      // Don't let higher precedence handle the qualifiers. For example if we
+      // have:
+      //    parameter x = 0
+      // We skip `parameter` here. This way the fake parentheses for the
+      // assignment will be around `x = 0`.
+      while (Current && Current != FirstOfType) {
+        if (Current->opensScope()) {
+          next();
+          parse();
+        }
+        next();
+      }
+    }
+
+    return FirstOfType;
+  }
+
   const FormatStyle &Style;
   const AdditionalKeywords &Keywords;
   const AnnotatedLine &Line;
@@ -2713,8 +3095,8 @@ void TokenAnnotator::setCommentLineLevels(
 
     // If the comment is currently aligned with the line immediately following
     // it, that's probably intentional and we should keep it.
-    if (NextNonCommentLine && Line->isComment() &&
-        NextNonCommentLine->First->NewlinesBefore <= 1 &&
+    if (NextNonCommentLine && !NextNonCommentLine->First->Finalized &&
+        Line->isComment() && NextNonCommentLine->First->NewlinesBefore <= 1 &&
         NextNonCommentLine->First->OriginalColumn ==
             Line->First->OriginalColumn) {
       const bool PPDirectiveOrImportStmt =
@@ -2739,16 +3121,86 @@ void TokenAnnotator::setCommentLineLevels(
 
 static unsigned maxNestingDepth(const AnnotatedLine &Line) {
   unsigned Result = 0;
-  for (const auto *Tok = Line.First; Tok != nullptr; Tok = Tok->Next)
+  for (const auto *Tok = Line.First; Tok; Tok = Tok->Next)
     Result = std::max(Result, Tok->NestingLevel);
   return Result;
 }
 
-void TokenAnnotator::annotate(AnnotatedLine &Line) const {
+// Returns the name of a function with no return type, e.g. a constructor or
+// destructor.
+static FormatToken *getFunctionName(const AnnotatedLine &Line) {
+  for (FormatToken *Tok = Line.getFirstNonComment(), *Name = nullptr; Tok;
+       Tok = Tok->getNextNonComment()) {
+    // Skip C++11 attributes both before and after the function name.
+    if (Tok->is(tok::l_square) && Tok->is(TT_AttributeSquare)) {
+      Tok = Tok->MatchingParen;
+      if (!Tok)
+        break;
+      continue;
+    }
+
+    // Make sure the name is followed by a pair of parentheses.
+    if (Name)
+      return Tok->is(tok::l_paren) && Tok->MatchingParen ? Name : nullptr;
+
+    // Skip keywords that may precede the constructor/destructor name.
+    if (Tok->isOneOf(tok::kw_friend, tok::kw_inline, tok::kw_virtual,
+                     tok::kw_constexpr, tok::kw_consteval, tok::kw_explicit)) {
+      continue;
+    }
+
+    // A qualified name may start from the global namespace.
+    if (Tok->is(tok::coloncolon)) {
+      Tok = Tok->Next;
+      if (!Tok)
+        break;
+    }
+
+    // Skip to the unqualified part of the name.
+    while (Tok->startsSequence(tok::identifier, tok::coloncolon)) {
+      assert(Tok->Next);
+      Tok = Tok->Next->Next;
+      if (!Tok)
+        return nullptr;
+    }
+
+    // Skip the `~` if a destructor name.
+    if (Tok->is(tok::tilde)) {
+      Tok = Tok->Next;
+      if (!Tok)
+        break;
+    }
+
+    // Make sure the name is not already annotated, e.g. as NamespaceMacro.
+    if (Tok->isNot(tok::identifier) || Tok->isNot(TT_Unknown))
+      break;
+
+    Name = Tok;
+  }
+
+  return nullptr;
+}
+
+// Checks if Tok is a constructor/destructor name qualified by its class name.
+static bool isCtorOrDtorName(const FormatToken *Tok) {
+  assert(Tok && Tok->is(tok::identifier));
+  const auto *Prev = Tok->Previous;
+
+  if (Prev && Prev->is(tok::tilde))
+    Prev = Prev->Previous;
+
+  if (!Prev || !Prev->endsSequence(tok::coloncolon, tok::identifier))
+    return false;
+
+  assert(Prev->Previous);
+  return Prev->Previous->TokenText == Tok->TokenText;
+}
+
+void TokenAnnotator::annotate(AnnotatedLine &Line) {
   for (auto &Child : Line.Children)
     annotate(*Child);
 
-  AnnotatingParser Parser(Style, Line, Keywords);
+  AnnotatingParser Parser(Style, Line, Keywords, Scopes);
   Line.Type = Parser.parseLine();
 
   // With very deep nesting, ExpressionParser uses lots of stack and the
@@ -2763,6 +3215,14 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) const {
 
   ExpressionParser ExprParser(Style, Keywords, Line);
   ExprParser.parse();
+
+  if (Style.isCpp()) {
+    auto *Tok = getFunctionName(Line);
+    if (Tok && ((!Scopes.empty() && Scopes.back() == ST_Class) ||
+                Line.endsWith(TT_FunctionLBrace) || isCtorOrDtorName(Tok))) {
+      Tok->setFinalizedType(TT_FunctionDeclarationName);
+    }
+  }
 
   if (Line.startsWith(TT_ObjCMethodSpecifier))
     Line.Type = LT_ObjCMethodDecl;
@@ -2779,6 +3239,14 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) const {
 // function declaration.
 static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
                                       const AnnotatedLine &Line) {
+  assert(Current.Previous);
+
+  if (Current.is(TT_FunctionDeclarationName))
+    return true;
+
+  if (!Current.Tok.getIdentifierInfo())
+    return false;
+
   auto skipOperatorName = [](const FormatToken *Next) -> const FormatToken * {
     for (; Next; Next = Next->Next) {
       if (Next->is(TT_OverloadedOperatorLParen))
@@ -2817,11 +3285,16 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
   // Find parentheses of parameter list.
   const FormatToken *Next = Current.Next;
   if (Current.is(tok::kw_operator)) {
-    if (Current.Previous && Current.Previous->is(tok::coloncolon))
+    const auto *Previous = Current.Previous;
+    if (Previous->Tok.getIdentifierInfo() &&
+        !Previous->isOneOf(tok::kw_return, tok::kw_co_return)) {
+      return true;
+    }
+    if (!Previous->isOneOf(tok::star, tok::amp, tok::ampamp, TT_TemplateCloser))
       return false;
     Next = skipOperatorName(Next);
   } else {
-    if (!Current.is(TT_StartOfName) || Current.NestingLevel != 0)
+    if (Current.isNot(TT_StartOfName) || Current.NestingLevel != 0)
       return false;
     for (; Next; Next = Next->Next) {
       if (Next->is(TT_TemplateOpener) && Next->MatchingParen) {
@@ -2834,7 +3307,7 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
           Next = skipOperatorName(Next->Next);
           break;
         }
-        if (!Next->is(tok::identifier))
+        if (Next->isNot(tok::identifier))
           return false;
       } else if (isCppAttribute(IsCpp, *Next)) {
         Next = Next->MatchingParen;
@@ -2849,7 +3322,7 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
   }
 
   // Check whether parameter list can belong to a function declaration.
-  if (!Next || !Next->is(tok::l_paren) || !Next->MatchingParen)
+  if (!Next || Next->isNot(tok::l_paren) || !Next->MatchingParen)
     return false;
   // If the lines ends with "{", this is likely a function definition.
   if (Line.Last->is(tok::l_brace))
@@ -2921,6 +3394,18 @@ bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
   return false;
 }
 
+static bool mustBreakAfterAttributes(const FormatToken &Tok,
+                                     const FormatStyle &Style) {
+  switch (Style.BreakAfterAttributes) {
+  case FormatStyle::ABS_Always:
+    return true;
+  case FormatStyle::ABS_Leave:
+    return Tok.NewlinesBefore > 0;
+  default:
+    return false;
+  }
+}
+
 void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   for (AnnotatedLine *ChildLine : Line.Children)
     calculateFormattingInformation(*ChildLine);
@@ -2936,14 +3421,60 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   if (AlignArrayOfStructures)
     calculateArrayInitializerColumnList(Line);
 
+  bool LineIsFunctionDeclaration = false;
+  for (FormatToken *Tok = Current, *AfterLastAttribute = nullptr; Tok;
+       Tok = Tok->Next) {
+    if (Tok->Previous->EndsCppAttributeGroup)
+      AfterLastAttribute = Tok;
+    if (isFunctionDeclarationName(Style.isCpp(), *Tok, Line)) {
+      LineIsFunctionDeclaration = true;
+      Tok->setFinalizedType(TT_FunctionDeclarationName);
+      if (AfterLastAttribute &&
+          mustBreakAfterAttributes(*AfterLastAttribute, Style)) {
+        AfterLastAttribute->MustBreakBefore = true;
+        Line.ReturnTypeWrapped = true;
+      }
+      break;
+    }
+  }
+
+  if (Style.isCpp() && !LineIsFunctionDeclaration) {
+    // Annotate */&/&& in `operator` function calls as binary operators.
+    for (const auto *Tok = Line.First; Tok; Tok = Tok->Next) {
+      if (Tok->isNot(tok::kw_operator))
+        continue;
+      do {
+        Tok = Tok->Next;
+      } while (Tok && Tok->isNot(TT_OverloadedOperatorLParen));
+      if (!Tok)
+        break;
+      const auto *LeftParen = Tok;
+      for (Tok = Tok->Next; Tok && Tok != LeftParen->MatchingParen;
+           Tok = Tok->Next) {
+        if (Tok->isNot(tok::identifier))
+          continue;
+        auto *Next = Tok->Next;
+        const bool NextIsBinaryOperator =
+            Next && Next->isOneOf(tok::star, tok::amp, tok::ampamp) &&
+            Next->Next && Next->Next->is(tok::identifier);
+        if (!NextIsBinaryOperator)
+          continue;
+        Next->setType(TT_BinaryOperator);
+        Tok = Next;
+      }
+    }
+  }
+
   while (Current) {
-    if (isFunctionDeclarationName(Style.isCpp(), *Current, Line))
-      Current->setType(TT_FunctionDeclarationName);
     const FormatToken *Prev = Current->Previous;
     if (Current->is(TT_LineComment)) {
       if (Prev->is(BK_BracedInit) && Prev->opensScope()) {
         Current->SpacesRequiredBefore =
-            (Style.Cpp11BracedListStyle && !Style.SpacesInParentheses) ? 0 : 1;
+            (Style.Cpp11BracedListStyle && !Style.SpacesInParensOptions.Other)
+                ? 0
+                : 1;
+      } else if (Prev->is(TT_VerilogMultiLineListLParen)) {
+        Current->SpacesRequiredBefore = 0;
       } else {
         Current->SpacesRequiredBefore = Style.SpacesBeforeTrailingComments;
       }
@@ -2961,7 +3492,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
           if (Parameter->isOneOf(tok::comment, tok::r_brace))
             break;
           if (Parameter->Previous && Parameter->Previous->is(tok::comma)) {
-            if (!Parameter->Previous->is(TT_CtorInitializerComma) &&
+            if (Parameter->Previous->isNot(TT_CtorInitializerComma) &&
                 Parameter->HasUnescapedNewline) {
               Parameter->MustBreakBefore = true;
             }
@@ -3030,7 +3561,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
 
   calculateUnbreakableTailLengths(Line);
   unsigned IndentLevel = Line.Level;
-  for (Current = Line.First; Current != nullptr; Current = Current->Next) {
+  for (Current = Line.First; Current; Current = Current->Next) {
     if (Current->Role)
       Current->Role->precomputeFormattingInfos(Current);
     if (Current->MatchingParen &&
@@ -3070,10 +3601,10 @@ void TokenAnnotator::calculateArrayInitializerColumnList(
   auto *CurrentToken = Line.First;
   CurrentToken->ArrayInitializerLineStart = true;
   unsigned Depth = 0;
-  while (CurrentToken != nullptr && CurrentToken != Line.Last) {
+  while (CurrentToken && CurrentToken != Line.Last) {
     if (CurrentToken->is(tok::l_brace)) {
       CurrentToken->IsArrayInitializer = true;
-      if (CurrentToken->Next != nullptr)
+      if (CurrentToken->Next)
         CurrentToken->Next->MustBreakBefore = true;
       CurrentToken =
           calculateInitializerColumnList(Line, CurrentToken->Next, Depth + 1);
@@ -3085,14 +3616,14 @@ void TokenAnnotator::calculateArrayInitializerColumnList(
 
 FormatToken *TokenAnnotator::calculateInitializerColumnList(
     AnnotatedLine &Line, FormatToken *CurrentToken, unsigned Depth) const {
-  while (CurrentToken != nullptr && CurrentToken != Line.Last) {
+  while (CurrentToken && CurrentToken != Line.Last) {
     if (CurrentToken->is(tok::l_brace))
       ++Depth;
     else if (CurrentToken->is(tok::r_brace))
       --Depth;
     if (Depth == 2 && CurrentToken->isOneOf(tok::l_brace, tok::comma)) {
       CurrentToken = CurrentToken->Next;
-      if (CurrentToken == nullptr)
+      if (!CurrentToken)
         break;
       CurrentToken->StartsColumn = true;
       CurrentToken = CurrentToken->Previous;
@@ -3249,7 +3780,8 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     return 100;
   }
   if (Left.is(tok::l_paren) && Left.Previous &&
-      (Left.Previous->is(tok::kw_for) || Left.Previous->isIf())) {
+      (Left.Previous->isOneOf(tok::kw_for, tok::kw__Generic) ||
+       Left.Previous->isIf())) {
     return 1000;
   }
   if (Left.is(tok::equal) && InFunctionDecl)
@@ -3293,7 +3825,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   }
   if (Right.is(tok::lessless)) {
     // Breaking at a << is really cheap.
-    if (!Left.is(tok::r_paren) || Right.OperatorIndex > 0) {
+    if (Left.isNot(tok::r_paren) || Right.OperatorIndex > 0) {
       // Slightly prefer to break before the first one in log-like statements.
       return 2;
     }
@@ -3341,8 +3873,6 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       Right.MatchingParen->is(TT_CastRParen)) {
     return true;
   }
-  if (Style.isJson() && Left.is(tok::string_literal) && Right.is(tok::colon))
-    return false;
   if (Left.is(Keywords.kw_assert) && Style.Language == FormatStyle::LK_Java)
     return true;
   if (Style.ObjCSpaceAfterProperty && Line.Type == LT_ObjCProperty &&
@@ -3356,17 +3886,19 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if ((Left.is(tok::l_paren) && Right.is(tok::r_paren)) ||
       (Left.is(tok::l_brace) && Left.isNot(BK_Block) &&
        Right.is(tok::r_brace) && Right.isNot(BK_Block))) {
-    return Style.SpaceInEmptyParentheses;
+    return Style.SpacesInParensOptions.InEmptyParentheses;
   }
-  if (Style.SpacesInConditionalStatement) {
+  if (Style.SpacesInParensOptions.InConditionalStatements) {
     const FormatToken *LeftParen = nullptr;
     if (Left.is(tok::l_paren))
       LeftParen = &Left;
     else if (Right.is(tok::r_paren) && Right.MatchingParen)
       LeftParen = Right.MatchingParen;
-    if (LeftParen && LeftParen->Previous &&
-        isKeywordWithCondition(*LeftParen->Previous)) {
-      return true;
+    if (LeftParen) {
+      if (LeftParen->is(TT_ConditionLParen))
+        return true;
+      if (LeftParen->Previous && isKeywordWithCondition(*LeftParen->Previous))
+        return true;
     }
   }
 
@@ -3395,8 +3927,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Left.is(tok::l_paren) || Right.is(tok::r_paren)) {
     return (Right.is(TT_CastRParen) ||
             (Left.MatchingParen && Left.MatchingParen->is(TT_CastRParen)))
-               ? Style.SpacesInCStyleCastParentheses
-               : Style.SpacesInParentheses;
+               ? Style.SpacesInParensOptions.InCStyleCasts
+               : Style.SpacesInParensOptions.Other;
   }
   if (Right.isOneOf(tok::semi, tok::comma))
     return false;
@@ -3417,7 +3949,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return false;
   }
   if (Left.is(tok::colon))
-    return !Left.is(TT_ObjCMethodExpr);
+    return Left.isNot(TT_ObjCMethodExpr);
   if (Left.is(tok::coloncolon))
     return false;
   if (Left.is(tok::less) || Right.isOneOf(tok::greater, tok::less)) {
@@ -3445,7 +3977,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         return true;
       FormatToken *TokenBeforeMatchingParen =
           Left.MatchingParen->getPreviousNonComment();
-      if (!TokenBeforeMatchingParen || !Left.is(TT_TypeDeclarationParen))
+      if (!TokenBeforeMatchingParen || Left.isNot(TT_TypeDeclarationParen))
         return true;
     }
     // Add a space if the previous token is a pointer qualifier or the closing
@@ -3473,7 +4005,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
               (Left.NestingLevel == 1 && startsWithInitStatement(Line)))));
   }
   if (Right.is(TT_FunctionTypeLParen) && Left.isNot(tok::l_paren) &&
-      (!Left.is(TT_PointerOrReference) ||
+      (Left.isNot(TT_PointerOrReference) ||
        (getTokenPointerOrReferenceAlignment(Left) != FormatStyle::PAS_Right &&
         !Line.IsMultiVariableDeclStmt))) {
     return true;
@@ -3493,8 +4025,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Right.is(TT_BlockComment))
       return true;
     // foo() -> const Bar * override/final
-    if (Right.isOneOf(Keywords.kw_override, Keywords.kw_final) &&
-        !Right.is(TT_StartOfName)) {
+    // S::foo() & noexcept/requires
+    if (Right.isOneOf(Keywords.kw_override, Keywords.kw_final, tok::kw_noexcept,
+                      TT_RequiresClause) &&
+        Right.isNot(TT_StartOfName)) {
       return true;
     }
     // & {
@@ -3539,7 +4073,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return false;
   if (Right.isOneOf(tok::star, tok::amp, tok::ampamp)) {
     const FormatToken *Previous = &Left;
-    while (Previous && !Previous->is(tok::kw_operator)) {
+    while (Previous && Previous->isNot(tok::kw_operator)) {
       if (Previous->is(tok::identifier) || Previous->isSimpleTypeSpecifier()) {
         Previous = Previous->getPreviousNonComment();
         continue;
@@ -3577,6 +4111,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       }
     }
   }
+  if (Style.isCSharp() && Left.is(Keywords.kw_is) && Right.is(tok::l_square))
+    return true;
   const auto SpaceRequiredForArrayInitializerLSquare =
       [](const FormatToken &LSquareTok, const FormatStyle &Style) {
         return Style.SpacesInContainerLiterals ||
@@ -3609,7 +4145,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                      TT_DesignatedInitializerLSquare,
                      TT_StructuredBindingLSquare, TT_AttributeSquare) &&
       !Left.isOneOf(tok::numeric_constant, TT_DictLiteral) &&
-      !(!Left.is(tok::r_square) && Style.SpaceBeforeSquareBrackets &&
+      !(Left.isNot(tok::r_square) && Style.SpaceBeforeSquareBrackets &&
         Right.is(TT_ArraySubscriptLSquare))) {
     return false;
   }
@@ -3618,7 +4154,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if ((Left.is(tok::l_brace) && Left.isNot(BK_Block)) ||
       (Right.is(tok::r_brace) && Right.MatchingParen &&
        Right.MatchingParen->isNot(BK_Block))) {
-    return Style.Cpp11BracedListStyle ? Style.SpacesInParentheses : true;
+    return Style.Cpp11BracedListStyle ? Style.SpacesInParensOptions.Other
+                                      : true;
   }
   if (Left.is(TT_BlockComment)) {
     // No whitespace in x(/*foo=*/1), except for JavaScript.
@@ -3717,7 +4254,12 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return !Left.isOneOf(tok::l_paren, tok::l_square, tok::at) &&
            (Left.isNot(tok::colon) || Left.isNot(TT_ObjCMethodExpr));
   }
-  if ((Left.isOneOf(tok::identifier, tok::greater, tok::r_square,
+  // No space between the variable name and the initializer list.
+  // A a1{1};
+  // Verilog doesn't have such syntax, but it has word operators that are C++
+  // identifiers like `a inside {b, c}`. So the rule is not applicable.
+  if (!Style.isVerilog() &&
+      (Left.isOneOf(tok::identifier, tok::greater, tok::r_square,
                     tok::r_paren) ||
        Left.isSimpleTypeSpecifier()) &&
       Right.is(tok::l_brace) && Right.getNextNonComment() &&
@@ -3787,6 +4329,13 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return true;
 
   if (Style.isCpp()) {
+    if (Left.is(TT_OverloadedOperator) &&
+        Right.isOneOf(TT_TemplateOpener, TT_TemplateCloser)) {
+      return true;
+    }
+    // Space between UDL and dot: auto b = 4s .count();
+    if (Right.is(tok::period) && Left.is(tok::numeric_constant))
+      return true;
     // Space between import <iostream>.
     // or import .....;
     if (Left.is(Keywords.kw_import) && Right.isOneOf(tok::less, tok::ellipsis))
@@ -3851,8 +4400,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(tok::numeric_constant) && Right.is(tok::percent))
       return Right.hasWhitespaceBefore();
   } else if (Style.isJson()) {
-    if (Right.is(tok::colon))
-      return false;
+    if (Right.is(tok::colon) && Left.is(tok::string_literal))
+      return Style.SpaceBeforeJsonColon;
   } else if (Style.isCSharp()) {
     // Require spaces around '{' and  before '}' unless they appear in
     // interpolated strings. Interpolated strings are merged into a single token
@@ -3991,7 +4540,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
          (Left.is(Keywords.kw_of) && Left.Previous &&
           (Left.Previous->is(tok::identifier) ||
            Left.Previous->isOneOf(tok::r_square, tok::r_brace)))) &&
-        (!Left.Previous || !Left.Previous->is(tok::period))) {
+        (!Left.Previous || Left.Previous->isNot(tok::period))) {
       return true;
     }
     if (Left.isOneOf(tok::kw_for, Keywords.kw_as) && Left.Previous &&
@@ -4047,6 +4596,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return true;
     }
   } else if (Style.isVerilog()) {
+    // An escaped identifier ends with whitespace.
+    if (Style.isVerilog() && Left.is(tok::identifier) &&
+        Left.TokenText[0] == '\\') {
+      return true;
+    }
     // Add space between things in a primitive's state table unless in a
     // transition like `(0?)`.
     if ((Left.is(TT_VerilogTableItem) &&
@@ -4061,7 +4615,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return false;
     }
     // Add space after a delay.
-    if (!Right.is(tok::semi) &&
+    if (Right.isNot(tok::semi) &&
         (Left.endsSequence(tok::numeric_constant, Keywords.kw_verilogHash) ||
          Left.endsSequence(tok::numeric_constant,
                            Keywords.kw_verilogHashHash) ||
@@ -4075,6 +4629,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         (Left.is(TT_VerilogNumberBase) && Right.is(tok::numeric_constant))) {
       return false;
     }
+    // Don't add spaces between two at signs. Like in a coverage event.
+    // Don't add spaces between at and a sensitivity list like
+    // `@(posedge clk)`.
+    if (Left.is(tok::at) && Right.isOneOf(tok::l_paren, tok::star, tok::at))
+      return false;
     // Add space between the type name and dimension like `logic [1:0]`.
     if (Right.is(tok::l_square) &&
         Left.isOneOf(TT_VerilogDimensionedTypeName, Keywords.kw_function)) {
@@ -4091,9 +4650,24 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
          Keywords.isWordLike(Left))) {
       return false;
     }
+    // Don't add spaces in imports like `import foo::*;`.
+    if ((Right.is(tok::star) && Left.is(tok::coloncolon)) ||
+        (Left.is(tok::star) && Right.is(tok::semi))) {
+      return false;
+    }
     // Add space in attribute like `(* ASYNC_REG = "TRUE" *)`.
     if (Left.endsSequence(tok::star, tok::l_paren) && Right.is(tok::identifier))
       return true;
+    // Add space before drive strength like in `wire (strong1, pull0)`.
+    if (Right.is(tok::l_paren) && Right.is(TT_VerilogStrength))
+      return true;
+    // Don't add space in a streaming concatenation like `{>>{j}}`.
+    if ((Left.is(tok::l_brace) &&
+         Right.isOneOf(tok::lessless, tok::greatergreater)) ||
+        (Left.endsSequence(tok::lessless, tok::l_brace) ||
+         Left.endsSequence(tok::greatergreater, tok::l_brace))) {
+      return false;
+    }
   }
   if (Left.is(TT_ImplicitStringLiteral))
     return Right.hasWhitespaceBefore();
@@ -4116,8 +4690,12 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       Left.isOneOf(TT_TrailingReturnArrow, TT_LambdaArrow)) {
     return true;
   }
-  if (Left.is(tok::comma) && !Right.is(TT_OverloadedOperatorLParen))
+  if (Left.is(tok::comma) && Right.isNot(TT_OverloadedOperatorLParen) &&
+      // In an unexpanded macro call we only find the parentheses and commas
+      // in a line; the commas and closing parenthesis do not require a space.
+      (Left.Children.empty() || !Left.MacroParent)) {
     return true;
+  }
   if (Right.is(tok::comma))
     return false;
   if (Right.is(TT_ObjCBlockLParen))
@@ -4135,15 +4713,12 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
            Style.BitFieldColonSpacing == FormatStyle::BFCS_After;
   }
   if (Right.is(tok::colon)) {
-    if (Right.is(TT_GotoLabelColon) ||
-        (!Style.isVerilog() &&
-         Line.First->isOneOf(tok::kw_default, tok::kw_case))) {
+    if (Right.is(TT_CaseLabelColon))
       return Style.SpaceBeforeCaseColon;
-    }
-    if (Line.First->isOneOf(tok::kw_default, tok::kw_case))
-      return Style.SpaceBeforeCaseColon;
-    const FormatToken *Next = Right.getNextNonComment();
-    if (!Next || Next->is(tok::semi))
+    if (Right.is(TT_GotoLabelColon))
+      return false;
+    // `private:` and `public:`.
+    if (!Right.getNextNonComment())
       return false;
     if (Right.is(TT_ObjCMethodExpr))
       return false;
@@ -4156,6 +4731,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Right.is(TT_AttributeColon))
       return false;
     if (Right.is(TT_CSharpNamedArgumentColon))
+      return false;
+    if (Right.is(TT_GenericSelectionColon))
       return false;
     if (Right.is(TT_BitFieldColon)) {
       return Style.BitFieldColonSpacing == FormatStyle::BFCS_Both ||
@@ -4171,7 +4748,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return true;
   }
   if (Left.is(TT_UnaryOperator)) {
-    if (!Right.is(tok::l_paren)) {
+    if (Right.isNot(tok::l_paren)) {
       // The alternative operators for ~ and ! are "compl" and "not".
       // If they are used instead, we do not want to combine them with
       // the token to the right, unless that is a left paren.
@@ -4240,7 +4817,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
            !(Left.isOneOf(tok::l_paren, tok::r_paren, tok::l_square,
                           tok::kw___super, TT_TemplateOpener,
                           TT_TemplateCloser)) ||
-           (Left.is(tok::l_paren) && Style.SpacesInParentheses);
+           (Left.is(tok::l_paren) && Style.SpacesInParensOptions.Other);
   }
   if ((Left.is(TT_TemplateOpener)) != (Right.is(TT_TemplateCloser)))
     return ShouldAddSpacesInAngles();
@@ -4254,9 +4831,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       Right.isOneOf(tok::amp, tok::ampamp)) {
     return getTokenReferenceAlignment(Right) != FormatStyle::PAS_Left;
   }
-  if ((Right.is(TT_BinaryOperator) && !Left.is(tok::l_paren)) ||
+  if ((Right.is(TT_BinaryOperator) && Left.isNot(tok::l_paren)) ||
       (Left.isOneOf(TT_BinaryOperator, TT_ConditionalExpr) &&
-       !Right.is(tok::r_paren))) {
+       Right.isNot(tok::r_paren))) {
     return true;
   }
   if (Right.is(TT_TemplateOpener) && Left.is(tok::r_paren) &&
@@ -4296,16 +4873,6 @@ isItAnEmptyLambdaAllowed(const FormatToken &Tok,
 static bool isAllmanLambdaBrace(const FormatToken &Tok) {
   return Tok.is(tok::l_brace) && Tok.is(BK_Block) &&
          !Tok.isOneOf(TT_ObjCBlockLBrace, TT_DictLiteral);
-}
-
-// Returns the first token on the line that is not a comment.
-static const FormatToken *getFirstNonComment(const AnnotatedLine &Line) {
-  const FormatToken *Next = Line.First;
-  if (!Next)
-    return Next;
-  if (Next->is(tok::comment))
-    Next = Next->getNextNonComment();
-  return Next;
 }
 
 bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
@@ -4403,6 +4970,21 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
     }
   } else if (Style.isVerilog()) {
+    // Break between assignments.
+    if (Left.is(TT_VerilogAssignComma))
+      return true;
+    // Break between ports of different types.
+    if (Left.is(TT_VerilogTypeComma))
+      return true;
+    // Break between ports in a module instantiation and after the parameter
+    // list.
+    if (Style.VerilogBreakBetweenInstancePorts &&
+        (Left.is(TT_VerilogInstancePortComma) ||
+         (Left.is(tok::r_paren) && Keywords.isVerilogIdentifier(Right) &&
+          Left.MatchingParen &&
+          Left.MatchingParen->is(TT_VerilogInstancePortLParen)))) {
+      return true;
+    }
     // Break after labels. In Verilog labels don't have the 'case' keyword, so
     // it is hard to identify them in UnwrappedLineParser.
     if (!Keywords.isVerilogBegin(Right) && Keywords.isVerilogEndOfLabel(Left))
@@ -4526,6 +5108,18 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       Right.isOneOf(TT_CtorInitializerComma, TT_CtorInitializerColon)) {
     return true;
   }
+  if (Style.PackConstructorInitializers == FormatStyle::PCIS_NextLineOnly) {
+    if ((Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeColon ||
+         Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma) &&
+        Right.is(TT_CtorInitializerColon)) {
+      return true;
+    }
+
+    if (Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon &&
+        Left.is(TT_CtorInitializerColon)) {
+      return true;
+    }
+  }
   // Break only if we have multiple inheritance.
   if (Style.BreakInheritanceList == FormatStyle::BILS_BeforeComma &&
       Right.is(TT_InheritanceComma)) {
@@ -4552,7 +5146,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return Right.HasUnescapedNewline;
 
   if (isAllmanBrace(Left) || isAllmanBrace(Right)) {
-    auto FirstNonComment = getFirstNonComment(Line);
+    auto *FirstNonComment = Line.getFirstNonComment();
     bool AccessSpecifier =
         FirstNonComment &&
         FirstNonComment->isOneOf(Keywords.kw_internal, tok::kw_public,
@@ -4578,8 +5172,13 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
     }
 
-    return (Line.startsWith(tok::kw_class) && Style.BraceWrapping.AfterClass) ||
-           (Line.startsWith(tok::kw_struct) && Style.BraceWrapping.AfterStruct);
+    // Don't attempt to interpret struct return types as structs.
+    if (Right.isNot(TT_FunctionLBrace)) {
+      return (Line.startsWith(tok::kw_class) &&
+              Style.BraceWrapping.AfterClass) ||
+             (Line.startsWith(tok::kw_struct) &&
+              Style.BraceWrapping.AfterStruct);
+    }
   }
 
   if (Left.is(TT_ObjCBlockLBrace) &&
@@ -4650,7 +5249,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   // We ensure elsewhere that extensions are always on their own line.
   if ((Style.Language == FormatStyle::LK_Proto ||
        Style.Language == FormatStyle::LK_TextProto) &&
-      Right.is(TT_SelectorName) && !Right.is(tok::r_square) && Right.Next) {
+      Right.is(TT_SelectorName) && Right.isNot(tok::r_square) && Right.Next) {
     // Keep `@submessage` together in:
     // @submessage { key: value }
     if (Left.is(tok::at))
@@ -4703,30 +5302,6 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // If there was a comment between `}` an `key` above, then `key` would be
     // put on a new line anyways.
     if (Left.isOneOf(tok::r_brace, tok::greater, tok::r_square))
-      return true;
-  }
-
-  // Deal with lambda arguments in C++ - we want consistent line breaks whether
-  // they happen to be at arg0, arg1 or argN. The selection is a bit nuanced
-  // as aggressive line breaks are placed when the lambda is not the last arg.
-  if ((Style.Language == FormatStyle::LK_Cpp ||
-       Style.Language == FormatStyle::LK_ObjC) &&
-      Left.is(tok::l_paren) && Left.BlockParameterCount > 0 &&
-      !Right.isOneOf(tok::l_paren, TT_LambdaLSquare)) {
-    // Multiple lambdas in the same function call force line breaks.
-    if (Left.BlockParameterCount > 1)
-      return true;
-
-    // A lambda followed by another arg forces a line break.
-    if (!Left.Role)
-      return false;
-    auto Comma = Left.Role->lastComma();
-    if (!Comma)
-      return false;
-    auto Next = Comma->getNextNonComment();
-    if (!Next)
-      return false;
-    if (!Next->isOneOf(TT_LambdaLSquare, tok::l_brace, tok::caret))
       return true;
   }
 
@@ -4798,7 +5373,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       //   is: 'name',
       //   ...
       // });
-      if (!Next || !Next->is(tok::colon))
+      if (!Next || Next->isNot(tok::colon))
         return false;
     }
     if (Left.is(Keywords.kw_in))
@@ -4845,7 +5420,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Left.Tok.getObjCKeywordID() == tok::objc_interface)
     return false;
   if (Left.isOneOf(TT_JavaAnnotation, TT_LeadingJavaAnnotation))
-    return !Right.is(tok::l_paren);
+    return Right.isNot(tok::l_paren);
   if (Right.is(TT_PointerOrReference)) {
     return Line.IsMultiVariableDeclStmt ||
            (getTokenPointerOrReferenceAlignment(Right) ==
@@ -4878,7 +5453,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return Style.BreakInheritanceList == FormatStyle::BILS_AfterColon;
   if (Right.is(TT_InheritanceColon))
     return Style.BreakInheritanceList != FormatStyle::BILS_AfterColon;
-  if (Right.is(TT_ObjCMethodExpr) && !Right.is(tok::r_square) &&
+  if (Right.is(TT_ObjCMethodExpr) && Right.isNot(tok::r_square) &&
       Left.isNot(TT_SelectorName)) {
     return true;
   }
@@ -4994,8 +5569,10 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
 
   // We only break before r_brace if there was a corresponding break before
   // the l_brace, which is tracked by BreakBeforeClosingBrace.
-  if (Right.is(tok::r_brace))
-    return Right.MatchingParen && Right.MatchingParen->is(BK_Block);
+  if (Right.is(tok::r_brace)) {
+    return Right.MatchingParen && (Right.MatchingParen->is(BK_Block) ||
+                                   (Right.isBlockIndentedInitRBrace(Style)));
+  }
 
   // We only break before r_paren if we're in a block indented context.
   if (Right.is(tok::r_paren)) {
@@ -5021,7 +5598,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
 
   if (Right.is(tok::kw___attribute) ||
       (Right.is(tok::l_square) && Right.is(TT_AttributeSquare))) {
-    return !Left.is(TT_AttributeSquare);
+    return Left.isNot(TT_AttributeSquare);
   }
 
   if (Left.is(tok::identifier) && Right.is(tok::string_literal))
@@ -5083,8 +5660,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                        tok::colon, tok::l_square, tok::at) ||
          (Left.is(tok::r_paren) &&
           Right.isOneOf(tok::identifier, tok::kw_const)) ||
-         (Left.is(tok::l_paren) && !Right.is(tok::r_paren)) ||
-         (Left.is(TT_TemplateOpener) && !Right.is(TT_TemplateCloser));
+         (Left.is(tok::l_paren) && Right.isNot(tok::r_paren)) ||
+         (Left.is(TT_TemplateOpener) && Right.isNot(TT_TemplateCloser));
 }
 
 void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) const {

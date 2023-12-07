@@ -24,53 +24,53 @@ from __future__ import print_function
 
 args = int((8168 - 160) / 8 + (5 - 1))
 
-print('declare i64 *@foo(i64 *%s)' % (', i64' * args))
-print('declare void @bar(i64 *)')
-print('')
-print('define i64 @f1(i64 %foo) {')
-print('entry:')
+print("declare i64 *@foo(i64 *%s)" % (", i64" * args))
+print("declare void @bar(i64 *)")
+print("")
+print("define i64 @f1(i64 %foo) {")
+print("entry:")
 
 # Make the allocation big, so that it goes at the top of the frame.
-print('  %array = alloca [1000 x i64]')
-print('  %area = getelementptr [1000 x i64], [1000 x i64] *%array, i64 0, i64 0')
-print('  %%base = call i64 *@foo(i64 *%%area%s)' % (', i64 0' * args))
-print('')
+print("  %array = alloca [1000 x i64]")
+print("  %area = getelementptr [1000 x i64], [1000 x i64] *%array, i64 0, i64 0")
+print("  %%base = call i64 *@foo(i64 *%%area%s)" % (", i64 0" * args))
+print("")
 
 # Make sure all GPRs are used.  One is needed for the stack pointer and
 # another for %base, so we need 14 live values.
 count = 14
 for i in range(count):
-    print('  %%ptr%d = getelementptr i64, i64 *%%base, i64 %d' % (i, i / 2))
-    print('  %%val%d = load volatile i64 , i64 *%%ptr%d' % (i, i))
-    print('')
+    print("  %%ptr%d = getelementptr i64, i64 *%%base, i64 %d" % (i, i / 2))
+    print("  %%val%d = load volatile i64 , i64 *%%ptr%d" % (i, i))
+    print("")
 
 # Encourage the register allocator to give preference to these %vals
 # by using them several times.
 for j in range(4):
     for i in range(count):
-        print('  store volatile i64 %%val%d, i64 *%%ptr%d' % (i, i))
-    print('')
+        print("  store volatile i64 %%val%d, i64 *%%ptr%d" % (i, i))
+    print("")
 
 # Copy the incoming argument, which we expect to be spilled, to the frame
 # index for the alloca area.  Also throw in a volatile store, so that this
 # block cannot be reordered with the surrounding code.
-print('  %cond = icmp eq i64 %val0, %val1')
-print('  br i1 %cond, label %skip, label %fallthru')
-print('')
-print('fallthru:')
-print('  store i64 %foo, i64 *%area')
-print('  store volatile i64 %val0, i64 *%ptr0')
-print('  br label %skip')
-print('')
-print('skip:')
+print("  %cond = icmp eq i64 %val0, %val1")
+print("  br i1 %cond, label %skip, label %fallthru")
+print("")
+print("fallthru:")
+print("  store i64 %foo, i64 *%area")
+print("  store volatile i64 %val0, i64 *%ptr0")
+print("  br label %skip")
+print("")
+print("skip:")
 
 # Use each %val a few more times to emphasise the point, and to make sure
 # that they are live across the store of %foo.
 for j in range(4):
     for i in range(count):
-        print('  store volatile i64 %%val%d, i64 *%%ptr%d' % (i, i))
-    print('')
+        print("  store volatile i64 %%val%d, i64 *%%ptr%d" % (i, i))
+    print("")
 
-print('  call void @bar(i64 *%area)')
-print('  ret i64 0')
-print('}')
+print("  call void @bar(i64 *%area)")
+print("  ret i64 0")
+print("}")

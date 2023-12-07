@@ -380,6 +380,40 @@ struct X86Operand final : public MCParsedAsmOperand {
   bool isMem512_RC512() const {
     return isMem512() && isMemIndexReg(X86::ZMM0, X86::ZMM31);
   }
+  bool isMem512_GR16() const {
+    if (!isMem512())
+      return false;
+    if (getMemBaseReg() &&
+        !X86MCRegisterClasses[X86::GR16RegClassID].contains(getMemBaseReg()))
+      return false;
+    return true;
+  }
+  bool isMem512_GR32() const {
+    if (!isMem512())
+      return false;
+    if (getMemBaseReg() &&
+        !X86MCRegisterClasses[X86::GR32RegClassID].contains(getMemBaseReg()) &&
+        getMemBaseReg() != X86::EIP)
+      return false;
+    if (getMemIndexReg() &&
+        !X86MCRegisterClasses[X86::GR32RegClassID].contains(getMemIndexReg()) &&
+        getMemIndexReg() != X86::EIZ)
+      return false;
+    return true;
+  }
+  bool isMem512_GR64() const {
+    if (!isMem512())
+      return false;
+    if (getMemBaseReg() &&
+        !X86MCRegisterClasses[X86::GR64RegClassID].contains(getMemBaseReg()) &&
+        getMemBaseReg() != X86::RIP)
+      return false;
+    if (getMemIndexReg() &&
+        !X86MCRegisterClasses[X86::GR64RegClassID].contains(getMemIndexReg()) &&
+        getMemIndexReg() != X86::RIZ)
+      return false;
+    return true;
+  }
 
   bool isAbsMem() const {
     return Kind == Memory && !getMemSegReg() && !getMemBaseReg() &&

@@ -45,8 +45,7 @@ extern "C" int LLVMFuzzerTestOneInput(const char *Data, size_t Size) {
     return 0;
 
   // Fuzz RewriteInstance.
-  auto RIOrErr =
-      RewriteInstance::createRewriteInstance(E, argc, argv, "llvm-bolt");
+  auto RIOrErr = RewriteInstance::create(E, argc, argv, "llvm-bolt");
   if (Error E = RIOrErr.takeError()) {
     consumeError(std::move(E));
     return 0;

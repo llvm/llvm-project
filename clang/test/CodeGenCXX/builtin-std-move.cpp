@@ -4,6 +4,7 @@ namespace std {
   template<typename T> constexpr T &&move(T &val) { return static_cast<T&&>(val); }
   template<typename T> constexpr T &&move_if_noexcept(T &val);
   template<typename T> constexpr T &&forward(T &val);
+  template<typename U, typename T> constexpr T &&forward_like(T &&val);
   template<typename T> constexpr const T &as_const(T &val);
 
   // Not the builtin.
@@ -23,6 +24,8 @@ T &&move_a = std::move(a);
 T &&move_if_noexcept_a = std::move_if_noexcept(a);
 // CHECK-DAG: @forward_a = constant ptr @a
 T &forward_a = std::forward<T&>(a);
+// CHECK-DAG: @forward_like_a = constant ptr @a
+T &forward_like_a = std::forward_like<int&>(a);
 
 // Check emission of a non-constant call.
 // CHECK-LABEL: define {{.*}} void @test
@@ -39,6 +42,9 @@ extern "C" void test(T &t) {
   take(std::forward<T&&>(t));
   // CHECK: %3 = load ptr, ptr %[[T_REF]]
   // CHECK: call void @take_lval(ptr {{.*}} %3)
+  take_lval(std::forward_like<int&>(t));
+  // CHECK: %4 = load ptr, ptr %[[T_REF]]
+  // CHECK: call void @take_lval(ptr {{.*}} %4)
   take_lval(std::as_const<T&&>(t));
 
   // CHECK: call {{.*}} @_ZSt4moveI1TS0_ET_T0_S2_S1_

@@ -19,6 +19,8 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 
+using namespace llvm;
+
 // Assume outgoing undef arguments aren't relevant.
 // TODO: Maybe skip any trivial constant arguments.
 static bool shouldIgnoreArgument(const Value *V) {
@@ -84,13 +86,7 @@ static bool callLooksLikeLoadStore(CallBase *CB, Value *&DataArg,
     if (!Arg->getType()->isSized())
       return false;
 
-    PointerType *PT = dyn_cast<PointerType>(Arg->getType());
-    if (!PtrArg && PT) {
-      // FIXME: Could create bitcast for typed pointers, but roll back unused
-      // replacement only erases one instruction.
-      if (!IsStore && !PT->isOpaqueOrPointeeTypeMatches(CB->getType()))
-        return false;
-
+    if (!PtrArg && Arg->getType()->isPointerTy()) {
       PtrArg = Arg;
       continue;
     }
@@ -253,7 +249,9 @@ static Value *reduceInstruction(Oracle &O, Module &M, Instruction &I) {
   return nullptr;
 }
 
-static void replaceOpcodesInModule(Oracle &O, Module &Mod) {
+static void replaceOpcodesInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Mod = WorkItem.getModule();
+
   for (Function &F : Mod) {
     for (BasicBlock &BB : F)
       for (Instruction &I : make_early_inc_range(BB)) {

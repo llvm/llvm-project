@@ -12,9 +12,9 @@ If you instead would like to generate and view the HTML locally, install
 Sphinx <http://sphinx-doc.org/> and then do:
 
     cd <build-dir>
-    cmake -DLLVM_ENABLE_SPHINX=true -DSPHINX_OUTPUT_HTML=true <src-dir>
-    make
-    $BROWSER <build-dir>/projects/openmp/docs//html/index.html
+    cmake -DLLVM_ENABLE_SPHINX=true -DSPHINX_OUTPUT_HTML=true -DCMAKE_MODULE_PATH=/path/to/llvm/cmake/modules <src-dir>
+    make docs-openmp-html
+    $BROWSER <build-dir>/docs/html/index.html
 
 The mapping between reStructuredText files and generated documentation is
 `docs/Foo.rst` <-> `<build-dir>/projects/openmp/docs//html/Foo.html` <->

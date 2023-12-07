@@ -17,19 +17,17 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 define hidden i32 @_Z1fv() local_unnamed_addr {
 entry:
   %a = alloca [4 x i32], align 32
-  %0 = bitcast [4 x i32]* %a to i8*
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %a, i32 0, i32 0
-  %call = call i32 @_Z1giPi(i32 4, i32* nonnull %arraydecay)
-  %1 = load i32, i32* %arraydecay, align 32
-  %arrayidx.1 = getelementptr inbounds [4 x i32], [4 x i32]* %a, i32 0, i32 1
-  %2 = load i32, i32* %arrayidx.1, align 4
-  %add.1 = add nsw i32 %2, %1
-  %arrayidx.2 = getelementptr inbounds [4 x i32], [4 x i32]* %a, i32 0, i32 2
-  %3 = load i32, i32* %arrayidx.2, align 8
-  %add.2 = add nsw i32 %3, %add.1
-  %arrayidx.3 = getelementptr inbounds [4 x i32], [4 x i32]* %a, i32 0, i32 3
-  %4 = load i32, i32* %arrayidx.3, align 4
-  %add.3 = add nsw i32 %4, %add.2
+  %call = call i32 @_Z1giPi(i32 4, ptr nonnull %a)
+  %0 = load i32, ptr %a, align 32
+  %arrayidx.1 = getelementptr inbounds [4 x i32], ptr %a, i32 0, i32 1
+  %1 = load i32, ptr %arrayidx.1, align 4
+  %add.1 = add nsw i32 %1, %0
+  %arrayidx.2 = getelementptr inbounds [4 x i32], ptr %a, i32 0, i32 2
+  %2 = load i32, ptr %arrayidx.2, align 8
+  %add.2 = add nsw i32 %2, %add.1
+  %arrayidx.3 = getelementptr inbounds [4 x i32], ptr %a, i32 0, i32 3
+  %3 = load i32, ptr %arrayidx.3, align 4
+  %add.3 = add nsw i32 %3, %add.2
   ret i32 %add.3
 }
 
@@ -56,7 +54,7 @@ entry:
 ; CHECK-NEXT: bx      lr
 
 
-declare dso_local i32 @_Z1giPi(i32, i32*) local_unnamed_addr
+declare dso_local i32 @_Z1giPi(i32, ptr) local_unnamed_addr
 
 !llvm.module.flags = !{!0, !1, !2}
 

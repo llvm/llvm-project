@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://7076235
 
 @protocol P
 - (bycopy id)serverPID; // expected-note {{previous declaration is here}}

@@ -8,10 +8,10 @@
 
 #include <algorithm>
 #include <iomanip>
+#include <optional>
 #include <sstream>
 #include <string.h>
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -307,8 +307,9 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 //   "required": [ "verified" ]
 // }
 llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
-                                   llvm::Optional<llvm::StringRef> request_path,
-                                   llvm::Optional<uint32_t> request_line) {
+                                   std::optional<llvm::StringRef> request_path,
+                                   std::optional<uint32_t> request_line,
+                                   std::optional<uint32_t> request_column) {
   // Each breakpoint location is treated as a separate breakpoint for VS code.
   // They don't have the notion of a single breakpoint with multiple locations.
   llvm::json::Object object;
@@ -341,15 +342,23 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
     object.try_emplace("source", CreateSource(*request_path));
 
   if (bp_addr.IsValid()) {
+    std::string formatted_addr =
+        "0x" + llvm::utohexstr(bp_addr.GetLoadAddress(g_vsc.target));
+    object.try_emplace("instructionReference", formatted_addr);
     auto line_entry = bp_addr.GetLineEntry();
     const auto line = line_entry.GetLine();
     if (line != UINT32_MAX)
       object.try_emplace("line", line);
+    const auto column = line_entry.GetColumn();
+    if (column != 0)
+      object.try_emplace("column", column);
     object.try_emplace("source", CreateSource(line_entry));
   }
   // We try to add request_line as a fallback
   if (request_line)
     object.try_emplace("line", *request_line);
+  if (request_column)
+    object.try_emplace("column", *request_column);
   return llvm::json::Value(std::move(object));
 }
 
@@ -439,8 +448,8 @@ llvm::json::Value CreateModule(lldb::SBModule &module) {
 }
 
 void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints,
-                      llvm::Optional<llvm::StringRef> request_path,
-                      llvm::Optional<uint32_t> request_line) {
+                      std::optional<llvm::StringRef> request_path,
+                      std::optional<uint32_t> request_line) {
   breakpoints.emplace_back(CreateBreakpoint(bp, request_path, request_line));
 }
 
@@ -594,8 +603,8 @@ llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry) {
     if (name)
       EmplaceSafeString(object, "name", name);
     char path[PATH_MAX] = "";
-    file.GetPath(path, sizeof(path));
-    if (path[0]) {
+    if (file.GetPath(path, sizeof(path)) &&
+        lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
       EmplaceSafeString(object, "path", std::string(path));
     }
   }
@@ -610,91 +619,14 @@ llvm::json::Value CreateSource(llvm::StringRef source_path) {
   return llvm::json::Value(std::move(source));
 }
 
-llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
-  disasm_line = 0;
+std::optional<llvm::json::Value> CreateSource(lldb::SBFrame &frame) {
   auto line_entry = frame.GetLineEntry();
-  if (line_entry.GetFileSpec().IsValid())
+  // A line entry of 0 indicates the line is compiler generated i.e. no source
+  // file is associated with the frame.
+  if (line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0)
     return CreateSource(line_entry);
 
-  llvm::json::Object object;
-  const auto pc = frame.GetPC();
-
-  lldb::SBInstructionList insts;
-  lldb::SBFunction function = frame.GetFunction();
-  lldb::addr_t low_pc = LLDB_INVALID_ADDRESS;
-  if (function.IsValid()) {
-    low_pc = function.GetStartAddress().GetLoadAddress(g_vsc.target);
-    auto addr_srcref = g_vsc.addr_to_source_ref.find(low_pc);
-    if (addr_srcref != g_vsc.addr_to_source_ref.end()) {
-      // We have this disassembly cached already, return the existing
-      // sourceReference
-      object.try_emplace("sourceReference", addr_srcref->second);
-      disasm_line = g_vsc.GetLineForPC(addr_srcref->second, pc);
-    } else {
-      insts = function.GetInstructions(g_vsc.target);
-    }
-  } else {
-    lldb::SBSymbol symbol = frame.GetSymbol();
-    if (symbol.IsValid()) {
-      low_pc = symbol.GetStartAddress().GetLoadAddress(g_vsc.target);
-      auto addr_srcref = g_vsc.addr_to_source_ref.find(low_pc);
-      if (addr_srcref != g_vsc.addr_to_source_ref.end()) {
-        // We have this disassembly cached already, return the existing
-        // sourceReference
-        object.try_emplace("sourceReference", addr_srcref->second);
-        disasm_line = g_vsc.GetLineForPC(addr_srcref->second, pc);
-      } else {
-        insts = symbol.GetInstructions(g_vsc.target);
-      }
-    }
-  }
-  const auto num_insts = insts.GetSize();
-  if (low_pc != LLDB_INVALID_ADDRESS && num_insts > 0) {
-    EmplaceSafeString(object, "name", frame.GetFunctionName());
-    SourceReference source;
-    llvm::raw_string_ostream src_strm(source.content);
-    std::string line;
-    for (size_t i = 0; i < num_insts; ++i) {
-      lldb::SBInstruction inst = insts.GetInstructionAtIndex(i);
-      const auto inst_addr = inst.GetAddress().GetLoadAddress(g_vsc.target);
-      const char *m = inst.GetMnemonic(g_vsc.target);
-      const char *o = inst.GetOperands(g_vsc.target);
-      const char *c = inst.GetComment(g_vsc.target);
-      if (pc == inst_addr)
-        disasm_line = i + 1;
-      const auto inst_offset = inst_addr - low_pc;
-      int spaces = 0;
-      if (inst_offset < 10)
-        spaces = 3;
-      else if (inst_offset < 100)
-        spaces = 2;
-      else if (inst_offset < 1000)
-        spaces = 1;
-      line.clear();
-      llvm::raw_string_ostream line_strm(line);
-      line_strm << llvm::formatv("{0:X+}: <{1}> {2} {3,12} {4}", inst_addr,
-                                 inst_offset, llvm::fmt_repeat(' ', spaces), m,
-                                 o);
-
-      // If there is a comment append it starting at column 60 or after one
-      // space past the last char
-      const uint32_t comment_row = std::max(line_strm.str().size(), (size_t)60);
-      if (c && c[0]) {
-        if (line.size() < comment_row)
-          line_strm.indent(comment_row - line_strm.str().size());
-        line_strm << " # " << c;
-      }
-      src_strm << line_strm.str() << "\n";
-      source.addr_to_line[inst_addr] = i + 1;
-    }
-    // Flush the source stream
-    src_strm.str();
-    auto sourceReference = VSCode::GetNextSourceReference();
-    g_vsc.source_map[sourceReference] = std::move(source);
-    g_vsc.addr_to_source_ref[low_pc] = sourceReference;
-    object.try_emplace("sourceReference", sourceReference);
-  }
-  return llvm::json::Value(std::move(object));
+  return {};
 }
 
 // "StackFrame": {
@@ -736,6 +668,12 @@ llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
 //       "description": "An optional end column of the range covered by the
 //                       stack frame."
 //     },
+//     "instructionPointerReference": {
+// 	     "type": "string",
+// 	     "description": "A memory reference for the current instruction
+// pointer
+//                       in this frame."
+//     },
 //     "moduleId": {
 //       "type": ["integer", "string"],
 //       "description": "The module associated with this frame, if any."
@@ -758,30 +696,45 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   int64_t frame_id = MakeVSCodeFrameID(frame);
   object.try_emplace("id", frame_id);
 
-  std::string frame_name;
-  const char *func_name = frame.GetFunctionName();
-  if (func_name)
-    frame_name = func_name;
-  else
-    frame_name = "<unknown>";
+  // `function_name` can be a nullptr, which throws an error when assigned to an
+  // `std::string`.
+  const char *function_name = frame.GetDisplayFunctionName();
+  std::string frame_name =
+      function_name == nullptr ? std::string() : function_name;
+  if (frame_name.empty()) {
+    // If the function name is unavailable, display the pc address as a 16-digit
+    // hex string, e.g. "0x0000000000012345"
+    llvm::raw_string_ostream os(frame_name);
+    os << llvm::format_hex(frame.GetPC(), 18);
+  }
   bool is_optimized = frame.GetFunction().GetIsOptimized();
   if (is_optimized)
     frame_name += " [opt]";
   EmplaceSafeString(object, "name", frame_name);
 
-  int64_t disasm_line = 0;
-  object.try_emplace("source", CreateSource(frame, disasm_line));
+  auto source = CreateSource(frame);
 
-  auto line_entry = frame.GetLineEntry();
-  if (disasm_line > 0) {
-    object.try_emplace("line", disasm_line);
-  } else {
+  if (source) {
+    object.try_emplace("source", *source);
+    auto line_entry = frame.GetLineEntry();
     auto line = line_entry.GetLine();
-    if (line == UINT32_MAX)
-      line = 0;
-    object.try_emplace("line", line);
+    if (line && line != LLDB_INVALID_LINE_NUMBER)
+      object.try_emplace("line", line);
+    auto column = line_entry.GetColumn();
+    if (column && column != LLDB_INVALID_COLUMN_NUMBER)
+      object.try_emplace("column", column);
+  } else {
+    object.try_emplace("line", 0);
+    object.try_emplace("column", 0);
+    object.try_emplace("presentationHint", "subtle");
   }
-  object.try_emplace("column", line_entry.GetColumn());
+
+  const auto pc = frame.GetPC();
+  if (pc != LLDB_INVALID_ADDRESS) {
+    std::string formatted_addr = "0x" + llvm::utohexstr(pc);
+    object.try_emplace("instructionPointerReference", formatted_addr);
+  }
+
   return llvm::json::Value(std::move(object));
 }
 
@@ -803,17 +756,30 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
 llvm::json::Value CreateThread(lldb::SBThread &thread) {
   llvm::json::Object object;
   object.try_emplace("id", (int64_t)thread.GetThreadID());
-  char thread_str[64];
-  snprintf(thread_str, sizeof(thread_str), "Thread #%u", thread.GetIndexID());
-  const char *name = thread.GetName();
-  if (name) {
-    std::string thread_with_name(thread_str);
-    thread_with_name += ' ';
-    thread_with_name += name;
-    EmplaceSafeString(object, "name", thread_with_name);
+  const char *thread_name = thread.GetName();
+  const char *queue_name = thread.GetQueueName();
+
+  std::string thread_str;
+  if (thread_name) {
+    thread_str = std::string(thread_name);
+  } else if (queue_name) {
+    auto kind = thread.GetQueue().GetKind();
+    std::string queue_kind_label = "";
+    if (kind == lldb::eQueueKindSerial) {
+      queue_kind_label = " (serial)";
+    } else if (kind == lldb::eQueueKindConcurrent) {
+      queue_kind_label = " (concurrent)";
+    }
+
+    thread_str = llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
+                               queue_name, queue_kind_label)
+                     .str();
   } else {
-    EmplaceSafeString(object, "name", std::string(thread_str));
+    thread_str = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
   }
+
+  EmplaceSafeString(object, "name", thread_str);
+
   return llvm::json::Value(std::move(object));
 }
 
@@ -895,6 +861,8 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
       uint64_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
       snprintf(desc_str, sizeof(desc_str), "breakpoint %" PRIu64 ".%" PRIu64,
                bp_id, bp_loc_id);
+      body.try_emplace("hitBreakpointIds",
+                       llvm::json::Array{llvm::json::Value(bp_id)});
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;
@@ -939,6 +907,7 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
       EmplaceSafeString(body, "description", std::string(description));
     }
   }
+  // "threadCausedFocus" is used in tests to validate breaking behavior.
   if (tid == g_vsc.focus_tid) {
     body.try_emplace("threadCausedFocus", true);
   }
@@ -1044,7 +1013,7 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   SetValueForKey(v, object, "value");
   auto type_obj = v.GetType();
   auto type_cstr = type_obj.GetDisplayTypeName();
-  // If we have a type with many many children, we would like to be able to
+  // If we have a type with many children, we would like to be able to
   // give a hint to the IDE that the type has indexed children so that the
   // request can be broken up in grabbing only a few children at a time. We want
   // to be careful and only call "v.GetNumChildren()" if we have an array type
@@ -1102,11 +1071,8 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit) {
 llvm::json::Object
 CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
                                   llvm::StringRef debug_adaptor_path,
-                                  llvm::StringRef comm_file) {
-  llvm::json::Object reverse_request;
-  reverse_request.try_emplace("type", "request");
-  reverse_request.try_emplace("command", "runInTerminal");
-
+                                  llvm::StringRef comm_file,
+                                  lldb::pid_t debugger_pid) {
   llvm::json::Object run_in_terminal_args;
   // This indicates the IDE to open an embedded terminal, instead of opening the
   // terminal in a new window.
@@ -1115,8 +1081,13 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
   auto launch_request_arguments = launch_request.getObject("arguments");
   // The program path must be the first entry in the "args" field
   std::vector<std::string> args = {
-      debug_adaptor_path.str(), "--comm-file", comm_file.str(),
-      "--launch-target", GetString(launch_request_arguments, "program").str()};
+      debug_adaptor_path.str(), "--comm-file", comm_file.str()};
+  if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
+    args.push_back("--debugger-pid");
+    args.push_back(std::to_string(debugger_pid));
+  }
+  args.push_back("--launch-target");
+  args.push_back(GetString(launch_request_arguments, "program").str());
   std::vector<std::string> target_args =
       GetStrings(launch_request_arguments, "args");
   args.insert(args.end(), target_args.begin(), target_args.end());
@@ -1137,9 +1108,7 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
   run_in_terminal_args.try_emplace("env",
                                    llvm::json::Value(std::move(environment)));
 
-  reverse_request.try_emplace(
-      "arguments", llvm::json::Value(std::move(run_in_terminal_args)));
-  return reverse_request;
+  return run_in_terminal_args;
 }
 
 // Keep all the top level items from the statistics dump, except for the
@@ -1155,8 +1124,11 @@ void FilterAndGetValueForKey(const lldb::SBStructuredData data, const char *key,
   case lldb::eStructuredDataTypeFloat:
     out.try_emplace(key_utf8, value.GetFloatValue());
     break;
-  case lldb::eStructuredDataTypeInteger:
-    out.try_emplace(key_utf8, value.GetIntegerValue());
+  case lldb::eStructuredDataTypeUnsignedInteger:
+    out.try_emplace(key_utf8, value.GetIntegerValue((uint64_t)0));
+    break;
+  case lldb::eStructuredDataTypeSignedInteger:
+    out.try_emplace(key_utf8, value.GetIntegerValue((int64_t)0));
     break;
   case lldb::eStructuredDataTypeArray: {
     lldb::SBStream contents;

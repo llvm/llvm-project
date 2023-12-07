@@ -82,11 +82,11 @@ void Thumb1InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                           const TargetRegisterInfo *TRI,
                                           Register VReg) const {
   assert((RC == &ARM::tGPRRegClass ||
-          (Register::isPhysicalRegister(SrcReg) && isARMLowRegister(SrcReg))) &&
+          (SrcReg.isPhysical() && isARMLowRegister(SrcReg))) &&
          "Unknown regclass!");
 
   if (RC == &ARM::tGPRRegClass ||
-      (Register::isPhysicalRegister(SrcReg) && isARMLowRegister(SrcReg))) {
+      (SrcReg.isPhysical() && isARMLowRegister(SrcReg))) {
     DebugLoc DL;
     if (I != MBB.end()) DL = I->getDebugLoc();
 
@@ -110,13 +110,12 @@ void Thumb1InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                            const TargetRegisterClass *RC,
                                            const TargetRegisterInfo *TRI,
                                            Register VReg) const {
-  assert(
-      (RC->hasSuperClassEq(&ARM::tGPRRegClass) ||
-       (Register::isPhysicalRegister(DestReg) && isARMLowRegister(DestReg))) &&
-      "Unknown regclass!");
+  assert((RC->hasSuperClassEq(&ARM::tGPRRegClass) ||
+          (DestReg.isPhysical() && isARMLowRegister(DestReg))) &&
+         "Unknown regclass!");
 
   if (RC->hasSuperClassEq(&ARM::tGPRRegClass) ||
-      (Register::isPhysicalRegister(DestReg) && isARMLowRegister(DestReg))) {
+      (DestReg.isPhysical() && isARMLowRegister(DestReg))) {
     DebugLoc DL;
     if (I != MBB.end()) DL = I->getDebugLoc();
 
@@ -137,14 +136,21 @@ void Thumb1InstrInfo::expandLoadStackGuard(
     MachineBasicBlock::iterator MI) const {
   MachineFunction &MF = *MI->getParent()->getParent();
   const TargetMachine &TM = MF.getTarget();
+  const ARMSubtarget &ST = MF.getSubtarget<ARMSubtarget>();
 
   assert(MF.getFunction().getParent()->getStackProtectorGuard() != "tls" &&
          "TLS stack protector not supported for Thumb1 targets");
 
+  unsigned Instr;
   if (TM.isPositionIndependent())
-    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_pcrel, ARM::tLDRi);
+    Instr = ARM::tLDRLIT_ga_pcrel;
+  else if (ST.genExecuteOnly() && ST.hasV8MBaselineOps())
+    Instr = ARM::t2MOVi32imm;
+  else if (ST.genExecuteOnly())
+    Instr = ARM::tMOVi32imm;
   else
-    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_abs, ARM::tLDRi);
+    Instr = ARM::tLDRLIT_ga_abs;
+  expandLoadStackGuardBase(MI, Instr, ARM::tLDRi);
 }
 
 bool Thumb1InstrInfo::canCopyGluedNodeDuringSchedule(SDNode *N) const {

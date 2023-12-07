@@ -21,9 +21,14 @@ DWARFDataExtractor::GetDWARFOffset(lldb::offset_t *offset_ptr) const {
   return GetMaxU64(offset_ptr, GetDWARFSizeOfOffset());
 }
 
-llvm::DWARFDataExtractor DWARFDataExtractor::GetAsLLVM() const {
-  return llvm::DWARFDataExtractor(
-      llvm::makeArrayRef(GetDataStart(), GetByteSize()),
-      GetByteOrder() == lldb::eByteOrderLittle, GetAddressByteSize());
+llvm::DWARFDataExtractor DWARFDataExtractor::GetAsLLVMDWARF() const {
+  return llvm::DWARFDataExtractor(llvm::ArrayRef(GetDataStart(), GetByteSize()),
+                                  GetByteOrder() == lldb::eByteOrderLittle,
+                                  GetAddressByteSize());
+}
+llvm::DataExtractor DWARFDataExtractor::GetAsLLVM() const {
+  return llvm::DataExtractor(llvm::ArrayRef(GetDataStart(), GetByteSize()),
+                             GetByteOrder() == lldb::eByteOrderLittle,
+                             GetAddressByteSize());
 }
 } // namespace lldb_private

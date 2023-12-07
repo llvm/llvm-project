@@ -64,9 +64,9 @@ exit:
 }
 
 ; Test that we don't crash.
-define void @test2(i32 %mode) {
+define void @test2(i32 %mode, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5, i1 %c6) {
 ; CHECK-LABEL: @test2
-  br i1 undef, label %1, label %._crit_edge
+  br i1 %c1, label %1, label %._crit_edge
 
 ; <label>:1                                       ; preds = %0
   switch i32 %mode, label %33 [
@@ -118,7 +118,7 @@ define void @test2(i32 %mode) {
   br label %34
 
 ; <label>:10                                      ; preds = %1
-  br i1 undef, label %11, label %12
+  br i1 %c2, label %11, label %12
 
 ; <label>:11                                      ; preds = %10
   br label %13
@@ -130,7 +130,7 @@ define void @test2(i32 %mode) {
   br label %34
 
 ; <label>:14                                      ; preds = %1
-  br i1 undef, label %15, label %16
+  br i1 %c3, label %15, label %16
 
 ; <label>:15                                      ; preds = %14
   br label %17
@@ -142,7 +142,7 @@ define void @test2(i32 %mode) {
   br label %34
 
 ; <label>:18                                      ; preds = %1
-  br i1 undef, label %19, label %20
+  br i1 %c4, label %19, label %20
 
 ; <label>:19                                      ; preds = %18
   br label %21
@@ -154,7 +154,7 @@ define void @test2(i32 %mode) {
   br label %34
 
 ; <label>:22                                      ; preds = %1
-  br i1 undef, label %23, label %24
+  br i1 %c5, label %23, label %24
 
 ; <label>:23                                      ; preds = %22
   br label %25
@@ -169,7 +169,7 @@ define void @test2(i32 %mode) {
   br label %34
 
 ; <label>:27                                      ; preds = %1
-  br i1 undef, label %28, label %29
+  br i1 %c6, label %28, label %29
 
 ; <label>:28                                      ; preds = %27
   br label %30
@@ -200,7 +200,7 @@ define void @test2(i32 %mode) {
 ; Test that the PHI node in for.cond should have one entry for each predecessor
 ; of its parent basic block after lowerswitch merged several cases into a new
 ; default block.
-define void @test3(i32 %mode) {
+define void @test3(i32 %mode, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @test3
 entry:
   br label %lbl1
@@ -224,7 +224,7 @@ for.cond1:                                        ; preds = %for.inc, %for.cond
   br i1 %tobool, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond1
-  br i1 undef, label %if.then, label %for.inc
+  br i1 %c1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
   br label %cleanup
@@ -233,7 +233,7 @@ for.inc:                                          ; preds = %for.body
   br label %for.cond1
 
 for.end:                                          ; preds = %for.cond1
-  br i1 undef, label %if.then4, label %for.body7
+  br i1 %c2, label %if.then4, label %for.body7
 
 if.then4:                                         ; preds = %for.end
   br label %cleanup
@@ -277,10 +277,10 @@ return:
 
 ; Test that the PHI node in for.inc is updated correctly as the switch is
 ; replaced with a single branch to for.inc
-define void @test5(i32 %mode) {
+define void @test5(i32 %mode, i1 %c1) {
 ; CHECK-LABEL: @test5
 entry:
-  br i1 undef, label %cleanup10, label %cleanup10.thread
+  br i1 %c1, label %cleanup10, label %cleanup10.thread
 
 cleanup10.thread:
   br label %for.inc

@@ -1290,3 +1290,82 @@ func.func @extract_strided_metadata_of_reinterpret_cast_rank0(
       index, index,
       index, index
 }
+
+// -----
+
+// Check that for `memref.get_global` -> `memref.extract_strided_metadata` resolves
+// with the consumer replaced with the strides, sizes and offsets computed from
+// `memref.get_global`. Since the result of `memref.get_global is always static shaped
+// no need to check for dynamic shapes.
+
+// CHECK-LABEL: func @extract_strided_metadata_of_get_global()
+//   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[C384:.+]] = arith.constant 384 : index
+//   CHECK-DAG:   %[[C512:.+]] = arith.constant 512 : index
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//       CHECK:   %[[GET_GLOBAL:.+]] = memref.get_global @const_i32
+//       CHECK:   %[[CAST:.+]] = memref.reinterpret_cast %[[GET_GLOBAL]]
+//  CHECK-SAME:       offset: [0], sizes: [], strides: []
+//       CHECK:   return %[[CAST]], %[[C0]], %[[C512]], %[[C384]], %[[C384]], %[[C1]]
+
+memref.global "private" constant @const_i32 : memref<512x384xi32> = dense<42>
+
+func.func @extract_strided_metadata_of_get_global()
+    -> (memref<i32>, index, index, index, index, index) {
+
+  %A = memref.get_global @const_i32 : memref<512x384xi32>
+
+  %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %A :
+    memref<512x384xi32> -> memref<i32>, index, index, index, index, index
+
+  return %base, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
+      memref<i32>, index, index, index, index, index
+}
+
+// -----
+
+// Check that for `memref.get_global` -> `memref.extract_strided_metadata` does not
+// resolve when the strides are not identity. This is an unhandled case that could
+// be covered in the future
+
+// CHECK-LABEL: func @extract_strided_metadata_of_get_global_with_strides()
+//       CHECK:   %[[GET_GLOBAL:.+]] = memref.get_global @const_i32
+//       CHECK:   memref.extract_strided_metadata %[[GET_GLOBAL]]
+memref.global "private" constant @const_i32 : memref<512x384xi32, strided<[420, 1], offset: 0>> = dense<42>
+
+func.func @extract_strided_metadata_of_get_global_with_strides()
+    -> (memref<i32>, index, index, index, index, index) {
+
+  %A = memref.get_global @const_i32 : memref<512x384xi32, strided<[420, 1], offset: 0>>
+
+  %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %A :
+    memref<512x384xi32, strided<[420, 1], offset: 0>>
+    -> memref<i32>, index, index, index, index, index
+
+  return %base, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
+      memref<i32>, index, index, index, index, index
+}
+
+// -----
+
+// Check that for `memref.get_global` -> `memref.extract_strided_metadata` does not
+// resolve when the offset is non-zero. This is an unhandled case that could
+// be covered in the future
+
+// CHECK-LABEL: func @extract_strided_metadata_of_get_global_with_offset()
+//       CHECK:   %[[GET_GLOBAL:.+]] = memref.get_global @const_i32
+//       CHECK:   memref.extract_strided_metadata %[[GET_GLOBAL]]
+memref.global "private" constant @const_i32 : memref<512x384xi32, strided<[384, 1], offset: 20>> = dense<42>
+
+func.func @extract_strided_metadata_of_get_global_with_offset()
+    -> (memref<i32>, index, index, index, index, index) {
+
+  %A = memref.get_global @const_i32 : memref<512x384xi32, strided<[384, 1], offset: 20>>
+
+  %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %A :
+    memref<512x384xi32, strided<[384, 1], offset: 20>>
+    -> memref<i32>, index, index, index, index, index
+
+  return %base, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
+      memref<i32>, index, index, index, index, index
+}

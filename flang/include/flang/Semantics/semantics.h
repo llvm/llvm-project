@@ -81,8 +81,8 @@ public:
   bool IsEnabled(common::LanguageFeature feature) const {
     return languageFeatures_.IsEnabled(feature);
   }
-  bool ShouldWarn(common::LanguageFeature feature) const {
-    return languageFeatures_.ShouldWarn(feature);
+  template <typename A> bool ShouldWarn(A x) const {
+    return languageFeatures_.ShouldWarn(x);
   }
   const std::optional<parser::CharBlock> &location() const { return location_; }
   const std::vector<std::string> &searchDirectories() const {
@@ -93,7 +93,6 @@ public:
   }
   const std::string &moduleDirectory() const { return moduleDirectory_; }
   const std::string &moduleFileSuffix() const { return moduleFileSuffix_; }
-  bool warnOnNonstandardUsage() const { return warnOnNonstandardUsage_; }
   bool warningsAreErrors() const { return warningsAreErrors_; }
   bool debugModuleWriter() const { return debugModuleWriter_; }
   const evaluate::IntrinsicProcTable &intrinsics() const { return intrinsics_; }
@@ -178,6 +177,7 @@ public:
 
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
+  void UpdateScopeIndex(Scope &, parser::CharBlock);
 
   bool IsInModuleFile(parser::CharBlock) const;
 
@@ -208,6 +208,12 @@ public:
   void UseFortranBuiltinsModule();
   const Scope *GetBuiltinsScope() const { return builtinsScope_; }
 
+  void UsePPCBuiltinTypesModule();
+  const Scope &GetCUDABuiltinsScope();
+  void UsePPCBuiltinsModule();
+  Scope *GetPPCBuiltinTypesScope() { return ppcBuiltinTypesScope_; }
+  const Scope *GetPPCBuiltinsScope() const { return ppcBuiltinsScope_; }
+
   // Saves a module file's parse tree so that it remains available
   // during semantics.
   parser::Program &SaveParseTree(parser::Program &&);
@@ -237,12 +243,19 @@ public:
   CommonBlockList GetCommonBlocks() const;
 
 private:
+  struct ScopeIndexComparator {
+    bool operator()(parser::CharBlock, parser::CharBlock) const;
+  };
+  using ScopeIndex =
+      std::multimap<parser::CharBlock, Scope &, ScopeIndexComparator>;
+  ScopeIndex::iterator SearchScopeIndex(parser::CharBlock);
+
   void CheckIndexVarRedefine(
       const parser::CharBlock &, const Symbol &, parser::MessageFixedText &&);
   void CheckError(const Symbol &);
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds_;
-  const common::LanguageFeatureControl languageFeatures_;
+  const common::LanguageFeatureControl &languageFeatures_;
   parser::AllCookedSources &allCookedSources_;
   std::optional<parser::CharBlock> location_;
   std::vector<std::string> searchDirectories_;
@@ -256,6 +269,7 @@ private:
   evaluate::TargetCharacteristics targetCharacteristics_;
   Scope globalScope_;
   Scope &intrinsicModulesScope_;
+  ScopeIndex scopeIndex_;
   parser::Messages messages_;
   evaluate::FoldingContext foldingContext_;
   ConstructStack constructStack_;
@@ -268,6 +282,9 @@ private:
   UnorderedSymbolSet errorSymbols_;
   std::set<std::string> tempNames_;
   const Scope *builtinsScope_{nullptr}; // module __Fortran_builtins
+  Scope *ppcBuiltinTypesScope_{nullptr}; // module __Fortran_PPC_types
+  std::optional<const Scope *> cudaBuiltinsScope_; // module __CUDA_builtins
+  const Scope *ppcBuiltinsScope_{nullptr}; // module __ppc_intrinsics
   std::list<parser::Program> modFileParseTrees_;
   std::unique_ptr<CommonBlockMap> commonBlockMap_;
 };

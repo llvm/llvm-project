@@ -7,4 +7,7 @@ add_clang_library(clangdRemoteIndex
 
   LINK_LIBS
   clangdSupport
+
+  DEPENDS
+  ClangDriverOptions
   )

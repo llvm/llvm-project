@@ -119,3 +119,30 @@ psel    p15, p15, p15.d[w15, 1]
 // CHECK-ENCODING: [0xef,0x7d,0xe3,0x25]
 // CHECK-ERROR: instruction requires: sme
 // CHECK-UNKNOWN: 25e37def <unknown>
+
+// --------------------------------------------------------------------------//
+// Also support with predicate-as-counter
+
+psel    pn15, pn15, p15.b[w15, 15]
+// CHECK-INST: psel    p15, p15, p15.b[w15, 15]
+// CHECK-ENCODING: [0xef,0x7d,0xff,0x25]
+// CHECK-ERROR: instruction requires: sme
+// CHECK-UNKNOWN: 25ff7def <unknown>
+
+psel    pn15, pn15, p15.h[w15, 7]
+// CHECK-INST: psel    p15, p15, p15.h[w15, 7]
+// CHECK-ENCODING: [0xef,0x7d,0xfb,0x25]
+// CHECK-ERROR: instruction requires: sme
+// CHECK-UNKNOWN: 25fb7def <unknown>
+
+psel    pn15, pn15, p15.s[w15, 3]
+// CHECK-INST: psel    p15, p15, p15.s[w15, 3]
+// CHECK-ENCODING: [0xef,0x7d,0xf3,0x25]
+// CHECK-ERROR: instruction requires: sme
+// CHECK-UNKNOWN: 25f37def <unknown>
+
+psel    pn15, pn15, p15.d[w15, 1]
+// CHECK-INST: psel    p15, p15, p15.d[w15, 1]
+// CHECK-ENCODING: [0xef,0x7d,0xe3,0x25]
+// CHECK-ERROR: instruction requires: sme
+// CHECK-UNKNOWN: 25e37def <unknown>

@@ -15,6 +15,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include <optional>
 
 namespace clang {
 
@@ -26,7 +27,7 @@ ProgramStateRef SimpleConstraintManager::assumeInternal(ProgramStateRef State,
                                                         DefinedSVal Cond,
                                                         bool Assumption) {
   // If we have a Loc value, cast it to a bool NonLoc first.
-  if (Optional<Loc> LV = Cond.getAs<Loc>()) {
+  if (std::optional<Loc> LV = Cond.getAs<Loc>()) {
     SValBuilder &SVB = State->getStateManager().getSValBuilder();
     QualType T;
     const MemRegion *MR = LV->getAsRegion();

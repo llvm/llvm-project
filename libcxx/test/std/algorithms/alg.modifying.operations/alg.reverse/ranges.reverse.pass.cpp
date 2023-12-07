@@ -45,7 +45,7 @@ static_assert(!HasReverseR<BidirectionalRangeNotDecrementable>);
 static_assert(!HasReverseR<PermutableRangeNotForwardIterator>);
 static_assert(!HasReverseR<PermutableRangeNotSwappable>);
 
-template <class Iter, class Sent, size_t N>
+template <class Iter, class Sent, std::size_t N>
 constexpr void test(std::array<int, N> value, std::array<int, N> expected) {
   {
     auto val = value;

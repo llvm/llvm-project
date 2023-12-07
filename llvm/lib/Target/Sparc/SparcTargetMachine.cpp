@@ -12,11 +12,11 @@
 #include "SparcTargetMachine.h"
 #include "LeonPasses.h"
 #include "Sparc.h"
+#include "SparcMachineFunctionInfo.h"
 #include "SparcTargetObjectFile.h"
 #include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/TargetRegistry.h"
 #include <optional>
 using namespace llvm;
@@ -26,7 +26,14 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
   RegisterTargetMachine<SparcV8TargetMachine> X(getTheSparcTarget());
   RegisterTargetMachine<SparcV9TargetMachine> Y(getTheSparcV9Target());
   RegisterTargetMachine<SparcelTargetMachine> Z(getTheSparcelTarget());
+
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeSparcDAGToDAGISelPass(PR);
 }
+
+static cl::opt<bool>
+    BranchRelaxation("sparc-enable-branch-relax", cl::Hidden, cl::init(true),
+                     cl::desc("Relax out of range conditional branches"));
 
 static std::string computeDataLayout(const Triple &T, bool is64Bit) {
   // Sparc is typically big endian, but some are little.
@@ -138,6 +145,13 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+MachineFunctionInfo *SparcTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return SparcMachineFunctionInfo::create<SparcMachineFunctionInfo>(Allocator,
+                                                                    F, STI);
+}
+
 namespace {
 /// Sparc Code Generator Pass Configuration Options.
 class SparcPassConfig : public TargetPassConfig {
@@ -171,6 +185,9 @@ bool SparcPassConfig::addInstSelector() {
 }
 
 void SparcPassConfig::addPreEmitPass(){
+  if (BranchRelaxation)
+    addPass(&BranchRelaxationPassID);
+
   addPass(createSparcDelaySlotFillerPass());
 
   if (this->getSparcTargetMachine().getSubtargetImpl()->insertNOPLoad())

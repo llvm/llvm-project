@@ -1,3 +1,8 @@
+# This chapter depends on JIT support enabled.
+if(NOT MLIR_ENABLE_EXECUTION_ENGINE)
+  return()
+endif()
+
 # For a better template to copy, see examples/standalone
 include_directories(include)
 add_subdirectory(include)
@@ -33,14 +38,18 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
+get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 target_link_libraries(toyc-ch7
   PRIVATE
     ${dialect_libs}
     ${conversion_libs}
+    ${extension_libs}
     MLIRAnalysis
+    MLIRBuiltinToLLVMIRTranslation
     MLIRCallInterfaces
     MLIRCastInterfaces
     MLIRExecutionEngine
+    MLIRFunctionInterfaces
     MLIRIR
     MLIRLLVMCommonConversion
     MLIRLLVMToLLVMIRTranslation

@@ -14,7 +14,7 @@
 # liveness flags are added.
 --- |
   target triple = "thumbv7-apple-ios"
-  define arm_aapcs_vfpcc <4 x float> @foo(float* %ptr) {
+  define arm_aapcs_vfpcc <4 x float> @foo(ptr %ptr) {
     ret <4 x float> undef
   }
 ...

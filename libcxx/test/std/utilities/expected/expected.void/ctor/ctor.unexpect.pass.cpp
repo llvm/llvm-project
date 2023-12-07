@@ -101,9 +101,9 @@ constexpr bool test() {
 
   // multi args
   {
-    std::expected<void, std::tuple<int, short, MoveOnly>> e(std::unexpect, 1, 2, MoveOnly(3));
+    std::expected<void, std::tuple<int, short, MoveOnly>> e(std::unexpect, 1, short{2}, MoveOnly(3));
     assert(!e.has_value());
-    assert((e.error() == std::tuple<int, short, MoveOnly>(1, 2, MoveOnly(3))));
+    assert((e.error() == std::tuple<int, short, MoveOnly>(1, short{2}, MoveOnly(3))));
   }
 
   return true;

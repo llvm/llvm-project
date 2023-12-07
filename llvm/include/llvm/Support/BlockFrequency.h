@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_BLOCKFREQUENCY_H
 #define LLVM_SUPPORT_BLOCKFREQUENCY_H
 
+#include <cassert>
 #include <cstdint>
 
 namespace llvm {
@@ -27,7 +28,7 @@ public:
   BlockFrequency(uint64_t Freq = 0) : Frequency(Freq) { }
 
   /// Returns the maximum possible frequency, the saturation value.
-  static uint64_t getMaxFrequency() { return -1ULL; }
+  static uint64_t getMaxFrequency() { return UINT64_MAX; }
 
   /// Returns the frequency as a fixpoint number scaled by the entry
   /// frequency.
@@ -44,15 +45,49 @@ public:
   BlockFrequency operator/(BranchProbability Prob) const;
 
   /// Adds another block frequency using saturating arithmetic.
-  BlockFrequency &operator+=(BlockFrequency Freq);
-  BlockFrequency operator+(BlockFrequency Freq) const;
+  BlockFrequency &operator+=(BlockFrequency Freq) {
+    uint64_t Before = Freq.Frequency;
+    Frequency += Freq.Frequency;
+
+    // If overflow, set frequency to the maximum value.
+    if (Frequency < Before)
+      Frequency = UINT64_MAX;
+
+    return *this;
+  }
+  BlockFrequency operator+(BlockFrequency Freq) const {
+    BlockFrequency NewFreq(Frequency);
+    NewFreq += Freq;
+    return NewFreq;
+  }
 
   /// Subtracts another block frequency using saturating arithmetic.
-  BlockFrequency &operator-=(BlockFrequency Freq);
-  BlockFrequency operator-(BlockFrequency Freq) const;
+  BlockFrequency &operator-=(BlockFrequency Freq) {
+    // If underflow, set frequency to 0.
+    if (Frequency <= Freq.Frequency)
+      Frequency = 0;
+    else
+      Frequency -= Freq.Frequency;
+    return *this;
+  }
+  BlockFrequency operator-(BlockFrequency Freq) const {
+    BlockFrequency NewFreq(Frequency);
+    NewFreq -= Freq;
+    return NewFreq;
+  }
 
   /// Shift block frequency to the right by count digits saturating to 1.
-  BlockFrequency &operator>>=(const unsigned count);
+  BlockFrequency &operator>>=(const unsigned count) {
+    // Frequency can never be 0 by design.
+    assert(Frequency != 0);
+
+    // Shift right by count.
+    Frequency >>= count;
+
+    // Saturate to 1 if we are 0.
+    Frequency |= Frequency == 0;
+    return *this;
+  }
 
   bool operator<(BlockFrequency RHS) const {
     return Frequency < RHS.Frequency;
@@ -75,6 +110,6 @@ public:
   }
 };
 
-}
+} // namespace llvm
 
 #endif

@@ -18,29 +18,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallVector.h"
 
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/Instructions.h"
-
 namespace llvm {
-
-class Function;
-class MachineBasicBlock;
-class MachineFunction;
-
-namespace afdo_detail {
-
-template <class BlockT> struct TypeMap {};
-template <> struct TypeMap<BasicBlock> {
-  using BasicBlockT = BasicBlock;
-  using FunctionT = Function;
-};
-template <> struct TypeMap<MachineBasicBlock> {
-  using BasicBlockT = MachineBasicBlock;
-  using FunctionT = MachineFunction;
-};
-
-} // end namespace afdo_detail
 
 struct FlowJump;
 
@@ -48,9 +26,9 @@ struct FlowJump;
 struct FlowBlock {
   uint64_t Index;
   uint64_t Weight{0};
-  bool UnknownWeight{false};
+  bool HasUnknownWeight{true};
+  bool IsUnlikely{false};
   uint64_t Flow{0};
-  bool HasSelfEdge{false};
   std::vector<FlowJump *> SuccJumps;
   std::vector<FlowJump *> PredJumps;
 
@@ -65,25 +43,84 @@ struct FlowBlock {
 struct FlowJump {
   uint64_t Source;
   uint64_t Target;
-  uint64_t Flow{0};
+  uint64_t Weight{0};
+  bool HasUnknownWeight{true};
   bool IsUnlikely{false};
+  uint64_t Flow{0};
 };
 
 /// A wrapper of binary function with basic blocks and jumps.
 struct FlowFunction {
+  /// Basic blocks in the function.
   std::vector<FlowBlock> Blocks;
+  /// Jumps between the basic blocks.
   std::vector<FlowJump> Jumps;
   /// The index of the entry block.
-  uint64_t Entry;
+  uint64_t Entry{0};
 };
 
+/// Various thresholds and options controlling the behavior of the profile
+/// inference algorithm. Default values are tuned for several large-scale
+/// applications, and can be modified via corresponding command-line flags.
+struct ProfiParams {
+  /// Evenly distribute flow when there are multiple equally likely options.
+  bool EvenFlowDistribution{false};
+
+  /// Evenly re-distribute flow among unknown subgraphs.
+  bool RebalanceUnknown{false};
+
+  /// Join isolated components having positive flow.
+  bool JoinIslands{false};
+
+  /// The cost of increasing a block's count by one.
+  unsigned CostBlockInc{0};
+
+  /// The cost of decreasing a block's count by one.
+  unsigned CostBlockDec{0};
+
+  /// The cost of increasing a count of zero-weight block by one.
+  unsigned CostBlockZeroInc{0};
+
+  /// The cost of increasing the entry block's count by one.
+  unsigned CostBlockEntryInc{0};
+
+  /// The cost of decreasing the entry block's count by one.
+  unsigned CostBlockEntryDec{0};
+
+  /// The cost of increasing an unknown block's count by one.
+  unsigned CostBlockUnknownInc{0};
+
+  /// The cost of increasing a jump's count by one.
+  unsigned CostJumpInc{0};
+
+  /// The cost of increasing a fall-through jump's count by one.
+  unsigned CostJumpFTInc{0};
+
+  /// The cost of decreasing a jump's count by one.
+  unsigned CostJumpDec{0};
+
+  /// The cost of decreasing a fall-through jump's count by one.
+  unsigned CostJumpFTDec{0};
+
+  /// The cost of increasing an unknown jump's count by one.
+  unsigned CostJumpUnknownInc{0};
+
+  /// The cost of increasing an unknown fall-through jump's count by one.
+  unsigned CostJumpUnknownFTInc{0};
+
+  /// The cost of taking an unlikely block/jump.
+  const int64_t CostUnlikely = ((int64_t)1) << 30;
+};
+
+void applyFlowInference(const ProfiParams &Params, FlowFunction &Func);
 void applyFlowInference(FlowFunction &Func);
 
 /// Sample profile inference pass.
-template <typename BT> class SampleProfileInference {
+template <typename FT> class SampleProfileInference {
 public:
-  using BasicBlockT = typename afdo_detail::TypeMap<BT>::BasicBlockT;
-  using FunctionT = typename afdo_detail::TypeMap<BT>::FunctionT;
+  using NodeRef = typename GraphTraits<FT *>::NodeRef;
+  using BasicBlockT = typename std::remove_pointer<NodeRef>::type;
+  using FunctionT = FT;
   using Edge = std::pair<const BasicBlockT *, const BasicBlockT *>;
   using BlockWeightMap = DenseMap<const BasicBlockT *, uint64_t>;
   using EdgeWeightMap = DenseMap<Edge, uint64_t>;
@@ -98,6 +135,11 @@ public:
   void apply(BlockWeightMap &BlockWeights, EdgeWeightMap &EdgeWeights);
 
 private:
+  /// Initialize flow function blocks, jumps and misc metadata.
+  FlowFunction
+  createFlowFunction(const std::vector<const BasicBlockT *> &BasicBlocks,
+                     DenseMap<const BasicBlockT *, uint64_t> &BlockIndex);
+
   /// Try to infer branch probabilities mimicking implementation of
   /// BranchProbabilityInfo. Unlikely taken branches are marked so that the
   /// inference algorithm can avoid sending flow along corresponding edges.
@@ -165,50 +207,7 @@ void SampleProfileInference<BT>::apply(BlockWeightMap &BlockWeights,
   }
 
   // Create necessary objects
-  FlowFunction Func;
-  Func.Blocks.reserve(BasicBlocks.size());
-  // Create FlowBlocks
-  for (const auto *BB : BasicBlocks) {
-    FlowBlock Block;
-    if (SampleBlockWeights.find(BB) != SampleBlockWeights.end()) {
-      Block.UnknownWeight = false;
-      Block.Weight = SampleBlockWeights[BB];
-    } else {
-      Block.UnknownWeight = true;
-      Block.Weight = 0;
-    }
-    Block.Index = Func.Blocks.size();
-    Func.Blocks.push_back(Block);
-  }
-  // Create FlowEdges
-  for (const auto *BB : BasicBlocks) {
-    for (auto *Succ : Successors[BB]) {
-      if (!BlockIndex.count(Succ))
-        continue;
-      FlowJump Jump;
-      Jump.Source = BlockIndex[BB];
-      Jump.Target = BlockIndex[Succ];
-      Func.Jumps.push_back(Jump);
-      if (BB == Succ) {
-        Func.Blocks[BlockIndex[BB]].HasSelfEdge = true;
-      }
-    }
-  }
-  for (auto &Jump : Func.Jumps) {
-    Func.Blocks[Jump.Source].SuccJumps.push_back(&Jump);
-    Func.Blocks[Jump.Target].PredJumps.push_back(&Jump);
-  }
-
-  // Try to infer probabilities of jumps based on the content of basic block
-  findUnlikelyJumps(BasicBlocks, Successors, Func);
-
-  // Find the entry block
-  for (size_t I = 0; I < Func.Blocks.size(); I++) {
-    if (Func.Blocks[I].isEntry()) {
-      Func.Entry = I;
-      break;
-    }
-  }
+  FlowFunction Func = createFlowFunction(BasicBlocks, BlockIndex);
 
   // Create and apply the inference network model.
   applyFlowInference(Func);
@@ -240,43 +239,72 @@ void SampleProfileInference<BT>::apply(BlockWeightMap &BlockWeights,
 }
 
 template <typename BT>
+FlowFunction SampleProfileInference<BT>::createFlowFunction(
+    const std::vector<const BasicBlockT *> &BasicBlocks,
+    DenseMap<const BasicBlockT *, uint64_t> &BlockIndex) {
+  FlowFunction Func;
+  Func.Blocks.reserve(BasicBlocks.size());
+  // Create FlowBlocks
+  for (const auto *BB : BasicBlocks) {
+    FlowBlock Block;
+    if (SampleBlockWeights.contains(BB)) {
+      Block.HasUnknownWeight = false;
+      Block.Weight = SampleBlockWeights[BB];
+    } else {
+      Block.HasUnknownWeight = true;
+      Block.Weight = 0;
+    }
+    Block.Index = Func.Blocks.size();
+    Func.Blocks.push_back(Block);
+  }
+  // Create FlowEdges
+  for (const auto *BB : BasicBlocks) {
+    for (auto *Succ : Successors[BB]) {
+      if (!BlockIndex.count(Succ))
+        continue;
+      FlowJump Jump;
+      Jump.Source = BlockIndex[BB];
+      Jump.Target = BlockIndex[Succ];
+      Func.Jumps.push_back(Jump);
+    }
+  }
+  for (auto &Jump : Func.Jumps) {
+    uint64_t Src = Jump.Source;
+    uint64_t Dst = Jump.Target;
+    Func.Blocks[Src].SuccJumps.push_back(&Jump);
+    Func.Blocks[Dst].PredJumps.push_back(&Jump);
+  }
+
+  // Try to infer probabilities of jumps based on the content of basic block
+  findUnlikelyJumps(BasicBlocks, Successors, Func);
+
+  // Find the entry block
+  for (size_t I = 0; I < Func.Blocks.size(); I++) {
+    if (Func.Blocks[I].isEntry()) {
+      Func.Entry = I;
+      break;
+    }
+  }
+  assert(Func.Entry == 0 && "incorrect index of the entry block");
+
+  // Pre-process data: make sure the entry weight is at least 1
+  auto &EntryBlock = Func.Blocks[Func.Entry];
+  if (EntryBlock.Weight == 0 && !EntryBlock.HasUnknownWeight) {
+    EntryBlock.Weight = 1;
+    EntryBlock.HasUnknownWeight = false;
+  }
+
+  return Func;
+}
+
+template <typename BT>
 inline void SampleProfileInference<BT>::findUnlikelyJumps(
     const std::vector<const BasicBlockT *> &BasicBlocks,
     BlockEdgeMap &Successors, FlowFunction &Func) {}
 
-template <>
-inline void SampleProfileInference<BasicBlock>::findUnlikelyJumps(
-    const std::vector<const BasicBlockT *> &BasicBlocks,
-    BlockEdgeMap &Successors, FlowFunction &Func) {
-  for (auto &Jump : Func.Jumps) {
-    const auto *BB = BasicBlocks[Jump.Source];
-    const auto *Succ = BasicBlocks[Jump.Target];
-    const Instruction *TI = BB->getTerminator();
-    // Check if a block ends with InvokeInst and mark non-taken branch unlikely.
-    // In that case block Succ should be a landing pad
-    if (Successors[BB].size() == 2 && Successors[BB].back() == Succ) {
-      if (isa<InvokeInst>(TI)) {
-        Jump.IsUnlikely = true;
-      }
-    }
-    const Instruction *SuccTI = Succ->getTerminator();
-    // Check if the target block contains UnreachableInst and mark it unlikely
-    if (SuccTI->getNumSuccessors() == 0) {
-      if (isa<UnreachableInst>(SuccTI)) {
-        Jump.IsUnlikely = true;
-      }
-    }
-  }
-}
-
 template <typename BT>
 inline bool SampleProfileInference<BT>::isExit(const BasicBlockT *BB) {
   return BB->succ_empty();
-}
-
-template <>
-inline bool SampleProfileInference<BasicBlock>::isExit(const BasicBlock *BB) {
-  return succ_empty(BB);
 }
 
 } // end namespace llvm

@@ -1,0 +1,27 @@
+# REQUIRES: system-linux
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc --split-dwarf-file=main.dwo --triple=x86_64-unknown-linux-gnu \
+; RUN: --filetype=obj %p/Inputs/dwarf5-df-cu-function-gc-main.s -o=main.o
+; RUN: llvm-mc --split-dwarf-file=helper.dwo --triple=x86_64-unknown-linux-gnu \
+; RUN: --filetype=obj %p/Inputs/dwarf5-df-cu-function-gc-helper.s -o=helper.o
+; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split -Wl,--entry=main -Wl,--gc-sections main.o helper.o -o main.exe
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --debug-addr main.exe.bolt > addr.txt
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt >> addr.txt
+; RUN: cat addr.txt | FileCheck -check-prefix=BOLT %s
+
+; Tests we generate range when linker GCs only function used in CU
+
+; BOLT: Addrs:
+; BOLT-NEXT: 0x[[#%.16x,ADDR:]]
+; BOLT: Addrs:
+; BOLT-NEXT: 0x[[#%.16x,ADDR1:]]
+
+; BOLT: DW_TAG_skeleton_unit
+; BOLT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000010
+; BOLT-NEXT: [0x[[#ADDR]], 0x[[#ADDR + 0xf]]))
+; BOLT: DW_TAG_skeleton_unit
+; BOLT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000024
+; BOLT-NEXT: [0x[[#ADDR1]], 0x[[#ADDR1]]))

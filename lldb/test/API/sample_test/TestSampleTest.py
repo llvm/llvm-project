@@ -3,14 +3,12 @@ Describe the purpose of the test class here.
 """
 
 
-
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
 
 class RenameThisSampleTestTestCase(TestBase):
-
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
     # each debug info format.
@@ -35,8 +33,9 @@ class RenameThisSampleTestTestCase(TestBase):
         # breakpoint, runs to it, and returns the thread, process & target.
         # It optionally takes an SBLaunchOption argument if you want to pass
         # arguments or environment variables.
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                   "Set a breakpoint here", self.main_source_file)
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", self.main_source_file
+        )
 
         frame = thread.GetFrameAtIndex(0)
         test_var = frame.FindVariable("test_var")
@@ -45,7 +44,7 @@ class RenameThisSampleTestTestCase(TestBase):
         self.assertEqual(test_value, 10, "Got the right value for test_var")
 
     def sample_test_no_launch(self):
-        """ Same as above but doesn't launch a process."""
+        """Same as above but doesn't launch a process."""
 
         target = self.createTestTarget()
         self.expect_expr("global_test_var", result_value="10")

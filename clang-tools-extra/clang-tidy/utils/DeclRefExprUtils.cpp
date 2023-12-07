@@ -12,10 +12,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
-namespace clang {
-namespace tidy {
-namespace utils {
-namespace decl_ref_expr {
+namespace clang::tidy::utils::decl_ref_expr {
 
 using namespace ::clang::ast_matchers;
 using llvm::SmallPtrSet;
@@ -46,14 +43,19 @@ constReferenceDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt,
                            ASTContext &Context) {
   auto DeclRefToVar =
       declRefExpr(to(varDecl(equalsNode(&VarDecl)))).bind("declRef");
+  auto MemberExprOfVar = memberExpr(hasObjectExpression(DeclRefToVar));
+  auto DeclRefToVarOrMemberExprOfVar =
+      stmt(anyOf(DeclRefToVar, MemberExprOfVar));
   auto ConstMethodCallee = callee(cxxMethodDecl(isConst()));
   // Match method call expressions where the variable is referenced as the this
   // implicit object argument and operator call expression for member operators
   // where the variable is the 0-th argument.
   auto Matches = match(
-      findAll(expr(anyOf(cxxMemberCallExpr(ConstMethodCallee, on(DeclRefToVar)),
-                         cxxOperatorCallExpr(ConstMethodCallee,
-                                             hasArgument(0, DeclRefToVar))))),
+      findAll(expr(anyOf(
+          cxxMemberCallExpr(ConstMethodCallee,
+                            on(DeclRefToVarOrMemberExprOfVar)),
+          cxxOperatorCallExpr(ConstMethodCallee,
+                              hasArgument(0, DeclRefToVarOrMemberExprOfVar))))),
       Stmt, Context);
   SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
@@ -65,22 +67,23 @@ constReferenceDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt,
       ConstReferenceOrValue,
       substTemplateTypeParmType(hasReplacementType(ConstReferenceOrValue))));
   auto UsedAsConstRefOrValueArg = forEachArgumentWithParam(
-      DeclRefToVar, parmVarDecl(hasType(ConstReferenceOrValueOrReplaced)));
+      DeclRefToVarOrMemberExprOfVar,
+      parmVarDecl(hasType(ConstReferenceOrValueOrReplaced)));
   Matches = match(findAll(invocation(UsedAsConstRefOrValueArg)), Stmt, Context);
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
   // References and pointers to const assignments.
-  Matches =
-      match(findAll(declStmt(
-                has(varDecl(hasType(qualType(matchers::isReferenceToConst())),
-                            hasInitializer(ignoringImpCasts(DeclRefToVar)))))),
-            Stmt, Context);
+  Matches = match(
+      findAll(declStmt(has(varDecl(
+          hasType(qualType(matchers::isReferenceToConst())),
+          hasInitializer(ignoringImpCasts(DeclRefToVarOrMemberExprOfVar)))))),
+      Stmt, Context);
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
-  Matches =
-      match(findAll(declStmt(has(varDecl(
-                hasType(qualType(matchers::isPointerToConst())),
-                hasInitializer(ignoringImpCasts(unaryOperator(
-                    hasOperatorName("&"), hasUnaryOperand(DeclRefToVar)))))))),
-            Stmt, Context);
+  Matches = match(findAll(declStmt(has(varDecl(
+                      hasType(qualType(matchers::isPointerToConst())),
+                      hasInitializer(ignoringImpCasts(unaryOperator(
+                          hasOperatorName("&"),
+                          hasUnaryOperand(DeclRefToVarOrMemberExprOfVar)))))))),
+                  Stmt, Context);
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
   return DeclRefs;
 }
@@ -146,7 +149,4 @@ bool isCopyAssignmentArgument(const DeclRefExpr &DeclRef, const Decl &Decl,
   return !Matches.empty();
 }
 
-} // namespace decl_ref_expr
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils::decl_ref_expr

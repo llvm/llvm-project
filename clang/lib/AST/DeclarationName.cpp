@@ -72,15 +72,9 @@ int DeclarationName::compare(DeclarationName LHS, DeclarationName RHS) {
     }
     unsigned LN = LHSSelector.getNumArgs(), RN = RHSSelector.getNumArgs();
     for (unsigned I = 0, N = std::min(LN, RN); I != N; ++I) {
-      switch (LHSSelector.getNameForSlot(I).compare(
-          RHSSelector.getNameForSlot(I))) {
-      case -1:
-        return -1;
-      case 1:
-        return 1;
-      default:
-        break;
-      }
+      if (int Compare = LHSSelector.getNameForSlot(I).compare(
+              RHSSelector.getNameForSlot(I)))
+        return Compare;
     }
 
     return compareInt(LN, RN);
@@ -123,12 +117,12 @@ static void printCXXConstructorDestructorName(QualType ClassType,
   Policy.adjustForCPlusPlus();
 
   if (const RecordType *ClassRec = ClassType->getAs<RecordType>()) {
-    OS << *ClassRec->getDecl();
+    ClassRec->getDecl()->printName(OS, Policy);
     return;
   }
   if (Policy.SuppressTemplateArgsInCXXConstructors) {
     if (auto *InjTy = ClassType->getAs<InjectedClassNameType>()) {
-      OS << *InjTy->getDecl();
+      InjTy->getDecl()->printName(OS, Policy);
       return;
     }
   }
@@ -371,7 +365,7 @@ DeclarationNameTable::getCXXSpecialName(DeclarationName::NameKind Kind,
 }
 
 DeclarationName
-DeclarationNameTable::getCXXLiteralOperatorName(IdentifierInfo *II) {
+DeclarationNameTable::getCXXLiteralOperatorName(const IdentifierInfo *II) {
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(II);
 

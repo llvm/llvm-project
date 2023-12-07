@@ -280,6 +280,34 @@ define amdgpu_kernel void @atomic_umax_shl_base_lds_0(ptr addrspace(1) %out, ptr
   ret void
 }
 
+; GCN-LABEL: {{^}}atomic_inc_shl_base_lds_0:
+; GCN: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
+; GCN: ds_inc_rtn_u32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
+; GCN: s_endpgm
+define amdgpu_kernel void @atomic_inc_shl_base_lds_0(ptr addrspace(1) %out, ptr addrspace(1) %add_use) #0 {
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %idx.0 = add nsw i32 %tid.x, 2
+  %arrayidx0 = getelementptr inbounds [512 x i32], ptr addrspace(3) @lds2, i32 0, i32 %idx.0
+  %val = atomicrmw uinc_wrap ptr addrspace(3) %arrayidx0, i32 31 seq_cst
+  store i32 %val, ptr addrspace(1) %out, align 4
+  store i32 %idx.0, ptr addrspace(1) %add_use, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_dec_shl_base_lds_0:
+; GCN: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
+; GCN: ds_dec_rtn_u32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
+; GCN: s_endpgm
+define amdgpu_kernel void @atomic_dec_shl_base_lds_0(ptr addrspace(1) %out, ptr addrspace(1) %add_use) #0 {
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %idx.0 = add nsw i32 %tid.x, 2
+  %arrayidx0 = getelementptr inbounds [512 x i32], ptr addrspace(3) @lds2, i32 0, i32 %idx.0
+  %val = atomicrmw udec_wrap ptr addrspace(3) %arrayidx0, i32 31 seq_cst
+  store i32 %val, ptr addrspace(1) %out, align 4
+  store i32 %idx.0, ptr addrspace(1) %add_use, align 4
+  ret void
+}
+
 ; GCN-LABEL: {{^}}shl_add_ptr_combine_2use_lds:
 ; GCN: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 3, v0
 ; GCN: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 4, v0
@@ -382,15 +410,12 @@ define void @shl_add_ptr_combine_2use_both_max_private_offset(i16 zeroext %idx.a
   ret void
 }
 
-; FIXME: This or should fold into an offset on the write
 ; GCN-LABEL: {{^}}shl_or_ptr_combine_2use_lds:
-; GCN: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 3, v0
-; GCN: v_or_b32_e32 [[SCALE1:v[0-9]+]], 32, [[SCALE0]]
-; GCN: v_lshlrev_b32_e32 [[SCALE2:v[0-9]+]], 4, v0
-; GCN: ds_write_b32 [[SCALE1]], v{{[0-9]+}}
-; GCN: ds_write_b32 [[SCALE2]], v{{[0-9]+}} offset:64
+; GCN-DAG: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:8
+; GCN-DAG: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:16
 define void @shl_or_ptr_combine_2use_lds(i32 %idx) #0 {
-  %idx.add = or i32 %idx, 4
+  %idx.shl = shl i32 %idx, 1
+  %idx.add = or i32 %idx.shl, 1
   %shl0 = shl i32 %idx.add, 3
   %shl1 = shl i32 %idx.add, 4
   %ptr0 = inttoptr i32 %shl0 to ptr addrspace(3)
@@ -399,15 +424,14 @@ define void @shl_or_ptr_combine_2use_lds(i32 %idx) #0 {
   store volatile i32 10, ptr addrspace(3) %ptr1
   ret void
 }
-
-; GCN-LABEL: {{^}}shl_or_ptr_combine_2use_max_lds_offset:
-; GCN-DAG: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 3, v0
-; GCN-DAG: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 4, v0
-; GCN-DAG: ds_write_b32 [[SCALE0]], v{{[0-9]+}} offset:65528
-; GCN-DAG: v_or_b32_e32 [[ADD1:v[0-9]+]], 0x1fff0, [[SCALE1]]
-; GCN: ds_write_b32 [[ADD1]], v{{[0-9]+$}}
-define void @shl_or_ptr_combine_2use_max_lds_offset(i32 %idx) #0 {
-  %idx.add = or i32 %idx, 8191
+; GCN-LABEL: {{^}}shl_or_ptr_not_combine_2use_lds:
+; GCN:     v_or_b32_e32 [[OR:v[0-9]+]], 1, v0
+; GCN-DAG: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 3, [[OR]]
+; GCN-DAG: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 4, [[OR]]
+; GCN-DAG: ds_write_b32 [[SCALE0]], v{{[0-9]+}}{{$}}
+; GCN-DAG: ds_write_b32 [[SCALE1]], v{{[0-9]+}}{{$}}
+define void @shl_or_ptr_not_combine_2use_lds(i32 %idx) #0 {
+  %idx.add = or i32 %idx, 1
   %shl0 = shl i32 %idx.add, 3
   %shl1 = shl i32 %idx.add, 4
   %ptr0 = inttoptr i32 %shl0 to ptr addrspace(3)

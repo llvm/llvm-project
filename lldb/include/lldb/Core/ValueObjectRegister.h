@@ -20,6 +20,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 namespace lldb_private {
 class DataExtractor;
@@ -36,7 +37,7 @@ public:
                                     lldb::RegisterContextSP &reg_ctx_sp,
                                     uint32_t set_idx);
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  std::optional<uint64_t> GetByteSize() override;
 
   lldb::ValueType GetValueType() const override {
     return lldb::eValueTypeRegisterSet;
@@ -51,10 +52,10 @@ public:
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index) override;
 
-  lldb::ValueObjectSP GetChildMemberWithName(ConstString name,
-                                             bool can_create) override;
+  lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
+                                             bool can_create = true) override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  size_t GetIndexOfChildWithName(llvm::StringRef name) override;
 
 protected:
   bool UpdateValue() override;
@@ -86,7 +87,7 @@ public:
                                     lldb::RegisterContextSP &reg_ctx_sp,
                                     const RegisterInfo *reg_info);
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  std::optional<uint64_t> GetByteSize() override;
 
   lldb::ValueType GetValueType() const override {
     return lldb::eValueTypeRegister;

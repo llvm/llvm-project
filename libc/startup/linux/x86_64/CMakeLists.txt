@@ -11,7 +11,7 @@ add_startup_object(
     libc.src.__support.OSUtil.osutil
     libc.src.stdlib.exit
     libc.src.stdlib.atexit
-    libc.src.string.memory_utils.memcpy_implementation
+    libc.src.string.memory_utils.inline_memcpy
     libc.src.unistd.environ
   COMPILE_OPTIONS
     -fno-omit-frame-pointer

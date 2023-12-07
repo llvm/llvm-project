@@ -1006,8 +1006,8 @@ bool HexagonHardwareLoops::isInvalidLoopOperation(const MachineInstr *MI,
 
   static const Register Regs01[] = { LC0, SA0, LC1, SA1 };
   static const Register Regs1[]  = { LC1, SA1 };
-  auto CheckRegs = IsInnerHWLoop ? makeArrayRef(Regs01, std::size(Regs01))
-                                 : makeArrayRef(Regs1, std::size(Regs1));
+  auto CheckRegs = IsInnerHWLoop ? ArrayRef(Regs01, std::size(Regs01))
+                                 : ArrayRef(Regs1, std::size(Regs1));
   for (Register R : CheckRegs)
     if (MI->modifiesRegister(R, TRI))
       return true;
@@ -1059,8 +1059,7 @@ bool HexagonHardwareLoops::isDead(const MachineInstr *MI,
       return false;
 
     MachineInstr *OnePhi = I->getParent();
-    for (unsigned j = 0, f = OnePhi->getNumOperands(); j != f; ++j) {
-      const MachineOperand &OPO = OnePhi->getOperand(j);
+    for (const MachineOperand &OPO : OnePhi->operands()) {
       if (!OPO.isReg() || !OPO.isDef())
         continue;
 
@@ -1702,8 +1701,7 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
   // operands.  Assume that if the compare has a single register use and a
   // single immediate operand, then the register is being compared with the
   // immediate value.
-  for (unsigned i = 0, n = PredDef->getNumOperands(); i < n; ++i) {
-    MachineOperand &MO = PredDef->getOperand(i);
+  for (MachineOperand &MO : PredDef->operands()) {
     if (MO.isReg()) {
       // Skip all implicit references.  In one case there was:
       //   %140 = FCMPUGT32_rr %138, %139, implicit %usr
@@ -1818,8 +1816,7 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
 
       // Finally, fix the compare instruction.
       setImmediate(*CmpImmOp, CmpImm);
-      for (unsigned i = 0, n = PredDef->getNumOperands(); i < n; ++i) {
-        MachineOperand &MO = PredDef->getOperand(i);
+      for (MachineOperand &MO : PredDef->operands()) {
         if (MO.isReg() && MO.getReg() == RB.first) {
           MO.setReg(I->first);
           return true;

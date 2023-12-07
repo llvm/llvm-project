@@ -18,12 +18,11 @@
 %struct.loc_prog = type { i32, i32 }
 
 ; Function Attrs: nofree norecurse nounwind willreturn
-define dso_local i32 @exec_prog(%struct.loc_prog* nocapture %prog) local_unnamed_addr {
+define dso_local i32 @exec_prog(ptr nocapture %prog) local_unnamed_addr {
 entry:
-  %ip = getelementptr inbounds %struct.loc_prog, %struct.loc_prog* %prog, i64 0, i32 0
-  %0 = load i32, i32* %ip, align 4
-  %len = getelementptr inbounds %struct.loc_prog, %struct.loc_prog* %prog, i64 0, i32 1
-  %1 = load i32, i32* %len, align 4
+  %0 = load i32, ptr %prog, align 4
+  %len = getelementptr inbounds %struct.loc_prog, ptr %prog, i64 0, i32 1
+  %1 = load i32, ptr %len, align 4
   %cmp = icmp ult i32 %0, %1
   %cmp2 = icmp slt i32 %0, 3
   %or.cond = and i1 %cmp2, %cmp
@@ -33,7 +32,7 @@ entry:
 
 if.then3:                                         ; preds = %entry
   %add = add nsw i32 %0, 2
-  store i32 %add, i32* %ip, align 4
+  store i32 %add, ptr %prog, align 4
   br label %if.end5
 
 if.end5:                                          ; preds = %if.then3, %entry

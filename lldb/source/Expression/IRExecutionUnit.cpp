@@ -21,6 +21,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Expression/IRExecutionUnit.h"
+#include "lldb/Expression/ObjectFileJIT.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -36,7 +37,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
-#include "lldb/../../source/Plugins/ObjectFile/JIT/ObjectFileJIT.h"
+#include <optional>
 
 using namespace lldb_private;
 
@@ -405,11 +406,11 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     }
   };
 
-  for (llvm::GlobalVariable &global_var : m_module->getGlobalList()) {
+  for (llvm::GlobalVariable &global_var : m_module->globals()) {
     RegisterOneValue(global_var);
   }
 
-  for (llvm::GlobalAlias &global_alias : m_module->getAliasList()) {
+  for (llvm::GlobalAlias &global_alias : m_module->aliases()) {
     RegisterOneValue(global_alias);
   }
 
@@ -418,7 +419,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   if (m_failed_lookups.size()) {
     StreamString ss;
 
-    ss.PutCString("Couldn't lookup symbols:\n");
+    ss.PutCString("Couldn't look up symbols:\n");
 
     bool emitNewLine = false;
 
@@ -702,7 +703,7 @@ public:
   LoadAddressResolver(Target *target, bool &symbol_was_missing_weak)
       : m_target(target), m_symbol_was_missing_weak(symbol_was_missing_weak) {}
 
-  llvm::Optional<lldb::addr_t> Resolve(SymbolContextList &sc_list) {
+  std::optional<lldb::addr_t> Resolve(SymbolContextList &sc_list) {
     if (sc_list.IsEmpty())
       return std::nullopt;
 

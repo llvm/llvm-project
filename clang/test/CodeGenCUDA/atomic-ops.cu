@@ -6,6 +6,7 @@
 // CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic monotonic, align 4
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as")
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as")
+// CHECK: atomicrmw sub ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as")
 // CHECK: atomicrmw and ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as")
 // CHECK: atomicrmw or ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as")
 // CHECK: atomicrmw xor ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as")
@@ -18,6 +19,7 @@ __device__ int atomic32_op_singlethread(int *ptr, int val, int desired) {
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_exchange(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_fetch_add(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
+  val = __hip_atomic_fetch_sub(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_fetch_and(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_fetch_or(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_fetch_xor(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
@@ -42,6 +44,7 @@ __device__ unsigned int atomicu32_op_singlethread(unsigned int *ptr, unsigned in
 // CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic monotonic, align 4
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as")
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as")
+// CHECK: atomicrmw sub ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as")
 // CHECK: atomicrmw and ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as")
 // CHECK: atomicrmw or ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as")
 // CHECK: atomicrmw xor ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as")
@@ -54,6 +57,7 @@ __device__ int atomic32_op_wavefront(int *ptr, int val, int desired) {
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
   val = __hip_atomic_exchange(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
   val = __hip_atomic_fetch_add(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
+  val = __hip_atomic_fetch_sub(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
   val = __hip_atomic_fetch_and(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
   val = __hip_atomic_fetch_or(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
   val = __hip_atomic_fetch_xor(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
@@ -78,6 +82,7 @@ __device__ unsigned int atomicu32_op_wavefront(unsigned int *ptr, unsigned int v
 // CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic monotonic, align 4
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as")
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as")
+// CHECK: atomicrmw sub ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as")
 // CHECK: atomicrmw and ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as")
 // CHECK: atomicrmw or ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as")
 // CHECK: atomicrmw xor ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as")
@@ -89,6 +94,7 @@ __device__ int atomic32_op_workgroup(int *ptr, int val, int desired) {
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
   val = __hip_atomic_exchange(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
   val = __hip_atomic_fetch_add(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
+  val = __hip_atomic_fetch_sub(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
   val = __hip_atomic_fetch_and(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
   val = __hip_atomic_fetch_or(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
   val = __hip_atomic_fetch_xor(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
@@ -112,6 +118,7 @@ __device__ unsigned int atomicu32_op_workgroup(unsigned int *ptr, unsigned int v
 // CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as") monotonic monotonic, align 4
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as")
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as")
+// CHECK: atomicrmw sub ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as")
 // CHECK: atomicrmw and ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as")
 // CHECK: atomicrmw or ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as")
 // CHECK: atomicrmw xor ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as")
@@ -123,6 +130,7 @@ __device__ int atomic32_op_agent(int *ptr, int val, int desired) {
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   val = __hip_atomic_exchange(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   val = __hip_atomic_fetch_add(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
+  val = __hip_atomic_fetch_sub(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   val = __hip_atomic_fetch_and(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   val = __hip_atomic_fetch_or(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   val = __hip_atomic_fetch_xor(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
@@ -146,6 +154,7 @@ __device__ unsigned int atomicu32_op_agent(unsigned int *ptr, unsigned int val, 
 // CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as") monotonic monotonic, align 4
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as")
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as")
+// CHECK: atomicrmw sub ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as")
 // CHECK: atomicrmw and ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as")
 // CHECK: atomicrmw or ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as")
 // CHECK: atomicrmw xor ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as")
@@ -158,6 +167,7 @@ __device__ int atomic32_op_system(int *ptr, int val, int desired) {
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
   val = __hip_atomic_exchange(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
   val = __hip_atomic_fetch_add(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
+  val = __hip_atomic_fetch_sub(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
   val = __hip_atomic_fetch_and(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
   val = __hip_atomic_fetch_or(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
   val = __hip_atomic_fetch_xor(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
@@ -182,6 +192,7 @@ __device__ unsigned int atomicu32_op_system(unsigned int *ptr, unsigned int val,
 // CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic monotonic, align 8
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as")
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as")
+// CHECK: atomicrmw sub ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as")
 // CHECK: atomicrmw and ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as")
 // CHECK: atomicrmw or ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as")
 // CHECK: atomicrmw xor ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as")
@@ -193,6 +204,7 @@ __device__ long long atomic64_op_singlethread(long long *ptr, long long *ptr2, l
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_exchange(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_fetch_add(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
+  val = __hip_atomic_fetch_sub(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_fetch_and(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_fetch_or(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   val = __hip_atomic_fetch_xor(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
@@ -220,6 +232,7 @@ __device__ unsigned long long atomicu64_op_singlethread(unsigned long long *ptr,
 // CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic monotonic, align 8
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as")
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as")
+// CHECK: atomicrmw sub ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as")
 // CHECK: atomicrmw and ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as")
 // CHECK: atomicrmw or ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as")
 // CHECK: atomicrmw xor ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as")
@@ -232,6 +245,7 @@ __device__ long long atomic64_op_wavefront(long long *ptr, long long *ptr2, long
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
   val = __hip_atomic_exchange(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
   val = __hip_atomic_fetch_add(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
+  val = __hip_atomic_fetch_sub(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
   val = __hip_atomic_fetch_and(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
   val = __hip_atomic_fetch_or(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
   val = __hip_atomic_fetch_xor(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WAVEFRONT);
@@ -260,6 +274,7 @@ __device__ unsigned long long atomicu64_op_wavefront(unsigned long long *ptr, un
 // CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic monotonic, align 8
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as")
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as")
+// CHECK: atomicrmw sub ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as")
 // CHECK: atomicrmw and ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as")
 // CHECK: atomicrmw or ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as")
 // CHECK: atomicrmw xor ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as")
@@ -271,6 +286,7 @@ __device__ long long atomic64_op_workgroup(long long *ptr, long long *ptr2, long
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
   val = __hip_atomic_exchange(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
   val = __hip_atomic_fetch_add(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
+  val = __hip_atomic_fetch_sub(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
   val = __hip_atomic_fetch_and(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
   val = __hip_atomic_fetch_or(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
   val = __hip_atomic_fetch_xor(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
@@ -296,6 +312,7 @@ __device__ unsigned long long atomicu64_op_workgroup(unsigned long long *ptr, un
 // CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as") monotonic monotonic, align 8
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as")
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as")
+// CHECK: atomicrmw sub ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as")
 // CHECK: atomicrmw and ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as")
 // CHECK: atomicrmw or ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as")
 // CHECK: atomicrmw xor ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as")
@@ -307,6 +324,7 @@ __device__ long long atomic64_op_agent(long long *ptr, long long *ptr2, long lon
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   val = __hip_atomic_exchange(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   val = __hip_atomic_fetch_add(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
+  val = __hip_atomic_fetch_sub(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   val = __hip_atomic_fetch_and(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   val = __hip_atomic_fetch_or(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   val = __hip_atomic_fetch_xor(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
@@ -332,6 +350,7 @@ __device__ unsigned long long atomicu64_op_agent(unsigned long long *ptr, unsign
 // CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as") monotonic monotonic, align 8
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as")
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as")
+// CHECK: atomicrmw sub ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as")
 // CHECK: atomicrmw and ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as")
 // CHECK: atomicrmw or ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as")
 // CHECK: atomicrmw xor ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as")
@@ -344,6 +363,7 @@ __device__ long long atomic64_op_system(long long *ptr, long long *ptr2, long lo
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
   val = __hip_atomic_exchange(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
   val = __hip_atomic_fetch_add(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
+  val = __hip_atomic_fetch_sub(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
   val = __hip_atomic_fetch_and(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
   val = __hip_atomic_fetch_or(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);
   val = __hip_atomic_fetch_xor(ptr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SYSTEM);

@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <iterator>
 #include <utility>
 
 namespace llvm {
@@ -40,6 +41,12 @@ template <typename BitVectorT> class const_set_bits_iterator_impl {
   }
 
 public:
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type   = void;
+  using value_type        = int;
+  using pointer           = value_type*;
+  using reference         = value_type&;
+
   const_set_bits_iterator_impl(const BitVectorT &Parent, int Current)
       : Parent(Parent), Current(Current) {}
   explicit const_set_bits_iterator_impl(const BitVectorT &Parent)
@@ -155,7 +162,7 @@ public:
   size_type count() const {
     unsigned NumBits = 0;
     for (auto Bit : Bits)
-      NumBits += countPopulation(Bit);
+      NumBits += llvm::popcount(Bit);
     return NumBits;
   }
 
@@ -213,7 +220,7 @@ public:
         Copy &= maskTrailingOnes<BitWord>(LastBit + 1);
       }
       if (Copy != 0)
-        return i * BITWORD_SIZE + countTrailingZeros(Copy);
+        return i * BITWORD_SIZE + llvm::countr_zero(Copy);
     }
     return -1;
   }
@@ -243,7 +250,7 @@ public:
       }
 
       if (Copy != 0)
-        return (CurrentWord + 1) * BITWORD_SIZE - countLeadingZeros(Copy) - 1;
+        return (CurrentWord + 1) * BITWORD_SIZE - llvm::countl_zero(Copy) - 1;
     }
 
     return -1;
@@ -281,7 +288,7 @@ public:
 
       if (Copy != ~BitWord(0)) {
         unsigned Result =
-            (CurrentWord + 1) * BITWORD_SIZE - countLeadingOnes(Copy) - 1;
+            (CurrentWord + 1) * BITWORD_SIZE - llvm::countl_one(Copy) - 1;
         return Result < Size ? Result : -1;
       }
     }
@@ -763,7 +770,7 @@ private:
   }
 
   int next_unset_in_word(int WordIndex, BitWord Word) const {
-    unsigned Result = WordIndex * BITWORD_SIZE + countTrailingOnes(Word);
+    unsigned Result = WordIndex * BITWORD_SIZE + llvm::countr_one(Word);
     return Result < size() ? Result : -1;
   }
 

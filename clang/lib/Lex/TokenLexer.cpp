@@ -31,6 +31,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include <cassert>
 #include <cstring>
+#include <optional>
 
 using namespace clang;
 
@@ -204,7 +205,7 @@ void TokenLexer::stringifyVAOPTContents(
       assert(CurTokenIdx != 0 &&
              "Can not have __VAOPT__ contents begin with a ##");
       Token &LHS = VAOPTTokens[CurTokenIdx - 1];
-      pasteTokens(LHS, llvm::makeArrayRef(VAOPTTokens, NumVAOptTokens),
+      pasteTokens(LHS, llvm::ArrayRef(VAOPTTokens, NumVAOptTokens),
                   CurTokenIdx);
       // Replace the token prior to the first ## in this iteration.
       ConcatenatedVAOPTResultToks.back() = LHS;
@@ -248,7 +249,7 @@ void TokenLexer::ExpandFunctionArguments() {
   // we install the newly expanded sequence as the new 'Tokens' list.
   bool MadeChange = false;
 
-  Optional<bool> CalledWithVariadicArguments;
+  std::optional<bool> CalledWithVariadicArguments;
 
   VAOptExpansionContext VCtx(PP);
 
@@ -499,8 +500,7 @@ void TokenLexer::ExpandFunctionArguments() {
           // the first token in a __VA_OPT__ after a ##, delete the ##.
           assert(VCtx.isInVAOpt() && "should only happen inside a __VA_OPT__");
           VCtx.hasPlaceholderAfterHashhashAtStart();
-        }
-        if (RParenAfter)
+        } else if (RParenAfter)
           VCtx.hasPlaceholderBeforeRParen();
       }
       continue;
@@ -566,7 +566,7 @@ void TokenLexer::ExpandFunctionArguments() {
       continue;
     }
 
-    if (RParenAfter)
+    if (RParenAfter && !NonEmptyPasteBefore)
       VCtx.hasPlaceholderBeforeRParen();
 
     // If this is on the RHS of a paste operator, we've already copied the
@@ -722,7 +722,7 @@ bool TokenLexer::Lex(Token &Tok) {
 }
 
 bool TokenLexer::pasteTokens(Token &Tok) {
-  return pasteTokens(Tok, llvm::makeArrayRef(Tokens, NumTokens), CurTokenIdx);
+  return pasteTokens(Tok, llvm::ArrayRef(Tokens, NumTokens), CurTokenIdx);
 }
 
 /// LHSTok is the LHS of a ## operator, and CurTokenIdx is the ##
@@ -1019,8 +1019,16 @@ static void updateConsecutiveMacroArgTokens(SourceManager &SM,
     SourceLocation Limit =
         SM.getComposedLoc(BeginFID, SM.getFileIDSize(BeginFID));
     Partition = All.take_while([&](const Token &T) {
-      return T.getLocation() >= BeginLoc && T.getLocation() < Limit &&
-             NearLast(T.getLocation());
+      // NOTE: the Limit is included! The lexer recovery only ever inserts a
+      // single token past the end of the FileID, specifically the ) when a
+      // macro-arg containing a comma should be guarded by parentheses.
+      //
+      // It is safe to include the Limit here because SourceManager allocates
+      // FileSize + 1 for each SLocEntry.
+      //
+      // See https://github.com/llvm/llvm-project/issues/60722.
+      return T.getLocation() >= BeginLoc && T.getLocation() <= Limit
+         &&  NearLast(T.getLocation());
     });
   }
   assert(!Partition.empty());

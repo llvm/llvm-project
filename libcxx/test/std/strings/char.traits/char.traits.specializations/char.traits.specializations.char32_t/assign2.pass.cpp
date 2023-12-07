@@ -19,25 +19,23 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER > 14
-constexpr bool test_constexpr()
-{
-    char32_t c = U'1';
-    std::char_traits<char32_t>::assign(c, U'a');
-    return c == U'a';
+constexpr bool test_constexpr() {
+  char32_t c = U'1';
+  std::char_traits<char32_t>::assign(c, U'a');
+  return c == U'a';
 }
 #endif
 
-int main(int, char**)
-{
+int main(int, char**) {
 #if TEST_STD_VER >= 11
-    char32_t c = U'\0';
-    std::char_traits<char32_t>::assign(c, U'a');
-    assert(c == U'a');
+  char32_t c = U'\0';
+  std::char_traits<char32_t>::assign(c, U'a');
+  assert(c == U'a');
 #endif
 
 #if TEST_STD_VER > 14
-    static_assert(test_constexpr(), "" );
+  static_assert(test_constexpr(), "");
 #endif
 
-    return 0;
+  return 0;
 }

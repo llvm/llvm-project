@@ -36,6 +36,7 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_CONSTANTHOISTING_H
 #define LLVM_TRANSFORMS_SCALAR_CONSTANTHOISTING_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -168,9 +169,13 @@ private:
   /// Keep track of cast instructions we already cloned.
   MapVector<Instruction *, Instruction *> ClonedCastMap;
 
+  void collectMatInsertPts(
+      const consthoist::RebasedConstantListType &RebasedConstants,
+      SmallVectorImpl<Instruction *> &MatInsertPts) const;
   Instruction *findMatInsertPt(Instruction *Inst, unsigned Idx = ~0U) const;
   SetVector<Instruction *>
-  findConstantInsertionPoint(const consthoist::ConstantInfo &ConstInfo) const;
+  findConstantInsertionPoint(const consthoist::ConstantInfo &ConstInfo,
+                             const ArrayRef<Instruction *> MatInsertPts) const;
   void collectConstantCandidates(ConstCandMapType &ConstCandMap,
                                  Instruction *Inst, unsigned Idx,
                                  ConstantInt *ConstInt);
@@ -191,8 +196,19 @@ private:
   // If BaseGV is nullptr, find base among Constant Integer candidates;
   // otherwise find base among constant GEPs sharing BaseGV as base pointer.
   void findBaseConstants(GlobalVariable *BaseGV);
-  void emitBaseConstants(Instruction *Base, Constant *Offset, Type *Ty,
-                         const consthoist::ConstantUser &ConstUser);
+
+  /// A ConstantUser grouped with the Type and Constant adjustment. The user
+  /// will be adjusted by Offset.
+  struct UserAdjustment {
+    Constant *Offset;
+    Type *Ty;
+    Instruction *MatInsertPt;
+    const consthoist::ConstantUser User;
+    UserAdjustment(Constant *O, Type *T, Instruction *I,
+                   consthoist::ConstantUser U)
+        : Offset(O), Ty(T), MatInsertPt(I), User(U) {}
+  };
+  void emitBaseConstants(Instruction *Base, UserAdjustment *Adj);
   // If BaseGV is nullptr, emit Constant Integer base; otherwise emit
   // constant GEP base.
   bool emitBaseConstants(GlobalVariable *BaseGV);

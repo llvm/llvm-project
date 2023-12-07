@@ -541,7 +541,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
           ExpectedLoc = SourceLocation();
         } else {
           // Lookup file via Preprocessor, like a #include.
-          Optional<FileEntryRef> File =
+          OptionalFileEntryRef File =
               PP->LookupFile(Pos, Filename, false, nullptr, nullptr, nullptr,
                              nullptr, nullptr, nullptr, nullptr, nullptr);
           if (!File) {
@@ -737,12 +737,12 @@ void VerifyDiagnosticConsumer::HandleDiagnostic(
       Loc = SrcManager->getExpansionLoc(Loc);
       FileID FID = SrcManager->getFileID(Loc);
 
-      const FileEntry *FE = SrcManager->getFileEntryForID(FID);
+      auto FE = SrcManager->getFileEntryRefForID(FID);
       if (FE && CurrentPreprocessor && SrcManager->isLoadedFileID(FID)) {
         // If the file is a modules header file it shall not be parsed
         // for expected-* directives.
         HeaderSearch &HS = CurrentPreprocessor->getHeaderSearchInfo();
-        if (HS.findModuleForHeader(FE))
+        if (HS.findModuleForHeader(*FE))
           PS = IsUnparsedNoDirectives;
       }
 
@@ -876,8 +876,10 @@ static unsigned PrintUnexpected(DiagnosticsEngine &Diags, SourceManager *SourceM
     OS << ": " << I->second;
   }
 
+  std::string Prefix = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
+  std::string KindStr = Prefix + "-" + Kind;
   Diags.Report(diag::err_verify_inconsistent_diags).setForceEmit()
-    << Kind << /*Unexpected=*/true << OS.str();
+      << KindStr << /*Unexpected=*/true << OS.str();
   return std::distance(diag_begin, diag_end);
 }
 
@@ -907,8 +909,10 @@ static unsigned PrintExpected(DiagnosticsEngine &Diags,
     OS << ": " << D->Text;
   }
 
+  std::string Prefix = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
+  std::string KindStr = Prefix + "-" + Kind;
   Diags.Report(diag::err_verify_inconsistent_diags).setForceEmit()
-    << Kind << /*Unexpected=*/false << OS.str();
+      << KindStr << /*Unexpected=*/false << OS.str();
   return DL.size();
 }
 

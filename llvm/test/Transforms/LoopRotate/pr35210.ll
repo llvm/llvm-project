@@ -1,5 +1,5 @@
-;RUN: opt %s -aa-pipeline= -passes='adce,loop(loop-rotate),adce' -S -verify-cfg-preserved=0 -debug-pass-manager -debug-only=loop-rotate 2>&1 | FileCheck %s
-;RUN: opt %s -aa-pipeline= -passes='adce,loop-mssa(loop-rotate),adce' -S -verify-cfg-preserved=0 -debug-pass-manager -debug-only=loop-rotate -verify-memoryssa 2>&1 | FileCheck %s --check-prefix=MSSA
+;RUN: opt %s -aa-pipeline= -passes='adce,loop(loop-rotate),adce' -S -verify-analysis-invalidation=0 -debug-pass-manager -debug-only=loop-rotate 2>&1 | FileCheck %s
+;RUN: opt %s -aa-pipeline= -passes='adce,loop-mssa(loop-rotate),adce' -S -verify-analysis-invalidation=0 -debug-pass-manager -debug-only=loop-rotate -verify-memoryssa 2>&1 | FileCheck %s --check-prefix=MSSA
 ;REQUIRES: asserts
 
 ; This test is to make sure we invalidate the post dominator pass after loop rotate simplifies the loop latch.

@@ -87,13 +87,17 @@ LANGSTANDARD(gnu17, "gnu17",
              LineComment | C99 | C11 | C17 | Digraphs | GNUMode | HexFloat)
 LANGSTANDARD_ALIAS(gnu17, "gnu18")
 
-// C2x modes
-LANGSTANDARD(c2x, "c2x",
-             C, "Working Draft for ISO C2x",
-             LineComment | C99 | C11 | C17 | C2x | Digraphs | HexFloat)
-LANGSTANDARD(gnu2x, "gnu2x",
-             C, "Working Draft for ISO C2x with GNU extensions",
-             LineComment | C99 | C11 | C17 | C2x | Digraphs | GNUMode | HexFloat)
+// C23 modes
+LANGSTANDARD(c23, "c23",
+             C, "Working Draft for ISO C23",
+             LineComment | C99 | C11 | C17 | C23 | Digraphs | HexFloat)
+LANGSTANDARD_ALIAS_DEPR(c23, "c2x")
+LANGSTANDARD(gnu23, "gnu23",
+             C, "Working Draft for ISO C23 with GNU extensions",
+             LineComment | C99 | C11 | C17 | C23 | Digraphs | GNUMode | HexFloat)
+LANGSTANDARD_ALIAS_DEPR(gnu23, "gnu2x")
+// FIXME: Add the alias for iso9899:202* once we know the year ISO publishes
+// the document (expected to be 2024).
 
 // C++ modes
 LANGSTANDARD(cxx98, "c++98",
@@ -151,15 +155,29 @@ LANGSTANDARD(gnucxx20, "gnu++20",
              CPlusPlus20 | Digraphs | HexFloat | GNUMode)
 LANGSTANDARD_ALIAS_DEPR(gnucxx20, "gnu++2a")
 
-LANGSTANDARD(cxx2b, "c++2b",
-             CXX, "Working draft for ISO C++ 2023 DIS",
+LANGSTANDARD(cxx23, "c++23",
+             CXX, "ISO C++ 2023 DIS",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
-             CPlusPlus20 | CPlusPlus2b | Digraphs | HexFloat)
+             CPlusPlus20 | CPlusPlus23 | Digraphs | HexFloat)
+LANGSTANDARD_ALIAS_DEPR(cxx23, "c++2b")
 
-LANGSTANDARD(gnucxx2b, "gnu++2b",
-             CXX, "Working draft for ISO C++ 2023 DIS with GNU extensions",
+LANGSTANDARD(gnucxx23, "gnu++23",
+             CXX, "ISO C++ 2023 DIS with GNU extensions",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
-             CPlusPlus20 | CPlusPlus2b | Digraphs | HexFloat | GNUMode)
+             CPlusPlus20 | CPlusPlus23 | Digraphs | HexFloat | GNUMode)
+LANGSTANDARD_ALIAS_DEPR(gnucxx23, "gnu++2b")
+
+LANGSTANDARD(cxx26, "c++2c",
+             CXX, "Working draft for C++2c",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus23 | CPlusPlus26 | Digraphs | HexFloat)
+LANGSTANDARD_ALIAS(cxx26, "c++26")
+
+LANGSTANDARD(gnucxx26, "gnu++2c",
+             CXX, "Working draft for C++2c with GNU extensions",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus23 | CPlusPlus26 | Digraphs | HexFloat | GNUMode)
+LANGSTANDARD_ALIAS(gnucxx26, "gnu++26")
 
 // OpenCL
 LANGSTANDARD(opencl10, "cl1.0",
@@ -199,14 +217,6 @@ LANGSTANDARD_ALIAS_DEPR(opencl30, "CL3.0")
 LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++")
 LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++1.0")
 LANGSTANDARD_ALIAS_DEPR(openclcpp2021, "CLC++2021")
-
-// CUDA
-LANGSTANDARD(cuda, "cuda", CUDA, "NVIDIA CUDA(tm)",
-             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | Digraphs)
-
-// HIP
-LANGSTANDARD(hip, "hip", HIP, "HIP",
-             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | Digraphs)
 
 // HLSL
 LANGSTANDARD(hlsl, "hlsl",

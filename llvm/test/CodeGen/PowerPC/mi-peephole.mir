@@ -16,7 +16,6 @@ frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
 body:             |
-body:             |
   bb.0.entry:
     liveins: $x3, $x4
 

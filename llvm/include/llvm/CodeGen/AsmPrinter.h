@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
@@ -87,7 +88,7 @@ public:
   TargetMachine &TM;
 
   /// Target Asm Printer information.
-  const MCAsmInfo *MAI;
+  const MCAsmInfo *MAI = nullptr;
 
   /// This is the context for the output file that we are streaming. This owns
   /// all of the global MC-related objects for the generated translation unit.
@@ -111,7 +112,7 @@ public:
   MachineLoopInfo *MLI = nullptr;
 
   /// Optimization remark emitter.
-  MachineOptimizationRemarkEmitter *ORE;
+  MachineOptimizationRemarkEmitter *ORE = nullptr;
 
   /// The symbol for the entry in __patchable_function_entires.
   MCSymbol *CurrentPatchableFunctionEntrySym = nullptr;
@@ -182,8 +183,8 @@ private:
   /// block's address of label.
   std::unique_ptr<AddrLabelMap> AddrLabelSymbols;
 
-  // The garbage collection metadata printer table.
-  void *GCMetadataPrinters = nullptr; // Really a DenseMap.
+  /// The garbage collection metadata printer table.
+  DenseMap<GCStrategy *, std::unique_ptr<GCMetadataPrinter>> GCMetadataPrinters;
 
   /// Emit comments in assembly output if this is true.
   bool VerboseAsm;
@@ -235,6 +236,10 @@ private:
   /// .note.GNU-no-split-stack section when it also contains functions without a
   /// split stack prologue.
   bool HasNoSplitStack = false;
+
+  /// Raw FDOstream for outputting machine basic block frequncies if the
+  /// --mbb-profile-dump flag is set for downstream cost modelling applications
+  std::unique_ptr<raw_fd_ostream> MBBProfileDumpFileOutput;
 
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
@@ -326,6 +331,14 @@ public:
   /// local symbol if a reference to GV is guaranteed to be resolved to the
   /// definition in the same module.
   MCSymbol *getSymbolPreferLocal(const GlobalValue &GV) const;
+
+  bool doesDwarfUseRelocationsAcrossSections() const {
+    return DwarfUsesRelocationsAcrossSections;
+  }
+
+  void setDwarfUsesRelocationsAcrossSections(bool Enable) {
+    DwarfUsesRelocationsAcrossSections = Enable;
+  }
 
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
@@ -437,9 +450,9 @@ public:
 
   /// Since emitting CFI unwind information is entangled with supporting the
   /// exceptions, this returns true for platforms which use CFI unwind
-  /// information for debugging purpose when
+  /// information for other purposes (debugging, sanitizers, ...) when
   /// `MCAsmInfo::ExceptionsType == ExceptionHandling::None`.
-  bool needsCFIForDebug() const;
+  bool usesCFIWithoutEH() const;
 
   /// Print to the current output stream assembly representations of the
   /// constants in the constant pool MCP. This is used to print out constants
@@ -635,6 +648,13 @@ public:
   /// Emit a long long directive and value.
   void emitInt64(uint64_t Value) const;
 
+  /// Emit the specified signed leb128 value.
+  void emitSLEB128(int64_t Value, const char *Desc = nullptr) const;
+
+  /// Emit the specified unsigned leb128 value.
+  void emitULEB128(uint64_t Value, const char *Desc = nullptr,
+                   unsigned PadTo = 0) const;
+
   /// Emit something like ".long Hi-Lo" where the size in bytes of the directive
   /// is specified by Size and Hi/Lo specify the labels.  This implicitly uses
   /// .set if it is available.
@@ -661,13 +681,6 @@ public:
   //===------------------------------------------------------------------===//
   // Dwarf Emission Helper Routines
   //===------------------------------------------------------------------===//
-
-  /// Emit the specified signed leb128 value.
-  void emitSLEB128(int64_t Value, const char *Desc = nullptr) const;
-
-  /// Emit the specified unsigned leb128 value.
-  void emitULEB128(uint64_t Value, const char *Desc = nullptr,
-                   unsigned PadTo = 0) const;
 
   /// Emit a .byte 42 directive that corresponds to an encoding.  If verbose
   /// assembly output is enabled, we output comments describing the encoding.
@@ -755,6 +768,18 @@ public:
   void emitDwarfDIE(const DIE &Die) const;
 
   //===------------------------------------------------------------------===//
+  // CodeView Helper Routines
+  //===------------------------------------------------------------------===//
+
+  /// Gets information required to create a CodeView debug symbol for a jump
+  /// table.
+  /// Return value is <Base Address, Base Offset, Branch Address, Entry Size>
+  virtual std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
+                     codeview::JumpTableEntrySize>
+  getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
+                           const MCSymbol *BranchLabel) const;
+
+  //===------------------------------------------------------------------===//
   // Inline Asm Support
   //===------------------------------------------------------------------===//
 
@@ -820,6 +845,8 @@ private:
   mutable unsigned LastFn = 0;
   mutable unsigned Counter = ~0U;
 
+  bool DwarfUsesRelocationsAcrossSections = false;
+
   /// This method emits the header for the current function.
   virtual void emitFunctionHeader();
 
@@ -852,9 +879,9 @@ private:
   /// Emit llvm.ident metadata in an '.ident' directive.
   void emitModuleIdents(Module &M);
   /// Emit bytes for llvm.commandline metadata.
-  void emitModuleCommandLines(Module &M);
+  virtual void emitModuleCommandLines(Module &M);
 
-  GCMetadataPrinter *GetOrCreateGCPrinter(GCStrategy &S);
+  GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
   void emitGlobalAlias(Module &M, const GlobalAlias &GA);
   void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 

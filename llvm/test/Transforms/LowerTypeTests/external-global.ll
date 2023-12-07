@@ -7,7 +7,7 @@ target triple = "x86_64-scei-ps4"
 @dipsy = external constant i8, !type !0
 
 define void @tinkywinky() {
-  store i8* @dipsy, i8** undef
+  store ptr @dipsy, ptr undef
   ret void
 }
 

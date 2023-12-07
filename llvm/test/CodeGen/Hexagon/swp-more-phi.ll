@@ -19,7 +19,7 @@ b3:                                               ; preds = %b3, %b2
 b4:                                               ; preds = %b3, %b2
   %v0 = ashr i32 undef, 25
   %v1 = mul nsw i32 %v0, 2
-  %v2 = load i8, i8* undef, align 1
+  %v2 = load i8, ptr undef, align 1
   br i1 undef, label %b5, label %b10
 
 b5:                                               ; preds = %b4
@@ -38,7 +38,7 @@ b9:                                               ; preds = %b9, %b8, %b5
   %v3 = phi i8 [ %v7, %b9 ], [ undef, %b8 ], [ %v2, %b5 ]
   %v4 = phi i32 [ %v8, %b9 ], [ undef, %b8 ], [ 1, %b5 ]
   %v5 = add i32 %v4, undef
-  %v6 = load i8, i8* undef, align 1
+  %v6 = load i8, ptr undef, align 1
   %v7 = select i1 undef, i8 %v6, i8 %v3
   %v8 = add nsw i32 %v4, 1
   %v9 = icmp eq i32 %v8, %v1

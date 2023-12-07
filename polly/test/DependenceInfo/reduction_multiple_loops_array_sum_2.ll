@@ -21,7 +21,7 @@
 ; }
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 
-define void @f(i32* noalias %A, i32* noalias %sum) {
+define void @f(ptr noalias %A, ptr noalias %sum) {
 entry:
   br label %for.cond
 
@@ -40,11 +40,11 @@ for.cond1:                                        ; preds = %for.inc8, %for.body
 
 for.body3:                                        ; preds = %for.cond1
   %add = add nsw i32 %i.0, %j.0
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add
-  %tmp3 = load i32, i32* %arrayidx, align 4
-  %tmp4 = load i32, i32* %sum, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add
+  %tmp3 = load i32, ptr %arrayidx, align 4
+  %tmp4 = load i32, ptr %sum, align 4
   %add4 = add nsw i32 %tmp4, %tmp3
-  store i32 %add4, i32* %sum, align 4
+  store i32 %add4, ptr %sum, align 4
   br label %for.cond5
 
 for.cond5:                                        ; preds = %for.inc, %for.body3

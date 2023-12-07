@@ -10,5 +10,4 @@ add_llvm_unittest(DemangleTests
   OutputBufferTest.cpp
   PartialDemangleTest.cpp
   RustDemangleTest.cpp
-  StringViewTest.cpp
 )

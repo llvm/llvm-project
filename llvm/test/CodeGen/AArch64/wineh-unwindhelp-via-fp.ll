@@ -46,24 +46,24 @@ target triple = "aarch64-pc-windows-msvc19.25.28611"
 ; }
 
 %struct.A = type { [4 x i32], [16 x i8] }
-declare dso_local %struct.A* @"??0A@@QEAA@XZ"(%struct.A* returned %0)
-declare dso_local void @"??1A@@QEAA@XZ"(%struct.A* %0)
+declare dso_local ptr @"??0A@@QEAA@XZ"(ptr returned %0)
+declare dso_local void @"??1A@@QEAA@XZ"(ptr %0)
 declare dso_local i32 @__CxxFrameHandler3(...)
 declare dso_local void @"?func3@@YAXXZ"()
 
 ; Function Attrs: noinline optnone uwtable
-define dso_local void @"?func2@@YAXXZ"() #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define dso_local void @"?func2@@YAXXZ"() #0 personality ptr @__CxxFrameHandler3 {
   %1 = alloca %struct.A, align 32
-  %2 = call %struct.A* @"??0A@@QEAA@XZ"(%struct.A* %1) #3
+  %2 = call ptr @"??0A@@QEAA@XZ"(ptr %1) #3
   invoke void @"?func3@@YAXXZ"()
           to label %3 unwind label %4
 
 3:                                                ; preds = %0
-  call void @"??1A@@QEAA@XZ"(%struct.A* %1) #3
+  call void @"??1A@@QEAA@XZ"(ptr %1) #3
   ret void
 
 4:                                                ; preds = %0
   %5 = cleanuppad within none []
-  call void @"??1A@@QEAA@XZ"(%struct.A* %1) #3 [ "funclet"(token %5) ]
+  call void @"??1A@@QEAA@XZ"(ptr %1) #3 [ "funclet"(token %5) ]
   cleanupret from %5 unwind to caller
 }

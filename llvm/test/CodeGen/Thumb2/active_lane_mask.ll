@@ -323,7 +323,7 @@ define <16 x i8> @v16i8(i32 %index, i32 %TC, <16 x i8> %V1, <16 x i8> %V2) {
   ret <16 x i8> %select
 }
 
-define void @test_width2(i32* nocapture readnone %x, i32* nocapture %y, i8 zeroext %m) {
+define void @test_width2(ptr nocapture readnone %x, ptr nocapture %y, i8 zeroext %m) {
 ; CHECK-LABEL: test_width2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r7, lr}
@@ -394,15 +394,13 @@ vector.body:                                      ; preds = %vector.body, %for.b
   %index = phi i32 [ 0, %for.body.preheader ], [ %index.next, %vector.body ]
   %active.lane.mask = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 %index, i32 %wide.trip.count)
   %0 = add nsw i32 %index, -2
-  %1 = getelementptr inbounds i32, i32* %y, i32 %0
-  %2 = bitcast i32* %1 to <2 x i32>*
-  %wide.masked.load = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* %2, i32 4, <2 x i1> %active.lane.mask, <2 x i32> undef)
-  %3 = getelementptr inbounds i32, i32* %y, i32 %index
-  %4 = bitcast i32* %3 to <2 x i32>*
-  call void @llvm.masked.store.v2i32.p0v2i32(<2 x i32> %wide.masked.load, <2 x i32>* %4, i32 4, <2 x i1> %active.lane.mask)
+  %1 = getelementptr inbounds i32, ptr %y, i32 %0
+  %wide.masked.load = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %1, i32 4, <2 x i1> %active.lane.mask, <2 x i32> undef)
+  %2 = getelementptr inbounds i32, ptr %y, i32 %index
+  call void @llvm.masked.store.v2i32.p0(<2 x i32> %wide.masked.load, ptr %2, i32 4, <2 x i1> %active.lane.mask)
   %index.next = add i32 %index, 2
-  %5 = icmp eq i32 %index.next, %n.vec
-  br i1 %5, label %for.cond.cleanup, label %vector.body
+  %3 = icmp eq i32 %index.next, %n.vec
+  br i1 %3, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -413,5 +411,5 @@ declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
 declare <7 x i1> @llvm.get.active.lane.mask.v7i1.i32(i32, i32)
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)
 declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32, i32)
-declare <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>*, i32, <2 x i1>, <2 x i32>)
-declare void @llvm.masked.store.v2i32.p0v2i32(<2 x i32>, <2 x i32>*, i32, <2 x i1>)
+declare <2 x i32> @llvm.masked.load.v2i32.p0(ptr, i32, <2 x i1>, <2 x i32>)
+declare void @llvm.masked.store.v2i32.p0(<2 x i32>, ptr, i32, <2 x i1>)

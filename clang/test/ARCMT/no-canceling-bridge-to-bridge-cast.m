@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -arcmt-action=check -triple x86_64-apple-darwin10 -fsyntax-only -x objective-c -verify %s
-// rdar://10387088
 typedef const void * CFTypeRef;
 CFTypeRef CFBridgingRetain(id X);
 id CFBridgingRelease(CFTypeRef);

@@ -14,14 +14,18 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 
-# RUN: %lld -lSystem %t/test.o -o %t/test -L%t -lHasSomeObjC -ObjC
+# RUN: %lld -lSystem %t/test.o -o %t/test -L%t -lHasSomeObjC -ObjC 
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=OBJC
 
 # RUN: %lld -lSystem %t/test.o -o %t/test -L%t -lHasSomeObjC2 -ObjC
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=OBJC
 
-# RUN: %lld -lSystem %t/test.o -o %t/test --start-lib %t/no-objc.o %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/has-swift-proto.o %t/wrong-arch.o --end-lib -ObjC
+# RUN: %no-fatal-warnings-lld -lSystem %t/test.o -o %t/test --start-lib %t/no-objc.o %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/has-swift-proto.o %t/wrong-arch.o --end-lib -ObjC 2>&1 \
+# RUN:     | FileCheck -check-prefix=WARNING %s
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=OBJC
+
+# WARNING: {{.+}}wrong-arch.o has architecture armv7 which is incompatible with target architecture x86_64
+# WARNING-NOT: {{.}}
 
 # OBJC:       Sections:
 # OBJC-NEXT:  Idx Name            Size   VMA  Type

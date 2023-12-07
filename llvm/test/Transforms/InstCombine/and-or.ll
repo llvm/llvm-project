@@ -318,6 +318,17 @@ define <2 x i8> @and_or_hoist_mask_commute_vec_splat(<2 x i8> %a, <2 x i8> %b) {
   ret <2 x i8> %and
 }
 
+@g = external global i32
+
+define i32 @pr64114_and_xor_hoist_mask_constexpr() {
+; CHECK-LABEL: @pr64114_and_xor_hoist_mask_constexpr(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 xor (i32 lshr (i32 ptrtoint (ptr @g to i32), i32 8), i32 ptrtoint (ptr @g to i32)), 1
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %and = and i32 xor (i32 lshr (i32 ptrtoint (ptr @g to i32), i32 8), i32 ptrtoint (ptr @g to i32)), 1
+  ret i32 %and
+}
+
 ; Don't transform if the 'or' has multiple uses because that would increase instruction count.
 
 define i8 @and_or_do_not_hoist_mask(i8 %a, i8 %b) {
@@ -703,13 +714,13 @@ define { i1, i1, i1, i1, i1 } @or_or_and_noOneUse_fail2(i1 %a_0, i1 %a_1, i1 %a_
 ; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP2]], [[A_1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i1 [[TMP6]], [[B_1]]
 ; CHECK-NEXT:    [[D:%.*]] = or i1 [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertvalue { i1, i1, i1, i1, i1 } zeroinitializer, i1 [[D]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP9]], i1 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP10]], i1 true, 2
-; CHECK-NEXT:    [[TMP12:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP11]], i1 [[A_3]], 3
-; CHECK-NEXT:    [[TMP13:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP12]], i1 [[TMP8]], 4
-; CHECK-NEXT:    ret { i1, i1, i1, i1, i1 } [[TMP13]]
+; CHECK-NEXT:    [[DOTNOT1:%.*]] = or i1 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = insertvalue { i1, i1, i1, i1, i1 } zeroinitializer, i1 [[D]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP8]], i1 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP9]], i1 true, 2
+; CHECK-NEXT:    [[TMP11:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP10]], i1 [[A_3]], 3
+; CHECK-NEXT:    [[TMP12:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP11]], i1 [[DOTNOT1]], 4
+; CHECK-NEXT:    ret { i1, i1, i1, i1, i1 } [[TMP12]]
 ;
 entry:
   %0 = and i1 %a_0, %b_0

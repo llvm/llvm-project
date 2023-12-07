@@ -17,10 +17,10 @@ entry:
 }
 
 ; CHECK-LABEL: @f1(
-; CHECK: ptrtoint i64*
+; CHECK: ptrtoint ptr
 ; CHECK: tail call addrspace(1) void @f0(i64
 
-define void @f1(i64* %p0) {
+define void @f1(ptr %p0) {
 entry:
   call void @stuff()
   call void @stuff()

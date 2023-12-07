@@ -23,7 +23,7 @@ cleanup:
 define void @test2() {
 ; CHECK-LABEL: test2:
 entry:
-  %0 = load i32, i32* @X, align 4
+  %0 = load i32, ptr @X, align 4
   %and = and i32 %0, 1
   %tobool = icmp eq i32 %and, 0
   br i1 %tobool, label %if.end10, label %if.then
@@ -36,11 +36,11 @@ if.then:
           to label %if.then4 [label %if.end6]
 
 if.then4:
-  %call5 = tail call i32 bitcast (i32 (...)* @g to i32 ()*)()
+  %call5 = tail call i32 @g()
   br label %if.end6
 
 if.end6:
-  %.pre = load i32, i32* @X, align 4
+  %.pre = load i32, ptr @X, align 4
   %.pre13 = and i32 %.pre, 1
   %phitmp = icmp eq i32 %.pre13, 0
   br i1 %phitmp, label %if.end10, label %if.then9

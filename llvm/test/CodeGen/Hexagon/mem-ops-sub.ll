@@ -7,26 +7,26 @@
 ; Function Attrs: norecurse nounwind
 define fastcc void @f0() unnamed_addr #0 {
 b0:
-  %v0 = load i8, i8* @g0, align 1, !tbaa !4
+  %v0 = load i8, ptr @g0, align 1, !tbaa !4
   %v1 = zext i8 %v0 to i32
   %v2 = mul nuw nsw i32 %v1, 9625
   %v3 = and i32 %v2, 255
   %v4 = mul nuw nsw i32 %v3, 9625
   %v5 = and i32 %v4, 255
   %v6 = trunc i32 %v5 to i8
-  store i8 %v6, i8* @g0, align 1, !tbaa !4
+  store i8 %v6, ptr @g0, align 1, !tbaa !4
   ret void
 }
 
 define i32 @f1() {
 b0:
-  %v0 = load i8, i8* @g0, align 1, !tbaa !4
+  %v0 = load i8, ptr @g0, align 1, !tbaa !4
   %v1 = zext i8 %v0 to i32
   %v2 = add nuw nsw i32 %v1, 224
   %v3 = trunc i32 %v2 to i8
-  store i8 %v3, i8* @g0, align 1, !tbaa !4
+  store i8 %v3, ptr @g0, align 1, !tbaa !4
   tail call fastcc void @f0()
-  %v4 = load i8, i8* @g0, align 1, !tbaa !4
+  %v4 = load i8, ptr @g0, align 1, !tbaa !4
   %v5 = zext i8 %v4 to i32
   ret i32 %v5
 }

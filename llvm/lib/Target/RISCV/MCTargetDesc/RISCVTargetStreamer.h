@@ -1,4 +1,4 @@
-//===-- RISCVTargetStreamer.h - RISCV Target Streamer ----------*- C++ -*--===//
+//===-- RISCVTargetStreamer.h - RISC-V Target Streamer ---------*- C++ -*--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,6 +17,20 @@ namespace llvm {
 
 class formatted_raw_ostream;
 
+enum class RISCVOptionArchArgType {
+  Full,
+  Plus,
+  Minus,
+};
+
+struct RISCVOptionArchArg {
+  RISCVOptionArchArgType Type;
+  std::string Value;
+
+  RISCVOptionArchArg(RISCVOptionArchArgType Type, std::string Value)
+      : Type(Type), Value(Value) {}
+};
+
 class RISCVTargetStreamer : public MCTargetStreamer {
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
 
@@ -33,6 +47,7 @@ public:
   virtual void emitDirectiveOptionNoRVC();
   virtual void emitDirectiveOptionRelax();
   virtual void emitDirectiveOptionNoRelax();
+  virtual void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args);
   virtual void emitDirectiveVariantCC(MCSymbol &Symbol);
   virtual void emitAttribute(unsigned Attribute, unsigned Value);
   virtual void finishAttributeSection();
@@ -40,7 +55,7 @@ public:
   virtual void emitIntTextAttribute(unsigned Attribute, unsigned IntValue,
                                     StringRef StringValue);
 
-  void emitTargetAttributes(const MCSubtargetInfo &STI);
+  void emitTargetAttributes(const MCSubtargetInfo &STI, bool EmitStackAlign);
   void setTargetABI(RISCVABI::ABI ABI);
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
 };
@@ -66,6 +81,7 @@ public:
   void emitDirectiveOptionNoRVC() override;
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
+  void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args) override;
   void emitDirectiveVariantCC(MCSymbol &Symbol) override;
 };
 

@@ -156,7 +156,7 @@ private:
 
   Type getVoidType() { return mlirBuilder.getNoneType(); }
 
-  bool isVoidType(Type type) const { return type.isa<NoneType>(); }
+  bool isVoidType(Type type) const { return isa<NoneType>(type); }
 
   /// Returns true if the given type is a pointer type to a struct in some
   /// interface storage class.

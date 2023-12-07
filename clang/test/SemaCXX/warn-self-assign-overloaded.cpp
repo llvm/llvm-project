@@ -53,15 +53,15 @@ void f() {
 
 #ifndef DUMMY
   a *= a;
-  a /= a; // expected-warning {{explicitly assigning}}
-  a %= a; // expected-warning {{explicitly assigning}}
+  a /= a;
+  a %= a;
   a += a;
-  a -= a; // expected-warning {{explicitly assigning}}
+  a -= a;
   a <<= a;
   a >>= a;
-  a &= a; // expected-warning {{explicitly assigning}}
-  a |= a; // expected-warning {{explicitly assigning}}
-  a ^= a; // expected-warning {{explicitly assigning}}
+  a &= a;
+  a |= a;
+  a ^= a;
 #endif
 }
 

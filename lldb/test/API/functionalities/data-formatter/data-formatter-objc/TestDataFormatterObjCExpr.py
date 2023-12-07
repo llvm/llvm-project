@@ -13,28 +13,28 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 
 class ObjCDataFormatterExpr(ObjCDataFormatterTestCase):
-
     def test_expr_with_run_command(self):
         """Test common cases of expression parser <--> formatters interaction."""
         self.build()
         self.target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, '// Set break point at this line.',
-            lldb.SBFileSpec('main.m', False))
+            self, "// Set break point at this line.", lldb.SBFileSpec("main.m", False)
+        )
 
         # The stop reason of the thread should be breakpoint.
         self.expect(
             "thread list",
             STOPPED_DUE_TO_BREAKPOINT,
-            substrs=['stopped', 'stop reason = breakpoint'])
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
-        self.runCmd('settings set target.prefer-dynamic-value no-dynamic-values')
+        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
 
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
         def cleanup():
-            self.runCmd('type format clear', check=False)
-            self.runCmd('type summary clear', check=False)
-            self.runCmd('type synth clear', check=False)
+            self.runCmd("type format clear", check=False)
+            self.runCmd("type summary clear", check=False)
+            self.runCmd("type synth clear", check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -44,22 +44,27 @@ class ObjCDataFormatterExpr(ObjCDataFormatterTestCase):
         self.expect(
             'expression ((id)@"Hello for long enough to avoid short string types")',
             matching=False,
-            substrs=['Hello for long enough to avoid short string types'])
+            substrs=["Hello for long enough to avoid short string types"],
+        )
 
         self.expect(
             'expression -d run -- ((id)@"Hello for long enough to avoid short string types")',
-            substrs=['Hello for long enough to avoid short string types'])
+            substrs=["Hello for long enough to avoid short string types"],
+        )
 
-        self.expect('expr -d run -- label1', substrs=['Process Name'])
+        self.expect("expr -d run -- label1", substrs=["Process Name"])
 
         self.expect(
             'expr -d run -- @"Hello for long enough to avoid short string types"',
-            substrs=['Hello for long enough to avoid short string types'])
+            substrs=["Hello for long enough to avoid short string types"],
+        )
 
         self.expect(
             'expr -d run --object-description -- @"Hello for long enough to avoid short string types"',
-            substrs=['Hello for long enough to avoid short string types'])
+            substrs=["Hello for long enough to avoid short string types"],
+        )
         self.expect(
             'expr -d run --object-description -- @"Hello"',
             matching=False,
-            substrs=['@"Hello" Hello'])
+            substrs=['@"Hello" Hello'],
+        )

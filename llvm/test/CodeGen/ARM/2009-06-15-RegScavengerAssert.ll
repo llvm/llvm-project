@@ -2,23 +2,23 @@
 
   %struct.term = type { i32, i32, i32 }
 
-declare fastcc i8* @memory_Malloc(i32) nounwind
+declare fastcc ptr @memory_Malloc(i32) nounwind
 
-define fastcc %struct.term* @t1() nounwind {
+define fastcc ptr @t1() nounwind {
 entry:
 	br i1 undef, label %bb, label %bb1
 
 bb:		; preds = %entry
-	ret %struct.term* undef
+	ret ptr undef
 
 bb1:		; preds = %entry
-	%0 = tail call fastcc i8* @memory_Malloc(i32 12) nounwind		; <i8*> [#uses=0]
-	%1 = tail call fastcc i8* @memory_Malloc(i32 12) nounwind		; <i8*> [#uses=0]
-	ret %struct.term* undef
+	%0 = tail call fastcc ptr @memory_Malloc(i32 12) nounwind		; <ptr> [#uses=0]
+	%1 = tail call fastcc ptr @memory_Malloc(i32 12) nounwind		; <ptr> [#uses=0]
+	ret ptr undef
 }
 
 
-define i32 @t2(i32 %argc, i8** nocapture %argv) nounwind {
+define i32 @t2(i32 %argc, ptr nocapture %argv) nounwind {
 entry:
 	br label %bb6.i8
 
@@ -30,10 +30,10 @@ bb.i.i9:		; preds = %bb6.i8
 
 memory_CalculateRealBlockSize1374.exit.i:		; preds = %bb.i.i9, %bb6.i8
 	%0 = phi i32 [ undef, %bb.i.i9 ], [ undef, %bb6.i8 ]		; <i32> [#uses=2]
-	store i32 %0, i32* undef, align 4
+	store i32 %0, ptr undef, align 4
 	%1 = urem i32 8184, %0		; <i32> [#uses=1]
 	%2 = sub i32 8188, %1		; <i32> [#uses=1]
-	store i32 %2, i32* undef, align 4
+	store i32 %2, ptr undef, align 4
 	br i1 undef, label %memory_Init.exit, label %bb6.i8
 
 memory_Init.exit:		; preds = %memory_CalculateRealBlockSize1374.exit.i

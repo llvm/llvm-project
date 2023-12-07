@@ -24,8 +24,9 @@ using namespace lld;
 using namespace lld::coff;
 
 AutoExporter::AutoExporter(
+    COFFLinkerContext &ctx,
     const llvm::DenseSet<StringRef> &manualExcludeSymbols)
-    : manualExcludeSymbols(manualExcludeSymbols) {
+    : manualExcludeSymbols(manualExcludeSymbols), ctx(ctx) {
   excludeLibs = {
       "libgcc",
       "libgcc_s",
@@ -48,6 +49,9 @@ AutoExporter::AutoExporter(
       "libclang_rt.profile-x86_64",
       "libc++",
       "libc++abi",
+      "libFortran_main",
+      "libFortranRuntime",
+      "libFortranDecimal",
       "libunwind",
       "libmsvcrt",
       "libucrtbase",
@@ -80,7 +84,7 @@ AutoExporter::AutoExporter(
       "_NULL_THUNK_DATA",
   };
 
-  if (config->machine == I386) {
+  if (ctx.config.machine == I386) {
     excludeSymbols = {
         "__NULL_IMPORT_DESCRIPTOR",
         "__pei386_runtime_relocator",
@@ -128,8 +132,7 @@ void AutoExporter::addExcludedSymbol(StringRef symbol) {
   excludeSymbols.insert(symbol);
 }
 
-bool AutoExporter::shouldExport(const COFFLinkerContext &ctx,
-                                Defined *sym) const {
+bool AutoExporter::shouldExport(Defined *sym) const {
   if (!sym || !sym->getChunk())
     return false;
 
@@ -141,10 +144,10 @@ bool AutoExporter::shouldExport(const COFFLinkerContext &ctx,
     return false;
 
   for (StringRef prefix : excludeSymbolPrefixes.keys())
-    if (sym->getName().startswith(prefix))
+    if (sym->getName().starts_with(prefix))
       return false;
   for (StringRef suffix : excludeSymbolSuffixes.keys())
-    if (sym->getName().endswith(suffix))
+    if (sym->getName().ends_with(suffix))
       return false;
 
   // If a corresponding __imp_ symbol exists and is defined, don't export it.
@@ -167,14 +170,15 @@ bool AutoExporter::shouldExport(const COFFLinkerContext &ctx,
   return !excludeObjects.count(fileName);
 }
 
-void lld::coff::writeDefFile(StringRef name) {
+void lld::coff::writeDefFile(StringRef name,
+                             const std::vector<Export> &exports) {
   std::error_code ec;
   raw_fd_ostream os(name, ec, sys::fs::OF_None);
   if (ec)
     fatal("cannot open " + name + ": " + ec.message());
 
   os << "EXPORTS\n";
-  for (Export &e : config->exports) {
+  for (const Export &e : exports) {
     os << "    " << e.exportName << " "
        << "@" << e.ordinal;
     if (auto *def = dyn_cast_or_null<Defined>(e.sym)) {
@@ -186,9 +190,9 @@ void lld::coff::writeDefFile(StringRef name) {
   }
 }
 
-static StringRef mangle(Twine sym) {
-  assert(config->machine != IMAGE_FILE_MACHINE_UNKNOWN);
-  if (config->machine == I386)
+static StringRef mangle(Twine sym, MachineTypes machine) {
+  assert(machine != IMAGE_FILE_MACHINE_UNKNOWN);
+  if (machine == I386)
     return saver().save("_" + sym);
   return saver().save(sym);
 }
@@ -212,8 +216,10 @@ lld::coff::addWrappedSymbols(COFFLinkerContext &ctx, opt::InputArgList &args) {
     if (!sym)
       continue;
 
-    Symbol *real = ctx.symtab.addUndefined(mangle("__real_" + name));
-    Symbol *wrap = ctx.symtab.addUndefined(mangle("__wrap_" + name));
+    Symbol *real =
+        ctx.symtab.addUndefined(mangle("__real_" + name, ctx.config.machine));
+    Symbol *wrap =
+        ctx.symtab.addUndefined(mangle("__wrap_" + name, ctx.config.machine));
     v.push_back({sym, real, wrap});
 
     // These symbols may seem undefined initially, but don't bail out
@@ -254,7 +260,7 @@ void lld::coff::wrapSymbols(COFFLinkerContext &ctx,
       // referenced it or not, though.)
       if (imp) {
         DefinedLocalImport *wrapimp = make<DefinedLocalImport>(
-            saver().save("__imp_" + w.wrap->getName()), d);
+            ctx, saver().save("__imp_" + w.wrap->getName()), d);
         ctx.symtab.localImportChunks.push_back(wrapimp->getChunk());
         map[imp] = wrapimp;
       }
@@ -264,8 +270,8 @@ void lld::coff::wrapSymbols(COFFLinkerContext &ctx,
   // Update pointers in input files.
   parallelForEach(ctx.objFileInstances, [&](ObjFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
-    for (size_t i = 0, e = syms.size(); i != e; ++i)
-      if (Symbol *s = map.lookup(syms[i]))
-        syms[i] = s;
+    for (auto &sym : syms)
+      if (Symbol *s = map.lookup(sym))
+        sym = s;
   });
 }

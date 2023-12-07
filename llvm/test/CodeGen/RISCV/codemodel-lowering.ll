@@ -20,13 +20,13 @@ define i32 @lower_global(i32 %a) nounwind {
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(G)
 ; RV32I-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV32I-MEDIUM-NEXT:    ret
-  %1 = load volatile i32, i32* @G
+  %1 = load volatile i32, ptr @G
   ret i32 %1
 }
 
 ; Check lowering of blockaddresses
 
-@addr = global i8* null
+@addr = global ptr null
 
 define void @lower_blockaddress() nounwind {
 ; RV32I-SMALL-LABEL: lower_blockaddress:
@@ -43,7 +43,7 @@ define void @lower_blockaddress() nounwind {
 ; RV32I-MEDIUM-NEXT:    li a1, 1
 ; RV32I-MEDIUM-NEXT:    sw a1, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; RV32I-MEDIUM-NEXT:    ret
-  store volatile i8* blockaddress(@lower_blockaddress, %block), i8** @addr
+  store volatile ptr blockaddress(@lower_blockaddress, %block), ptr @addr
   ret void
 
 block:
@@ -96,13 +96,13 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-MEDIUM-NEXT:    addi sp, sp, 16
 ; RV32I-MEDIUM-NEXT:    ret
 entry:
-  %x = alloca i8*, align 8
-  store i8* blockaddress(@lower_blockaddress_displ, %test_block), i8** %x, align 8
+  %x = alloca ptr, align 8
+  store ptr blockaddress(@lower_blockaddress_displ, %test_block), ptr %x, align 8
   %cmp = icmp sgt i32 %w, 100
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  %addr = load i8*, i8** %x, align 8
+  %addr = load ptr, ptr %x, align 8
   br label %indirectgoto
 
 if.end:
@@ -116,7 +116,7 @@ return:
   ret i32 %retval
 
 indirectgoto:
-  indirectbr i8* %addr, [ label %test_block ]
+  indirectbr ptr %addr, [ label %test_block ]
 }
 
 ; Check lowering of constantpools
@@ -124,19 +124,38 @@ indirectgoto:
 define float @lower_constantpool(float %a) nounwind {
 ; RV32I-SMALL-LABEL: lower_constantpool:
 ; RV32I-SMALL:       # %bb.0:
-; RV32I-SMALL-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV32I-SMALL-NEXT:    flw ft0, %lo(.LCPI3_0)(a0)
-; RV32I-SMALL-NEXT:    fadd.s fa0, fa0, ft0
+; RV32I-SMALL-NEXT:    lui a0, 260096
+; RV32I-SMALL-NEXT:    fmv.w.x fa5, a0
+; RV32I-SMALL-NEXT:    fadd.s fa0, fa0, fa5
 ; RV32I-SMALL-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: lower_constantpool:
 ; RV32I-MEDIUM:       # %bb.0:
-; RV32I-MEDIUM-NEXT:  .Lpcrel_hi3:
-; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(.LCPI3_0)
-; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi3)
-; RV32I-MEDIUM-NEXT:    flw ft0, 0(a0)
-; RV32I-MEDIUM-NEXT:    fadd.s fa0, fa0, ft0
+; RV32I-MEDIUM-NEXT:    lui a0, 260096
+; RV32I-MEDIUM-NEXT:    fmv.w.x fa5, a0
+; RV32I-MEDIUM-NEXT:    fadd.s fa0, fa0, fa5
 ; RV32I-MEDIUM-NEXT:    ret
   %1 = fadd float %a, 1.0
   ret float %1
+}
+
+; Check lowering of extern_weaks
+@W = extern_weak global i32
+
+define i32 @lower_extern_weak(i32 %a) nounwind {
+; RV32I-SMALL-LABEL: lower_extern_weak:
+; RV32I-SMALL:       # %bb.0:
+; RV32I-SMALL-NEXT:    lui a0, %hi(W)
+; RV32I-SMALL-NEXT:    lw a0, %lo(W)(a0)
+; RV32I-SMALL-NEXT:    ret
+;
+; RV32I-MEDIUM-LABEL: lower_extern_weak:
+; RV32I-MEDIUM:       # %bb.0:
+; RV32I-MEDIUM-NEXT:  .Lpcrel_hi3:
+; RV32I-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(W)
+; RV32I-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi3)(a0)
+; RV32I-MEDIUM-NEXT:    lw a0, 0(a0)
+; RV32I-MEDIUM-NEXT:    ret
+  %1 = load volatile i32, ptr @W
+  ret i32 %1
 }

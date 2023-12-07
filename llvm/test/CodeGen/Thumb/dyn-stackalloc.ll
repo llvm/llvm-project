@@ -1,10 +1,10 @@
 ; RUN: llc < %s -mtriple=thumb-apple-darwin -disable-cgp-branch-opts -disable-post-ra -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=RA_GREEDY
 ; RUN: llc < %s -mtriple=thumb-apple-darwin -disable-cgp-branch-opts -disable-post-ra -regalloc=basic -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=RA_BASIC
 
-	%struct.state = type { i32, %struct.info*, float**, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i64, i64, i64, i64, i64, i8* }
-	%struct.info = type { i32, i32, i32, i32, i32, i32, i32, i8* }
+	%struct.state = type { i32, ptr, ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i64, i64, i64, i64, i64, ptr }
+	%struct.info = type { i32, i32, i32, i32, i32, i32, i32, ptr }
 
-define void @t1(%struct.state* %v) {
+define void @t1(ptr %v) {
 ; CHECK-LABEL: t1:
 ; CHECK: push
 ; CHECK: add r7, sp, #12
@@ -12,33 +12,32 @@ define void @t1(%struct.state* %v) {
 ; CHECK: mov r[[R1:[0-9]+]], sp
 ; CHECK: subs r[[R2:[0-9]+]], r[[R1]], r[[R0]]
 ; CHECK: mov sp, r[[R2]]
-	%tmp6 = load i32, i32* null
+	%tmp6 = load i32, ptr null
 	%tmp8 = alloca float, i32 %tmp6
-	store i32 1, i32* null
+	store i32 1, ptr null
 	br i1 false, label %bb123.preheader, label %return
 
 bb123.preheader:
 	br i1 false, label %bb43, label %return
 
 bb43:
-	call fastcc void @f1( float* %tmp8, float* null, i32 0 )
-	%tmp70 = load i32, i32* null
-	%tmp85 = getelementptr float, float* %tmp8, i32 0
-	call fastcc void @f2( float* null, float* null, float* %tmp85, i32 %tmp70 )
+	call fastcc void @f1( ptr %tmp8, ptr null, i32 0 )
+	%tmp70 = load i32, ptr null
+	call fastcc void @f2( ptr null, ptr null, ptr %tmp8, i32 %tmp70 )
 	ret void
 
 return:
 	ret void
 }
 
-declare fastcc void @f1(float*, float*, i32)
+declare fastcc void @f1(ptr, ptr, i32)
 
-declare fastcc void @f2(float*, float*, float*, i32)
+declare fastcc void @f2(ptr, ptr, ptr, i32)
 
-	%struct.comment = type { i8**, i32*, i32, i8* }
+	%struct.comment = type { ptr, ptr, i32, ptr }
 @str215 = external global [2 x i8]
 
-define void @t2(%struct.comment* %vc, i8* %tag, i8* %contents) {
+define void @t2(ptr %vc, ptr %tag, ptr %contents) {
 ; CHECK-LABEL: t2:
 ; CHECK: push
 ; CHECK: add r7, sp, #12
@@ -53,26 +52,26 @@ define void @t2(%struct.comment* %vc, i8* %tag, i8* %contents) {
 ; CHECK: mov sp, r[[R2]]
 ; CHECK-NOT: ldr r0, [sp
 ; CHECK: bx
-	%tmp1 = call i32 @strlen( i8* %tag )
-	%tmp3 = call i32 @strlen( i8* %contents )
+	%tmp1 = call i32 @strlen( ptr %tag )
+	%tmp3 = call i32 @strlen( ptr %contents )
 	%tmp4 = add i32 %tmp1, 2
 	%tmp5 = add i32 %tmp4, %tmp3
 	%tmp6 = alloca i8, i32 %tmp5
-	%tmp9 = call i8* @strcpy( i8* %tmp6, i8* %tag )
-	%tmp6.len = call i32 @strlen( i8* %tmp6 )
-	%tmp6.indexed = getelementptr i8, i8* %tmp6, i32 %tmp6.len
-	call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp6.indexed, i8* align 1 getelementptr inbounds ([2 x i8], [2 x i8]* @str215, i32 0, i32 0), i32 2, i1 false)
-	%tmp15 = call i8* @strcat( i8* %tmp6, i8* %contents )
-	call fastcc void @comment_add( %struct.comment* %vc, i8* %tmp6 )
+	%tmp9 = call ptr @strcpy( ptr %tmp6, ptr %tag )
+	%tmp6.len = call i32 @strlen( ptr %tmp6 )
+	%tmp6.indexed = getelementptr i8, ptr %tmp6, i32 %tmp6.len
+	call void @llvm.memcpy.p0.p0.i32(ptr align 1 %tmp6.indexed, ptr align 1 @str215, i32 2, i1 false)
+	%tmp15 = call ptr @strcat( ptr %tmp6, ptr %contents )
+	call fastcc void @comment_add( ptr %vc, ptr %tmp6 )
 	ret void
 }
 
-declare i32 @strlen(i8*)
+declare i32 @strlen(ptr)
 
-declare i8* @strcat(i8*, i8*)
+declare ptr @strcat(ptr, ptr)
 
-declare fastcc void @comment_add(%struct.comment*, i8*)
+declare fastcc void @comment_add(ptr, ptr)
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
 
-declare i8* @strcpy(i8*, i8*)
+declare ptr @strcpy(ptr, ptr)

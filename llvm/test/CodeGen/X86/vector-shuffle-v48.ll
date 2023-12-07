@@ -38,7 +38,8 @@ define <32 x i8> @foo(ptr %x0) {
 ; AVX2-NEXT:    vmovdqu 16(%rdi), %xmm2
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[u,u,u,u,u,u,u,u,u,u,u,0,2,3,5,6]
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,3,4,6,7,9,10,12,13,15,u,u,u,u,u,24,25,27,28,30,31,u,u,u,u,u,u,u,u,u,u]
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = <255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,255,255,255,255,255,255,u,u,u,u,u,u,u,u,u,u>
+; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
+; AVX2-NEXT:    # ymm3 = mem[0,1,0,1]
 ; AVX2-NEXT:    vpblendvb %ymm3, %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,u,u,u,u,1,2,4,5,7,8,10,11,13,14]
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0

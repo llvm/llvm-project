@@ -45,3 +45,39 @@ F2:
 ; UNIFORM: ret i32 %v2
 	ret i32 %B
 }
+
+; Check divergence check is skipped if there can't be divergence in
+; the function.
+define i32 @requires_single_lane_exec(i1 %cond) #0 {
+; CHECK: requires_single_lane_exec
+	br i1 %cond, label %T1, label %F1
+
+; CHECK-NOT: T1
+T1:
+	%v1 = call i32 @f1()
+	br label %Merge
+; CHECK-NOT: F1
+F1:
+	%v2 = call i32 @f2()
+	br label %Merge
+; CHECK-NOT: Merge
+Merge:
+	%A = phi i1 [true, %T1], [false, %F1]
+	%B = phi i32 [%v1, %T1], [%v2, %F1]
+	br i1 %A, label %T2, label %F2
+
+T2:
+; CHECK: T2:
+; CHECK: %v1 = call i32 @f1()
+; CHECK: call void @f3()
+; CHECK: ret i32 %v1
+	call void @f3()
+	ret i32 %B
+F2:
+; CHECK: F2:
+; CHECK: %v2 = call i32 @f2()
+; CHECK: ret i32 %v2
+	ret i32 %B
+}
+
+attributes #0 = { "amdgpu-flat-work-group-size"="1,1" }

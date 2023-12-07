@@ -85,6 +85,7 @@ struct DriverOptions {
   std::vector<std::string> searchDirectories{"."s}; // -I dir
   bool forcedForm{false}; // -Mfixed or -Mfree appeared
   bool warnOnNonstandardUsage{false}; // -Mstandard
+  bool warnOnSuspiciousUsage{false}; // -pedantic
   bool warningsAreErrors{false}; // -Werror
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::LATIN_1};
   bool lineDirectives{true}; // -P disables
@@ -352,6 +353,9 @@ int main(int argc, char *const argv[]) {
           Fortran::common::LanguageFeature::BackslashEscapes);
     } else if (arg == "-Mstandard") {
       driver.warnOnNonstandardUsage = true;
+    } else if (arg == "-pedantic") {
+      driver.warnOnNonstandardUsage = true;
+      driver.warnOnSuspiciousUsage = true;
     } else if (arg == "-fopenmp") {
       options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
       options.predefinitions.emplace_back("_OPENMP", "201511");
@@ -401,6 +405,7 @@ int main(int argc, char *const argv[]) {
       defaultKinds.set_defaultRealKind(8);
     } else if (arg == "-i8" || arg == "-fdefault-integer-8") {
       defaultKinds.set_defaultIntegerKind(8);
+      defaultKinds.set_defaultLogicalKind(8);
     } else if (arg == "-help" || arg == "--help" || arg == "-?") {
       llvm::errs()
           << "f18-parse-demo options:\n"
@@ -443,6 +448,9 @@ int main(int argc, char *const argv[]) {
 
   if (driver.warnOnNonstandardUsage) {
     options.features.WarnOnAllNonstandard();
+  }
+  if (driver.warnOnSuspiciousUsage) {
+    options.features.WarnOnAllUsage();
   }
   if (!options.features.IsEnabled(
           Fortran::common::LanguageFeature::BackslashEscapes)) {

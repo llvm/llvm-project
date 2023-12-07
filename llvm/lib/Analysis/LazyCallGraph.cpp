@@ -673,7 +673,7 @@ bool LazyCallGraph::RefSCC::switchInternalEdgeToCall(
 
   // Run the user's callback on the merged SCCs before we actually merge them.
   if (MergeCB)
-    MergeCB(makeArrayRef(MergeRange.begin(), MergeRange.end()));
+    MergeCB(ArrayRef(MergeRange.begin(), MergeRange.end()));
 
   // If the merge range is empty, then adding the edge didn't actually form any
   // new cycles. We're done.

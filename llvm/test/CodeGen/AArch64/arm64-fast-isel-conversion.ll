@@ -23,20 +23,20 @@ entry:
   %b.addr = alloca i16, align 2
   %c.addr = alloca i32, align 4
   %d.addr = alloca i64, align 8
-  store i8 %a, i8* %a.addr, align 1
-  store i16 %b, i16* %b.addr, align 2
-  store i32 %c, i32* %c.addr, align 4
-  store i64 %d, i64* %d.addr, align 8
-  %tmp = load i64, i64* %d.addr, align 8
+  store i8 %a, ptr %a.addr, align 1
+  store i16 %b, ptr %b.addr, align 2
+  store i32 %c, ptr %c.addr, align 4
+  store i64 %d, ptr %d.addr, align 8
+  %tmp = load i64, ptr %d.addr, align 8
   %conv = trunc i64 %tmp to i32
-  store i32 %conv, i32* %c.addr, align 4
-  %tmp1 = load i32, i32* %c.addr, align 4
+  store i32 %conv, ptr %c.addr, align 4
+  %tmp1 = load i32, ptr %c.addr, align 4
   %conv2 = trunc i32 %tmp1 to i16
-  store i16 %conv2, i16* %b.addr, align 2
-  %tmp3 = load i16, i16* %b.addr, align 2
+  store i16 %conv2, ptr %b.addr, align 2
+  %tmp3 = load i16, ptr %b.addr, align 2
   %conv4 = trunc i16 %tmp3 to i8
-  store i8 %conv4, i8* %a.addr, align 1
-  %tmp5 = load i8, i8* %a.addr, align 1
+  store i8 %conv4, ptr %a.addr, align 1
+  %tmp5 = load i8, ptr %a.addr, align 1
   %conv6 = zext i8 %tmp5 to i32
   ret i32 %conv6
 }
@@ -61,20 +61,20 @@ entry:
   %b.addr = alloca i16, align 2
   %c.addr = alloca i32, align 4
   %d.addr = alloca i64, align 8
-  store i8 %a, i8* %a.addr, align 1
-  store i16 %b, i16* %b.addr, align 2
-  store i32 %c, i32* %c.addr, align 4
-  store i64 %d, i64* %d.addr, align 8
-  %tmp = load i8, i8* %a.addr, align 1
+  store i8 %a, ptr %a.addr, align 1
+  store i16 %b, ptr %b.addr, align 2
+  store i32 %c, ptr %c.addr, align 4
+  store i64 %d, ptr %d.addr, align 8
+  %tmp = load i8, ptr %a.addr, align 1
   %conv = zext i8 %tmp to i16
-  store i16 %conv, i16* %b.addr, align 2
-  %tmp1 = load i16, i16* %b.addr, align 2
+  store i16 %conv, ptr %b.addr, align 2
+  %tmp1 = load i16, ptr %b.addr, align 2
   %conv2 = zext i16 %tmp1 to i32
-  store i32 %conv2, i32* %c.addr, align 4
-  %tmp3 = load i32, i32* %c.addr, align 4
+  store i32 %conv2, ptr %c.addr, align 4
+  %tmp3 = load i32, ptr %c.addr, align 4
   %conv4 = zext i32 %tmp3 to i64
-  store i64 %conv4, i64* %d.addr, align 8
-  %tmp5 = load i64, i64* %d.addr, align 8
+  store i64 %conv4, ptr %d.addr, align 8
+  %tmp5 = load i64, ptr %d.addr, align 8
   ret i64 %tmp5
 }
 
@@ -116,20 +116,20 @@ entry:
   %b.addr = alloca i16, align 2
   %c.addr = alloca i32, align 4
   %d.addr = alloca i64, align 8
-  store i8 %a, i8* %a.addr, align 1
-  store i16 %b, i16* %b.addr, align 2
-  store i32 %c, i32* %c.addr, align 4
-  store i64 %d, i64* %d.addr, align 8
-  %tmp = load i8, i8* %a.addr, align 1
+  store i8 %a, ptr %a.addr, align 1
+  store i16 %b, ptr %b.addr, align 2
+  store i32 %c, ptr %c.addr, align 4
+  store i64 %d, ptr %d.addr, align 8
+  %tmp = load i8, ptr %a.addr, align 1
   %conv = sext i8 %tmp to i16
-  store i16 %conv, i16* %b.addr, align 2
-  %tmp1 = load i16, i16* %b.addr, align 2
+  store i16 %conv, ptr %b.addr, align 2
+  %tmp1 = load i16, ptr %b.addr, align 2
   %conv2 = sext i16 %tmp1 to i32
-  store i32 %conv2, i32* %c.addr, align 4
-  %tmp3 = load i32, i32* %c.addr, align 4
+  store i32 %conv2, ptr %c.addr, align 4
+  %tmp3 = load i32, ptr %c.addr, align 4
   %conv4 = sext i32 %tmp3 to i64
-  store i64 %conv4, i64* %d.addr, align 8
-  %tmp5 = load i64, i64* %d.addr, align 8
+  store i64 %conv4, ptr %d.addr, align 8
+  %tmp5 = load i64, ptr %d.addr, align 8
   ret i64 %tmp5
 }
 
@@ -410,9 +410,9 @@ define void @stack_trunc() nounwind {
 ; CHECK: add  sp, sp, #16
   %a = alloca i8, align 1
   %b = alloca i64, align 8
-  %c = load i64, i64* %b, align 8
+  %c = load i64, ptr %b, align 8
   %d = trunc i64 %c to i8
-  store i8 %d, i8* %a, align 1
+  store i8 %d, ptr %a, align 1
   ret void
 }
 

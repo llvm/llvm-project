@@ -119,10 +119,10 @@ if.else:
 }
 
 ; The masks used are suitable for umull, sink shufflevector to users.
-define <8 x i16> @sink_shufflevector_umull(<16 x i8> %a, <16 x i8> %b) {
+define <8 x i16> @sink_shufflevector_umull(<16 x i8> %a, <16 x i8> %b, i1 %c) {
 ; CHECK-LABEL: @sink_shufflevector_umull(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -137,7 +137,7 @@ define <8 x i16> @sink_shufflevector_umull(<16 x i8> %a, <16 x i8> %b) {
 entry:
   %s1 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %s3 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  br i1 undef, label %if.then, label %if.else
+  br i1 %c, label %if.then, label %if.else
 
 if.then:
   %s2 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -151,10 +151,10 @@ if.else:
 }
 
 ; Both exts and their shufflevector operands can be sunk.
-define <8 x i16> @sink_shufflevector_ext_subadd(<16 x i8> %a, <16 x i8> %b) {
+define <8 x i16> @sink_shufflevector_ext_subadd(<16 x i8> %a, <16 x i8> %b, i1 %c) {
 ; CHECK-LABEL: @sink_shufflevector_ext_subadd(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i16>
@@ -175,7 +175,7 @@ entry:
   %z1 = zext <8 x i8> %s1 to <8 x i16>
   %s3 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %z3 = sext <8 x i8> %s3 to <8 x i16>
-  br i1 undef, label %if.then, label %if.else
+  br i1 %c, label %if.then, label %if.else
 
 if.then:
   %s2 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -194,13 +194,13 @@ if.else:
 declare void @user1(<8 x i16>)
 
 ; Both exts and their shufflevector operands can be sunk.
-define <8 x i16> @sink_shufflevector_ext_subadd_multiuse(<16 x i8> %a, <16 x i8> %b) {
+define <8 x i16> @sink_shufflevector_ext_subadd_multiuse(<16 x i8> %a, <16 x i8> %b, i1 %c) {
 ; CHECK-LABEL: @sink_shufflevector_ext_subadd_multiuse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S3:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[Z3:%.*]] = sext <8 x i8> [[S3]] to <8 x i16>
 ; CHECK-NEXT:    call void @user1(<8 x i16> [[Z3]])
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i16>
@@ -222,7 +222,7 @@ entry:
   %s3 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %z3 = sext <8 x i8> %s3 to <8 x i16>
   call void @user1(<8 x i16> %z3)
-  br i1 undef, label %if.then, label %if.else
+  br i1 %c, label %if.then, label %if.else
 
 if.then:
   %s2 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -239,12 +239,12 @@ if.else:
 
 
 ; The masks used are not suitable for umull, do not sink.
-define <8 x i16> @no_sink_shufflevector_umull(<16 x i8> %a, <16 x i8> %b) {
+define <8 x i16> @no_sink_shufflevector_umull(<16 x i8> %a, <16 x i8> %b, i1 %c) {
 ; CHECK-LABEL: @no_sink_shufflevector_umull(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[S3:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[VMULL0:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> [[S1]], <8 x i8> [[S2]])
@@ -257,7 +257,7 @@ define <8 x i16> @no_sink_shufflevector_umull(<16 x i8> %a, <16 x i8> %b) {
 entry:
   %s1 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 5, i32 6, i32 7>
   %s3 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  br i1 undef, label %if.then, label %if.else
+  br i1 %c, label %if.then, label %if.else
 
 if.then:
   %s2 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

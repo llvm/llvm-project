@@ -172,6 +172,129 @@ int __tsan_on_finalize(int failed);
 // Release TSan internal memory in a best-effort manner.
 void __tsan_flush_memory();
 
+// User-provided default TSAN options.
+const char* __tsan_default_options(void);
+
+// User-provided default TSAN suppressions.
+const char* __tsan_default_suppressions(void);
+
+/// Returns a report's description.
+///
+/// Returns a report's description (issue type), number of duplicate issues
+/// found, counts of array data (stack traces, memory operations, locations,
+/// mutexes, threads, unique thread IDs) and a stack trace of a <c>sleep()</c>
+/// call (if one was involved in the issue).
+///
+/// \param report Opaque pointer to the current report.
+/// \param[out] description Report type description.
+/// \param[out] count Count of duplicate issues.
+/// \param[out] stack_count Count of stack traces.
+/// \param[out] mop_count Count of memory operations.
+/// \param[out] loc_count Count of locations.
+/// \param[out] mutex_count Count of mutexes.
+/// \param[out] thread_count Count of threads.
+/// \param[out] unique_tid_count Count of unique thread IDs.
+/// \param sleep_trace A buffer to store the stack trace of a <c>sleep()</c>
+/// call.
+/// \param trace_size Size in bytes of the trace buffer.
+/// \returns Returns 1 if successful, 0 if not.
+int __tsan_get_report_data(void *report, const char **description, int *count,
+                           int *stack_count, int *mop_count, int *loc_count,
+                           int *mutex_count, int *thread_count,
+                           int *unique_tid_count, void **sleep_trace,
+                           unsigned long trace_size);
+
+/// Returns information about stack traces included in the report.
+///
+/// \param report Opaque pointer to the current report.
+/// \param idx Index to the report's stacks.
+/// \param trace A buffer to store the stack trace.
+/// \param trace_size Size in bytes of the trace buffer.
+/// \returns Returns 1 if successful, 0 if not.
+int __tsan_get_report_stack(void *report, unsigned long idx, void **trace,
+                            unsigned long trace_size);
+
+/// Returns information about memory operations included in the report.
+///
+/// \param report Opaque pointer to the current report.
+/// \param idx Index to the report's memory operations.
+/// \param[out] tid Thread ID of the memory operation.
+/// \param[out] addr Address of the memory operation.
+/// \param[out] size Size of the memory operation.
+/// \param[out] write Write flag of the memory operation.
+/// \param[out] atomic Atomicity flag of the memory operation.
+/// \param trace A buffer to store the stack trace.
+/// \param trace_size Size in bytes of the trace buffer.
+/// \returns Returns 1 if successful, 0 if not.
+int __tsan_get_report_mop(void *report, unsigned long idx, int *tid,
+                          void **addr, int *size, int *write, int *atomic,
+                          void **trace, unsigned long trace_size);
+
+/// Returns information about locations included in the report.
+///
+/// \param report Opaque pointer to the current report.
+/// \param idx Index to the report's locations.
+/// \param[out] type Type of the location.
+/// \param[out] addr Address of the location.
+/// \param[out] start Start of the location.
+/// \param[out] size Size of the location.
+/// \param[out] tid Thread ID of the location.
+/// \param[out] fd File descriptor of the location.
+/// \param[out] suppressable Suppressable flag.
+/// \param trace A buffer to store the stack trace.
+/// \param trace_size Size in bytes of the trace buffer.
+/// \returns Returns 1 if successful, 0 if not.
+int __tsan_get_report_loc(void *report, unsigned long idx, const char **type,
+                          void **addr, void **start, unsigned long *size,
+                          int *tid, int *fd, int *suppressable, void **trace,
+                          unsigned long trace_size);
+
+/// Returns information about mutexes included in the report.
+///
+/// \param report Opaque pointer to the current report.
+/// \param idx Index to the report's mutexes.
+/// \param[out] mutex_id Id of the mutex.
+/// \param[out] addr Address of the mutex.
+/// \param[out] destroyed Destroyed mutex flag.
+/// \param trace A buffer to store the stack trace.
+/// \param trace_size Size in bytes of the trace buffer.
+/// \returns Returns 1 if successful, 0 if not.
+int __tsan_get_report_mutex(void *report, unsigned long idx, uint64_t *mutex_id,
+                            void **addr, int *destroyed, void **trace,
+                            unsigned long trace_size);
+
+/// Returns information about threads included in the report.
+///
+/// \param report Opaque pointer to the current report.
+/// \param idx Index to the report's threads.
+/// \param[out] tid Thread ID of the thread.
+/// \param[out] os_id Operating system's ID of the thread.
+/// \param[out] running Running flag of the thread.
+/// \param[out] name Name of the thread.
+/// \param[out] parent_tid ID of the parent thread.
+/// \param trace A buffer to store the stack trace.
+/// \param trace_size Size in bytes of the trace buffer.
+/// \returns Returns 1 if successful, 0 if not.
+int __tsan_get_report_thread(void *report, unsigned long idx, int *tid,
+                             uint64_t *os_id, int *running, const char **name,
+                             int *parent_tid, void **trace,
+                             unsigned long trace_size);
+
+/// Returns information about unique thread IDs included in the report.
+///
+/// \param report Opaque pointer to the current report.
+/// \param idx Index to the report's unique thread IDs.
+/// \param[out] tid Unique thread ID of the report.
+/// \returns Returns 1 if successful, 0 if not.
+int __tsan_get_report_unique_tid(void *report, unsigned long idx, int *tid);
+
+/// Returns the current report.
+///
+/// If TSan is currently reporting a detected issue on the current thread,
+/// returns an opaque pointer to the current report. Otherwise returns NULL.
+/// \returns An opaque pointer to the current report. Otherwise returns NULL.
+void *__tsan_get_current_report();
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

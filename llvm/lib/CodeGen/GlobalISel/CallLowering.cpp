@@ -110,6 +110,8 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   getReturnInfo(CallConv, RetTy, CB.getAttributes(), SplitArgs, DL);
   Info.CanLowerReturn = canLowerReturn(MF, CallConv, SplitArgs, IsVarArg);
 
+  Info.IsConvergent = CB.isConvergent();
+
   if (!Info.CanLowerReturn) {
     // Callee requires sret demotion.
     insertSRetOutgoingArgument(MIRBuilder, CB, Info);
@@ -306,8 +308,8 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   Register UnmergeSrcReg;
   if (LCMTy != PartLLT) {
     assert(DstRegs.size() == 1);
-    return B.buildDeleteTrailingVectorElements(DstRegs[0],
-                                               B.buildMerge(LCMTy, SrcRegs));
+    return B.buildDeleteTrailingVectorElements(
+        DstRegs[0], B.buildMergeLikeInstr(LCMTy, SrcRegs));
   } else {
     // We don't need to widen anything if we're extracting a scalar which was
     // promoted to a vector e.g. s8 -> v4s8 -> s8
@@ -386,11 +388,11 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     assert(OrigRegs.size() == 1);
     LLT OrigTy = MRI.getType(OrigRegs[0]);
 
-    unsigned SrcSize = PartLLT.getSizeInBits().getFixedSize() * Regs.size();
+    unsigned SrcSize = PartLLT.getSizeInBits().getFixedValue() * Regs.size();
     if (SrcSize == OrigTy.getSizeInBits())
-      B.buildMerge(OrigRegs[0], Regs);
+      B.buildMergeValues(OrigRegs[0], Regs);
     else {
-      auto Widened = B.buildMerge(LLT::scalar(SrcSize), Regs);
+      auto Widened = B.buildMergeLikeInstr(LLT::scalar(SrcSize), Regs);
       B.buildTrunc(OrigRegs[0], Widened);
     }
 
@@ -458,7 +460,8 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     assert(DstEltTy.getSizeInBits() % PartLLT.getSizeInBits() == 0);
 
     for (int I = 0, NumElts = LLTy.getNumElements(); I != NumElts; ++I) {
-      auto Merge = B.buildMerge(RealDstEltTy, Regs.take_front(PartsPerElt));
+      auto Merge =
+          B.buildMergeLikeInstr(RealDstEltTy, Regs.take_front(PartsPerElt));
       // Fix the type in case this is really a vector of pointers.
       MRI.setType(Merge.getReg(0), RealDstEltTy);
       EltMerges.push_back(Merge.getReg(0));
@@ -549,7 +552,7 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
       SmallVector<Register, 8> MergeParts(1, SrcReg);
       for (unsigned Size = SrcSize; Size != CoveringSize; Size += SrcSize)
         MergeParts.push_back(Undef);
-      UnmergeSrc = B.buildMerge(LCMTy, MergeParts).getReg(0);
+      UnmergeSrc = B.buildMergeLikeInstr(LCMTy, MergeParts).getReg(0);
     }
   }
 
@@ -680,7 +683,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
     if (VA.needsCustom()) {
       std::function<void()> Thunk;
       unsigned NumArgRegs = Handler.assignCustomValue(
-          Args[i], makeArrayRef(ArgLocs).slice(j), &Thunk);
+          Args[i], ArrayRef(ArgLocs).slice(j), &Thunk);
       if (Thunk)
         DelayedOutgoingRegAssignments.emplace_back(Thunk);
       if (!NumArgRegs)
@@ -845,7 +848,7 @@ void CallLowering::insertSRetLoads(MachineIRBuilder &MIRBuilder, Type *RetTy,
   unsigned NumValues = SplitVTs.size();
   Align BaseAlign = DL.getPrefTypeAlign(RetTy);
   Type *RetPtrTy = RetTy->getPointerTo(DL.getAllocaAddrSpace());
-  LLT OffsetLLTy = getLLTForType(*DL.getIntPtrType(RetPtrTy), DL);
+  LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetPtrTy), DL);
 
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
 
@@ -875,8 +878,7 @@ void CallLowering::insertSRetStores(MachineIRBuilder &MIRBuilder, Type *RetTy,
   unsigned NumValues = SplitVTs.size();
   Align BaseAlign = DL.getPrefTypeAlign(RetTy);
   unsigned AS = DL.getAllocaAddrSpace();
-  LLT OffsetLLTy =
-      getLLTForType(*DL.getIntPtrType(RetTy->getPointerTo(AS)), DL);
+  LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetTy->getPointerTo(AS)), DL);
 
   MachinePointerInfo PtrInfo(AS);
 

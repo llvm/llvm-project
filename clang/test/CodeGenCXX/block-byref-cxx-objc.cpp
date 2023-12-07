@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -std=c++11 -emit-llvm -triple %itanium_abi_triple -o - -fblocks -fexceptions | FileCheck %s
-// rdar://8594790
 
 struct A {
 	int x;
@@ -51,8 +50,6 @@ int testB() {
 // CHECK: define linkonce_odr hidden void @__destroy_helper_block_e{{4|8}}_{{20|32}}r{{24|40}}r(
 
 // CHECK: attributes #[[NOUNWIND_ATTR]] = {{{.*}}nounwind{{.*}}}
-
-// rdar://problem/11135650
 namespace test1 {
   struct A { int x; A(); ~A(); };
 

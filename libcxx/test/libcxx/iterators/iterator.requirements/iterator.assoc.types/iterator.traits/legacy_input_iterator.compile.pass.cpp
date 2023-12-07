@@ -8,17 +8,19 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// This test uses iterator types from std::filesystem, which were introduced in macOS 10.15.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+// This test uses iterator types from std::filesystem
+// XFAIL: availability-filesystem-missing
 
 // template<class I>
 // concept __iterator_traits_detail::__cpp17_input_iterator;
+
+#include "test_macros.h"
 
 #include <iterator>
 
 #include <array>
 #include <deque>
-#ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM
 #include <filesystem>
 #endif
 #include <forward_list>
@@ -59,7 +61,7 @@ static_assert(std::__iterator_traits_detail::__cpp17_input_iterator<std::deque<i
 static_assert(std::__iterator_traits_detail::__cpp17_input_iterator<std::deque<int>::const_reverse_iterator>);
 
 // <filesystem>
-#ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM
 static_assert(std::__iterator_traits_detail::__cpp17_input_iterator<std::filesystem::directory_iterator>);
 static_assert(std::__iterator_traits_detail::__cpp17_input_iterator<std::filesystem::recursive_directory_iterator>);
 #endif

@@ -1,7 +1,13 @@
-// RUN: %clang_cl_asan -Od %s -Fe%t
+// RUN: %clang_cl_asan %Od %s %Fe%t
 // RUN: %run %t
 
 #include <windows.h>
+
+#ifdef __MINGW32__
+// FIXME: remove after mingw-w64 adds this declaration.
+extern "C" size_t __cdecl _aligned_msize(void *_Memory, size_t _Alignment,
+                                         size_t _Offset);
+#endif
 
 #define CHECK_ALIGNED(ptr,alignment) \
   do { \

@@ -9,7 +9,7 @@
 #ifndef LLDB_CORE_SEARCHFILTER_H
 #define LLDB_CORE_SEARCHFILTER_H
 
-#include "lldb/Core/FileSpecList.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/StructuredData.h"
 
 #include "lldb/Utility/FileSpec.h"

@@ -15,8 +15,7 @@
 #include <functional>
 #include <memory>
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 class ClangTidyCheck;
 class ClangTidyContext;
@@ -65,13 +64,13 @@ public:
 
   /// Create instances of checks that are enabled.
   std::vector<std::unique_ptr<ClangTidyCheck>>
-  createChecks(ClangTidyContext *Context);
+  createChecks(ClangTidyContext *Context) const;
 
   /// Create instances of checks that are enabled for the current Language.
   std::vector<std::unique_ptr<ClangTidyCheck>>
-  createChecksForLanguage(ClangTidyContext *Context);
+  createChecksForLanguage(ClangTidyContext *Context) const;
 
-  typedef llvm::StringMap<CheckFactory> FactoryMap;
+  using FactoryMap = llvm::StringMap<CheckFactory>;
   FactoryMap::const_iterator begin() const { return Factories.begin(); }
   FactoryMap::const_iterator end() const { return Factories.end(); }
   bool empty() const { return Factories.empty(); }
@@ -94,7 +93,6 @@ public:
   virtual ClangTidyOptions getModuleOptions();
 };
 
-} // end namespace tidy
-} // end namespace clang
+} // namespace clang::tidy
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYMODULE_H

@@ -592,19 +592,19 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
             P->getLocation().asLocation().getExpansionLineNumber();
         int ColumnNumber =
             P->getLocation().asLocation().getExpansionColumnNumber();
+        ++NumExtraPieces;
         os << "<tr><td class=\"rowname\">Note:</td><td>"
            << "<a href=\"#Note" << NumExtraPieces << "\">line "
            << LineNumber << ", column " << ColumnNumber << "</a><br />"
            << P->getString() << "</td></tr>";
-        ++NumExtraPieces;
       }
     }
 
     // Output any other meta data.
 
-    for (PathDiagnostic::meta_iterator I = D.meta_begin(), E = D.meta_end();
-         I != E; ++I) {
-      os << "<tr><td></td><td>" << html::EscapeText(*I) << "</td></tr>\n";
+    for (const std::string &Metadata :
+         llvm::make_range(D.meta_begin(), D.meta_end())) {
+      os << "<tr><td></td><td>" << html::EscapeText(Metadata) << "</td></tr>\n";
     }
 
     os << R"<<<(

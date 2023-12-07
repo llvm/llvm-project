@@ -10,11 +10,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -22,6 +20,8 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -436,7 +436,7 @@ TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
   const cl::OptionCategory *VisibleCategories[] = {&TestCategory,
                                                    &TestCategory2};
 
-  cl::HideUnrelatedOptions(makeArrayRef(VisibleCategories));
+  cl::HideUnrelatedOptions(ArrayRef(VisibleCategories));
 
   ASSERT_EQ(cl::ReallyHidden, TestOption1.getOptionHiddenFlag())
       << "Failed to hide extra option.";
@@ -1060,7 +1060,7 @@ TEST(CommandLineTest, BadResponseFile) {
   ASSERT_STREQ(Argv[0], "clang");
   ASSERT_STREQ(Argv[1], AFileExp.c_str());
 
-#ifndef _AIX
+#if !defined(_AIX) && !defined(__MVS__)
   std::string ADirExp = std::string("@") + std::string(ADir.path());
   Argv = {"clang", ADirExp.c_str()};
   Res = cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);

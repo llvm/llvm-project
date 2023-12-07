@@ -6,24 +6,24 @@ declare void @may_not_return()
 ; The argument cannot be promoted, as we do not know whether the load can be
 ; speculatively executed.
 
-define internal i32 @callee(i32* %p) {
+define internal i32 @callee(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@callee
-; CHECK-SAME: (i32* [[P:%.*]]) {
+; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    call void @may_not_return()
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   call void @may_not_return() readnone
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   ret i32 %x
 }
 
-define void @caller(i32* %p) {
+define void @caller(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@caller
-; CHECK-SAME: (i32* [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee(i32* [[P]])
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
-  call i32 @callee(i32* %p)
+  call i32 @callee(ptr %p)
   ret void
 }

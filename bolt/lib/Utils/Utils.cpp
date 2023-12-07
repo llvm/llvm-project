@@ -66,6 +66,15 @@ std::string getUnescapedName(const StringRef &Name) {
   return Output;
 }
 
+std::optional<StringRef> getLTOCommonName(const StringRef Name) {
+  for (StringRef Suffix : {".__uniq.", ".lto_priv.", ".constprop.", ".llvm."}) {
+    size_t LTOSuffixPos = Name.find(Suffix);
+    if (LTOSuffixPos != StringRef::npos)
+      return Name.substr(0, LTOSuffixPos + Suffix.size());
+  }
+  return std::nullopt;
+}
+
 std::optional<uint8_t> readDWARFExpressionTargetReg(StringRef ExprBytes) {
   uint8_t Opcode = ExprBytes[0];
   if (Opcode == dwarf::DW_CFA_def_cfa_expression)

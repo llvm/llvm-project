@@ -11,8 +11,9 @@
 #include "TestFS.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <atomic>
 #include <chrono>
+#include <optional>
+#include <utility>
 
 namespace clang {
 namespace clangd {
@@ -33,14 +34,14 @@ public:
       FS.Files.erase(testPath("foo.cc"));
   }
 
-  std::string get(std::chrono::steady_clock::time_point FreshTime,
-                  bool ExpectParse) const {
+  std::pair<std::string, /*Parsed=*/bool>
+  get(std::chrono::steady_clock::time_point FreshTime) const {
     bool GotParse = false;
-    bool GotRead;
+    bool GotRead = false;
     std::string Result;
     read(
         FS, FreshTime,
-        [&](llvm::Optional<llvm::StringRef> Data) {
+        [&](std::optional<llvm::StringRef> Data) {
           GotParse = true;
           Value = Data.value_or("").str();
         },
@@ -48,11 +49,13 @@ public:
           GotRead = true;
           Result = Value;
         });
-    EXPECT_EQ(GotParse, ExpectParse);
     EXPECT_TRUE(GotRead);
-    return Result;
+    return {Result, GotParse};
   }
 };
+
+MATCHER_P(Parsed, Value, "") { return arg.second && arg.first == Value; }
+MATCHER_P(Cached, Value, "") { return !arg.second && arg.first == Value; }
 
 TEST(FileCacheTest, Invalidation) {
   TestCache C;
@@ -61,20 +64,20 @@ TEST(FileCacheTest, Invalidation) {
   auto MustBeFresh = StaleOK + std::chrono::hours(1);
 
   C.setContents("a");
-  EXPECT_EQ("a", C.get(StaleOK, /*ExpectParse=*/true)) << "Parsed first time";
-  EXPECT_EQ("a", C.get(StaleOK, /*ExpectParse=*/false)) << "Cached (time)";
-  EXPECT_EQ("a", C.get(MustBeFresh, /*ExpectParse=*/false)) << "Cached (stat)";
+  EXPECT_THAT(C.get(StaleOK), Parsed("a")) << "Parsed first time";
+  EXPECT_THAT(C.get(StaleOK), Cached("a")) << "Cached (time)";
+  EXPECT_THAT(C.get(MustBeFresh), Cached("a")) << "Cached (stat)";
   C.setContents("bb");
-  EXPECT_EQ("a", C.get(StaleOK, /*ExpectParse=*/false)) << "Cached (time)";
-  EXPECT_EQ("bb", C.get(MustBeFresh, /*ExpectParse=*/true)) << "Size changed";
-  EXPECT_EQ("bb", C.get(MustBeFresh, /*ExpectParse=*/true)) << "Cached (stat)";
+  EXPECT_THAT(C.get(StaleOK), Cached("a")) << "Cached (time)";
+  EXPECT_THAT(C.get(MustBeFresh), Parsed("bb")) << "Size changed";
+  EXPECT_THAT(C.get(MustBeFresh), Cached("bb")) << "Cached (stat)";
   C.setContents(nullptr);
-  EXPECT_EQ("bb", C.get(StaleOK, /*ExpectParse=*/false)) << "Cached (time)";
-  EXPECT_EQ("", C.get(MustBeFresh, /*ExpectParse=*/true)) << "Stat failed";
-  EXPECT_EQ("", C.get(MustBeFresh, /*ExpectParse=*/false)) << "Cached (404)";
+  EXPECT_THAT(C.get(StaleOK), Cached("bb")) << "Cached (time)";
+  EXPECT_THAT(C.get(MustBeFresh), Parsed("")) << "stat failed";
+  EXPECT_THAT(C.get(MustBeFresh), Cached("")) << "Cached (404)";
   C.setContents("bb"); // Match the previous stat values!
-  EXPECT_EQ("", C.get(StaleOK, /*ExpectParse=*/false)) << "Cached (time)";
-  EXPECT_EQ("bb", C.get(MustBeFresh, /*ExpectParse=*/true)) << "Size changed";
+  EXPECT_THAT(C.get(StaleOK), Cached("")) << "Cached (time)";
+  EXPECT_THAT(C.get(MustBeFresh), Parsed("bb")) << "Size changed";
 }
 
 } // namespace

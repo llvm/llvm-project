@@ -41,7 +41,10 @@ CLANG_ENABLE_BOOTSTRAP.
 
 .. code-block:: console
 
-  $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCLANG_ENABLE_BOOTSTRAP=On <path to source>
+  $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DCLANG_ENABLE_BOOTSTRAP=On \
+      -DLLVM_ENABLE_PROJECTS="clang" \
+      <path to source>/llvm
   $ ninja stage2
 
 This command itself isn't terribly useful because it assumes default
@@ -55,7 +58,11 @@ CMake option, each variable separated by a ";". As example:
 
 .. code-block:: console
 
-  $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCLANG_ENABLE_BOOTSTRAP=On -DCLANG_BOOTSTRAP_PASSTHROUGH="CMAKE_INSTALL_PREFIX;CMAKE_VERBOSE_MAKEFILE" <path to source>
+  $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DCLANG_ENABLE_BOOTSTRAP=On \
+      -DCLANG_BOOTSTRAP_PASSTHROUGH="CMAKE_INSTALL_PREFIX;CMAKE_VERBOSE_MAKEFILE" \
+      -DLLVM_ENABLE_PROJECTS="clang" \
+      <path to source>/llvm
   $ ninja stage2
 
 CMake options starting by ``BOOTSTRAP_`` will be passed only to the stage2 build.
@@ -88,7 +95,7 @@ You can build an Apple Clang compiler using the following commands:
 
 .. code-block:: console
 
-  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/Apple-stage1.cmake <path to source>
+  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/Apple-stage1.cmake <path to source>/llvm
   $ ninja stage2-distribution
 
 This CMake invocation configures the stage1 host compiler, and sets
@@ -224,7 +231,7 @@ Then, build the BOLT-optimized binary by running the following ninja command:
 
 .. code-block:: console
 
-  $ ninja clang++-bolt
+  $ ninja clang-bolt
 
 If you're seeing errors in the build process, try building with a recent
 version of Clang/LLVM by setting the CMAKE_C_COMPILER and
@@ -243,12 +250,11 @@ configuration command:
       -DBOOTSTRAP_BOOTSTRAP_LLVM_ENABLE_LLD=ON \
       -DPGO_INSTRUMENT_LTO=Thin
 
-Then, to build the final optimized binary, build the stage2-clang++-bolt
-target:
+Then, to build the final optimized binary, build the stage2-clang-bolt target:
 
 .. code-block:: console
 
-  $ ninja stage2-clang++-bolt
+  $ ninja stage2-clang-bolt
 
 3-Stage Non-Determinism
 =======================
@@ -264,12 +270,12 @@ and build a compiler (stage1), then use that compiler to rebuild the sources
 this, you have a stage2 and stage3 compiler that should be bit-for-bit
 identical.
 
-You can perform one of these 3-stage builds with LLVM & clang using the
+You can perform one of these 3-stage builds with LLVM and clang using the
 following commands:
 
 .. code-block:: console
 
-  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/3-stage.cmake <path to source>
-  $ cmake --build . --target stage3 --parallel
+  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/3-stage.cmake <path to source>/llvm
+  $ ninja stage3
 
-After the build you can compare the stage2 & stage3 compilers.
+After the build you can compare the stage2 and stage3 compilers.

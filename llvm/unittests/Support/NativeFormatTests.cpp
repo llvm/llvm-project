@@ -48,6 +48,8 @@ std::string format_number(double D, FloatStyle Style,
 TEST(NativeFormatTest, BasicIntegerTests) {
   // Simple integers with no decimal.
   EXPECT_EQ("0", format_number(0, IntegerStyle::Integer));
+  EXPECT_EQ("1", format_number(1, IntegerStyle::Integer));
+  EXPECT_EQ("-1", format_number(-1, IntegerStyle::Integer));
   EXPECT_EQ("2425", format_number(2425, IntegerStyle::Integer));
   EXPECT_EQ("-2425", format_number(-2425, IntegerStyle::Integer));
 

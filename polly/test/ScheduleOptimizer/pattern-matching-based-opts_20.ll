@@ -16,7 +16,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define internal void @kernel_tc([16 x [8 x [8 x [8 x [8 x double]]]]]* %C, [8 x [16 x [8 x double]]]* %A, [8 x [1024 x [16 x double]]]* %B) {
+define internal void @kernel_tc(ptr %C, ptr %A, ptr %B) {
 entry:
   br label %for.cond1.preheader
 
@@ -46,15 +46,15 @@ for.cond16.preheader:                             ; preds = %for.inc45, %for.con
 
 for.body18:                                       ; preds = %for.body18, %for.cond16.preheader
   %indvars.iv = phi i64 [ 0, %for.cond16.preheader ], [ %indvars.iv.next, %for.body18 ]
-  %arrayidx24 = getelementptr inbounds [8 x [16 x [8 x double]]], [8 x [16 x [8 x double]]]* %A, i64 %indvars.iv76, i64 %indvars.iv, i64 %indvars.iv82, i64 %indvars.iv79
-  %i = load double, double* %arrayidx24, align 8
-  %arrayidx32 = getelementptr inbounds [8 x [1024 x [16 x double]]], [8 x [1024 x [16 x double]]]* %B, i64 %indvars.iv73, i64 %indvars.iv70, i64 %indvars.iv76, i64 %indvars.iv85
-  %i1 = load double, double* %arrayidx32, align 8
+  %arrayidx24 = getelementptr inbounds [8 x [16 x [8 x double]]], ptr %A, i64 %indvars.iv76, i64 %indvars.iv, i64 %indvars.iv82, i64 %indvars.iv79
+  %i = load double, ptr %arrayidx24, align 8
+  %arrayidx32 = getelementptr inbounds [8 x [1024 x [16 x double]]], ptr %B, i64 %indvars.iv73, i64 %indvars.iv70, i64 %indvars.iv76, i64 %indvars.iv85
+  %i1 = load double, ptr %arrayidx32, align 8
   %mul = fmul fast double %i1, %i
-  %arrayidx44 = getelementptr inbounds [16 x [8 x [8 x [8 x [8 x double]]]]], [16 x [8 x [8 x [8 x [8 x double]]]]]* %C, i64 %indvars.iv85, i64 %indvars.iv82, i64 %indvars.iv79, i64 %indvars.iv73, i64 %indvars.iv70, i64 %indvars.iv
-  %i2 = load double, double* %arrayidx44, align 8
+  %arrayidx44 = getelementptr inbounds [16 x [8 x [8 x [8 x [8 x double]]]]], ptr %C, i64 %indvars.iv85, i64 %indvars.iv82, i64 %indvars.iv79, i64 %indvars.iv73, i64 %indvars.iv70, i64 %indvars.iv
+  %i2 = load double, ptr %arrayidx44, align 8
   %add = fadd fast double %i2, %mul
-  store double %add, double* %arrayidx44, align 8
+  store double %add, ptr %arrayidx44, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 8
   br i1 %exitcond, label %for.body18, label %for.inc45

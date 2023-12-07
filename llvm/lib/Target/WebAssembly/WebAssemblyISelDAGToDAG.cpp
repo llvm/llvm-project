@@ -29,6 +29,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-isel"
+#define PASS_NAME "WebAssembly Instruction Selection"
 
 //===--------------------------------------------------------------------===//
 /// WebAssembly-specific code to select WebAssembly machine instructions for
@@ -43,13 +44,11 @@ class WebAssemblyDAGToDAGISel final : public SelectionDAGISel {
 public:
   static char ID;
 
+  WebAssemblyDAGToDAGISel() = delete;
+
   WebAssemblyDAGToDAGISel(WebAssemblyTargetMachine &TM,
                           CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(ID, TM, OptLevel), Subtarget(nullptr) {}
-
-  StringRef getPassName() const override {
-    return "WebAssembly Instruction Selection";
-  }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     LLVM_DEBUG(dbgs() << "********** ISelDAGToDAG **********\n"
@@ -85,6 +84,8 @@ private:
 } // end anonymous namespace
 
 char WebAssemblyDAGToDAGISel::ID;
+
+INITIALIZE_PASS(WebAssemblyDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 void WebAssemblyDAGToDAGISel::PreprocessISelDAG() {
   // Stack objects that should be allocated to locals are hoisted to WebAssembly
@@ -248,8 +249,22 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     SmallVector<SDValue, 16> Ops;
     for (size_t i = 1; i < Node->getNumOperands(); ++i) {
       SDValue Op = Node->getOperand(i);
-      if (i == 1 && Op->getOpcode() == WebAssemblyISD::Wrapper)
-        Op = Op->getOperand(0);
+      // Remove the wrapper when the call target is a function, an external
+      // symbol (which will be lowered to a library function), or an alias of
+      // a function. If the target is not a function/external symbol, we
+      // shouldn't remove the wrapper, because we cannot call it directly and
+      // instead we want it to be loaded with a CONST instruction and called
+      // with a call_indirect later.
+      if (i == 1 && Op->getOpcode() == WebAssemblyISD::Wrapper) {
+        SDValue NewOp = Op->getOperand(0);
+        if (auto *GlobalOp = dyn_cast<GlobalAddressSDNode>(NewOp.getNode())) {
+          if (isa<Function>(
+                  GlobalOp->getGlobal()->stripPointerCastsAndAliases()))
+            Op = NewOp;
+        } else if (isa<ExternalSymbolSDNode>(NewOp.getNode())) {
+          Op = NewOp;
+        }
+      }
       Ops.push_back(Op);
     }
 

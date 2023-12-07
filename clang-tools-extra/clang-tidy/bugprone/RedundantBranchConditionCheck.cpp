@@ -16,9 +16,7 @@
 using namespace clang::ast_matchers;
 using clang::tidy::utils::hasPtrOrReferenceInFunc;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 static const char CondVarStr[] = "cond_var";
 static const char OuterIfStr[] = "outer_if";
@@ -78,7 +76,7 @@ void RedundantBranchConditionCheck::check(const MatchFinder::MatchResult &Result
   const auto *CondVar = Result.Nodes.getNodeAs<VarDecl>(CondVarStr);
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>(FuncStr);
 
-  const DeclRefExpr *OuterIfVar, *InnerIfVar;
+  const DeclRefExpr *OuterIfVar = nullptr, *InnerIfVar = nullptr;
   if (const auto *Inner = Result.Nodes.getNodeAs<DeclRefExpr>(InnerIfVar1Str))
     InnerIfVar = Inner;
   else
@@ -177,6 +175,4 @@ void RedundantBranchConditionCheck::check(const MatchFinder::MatchResult &Result
   }
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

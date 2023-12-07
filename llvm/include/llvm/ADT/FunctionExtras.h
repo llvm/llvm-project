@@ -59,7 +59,7 @@ namespace detail {
 
 template <typename T>
 using EnableIfTrivial =
-    std::enable_if_t<llvm::is_trivially_move_constructible<T>::value &&
+    std::enable_if_t<std::is_trivially_move_constructible<T>::value &&
                      std::is_trivially_destructible<T>::value>;
 template <typename CallableT, typename ThisT>
 using EnableUnlessSameType =
@@ -99,11 +99,11 @@ protected:
   template <typename T> struct AdjustedParamTBase {
     static_assert(!std::is_reference<T>::value,
                   "references should be handled by template specialization");
-    using type = std::conditional_t<
-        llvm::is_trivially_copy_constructible<T>::value &&
-            llvm::is_trivially_move_constructible<T>::value &&
-            IsSizeLessThanThresholdT<T>::value,
-        T, T &>;
+    using type =
+        std::conditional_t<std::is_trivially_copy_constructible<T>::value &&
+                               std::is_trivially_move_constructible<T>::value &&
+                               IsSizeLessThanThresholdT<T>::value,
+                           T, T &>;
   };
 
   // This specialization ensures that 'AdjustedParam<V<T>&>' or
@@ -172,16 +172,15 @@ protected:
   bool isInlineStorage() const { return CallbackAndInlineFlag.getInt(); }
 
   bool isTrivialCallback() const {
-    return CallbackAndInlineFlag.getPointer().template is<TrivialCallback *>();
+    return isa<TrivialCallback *>(CallbackAndInlineFlag.getPointer());
   }
 
   CallPtrT getTrivialCallback() const {
-    return CallbackAndInlineFlag.getPointer().template get<TrivialCallback *>()->CallPtr;
+    return cast<TrivialCallback *>(CallbackAndInlineFlag.getPointer())->CallPtr;
   }
 
   NonTrivialCallbacks *getNonTrivialCallbacks() const {
-    return CallbackAndInlineFlag.getPointer()
-        .template get<NonTrivialCallbacks *>();
+    return cast<NonTrivialCallbacks *>(CallbackAndInlineFlag.getPointer());
   }
 
   CallPtrT getCallPtr() const {

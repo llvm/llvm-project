@@ -427,6 +427,9 @@ __isl_give isl_set *isl_pw_multi_aff_as_set(__isl_take isl_pw_multi_aff *pma)
  * of the piecewise affine expressions to the range of "mpa"
  * with each dimension in the range equated to the
  * corresponding piecewise affine expression.
+ *
+ * If "mpa" has an explicit domain (i.e., it is zero-dimensional),
+ * then return a set or map with the same (parameter) domain.
  */
 static __isl_give isl_map *map_from_multi_pw_aff(
 	__isl_take isl_multi_pw_aff *mpa)
@@ -458,6 +461,8 @@ static __isl_give isl_map *map_from_multi_pw_aff(
 	}
 
 	map = isl_map_reset_space(map, isl_multi_pw_aff_get_space(mpa));
+
+	map = isl_map_intersect_multi_pw_aff_explicit_domain(map, mpa);
 
 	isl_multi_pw_aff_free(mpa);
 	return map;

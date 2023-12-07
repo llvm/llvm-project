@@ -14,7 +14,7 @@
 ; CHECK-LABEL: bb.0.entry:
 ; INSTRREF:    DBG_PHI $rdi, 1
 ; CHECK-LABEL: bb.1.next:
-; INSTRREF:    DBG_INSTR_REF 1, 0, ![[AAAVAR]]
+; INSTRREF:    DBG_INSTR_REF ![[AAAVAR]], {{.+}}, dbg-instr-ref(1, 0)
 ; DBGVALUE:    DBG_VALUE %{{[0-9]+}}, $noreg, ![[AAAVAR]]
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

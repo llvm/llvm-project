@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-aix{{.*}}
 // RUN: rm -rf %t.mcp
 // RUN: c-index-test core -print-source-symbols -dump-imported-module-files -- %s -I %S/Inputs/module -fmodules -fmodules-cache-path=%t.mcp | FileCheck %s
 

@@ -33,12 +33,12 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ; CHECK-LABEL: func16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w9, w1, w2
-; CHECK-NEXT:    and w10, w0, #0xffff
-; CHECK-NEXT:    mov w8, #65535
-; CHECK-NEXT:    add w9, w10, w9, uxth
-; CHECK-NEXT:    cmp w9, w8
-; CHECK-NEXT:    csel w0, w9, w8, lo
+; CHECK-NEXT:    mul w8, w1, w2
+; CHECK-NEXT:    and w9, w0, #0xffff
+; CHECK-NEXT:    add w8, w9, w8, uxth
+; CHECK-NEXT:    mov w9, #65535 // =0xffff
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    csel w0, w8, w9, lo
 ; CHECK-NEXT:    ret
   %a = mul i16 %y, %z
   %tmp = call i16 @llvm.uadd.sat.i16(i16 %x, i16 %a)
@@ -48,12 +48,12 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 ; CHECK-LABEL: func8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w9, w1, w2
-; CHECK-NEXT:    and w10, w0, #0xff
-; CHECK-NEXT:    mov w8, #255
-; CHECK-NEXT:    add w9, w10, w9, uxtb
-; CHECK-NEXT:    cmp w9, #255
-; CHECK-NEXT:    csel w0, w9, w8, lo
+; CHECK-NEXT:    mul w8, w1, w2
+; CHECK-NEXT:    and w9, w0, #0xff
+; CHECK-NEXT:    add w8, w9, w8, uxtb
+; CHECK-NEXT:    mov w9, #255 // =0xff
+; CHECK-NEXT:    cmp w8, #255
+; CHECK-NEXT:    csel w0, w8, w9, lo
 ; CHECK-NEXT:    ret
   %a = mul i8 %y, %z
   %tmp = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %a)
@@ -63,13 +63,13 @@ define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 define i4 @func4(i4 %x, i4 %y, i4 %z) nounwind {
 ; CHECK-LABEL: func4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w9, w1, w2
-; CHECK-NEXT:    and w10, w0, #0xf
-; CHECK-NEXT:    mov w8, #15
-; CHECK-NEXT:    and w9, w9, #0xf
-; CHECK-NEXT:    add w9, w10, w9
-; CHECK-NEXT:    cmp w9, #15
-; CHECK-NEXT:    csel w0, w9, w8, lo
+; CHECK-NEXT:    mul w8, w1, w2
+; CHECK-NEXT:    and w9, w0, #0xf
+; CHECK-NEXT:    and w8, w8, #0xf
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    mov w9, #15 // =0xf
+; CHECK-NEXT:    cmp w8, #15
+; CHECK-NEXT:    csel w0, w8, w9, lo
 ; CHECK-NEXT:    ret
   %a = mul i4 %y, %z
   %tmp = call i4 @llvm.uadd.sat.i4(i4 %x, i4 %a)

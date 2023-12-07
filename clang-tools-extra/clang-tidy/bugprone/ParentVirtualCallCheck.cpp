@@ -17,9 +17,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 using BasesVector = llvm::SmallVector<const CXXRecordDecl *, 5>;
 
@@ -147,6 +145,4 @@ void ParentVirtualCallCheck::check(const MatchFinder::MatchResult &Result) {
         getNameAsString(Parents.front()) + "::");
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

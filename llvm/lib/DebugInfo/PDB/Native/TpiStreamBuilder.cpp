@@ -61,7 +61,7 @@ void TpiStreamBuilder::addTypeRecord(ArrayRef<uint8_t> Record,
          "cause misalignment in the output TPI stream!");
   assert(Record.size() <= codeview::MaxRecordLength);
   uint16_t OneSize = (uint16_t)Record.size();
-  updateTypeIndexOffsets(makeArrayRef(&OneSize, 1));
+  updateTypeIndexOffsets(ArrayRef(&OneSize, 1));
 
   TypeRecBuffers.push_back(Record);
   // FIXME: Require it.

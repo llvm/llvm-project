@@ -1,4 +1,4 @@
-// RUN: %clang_cl_asan -Od %s -Fe%t
+// RUN: %clang_cl_asan %Od %s %Fe%t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 #include <stdio.h>
@@ -22,7 +22,7 @@ int main() {
   call_memcpy(&memcpy, buff2, buff1, 6);
 // CHECK: AddressSanitizer: stack-buffer-overflow on address [[ADDR:0x[0-9a-f]+]]
 // CHECK: WRITE of size 6 at [[ADDR]] thread T0
-// CHECK-NEXT:  __asan_{{.*}}mem{{.*}}
+// CHECK-NEXT:  mem{{.*}}
 // CHECK-NEXT:  call_mem{{.*}}
 // CHECK-NEXT:  main {{.*}}intercept_memcpy.cpp:[[@LINE-5]]
 // CHECK: Address [[ADDR]] is located in stack of thread T0 at offset {{.*}} in frame

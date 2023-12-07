@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp,+fp64 -verify-machineinstrs -o - %s | FileCheck %s
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp,+fp64 -verify-machineinstrs -early-live-intervals -o - %s | FileCheck %s
 
-define arm_aapcs_vfpcc <4 x float> @foo_v4i16(<4 x i16>* nocapture readonly %pSrc, i32 %blockSize, <4 x i16> %a) {
+define arm_aapcs_vfpcc <4 x float> @foo_v4i16(ptr nocapture readonly %pSrc, i32 %blockSize, <4 x i16> %a) {
 ; CHECK-LABEL: foo_v4i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
@@ -12,12 +12,12 @@ define arm_aapcs_vfpcc <4 x float> @foo_v4i16(<4 x i16>* nocapture readonly %pSr
 ; CHECK-NEXT:    bx lr
 entry:
   %active.lane.mask = icmp slt <4 x i16> %a, zeroinitializer
-  %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %pSrc, i32 2, <4 x i1> %active.lane.mask, <4 x i16> undef)
+  %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %pSrc, i32 2, <4 x i1> %active.lane.mask, <4 x i16> undef)
   %0 = sitofp <4 x i16> %wide.masked.load to <4 x float>
   ret <4 x float> %0
 }
 
-define arm_aapcs_vfpcc <8 x half> @foo_v8i8(<8 x i8>* nocapture readonly %pSrc, i32 %blockSize, <8 x i8> %a) {
+define arm_aapcs_vfpcc <8 x half> @foo_v8i8(ptr nocapture readonly %pSrc, i32 %blockSize, <8 x i8> %a) {
 ; CHECK-LABEL: foo_v8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
@@ -27,12 +27,12 @@ define arm_aapcs_vfpcc <8 x half> @foo_v8i8(<8 x i8>* nocapture readonly %pSrc, 
 ; CHECK-NEXT:    bx lr
 entry:
   %active.lane.mask = icmp slt <8 x i8> %a, zeroinitializer
-  %wide.masked.load = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %pSrc, i32 1, <8 x i1> %active.lane.mask, <8 x i8> undef)
+  %wide.masked.load = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %pSrc, i32 1, <8 x i1> %active.lane.mask, <8 x i8> undef)
   %0 = sitofp <8 x i8> %wide.masked.load to <8 x half>
   ret <8 x half> %0
 }
 
-define arm_aapcs_vfpcc <4 x float> @foo_v4i8(<4 x i8>* nocapture readonly %pSrc, i32 %blockSize, <4 x i8> %a) {
+define arm_aapcs_vfpcc <4 x float> @foo_v4i8(ptr nocapture readonly %pSrc, i32 %blockSize, <4 x i8> %a) {
 ; CHECK-LABEL: foo_v4i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
@@ -43,12 +43,12 @@ define arm_aapcs_vfpcc <4 x float> @foo_v4i8(<4 x i8>* nocapture readonly %pSrc,
 ; CHECK-NEXT:    bx lr
 entry:
   %active.lane.mask = icmp slt <4 x i8> %a, zeroinitializer
-  %wide.masked.load = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* %pSrc, i32 1, <4 x i1> %active.lane.mask, <4 x i8> undef)
+  %wide.masked.load = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr %pSrc, i32 1, <4 x i1> %active.lane.mask, <4 x i8> undef)
   %0 = sitofp <4 x i8> %wide.masked.load to <4 x float>
   ret <4 x float> %0
 }
 
-define arm_aapcs_vfpcc <4 x double> @foo_v4i32(<4 x i32>* nocapture readonly %pSrc, i32 %blockSize, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x double> @foo_v4i32(ptr nocapture readonly %pSrc, i32 %blockSize, <4 x i32> %a) {
 ; CHECK-LABEL: foo_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -88,15 +88,15 @@ define arm_aapcs_vfpcc <4 x double> @foo_v4i32(<4 x i32>* nocapture readonly %pS
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %active.lane.mask = icmp slt <4 x i32> %a, zeroinitializer
-  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %pSrc, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
+  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %pSrc, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
   %0 = sitofp <4 x i32> %wide.masked.load to <4 x double>
   ret <4 x double> %0
 }
 
-declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32 immarg, <4 x i1>, <4 x i16>)
+declare <4 x i16> @llvm.masked.load.v4i16.p0(ptr, i32 immarg, <4 x i1>, <4 x i16>)
 
-declare <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>*, i32 immarg, <8 x i1>, <8 x i8>)
+declare <8 x i8> @llvm.masked.load.v8i8.p0(ptr, i32 immarg, <8 x i1>, <8 x i8>)
 
-declare <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>*, i32 immarg, <4 x i1>, <4 x i8>)
+declare <4 x i8> @llvm.masked.load.v4i8.p0(ptr, i32 immarg, <4 x i1>, <4 x i8>)
 
-declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
+declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>)

@@ -68,7 +68,7 @@ public:
 
 private:
   bool HandleModuleRemark(const clang::Diagnostic &info);
-  void SetCurrentModuleProgress(llvm::StringRef module_name);
+  void SetCurrentModuleProgress(std::string module_name);
 
   typedef std::pair<clang::DiagnosticsEngine::Level, std::string>
       IDAndDiagnostic;
@@ -208,8 +208,9 @@ bool StoringDiagnosticConsumer::HandleModuleRemark(
     if (m_module_build_stack.empty()) {
       m_current_progress_up = nullptr;
     } else {
-      // Update the progress to re-show the module that was currently being
-      // built from the time the now completed module was originally began.
+      // When the just completed module began building, a module that depends on
+      // it ("module A") was effectively paused. Update the progress to re-show
+      // "module A" as continuing to be built.
       const auto &resumed_module_name = m_module_build_stack.back();
       SetCurrentModuleProgress(resumed_module_name);
     }
@@ -224,13 +225,12 @@ bool StoringDiagnosticConsumer::HandleModuleRemark(
 }
 
 void StoringDiagnosticConsumer::SetCurrentModuleProgress(
-    llvm::StringRef module_name) {
-  // Ensure the ordering of:
-  //   1. Completing the existing progress event.
-  //   2. Beginining a new progress event.
-  m_current_progress_up = nullptr;
-  m_current_progress_up = std::make_unique<Progress>(
-      llvm::formatv("Currently building module {0}", module_name));
+    std::string module_name) {
+  if (!m_current_progress_up)
+    m_current_progress_up =
+        std::make_unique<Progress>("Building Clang modules");
+
+  m_current_progress_up->Increment(1, std::move(module_name));
 }
 
 ClangModulesDeclVendor::ClangModulesDeclVendor()
@@ -329,14 +329,14 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
 
       bool is_system = true;
       bool is_framework = false;
-      auto dir =
-          HS.getFileMgr().getDirectory(module.search_path.GetStringRef());
+      auto dir = HS.getFileMgr().getOptionalDirectoryRef(
+          module.search_path.GetStringRef());
       if (!dir)
         return error();
-      auto *file = HS.lookupModuleMapFile(*dir, is_framework);
+      auto file = HS.lookupModuleMapFile(*dir, is_framework);
       if (!file)
         return error();
-      if (!HS.loadModuleMapFile(file, is_system))
+      if (!HS.loadModuleMapFile(*file, is_system))
         return error();
     }
   }

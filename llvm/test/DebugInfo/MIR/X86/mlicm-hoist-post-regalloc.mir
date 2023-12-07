@@ -86,7 +86,7 @@ body:             |
 
     %0 = PHI %2, %bb.0.entry, %1, %bb.1.while.body
     DBG_VALUE %0, _, !17, !DIExpression(), debug-location !18
-    %1 = ADD64ri8 %0, 4, implicit-def dead $eflags, debug-location !20
+    %1 = ADD64ri32 %0, 4, implicit-def dead $eflags, debug-location !20
     DBG_VALUE %1, _, !17, !DIExpression(), debug-location !18
     %3 = MOV32rm %0, 1, _, 0, _, debug-location !21 :: (load (s32) from %ir.p.addr.0)
     %4 = MOV64rm $rip, 1, _, target-flags(x86-gotpcrel) @x, _, debug-location !22 :: (load (s64) from got)

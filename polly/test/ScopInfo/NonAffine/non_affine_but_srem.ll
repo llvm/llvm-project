@@ -37,7 +37,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @pos(float* %A, i64 %n) {
+define void @pos(ptr %A, i64 %n) {
 bb:
   br label %bb1
 
@@ -48,10 +48,10 @@ bb1:                                              ; preds = %bb6, %bb
 
 bb2:                                              ; preds = %bb1
   %tmp = srem i64 %n, 42
-  %tmp3 = getelementptr inbounds float, float* %A, i64 %tmp
-  %tmp4 = load float, float* %tmp3, align 4
+  %tmp3 = getelementptr inbounds float, ptr %A, i64 %tmp
+  %tmp4 = load float, ptr %tmp3, align 4
   %tmp5 = fadd float %tmp4, 1.000000e+00
-  store float %tmp5, float* %tmp3, align 4
+  store float %tmp5, ptr %tmp3, align 4
   br label %bb6
 
 bb6:                                              ; preds = %bb2
@@ -62,7 +62,7 @@ bb8:                                              ; preds = %bb1
   ret void
 }
 
-define void @neg(float* %A, i64 %n) {
+define void @neg(ptr %A, i64 %n) {
 bb:
   br label %bb1
 
@@ -73,10 +73,10 @@ bb1:                                              ; preds = %bb6, %bb
 
 bb2:                                              ; preds = %bb1
   %tmp = srem i64 %n, -42
-  %tmp3 = getelementptr inbounds float, float* %A, i64 %tmp
-  %tmp4 = load float, float* %tmp3, align 4
+  %tmp3 = getelementptr inbounds float, ptr %A, i64 %tmp
+  %tmp4 = load float, ptr %tmp3, align 4
   %tmp5 = fadd float %tmp4, 1.000000e+00
-  store float %tmp5, float* %tmp3, align 4
+  store float %tmp5, ptr %tmp3, align 4
   br label %bb6
 
 bb6:                                              ; preds = %bb2

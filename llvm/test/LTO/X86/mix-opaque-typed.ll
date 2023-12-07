@@ -1,8 +1,6 @@
-; RUN: llvm-as -opaque-pointers=0 %s -o %t-typed.bc
-; RUN: llvm-as -opaque-pointers=1 %S/Inputs/opaque-pointers.ll -o %t-opaque.bc
-; RUN: llvm-lto2 run -o %t-lto.bc %t-typed.bc %t-opaque.bc -save-temps \
-; RUN:     -lto-opaque-pointers \
-; RUN:     -r %t-typed.bc,call_foo,px -r %t-typed.bc,foo,l \
+; RUN: llvm-as %S/Inputs/opaque-pointers.ll -o %t-opaque.bc
+; RUN: llvm-lto2 run -o %t-lto.bc %S/Inputs/typed.bc %t-opaque.bc -save-temps \
+; RUN:     -r %S/Inputs/typed.bc,call_foo,px -r %S/Inputs/typed.bc,foo,l \
 ; RUN:     -r %t-opaque.bc,foo,px
 ; RUN: opt -S -o - %t-lto.bc.0.4.opt.bc | FileCheck %s
 

@@ -25,7 +25,7 @@
 ; `a::b()` is actually associated with the function's symbol instead of the
 ; .debug_types.dwo section.
 ;
-; CHECK-ASM: xray_fn_idx,"awo",@progbits,_ZN1a1bEv{{$}}
+; CHECK-ASM: xray_fn_idx,"ao",@progbits,_ZN1a1bEv{{$}}
 ;
 ; CHECK-ELF-DAG: [[FSECT:[0-9]+]]] .text._ZN1a1bEv PROGBITS
 ; CHECK-ELF-DAG: [{{.*}}] .debug_types.dwo PROGBITS

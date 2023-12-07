@@ -41,7 +41,7 @@ protected:
 
 protected:
   /// Builds IR to extract a value from the struct at position pos
-  Value extractPtr(OpBuilder &builder, Location loc, unsigned pos);
+  Value extractPtr(OpBuilder &builder, Location loc, unsigned pos) const;
   /// Builds IR to set a value in the struct at position pos
   void setPtr(OpBuilder &builder, Location loc, unsigned pos, Value ptr);
 };

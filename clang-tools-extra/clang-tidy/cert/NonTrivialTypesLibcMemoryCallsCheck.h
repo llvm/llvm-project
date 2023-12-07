@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace cert {
+namespace clang::tidy::cert {
 
 /// Flags use of the `C` standard library functions 'memset', 'memcpy' and
 /// 'memcmp' and similar derivatives on non-trivial types.
@@ -37,8 +35,6 @@ private:
   const StringRef MemCmpNames;
 };
 
-} // namespace cert
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cert
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_NONTRIVIALTYPESLIBCMEMORYCALLSCHECK_H

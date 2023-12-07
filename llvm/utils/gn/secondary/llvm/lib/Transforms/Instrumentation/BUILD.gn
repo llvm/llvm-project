@@ -6,10 +6,12 @@ static_library("Instrumentation") {
     "//llvm/lib/MC",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [
     "AddressSanitizer.cpp",
+    "BlockCoverageInference.cpp",
     "BoundsChecking.cpp",
     "CGProfile.cpp",
     "ControlHeightReduction.cpp",

@@ -292,8 +292,8 @@ for ``IfExprAST``:
         return nullptr;
 
       // Convert condition to a bool by comparing non-equal to 0.0.
-      CondV = Builder.CreateFCmpONE(
-          CondV, ConstantFP::get(TheContext, APFloat(0.0)), "ifcond");
+      CondV = Builder->CreateFCmpONE(
+          CondV, ConstantFP::get(*TheContext, APFloat(0.0)), "ifcond");
 
 This code is straightforward and similar to what we saw before. We emit
 the expression for the condition, then compare that value to zero to get
@@ -301,16 +301,16 @@ a truth value as a 1-bit (bool) value.
 
 .. code-block:: c++
 
-      Function *TheFunction = Builder.GetInsertBlock()->getParent();
+      Function *TheFunction = Builder->GetInsertBlock()->getParent();
 
       // Create blocks for the then and else cases.  Insert the 'then' block at the
       // end of the function.
       BasicBlock *ThenBB =
-          BasicBlock::Create(TheContext, "then", TheFunction);
-      BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
-      BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
+          BasicBlock::Create(*TheContext, "then", TheFunction);
+      BasicBlock *ElseBB = BasicBlock::Create(*TheContext, "else");
+      BasicBlock *MergeBB = BasicBlock::Create(*TheContext, "ifcont");
 
-      Builder.CreateCondBr(CondV, ThenBB, ElseBB);
+      Builder->CreateCondBr(CondV, ThenBB, ElseBB);
 
 This code creates the basic blocks that are related to the if/then/else
 statement, and correspond directly to the blocks in the example above.
@@ -336,15 +336,15 @@ that LLVM supports forward references.
 .. code-block:: c++
 
       // Emit then value.
-      Builder.SetInsertPoint(ThenBB);
+      Builder->SetInsertPoint(ThenBB);
 
       Value *ThenV = Then->codegen();
       if (!ThenV)
         return nullptr;
 
-      Builder.CreateBr(MergeBB);
+      Builder->CreateBr(MergeBB);
       // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
-      ThenBB = Builder.GetInsertBlock();
+      ThenBB = Builder->GetInsertBlock();
 
 After the conditional branch is inserted, we move the builder to start
 inserting into the "then" block. Strictly speaking, this call moves the
@@ -378,15 +378,15 @@ value for code that will set up the Phi node.
 
       // Emit else block.
       TheFunction->insert(TheFunction->end(), ElseBB);
-      Builder.SetInsertPoint(ElseBB);
+      Builder->SetInsertPoint(ElseBB);
 
       Value *ElseV = Else->codegen();
       if (!ElseV)
         return nullptr;
 
-      Builder.CreateBr(MergeBB);
+      Builder->CreateBr(MergeBB);
       // codegen of 'Else' can change the current block, update ElseBB for the PHI.
-      ElseBB = Builder.GetInsertBlock();
+      ElseBB = Builder->GetInsertBlock();
 
 Code generation for the 'else' block is basically identical to codegen
 for the 'then' block. The only significant difference is the first line,
@@ -399,9 +399,9 @@ code:
 
       // Emit merge block.
       TheFunction->insert(TheFunction->end(), MergeBB);
-      Builder.SetInsertPoint(MergeBB);
+      Builder->SetInsertPoint(MergeBB);
       PHINode *PN =
-        Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "iftmp");
+        Builder->CreatePHI(Type::getDoubleTy(*TheContext), 2, "iftmp");
 
       PN->addIncoming(ThenV, ThenBB);
       PN->addIncoming(ElseV, ElseBB);
@@ -646,13 +646,13 @@ expression).
 
       // Make the new basic block for the loop header, inserting after current
       // block.
-      Function *TheFunction = Builder.GetInsertBlock()->getParent();
-      BasicBlock *PreheaderBB = Builder.GetInsertBlock();
+      Function *TheFunction = Builder->GetInsertBlock()->getParent();
+      BasicBlock *PreheaderBB = Builder->GetInsertBlock();
       BasicBlock *LoopBB =
-          BasicBlock::Create(TheContext, "loop", TheFunction);
+          BasicBlock::Create(*TheContext, "loop", TheFunction);
 
       // Insert an explicit fall through from the current block to the LoopBB.
-      Builder.CreateBr(LoopBB);
+      Builder->CreateBr(LoopBB);
 
 This code is similar to what we saw for if/then/else. Because we will
 need it to create the Phi node, we remember the block that falls through
@@ -663,11 +663,11 @@ the two blocks.
 .. code-block:: c++
 
       // Start insertion in LoopBB.
-      Builder.SetInsertPoint(LoopBB);
+      Builder->SetInsertPoint(LoopBB);
 
       // Start the PHI node with an entry for Start.
-      PHINode *Variable = Builder.CreatePHI(Type::getDoubleTy(TheContext),
-                                            2, VarName.c_str());
+      PHINode *Variable = Builder->CreatePHI(Type::getDoubleTy(*TheContext),
+                                             2, VarName);
       Variable->addIncoming(StartVal, PreheaderBB);
 
 Now that the "preheader" for the loop is set up, we switch to emitting
@@ -717,10 +717,10 @@ table.
           return nullptr;
       } else {
         // If not specified, use 1.0.
-        StepVal = ConstantFP::get(TheContext, APFloat(1.0));
+        StepVal = ConstantFP::get(*TheContext, APFloat(1.0));
       }
 
-      Value *NextVar = Builder.CreateFAdd(Variable, StepVal, "nextvar");
+      Value *NextVar = Builder->CreateFAdd(Variable, StepVal, "nextvar");
 
 Now that the body is emitted, we compute the next value of the iteration
 variable by adding the step value, or 1.0 if it isn't present.
@@ -735,8 +735,8 @@ iteration of the loop.
         return nullptr;
 
       // Convert condition to a bool by comparing non-equal to 0.0.
-      EndCond = Builder.CreateFCmpONE(
-          EndCond, ConstantFP::get(TheContext, APFloat(0.0)), "loopcond");
+      EndCond = Builder->CreateFCmpONE(
+          EndCond, ConstantFP::get(*TheContext, APFloat(0.0)), "loopcond");
 
 Finally, we evaluate the exit value of the loop, to determine whether
 the loop should exit. This mirrors the condition evaluation for the
@@ -745,15 +745,15 @@ if/then/else statement.
 .. code-block:: c++
 
       // Create the "after loop" block and insert it.
-      BasicBlock *LoopEndBB = Builder.GetInsertBlock();
+      BasicBlock *LoopEndBB = Builder->GetInsertBlock();
       BasicBlock *AfterBB =
-          BasicBlock::Create(TheContext, "afterloop", TheFunction);
+          BasicBlock::Create(*TheContext, "afterloop", TheFunction);
 
       // Insert the conditional branch into the end of LoopEndBB.
-      Builder.CreateCondBr(EndCond, LoopBB, AfterBB);
+      Builder->CreateCondBr(EndCond, LoopBB, AfterBB);
 
       // Any new code will be inserted in AfterBB.
-      Builder.SetInsertPoint(AfterBB);
+      Builder->SetInsertPoint(AfterBB);
 
 With the code for the body of the loop complete, we just need to finish
 up the control flow for it. This code remembers the end block (for the
@@ -775,7 +775,7 @@ insertion position to it.
         NamedValues.erase(VarName);
 
       // for expr always returns 0.0.
-      return Constant::getNullValue(Type::getDoubleTy(TheContext));
+      return Constant::getNullValue(Type::getDoubleTy(*TheContext));
     }
 
 The final code handles various cleanups: now that we have the "NextVar"

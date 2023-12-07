@@ -85,19 +85,19 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
     numOfFourHundredYearCycles--;
   }
 
-  // The reminder number of years after computing number of
+  // The remaining number of years after computing the number of
   // "four hundred year cycles" will be 4 hundred year cycles or less in 400
   // years.
   int64_t numOfHundredYearCycles = computeRemainingYears(
       TimeConstants::DAYS_PER100_YEARS, 4, &remainingDays);
 
-  // The reminder number of years after computing number of
+  // The remaining number of years after computing the number of
   // "hundred year cycles" will be 25 four year cycles or less in 100 years.
   int64_t numOfFourYearCycles =
       computeRemainingYears(TimeConstants::DAYS_PER4_YEARS, 25, &remainingDays);
 
-  // The reminder number of years after computing number of "four year cycles"
-  // will be 4 one year cycles or less in 4 years.
+  // The remaining number of years after computing the number of
+  // "four year cycles" will be 4 one year cycles or less in 4 years.
   int64_t remainingYears = computeRemainingYears(
       TimeConstants::DAYS_PER_NON_LEAP_YEAR, 4, &remainingDays);
 
@@ -109,6 +109,8 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
   int leapDay =
       !remainingYears && (numOfFourYearCycles || !numOfHundredYearCycles);
 
+  // We add 31 and 28 for the number of days in January and February, since our
+  // starting point was March 1st.
   int64_t yday = remainingDays + 31 + 28 + leapDay;
   if (yday >= TimeConstants::DAYS_PER_NON_LEAP_YEAR + leapDay)
     yday -= TimeConstants::DAYS_PER_NON_LEAP_YEAR + leapDay;
@@ -129,16 +131,19 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
 
   // All the data (years, month and remaining days) was calculated from
   // March, 2000. Thus adjust the data to be from January, 1900.
-  tm->tm_year = years + 2000 - TimeConstants::TIME_YEAR_BASE;
-  tm->tm_mon = months + 2;
-  tm->tm_mday = remainingDays + 1;
-  tm->tm_wday = wday;
-  tm->tm_yday = yday;
+  tm->tm_year = static_cast<int>(years + 2000 - TimeConstants::TIME_YEAR_BASE);
+  tm->tm_mon = static_cast<int>(months + 2);
+  tm->tm_mday = static_cast<int>(remainingDays + 1);
+  tm->tm_wday = static_cast<int>(wday);
+  tm->tm_yday = static_cast<int>(yday);
 
-  tm->tm_hour = remainingSeconds / TimeConstants::SECONDS_PER_HOUR;
-  tm->tm_min = remainingSeconds / TimeConstants::SECONDS_PER_MIN %
-               TimeConstants::SECONDS_PER_MIN;
-  tm->tm_sec = remainingSeconds % TimeConstants::SECONDS_PER_MIN;
+  tm->tm_hour =
+      static_cast<int>(remainingSeconds / TimeConstants::SECONDS_PER_HOUR);
+  tm->tm_min =
+      static_cast<int>(remainingSeconds / TimeConstants::SECONDS_PER_MIN %
+                       TimeConstants::SECONDS_PER_MIN);
+  tm->tm_sec =
+      static_cast<int>(remainingSeconds % TimeConstants::SECONDS_PER_MIN);
   // TODO(rtenneti): Need to handle timezone and update of tm_isdst.
   tm->tm_isdst = 0;
 

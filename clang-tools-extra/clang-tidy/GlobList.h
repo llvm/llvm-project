@@ -15,8 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Regex.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 /// Read-only set of strings represented as a list of positive and negative
 /// globs.
@@ -62,7 +61,6 @@ private:
   mutable llvm::StringMap<bool> Cache;
 };
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GLOBLIST_H

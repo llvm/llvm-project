@@ -1,4 +1,5 @@
 // RUN: %check_clang_tidy -std=c++14,c++17 %s readability-use-anyofallof %t -- -- -fexceptions
+// FIXME: Fix the checker to work in C++20 mode.
 
 bool good_any_of() {
   int v[] = {1, 2, 3};

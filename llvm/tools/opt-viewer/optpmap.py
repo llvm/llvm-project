@@ -19,13 +19,15 @@ def _wrapped_func(func_and_args):
     if should_print_progress:
         with _current.get_lock():
             _current.value += 1
-        sys.stdout.write('\r\t{} of {}'.format(_current.value, _total.value))
+        sys.stdout.write("\r\t{} of {}".format(_current.value, _total.value))
         sys.stdout.flush()
 
     return func(argument, filter_)
 
 
-def pmap(func, iterable, processes, should_print_progress, filter_=None, *args, **kwargs):
+def pmap(
+    func, iterable, processes, should_print_progress, filter_=None, *args, **kwargs
+):
     """
     A parallel map function that reports on its progress.
 
@@ -37,20 +39,25 @@ def pmap(func, iterable, processes, should_print_progress, filter_=None, *args, 
     """
     global _current
     global _total
-    _current = multiprocessing.Value('i', 0)
-    _total = multiprocessing.Value('i', len(iterable))
+    _current = multiprocessing.Value("i", 0)
+    _total = multiprocessing.Value("i", len(iterable))
 
     func_and_args = [(func, arg, should_print_progress, filter_) for arg in iterable]
     if processes == 1:
         result = list(map(_wrapped_func, func_and_args, *args, **kwargs))
     else:
-        pool = multiprocessing.Pool(initializer=_init,
-                                    initargs=(_current, _total,),
-                                    processes=processes)
+        pool = multiprocessing.Pool(
+            initializer=_init,
+            initargs=(
+                _current,
+                _total,
+            ),
+            processes=processes,
+        )
         result = pool.map(_wrapped_func, func_and_args, *args, **kwargs)
         pool.close()
         pool.join()
 
     if should_print_progress:
-        sys.stdout.write('\r')
+        sys.stdout.write("\r")
     return result

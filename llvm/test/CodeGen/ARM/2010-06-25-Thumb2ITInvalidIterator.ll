@@ -7,11 +7,11 @@ target triple = "thumbv7-apple-darwin3.0.0-iphoneos"
 @length = common global i32 0, align 4, !dbg !0
 
 ; Function Attrs: nounwind optsize
-define void @x0(i8* nocapture %buf, i32 %nbytes) #0 {
+define void @x0(ptr nocapture %buf, i32 %nbytes) #0 {
 entry:
-  tail call void @llvm.dbg.value(metadata i8* %buf, metadata !8, metadata !14), !dbg !15
+  tail call void @llvm.dbg.value(metadata ptr %buf, metadata !8, metadata !14), !dbg !15
   tail call void @llvm.dbg.value(metadata i32 %nbytes, metadata !16, metadata !14), !dbg !18
-  %tmp = load i32, i32* @length, !dbg !19
+  %tmp = load i32, ptr @length, !dbg !19
   %cmp = icmp eq i32 %tmp, -1, !dbg !19
   %cmp.not = xor i1 %cmp, true
   %cmp3 = icmp ult i32 %tmp, %nbytes, !dbg !19
@@ -24,7 +24,7 @@ entry:
 while.cond:                                       ; preds = %while.body, %entry
 
   %0 = phi i32 [ 0, %entry ], [ %inc, %while.body ]
-  %buf.addr.0 = getelementptr i8, i8* %buf, i32 %0
+  %buf.addr.0 = getelementptr i8, ptr %buf, i32 %0
   %cmp7 = icmp ult i32 %0, %nbytes.addr.0, !dbg !23
   br i1 %cmp7, label %land.rhs, label %while.end, !dbg !23
 
@@ -35,7 +35,7 @@ land.rhs:                                         ; preds = %while.cond
 
 while.body:                                       ; preds = %land.rhs
   %conv = trunc i32 %call to i8, !dbg !24
-  store i8 %conv, i8* %buf.addr.0, !dbg !24
+  store i8 %conv, ptr %buf.addr.0, !dbg !24
   %inc = add i32 %0, 1, !dbg !26
   br label %while.cond, !dbg !27
 

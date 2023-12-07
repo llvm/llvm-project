@@ -30,7 +30,7 @@ declare void @func() #0
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, func@
 ; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, func@
 ; GCN: s_swappc_b64
-define amdgpu_kernel void @bundle_size(i32 addrspace(1)* %arg, i32 %cnd) #0 {
+define amdgpu_kernel void @bundle_size(ptr addrspace(1) %arg, i32 %cnd) #0 {
 bb:
   %cmp = icmp eq i32 %cnd, 0
   br i1 %cmp, label %bb3, label %bb2 ; +8 dword branch
@@ -46,7 +46,7 @@ bb2:
   br label %bb3
 
 bb3:
-  store volatile i32 %cnd, i32 addrspace(1)* %arg
+  store volatile i32 %cnd, ptr addrspace(1) %arg
   ret void
 }
 

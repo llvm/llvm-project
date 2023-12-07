@@ -1,10 +1,14 @@
-# Test that cpu/processor-specific SHF_* flags are preserved.
+# Test that cpu/processor-specific SHF_* flags are preserved,
+# except SHF_X86_64_LARGE on x86_64 (which is controlled with the
+# "large" flag).
 
 # ===== x86_64 =====
 
 # RUN: yaml2obj --docnum=1 %s -o %t-x86_64.o
 # RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t-x86_64.o
 # RUN: llvm-readobj --sections %t-x86_64.o | FileCheck %s --check-prefix=X86_64
+# RUN: llvm-objcopy --rename-section=.bar=.quz,alloc,large %t-x86_64.o
+# RUN: llvm-readobj --sections %t-x86_64.o | FileCheck %s --check-prefix=X86_64-LARGE
 
 --- !ELF
 FileHeader:
@@ -22,8 +26,15 @@ Sections:
 # X86_64-NEXT:   Flags [
 # X86_64-NEXT:     SHF_ALLOC (0x2)
 # X86_64-NEXT:     SHF_WRITE (0x1)
-# X86_64-NEXT:     SHF_X86_64_LARGE (0x10000000)
 # X86_64-NEXT:   ]
+
+# X86_64-LARGE:        Name: .quz
+# X86_64-LARGE-NEXT:   Type: SHT_PROGBITS
+# X86_64-LARGE-NEXT:   Flags [
+# X86_64-LARGE-NEXT:     SHF_ALLOC (0x2)
+# X86_64-LARGE-NEXT:     SHF_WRITE (0x1)
+# X86_64-LARGE-NEXT:     SHF_X86_64_LARGE (0x10000000)
+# X86_64-LARGE-NEXT:   ]
 
 # ===== hex =====
 

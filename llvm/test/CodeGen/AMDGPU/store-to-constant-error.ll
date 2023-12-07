@@ -3,8 +3,8 @@
 
 ; SDAG: LLVM ERROR: Cannot select: {{[a-z0-9]+}}: ch = store<(store (s32) into %ir.ptr.load, addrspace 4)>
 ; GISEL: LLVM ERROR: cannot select: G_STORE %{{[0-9]+}}:vgpr(s32), %{{[0-9]+}}:vgpr(p4) :: (store (s32) into %ir.ptr.load, addrspace 4) (in function: store_to_constant_i32)
-define amdgpu_kernel void @store_to_constant_i32(i32 addrspace(4)* %ptr) {
+define amdgpu_kernel void @store_to_constant_i32(ptr addrspace(4) %ptr) {
 bb:
-  store i32 1, i32 addrspace(4)* %ptr, align 4
+  store i32 1, ptr addrspace(4) %ptr, align 4
   ret void
 }

@@ -14,14 +14,14 @@ target datalayout = "A5"
 define amdgpu_cs void @test_simple_indirect_call() {
 ; AKF_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call() {
 ; AKF_GCN-NEXT:    [[PC:%.*]] = call i64 @llvm.amdgcn.s.getpc()
-; AKF_GCN-NEXT:    [[FUN:%.*]] = inttoptr i64 [[PC]] to void ()*
+; AKF_GCN-NEXT:    [[FUN:%.*]] = inttoptr i64 [[PC]] to ptr
 ; AKF_GCN-NEXT:    call amdgpu_gfx void [[FUN]]()
 ; AKF_GCN-NEXT:    ret void
 ;
 ; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
 ; ATTRIBUTOR_GCN-SAME: () #[[ATTR0:[0-9]+]] {
 ; ATTRIBUTOR_GCN-NEXT:    [[PC:%.*]] = call i64 @llvm.amdgcn.s.getpc()
-; ATTRIBUTOR_GCN-NEXT:    [[FUN:%.*]] = inttoptr i64 [[PC]] to void ()*
+; ATTRIBUTOR_GCN-NEXT:    [[FUN:%.*]] = inttoptr i64 [[PC]] to ptr
 ; ATTRIBUTOR_GCN-NEXT:    call amdgpu_gfx void [[FUN]]()
 ; ATTRIBUTOR_GCN-NEXT:    ret void
 ;
@@ -58,7 +58,7 @@ define amdgpu_cs void @test_simple_indirect_call() {
 
 
   %pc = call i64 @llvm.amdgcn.s.getpc()
-  %fun = inttoptr i64 %pc to void()*
+  %fun = inttoptr i64 %pc to ptr
   call amdgpu_gfx void %fun()
   ret void
 }

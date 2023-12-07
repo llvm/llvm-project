@@ -343,5 +343,3 @@ struct basic_common_reference<int, HasCommonReference, X, Y> {
 } // namespace std
 static_assert(!std::common_reference_with<HasCommonReference, int>);
 static_assert(std::common_reference_with<HasCommonReference, int&>);
-
-int main(int, char**) { return 0; }

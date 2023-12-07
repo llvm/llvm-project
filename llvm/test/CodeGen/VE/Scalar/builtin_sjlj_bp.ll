@@ -1,11 +1,11 @@
 ; RUN: llc < %s -mtriple=ve | FileCheck %s
 
 %Foo = type { [125 x i8] }
-declare void @whatever(i64, %Foo*, i8**, i8*, i8*, i32)  #0
-declare i32 @llvm.eh.sjlj.setjmp(i8*) nounwind
+declare void @whatever(i64, ptr, ptr, ptr, ptr, i32)  #0
+declare i32 @llvm.eh.sjlj.setjmp(ptr) nounwind
 
 ; Function Attrs: noinline nounwind optnone
-define i32 @t_setjmp(i64 %n, %Foo* byval(%Foo) nocapture readnone align 8 %f) {
+define i32 @t_setjmp(i64 %n, ptr byval(%Foo) nocapture readnone align 8 %f) {
 ; CHECK-LABEL: t_setjmp:
 ; CHECK:       .LBB{{[0-9]+}}_5:
 ; CHECK-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
@@ -75,13 +75,12 @@ define i32 @t_setjmp(i64 %n, %Foo* byval(%Foo) nocapture readnone align 8 %f) {
 ; CHECK-NEXT:    ld %s19, 56(, %s9) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld %s18, 48(, %s9) # 8-byte Folded Reload
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %buf = alloca [5 x i8*], align 16
-  %p = alloca i8*, align 8
+  %buf = alloca [5 x ptr], align 16
+  %p = alloca ptr, align 8
   %q = alloca i8, align 64
-  %r = bitcast [5 x i8*]* %buf to i8*
   %s = alloca i8, i64 %n, align 1
-  store i8* %s, i8** %p, align 8
-  %t = call i32 @llvm.eh.sjlj.setjmp(i8* %s)
-  call void @whatever(i64 %n, %Foo* %f, i8** %p, i8* %q, i8* %s, i32 %t) #1
+  store ptr %s, ptr %p, align 8
+  %t = call i32 @llvm.eh.sjlj.setjmp(ptr %s)
+  call void @whatever(i64 %n, ptr %f, ptr %p, ptr %q, ptr %s, i32 %t) #1
   ret i32 0
 }

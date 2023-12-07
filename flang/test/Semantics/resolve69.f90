@@ -52,7 +52,7 @@ subroutine s1()
   end type derived
 
   type (derived(constVal, 3)) :: constDerivedKind
-!ERROR: Value of kind type parameter 'typekind' (nonconstval) must be a scalar INTEGER constant
+!ERROR: Value of KIND type parameter 'typekind' must be constant
 !ERROR: Invalid specification expression: reference to local entity 'nonconstval'
   type (derived(nonConstVal, 3)) :: nonConstDerivedKind
 
@@ -63,6 +63,7 @@ subroutine s1()
   type (derived(3, nonConstVal)) :: nonConstDerivedLen
 !ERROR: 'colonderivedlen' has a type derived(typekind=3_4,typelen=:) with a deferred type parameter but is neither an allocatable nor an object pointer
   type (derived(3, :)) :: colonDerivedLen
+!ERROR: Value of KIND type parameter 'typekind' must be constant
 !ERROR: 'colonderivedlen1' has a type derived(typekind=:,typelen=:) with a deferred type parameter but is neither an allocatable nor an object pointer
   type (derived( :, :)) :: colonDerivedLen1
   type (derived( :, :)), pointer :: colonDerivedLen2

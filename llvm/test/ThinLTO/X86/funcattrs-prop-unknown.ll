@@ -26,7 +26,7 @@ entry:
 ; CHECK: define void @selectcallee() {
 define void @selectcallee() {
     ; Test calls that aren't handled either as direct or indirect.
-    call void select (i1 icmp eq (ptr @global, ptr null), ptr @f, ptr @g)()
+    call void getelementptr (i8, ptr @f, i64 ptrtoint (ptr @g to i64))()
     ret void
 }
 

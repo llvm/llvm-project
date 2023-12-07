@@ -12,7 +12,7 @@ bb19:                                             ; preds = %bb18
   br label %bb21
 
 bb20:                                             ; preds = %bb21
-  %1 = load float, float* undef, align 4                 ; <float> [#uses=0]
+  %1 = load float, ptr undef, align 4                 ; <float> [#uses=0]
   %2 = fpext float undef to double                ; <double> [#uses=1]
   %3 = fdiv double %2, %a ; <double> [#uses=0]
   %indvar.next = add i64 %indvar, 1               ; <i64> [#uses=1]

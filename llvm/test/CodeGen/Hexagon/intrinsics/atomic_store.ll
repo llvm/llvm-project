@@ -13,13 +13,13 @@
 @i32Dest = global i32 0, align 4
 @i64Src  = global i64 0, align 8
 @i64Dest = global i64 0, align 8
-@ptrSrc  = global %struct.Obj* null, align 4
-@ptrDest = global %struct.Obj* null, align 4
+@ptrSrc  = global ptr null, align 4
+@ptrDest = global ptr null, align 4
 
 define void @store_i8() #0 {
 entry:
-  %i8Tmp = load i8, i8* @i8Src, align 1
-  store atomic i8 %i8Tmp, i8* @i8Dest ORDER, align 1
+  %i8Tmp = load i8, ptr @i8Src, align 1
+  store atomic i8 %i8Tmp, ptr @i8Dest ORDER, align 1
   ret void
 }
 ; CHECK-LABEL: store_i8:
@@ -28,8 +28,8 @@ entry:
 
 define void @store_i16() #0 {
 entry:
-  %i16Tmp = load i16, i16* @i16Src, align 2
-  store atomic i16 %i16Tmp, i16* @i16Dest ORDER, align 2
+  %i16Tmp = load i16, ptr @i16Src, align 2
+  store atomic i16 %i16Tmp, ptr @i16Dest ORDER, align 2
   ret void
 }
 ; CHECK-LABEL: store_i16:
@@ -38,8 +38,8 @@ entry:
 
 define void @store_i32() #0 {
 entry:
-  %i32Tmp = load i32, i32* @i32Src, align 4
-  store atomic i32 %i32Tmp, i32* @i32Dest ORDER, align 4
+  %i32Tmp = load i32, ptr @i32Src, align 4
+  store atomic i32 %i32Tmp, ptr @i32Dest ORDER, align 4
   ret void
 }
 ; CHECK-LABEL: store_i32:
@@ -48,8 +48,8 @@ entry:
 
 define void @store_i64() #0 {
 entry:
-  %i64Tmp = load i64, i64* @i64Src, align 8
-  store atomic i64 %i64Tmp, i64* @i64Dest ORDER, align 8
+  %i64Tmp = load i64, ptr @i64Src, align 8
+  store atomic i64 %i64Tmp, ptr @i64Dest ORDER, align 8
   ret void
 }
 ; CHECK-LABEL: store_i64:
@@ -58,8 +58,8 @@ entry:
 
 define void @store_ptr() #0 {
 entry:
-  %ptrTmp = load i32, i32* bitcast (%struct.Obj** @ptrSrc to i32*), align 4
-  store atomic i32 %ptrTmp, i32* bitcast (%struct.Obj** @ptrDest to i32*) ORDER, align 4
+  %ptrTmp = load i32, ptr @ptrSrc, align 4
+  store atomic i32 %ptrTmp, ptr @ptrDest ORDER, align 4
   ret void
 }
 ; CHECK-LABEL: store_ptr:

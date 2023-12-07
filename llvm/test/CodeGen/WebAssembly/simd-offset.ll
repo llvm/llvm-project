@@ -8,87 +8,87 @@ target triple = "wasm32-unknown-unknown"
 ; ==============================================================================
 ; 16 x i8
 ; ==============================================================================
-define <16 x i8> @load_v16i8(<16 x i8>* %p) {
+define <16 x i8> @load_v16i8(ptr %p) {
 ; CHECK-LABEL: load_v16i8:
 ; CHECK:         .functype load_v16i8 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <16 x i8>, <16 x i8>* %p
+  %v = load <16 x i8>, ptr %p
   ret <16 x i8> %v
 }
 
-define <16 x i8> @load_splat_v16i8(i8* %p) {
+define <16 x i8> @load_splat_v16i8(ptr %p) {
 ; CHECK-LABEL: load_splat_v16i8:
 ; CHECK:         .functype load_splat_v16i8 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load8_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load i8, i8* %p
+  %e = load i8, ptr %p
   %v1 = insertelement <16 x i8> undef, i8 %e, i32 0
   %v2 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> zeroinitializer
   ret <16 x i8> %v2
 }
 
-define <16 x i8> @load_v16i8_with_folded_offset(<16 x i8>* %p) {
+define <16 x i8> @load_v16i8_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_v16i8_with_folded_offset:
 ; CHECK:         .functype load_v16i8_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <16 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <16 x i8>*
-  %v = load <16 x i8>, <16 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <16 x i8>, ptr %s
   ret <16 x i8> %v
 }
 
-define <16 x i8> @load_splat_v16i8_with_folded_offset(i8* %p) {
+define <16 x i8> @load_splat_v16i8_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v16i8_with_folded_offset:
 ; CHECK:         .functype load_splat_v16i8_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load8_splat 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint i8* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to i8*
-  %e = load i8, i8* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load i8, ptr %s
   %v1 = insertelement <16 x i8> undef, i8 %e, i32 0
   %v2 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> zeroinitializer
   ret <16 x i8> %v2
 }
 
-define <16 x i8> @load_v16i8_with_folded_gep_offset(<16 x i8>* %p) {
+define <16 x i8> @load_v16i8_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_v16i8_with_folded_gep_offset:
 ; CHECK:         .functype load_v16i8_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 16
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <16 x i8>, <16 x i8>* %p, i32 1
-  %v = load <16 x i8>, <16 x i8>* %s
+  %s = getelementptr inbounds <16 x i8>, ptr %p, i32 1
+  %v = load <16 x i8>, ptr %s
   ret <16 x i8> %v
 }
 
-define <16 x i8> @load_splat_v16i8_with_folded_gep_offset(i8* %p) {
+define <16 x i8> @load_splat_v16i8_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v16i8_with_folded_gep_offset:
 ; CHECK:         .functype load_splat_v16i8_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load8_splat 1
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds i8, i8* %p, i32 1
-  %e = load i8, i8* %s
+  %s = getelementptr inbounds i8, ptr %p, i32 1
+  %e = load i8, ptr %s
   %v1 = insertelement <16 x i8> undef, i8 %e, i32 0
   %v2 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> zeroinitializer
   ret <16 x i8> %v2
 }
 
-define <16 x i8> @load_v16i8_with_unfolded_gep_negative_offset(<16 x i8>* %p) {
+define <16 x i8> @load_v16i8_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_v16i8_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_v16i8_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -97,12 +97,12 @@ define <16 x i8> @load_v16i8_with_unfolded_gep_negative_offset(<16 x i8>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <16 x i8>, <16 x i8>* %p, i32 -1
-  %v = load <16 x i8>, <16 x i8>* %s
+  %s = getelementptr inbounds <16 x i8>, ptr %p, i32 -1
+  %v = load <16 x i8>, ptr %s
   ret <16 x i8> %v
 }
 
-define <16 x i8> @load_splat_v16i8_with_unfolded_gep_negative_offset(i8* %p) {
+define <16 x i8> @load_splat_v16i8_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v16i8_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_splat_v16i8_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -111,14 +111,14 @@ define <16 x i8> @load_splat_v16i8_with_unfolded_gep_negative_offset(i8* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load8_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds i8, i8* %p, i32 -1
-  %e = load i8, i8* %s
+  %s = getelementptr inbounds i8, ptr %p, i32 -1
+  %e = load i8, ptr %s
   %v1 = insertelement <16 x i8> undef, i8 %e, i32 0
   %v2 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> zeroinitializer
   ret <16 x i8> %v2
 }
 
-define <16 x i8> @load_v16i8_with_unfolded_offset(<16 x i8>* %p) {
+define <16 x i8> @load_v16i8_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_v16i8_with_unfolded_offset:
 ; CHECK:         .functype load_v16i8_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -127,14 +127,14 @@ define <16 x i8> @load_v16i8_with_unfolded_offset(<16 x i8>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <16 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <16 x i8>*
-  %v = load <16 x i8>, <16 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <16 x i8>, ptr %s
   ret <16 x i8> %v
 }
 
-define <16 x i8> @load_splat_v16i8_with_unfolded_offset(i8* %p) {
+define <16 x i8> @load_splat_v16i8_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v16i8_with_unfolded_offset:
 ; CHECK:         .functype load_splat_v16i8_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -143,16 +143,16 @@ define <16 x i8> @load_splat_v16i8_with_unfolded_offset(i8* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load8_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint i8* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to i8*
-  %e = load i8, i8* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load i8, ptr %s
   %v1 = insertelement <16 x i8> undef, i8 %e, i32 0
   %v2 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> zeroinitializer
   ret <16 x i8> %v2
 }
 
-define <16 x i8> @load_v16i8_with_unfolded_gep_offset(<16 x i8>* %p) {
+define <16 x i8> @load_v16i8_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_v16i8_with_unfolded_gep_offset:
 ; CHECK:         .functype load_v16i8_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -161,12 +161,12 @@ define <16 x i8> @load_v16i8_with_unfolded_gep_offset(<16 x i8>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <16 x i8>, <16 x i8>* %p, i32 1
-  %v = load <16 x i8>, <16 x i8>* %s
+  %s = getelementptr <16 x i8>, ptr %p, i32 1
+  %v = load <16 x i8>, ptr %s
   ret <16 x i8> %v
 }
 
-define <16 x i8> @load_splat_v16i8_with_unfolded_gep_offset(i8* %p) {
+define <16 x i8> @load_splat_v16i8_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v16i8_with_unfolded_gep_offset:
 ; CHECK:         .functype load_splat_v16i8_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -175,8 +175,8 @@ define <16 x i8> @load_splat_v16i8_with_unfolded_gep_offset(i8* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load8_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr i8, i8* %p, i32 1
-  %e = load i8, i8* %s
+  %s = getelementptr i8, ptr %p, i32 1
+  %e = load i8, ptr %s
   %v1 = insertelement <16 x i8> undef, i8 %e, i32 0
   %v2 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> zeroinitializer
   ret <16 x i8> %v2
@@ -189,8 +189,8 @@ define <16 x i8> @load_v16i8_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <16 x i8>*
-  %v = load <16 x i8>, <16 x i8>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <16 x i8>, ptr %s
   ret <16 x i8> %v
 }
 
@@ -201,8 +201,8 @@ define <16 x i8> @load_splat_v16i8_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load8_splat 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to i8*
-  %e = load i8, i8* %s
+  %s = inttoptr i32 32 to ptr
+  %e = load i8, ptr %s
   %v1 = insertelement <16 x i8> undef, i8 %e, i32 0
   %v2 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> zeroinitializer
   ret <16 x i8> %v2
@@ -216,7 +216,7 @@ define <16 x i8> @load_v16i8_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load gv_v16i8
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <16 x i8>, <16 x i8>* @gv_v16i8
+  %v = load <16 x i8>, ptr @gv_v16i8
   ret <16 x i8> %v
 }
 
@@ -228,13 +228,13 @@ define <16 x i8> @load_splat_v16i8_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load8_splat gv_i8
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load i8, i8* @gv_i8
+  %e = load i8, ptr @gv_i8
   %v1 = insertelement <16 x i8> undef, i8 %e, i32 0
   %v2 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> zeroinitializer
   ret <16 x i8> %v2
 }
 
-define void @store_v16i8(<16 x i8> %v, <16 x i8>* %p) {
+define void @store_v16i8(<16 x i8> %v, ptr %p) {
 ; CHECK-LABEL: store_v16i8:
 ; CHECK:         .functype store_v16i8 (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -242,11 +242,11 @@ define void @store_v16i8(<16 x i8> %v, <16 x i8>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  store <16 x i8> %v , <16 x i8>* %p
+  store <16 x i8> %v , ptr %p
   ret void
 }
 
-define void @store_v16i8_with_folded_offset(<16 x i8> %v, <16 x i8>* %p) {
+define void @store_v16i8_with_folded_offset(<16 x i8> %v, ptr %p) {
 ; CHECK-LABEL: store_v16i8_with_folded_offset:
 ; CHECK:         .functype store_v16i8_with_folded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -254,14 +254,14 @@ define void @store_v16i8_with_folded_offset(<16 x i8> %v, <16 x i8>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <16 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <16 x i8>*
-  store <16 x i8> %v , <16 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  store <16 x i8> %v , ptr %s
   ret void
 }
 
-define void @store_v16i8_with_folded_gep_offset(<16 x i8> %v, <16 x i8>* %p) {
+define void @store_v16i8_with_folded_gep_offset(<16 x i8> %v, ptr %p) {
 ; CHECK-LABEL: store_v16i8_with_folded_gep_offset:
 ; CHECK:         .functype store_v16i8_with_folded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -269,12 +269,12 @@ define void @store_v16i8_with_folded_gep_offset(<16 x i8> %v, <16 x i8>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <16 x i8>, <16 x i8>* %p, i32 1
-  store <16 x i8> %v , <16 x i8>* %s
+  %s = getelementptr inbounds <16 x i8>, ptr %p, i32 1
+  store <16 x i8> %v , ptr %s
   ret void
 }
 
-define void @store_v16i8_with_unfolded_gep_negative_offset(<16 x i8> %v, <16 x i8>* %p) {
+define void @store_v16i8_with_unfolded_gep_negative_offset(<16 x i8> %v, ptr %p) {
 ; CHECK-LABEL: store_v16i8_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype store_v16i8_with_unfolded_gep_negative_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -284,12 +284,12 @@ define void @store_v16i8_with_unfolded_gep_negative_offset(<16 x i8> %v, <16 x i
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <16 x i8>, <16 x i8>* %p, i32 -1
-  store <16 x i8> %v , <16 x i8>* %s
+  %s = getelementptr inbounds <16 x i8>, ptr %p, i32 -1
+  store <16 x i8> %v , ptr %s
   ret void
 }
 
-define void @store_v16i8_with_unfolded_offset(<16 x i8> %v, <16 x i8>* %p) {
+define void @store_v16i8_with_unfolded_offset(<16 x i8> %v, ptr %p) {
 ; CHECK-LABEL: store_v16i8_with_unfolded_offset:
 ; CHECK:         .functype store_v16i8_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -299,14 +299,14 @@ define void @store_v16i8_with_unfolded_offset(<16 x i8> %v, <16 x i8>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <16 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <16 x i8>*
-  store <16 x i8> %v , <16 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  store <16 x i8> %v , ptr %s
   ret void
 }
 
-define void @store_v16i8_with_unfolded_gep_offset(<16 x i8> %v, <16 x i8>* %p) {
+define void @store_v16i8_with_unfolded_gep_offset(<16 x i8> %v, ptr %p) {
 ; CHECK-LABEL: store_v16i8_with_unfolded_gep_offset:
 ; CHECK:         .functype store_v16i8_with_unfolded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -316,8 +316,8 @@ define void @store_v16i8_with_unfolded_gep_offset(<16 x i8> %v, <16 x i8>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <16 x i8>, <16 x i8>* %p, i32 1
-  store <16 x i8> %v , <16 x i8>* %s
+  %s = getelementptr <16 x i8>, ptr %p, i32 1
+  store <16 x i8> %v , ptr %s
   ret void
 }
 
@@ -329,8 +329,8 @@ define void @store_v16i8_to_numeric_address(<16 x i8> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <16 x i8>*
-  store <16 x i8> %v , <16 x i8>* %s
+  %s = inttoptr i32 32 to ptr
+  store <16 x i8> %v , ptr %s
   ret void
 }
 
@@ -342,211 +342,211 @@ define void @store_v16i8_to_global_address(<16 x i8> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store gv_v16i8
 ; CHECK-NEXT:    # fallthrough-return
-  store <16 x i8> %v , <16 x i8>* @gv_v16i8
+  store <16 x i8> %v , ptr @gv_v16i8
   ret void
 }
 
 ; ==============================================================================
 ; 8 x i16
 ; ==============================================================================
-define <8 x i16> @load_v8i16(<8 x i16>* %p) {
+define <8 x i16> @load_v8i16(ptr %p) {
 ; CHECK-LABEL: load_v8i16:
 ; CHECK:         .functype load_v8i16 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <8 x i16>, <8 x i16>* %p
+  %v = load <8 x i16>, ptr %p
   ret <8 x i16> %v
 }
 
-define <8 x i16> @load_splat_v8i16(i16* %p) {
+define <8 x i16> @load_splat_v8i16(ptr %p) {
 ; CHECK-LABEL: load_splat_v8i16:
 ; CHECK:         .functype load_splat_v8i16 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load16_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load i16, i16* %p
+  %e = load i16, ptr %p
   %v1 = insertelement <8 x i16> undef, i16 %e, i32 0
   %v2 = shufflevector <8 x i16> %v1, <8 x i16> undef, <8 x i32> zeroinitializer
   ret <8 x i16> %v2
 }
 
-define <8 x i16> @load_sext_v8i16(<8 x i8>* %p) {
+define <8 x i16> @load_sext_v8i16(ptr %p) {
 ; CHECK-LABEL: load_sext_v8i16:
 ; CHECK:         .functype load_sext_v8i16 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i16x8.load8x8_s 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <8 x i8>, <8 x i8>* %p
+  %v = load <8 x i8>, ptr %p
   %v2 = sext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
 
-define <8 x i16> @load_zext_v8i16(<8 x i8>* %p) {
+define <8 x i16> @load_zext_v8i16(ptr %p) {
 ; CHECK-LABEL: load_zext_v8i16:
 ; CHECK:         .functype load_zext_v8i16 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i16x8.load8x8_u 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <8 x i8>, <8 x i8>* %p
+  %v = load <8 x i8>, ptr %p
   %v2 = zext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
 
-define <8 x i8> @load_ext_v8i16(<8 x i8>* %p) {
+define <8 x i8> @load_ext_v8i16(ptr %p) {
 ; CHECK-LABEL: load_ext_v8i16:
 ; CHECK:         .functype load_ext_v8i16 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <8 x i8>, <8 x i8>* %p
+  %v = load <8 x i8>, ptr %p
   ret <8 x i8> %v
 }
 
-define <8 x i16> @load_v8i16_with_folded_offset(<8 x i16>* %p) {
+define <8 x i16> @load_v8i16_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_v8i16_with_folded_offset:
 ; CHECK:         .functype load_v8i16_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <8 x i16>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <8 x i16>*
-  %v = load <8 x i16>, <8 x i16>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <8 x i16>, ptr %s
   ret <8 x i16> %v
 }
 
-define <8 x i16> @load_splat_v8i16_with_folded_offset(i16* %p) {
+define <8 x i16> @load_splat_v8i16_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v8i16_with_folded_offset:
 ; CHECK:         .functype load_splat_v8i16_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load16_splat 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint i16* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to i16*
-  %e = load i16, i16* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load i16, ptr %s
   %v1 = insertelement <8 x i16> undef, i16 %e, i32 0
   %v2 = shufflevector <8 x i16> %v1, <8 x i16> undef, <8 x i32> zeroinitializer
   ret <8 x i16> %v2
 }
 
-define <8 x i16> @load_sext_v8i16_with_folded_offset(<8 x i8>* %p) {
+define <8 x i16> @load_sext_v8i16_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v8i16_with_folded_offset:
 ; CHECK:         .functype load_sext_v8i16_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i16x8.load8x8_s 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <8 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <8 x i8>*
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <8 x i8>, ptr %s
   %v2 = sext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
 
-define <8 x i16> @load_zext_v8i16_with_folded_offset(<8 x i8>* %p) {
+define <8 x i16> @load_zext_v8i16_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v8i16_with_folded_offset:
 ; CHECK:         .functype load_zext_v8i16_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i16x8.load8x8_u 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <8 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <8 x i8>*
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <8 x i8>, ptr %s
   %v2 = zext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
 
-define <8 x i8> @load_ext_v8i16_with_folded_offset(<8 x i8>* %p) {
+define <8 x i8> @load_ext_v8i16_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v8i16_with_folded_offset:
 ; CHECK:         .functype load_ext_v8i16_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_zero 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <8 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <8 x i8>*
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <8 x i8>, ptr %s
   ret <8 x i8> %v
 }
 
-define <8 x i16> @load_v8i16_with_folded_gep_offset(<8 x i16>* %p) {
+define <8 x i16> @load_v8i16_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_v8i16_with_folded_gep_offset:
 ; CHECK:         .functype load_v8i16_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 16
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i32 1
-  %v = load <8 x i16>, <8 x i16>* %s
+  %s = getelementptr inbounds <8 x i16>, ptr %p, i32 1
+  %v = load <8 x i16>, ptr %s
   ret <8 x i16> %v
 }
 
-define <8 x i16> @load_splat_v8i16_with_folded_gep_offset(i16* %p) {
+define <8 x i16> @load_splat_v8i16_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v8i16_with_folded_gep_offset:
 ; CHECK:         .functype load_splat_v8i16_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load16_splat 2
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds i16, i16* %p, i32 1
-  %e = load i16, i16* %s
+  %s = getelementptr inbounds i16, ptr %p, i32 1
+  %e = load i16, ptr %s
   %v1 = insertelement <8 x i16> undef, i16 %e, i32 0
   %v2 = shufflevector <8 x i16> %v1, <8 x i16> undef, <8 x i32> zeroinitializer
   ret <8 x i16> %v2
 }
 
-define <8 x i16> @load_sext_v8i16_with_folded_gep_offset(<8 x i8>* %p) {
+define <8 x i16> @load_sext_v8i16_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v8i16_with_folded_gep_offset:
 ; CHECK:         .functype load_sext_v8i16_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i16x8.load8x8_s 8
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <8 x i8>, <8 x i8>* %p, i32 1
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = getelementptr inbounds <8 x i8>, ptr %p, i32 1
+  %v = load <8 x i8>, ptr %s
   %v2 = sext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
 
-define <8 x i16> @load_zext_v8i16_with_folded_gep_offset(<8 x i8>* %p) {
+define <8 x i16> @load_zext_v8i16_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v8i16_with_folded_gep_offset:
 ; CHECK:         .functype load_zext_v8i16_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i16x8.load8x8_u 8
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <8 x i8>, <8 x i8>* %p, i32 1
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = getelementptr inbounds <8 x i8>, ptr %p, i32 1
+  %v = load <8 x i8>, ptr %s
   %v2 = zext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
 
-define <8 x i8> @load_ext_v8i16_with_folded_gep_offset(<8 x i8>* %p) {
+define <8 x i8> @load_ext_v8i16_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v8i16_with_folded_gep_offset:
 ; CHECK:         .functype load_ext_v8i16_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_zero 8
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <8 x i8>, <8 x i8>* %p, i32 1
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = getelementptr inbounds <8 x i8>, ptr %p, i32 1
+  %v = load <8 x i8>, ptr %s
   ret <8 x i8> %v
 }
 
-define <8 x i16> @load_v8i16_with_unfolded_gep_negative_offset(<8 x i16>* %p) {
+define <8 x i16> @load_v8i16_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_v8i16_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_v8i16_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -555,12 +555,12 @@ define <8 x i16> @load_v8i16_with_unfolded_gep_negative_offset(<8 x i16>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i32 -1
-  %v = load <8 x i16>, <8 x i16>* %s
+  %s = getelementptr inbounds <8 x i16>, ptr %p, i32 -1
+  %v = load <8 x i16>, ptr %s
   ret <8 x i16> %v
 }
 
-define <8 x i16> @load_splat_v8i16_with_unfolded_gep_negative_offset(i16* %p) {
+define <8 x i16> @load_splat_v8i16_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v8i16_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_splat_v8i16_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -569,14 +569,14 @@ define <8 x i16> @load_splat_v8i16_with_unfolded_gep_negative_offset(i16* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load16_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds i16, i16* %p, i32 -1
-  %e = load i16, i16* %s
+  %s = getelementptr inbounds i16, ptr %p, i32 -1
+  %e = load i16, ptr %s
   %v1 = insertelement <8 x i16> undef, i16 %e, i32 0
   %v2 = shufflevector <8 x i16> %v1, <8 x i16> undef, <8 x i32> zeroinitializer
   ret <8 x i16> %v2
 }
 
-define <8 x i16> @load_sext_v8i16_with_unfolded_gep_negative_offset(<8 x i8>* %p) {
+define <8 x i16> @load_sext_v8i16_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v8i16_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_sext_v8i16_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -585,13 +585,13 @@ define <8 x i16> @load_sext_v8i16_with_unfolded_gep_negative_offset(<8 x i8>* %p
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i16x8.load8x8_s 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <8 x i8>, <8 x i8>* %p, i32 -1
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = getelementptr inbounds <8 x i8>, ptr %p, i32 -1
+  %v = load <8 x i8>, ptr %s
   %v2 = sext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
 
-define <8 x i16> @load_zext_v8i16_with_unfolded_gep_negative_offset(<8 x i8>* %p) {
+define <8 x i16> @load_zext_v8i16_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v8i16_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_zext_v8i16_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -600,13 +600,13 @@ define <8 x i16> @load_zext_v8i16_with_unfolded_gep_negative_offset(<8 x i8>* %p
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i16x8.load8x8_u 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <8 x i8>, <8 x i8>* %p, i32 -1
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = getelementptr inbounds <8 x i8>, ptr %p, i32 -1
+  %v = load <8 x i8>, ptr %s
   %v2 = zext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
 
-define <8 x i8> @load_ext_v8i16_with_unfolded_gep_negative_offset(<8 x i8>* %p) {
+define <8 x i8> @load_ext_v8i16_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v8i16_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_ext_v8i16_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -615,12 +615,12 @@ define <8 x i8> @load_ext_v8i16_with_unfolded_gep_negative_offset(<8 x i8>* %p) 
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <8 x i8>, <8 x i8>* %p, i32 -1
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = getelementptr inbounds <8 x i8>, ptr %p, i32 -1
+  %v = load <8 x i8>, ptr %s
   ret <8 x i8> %v
 }
 
-define <8 x i16> @load_v8i16_with_unfolded_offset(<8 x i16>* %p) {
+define <8 x i16> @load_v8i16_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_v8i16_with_unfolded_offset:
 ; CHECK:         .functype load_v8i16_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -629,14 +629,14 @@ define <8 x i16> @load_v8i16_with_unfolded_offset(<8 x i16>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <8 x i16>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <8 x i16>*
-  %v = load <8 x i16>, <8 x i16>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <8 x i16>, ptr %s
   ret <8 x i16> %v
 }
 
-define <8 x i16> @load_splat_v8i16_with_unfolded_offset(i16* %p) {
+define <8 x i16> @load_splat_v8i16_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v8i16_with_unfolded_offset:
 ; CHECK:         .functype load_splat_v8i16_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -645,16 +645,16 @@ define <8 x i16> @load_splat_v8i16_with_unfolded_offset(i16* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load16_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint i16* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to i16*
-  %e = load i16, i16* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load i16, ptr %s
   %v1 = insertelement <8 x i16> undef, i16 %e, i32 0
   %v2 = shufflevector <8 x i16> %v1, <8 x i16> undef, <8 x i32> zeroinitializer
   ret <8 x i16> %v2
 }
 
-define <8 x i16> @load_sext_v8i16_with_unfolded_offset(<8 x i8>* %p) {
+define <8 x i16> @load_sext_v8i16_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v8i16_with_unfolded_offset:
 ; CHECK:         .functype load_sext_v8i16_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -663,15 +663,15 @@ define <8 x i16> @load_sext_v8i16_with_unfolded_offset(<8 x i8>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i16x8.load8x8_s 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <8 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <8 x i8>*
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <8 x i8>, ptr %s
   %v2 = sext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
 
-define <8 x i16> @load_zext_v8i16_with_unfolded_offset(<8 x i8>* %p) {
+define <8 x i16> @load_zext_v8i16_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v8i16_with_unfolded_offset:
 ; CHECK:         .functype load_zext_v8i16_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -680,15 +680,15 @@ define <8 x i16> @load_zext_v8i16_with_unfolded_offset(<8 x i8>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i16x8.load8x8_u 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <8 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <8 x i8>*
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <8 x i8>, ptr %s
   %v2 = zext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
 
-define <8 x i8> @load_ext_v8i16_with_unfolded_offset(<8 x i8>* %p) {
+define <8 x i8> @load_ext_v8i16_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v8i16_with_unfolded_offset:
 ; CHECK:         .functype load_ext_v8i16_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -697,14 +697,14 @@ define <8 x i8> @load_ext_v8i16_with_unfolded_offset(<8 x i8>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <8 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <8 x i8>*
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <8 x i8>, ptr %s
   ret <8 x i8> %v
 }
 
-define <8 x i16> @load_v8i16_with_unfolded_gep_offset(<8 x i16>* %p) {
+define <8 x i16> @load_v8i16_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_v8i16_with_unfolded_gep_offset:
 ; CHECK:         .functype load_v8i16_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -713,12 +713,12 @@ define <8 x i16> @load_v8i16_with_unfolded_gep_offset(<8 x i16>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <8 x i16>, <8 x i16>* %p, i32 1
-  %v = load <8 x i16>, <8 x i16>* %s
+  %s = getelementptr <8 x i16>, ptr %p, i32 1
+  %v = load <8 x i16>, ptr %s
   ret <8 x i16> %v
 }
 
-define <8 x i16> @load_splat_v8i16_with_unfolded_gep_offset(i16* %p) {
+define <8 x i16> @load_splat_v8i16_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v8i16_with_unfolded_gep_offset:
 ; CHECK:         .functype load_splat_v8i16_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -727,14 +727,14 @@ define <8 x i16> @load_splat_v8i16_with_unfolded_gep_offset(i16* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load16_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr i16, i16* %p, i32 1
-  %e = load i16, i16* %s
+  %s = getelementptr i16, ptr %p, i32 1
+  %e = load i16, ptr %s
   %v1 = insertelement <8 x i16> undef, i16 %e, i32 0
   %v2 = shufflevector <8 x i16> %v1, <8 x i16> undef, <8 x i32> zeroinitializer
   ret <8 x i16> %v2
 }
 
-define <8 x i16> @load_sext_v8i16_with_unfolded_gep_offset(<8 x i8>* %p) {
+define <8 x i16> @load_sext_v8i16_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v8i16_with_unfolded_gep_offset:
 ; CHECK:         .functype load_sext_v8i16_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -743,13 +743,13 @@ define <8 x i16> @load_sext_v8i16_with_unfolded_gep_offset(<8 x i8>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i16x8.load8x8_s 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <8 x i8>, <8 x i8>* %p, i32 1
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = getelementptr <8 x i8>, ptr %p, i32 1
+  %v = load <8 x i8>, ptr %s
   %v2 = sext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
 
-define <8 x i16> @load_zext_v8i16_with_unfolded_gep_offset(<8 x i8>* %p) {
+define <8 x i16> @load_zext_v8i16_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v8i16_with_unfolded_gep_offset:
 ; CHECK:         .functype load_zext_v8i16_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -758,13 +758,13 @@ define <8 x i16> @load_zext_v8i16_with_unfolded_gep_offset(<8 x i8>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i16x8.load8x8_u 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <8 x i8>, <8 x i8>* %p, i32 1
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = getelementptr <8 x i8>, ptr %p, i32 1
+  %v = load <8 x i8>, ptr %s
   %v2 = zext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
 
-define <8 x i8> @load_ext_v8i16_with_unfolded_gep_offset(<8 x i8>* %p) {
+define <8 x i8> @load_ext_v8i16_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v8i16_with_unfolded_gep_offset:
 ; CHECK:         .functype load_ext_v8i16_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -773,8 +773,8 @@ define <8 x i8> @load_ext_v8i16_with_unfolded_gep_offset(<8 x i8>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <8 x i8>, <8 x i8>* %p, i32 1
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = getelementptr <8 x i8>, ptr %p, i32 1
+  %v = load <8 x i8>, ptr %s
   ret <8 x i8> %v
 }
 
@@ -785,8 +785,8 @@ define <8 x i16> @load_v8i16_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <8 x i16>*
-  %v = load <8 x i16>, <8 x i16>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <8 x i16>, ptr %s
   ret <8 x i16> %v
 }
 
@@ -797,8 +797,8 @@ define <8 x i16> @load_splat_v8i16_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load16_splat 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to i16*
-  %e = load i16, i16* %s
+  %s = inttoptr i32 32 to ptr
+  %e = load i16, ptr %s
   %v1 = insertelement <8 x i16> undef, i16 %e, i32 0
   %v2 = shufflevector <8 x i16> %v1, <8 x i16> undef, <8 x i32> zeroinitializer
   ret <8 x i16> %v2
@@ -811,8 +811,8 @@ define <8 x i16> @load_sext_v8i16_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i16x8.load8x8_s 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <8 x i8>*
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <8 x i8>, ptr %s
   %v2 = sext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
@@ -824,8 +824,8 @@ define <8 x i16> @load_zext_v8i16_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i16x8.load8x8_u 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <8 x i8>*
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <8 x i8>, ptr %s
   %v2 = zext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
@@ -837,8 +837,8 @@ define <8 x i8> @load_ext_v8i16_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load64_zero 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <8 x i8>*
-  %v = load <8 x i8>, <8 x i8>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <8 x i8>, ptr %s
   ret <8 x i8> %v
 }
 
@@ -850,7 +850,7 @@ define <8 x i16> @load_v8i16_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load gv_v8i16
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <8 x i16>, <8 x i16>* @gv_v8i16
+  %v = load <8 x i16>, ptr @gv_v8i16
   ret <8 x i16> %v
 }
 
@@ -862,7 +862,7 @@ define <8 x i16> @load_splat_v8i16_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load16_splat gv_i16
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load i16, i16* @gv_i16
+  %e = load i16, ptr @gv_i16
   %v1 = insertelement <8 x i16> undef, i16 %e, i32 0
   %v2 = shufflevector <8 x i16> %v1, <8 x i16> undef, <8 x i32> zeroinitializer
   ret <8 x i16> %v2
@@ -876,7 +876,7 @@ define <8 x i16> @load_sext_v8i16_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i16x8.load8x8_s gv_v8i8
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <8 x i8>, <8 x i8>* @gv_v8i8
+  %v = load <8 x i8>, ptr @gv_v8i8
   %v2 = sext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
@@ -888,7 +888,7 @@ define <8 x i16> @load_zext_v8i16_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i16x8.load8x8_u gv_v8i8
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <8 x i8>, <8 x i8>* @gv_v8i8
+  %v = load <8 x i8>, ptr @gv_v8i8
   %v2 = zext <8 x i8> %v to <8 x i16>
   ret <8 x i16> %v2
 }
@@ -900,12 +900,12 @@ define <8 x i8> @load_ext_v8i16_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load64_zero gv_v8i8
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <8 x i8>, <8 x i8>* @gv_v8i8
+  %v = load <8 x i8>, ptr @gv_v8i8
   ret <8 x i8> %v
 }
 
 
-define void @store_v8i16(<8 x i16> %v, <8 x i16>* %p) {
+define void @store_v8i16(<8 x i16> %v, ptr %p) {
 ; CHECK-LABEL: store_v8i16:
 ; CHECK:         .functype store_v8i16 (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -913,11 +913,11 @@ define void @store_v8i16(<8 x i16> %v, <8 x i16>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  store <8 x i16> %v , <8 x i16>* %p
+  store <8 x i16> %v , ptr %p
   ret void
 }
 
-define void @store_narrowing_v8i16(<8 x i8> %v, <8 x i8>* %p) {
+define void @store_narrowing_v8i16(<8 x i8> %v, ptr %p) {
 ; CHECK-LABEL: store_narrowing_v8i16:
 ; CHECK:         .functype store_narrowing_v8i16 (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -925,11 +925,11 @@ define void @store_narrowing_v8i16(<8 x i8> %v, <8 x i8>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 0, 0
 ; CHECK-NEXT:    # fallthrough-return
-  store <8 x i8> %v, <8 x i8>* %p
+  store <8 x i8> %v, ptr %p
   ret void
 }
 
-define void @store_v8i16_with_folded_offset(<8 x i16> %v, <8 x i16>* %p) {
+define void @store_v8i16_with_folded_offset(<8 x i16> %v, ptr %p) {
 ; CHECK-LABEL: store_v8i16_with_folded_offset:
 ; CHECK:         .functype store_v8i16_with_folded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -937,14 +937,14 @@ define void @store_v8i16_with_folded_offset(<8 x i16> %v, <8 x i16>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <8 x i16>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <8 x i16>*
-  store <8 x i16> %v , <8 x i16>* %s
+  %s = inttoptr i32 %r to ptr
+  store <8 x i16> %v , ptr %s
   ret void
 }
 
-define void @store_narrowing_v8i16_with_folded_offset(<8 x i8> %v, <8 x i8>* %p) {
+define void @store_narrowing_v8i16_with_folded_offset(<8 x i8> %v, ptr %p) {
 ; CHECK-LABEL: store_narrowing_v8i16_with_folded_offset:
 ; CHECK:         .functype store_narrowing_v8i16_with_folded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -952,14 +952,14 @@ define void @store_narrowing_v8i16_with_folded_offset(<8 x i8> %v, <8 x i8>* %p)
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 16, 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <8 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <8 x i8>*
-  store <8 x i8> %v , <8 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  store <8 x i8> %v , ptr %s
   ret void
 }
 
-define void @store_v8i16_with_folded_gep_offset(<8 x i16> %v, <8 x i16>* %p) {
+define void @store_v8i16_with_folded_gep_offset(<8 x i16> %v, ptr %p) {
 ; CHECK-LABEL: store_v8i16_with_folded_gep_offset:
 ; CHECK:         .functype store_v8i16_with_folded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -967,12 +967,12 @@ define void @store_v8i16_with_folded_gep_offset(<8 x i16> %v, <8 x i16>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i32 1
-  store <8 x i16> %v , <8 x i16>* %s
+  %s = getelementptr inbounds <8 x i16>, ptr %p, i32 1
+  store <8 x i16> %v , ptr %s
   ret void
 }
 
-define void @store_narrowing_v8i16_with_folded_gep_offset(<8 x i8> %v, <8 x i8>* %p) {
+define void @store_narrowing_v8i16_with_folded_gep_offset(<8 x i8> %v, ptr %p) {
 ; CHECK-LABEL: store_narrowing_v8i16_with_folded_gep_offset:
 ; CHECK:         .functype store_narrowing_v8i16_with_folded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -980,12 +980,12 @@ define void @store_narrowing_v8i16_with_folded_gep_offset(<8 x i8> %v, <8 x i8>*
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 8, 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <8 x i8>, <8 x i8>* %p, i32 1
-  store <8 x i8> %v , <8 x i8>* %s
+  %s = getelementptr inbounds <8 x i8>, ptr %p, i32 1
+  store <8 x i8> %v , ptr %s
   ret void
 }
 
-define void @store_v8i16_with_unfolded_gep_negative_offset(<8 x i16> %v, <8 x i16>* %p) {
+define void @store_v8i16_with_unfolded_gep_negative_offset(<8 x i16> %v, ptr %p) {
 ; CHECK-LABEL: store_v8i16_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype store_v8i16_with_unfolded_gep_negative_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -995,12 +995,12 @@ define void @store_v8i16_with_unfolded_gep_negative_offset(<8 x i16> %v, <8 x i1
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i32 -1
-  store <8 x i16> %v , <8 x i16>* %s
+  %s = getelementptr inbounds <8 x i16>, ptr %p, i32 -1
+  store <8 x i16> %v , ptr %s
   ret void
 }
 
-define void @store_narrowing_v8i16_with_unfolded_gep_negative_offset(<8 x i8> %v, <8 x i8>* %p) {
+define void @store_narrowing_v8i16_with_unfolded_gep_negative_offset(<8 x i8> %v, ptr %p) {
 ; CHECK-LABEL: store_narrowing_v8i16_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype store_narrowing_v8i16_with_unfolded_gep_negative_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -1010,12 +1010,12 @@ define void @store_narrowing_v8i16_with_unfolded_gep_negative_offset(<8 x i8> %v
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 0, 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <8 x i8>, <8 x i8>* %p, i32 -1
-  store <8 x i8> %v , <8 x i8>* %s
+  %s = getelementptr inbounds <8 x i8>, ptr %p, i32 -1
+  store <8 x i8> %v , ptr %s
   ret void
 }
 
-define void @store_v8i16_with_unfolded_offset(<8 x i16> %v, <8 x i16>* %p) {
+define void @store_v8i16_with_unfolded_offset(<8 x i16> %v, ptr %p) {
 ; CHECK-LABEL: store_v8i16_with_unfolded_offset:
 ; CHECK:         .functype store_v8i16_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -1025,14 +1025,14 @@ define void @store_v8i16_with_unfolded_offset(<8 x i16> %v, <8 x i16>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <8 x i16>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <8 x i16>*
-  store <8 x i16> %v , <8 x i16>* %s
+  %s = inttoptr i32 %r to ptr
+  store <8 x i16> %v , ptr %s
   ret void
 }
 
-define void @store_narrowing_v8i16_with_unfolded_offset(<8 x i8> %v, <8 x i8>* %p) {
+define void @store_narrowing_v8i16_with_unfolded_offset(<8 x i8> %v, ptr %p) {
 ; CHECK-LABEL: store_narrowing_v8i16_with_unfolded_offset:
 ; CHECK:         .functype store_narrowing_v8i16_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -1042,14 +1042,14 @@ define void @store_narrowing_v8i16_with_unfolded_offset(<8 x i8> %v, <8 x i8>* %
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 0, 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <8 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <8 x i8>*
-  store <8 x i8> %v , <8 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  store <8 x i8> %v , ptr %s
   ret void
 }
 
-define void @store_v8i16_with_unfolded_gep_offset(<8 x i16> %v, <8 x i16>* %p) {
+define void @store_v8i16_with_unfolded_gep_offset(<8 x i16> %v, ptr %p) {
 ; CHECK-LABEL: store_v8i16_with_unfolded_gep_offset:
 ; CHECK:         .functype store_v8i16_with_unfolded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -1059,12 +1059,12 @@ define void @store_v8i16_with_unfolded_gep_offset(<8 x i16> %v, <8 x i16>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <8 x i16>, <8 x i16>* %p, i32 1
-  store <8 x i16> %v , <8 x i16>* %s
+  %s = getelementptr <8 x i16>, ptr %p, i32 1
+  store <8 x i16> %v , ptr %s
   ret void
 }
 
-define void @store_narrowing_v8i16_with_unfolded_gep_offset(<8 x i8> %v, <8 x i8>* %p) {
+define void @store_narrowing_v8i16_with_unfolded_gep_offset(<8 x i8> %v, ptr %p) {
 ; CHECK-LABEL: store_narrowing_v8i16_with_unfolded_gep_offset:
 ; CHECK:         .functype store_narrowing_v8i16_with_unfolded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -1074,8 +1074,8 @@ define void @store_narrowing_v8i16_with_unfolded_gep_offset(<8 x i8> %v, <8 x i8
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 0, 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <8 x i8>, <8 x i8>* %p, i32 1
-  store <8 x i8> %v , <8 x i8>* %s
+  %s = getelementptr <8 x i8>, ptr %p, i32 1
+  store <8 x i8> %v , ptr %s
   ret void
 }
 
@@ -1087,12 +1087,12 @@ define void @store_v8i16_to_numeric_address(<8 x i16> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <8 x i16>*
-  store <8 x i16> %v , <8 x i16>* %s
+  %s = inttoptr i32 32 to ptr
+  store <8 x i16> %v , ptr %s
   ret void
 }
 
-define void @store_narrowing_v8i16_to_numeric_address(<8 x i8> %v, <8 x i8>* %p) {
+define void @store_narrowing_v8i16_to_numeric_address(<8 x i8> %v, ptr %p) {
 ; CHECK-LABEL: store_narrowing_v8i16_to_numeric_address:
 ; CHECK:         .functype store_narrowing_v8i16_to_numeric_address (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -1100,8 +1100,8 @@ define void @store_narrowing_v8i16_to_numeric_address(<8 x i8> %v, <8 x i8>* %p)
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 32, 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <8 x i8>*
-  store <8 x i8> %v , <8 x i8>* %s
+  %s = inttoptr i32 32 to ptr
+  store <8 x i8> %v , ptr %s
   ret void
 }
 
@@ -1113,7 +1113,7 @@ define void @store_v8i16_to_global_address(<8 x i16> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store gv_v8i16
 ; CHECK-NEXT:    # fallthrough-return
-  store <8 x i16> %v , <8 x i16>* @gv_v8i16
+  store <8 x i16> %v , ptr @gv_v8i16
   ret void
 }
 
@@ -1125,318 +1125,303 @@ define void @store_narrowing_v8i16_to_global_address(<8 x i8> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane gv_v8i8, 0
 ; CHECK-NEXT:    # fallthrough-return
-  store <8 x i8> %v , <8 x i8>* @gv_v8i8
+  store <8 x i8> %v , ptr @gv_v8i8
   ret void
 }
 
 ; ==============================================================================
 ; 4 x i32
 ; ==============================================================================
-define <4 x i32> @load_v4i32(<4 x i32>* %p) {
+define <4 x i32> @load_v4i32(ptr %p) {
 ; CHECK-LABEL: load_v4i32:
 ; CHECK:         .functype load_v4i32 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x i32>, <4 x i32>* %p
+  %v = load <4 x i32>, ptr %p
   ret <4 x i32> %v
 }
 
-define <4 x i32> @load_splat_v4i32(i32* %addr) {
+define <4 x i32> @load_splat_v4i32(ptr %addr) {
 ; CHECK-LABEL: load_splat_v4i32:
 ; CHECK:         .functype load_splat_v4i32 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load i32, i32* %addr, align 4
+  %e = load i32, ptr %addr, align 4
   %v1 = insertelement <4 x i32> undef, i32 %e, i32 0
   %v2 = shufflevector <4 x i32> %v1, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_sext_v4i16_to_v4i32(<4 x i16>* %p) {
+define <4 x i32> @load_sext_v4i16_to_v4i32(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i16_to_v4i32:
 ; CHECK:         .functype load_sext_v4i16_to_v4i32 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32x4.load16x4_s 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x i16>, <4 x i16>* %p
+  %v = load <4 x i16>, ptr %p
   %v2 = sext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_zext_v4i16_to_v4i32(<4 x i16>* %p) {
+define <4 x i32> @load_zext_v4i16_to_v4i32(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i16_to_v4i32:
 ; CHECK:         .functype load_zext_v4i16_to_v4i32 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32x4.load16x4_u 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x i16>, <4 x i16>* %p
+  %v = load <4 x i16>, ptr %p
   %v2 = zext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_sext_v4i8_to_v4i32(<4 x i8>* %p) {
+define <4 x i32> @load_sext_v4i8_to_v4i32(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32 (i32) -> (v128)
-; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shl
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x i8>, <4 x i8>* %p
+  %v = load <4 x i8>, ptr %p
   %v2 = sext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_zext_v4i8_to_v4i32(<4 x i8>* %p) {
+define <4 x i32> @load_zext_v4i8_to_v4i32(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x i8>, <4 x i8>* %p
+  %v = load <4 x i8>, ptr %p
   %v2 = zext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i16> @load_ext_v4i32(<4 x i16>* %p) {
+define <4 x i16> @load_ext_v4i32(ptr %p) {
 ; CHECK-LABEL: load_ext_v4i32:
 ; CHECK:         .functype load_ext_v4i32 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x i16>, <4 x i16>* %p
+  %v = load <4 x i16>, ptr %p
   ret <4 x i16> %v
 }
 
-define <4 x i32> @load_v4i32_with_folded_offset(<4 x i32>* %p) {
+define <4 x i32> @load_v4i32_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_v4i32_with_folded_offset:
 ; CHECK:         .functype load_v4i32_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i32>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i32>*
-  %v = load <4 x i32>, <4 x i32>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x i32>, ptr %s
   ret <4 x i32> %v
 }
 
-define <4 x i32> @load_splat_v4i32_with_folded_offset(i32* %p) {
+define <4 x i32> @load_splat_v4i32_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v4i32_with_folded_offset:
 ; CHECK:         .functype load_splat_v4i32_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_splat 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint i32* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to i32*
-  %e = load i32, i32* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load i32, ptr %s
   %v1 = insertelement <4 x i32> undef, i32 %e, i32 0
   %v2 = shufflevector <4 x i32> %v1, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_sext_v4i16_to_v4i32_with_folded_offset(<4 x i16>* %p) {
+define <4 x i32> @load_sext_v4i16_to_v4i32_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i16_to_v4i32_with_folded_offset:
 ; CHECK:         .functype load_sext_v4i16_to_v4i32_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32x4.load16x4_s 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i16>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i16>*
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x i16>, ptr %s
   %v2 = sext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_zext_v4i16_to_v4i32_with_folded_offset(<4 x i16>* %p) {
+define <4 x i32> @load_zext_v4i16_to_v4i32_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i16_to_v4i32_with_folded_offset:
 ; CHECK:         .functype load_zext_v4i16_to_v4i32_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32x4.load16x4_u 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i16>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i16>*
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x i16>, ptr %s
   %v2 = zext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_sext_v4i8_to_v4i32_with_folded_offset(<4 x i8>* %p) {
+define <4 x i32> @load_sext_v4i8_to_v4i32_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_with_folded_offset:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_with_folded_offset (i32) -> (v128)
-; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_zero 16
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shl
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i8>*
-  %v = load <4 x i8>, <4 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x i8>, ptr %s
   %v2 = sext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_zext_v4i8_to_v4i32_with_folded_offset(<4 x i8>* %p) {
+define <4 x i32> @load_zext_v4i8_to_v4i32_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_with_folded_offset:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_zero 16
-; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i8>*
-  %v = load <4 x i8>, <4 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x i8>, ptr %s
   %v2 = zext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i16> @load_ext_v4i32_with_folded_offset(<4 x i16>* %p) {
+define <4 x i16> @load_ext_v4i32_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v4i32_with_folded_offset:
 ; CHECK:         .functype load_ext_v4i32_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_zero 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i16>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i16>*
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x i16>, ptr %s
   ret <4 x i16> %v
 }
 
-define <4 x i32> @load_v4i32_with_folded_gep_offset(<4 x i32>* %p) {
+define <4 x i32> @load_v4i32_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_v4i32_with_folded_gep_offset:
 ; CHECK:         .functype load_v4i32_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 16
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i32>, <4 x i32>* %p, i32 1
-  %v = load <4 x i32>, <4 x i32>* %s
+  %s = getelementptr inbounds <4 x i32>, ptr %p, i32 1
+  %v = load <4 x i32>, ptr %s
   ret <4 x i32> %v
 }
 
-define <4 x i32> @load_splat_v4i32_with_folded_gep_offset(i32* %p) {
+define <4 x i32> @load_splat_v4i32_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v4i32_with_folded_gep_offset:
 ; CHECK:         .functype load_splat_v4i32_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_splat 4
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds i32, i32* %p, i32 1
-  %e = load i32, i32* %s
+  %s = getelementptr inbounds i32, ptr %p, i32 1
+  %e = load i32, ptr %s
   %v1 = insertelement <4 x i32> undef, i32 %e, i32 0
   %v2 = shufflevector <4 x i32> %v1, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_sext_v4i16_to_v4i32_with_folded_gep_offset(<4 x i16>* %p) {
+define <4 x i32> @load_sext_v4i16_to_v4i32_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i16_to_v4i32_with_folded_gep_offset:
 ; CHECK:         .functype load_sext_v4i16_to_v4i32_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32x4.load16x4_s 8
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i16>, <4 x i16>* %p, i32 1
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = getelementptr inbounds <4 x i16>, ptr %p, i32 1
+  %v = load <4 x i16>, ptr %s
   %v2 = sext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_zext_v4i16_to_v4i32_with_folded_gep_offset(<4 x i16>* %p) {
+define <4 x i32> @load_zext_v4i16_to_v4i32_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i16_to_v4i32_with_folded_gep_offset:
 ; CHECK:         .functype load_zext_v4i16_to_v4i32_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32x4.load16x4_u 8
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i16>, <4 x i16>* %p, i32 1
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = getelementptr inbounds <4 x i16>, ptr %p, i32 1
+  %v = load <4 x i16>, ptr %s
   %v2 = zext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_sext_v4i8_to_v4i32_with_folded_gep_offset(<4 x i8>* %p) {
+define <4 x i32> @load_sext_v4i8_to_v4i32_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_with_folded_gep_offset:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_with_folded_gep_offset (i32) -> (v128)
-; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_zero 4
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shl
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i8>, <4 x i8>* %p, i32 1
-  %v = load <4 x i8>, <4 x i8>* %s
+  %s = getelementptr inbounds <4 x i8>, ptr %p, i32 1
+  %v = load <4 x i8>, ptr %s
   %v2 = sext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_zext_v4i8_to_v4i32_with_folded_gep_offset(<4 x i8>* %p) {
+define <4 x i32> @load_zext_v4i8_to_v4i32_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_with_folded_gep_offset:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_zero 4
-; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i8>, <4 x i8>* %p, i32 1
-  %v = load <4 x i8>, <4 x i8>* %s
+  %s = getelementptr inbounds <4 x i8>, ptr %p, i32 1
+  %v = load <4 x i8>, ptr %s
   %v2 = zext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i16> @load_ext_v4i32_with_folded_gep_offset(<4 x i16>* %p) {
+define <4 x i16> @load_ext_v4i32_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v4i32_with_folded_gep_offset:
 ; CHECK:         .functype load_ext_v4i32_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_zero 8
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i16>, <4 x i16>* %p, i32 1
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = getelementptr inbounds <4 x i16>, ptr %p, i32 1
+  %v = load <4 x i16>, ptr %s
   ret <4 x i16> %v
 }
 
-define <4 x i32> @load_v4i32_with_unfolded_gep_negative_offset(<4 x i32>* %p) {
+define <4 x i32> @load_v4i32_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_v4i32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_v4i32_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1445,12 +1430,12 @@ define <4 x i32> @load_v4i32_with_unfolded_gep_negative_offset(<4 x i32>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i32>, <4 x i32>* %p, i32 -1
-  %v = load <4 x i32>, <4 x i32>* %s
+  %s = getelementptr inbounds <4 x i32>, ptr %p, i32 -1
+  %v = load <4 x i32>, ptr %s
   ret <4 x i32> %v
 }
 
-define <4 x i32> @load_splat_v4i32_with_unfolded_gep_negative_offset(i32* %p) {
+define <4 x i32> @load_splat_v4i32_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v4i32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_splat_v4i32_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1459,14 +1444,14 @@ define <4 x i32> @load_splat_v4i32_with_unfolded_gep_negative_offset(i32* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds i32, i32* %p, i32 -1
-  %e = load i32, i32* %s
+  %s = getelementptr inbounds i32, ptr %p, i32 -1
+  %e = load i32, ptr %s
   %v1 = insertelement <4 x i32> undef, i32 %e, i32 0
   %v2 = shufflevector <4 x i32> %v1, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_sext_v4i16_to_v4i32_with_unfolded_gep_negative_offset(<4 x i16>* %p) {
+define <4 x i32> @load_sext_v4i16_to_v4i32_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i16_to_v4i32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_sext_v4i16_to_v4i32_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1475,13 +1460,13 @@ define <4 x i32> @load_sext_v4i16_to_v4i32_with_unfolded_gep_negative_offset(<4 
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i32x4.load16x4_s 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i16>, <4 x i16>* %p, i32 -1
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = getelementptr inbounds <4 x i16>, ptr %p, i32 -1
+  %v = load <4 x i16>, ptr %s
   %v2 = sext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_zext_v4i16_to_v4i32_with_unfolded_gep_negative_offset(<4 x i16>* %p) {
+define <4 x i32> @load_zext_v4i16_to_v4i32_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i16_to_v4i32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_zext_v4i16_to_v4i32_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1490,52 +1475,47 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_with_unfolded_gep_negative_offset(<4 
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i32x4.load16x4_u 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i16>, <4 x i16>* %p, i32 -1
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = getelementptr inbounds <4 x i16>, ptr %p, i32 -1
+  %v = load <4 x i16>, ptr %s
   %v2 = zext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_sext_v4i8_to_v4i32_with_unfolded_gep_negative_offset(<4 x i8>* %p) {
+define <4 x i32> @load_sext_v4i8_to_v4i32_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_with_unfolded_gep_negative_offset (i32) -> (v128)
-; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const -4
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shl
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i8>, <4 x i8>* %p, i32 -1
-  %v = load <4 x i8>, <4 x i8>* %s
+  %s = getelementptr inbounds <4 x i8>, ptr %p, i32 -1
+  %v = load <4 x i8>, ptr %s
   %v2 = sext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_zext_v4i8_to_v4i32_with_unfolded_gep_negative_offset(<4 x i8>* %p) {
+define <4 x i32> @load_zext_v4i8_to_v4i32_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const -4
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i8>, <4 x i8>* %p, i32 -1
-  %v = load <4 x i8>, <4 x i8>* %s
+  %s = getelementptr inbounds <4 x i8>, ptr %p, i32 -1
+  %v = load <4 x i8>, ptr %s
   %v2 = zext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i16> @load_ext_v4i32_with_unfolded_gep_negative_offset(<4 x i16>* %p) {
+define <4 x i16> @load_ext_v4i32_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v4i32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_ext_v4i32_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1544,12 +1524,12 @@ define <4 x i16> @load_ext_v4i32_with_unfolded_gep_negative_offset(<4 x i16>* %p
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i16>, <4 x i16>* %p, i32 -1
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = getelementptr inbounds <4 x i16>, ptr %p, i32 -1
+  %v = load <4 x i16>, ptr %s
   ret <4 x i16> %v
 }
 
-define <4 x i32> @load_v4i32_with_unfolded_offset(<4 x i32>* %p) {
+define <4 x i32> @load_v4i32_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_v4i32_with_unfolded_offset:
 ; CHECK:         .functype load_v4i32_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1558,14 +1538,14 @@ define <4 x i32> @load_v4i32_with_unfolded_offset(<4 x i32>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i32>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i32>*
-  %v = load <4 x i32>, <4 x i32>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x i32>, ptr %s
   ret <4 x i32> %v
 }
 
-define <4 x i32> @load_splat_v4i32_with_unfolded_offset(i32* %p) {
+define <4 x i32> @load_splat_v4i32_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v4i32_with_unfolded_offset:
 ; CHECK:         .functype load_splat_v4i32_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1574,16 +1554,16 @@ define <4 x i32> @load_splat_v4i32_with_unfolded_offset(i32* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint i32* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to i32*
-  %e = load i32, i32* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load i32, ptr %s
   %v1 = insertelement <4 x i32> undef, i32 %e, i32 0
   %v2 = shufflevector <4 x i32> %v1, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_sext_v4i16_to_v4i32_with_unfolded_offset(<4 x i16>* %p) {
+define <4 x i32> @load_sext_v4i16_to_v4i32_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i16_to_v4i32_with_unfolded_offset:
 ; CHECK:         .functype load_sext_v4i16_to_v4i32_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1592,15 +1572,15 @@ define <4 x i32> @load_sext_v4i16_to_v4i32_with_unfolded_offset(<4 x i16>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i32x4.load16x4_s 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i16>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i16>*
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x i16>, ptr %s
   %v2 = sext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_zext_v4i16_to_v4i32_with_unfolded_offset(<4 x i16>* %p) {
+define <4 x i32> @load_zext_v4i16_to_v4i32_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i16_to_v4i32_with_unfolded_offset:
 ; CHECK:         .functype load_zext_v4i16_to_v4i32_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1609,58 +1589,53 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_with_unfolded_offset(<4 x i16>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i32x4.load16x4_u 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i16>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i16>*
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x i16>, ptr %s
   %v2 = zext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_sext_v4i8_to_v4i32_with_unfolded_offset(<4 x i8>* %p) {
+define <4 x i32> @load_sext_v4i8_to_v4i32_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_with_unfolded_offset:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_with_unfolded_offset (i32) -> (v128)
-; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shl
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i8>*
-  %v = load <4 x i8>, <4 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x i8>, ptr %s
   %v2 = sext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_zext_v4i8_to_v4i32_with_unfolded_offset(<4 x i8>* %p) {
+define <4 x i32> @load_zext_v4i8_to_v4i32_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_with_unfolded_offset:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i8>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i8>*
-  %v = load <4 x i8>, <4 x i8>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x i8>, ptr %s
   %v2 = zext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i16> @load_ext_v4i32_with_unfolded_offset(<4 x i16>* %p) {
+define <4 x i16> @load_ext_v4i32_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v4i32_with_unfolded_offset:
 ; CHECK:         .functype load_ext_v4i32_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1669,14 +1644,14 @@ define <4 x i16> @load_ext_v4i32_with_unfolded_offset(<4 x i16>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i16>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i16>*
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x i16>, ptr %s
   ret <4 x i16> %v
 }
 
-define <4 x i32> @load_v4i32_with_unfolded_gep_offset(<4 x i32>* %p) {
+define <4 x i32> @load_v4i32_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_v4i32_with_unfolded_gep_offset:
 ; CHECK:         .functype load_v4i32_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1685,12 +1660,12 @@ define <4 x i32> @load_v4i32_with_unfolded_gep_offset(<4 x i32>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <4 x i32>, <4 x i32>* %p, i32 1
-  %v = load <4 x i32>, <4 x i32>* %s
+  %s = getelementptr <4 x i32>, ptr %p, i32 1
+  %v = load <4 x i32>, ptr %s
   ret <4 x i32> %v
 }
 
-define <4 x i32> @load_splat_v4i32_with_unfolded_gep_offset(i32* %p) {
+define <4 x i32> @load_splat_v4i32_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v4i32_with_unfolded_gep_offset:
 ; CHECK:         .functype load_splat_v4i32_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1699,14 +1674,14 @@ define <4 x i32> @load_splat_v4i32_with_unfolded_gep_offset(i32* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr i32, i32* %p, i32 1
-  %e = load i32, i32* %s
+  %s = getelementptr i32, ptr %p, i32 1
+  %e = load i32, ptr %s
   %v1 = insertelement <4 x i32> undef, i32 %e, i32 0
   %v2 = shufflevector <4 x i32> %v1, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_sext_v4i16_to_v4i32_with_unfolded_gep_offset(<4 x i16>* %p) {
+define <4 x i32> @load_sext_v4i16_to_v4i32_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i16_to_v4i32_with_unfolded_gep_offset:
 ; CHECK:         .functype load_sext_v4i16_to_v4i32_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1715,13 +1690,13 @@ define <4 x i32> @load_sext_v4i16_to_v4i32_with_unfolded_gep_offset(<4 x i16>* %
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i32x4.load16x4_s 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <4 x i16>, <4 x i16>* %p, i32 1
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = getelementptr <4 x i16>, ptr %p, i32 1
+  %v = load <4 x i16>, ptr %s
   %v2 = sext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_zext_v4i16_to_v4i32_with_unfolded_gep_offset(<4 x i16>* %p) {
+define <4 x i32> @load_zext_v4i16_to_v4i32_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i16_to_v4i32_with_unfolded_gep_offset:
 ; CHECK:         .functype load_zext_v4i16_to_v4i32_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1730,52 +1705,47 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_with_unfolded_gep_offset(<4 x i16>* %
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i32x4.load16x4_u 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <4 x i16>, <4 x i16>* %p, i32 1
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = getelementptr <4 x i16>, ptr %p, i32 1
+  %v = load <4 x i16>, ptr %s
   %v2 = zext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_sext_v4i8_to_v4i32_with_unfolded_gep_offset(<4 x i8>* %p) {
+define <4 x i32> @load_sext_v4i8_to_v4i32_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_with_unfolded_gep_offset:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_with_unfolded_gep_offset (i32) -> (v128)
-; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 4
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shl
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <4 x i8>, <4 x i8>* %p, i32 1
-  %v = load <4 x i8>, <4 x i8>* %s
+  %s = getelementptr <4 x i8>, ptr %p, i32 1
+  %v = load <4 x i8>, ptr %s
   %v2 = sext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i32> @load_zext_v4i8_to_v4i32_with_unfolded_gep_offset(<4 x i8>* %p) {
+define <4 x i32> @load_zext_v4i8_to_v4i32_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_with_unfolded_gep_offset:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 4
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <4 x i8>, <4 x i8>* %p, i32 1
-  %v = load <4 x i8>, <4 x i8>* %s
+  %s = getelementptr <4 x i8>, ptr %p, i32 1
+  %v = load <4 x i8>, ptr %s
   %v2 = zext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
 
-define <4 x i16> @load_ext_v4i32_with_unfolded_gep_offset(<4 x i16>* %p) {
+define <4 x i16> @load_ext_v4i32_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v4i32_with_unfolded_gep_offset:
 ; CHECK:         .functype load_ext_v4i32_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -1784,8 +1754,8 @@ define <4 x i16> @load_ext_v4i32_with_unfolded_gep_offset(<4 x i16>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <4 x i16>, <4 x i16>* %p, i32 1
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = getelementptr <4 x i16>, ptr %p, i32 1
+  %v = load <4 x i16>, ptr %s
   ret <4 x i16> %v
 }
 
@@ -1796,8 +1766,8 @@ define <4 x i32> @load_v4i32_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <4 x i32>*
-  %v = load <4 x i32>, <4 x i32>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <4 x i32>, ptr %s
   ret <4 x i32> %v
 }
 
@@ -1808,8 +1778,8 @@ define <4 x i32> @load_splat_v4i32_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load32_splat 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to i32*
-  %e = load i32, i32* %s
+  %s = inttoptr i32 32 to ptr
+  %e = load i32, ptr %s
   %v1 = insertelement <4 x i32> undef, i32 %e, i32 0
   %v2 = shufflevector <4 x i32> %v1, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %v2
@@ -1822,8 +1792,8 @@ define <4 x i32> @load_sext_v4i16_to_v4i32_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i32x4.load16x4_s 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <4 x i16>*
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <4 x i16>, ptr %s
   %v2 = sext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
@@ -1835,8 +1805,8 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i32x4.load16x4_u 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <4 x i16>*
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <4 x i16>, ptr %s
   %v2 = zext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
@@ -1844,19 +1814,14 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_from_numeric_address() {
 define <4 x i32> @load_sext_v4i8_to_v4i32_from_numeric_address() {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_from_numeric_address:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_from_numeric_address () -> (v128)
-; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load32_zero 32
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shl
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <4 x i8>*
-  %v = load <4 x i8>, <4 x i8>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <4 x i8>, ptr %s
   %v2 = sext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
@@ -1865,13 +1830,13 @@ define <4 x i32> @load_zext_v4i8_to_v4i32_from_numeric_address() {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_from_numeric_address:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_from_numeric_address () -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load32_zero 32
-; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <4 x i8>*
-  %v = load <4 x i8>, <4 x i8>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <4 x i8>, ptr %s
   %v2 = zext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
@@ -1883,8 +1848,8 @@ define <4 x i16> @load_ext_v4i32_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load64_zero 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <4 x i16>*
-  %v = load <4 x i16>, <4 x i16>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <4 x i16>, ptr %s
   ret <4 x i16> %v
 }
 
@@ -1896,7 +1861,7 @@ define <4 x i32> @load_v4i32_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load gv_v4i32
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x i32>, <4 x i32>* @gv_v4i32
+  %v = load <4 x i32>, ptr @gv_v4i32
   ret <4 x i32> %v
 }
 
@@ -1908,7 +1873,7 @@ define <4 x i32> @load_splat_v4i32_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load32_splat gv_i32
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load i32, i32* @gv_i32
+  %e = load i32, ptr @gv_i32
   %v1 = insertelement <4 x i32> undef, i32 %e, i32 0
   %v2 = shufflevector <4 x i32> %v1, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %v2
@@ -1922,7 +1887,7 @@ define <4 x i32> @load_sext_v4i16_to_v4i32_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i32x4.load16x4_s gv_v4i16
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x i16>, <4 x i16>* @gv_v4i16
+  %v = load <4 x i16>, ptr @gv_v4i16
   %v2 = sext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
@@ -1934,7 +1899,7 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i32x4.load16x4_u gv_v4i16
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x i16>, <4 x i16>* @gv_v4i16
+  %v = load <4 x i16>, ptr @gv_v4i16
   %v2 = zext <4 x i16> %v to <4 x i32>
   ret <4 x i32> %v2
 }
@@ -1943,18 +1908,13 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_from_global_address() {
 define <4 x i32> @load_sext_v4i8_to_v4i32_from_global_address() {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_from_global_address:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_from_global_address () -> (v128)
-; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load32_zero gv_v4i8
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shl
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x i8>, <4 x i8>* @gv_v4i8
+  %v = load <4 x i8>, ptr @gv_v4i8
   %v2 = sext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
@@ -1963,12 +1923,12 @@ define <4 x i32> @load_zext_v4i8_to_v4i32_from_global_address() {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_from_global_address:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_from_global_address () -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load32_zero gv_v4i8
-; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x i8>, <4 x i8>* @gv_v4i8
+  %v = load <4 x i8>, ptr @gv_v4i8
   %v2 = zext <4 x i8> %v to <4 x i32>
   ret <4 x i32> %v2
 }
@@ -1980,11 +1940,11 @@ define <4 x i16> @load_ext_v4i32_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load64_zero gv_v4i16
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x i16>, <4 x i16>* @gv_v4i16
+  %v = load <4 x i16>, ptr @gv_v4i16
   ret <4 x i16> %v
 }
 
-define void @store_v4i32(<4 x i32> %v, <4 x i32>* %p) {
+define void @store_v4i32(<4 x i32> %v, ptr %p) {
 ; CHECK-LABEL: store_v4i32:
 ; CHECK:         .functype store_v4i32 (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -1992,11 +1952,11 @@ define void @store_v4i32(<4 x i32> %v, <4 x i32>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  store <4 x i32> %v , <4 x i32>* %p
+  store <4 x i32> %v , ptr %p
   ret void
 }
 
-define void @store_narrowing_v4i32(<4 x i16> %v, <4 x i16>* %p) {
+define void @store_narrowing_v4i32(<4 x i16> %v, ptr %p) {
 ; CHECK-LABEL: store_narrowing_v4i32:
 ; CHECK:         .functype store_narrowing_v4i32 (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2004,11 +1964,11 @@ define void @store_narrowing_v4i32(<4 x i16> %v, <4 x i16>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 0, 0
 ; CHECK-NEXT:    # fallthrough-return
-  store <4 x i16> %v , <4 x i16>* %p
+  store <4 x i16> %v , ptr %p
   ret void
 }
 
-define void @store_v4i32_with_folded_offset(<4 x i32> %v, <4 x i32>* %p) {
+define void @store_v4i32_with_folded_offset(<4 x i32> %v, ptr %p) {
 ; CHECK-LABEL: store_v4i32_with_folded_offset:
 ; CHECK:         .functype store_v4i32_with_folded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2016,14 +1976,14 @@ define void @store_v4i32_with_folded_offset(<4 x i32> %v, <4 x i32>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i32>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i32>*
-  store <4 x i32> %v , <4 x i32>* %s
+  %s = inttoptr i32 %r to ptr
+  store <4 x i32> %v , ptr %s
   ret void
 }
 
-define void @store_narrowing_v4i32_with_folded_offset(<4 x i16> %v, <4 x i16>* %p) {
+define void @store_narrowing_v4i32_with_folded_offset(<4 x i16> %v, ptr %p) {
 ; CHECK-LABEL: store_narrowing_v4i32_with_folded_offset:
 ; CHECK:         .functype store_narrowing_v4i32_with_folded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2031,14 +1991,14 @@ define void @store_narrowing_v4i32_with_folded_offset(<4 x i16> %v, <4 x i16>* %
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 16, 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i16>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i16>*
-  store <4 x i16> %v , <4 x i16>* %s
+  %s = inttoptr i32 %r to ptr
+  store <4 x i16> %v , ptr %s
   ret void
 }
 
-define void @store_v4i32_with_folded_gep_offset(<4 x i32> %v, <4 x i32>* %p) {
+define void @store_v4i32_with_folded_gep_offset(<4 x i32> %v, ptr %p) {
 ; CHECK-LABEL: store_v4i32_with_folded_gep_offset:
 ; CHECK:         .functype store_v4i32_with_folded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2046,12 +2006,12 @@ define void @store_v4i32_with_folded_gep_offset(<4 x i32> %v, <4 x i32>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i32>, <4 x i32>* %p, i32 1
-  store <4 x i32> %v , <4 x i32>* %s
+  %s = getelementptr inbounds <4 x i32>, ptr %p, i32 1
+  store <4 x i32> %v , ptr %s
   ret void
 }
 
-define void @store_narrowing_v4i32_with_folded_gep_offset(<4 x i16> %v, <4 x i16>* %p) {
+define void @store_narrowing_v4i32_with_folded_gep_offset(<4 x i16> %v, ptr %p) {
 ; CHECK-LABEL: store_narrowing_v4i32_with_folded_gep_offset:
 ; CHECK:         .functype store_narrowing_v4i32_with_folded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2059,12 +2019,12 @@ define void @store_narrowing_v4i32_with_folded_gep_offset(<4 x i16> %v, <4 x i16
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 8, 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i16>, <4 x i16>* %p, i32 1
-  store <4 x i16> %v , <4 x i16>* %s
+  %s = getelementptr inbounds <4 x i16>, ptr %p, i32 1
+  store <4 x i16> %v , ptr %s
   ret void
 }
 
-define void @store_v4i32_with_unfolded_gep_negative_offset(<4 x i32> %v, <4 x i32>* %p) {
+define void @store_v4i32_with_unfolded_gep_negative_offset(<4 x i32> %v, ptr %p) {
 ; CHECK-LABEL: store_v4i32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype store_v4i32_with_unfolded_gep_negative_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2074,12 +2034,12 @@ define void @store_v4i32_with_unfolded_gep_negative_offset(<4 x i32> %v, <4 x i3
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i32>, <4 x i32>* %p, i32 -1
-  store <4 x i32> %v , <4 x i32>* %s
+  %s = getelementptr inbounds <4 x i32>, ptr %p, i32 -1
+  store <4 x i32> %v , ptr %s
   ret void
 }
 
-define void @store_narrowing_v4i32_with_unfolded_gep_negative_offset(<4 x i16> %v, <4 x i16>* %p) {
+define void @store_narrowing_v4i32_with_unfolded_gep_negative_offset(<4 x i16> %v, ptr %p) {
 ; CHECK-LABEL: store_narrowing_v4i32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype store_narrowing_v4i32_with_unfolded_gep_negative_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2089,12 +2049,12 @@ define void @store_narrowing_v4i32_with_unfolded_gep_negative_offset(<4 x i16> %
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 0, 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i16>, <4 x i16>* %p, i32 -1
-  store <4 x i16> %v , <4 x i16>* %s
+  %s = getelementptr inbounds <4 x i16>, ptr %p, i32 -1
+  store <4 x i16> %v , ptr %s
   ret void
 }
 
-define void @store_v4i32_with_unfolded_offset(<4 x i32> %v, <4 x i32>* %p) {
+define void @store_v4i32_with_unfolded_offset(<4 x i32> %v, ptr %p) {
 ; CHECK-LABEL: store_v4i32_with_unfolded_offset:
 ; CHECK:         .functype store_v4i32_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2104,14 +2064,14 @@ define void @store_v4i32_with_unfolded_offset(<4 x i32> %v, <4 x i32>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i32>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i32>*
-  store <4 x i32> %v , <4 x i32>* %s
+  %s = inttoptr i32 %r to ptr
+  store <4 x i32> %v , ptr %s
   ret void
 }
 
-define void @store_narrowing_v4i32_with_unfolded_offset(<4 x i16> %v, <4 x i16>* %p) {
+define void @store_narrowing_v4i32_with_unfolded_offset(<4 x i16> %v, ptr %p) {
 ; CHECK-LABEL: store_narrowing_v4i32_with_unfolded_offset:
 ; CHECK:         .functype store_narrowing_v4i32_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2121,14 +2081,14 @@ define void @store_narrowing_v4i32_with_unfolded_offset(<4 x i16> %v, <4 x i16>*
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 0, 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x i16>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x i16>*
-  store <4 x i16> %v , <4 x i16>* %s
+  %s = inttoptr i32 %r to ptr
+  store <4 x i16> %v , ptr %s
   ret void
 }
 
-define void @store_v4i32_with_unfolded_gep_offset(<4 x i32> %v, <4 x i32>* %p) {
+define void @store_v4i32_with_unfolded_gep_offset(<4 x i32> %v, ptr %p) {
 ; CHECK-LABEL: store_v4i32_with_unfolded_gep_offset:
 ; CHECK:         .functype store_v4i32_with_unfolded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2138,12 +2098,12 @@ define void @store_v4i32_with_unfolded_gep_offset(<4 x i32> %v, <4 x i32>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <4 x i32>, <4 x i32>* %p, i32 1
-  store <4 x i32> %v , <4 x i32>* %s
+  %s = getelementptr <4 x i32>, ptr %p, i32 1
+  store <4 x i32> %v , ptr %s
   ret void
 }
 
-define void @store_narrowing_v4i32_with_unfolded_gep_offset(<4 x i16> %v, <4 x i16>* %p) {
+define void @store_narrowing_v4i32_with_unfolded_gep_offset(<4 x i16> %v, ptr %p) {
 ; CHECK-LABEL: store_narrowing_v4i32_with_unfolded_gep_offset:
 ; CHECK:         .functype store_narrowing_v4i32_with_unfolded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2153,8 +2113,8 @@ define void @store_narrowing_v4i32_with_unfolded_gep_offset(<4 x i16> %v, <4 x i
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 0, 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <4 x i16>, <4 x i16>* %p, i32 1
-  store <4 x i16> %v , <4 x i16>* %s
+  %s = getelementptr <4 x i16>, ptr %p, i32 1
+  store <4 x i16> %v , ptr %s
   ret void
 }
 
@@ -2166,8 +2126,8 @@ define void @store_v4i32_to_numeric_address(<4 x i32> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <4 x i32>*
-  store <4 x i32> %v , <4 x i32>* %s
+  %s = inttoptr i32 32 to ptr
+  store <4 x i32> %v , ptr %s
   ret void
 }
 
@@ -2179,8 +2139,8 @@ define void @store_narrowing_v4i32_to_numeric_address(<4 x i16> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane 32, 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <4 x i16>*
-  store <4 x i16> %v , <4 x i16>* %s
+  %s = inttoptr i32 32 to ptr
+  store <4 x i16> %v , ptr %s
   ret void
 }
 
@@ -2192,7 +2152,7 @@ define void @store_v4i32_to_global_address(<4 x i32> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store gv_v4i32
 ; CHECK-NEXT:    # fallthrough-return
-  store <4 x i32> %v , <4 x i32>* @gv_v4i32
+  store <4 x i32> %v , ptr @gv_v4i32
   ret void
 }
 
@@ -2204,211 +2164,211 @@ define void @store_narrowing_v4i32_to_global_address(<4 x i16> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store64_lane gv_v4i16, 0
 ; CHECK-NEXT:    # fallthrough-return
-  store <4 x i16> %v , <4 x i16>* @gv_v4i16
+  store <4 x i16> %v , ptr @gv_v4i16
   ret void
 }
 
 ; ==============================================================================
 ; 2 x i64
 ; ==============================================================================
-define <2 x i64> @load_v2i64(<2 x i64>* %p) {
+define <2 x i64> @load_v2i64(ptr %p) {
 ; CHECK-LABEL: load_v2i64:
 ; CHECK:         .functype load_v2i64 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <2 x i64>, <2 x i64>* %p
+  %v = load <2 x i64>, ptr %p
   ret <2 x i64> %v
 }
 
-define <2 x i64> @load_splat_v2i64(i64* %p) {
+define <2 x i64> @load_splat_v2i64(ptr %p) {
 ; CHECK-LABEL: load_splat_v2i64:
 ; CHECK:         .functype load_splat_v2i64 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load i64, i64* %p
+  %e = load i64, ptr %p
   %v1 = insertelement <2 x i64> undef, i64 %e, i32 0
   %v2 = shufflevector <2 x i64> %v1, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %v2
 }
 
-define <2 x i64> @load_sext_v2i64(<2 x i32>* %p) {
+define <2 x i64> @load_sext_v2i64(ptr %p) {
 ; CHECK-LABEL: load_sext_v2i64:
 ; CHECK:         .functype load_sext_v2i64 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i64x2.load32x2_s 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <2 x i32>, <2 x i32>* %p
+  %v = load <2 x i32>, ptr %p
   %v2 = sext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
 
-define <2 x i64> @load_zext_v2i64(<2 x i32>* %p) {
+define <2 x i64> @load_zext_v2i64(ptr %p) {
 ; CHECK-LABEL: load_zext_v2i64:
 ; CHECK:         .functype load_zext_v2i64 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i64x2.load32x2_u 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <2 x i32>, <2 x i32>* %p
+  %v = load <2 x i32>, ptr %p
   %v2 = zext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
 
-define <2 x i32> @load_ext_v2i64(<2 x i32>* %p) {
+define <2 x i32> @load_ext_v2i64(ptr %p) {
 ; CHECK-LABEL: load_ext_v2i64:
 ; CHECK:         .functype load_ext_v2i64 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <2 x i32>, <2 x i32>* %p
+  %v = load <2 x i32>, ptr %p
   ret <2 x i32> %v
 }
 
-define <2 x i64> @load_v2i64_with_folded_offset(<2 x i64>* %p) {
+define <2 x i64> @load_v2i64_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_v2i64_with_folded_offset:
 ; CHECK:         .functype load_v2i64_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x i64>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x i64>*
-  %v = load <2 x i64>, <2 x i64>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <2 x i64>, ptr %s
   ret <2 x i64> %v
 }
 
-define <2 x i64> @load_splat_v2i64_with_folded_offset(i64* %p) {
+define <2 x i64> @load_splat_v2i64_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v2i64_with_folded_offset:
 ; CHECK:         .functype load_splat_v2i64_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_splat 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint i64* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to i64*
-  %e = load i64, i64* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load i64, ptr %s
   %v1 = insertelement <2 x i64> undef, i64 %e, i32 0
   %v2 = shufflevector <2 x i64> %v1, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %v2
 }
 
-define <2 x i64> @load_sext_v2i64_with_folded_offset(<2 x i32>* %p) {
+define <2 x i64> @load_sext_v2i64_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v2i64_with_folded_offset:
 ; CHECK:         .functype load_sext_v2i64_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i64x2.load32x2_s 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x i32>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x i32>*
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <2 x i32>, ptr %s
   %v2 = sext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
 
-define <2 x i64> @load_zext_v2i64_with_folded_offset(<2 x i32>* %p) {
+define <2 x i64> @load_zext_v2i64_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v2i64_with_folded_offset:
 ; CHECK:         .functype load_zext_v2i64_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i64x2.load32x2_u 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x i32>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x i32>*
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <2 x i32>, ptr %s
   %v2 = zext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
 
-define <2 x i32> @load_ext_v2i64_with_folded_offset(<2 x i32>* %p) {
+define <2 x i32> @load_ext_v2i64_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v2i64_with_folded_offset:
 ; CHECK:         .functype load_ext_v2i64_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_zero 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x i32>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x i32>*
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <2 x i32>, ptr %s
   ret <2 x i32> %v
 }
 
-define <2 x i64> @load_v2i64_with_folded_gep_offset(<2 x i64>* %p) {
+define <2 x i64> @load_v2i64_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_v2i64_with_folded_gep_offset:
 ; CHECK:         .functype load_v2i64_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 16
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x i64>, <2 x i64>* %p, i32 1
-  %v = load <2 x i64>, <2 x i64>* %s
+  %s = getelementptr inbounds <2 x i64>, ptr %p, i32 1
+  %v = load <2 x i64>, ptr %s
   ret <2 x i64> %v
 }
 
-define <2 x i64> @load_splat_v2i64_with_folded_gep_offset(i64* %p) {
+define <2 x i64> @load_splat_v2i64_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v2i64_with_folded_gep_offset:
 ; CHECK:         .functype load_splat_v2i64_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_splat 8
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds i64, i64* %p, i32 1
-  %e = load i64, i64* %s
+  %s = getelementptr inbounds i64, ptr %p, i32 1
+  %e = load i64, ptr %s
   %v1 = insertelement <2 x i64> undef, i64 %e, i32 0
   %v2 = shufflevector <2 x i64> %v1, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %v2
 }
 
-define <2 x i64> @load_sext_v2i64_with_folded_gep_offset(<2 x i32>* %p) {
+define <2 x i64> @load_sext_v2i64_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v2i64_with_folded_gep_offset:
 ; CHECK:         .functype load_sext_v2i64_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i64x2.load32x2_s 8
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x i32>, <2 x i32>* %p, i32 1
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = getelementptr inbounds <2 x i32>, ptr %p, i32 1
+  %v = load <2 x i32>, ptr %s
   %v2 = sext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
 
-define <2 x i64> @load_zext_v2i64_with_folded_gep_offset(<2 x i32>* %p) {
+define <2 x i64> @load_zext_v2i64_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v2i64_with_folded_gep_offset:
 ; CHECK:         .functype load_zext_v2i64_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i64x2.load32x2_u 8
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x i32>, <2 x i32>* %p, i32 1
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = getelementptr inbounds <2 x i32>, ptr %p, i32 1
+  %v = load <2 x i32>, ptr %s
   %v2 = zext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
 
-define <2 x i32> @load_ext_v2i64_with_folded_gep_offset(<2 x i32>* %p) {
+define <2 x i32> @load_ext_v2i64_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v2i64_with_folded_gep_offset:
 ; CHECK:         .functype load_ext_v2i64_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_zero 8
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x i32>, <2 x i32>* %p, i32 1
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = getelementptr inbounds <2 x i32>, ptr %p, i32 1
+  %v = load <2 x i32>, ptr %s
   ret <2 x i32> %v
 }
 
-define <2 x i64> @load_v2i64_with_unfolded_gep_negative_offset(<2 x i64>* %p) {
+define <2 x i64> @load_v2i64_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_v2i64_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_v2i64_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2417,12 +2377,12 @@ define <2 x i64> @load_v2i64_with_unfolded_gep_negative_offset(<2 x i64>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x i64>, <2 x i64>* %p, i32 -1
-  %v = load <2 x i64>, <2 x i64>* %s
+  %s = getelementptr inbounds <2 x i64>, ptr %p, i32 -1
+  %v = load <2 x i64>, ptr %s
   ret <2 x i64> %v
 }
 
-define <2 x i64> @load_splat_v2i64_with_unfolded_gep_negative_offset(i64* %p) {
+define <2 x i64> @load_splat_v2i64_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v2i64_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_splat_v2i64_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2431,14 +2391,14 @@ define <2 x i64> @load_splat_v2i64_with_unfolded_gep_negative_offset(i64* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds i64, i64* %p, i32 -1
-  %e = load i64, i64* %s
+  %s = getelementptr inbounds i64, ptr %p, i32 -1
+  %e = load i64, ptr %s
   %v1 = insertelement <2 x i64> undef, i64 %e, i32 0
   %v2 = shufflevector <2 x i64> %v1, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %v2
 }
 
-define <2 x i64> @load_sext_v2i64_with_unfolded_gep_negative_offset(<2 x i32>* %p) {
+define <2 x i64> @load_sext_v2i64_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v2i64_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_sext_v2i64_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2447,13 +2407,13 @@ define <2 x i64> @load_sext_v2i64_with_unfolded_gep_negative_offset(<2 x i32>* %
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i64x2.load32x2_s 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x i32>, <2 x i32>* %p, i32 -1
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = getelementptr inbounds <2 x i32>, ptr %p, i32 -1
+  %v = load <2 x i32>, ptr %s
   %v2 = sext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
 
-define <2 x i64> @load_zext_v2i64_with_unfolded_gep_negative_offset(<2 x i32>* %p) {
+define <2 x i64> @load_zext_v2i64_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v2i64_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_zext_v2i64_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2462,13 +2422,13 @@ define <2 x i64> @load_zext_v2i64_with_unfolded_gep_negative_offset(<2 x i32>* %
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i64x2.load32x2_u 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x i32>, <2 x i32>* %p, i32 -1
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = getelementptr inbounds <2 x i32>, ptr %p, i32 -1
+  %v = load <2 x i32>, ptr %s
   %v2 = zext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
 
-define <2 x i32> @load_ext_v2i64_with_unfolded_gep_negative_offset(<2 x i32>* %p) {
+define <2 x i32> @load_ext_v2i64_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v2i64_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_ext_v2i64_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2477,12 +2437,12 @@ define <2 x i32> @load_ext_v2i64_with_unfolded_gep_negative_offset(<2 x i32>* %p
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x i32>, <2 x i32>* %p, i32 -1
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = getelementptr inbounds <2 x i32>, ptr %p, i32 -1
+  %v = load <2 x i32>, ptr %s
   ret <2 x i32> %v
 }
 
-define <2 x i64> @load_v2i64_with_unfolded_offset(<2 x i64>* %p) {
+define <2 x i64> @load_v2i64_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_v2i64_with_unfolded_offset:
 ; CHECK:         .functype load_v2i64_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2491,14 +2451,14 @@ define <2 x i64> @load_v2i64_with_unfolded_offset(<2 x i64>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x i64>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x i64>*
-  %v = load <2 x i64>, <2 x i64>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <2 x i64>, ptr %s
   ret <2 x i64> %v
 }
 
-define <2 x i64> @load_splat_v2i64_with_unfolded_offset(i64* %p) {
+define <2 x i64> @load_splat_v2i64_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v2i64_with_unfolded_offset:
 ; CHECK:         .functype load_splat_v2i64_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2507,16 +2467,16 @@ define <2 x i64> @load_splat_v2i64_with_unfolded_offset(i64* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint i64* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to i64*
-  %e = load i64, i64* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load i64, ptr %s
   %v1 = insertelement <2 x i64> undef, i64 %e, i32 0
   %v2 = shufflevector <2 x i64> %v1, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %v2
 }
 
-define <2 x i64> @load_sext_v2i64_with_unfolded_offset(<2 x i32>* %p) {
+define <2 x i64> @load_sext_v2i64_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v2i64_with_unfolded_offset:
 ; CHECK:         .functype load_sext_v2i64_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2525,15 +2485,15 @@ define <2 x i64> @load_sext_v2i64_with_unfolded_offset(<2 x i32>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i64x2.load32x2_s 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x i32>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x i32>*
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <2 x i32>, ptr %s
   %v2 = sext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
 
-define <2 x i64> @load_zext_v2i64_with_unfolded_offset(<2 x i32>* %p) {
+define <2 x i64> @load_zext_v2i64_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v2i64_with_unfolded_offset:
 ; CHECK:         .functype load_zext_v2i64_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2542,15 +2502,15 @@ define <2 x i64> @load_zext_v2i64_with_unfolded_offset(<2 x i32>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i64x2.load32x2_u 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x i32>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x i32>*
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <2 x i32>, ptr %s
   %v2 = zext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
 
-define <2 x i32> @load_ext_v2i64_with_unfolded_offset(<2 x i32>* %p) {
+define <2 x i32> @load_ext_v2i64_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v2i64_with_unfolded_offset:
 ; CHECK:         .functype load_ext_v2i64_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2559,14 +2519,14 @@ define <2 x i32> @load_ext_v2i64_with_unfolded_offset(<2 x i32>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x i32>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x i32>*
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <2 x i32>, ptr %s
   ret <2 x i32> %v
 }
 
-define <2 x i64> @load_v2i64_with_unfolded_gep_offset(<2 x i64>* %p) {
+define <2 x i64> @load_v2i64_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_v2i64_with_unfolded_gep_offset:
 ; CHECK:         .functype load_v2i64_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2575,12 +2535,12 @@ define <2 x i64> @load_v2i64_with_unfolded_gep_offset(<2 x i64>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <2 x i64>, <2 x i64>* %p, i32 1
-  %v = load <2 x i64>, <2 x i64>* %s
+  %s = getelementptr <2 x i64>, ptr %p, i32 1
+  %v = load <2 x i64>, ptr %s
   ret <2 x i64> %v
 }
 
-define <2 x i64> @load_splat_v2i64_with_unfolded_gep_offset(i64* %p) {
+define <2 x i64> @load_splat_v2i64_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v2i64_with_unfolded_gep_offset:
 ; CHECK:         .functype load_splat_v2i64_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2589,14 +2549,14 @@ define <2 x i64> @load_splat_v2i64_with_unfolded_gep_offset(i64* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr i64, i64* %p, i32 1
-  %e = load i64, i64* %s
+  %s = getelementptr i64, ptr %p, i32 1
+  %e = load i64, ptr %s
   %v1 = insertelement <2 x i64> undef, i64 %e, i32 0
   %v2 = shufflevector <2 x i64> %v1, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %v2
 }
 
-define <2 x i64> @load_sext_v2i64_with_unfolded_gep_offset(<2 x i32>* %p) {
+define <2 x i64> @load_sext_v2i64_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v2i64_with_unfolded_gep_offset:
 ; CHECK:         .functype load_sext_v2i64_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2605,13 +2565,13 @@ define <2 x i64> @load_sext_v2i64_with_unfolded_gep_offset(<2 x i32>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i64x2.load32x2_s 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <2 x i32>, <2 x i32>* %p, i32 1
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = getelementptr <2 x i32>, ptr %p, i32 1
+  %v = load <2 x i32>, ptr %s
   %v2 = sext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
 
-define <2 x i64> @load_zext_v2i64_with_unfolded_gep_offset(<2 x i32>* %p) {
+define <2 x i64> @load_zext_v2i64_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v2i64_with_unfolded_gep_offset:
 ; CHECK:         .functype load_zext_v2i64_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2620,13 +2580,13 @@ define <2 x i64> @load_zext_v2i64_with_unfolded_gep_offset(<2 x i32>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    i64x2.load32x2_u 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <2 x i32>, <2 x i32>* %p, i32 1
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = getelementptr <2 x i32>, ptr %p, i32 1
+  %v = load <2 x i32>, ptr %s
   %v2 = zext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
 
-define <2 x i32> @load_ext_v2i64_with_unfolded_gep_offset(<2 x i32>* %p) {
+define <2 x i32> @load_ext_v2i64_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_ext_v2i64_with_unfolded_gep_offset:
 ; CHECK:         .functype load_ext_v2i64_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2635,8 +2595,8 @@ define <2 x i32> @load_ext_v2i64_with_unfolded_gep_offset(<2 x i32>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <2 x i32>, <2 x i32>* %p, i32 1
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = getelementptr <2 x i32>, ptr %p, i32 1
+  %v = load <2 x i32>, ptr %s
   ret <2 x i32> %v
 }
 
@@ -2647,8 +2607,8 @@ define <2 x i64> @load_v2i64_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <2 x i64>*
-  %v = load <2 x i64>, <2 x i64>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <2 x i64>, ptr %s
   ret <2 x i64> %v
 }
 
@@ -2659,8 +2619,8 @@ define <2 x i64> @load_splat_v2i64_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load64_splat 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to i64*
-  %e = load i64, i64* %s
+  %s = inttoptr i32 32 to ptr
+  %e = load i64, ptr %s
   %v1 = insertelement <2 x i64> undef, i64 %e, i32 0
   %v2 = shufflevector <2 x i64> %v1, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %v2
@@ -2673,8 +2633,8 @@ define <2 x i64> @load_sext_v2i64_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i64x2.load32x2_s 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <2 x i32>*
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <2 x i32>, ptr %s
   %v2 = sext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
@@ -2686,8 +2646,8 @@ define <2 x i64> @load_zext_v2i64_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i64x2.load32x2_u 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <2 x i32>*
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <2 x i32>, ptr %s
   %v2 = zext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
@@ -2699,8 +2659,8 @@ define <2 x i32> @load_ext_v2i64_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load64_zero 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <2 x i32>*
-  %v = load <2 x i32>, <2 x i32>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <2 x i32>, ptr %s
   ret <2 x i32> %v
 }
 
@@ -2712,7 +2672,7 @@ define <2 x i64> @load_v2i64_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load gv_v2i64
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <2 x i64>, <2 x i64>* @gv_v2i64
+  %v = load <2 x i64>, ptr @gv_v2i64
   ret <2 x i64> %v
 }
 
@@ -2724,7 +2684,7 @@ define <2 x i64> @load_splat_v2i64_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load64_splat gv_i64
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load i64, i64* @gv_i64
+  %e = load i64, ptr @gv_i64
   %v1 = insertelement <2 x i64> undef, i64 %e, i32 0
   %v2 = shufflevector <2 x i64> %v1, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %v2
@@ -2738,7 +2698,7 @@ define <2 x i64> @load_sext_v2i64_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i64x2.load32x2_s gv_v2i32
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <2 x i32>, <2 x i32>* @gv_v2i32
+  %v = load <2 x i32>, ptr @gv_v2i32
   %v2 = sext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
@@ -2750,7 +2710,7 @@ define <2 x i64> @load_zext_v2i64_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i64x2.load32x2_u gv_v2i32
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <2 x i32>, <2 x i32>* @gv_v2i32
+  %v = load <2 x i32>, ptr @gv_v2i32
   %v2 = zext <2 x i32> %v to <2 x i64>
   ret <2 x i64> %v2
 }
@@ -2762,11 +2722,11 @@ define <2 x i32> @load_ext_v2i64_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load64_zero gv_v2i32
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <2 x i32>, <2 x i32>* @gv_v2i32
+  %v = load <2 x i32>, ptr @gv_v2i32
   ret <2 x i32> %v
 }
 
-define void @store_v2i64(<2 x i64> %v, <2 x i64>* %p) {
+define void @store_v2i64(<2 x i64> %v, ptr %p) {
 ; CHECK-LABEL: store_v2i64:
 ; CHECK:         .functype store_v2i64 (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2774,11 +2734,11 @@ define void @store_v2i64(<2 x i64> %v, <2 x i64>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  store <2 x i64> %v , <2 x i64>* %p
+  store <2 x i64> %v , ptr %p
   ret void
 }
 
-define void @store_v2i64_with_folded_offset(<2 x i64> %v, <2 x i64>* %p) {
+define void @store_v2i64_with_folded_offset(<2 x i64> %v, ptr %p) {
 ; CHECK-LABEL: store_v2i64_with_folded_offset:
 ; CHECK:         .functype store_v2i64_with_folded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2786,14 +2746,14 @@ define void @store_v2i64_with_folded_offset(<2 x i64> %v, <2 x i64>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x i64>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x i64>*
-  store <2 x i64> %v , <2 x i64>* %s
+  %s = inttoptr i32 %r to ptr
+  store <2 x i64> %v , ptr %s
   ret void
 }
 
-define void @store_v2i64_with_folded_gep_offset(<2 x i64> %v, <2 x i64>* %p) {
+define void @store_v2i64_with_folded_gep_offset(<2 x i64> %v, ptr %p) {
 ; CHECK-LABEL: store_v2i64_with_folded_gep_offset:
 ; CHECK:         .functype store_v2i64_with_folded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2801,12 +2761,12 @@ define void @store_v2i64_with_folded_gep_offset(<2 x i64> %v, <2 x i64>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x i64>, <2 x i64>* %p, i32 1
-  store <2 x i64> %v , <2 x i64>* %s
+  %s = getelementptr inbounds <2 x i64>, ptr %p, i32 1
+  store <2 x i64> %v , ptr %s
   ret void
 }
 
-define void @store_v2i64_with_unfolded_gep_negative_offset(<2 x i64> %v, <2 x i64>* %p) {
+define void @store_v2i64_with_unfolded_gep_negative_offset(<2 x i64> %v, ptr %p) {
 ; CHECK-LABEL: store_v2i64_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype store_v2i64_with_unfolded_gep_negative_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2816,12 +2776,12 @@ define void @store_v2i64_with_unfolded_gep_negative_offset(<2 x i64> %v, <2 x i6
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x i64>, <2 x i64>* %p, i32 -1
-  store <2 x i64> %v , <2 x i64>* %s
+  %s = getelementptr inbounds <2 x i64>, ptr %p, i32 -1
+  store <2 x i64> %v , ptr %s
   ret void
 }
 
-define void @store_v2i64_with_unfolded_offset(<2 x i64> %v, <2 x i64>* %p) {
+define void @store_v2i64_with_unfolded_offset(<2 x i64> %v, ptr %p) {
 ; CHECK-LABEL: store_v2i64_with_unfolded_offset:
 ; CHECK:         .functype store_v2i64_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2831,14 +2791,14 @@ define void @store_v2i64_with_unfolded_offset(<2 x i64> %v, <2 x i64>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x i64>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x i64>*
-  store <2 x i64> %v , <2 x i64>* %s
+  %s = inttoptr i32 %r to ptr
+  store <2 x i64> %v , ptr %s
   ret void
 }
 
-define void @store_v2i64_with_unfolded_gep_offset(<2 x i64> %v, <2 x i64>* %p) {
+define void @store_v2i64_with_unfolded_gep_offset(<2 x i64> %v, ptr %p) {
 ; CHECK-LABEL: store_v2i64_with_unfolded_gep_offset:
 ; CHECK:         .functype store_v2i64_with_unfolded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -2848,8 +2808,8 @@ define void @store_v2i64_with_unfolded_gep_offset(<2 x i64> %v, <2 x i64>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <2 x i64>, <2 x i64>* %p, i32 1
-  store <2 x i64> %v , <2 x i64>* %s
+  %s = getelementptr <2 x i64>, ptr %p, i32 1
+  store <2 x i64> %v , ptr %s
   ret void
 }
 
@@ -2861,8 +2821,8 @@ define void @store_v2i64_to_numeric_address(<2 x i64> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <2 x i64>*
-  store <2 x i64> %v , <2 x i64>* %s
+  %s = inttoptr i32 32 to ptr
+  store <2 x i64> %v , ptr %s
   ret void
 }
 
@@ -2874,94 +2834,94 @@ define void @store_v2i64_to_global_address(<2 x i64> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store gv_v2i64
 ; CHECK-NEXT:    # fallthrough-return
-  store <2 x i64> %v , <2 x i64>* @gv_v2i64
+  store <2 x i64> %v , ptr @gv_v2i64
   ret void
 }
 
 ; ==============================================================================
 ; 4 x float
 ; ==============================================================================
-define <4 x float> @load_v4f32(<4 x float>* %p) {
+define <4 x float> @load_v4f32(ptr %p) {
 ; CHECK-LABEL: load_v4f32:
 ; CHECK:         .functype load_v4f32 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x float>, <4 x float>* %p
+  %v = load <4 x float>, ptr %p
   ret <4 x float> %v
 }
 
-define <4 x float> @load_splat_v4f32(float* %p) {
+define <4 x float> @load_splat_v4f32(ptr %p) {
 ; CHECK-LABEL: load_splat_v4f32:
 ; CHECK:         .functype load_splat_v4f32 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load float, float* %p
+  %e = load float, ptr %p
   %v1 = insertelement <4 x float> undef, float %e, i32 0
   %v2 = shufflevector <4 x float> %v1, <4 x float> undef, <4 x i32> zeroinitializer
   ret <4 x float> %v2
 }
 
-define <4 x float> @load_v4f32_with_folded_offset(<4 x float>* %p) {
+define <4 x float> @load_v4f32_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_v4f32_with_folded_offset:
 ; CHECK:         .functype load_v4f32_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x float>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x float>*
-  %v = load <4 x float>, <4 x float>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x float>, ptr %s
   ret <4 x float> %v
 }
 
-define <4 x float> @load_splat_v4f32_with_folded_offset(float* %p) {
+define <4 x float> @load_splat_v4f32_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v4f32_with_folded_offset:
 ; CHECK:         .functype load_splat_v4f32_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_splat 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint float* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to float*
-  %e = load float, float* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load float, ptr %s
   %v1 = insertelement <4 x float> undef, float %e, i32 0
   %v2 = shufflevector <4 x float> %v1, <4 x float> undef, <4 x i32> zeroinitializer
   ret <4 x float> %v2
 }
 
-define <4 x float> @load_v4f32_with_folded_gep_offset(<4 x float>* %p) {
+define <4 x float> @load_v4f32_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_v4f32_with_folded_gep_offset:
 ; CHECK:         .functype load_v4f32_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 16
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x float>, <4 x float>* %p, i32 1
-  %v = load <4 x float>, <4 x float>* %s
+  %s = getelementptr inbounds <4 x float>, ptr %p, i32 1
+  %v = load <4 x float>, ptr %s
   ret <4 x float> %v
 }
 
-define <4 x float> @load_splat_v4f32_with_folded_gep_offset(float* %p) {
+define <4 x float> @load_splat_v4f32_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v4f32_with_folded_gep_offset:
 ; CHECK:         .functype load_splat_v4f32_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_splat 4
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds float, float* %p, i32 1
-  %e = load float, float* %s
+  %s = getelementptr inbounds float, ptr %p, i32 1
+  %e = load float, ptr %s
   %v1 = insertelement <4 x float> undef, float %e, i32 0
   %v2 = shufflevector <4 x float> %v1, <4 x float> undef, <4 x i32> zeroinitializer
   ret <4 x float> %v2
 }
 
-define <4 x float> @load_v4f32_with_unfolded_gep_negative_offset(<4 x float>* %p) {
+define <4 x float> @load_v4f32_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_v4f32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_v4f32_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2970,12 +2930,12 @@ define <4 x float> @load_v4f32_with_unfolded_gep_negative_offset(<4 x float>* %p
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x float>, <4 x float>* %p, i32 -1
-  %v = load <4 x float>, <4 x float>* %s
+  %s = getelementptr inbounds <4 x float>, ptr %p, i32 -1
+  %v = load <4 x float>, ptr %s
   ret <4 x float> %v
 }
 
-define <4 x float> @load_splat_v4f32_with_unfolded_gep_negative_offset(float* %p) {
+define <4 x float> @load_splat_v4f32_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v4f32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_splat_v4f32_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -2984,14 +2944,14 @@ define <4 x float> @load_splat_v4f32_with_unfolded_gep_negative_offset(float* %p
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds float, float* %p, i32 -1
-  %e = load float, float* %s
+  %s = getelementptr inbounds float, ptr %p, i32 -1
+  %e = load float, ptr %s
   %v1 = insertelement <4 x float> undef, float %e, i32 0
   %v2 = shufflevector <4 x float> %v1, <4 x float> undef, <4 x i32> zeroinitializer
   ret <4 x float> %v2
 }
 
-define <4 x float> @load_v4f32_with_unfolded_offset(<4 x float>* %p) {
+define <4 x float> @load_v4f32_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_v4f32_with_unfolded_offset:
 ; CHECK:         .functype load_v4f32_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3000,14 +2960,14 @@ define <4 x float> @load_v4f32_with_unfolded_offset(<4 x float>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x float>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x float>*
-  %v = load <4 x float>, <4 x float>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <4 x float>, ptr %s
   ret <4 x float> %v
 }
 
-define <4 x float> @load_splat_v4f32_with_unfolded_offset(float* %p) {
+define <4 x float> @load_splat_v4f32_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v4f32_with_unfolded_offset:
 ; CHECK:         .functype load_splat_v4f32_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3016,16 +2976,16 @@ define <4 x float> @load_splat_v4f32_with_unfolded_offset(float* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint float* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to float*
-  %e = load float, float* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load float, ptr %s
   %v1 = insertelement <4 x float> undef, float %e, i32 0
   %v2 = shufflevector <4 x float> %v1, <4 x float> undef, <4 x i32> zeroinitializer
   ret <4 x float> %v2
 }
 
-define <4 x float> @load_v4f32_with_unfolded_gep_offset(<4 x float>* %p) {
+define <4 x float> @load_v4f32_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_v4f32_with_unfolded_gep_offset:
 ; CHECK:         .functype load_v4f32_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3034,12 +2994,12 @@ define <4 x float> @load_v4f32_with_unfolded_gep_offset(<4 x float>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <4 x float>, <4 x float>* %p, i32 1
-  %v = load <4 x float>, <4 x float>* %s
+  %s = getelementptr <4 x float>, ptr %p, i32 1
+  %v = load <4 x float>, ptr %s
   ret <4 x float> %v
 }
 
-define <4 x float> @load_splat_v4f32_with_unfolded_gep_offset(float* %p) {
+define <4 x float> @load_splat_v4f32_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v4f32_with_unfolded_gep_offset:
 ; CHECK:         .functype load_splat_v4f32_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3048,8 +3008,8 @@ define <4 x float> @load_splat_v4f32_with_unfolded_gep_offset(float* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr float, float* %p, i32 1
-  %e = load float, float* %s
+  %s = getelementptr float, ptr %p, i32 1
+  %e = load float, ptr %s
   %v1 = insertelement <4 x float> undef, float %e, i32 0
   %v2 = shufflevector <4 x float> %v1, <4 x float> undef, <4 x i32> zeroinitializer
   ret <4 x float> %v2
@@ -3062,8 +3022,8 @@ define <4 x float> @load_v4f32_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <4 x float>*
-  %v = load <4 x float>, <4 x float>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <4 x float>, ptr %s
   ret <4 x float> %v
 }
 
@@ -3074,8 +3034,8 @@ define <4 x float> @load_splat_v4f32_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load32_splat 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to float*
-  %e = load float, float* %s
+  %s = inttoptr i32 32 to ptr
+  %e = load float, ptr %s
   %v1 = insertelement <4 x float> undef, float %e, i32 0
   %v2 = shufflevector <4 x float> %v1, <4 x float> undef, <4 x i32> zeroinitializer
   ret <4 x float> %v2
@@ -3089,7 +3049,7 @@ define <4 x float> @load_v4f32_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load gv_v4f32
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <4 x float>, <4 x float>* @gv_v4f32
+  %v = load <4 x float>, ptr @gv_v4f32
   ret <4 x float> %v
 }
 
@@ -3101,13 +3061,13 @@ define <4 x float> @load_splat_v4f32_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load32_splat gv_f32
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load float, float* @gv_f32
+  %e = load float, ptr @gv_f32
   %v1 = insertelement <4 x float> undef, float %e, i32 0
   %v2 = shufflevector <4 x float> %v1, <4 x float> undef, <4 x i32> zeroinitializer
   ret <4 x float> %v2
 }
 
-define void @store_v4f32(<4 x float> %v, <4 x float>* %p) {
+define void @store_v4f32(<4 x float> %v, ptr %p) {
 ; CHECK-LABEL: store_v4f32:
 ; CHECK:         .functype store_v4f32 (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -3115,11 +3075,11 @@ define void @store_v4f32(<4 x float> %v, <4 x float>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  store <4 x float> %v , <4 x float>* %p
+  store <4 x float> %v , ptr %p
   ret void
 }
 
-define void @store_v4f32_with_folded_offset(<4 x float> %v, <4 x float>* %p) {
+define void @store_v4f32_with_folded_offset(<4 x float> %v, ptr %p) {
 ; CHECK-LABEL: store_v4f32_with_folded_offset:
 ; CHECK:         .functype store_v4f32_with_folded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -3127,14 +3087,14 @@ define void @store_v4f32_with_folded_offset(<4 x float> %v, <4 x float>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x float>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x float>*
-  store <4 x float> %v , <4 x float>* %s
+  %s = inttoptr i32 %r to ptr
+  store <4 x float> %v , ptr %s
   ret void
 }
 
-define void @store_v4f32_with_folded_gep_offset(<4 x float> %v, <4 x float>* %p) {
+define void @store_v4f32_with_folded_gep_offset(<4 x float> %v, ptr %p) {
 ; CHECK-LABEL: store_v4f32_with_folded_gep_offset:
 ; CHECK:         .functype store_v4f32_with_folded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -3142,12 +3102,12 @@ define void @store_v4f32_with_folded_gep_offset(<4 x float> %v, <4 x float>* %p)
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x float>, <4 x float>* %p, i32 1
-  store <4 x float> %v , <4 x float>* %s
+  %s = getelementptr inbounds <4 x float>, ptr %p, i32 1
+  store <4 x float> %v , ptr %s
   ret void
 }
 
-define void @store_v4f32_with_unfolded_gep_negative_offset(<4 x float> %v, <4 x float>* %p) {
+define void @store_v4f32_with_unfolded_gep_negative_offset(<4 x float> %v, ptr %p) {
 ; CHECK-LABEL: store_v4f32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype store_v4f32_with_unfolded_gep_negative_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -3157,12 +3117,12 @@ define void @store_v4f32_with_unfolded_gep_negative_offset(<4 x float> %v, <4 x 
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x float>, <4 x float>* %p, i32 -1
-  store <4 x float> %v , <4 x float>* %s
+  %s = getelementptr inbounds <4 x float>, ptr %p, i32 -1
+  store <4 x float> %v , ptr %s
   ret void
 }
 
-define void @store_v4f32_with_unfolded_offset(<4 x float> %v, <4 x float>* %p) {
+define void @store_v4f32_with_unfolded_offset(<4 x float> %v, ptr %p) {
 ; CHECK-LABEL: store_v4f32_with_unfolded_offset:
 ; CHECK:         .functype store_v4f32_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -3172,14 +3132,14 @@ define void @store_v4f32_with_unfolded_offset(<4 x float> %v, <4 x float>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <4 x float>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <4 x float>*
-  store <4 x float> %v , <4 x float>* %s
+  %s = inttoptr i32 %r to ptr
+  store <4 x float> %v , ptr %s
   ret void
 }
 
-define void @store_v4f32_with_unfolded_gep_offset(<4 x float> %v, <4 x float>* %p) {
+define void @store_v4f32_with_unfolded_gep_offset(<4 x float> %v, ptr %p) {
 ; CHECK-LABEL: store_v4f32_with_unfolded_gep_offset:
 ; CHECK:         .functype store_v4f32_with_unfolded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -3189,8 +3149,8 @@ define void @store_v4f32_with_unfolded_gep_offset(<4 x float> %v, <4 x float>* %
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <4 x float>, <4 x float>* %p, i32 1
-  store <4 x float> %v , <4 x float>* %s
+  %s = getelementptr <4 x float>, ptr %p, i32 1
+  store <4 x float> %v , ptr %s
   ret void
 }
 
@@ -3202,8 +3162,8 @@ define void @store_v4f32_to_numeric_address(<4 x float> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <4 x float>*
-  store <4 x float> %v , <4 x float>* %s
+  %s = inttoptr i32 32 to ptr
+  store <4 x float> %v , ptr %s
   ret void
 }
 
@@ -3215,38 +3175,38 @@ define void @store_v4f32_to_global_address(<4 x float> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store gv_v4f32
 ; CHECK-NEXT:    # fallthrough-return
-  store <4 x float> %v , <4 x float>* @gv_v4f32
+  store <4 x float> %v , ptr @gv_v4f32
   ret void
 }
 
 ; ==============================================================================
 ; 2 x double
 ; ==============================================================================
-define <2 x double> @load_v2f64(<2 x double>* %p) {
+define <2 x double> @load_v2f64(ptr %p) {
 ; CHECK-LABEL: load_v2f64:
 ; CHECK:         .functype load_v2f64 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <2 x double>, <2 x double>* %p
+  %v = load <2 x double>, ptr %p
   ret <2 x double> %v
 }
 
-define <2 x double> @load_splat_v2f64(double* %p) {
+define <2 x double> @load_splat_v2f64(ptr %p) {
 ; CHECK-LABEL: load_splat_v2f64:
 ; CHECK:         .functype load_splat_v2f64 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load double, double* %p
+  %e = load double, ptr %p
   %v1 = insertelement <2 x double> undef, double %e, i32 0
   %v2 = shufflevector <2 x double> %v1, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %v2
 }
 
-define <2 x double> @load_promote_v2f64(<2 x float>* %p) {
+define <2 x double> @load_promote_v2f64(ptr %p) {
 ; CHECK-LABEL: load_promote_v2f64:
 ; CHECK:         .functype load_promote_v2f64 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3254,42 +3214,42 @@ define <2 x double> @load_promote_v2f64(<2 x float>* %p) {
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load <2 x float>, <2 x float>* %p
+  %e = load <2 x float>, ptr %p
   %v = fpext <2 x float> %e to <2 x double>
   ret <2 x double> %v
 }
 
-define <2 x double> @load_v2f64_with_folded_offset(<2 x double>* %p) {
+define <2 x double> @load_v2f64_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_v2f64_with_folded_offset:
 ; CHECK:         .functype load_v2f64_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x double>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x double>*
-  %v = load <2 x double>, <2 x double>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <2 x double>, ptr %s
   ret <2 x double> %v
 }
 
-define <2 x double> @load_splat_v2f64_with_folded_offset(double* %p) {
+define <2 x double> @load_splat_v2f64_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v2f64_with_folded_offset:
 ; CHECK:         .functype load_splat_v2f64_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_splat 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint double* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to double*
-  %e = load double, double* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load double, ptr %s
   %v1 = insertelement <2 x double> undef, double %e, i32 0
   %v2 = shufflevector <2 x double> %v1, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %v2
 }
 
-define <2 x double> @load_promote_v2f64_with_folded_offset(<2 x float>* %p) {
+define <2 x double> @load_promote_v2f64_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_promote_v2f64_with_folded_offset:
 ; CHECK:         .functype load_promote_v2f64_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3299,41 +3259,41 @@ define <2 x double> @load_promote_v2f64_with_folded_offset(<2 x float>* %p) {
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x float>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x float>*
-  %e = load <2 x float>, <2 x float>* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load <2 x float>, ptr %s
   %v = fpext <2 x float> %e to <2 x double>
   ret <2 x double> %v
 }
 
-define <2 x double> @load_v2f64_with_folded_gep_offset(<2 x double>* %p) {
+define <2 x double> @load_v2f64_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_v2f64_with_folded_gep_offset:
 ; CHECK:         .functype load_v2f64_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 16
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x double>, <2 x double>* %p, i32 1
-  %v = load <2 x double>, <2 x double>* %s
+  %s = getelementptr inbounds <2 x double>, ptr %p, i32 1
+  %v = load <2 x double>, ptr %s
   ret <2 x double> %v
 }
 
-define <2 x double> @load_splat_v2f64_with_folded_gep_offset(double* %p) {
+define <2 x double> @load_splat_v2f64_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v2f64_with_folded_gep_offset:
 ; CHECK:         .functype load_splat_v2f64_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_splat 8
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds double, double* %p, i32 1
-  %e = load double, double* %s
+  %s = getelementptr inbounds double, ptr %p, i32 1
+  %e = load double, ptr %s
   %v1 = insertelement <2 x double> undef, double %e, i32 0
   %v2 = shufflevector <2 x double> %v1, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %v2
 }
 
-define <2 x double> @load_promote_v2f64_with_folded_gep_offset(<2 x float>* %p) {
+define <2 x double> @load_promote_v2f64_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_promote_v2f64_with_folded_gep_offset:
 ; CHECK:         .functype load_promote_v2f64_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3343,13 +3303,13 @@ define <2 x double> @load_promote_v2f64_with_folded_gep_offset(<2 x float>* %p) 
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x float>, <2 x float>* %p, i32 1
-  %e = load <2 x float>, <2 x float>* %s
+  %s = getelementptr inbounds <2 x float>, ptr %p, i32 1
+  %e = load <2 x float>, ptr %s
   %v = fpext <2 x float> %e to <2 x double>
   ret <2 x double> %v
 }
 
-define <2 x double> @load_v2f64_with_unfolded_gep_negative_offset(<2 x double>* %p) {
+define <2 x double> @load_v2f64_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_v2f64_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_v2f64_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3358,12 +3318,12 @@ define <2 x double> @load_v2f64_with_unfolded_gep_negative_offset(<2 x double>* 
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x double>, <2 x double>* %p, i32 -1
-  %v = load <2 x double>, <2 x double>* %s
+  %s = getelementptr inbounds <2 x double>, ptr %p, i32 -1
+  %v = load <2 x double>, ptr %s
   ret <2 x double> %v
 }
 
-define <2 x double> @load_splat_v2f64_with_unfolded_gep_negative_offset(double* %p) {
+define <2 x double> @load_splat_v2f64_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v2f64_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_splat_v2f64_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3372,14 +3332,14 @@ define <2 x double> @load_splat_v2f64_with_unfolded_gep_negative_offset(double* 
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds double, double* %p, i32 -1
-  %e = load double, double* %s
+  %s = getelementptr inbounds double, ptr %p, i32 -1
+  %e = load double, ptr %s
   %v1 = insertelement <2 x double> undef, double %e, i32 0
   %v2 = shufflevector <2 x double> %v1, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %v2
 }
 
-define <2 x double> @load_promote_v2f64_with_unfolded_gep_negative_offset(<2 x float>* %p) {
+define <2 x double> @load_promote_v2f64_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_promote_v2f64_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_promote_v2f64_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3389,13 +3349,13 @@ define <2 x double> @load_promote_v2f64_with_unfolded_gep_negative_offset(<2 x f
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x float>, <2 x float>* %p, i32 -1
-  %e = load <2 x float>, <2 x float>* %s
+  %s = getelementptr inbounds <2 x float>, ptr %p, i32 -1
+  %e = load <2 x float>, ptr %s
   %v = fpext <2 x float> %e to <2 x double>
   ret <2 x double> %v
 }
 
-define <2 x double> @load_v2f64_with_unfolded_offset(<2 x double>* %p) {
+define <2 x double> @load_v2f64_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_v2f64_with_unfolded_offset:
 ; CHECK:         .functype load_v2f64_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3404,14 +3364,14 @@ define <2 x double> @load_v2f64_with_unfolded_offset(<2 x double>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x double>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x double>*
-  %v = load <2 x double>, <2 x double>* %s
+  %s = inttoptr i32 %r to ptr
+  %v = load <2 x double>, ptr %s
   ret <2 x double> %v
 }
 
-define <2 x double> @load_splat_v2f64_with_unfolded_offset(double* %p) {
+define <2 x double> @load_splat_v2f64_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v2f64_with_unfolded_offset:
 ; CHECK:         .functype load_splat_v2f64_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3420,16 +3380,16 @@ define <2 x double> @load_splat_v2f64_with_unfolded_offset(double* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint double* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to double*
-  %e = load double, double* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load double, ptr %s
   %v1 = insertelement <2 x double> undef, double %e, i32 0
   %v2 = shufflevector <2 x double> %v1, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %v2
 }
 
-define <2 x double> @load_promote_v2f64_with_unfolded_offset(<2 x float>* %p) {
+define <2 x double> @load_promote_v2f64_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_promote_v2f64_with_unfolded_offset:
 ; CHECK:         .functype load_promote_v2f64_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3439,15 +3399,15 @@ define <2 x double> @load_promote_v2f64_with_unfolded_offset(<2 x float>* %p) {
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x float>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x float>*
-  %e = load <2 x float>, <2 x float>* %s
+  %s = inttoptr i32 %r to ptr
+  %e = load <2 x float>, ptr %s
   %v = fpext <2 x float> %e to <2 x double>
   ret <2 x double> %v
 }
 
-define <2 x double> @load_v2f64_with_unfolded_gep_offset(<2 x double>* %p) {
+define <2 x double> @load_v2f64_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_v2f64_with_unfolded_gep_offset:
 ; CHECK:         .functype load_v2f64_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3456,12 +3416,12 @@ define <2 x double> @load_v2f64_with_unfolded_gep_offset(<2 x double>* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <2 x double>, <2 x double>* %p, i32 1
-  %v = load <2 x double>, <2 x double>* %s
+  %s = getelementptr <2 x double>, ptr %p, i32 1
+  %v = load <2 x double>, ptr %s
   ret <2 x double> %v
 }
 
-define <2 x double> @load_splat_v2f64_with_unfolded_gep_offset(double* %p) {
+define <2 x double> @load_splat_v2f64_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_splat_v2f64_with_unfolded_gep_offset:
 ; CHECK:         .functype load_splat_v2f64_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3470,14 +3430,14 @@ define <2 x double> @load_splat_v2f64_with_unfolded_gep_offset(double* %p) {
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load64_splat 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr double, double* %p, i32 1
-  %e = load double, double* %s
+  %s = getelementptr double, ptr %p, i32 1
+  %e = load double, ptr %s
   %v1 = insertelement <2 x double> undef, double %e, i32 0
   %v2 = shufflevector <2 x double> %v1, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %v2
 }
 
-define <2 x double> @load_promote_v2f64_with_unfolded_gep_offset(<2 x float>* %p) {
+define <2 x double> @load_promote_v2f64_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_promote_v2f64_with_unfolded_gep_offset:
 ; CHECK:         .functype load_promote_v2f64_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
@@ -3487,8 +3447,8 @@ define <2 x double> @load_promote_v2f64_with_unfolded_gep_offset(<2 x float>* %p
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <2 x float>, <2 x float>* %p, i32 1
-  %e = load <2 x float>, <2 x float>* %s
+  %s = getelementptr <2 x float>, ptr %p, i32 1
+  %e = load <2 x float>, ptr %s
   %v = fpext <2 x float> %e to <2 x double>
   ret <2 x double> %v
 }
@@ -3500,8 +3460,8 @@ define <2 x double> @load_v2f64_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <2 x double>*
-  %v = load <2 x double>, <2 x double>* %s
+  %s = inttoptr i32 32 to ptr
+  %v = load <2 x double>, ptr %s
   ret <2 x double> %v
 }
 
@@ -3512,8 +3472,8 @@ define <2 x double> @load_splat_v2f64_from_numeric_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load64_splat 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to double*
-  %e = load double, double* %s
+  %s = inttoptr i32 32 to ptr
+  %e = load double, ptr %s
   %v1 = insertelement <2 x double> undef, double %e, i32 0
   %v2 = shufflevector <2 x double> %v1, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %v2
@@ -3527,8 +3487,8 @@ define <2 x double> @load_promote_v2f64_from_numeric_address() {
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <2 x float>*
-  %e = load <2 x float>, <2 x float>* %s
+  %s = inttoptr i32 32 to ptr
+  %e = load <2 x float>, ptr %s
   %v = fpext <2 x float> %e to <2 x double>
   ret <2 x double> %v
 }
@@ -3541,7 +3501,7 @@ define <2 x double> @load_v2f64_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load gv_v2f64
 ; CHECK-NEXT:    # fallthrough-return
-  %v = load <2 x double>, <2 x double>* @gv_v2f64
+  %v = load <2 x double>, ptr @gv_v2f64
   ret <2 x double> %v
 }
 
@@ -3553,7 +3513,7 @@ define <2 x double> @load_splat_v2f64_from_global_address() {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load64_splat gv_f64
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load double, double* @gv_f64
+  %e = load double, ptr @gv_f64
   %v1 = insertelement <2 x double> undef, double %e, i32 0
   %v2 = shufflevector <2 x double> %v1, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %v2
@@ -3568,12 +3528,12 @@ define <2 x double> @load_promote_v2f64_from_global_address() {
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
-  %e = load <2 x float>, <2 x float>* @gv_v2f32
+  %e = load <2 x float>, ptr @gv_v2f32
   %v = fpext <2 x float> %e to <2 x double>
   ret <2 x double> %v
 }
 
-define void @store_v2f64(<2 x double> %v, <2 x double>* %p) {
+define void @store_v2f64(<2 x double> %v, ptr %p) {
 ; CHECK-LABEL: store_v2f64:
 ; CHECK:         .functype store_v2f64 (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -3581,11 +3541,11 @@ define void @store_v2f64(<2 x double> %v, <2 x double>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  store <2 x double> %v , <2 x double>* %p
+  store <2 x double> %v , ptr %p
   ret void
 }
 
-define void @store_v2f64_with_folded_offset(<2 x double> %v, <2 x double>* %p) {
+define void @store_v2f64_with_folded_offset(<2 x double> %v, ptr %p) {
 ; CHECK-LABEL: store_v2f64_with_folded_offset:
 ; CHECK:         .functype store_v2f64_with_folded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -3593,14 +3553,14 @@ define void @store_v2f64_with_folded_offset(<2 x double> %v, <2 x double>* %p) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x double>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x double>*
-  store <2 x double> %v , <2 x double>* %s
+  %s = inttoptr i32 %r to ptr
+  store <2 x double> %v , ptr %s
   ret void
 }
 
-define void @store_v2f64_with_folded_gep_offset(<2 x double> %v, <2 x double>* %p) {
+define void @store_v2f64_with_folded_gep_offset(<2 x double> %v, ptr %p) {
 ; CHECK-LABEL: store_v2f64_with_folded_gep_offset:
 ; CHECK:         .functype store_v2f64_with_folded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -3608,12 +3568,12 @@ define void @store_v2f64_with_folded_gep_offset(<2 x double> %v, <2 x double>* %
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x double>, <2 x double>* %p, i32 1
-  store <2 x double> %v , <2 x double>* %s
+  %s = getelementptr inbounds <2 x double>, ptr %p, i32 1
+  store <2 x double> %v , ptr %s
   ret void
 }
 
-define void @store_v2f64_with_unfolded_gep_negative_offset(<2 x double> %v, <2 x double>* %p) {
+define void @store_v2f64_with_unfolded_gep_negative_offset(<2 x double> %v, ptr %p) {
 ; CHECK-LABEL: store_v2f64_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype store_v2f64_with_unfolded_gep_negative_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -3623,12 +3583,12 @@ define void @store_v2f64_with_unfolded_gep_negative_offset(<2 x double> %v, <2 x
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x double>, <2 x double>* %p, i32 -1
-  store <2 x double> %v , <2 x double>* %s
+  %s = getelementptr inbounds <2 x double>, ptr %p, i32 -1
+  store <2 x double> %v , ptr %s
   ret void
 }
 
-define void @store_v2f64_with_unfolded_offset(<2 x double> %v, <2 x double>* %p) {
+define void @store_v2f64_with_unfolded_offset(<2 x double> %v, ptr %p) {
 ; CHECK-LABEL: store_v2f64_with_unfolded_offset:
 ; CHECK:         .functype store_v2f64_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -3638,14 +3598,14 @@ define void @store_v2f64_with_unfolded_offset(<2 x double> %v, <2 x double>* %p)
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %q = ptrtoint <2 x double>* %p to i32
+  %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
-  %s = inttoptr i32 %r to <2 x double>*
-  store <2 x double> %v , <2 x double>* %s
+  %s = inttoptr i32 %r to ptr
+  store <2 x double> %v , ptr %s
   ret void
 }
 
-define void @store_v2f64_with_unfolded_gep_offset(<2 x double> %v, <2 x double>* %p) {
+define void @store_v2f64_with_unfolded_gep_offset(<2 x double> %v, ptr %p) {
 ; CHECK-LABEL: store_v2f64_with_unfolded_gep_offset:
 ; CHECK:         .functype store_v2f64_with_unfolded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
@@ -3655,8 +3615,8 @@ define void @store_v2f64_with_unfolded_gep_offset(<2 x double> %v, <2 x double>*
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr <2 x double>, <2 x double>* %p, i32 1
-  store <2 x double> %v , <2 x double>* %s
+  %s = getelementptr <2 x double>, ptr %p, i32 1
+  store <2 x double> %v , ptr %s
   ret void
 }
 
@@ -3668,8 +3628,8 @@ define void @store_v2f64_to_numeric_address(<2 x double> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 32
 ; CHECK-NEXT:    # fallthrough-return
-  %s = inttoptr i32 32 to <2 x double>*
-  store <2 x double> %v , <2 x double>* %s
+  %s = inttoptr i32 32 to ptr
+  store <2 x double> %v , ptr %s
   ret void
 }
 
@@ -3681,6 +3641,6 @@ define void @store_v2f64_to_global_address(<2 x double> %v) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store gv_v2f64
 ; CHECK-NEXT:    # fallthrough-return
-  store <2 x double> %v , <2 x double>* @gv_v2f64
+  store <2 x double> %v , ptr @gv_v2f64
   ret void
 }

@@ -24,6 +24,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -38,10 +39,10 @@ static bool IsCFError(QualType T, IdentifierInfo *II);
 namespace {
 class NSErrorMethodChecker
     : public Checker< check::ASTDecl<ObjCMethodDecl> > {
-  mutable IdentifierInfo *II;
+  mutable IdentifierInfo *II = nullptr;
 
 public:
-  NSErrorMethodChecker() : II(nullptr) {}
+  NSErrorMethodChecker() = default;
 
   void checkASTDecl(const ObjCMethodDecl *D,
                     AnalysisManager &mgr, BugReporter &BR) const;
@@ -197,7 +198,7 @@ static void setFlag(ProgramStateRef state, SVal val, CheckerContext &C) {
 
 static QualType parameterTypeFromSVal(SVal val, CheckerContext &C) {
   const StackFrameContext * SFC = C.getStackFrame();
-  if (Optional<loc::MemRegionVal> X = val.getAs<loc::MemRegionVal>()) {
+  if (std::optional<loc::MemRegionVal> X = val.getAs<loc::MemRegionVal>()) {
     const MemRegion* R = X->getRegion();
     if (const VarRegion *VR = R->getAs<VarRegion>())
       if (const StackArgumentsSpaceRegion *

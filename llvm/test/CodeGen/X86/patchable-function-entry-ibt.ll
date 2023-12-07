@@ -83,6 +83,25 @@ entry:
   ret void
 }
 
+;; Test the interaction with -fsanitize=function.
+; CHECK:      .type sanitize_function,@function
+; CHECK-NEXT: .Ltmp{{.*}}:
+; CHECK-NEXT:   nop
+; CHECK-NEXT:   .long   3238382334
+; CHECK-NEXT:   .long   42
+; CHECK-NEXT: sanitize_function:
+; CHECK-NEXT: .Lfunc_begin{{.*}}:
+; CHECK-NEXT:   .cfi_startproc
+; CHECK-NEXT:   # %bb.0:
+; 32-NEXT:      endbr32
+; 64-NEXT:      endbr64
+; CHECK-NEXT:   nop
+; CHECK-NEXT:   ret
+define void @sanitize_function(ptr noundef %x) "patchable-function-prefix"="1" "patchable-function-entry"="1" !func_sanitize !1 {
+  ret void
+}
+
 !llvm.module.flags = !{!0}
 
 !0 = !{i32 8, !"cf-protection-branch", i32 1}
+!1 = !{i32 3238382334, i32 42}

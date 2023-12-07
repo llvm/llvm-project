@@ -20,6 +20,7 @@
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/ModRef.h"
 #include <map>
 #include <optional>
 
@@ -33,7 +34,6 @@ namespace llvm {
   class SourceMgr;
   class Type;
   struct MaybeAlign;
-  template <typename T> class Optional;
   class Function;
   class Value;
   class BasicBlock;
@@ -43,7 +43,6 @@ namespace llvm {
   class Comdat;
   class MDString;
   class MDNode;
-  class MemoryEffects;
   struct SlotMapping;
 
   /// ValID - Represents a reference of a definition of some sort with no type.
@@ -180,8 +179,10 @@ namespace llvm {
           Lex(F, SM, Err, Context), M(M), Index(Index), Slots(Slots),
           BlockAddressPFS(nullptr) {}
     bool Run(
-        bool UpgradeDebugInfo, DataLayoutCallbackTy DataLayoutCallback =
-                                   [](StringRef) { return std::nullopt; });
+        bool UpgradeDebugInfo,
+        DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
+          return std::nullopt;
+        });
 
     bool parseStandaloneConstantValue(Constant *&C, const SlotMapping *Slots);
 
@@ -293,6 +294,7 @@ namespace llvm {
     bool parseOptionalUWTableKind(UWTableKind &Kind);
     bool parseAllocKind(AllocFnKind &Kind);
     std::optional<MemoryEffects> parseMemoryAttr();
+    unsigned parseNoFPClassAttr();
     bool parseScopeAndOrdering(bool IsAtomic, SyncScope::ID &SSID,
                                AtomicOrdering &Ordering);
     bool parseScope(SyncScope::ID &SSID);
@@ -319,8 +321,8 @@ namespace llvm {
     bool parseTopLevelEntities();
     bool validateEndOfModule(bool UpgradeDebugInfo);
     bool validateEndOfIndex();
-    bool parseTargetDefinitions();
-    bool parseTargetDefinition();
+    bool parseTargetDefinitions(DataLayoutCallbackTy DataLayoutCallback);
+    bool parseTargetDefinition(std::string &TentativeDLStr, LocTy &DLStrLoc);
     bool parseModuleAsm();
     bool parseSourceFileName();
     bool parseUnnamedType();
@@ -434,6 +436,7 @@ namespace llvm {
 
     bool parseArrayVectorType(Type *&Result, bool IsVector);
     bool parseFunctionType(Type *&Result);
+    bool parseTargetExtType(Type *&Result);
 
     // Function Semantic Analysis.
     class PerFunctionState {

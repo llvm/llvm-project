@@ -44,3 +44,19 @@ func.func @alloc_load_store_i64() {
     memref.store %c1, %m[%c0] : memref<4xi64, 1>
     return
 }
+
+
+// CHECK-LABEL: func @alloc_load_store_i64_nontemporal
+// CHECK:         [[C1:%.+]] = arith.constant dense<[1, 0]> : vector<2xi32>
+// CHECK-NEXT:    [[M:%.+]]  = memref.alloc() : memref<4xvector<2xi32>, 1>
+// CHECK-NEXT:    [[V:%.+]]  = memref.load [[M]][{{%.+}}] {nontemporal = true} : memref<4xvector<2xi32>, 1>
+// CHECK-NEXT:    memref.store [[C1]], [[M]][{{%.+}}] {nontemporal = true} : memref<4xvector<2xi32>, 1>
+// CHECK-NEXT:    return
+func.func @alloc_load_store_i64_nontemporal() {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : i64
+    %m = memref.alloc() : memref<4xi64, 1>
+    %v = memref.load %m[%c0] {nontemporal = true} : memref<4xi64, 1>
+    memref.store %c1, %m[%c0] {nontemporal = true} : memref<4xi64, 1>
+    return
+}

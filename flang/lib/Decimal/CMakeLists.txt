@@ -1,5 +1,5 @@
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  cmake_minimum_required(VERSION 3.13.4)
+  cmake_minimum_required(VERSION 3.20.0)
 
   project(FortranDecimal C CXX)
 
@@ -11,6 +11,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   set(LLVM_COMMON_CMAKE_UTILS "${FLANG_SOURCE_DIR}/../cmake")
   set(LLVM_CMAKE_UTILS "${FLANG_SOURCE_DIR}/../llvm/cmake")
+  set(CLANG_CMAKE_UTILS "${FLANG_SOURCE_DIR}/../clang/cmake")
 
   # Add path for custom modules
   list(INSERT CMAKE_MODULE_PATH 0
@@ -20,10 +21,13 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     "${LLVM_COMMON_CMAKE_UTILS}/Modules"
     "${LLVM_CMAKE_UTILS}"
     "${LLVM_CMAKE_UTILS}/modules"
+    "${CLANG_CMAKE_UTILS}/modules"
     )
 
+  include(AddClang)
   include(AddLLVM)
   include(AddFlang)
+  include(HandleLLVMOptions)
 
   include(TestBigEndian)
   test_big_endian(IS_BIGENDIAN)
@@ -35,6 +39,15 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include_directories(BEFORE
     ${FLANG_SOURCE_DIR}/include)
 endif()
+
+check_cxx_compiler_flag(-fno-lto FLANG_RUNTIME_HAS_FNO_LTO_FLAG)
+if (FLANG_RUNTIME_HAS_FNO_LTO_FLAG)
+  append("-fno-lto" CMAKE_CXX_FLAGS)
+endif()
+
+# Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
+# avoid an unwanted dependency on libstdc++.so.
+add_definitions(-U_GLIBCXX_ASSERTIONS)
 
 add_flang_library(FortranDecimal INSTALL_WITH_TOOLCHAIN
   binary-to-decimal.cpp

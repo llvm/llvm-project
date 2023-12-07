@@ -180,7 +180,7 @@ While direct usage of pointer element types is immediately apparent in code,
 there is a more subtle issue that opaque pointers need to contend with: A lot
 of code assumes that pointer equality also implies that the used load/store
 type or GEP source element type is the same. Consider the following examples
-with typed an opaque pointers:
+with typed and opaque pointers:
 
 .. code-block:: llvm
 
@@ -234,8 +234,7 @@ Additionally, it will no longer be possible to call ``LLVMGetElementType()``
 on a pointer type.
 
 It is possible to control whether opaque pointers are used (if you want to
-override the default) using ``LLVMContext::setOpaquePointers`` or
-``LLVMContextSetOpaquePointers()``.
+override the default) using ``LLVMContext::setOpaquePointers``.
 
 Temporarily disabling opaque pointers
 =====================================
@@ -268,31 +267,28 @@ Version Support
 **LLVM 15:** Opaque pointers are enabled by default. Typed pointers are still
 supported.
 
-**LLVM 16:** Only opaque pointers will be supported. Typed pointers will not be supported.
+**LLVM 16:** Opaque pointers are enabled by default. Typed pointers are
+supported on a best-effort basis only and not tested.
+
+**LLVM 17:** Only opaque pointers are supported. Typed pointers are not
+supported.
 
 Transition State
 ================
 
-As of December 2022 (LLVM 16):
+As of July 2023:
 
-Typed pointers are currently still supported on a best-effort basis. Patches to
-fix typed pointer support are accepted, but must not include test coverage.
+Typed pointers are **not** supported on the ``main`` branch.
 
-Tests are in the process of being converted to opaque pointers. All new tests
-must use opaque pointers. Typed pointer support will be removed as soon as test
-migration finishes.
-
-The following typed pointer functionality has already been removed:
+The following typed pointer functionality has been removed:
 
 * The ``CLANG_ENABLE_OPAQUE_POINTERS`` cmake flag is no longer supported.
+* The ``-no-opaque-pointers`` cc1 clang flag is no longer supported.
+* The ``-opaque-pointers`` opt flag is no longer supported.
+* The ``-plugin-opt=no-opaque-pointers`` LTO flag is no longer supported.
 * C APIs that do not support opaque pointers (like ``LLVMBuildLoad``) are no
   longer supported.
-* Typed pointer bitcode is implicitly upgraded to use opaque pointers, unless
-  ``-opaque-pointers=0`` is passed.
 
 The following typed pointer functionality is still to be removed:
 
-* The ``-no-opaque-pointers`` cc1 flag, ``-opaque-pointers=0`` opt flag and
-  ``-plugin-opt=no-opaque-pointers`` lto flag.
-* Auto-detection of typed pointers in textual IR.
-* Support for typed pointers in LLVM libraries.
+* Various APIs that are no longer relevant with opaque pointers.

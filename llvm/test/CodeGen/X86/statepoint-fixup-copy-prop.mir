@@ -6,8 +6,8 @@
 
   declare void @foo(i64)
 
-  define i8 addrspace(1)* @test_cp(i64 %a, i64 %b, i64 %c, i8 addrspace(1)* %p) gc "statepoint-example" {
-    ret i8 addrspace(1)* undef
+  define ptr addrspace(1) @test_cp(i64 %a, i64 %b, i64 %c, ptr addrspace(1) %p) gc "statepoint-example" {
+    ret ptr addrspace(1) undef
   }
 ...
 ---

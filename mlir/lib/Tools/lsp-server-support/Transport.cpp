@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Transport.h"
-#include "Logging.h"
-#include "Protocol.h"
+#include "mlir/Tools/lsp-server-support/Transport.h"
+#include "mlir/Tools/lsp-server-support/Logging.h"
+#include "mlir/Tools/lsp-server-support/Protocol.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 #include <system_error>
 #include <utility>
 
@@ -29,8 +30,8 @@ namespace {
 ///  - if there were multiple replies, only the first is sent
 class Reply {
 public:
-  Reply(const llvm::json::Value &id, StringRef method,
-        JSONTransport &transport);
+  Reply(const llvm::json::Value &id, StringRef method, JSONTransport &transport,
+        std::mutex &transportOutputMutex);
   Reply(Reply &&other);
   Reply &operator=(Reply &&) = delete;
   Reply(const Reply &) = delete;
@@ -43,16 +44,19 @@ private:
   std::atomic<bool> replied = {false};
   llvm::json::Value id;
   JSONTransport *transport;
+  std::mutex &transportOutputMutex;
 };
 } // namespace
 
 Reply::Reply(const llvm::json::Value &id, llvm::StringRef method,
-             JSONTransport &transport)
-    : id(id), transport(&transport) {}
+             JSONTransport &transport, std::mutex &transportOutputMutex)
+    : id(id), transport(&transport),
+      transportOutputMutex(transportOutputMutex) {}
 
 Reply::Reply(Reply &&other)
     : replied(other.replied.load()), id(std::move(other.id)),
-      transport(other.transport) {
+      transport(other.transport),
+      transportOutputMutex(other.transportOutputMutex) {
   other.transport = nullptr;
 }
 
@@ -64,6 +68,7 @@ void Reply::operator()(llvm::Expected<llvm::json::Value> reply) {
   }
   assert(transport && "expected valid transport to reply to");
 
+  std::lock_guard<std::mutex> transportLock(transportOutputMutex);
   if (reply) {
     Logger::info("--> reply:{0}({1})", method, id);
     transport->reply(std::move(id), std::move(reply));
@@ -97,7 +102,7 @@ bool MessageHandler::onCall(llvm::StringRef method, llvm::json::Value params,
                             llvm::json::Value id) {
   Logger::info("--> {0}({1})", method, id);
 
-  Reply reply(id, method, transport);
+  Reply reply(id, method, transport, transportOutputMutex);
 
   auto it = methodHandlers.find(method);
   if (it != methodHandlers.end()) {
@@ -228,11 +233,11 @@ bool JSONTransport::handleMessage(llvm::json::Value msg,
   // Message must be an object with "jsonrpc":"2.0".
   llvm::json::Object *object = msg.getAsObject();
   if (!object ||
-      object->getString("jsonrpc") != llvm::Optional<StringRef>("2.0"))
+      object->getString("jsonrpc") != std::optional<StringRef>("2.0"))
     return false;
 
   // `id` may be any JSON value. If absent, this is a notification.
-  llvm::Optional<llvm::json::Value> id;
+  std::optional<llvm::json::Value> id;
   if (llvm::json::Value *i = object->get("id"))
     id = std::move(*i);
   std::optional<StringRef> method = object->getString("method");

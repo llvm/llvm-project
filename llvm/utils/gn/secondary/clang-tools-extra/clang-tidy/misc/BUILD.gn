@@ -13,11 +13,15 @@ compiled_action("Confusables.inc") {
 static_library("misc") {
   output_name = "clangTidyMiscModule"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
-  include_dirs = [ target_gen_dir ]
+  include_dirs = [
+    target_gen_dir,
+    "//clang-tools-extra/include-cleaner/include",
+  ]
   deps = [
     ":Confusables.inc",
     "//clang-tools-extra/clang-tidy",
     "//clang-tools-extra/clang-tidy/utils",
+    "//clang-tools-extra/include-cleaner/lib",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
     "//clang/lib/Analysis",
@@ -31,6 +35,8 @@ static_library("misc") {
     "ConfusableIdentifierCheck.cpp",
     "ConstCorrectnessCheck.cpp",
     "DefinitionsInHeadersCheck.cpp",
+    "HeaderIncludeCycleCheck.cpp",
+    "IncludeCleanerCheck.cpp",
     "MiscTidyModule.cpp",
     "MisleadingBidirectional.cpp",
     "MisleadingIdentifier.cpp",

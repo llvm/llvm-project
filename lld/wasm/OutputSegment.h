@@ -13,8 +13,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/Wasm.h"
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 class InputSegment;
 
@@ -38,7 +37,7 @@ public:
   uint32_t linkingFlags = 0;
   uint32_t initFlags = 0;
   uint32_t sectionOffset = 0;
-  llvm::Align alignment;
+  uint32_t alignment = 0;
   uint64_t startVA = 0;
   std::vector<InputChunk *> inputSegments;
 
@@ -49,7 +48,6 @@ public:
   std::string header;
 };
 
-} // namespace wasm
-} // namespace lld
+} // namespace lld::wasm
 
 #endif // LLD_WASM_OUTPUT_SEGMENT_H

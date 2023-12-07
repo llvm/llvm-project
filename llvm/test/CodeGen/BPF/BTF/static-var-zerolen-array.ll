@@ -16,7 +16,7 @@
 
 ; Function Attrs: norecurse nounwind
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !21 {
-  %1 = load volatile i32, i32* getelementptr inbounds ({ i32, i32, [10 x i8] }, { i32, i32, [10 x i8] }* @sv, i64 0, i32 0), align 4, !dbg !24, !tbaa !25
+  %1 = load volatile i32, ptr getelementptr inbounds ({ i32, i32, [10 x i8] }, ptr @sv, i64 0, i32 0), align 4, !dbg !24, !tbaa !25
   ret i32 %1, !dbg !29
 }
 

@@ -11,7 +11,7 @@ pre1:
   br label %body1
 
 ; CHECK:body1:
-; CHECK-NOT: store atomic i32 3, i32* %ptr seq_cst, align 4
+; CHECK-NOT: store atomic i32 3, ptr %ptr seq_cst, align 4
 body1:  ; preds = %pre1, %body1
   %i = phi i32 [%i_next, %body1], [0, %pre1]
   %i_next = add i32 1, %i
@@ -19,13 +19,13 @@ body1:  ; preds = %pre1, %body1
   br i1 %cond, label %body1, label %pre2
 
 ; CHECK:pre2:
-; CHECK-NEXT: store atomic i32 3, i32* %ptr seq_cst, align 4
+; CHECK-NEXT: store atomic i32 3, ptr %ptr seq_cst, align 4
 pre2:
-  store atomic i32 3, i32* %ptr seq_cst, align 4
+  store atomic i32 3, ptr %ptr seq_cst, align 4
   br label %body2
 
 ; CHECK: body2:
-; CHECK-NOT:  store atomic i32 3, i32* %ptr seq_cst, align 4
+; CHECK-NOT:  store atomic i32 3, ptr %ptr seq_cst, align 4
 body2:  ; preds = %pre2, %body2
   %i2 = phi i32 [%i_next2, %body2], [0, %pre2]
   %i_next2 = add i32 1, %i2

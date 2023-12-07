@@ -3948,6 +3948,7 @@ _func:
         msr MAIR2_EL2, x12
         msr MAIR2_EL3, x12
         msr PIRE0_EL1, x12
+        msr PIRE0_EL12, x12
         msr PIRE0_EL2, x12
         msr PIR_EL1, x12
         msr PIR_EL12, x12
@@ -4229,6 +4230,7 @@ _func:
 // CHECK: msr      {{mair2_el2|MAIR2_EL2}}, x12       // encoding: [0x2c,0xa1,0x1c,0xd5]
 // CHECK: msr      {{mair2_el3|MAIR2_EL3}}, x12       // encoding: [0x2c,0xa1,0x1e,0xd5]
 // CHECK: msr      {{pire0_el1|PIRE0_EL1}}, x12       // encoding: [0x4c,0xa2,0x18,0xd5]
+// CHECK: msr      {{pire0_el12|PIRE0_EL12}}, x12     // encoding: [0x4c,0xa2,0x1d,0xd5]
 // CHECK: msr      {{pire0_el2|PIRE0_EL2}}, x12       // encoding: [0x4c,0xa2,0x1c,0xd5]
 // CHECK: msr      {{pir_el1|PIR_EL1}}, x12       // encoding: [0x6c,0xa2,0x18,0xd5]
 // CHECK: msr      {{pir_el12|PIR_EL12}}, x12       // encoding: [0x6c,0xa2,0x1d,0xd5]
@@ -4566,6 +4568,7 @@ _func:
         mrs x9, MAIR2_EL2
         mrs x9, MAIR2_EL3
         mrs x9, PIRE0_EL1
+        mrs x9, PIRE0_EL12
         mrs x9, PIRE0_EL2
         mrs x9, PIR_EL1
         mrs x9, PIR_EL12
@@ -4902,6 +4905,7 @@ _func:
 // CHECK: mrs      x9, {{mair2_el2|MAIR2_EL2}}        // encoding: [0x29,0xa1,0x3c,0xd5]
 // CHECK: mrs      x9, {{mair2_el3|MAIR2_EL3}}        // encoding: [0x29,0xa1,0x3e,0xd5]
 // CHECK: mrs      x9, {{pire0_el1|PIRE0_EL1}}        // encoding: [0x49,0xa2,0x38,0xd5]
+// CHECK: mrs      x9, {{pire0_el12|PIRE0_EL12}}      // encoding: [0x49,0xa2,0x3d,0xd5]
 // CHECK: mrs      x9, {{pire0_el2|PIRE0_EL2}}        // encoding: [0x49,0xa2,0x3c,0xd5]
 // CHECK: mrs      x9, {{pir_el1|PIR_EL1}}        // encoding: [0x69,0xa2,0x38,0xd5]
 // CHECK: mrs      x9, {{pir_el12|PIR_EL12}}        // encoding: [0x69,0xa2,0x3d,0xd5]

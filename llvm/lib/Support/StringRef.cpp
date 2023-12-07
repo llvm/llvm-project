@@ -92,16 +92,15 @@ int StringRef::compare_numeric(StringRef RHS) const {
 unsigned StringRef::edit_distance(llvm::StringRef Other,
                                   bool AllowReplacements,
                                   unsigned MaxEditDistance) const {
-  return llvm::ComputeEditDistance(
-      makeArrayRef(data(), size()),
-      makeArrayRef(Other.data(), Other.size()),
-      AllowReplacements, MaxEditDistance);
+  return llvm::ComputeEditDistance(ArrayRef(data(), size()),
+                                   ArrayRef(Other.data(), Other.size()),
+                                   AllowReplacements, MaxEditDistance);
 }
 
 unsigned llvm::StringRef::edit_distance_insensitive(
     StringRef Other, bool AllowReplacements, unsigned MaxEditDistance) const {
   return llvm::ComputeMappedEditDistance(
-      makeArrayRef(data(), size()), makeArrayRef(Other.data(), Other.size()),
+      ArrayRef(data(), size()), ArrayRef(Other.data(), Other.size()),
       llvm::toLower, AllowReplacements, MaxEditDistance);
 }
 
@@ -192,7 +191,7 @@ size_t StringRef::find(StringRef Str, size_t From) const {
 size_t StringRef::find_insensitive(StringRef Str, size_t From) const {
   StringRef This = substr(From);
   while (This.size() >= Str.size()) {
-    if (This.startswith_insensitive(Str))
+    if (This.starts_with_insensitive(Str))
       return From;
     This = This.drop_front();
     ++From;
@@ -216,15 +215,7 @@ size_t StringRef::rfind_insensitive(char C, size_t From) const {
 /// \return - The index of the last occurrence of \arg Str, or npos if not
 /// found.
 size_t StringRef::rfind(StringRef Str) const {
-  size_t N = Str.size();
-  if (N > Length)
-    return npos;
-  for (size_t i = Length - N + 1, e = 0; i != e;) {
-    --i;
-    if (substr(i, N).equals(Str))
-      return i;
-  }
-  return npos;
+  return std::string_view(*this).rfind(Str);
 }
 
 size_t StringRef::rfind_insensitive(StringRef Str) const {
@@ -258,10 +249,7 @@ StringRef::size_type StringRef::find_first_of(StringRef Chars,
 /// find_first_not_of - Find the first character in the string that is not
 /// \arg C or npos if not found.
 StringRef::size_type StringRef::find_first_not_of(char C, size_t From) const {
-  for (size_type i = std::min(From, Length), e = Length; i != e; ++i)
-    if (Data[i] != C)
-      return i;
-  return npos;
+  return std::string_view(*this).find_first_not_of(C, From);
 }
 
 /// find_first_not_of - Find the first character in the string that is not
@@ -521,7 +509,7 @@ bool llvm::getAsSignedInteger(StringRef Str, unsigned Radix,
   return !Str.empty();
 }
 
-bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
+bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
   StringRef Str = *this;
 
   // Autosense radix if not specified.
@@ -541,6 +529,7 @@ bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
   // If it was nothing but zeroes....
   if (Str.empty()) {
     Result = APInt(64, 0);
+    *this = Str;
     return false;
   }
 
@@ -573,12 +562,12 @@ bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
     else if (Str[0] >= 'A' && Str[0] <= 'Z')
       CharVal = Str[0]-'A'+10;
     else
-      return true;
+      break;
 
     // If the parsed value is larger than the integer radix, the string is
     // invalid.
     if (CharVal >= Radix)
-      return true;
+      break;
 
     // Add in this character.
     if (IsPowerOf2Radix) {
@@ -593,7 +582,23 @@ bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
     Str = Str.substr(1);
   }
 
+  // We consider the operation a failure if no characters were consumed
+  // successfully.
+  if (size() == Str.size())
+    return true;
+
+  *this = Str;
   return false;
+}
+
+bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
+  StringRef Str = *this;
+  if (Str.consumeInteger(Radix, Result))
+    return true;
+
+  // For getAsInteger, we require the whole string to be consumed or else we
+  // consider it a failure.
+  return !Str.empty();
 }
 
 bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {

@@ -79,7 +79,8 @@ public:
   std::optional<unsigned> getGlobal(const ValueDecl *VD);
 
   /// Returns or creates a global an creates an index to it.
-  std::optional<unsigned> getOrCreateGlobal(const ValueDecl *VD);
+  std::optional<unsigned> getOrCreateGlobal(const ValueDecl *VD,
+                                            const Expr *Init = nullptr);
 
   /// Returns or creates a dummy value for parameters.
   std::optional<unsigned> getOrCreateDummy(const ParmVarDecl *PD);
@@ -114,14 +115,15 @@ public:
 
   /// Creates a descriptor for a primitive type.
   Descriptor *createDescriptor(const DeclTy &D, PrimType Type,
-                               bool IsConst = false,
-                               bool IsTemporary = false,
+                               Descriptor::MetadataSize MDSize = std::nullopt,
+                               bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false) {
-    return allocateDescriptor(D, Type, IsConst, IsTemporary, IsMutable);
+    return allocateDescriptor(D, Type, MDSize, IsConst, IsTemporary, IsMutable);
   }
 
   /// Creates a descriptor for a composite type.
   Descriptor *createDescriptor(const DeclTy &D, const Type *Ty,
+                               Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false,
                                const Expr *Init = nullptr);
@@ -129,7 +131,9 @@ public:
   /// Context to manage declaration lifetimes.
   class DeclScope {
   public:
-    DeclScope(Program &P, const VarDecl *VD) : P(P) { P.startDeclaration(VD); }
+    DeclScope(Program &P, const ValueDecl *VD) : P(P) {
+      P.startDeclaration(VD);
+    }
     ~DeclScope() { P.endDeclaration(); }
 
   private:
@@ -183,7 +187,7 @@ private:
     }
 
     /// Return a pointer to the data.
-    char *data() { return B.data(); }
+    std::byte *data() { return B.data(); }
     /// Return a pointer to the block.
     Block *block() { return &B; }
 
@@ -220,7 +224,7 @@ private:
   unsigned CurrentDeclaration = NoDeclaration;
 
   /// Starts evaluating a declaration.
-  void startDeclaration(const VarDecl *Decl) {
+  void startDeclaration(const ValueDecl *Decl) {
     LastDeclaration += 1;
     CurrentDeclaration = LastDeclaration;
   }

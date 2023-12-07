@@ -21,8 +21,8 @@ define void @fold_isascii(i16 %c) {
 ; CHECK-NEXT:    call void @sink(i16 0)
 ; CHECK-NEXT:    call void @sink(i16 0)
 ; CHECK-NEXT:    [[ISASCII:%.*]] = icmp ult i16 [[C:%.*]], 128
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[ISASCII]] to i16
-; CHECK-NEXT:    call void @sink(i16 [[TMP1]])
+; CHECK-NEXT:    [[IC:%.*]] = zext i1 [[ISASCII]] to i16
+; CHECK-NEXT:    call void @sink(i16 [[IC]])
 ; CHECK-NEXT:    ret void
 ;
   %i0 = call i16 @isascii(i16 0)

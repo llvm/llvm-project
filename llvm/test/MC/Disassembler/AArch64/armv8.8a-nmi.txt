@@ -1,0 +1,30 @@
+# RUN: llvm-mc -triple=aarch64 -mattr=+nmi   -disassemble %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8.8a -disassemble %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64               -disassemble %s | FileCheck %s --check-prefix=NO-NMI
+
+
+[0x03,0x43,0x38,0xd5]
+# CHECK:  mrs x3, ALLINT
+# NO-NMI: mrs x3, S3_0_C4_C3_0
+
+[0x06,0x43,0x18,0xd5]
+# CHECK:  msr ALLINT, x6
+# NO-NMI: msr S3_0_C4_C3_0, x6
+
+[0x1f,0x40,0x01,0xd5]
+# CHECK:  msr ALLINT, #0
+# NO-NMI: msr S0_1_C4_C0_0, xzr
+
+[0x1f,0x41,0x01,0xd5]
+# CHECK:  msr ALLINT, #1
+# NO-NMI: msr S0_1_C4_C1_0, xzr
+
+# Regression test for a defect, where the bit-pattern, which should have allowed
+# only ALLSTATE, allowed SPSel (and others).
+[0xbf,0x51,0x00,0xd5]
+# CHECK:  msr S0_0_C5_C1_5, xzr
+# NO-NMI: msr S0_0_C5_C1_5, xzr
+
+[0xa7,0xc9,0x38,0xd5]
+# CHECK:  mrs x7, ICC_NMIAR1_EL1
+# NO-NMI: mrs x7, S3_0_C12_C9_5

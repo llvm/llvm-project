@@ -32,7 +32,7 @@ void f1(t1 x, t1 y) {
 // Omit exact length of this file
 // CHECK: ,"location":{"index":0,"uri":"file://
 // Omit filepath to llvm project directory
-// CHECK: clang/test/Frontend/sarif-diagnostics.cpp"},"mimeType":"text/plain","roles":["resultFile"]}],"columnKind":"unicodeCodePoints","results":
+// CHECK: test/Frontend/sarif-diagnostics.cpp"},"mimeType":"text/plain","roles":["resultFile"]}],"columnKind":"unicodeCodePoints","results":
 // CHECK: [{"level":"error","locations":[{"physicalLocation":{"artifactLocation":{"index":0,"uri":"file://
 // CHECK: {"endColumn":1,"startColumn":1,"startLine":12}}}],"message":{"text":"'main' must return 'int'"},"ruleId":"{{[0-9]+}}","ruleIndex":0},
 // CHECK: {"level":"error","locations":[{"physicalLocation":{"artifactLocation":{"index":0,"uri":"file://

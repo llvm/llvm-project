@@ -19,9 +19,9 @@ program p
   ! CHECK: fir.insert_value
   ! CHECK: fir.embox [[ccc]]
   ! CHECK: fir.insert_value
-  ! CHECK: fir.alloca tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>>
+  ! CHECK: fir.alloca tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK: fir.address_of
-  ! CHECK-COUNT-3: fir.insert_value
+  ! CHECK-COUNT-4: fir.insert_value
   ! CHECK: fir.call @_FortranAioOutputNamelist([[cookie]]
   ! CHECK: fir.call @_FortranAioEndIoStatement([[cookie]]
   write(*, nnn)
@@ -39,9 +39,9 @@ program p
   ! CHECK: fir.insert_value
   ! CHECK: fir.embox [[ccc]]
   ! CHECK: fir.insert_value
-  ! CHECK: fir.alloca tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>>
+  ! CHECK: fir.alloca tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK: fir.address_of
-  ! CHECK-COUNT-3: fir.insert_value
+  ! CHECK-COUNT-4: fir.insert_value
   ! CHECK: fir.call @_FortranAioOutputNamelist([[cookie]]
   ! CHECK: fir.call @_FortranAioEndIoStatement([[cookie]]
   write(*, nnn)

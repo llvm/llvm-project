@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestWorkspace.h"
+#include "clang-include-cleaner/Record.h"
 #include "index/FileIndex.h"
 #include "gtest/gtest.h"
+#include <memory>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -20,10 +23,11 @@ std::unique_ptr<SymbolIndex> TestWorkspace::index() {
       continue;
     TU.Code = Input.second.Code;
     TU.Filename = Input.first().str();
-    TU.preamble([&](ASTContext &Ctx, Preprocessor &PP,
-                    const CanonicalIncludes &CanonIncludes) {
-      Index->updatePreamble(testPath(Input.first()), "null", Ctx, PP,
-                            CanonIncludes);
+    TU.preamble([&](CapturedASTCtx ASTCtx,
+                    std::shared_ptr<const include_cleaner::PragmaIncludes> PI) {
+      auto &Ctx = ASTCtx.getASTContext();
+      auto &PP = ASTCtx.getPreprocessor();
+      Index->updatePreamble(testPath(Input.first()), "null", Ctx, PP, *PI);
     });
     ParsedAST MainAST = TU.build();
     Index->updateMain(testPath(Input.first()), MainAST);
@@ -31,7 +35,7 @@ std::unique_ptr<SymbolIndex> TestWorkspace::index() {
   return Index;
 }
 
-Optional<ParsedAST> TestWorkspace::openFile(llvm::StringRef Filename) {
+std::optional<ParsedAST> TestWorkspace::openFile(llvm::StringRef Filename) {
   auto It = Inputs.find(Filename);
   if (It == Inputs.end()) {
     ADD_FAILURE() << "Accessing non-existing file: " << Filename;

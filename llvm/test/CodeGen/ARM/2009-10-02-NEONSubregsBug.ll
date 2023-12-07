@@ -1,13 +1,13 @@
 ; RUN: llc -mtriple=armv7-eabi -mcpu=cortex-a8 -enable-unsafe-fp-math < %s
 ; PR5367
 
-define arm_aapcs_vfpcc void @_Z27Benchmark_SceDualQuaternionPvm(i8* nocapture %pBuffer, i32 %numItems) nounwind {
+define arm_aapcs_vfpcc void @_Z27Benchmark_SceDualQuaternionPvm(ptr nocapture %pBuffer, i32 %numItems) nounwind {
 entry:
   br i1 undef, label %return, label %bb
 
 bb:                                               ; preds = %bb, %entry
-  %0 = load float, float* undef, align 4                 ; <float> [#uses=1]
-  %1 = load float, float* null, align 4                  ; <float> [#uses=1]
+  %0 = load float, ptr undef, align 4                 ; <float> [#uses=1]
+  %1 = load float, ptr null, align 4                  ; <float> [#uses=1]
   %2 = insertelement <4 x float> undef, float undef, i32 1 ; <<4 x float>> [#uses=1]
   %3 = insertelement <4 x float> %2, float %1, i32 2 ; <<4 x float>> [#uses=2]
   %4 = insertelement <4 x float> undef, float %0, i32 2 ; <<4 x float>> [#uses=1]
@@ -50,10 +50,10 @@ bb:                                               ; preds = %bb, %entry
   %41 = fadd <4 x float> %40, zeroinitializer     ; <<4 x float>> [#uses=1]
   %42 = shufflevector <4 x float> undef, <4 x float> %41, <4 x i32> <i32 0, i32 1, i32 6, i32 3> ; <<4 x float>> [#uses=1]
   %43 = fmul <4 x float> %42, %31                 ; <<4 x float>> [#uses=1]
-  store float undef, float* undef, align 4
-  store float 0.000000e+00, float* null, align 4
+  store float undef, ptr undef, align 4
+  store float 0.000000e+00, ptr null, align 4
   %44 = extractelement <4 x float> %43, i32 1     ; <float> [#uses=1]
-  store float %44, float* undef, align 4
+  store float %44, ptr undef, align 4
   br i1 undef, label %return, label %bb
 
 return:                                           ; preds = %bb, %entry

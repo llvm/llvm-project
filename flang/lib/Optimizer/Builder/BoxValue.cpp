@@ -87,7 +87,7 @@ llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
 llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
                                    const fir::PolymorphicValue &p) {
   return os << "polymorphicvalue: { addr: " << p.getAddr()
-            << ", tdesc: " << p.getTdesc() << " }";
+            << ", sourceBox: " << p.getSourceBox() << " }";
 }
 
 llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,

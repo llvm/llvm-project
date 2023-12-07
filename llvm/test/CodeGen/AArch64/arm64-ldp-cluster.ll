@@ -8,11 +8,11 @@
 ; CHECK: Cluster ld/st SU(1) - SU(2)
 ; CHECK: SU(1):   %{{[0-9]+}}:gpr32 = LDRWui
 ; CHECK: SU(2):   %{{[0-9]+}}:gpr32 = LDRWui
-define i32 @ldr_int(i32* %a) nounwind {
-  %p1 = getelementptr inbounds i32, i32* %a, i32 1
-  %tmp1 = load i32, i32* %p1, align 2
-  %p2 = getelementptr inbounds i32, i32* %a, i32 2
-  %tmp2 = load i32, i32* %p2, align 2
+define i32 @ldr_int(ptr %a) nounwind {
+  %p1 = getelementptr inbounds i32, ptr %a, i32 1
+  %tmp1 = load i32, ptr %p1, align 2
+  %p2 = getelementptr inbounds i32, ptr %a, i32 2
+  %tmp2 = load i32, ptr %p2, align 2
   %tmp3 = add i32 %tmp1, %tmp2
   ret i32 %tmp3
 }
@@ -23,10 +23,10 @@ define i32 @ldr_int(i32* %a) nounwind {
 ; CHECK: Cluster ld/st SU(1) - SU(2)
 ; CHECK: SU(1):   %{{[0-9]+}}:gpr64 = LDRSWui
 ; CHECK: SU(2):   %{{[0-9]+}}:gpr64 = LDRSWui
-define i64 @ldp_sext_int(i32* %p) nounwind {
-  %tmp = load i32, i32* %p, align 4
-  %add.ptr = getelementptr inbounds i32, i32* %p, i64 1
-  %tmp1 = load i32, i32* %add.ptr, align 4
+define i64 @ldp_sext_int(ptr %p) nounwind {
+  %tmp = load i32, ptr %p, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 1
+  %tmp1 = load i32, ptr %add.ptr, align 4
   %sexttmp = sext i32 %tmp to i64
   %sexttmp1 = sext i32 %tmp1 to i64
   %add = add nsw i64 %sexttmp1, %sexttmp
@@ -39,11 +39,11 @@ define i64 @ldp_sext_int(i32* %p) nounwind {
 ; CHECK: Cluster ld/st SU(1) - SU(2)
 ; CHECK: SU(1):   %{{[0-9]+}}:gpr32 = LDURWi
 ; CHECK: SU(2):   %{{[0-9]+}}:gpr32 = LDURWi
-define i32 @ldur_int(i32* %a) nounwind {
-  %p1 = getelementptr inbounds i32, i32* %a, i32 -1
-  %tmp1 = load i32, i32* %p1, align 2
-  %p2 = getelementptr inbounds i32, i32* %a, i32 -2
-  %tmp2 = load i32, i32* %p2, align 2
+define i32 @ldur_int(ptr %a) nounwind {
+  %p1 = getelementptr inbounds i32, ptr %a, i32 -1
+  %tmp1 = load i32, ptr %p1, align 2
+  %p2 = getelementptr inbounds i32, ptr %a, i32 -2
+  %tmp2 = load i32, ptr %p2, align 2
   %tmp3 = add i32 %tmp1, %tmp2
   ret i32 %tmp3
 }
@@ -54,11 +54,11 @@ define i32 @ldur_int(i32* %a) nounwind {
 ; CHECK: Cluster ld/st SU(3) - SU(4)
 ; CHECK: SU(3):   %{{[0-9]+}}:gpr64 = LDRSWui
 ; CHECK: SU(4):   undef %{{[0-9]+}}.sub_32:gpr64 = LDRWui
-define i64 @ldp_half_sext_zext_int(i64* %q, i32* %p) nounwind {
-  %tmp0 = load i64, i64* %q, align 4
-  %tmp = load i32, i32* %p, align 4
-  %add.ptr = getelementptr inbounds i32, i32* %p, i64 1
-  %tmp1 = load i32, i32* %add.ptr, align 4
+define i64 @ldp_half_sext_zext_int(ptr %q, ptr %p) nounwind {
+  %tmp0 = load i64, ptr %q, align 4
+  %tmp = load i32, ptr %p, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 1
+  %tmp1 = load i32, ptr %add.ptr, align 4
   %sexttmp = sext i32 %tmp to i64
   %sexttmp1 = zext i32 %tmp1 to i64
   %add = add nsw i64 %sexttmp1, %sexttmp
@@ -72,11 +72,11 @@ define i64 @ldp_half_sext_zext_int(i64* %q, i32* %p) nounwind {
 ; CHECK: Cluster ld/st SU(3) - SU(4)
 ; CHECK: SU(3):   undef %{{[0-9]+}}.sub_32:gpr64 = LDRWui
 ; CHECK: SU(4):   %{{[0-9]+}}:gpr64 = LDRSWui
-define i64 @ldp_half_zext_sext_int(i64* %q, i32* %p) nounwind {
-  %tmp0 = load i64, i64* %q, align 4
-  %tmp = load i32, i32* %p, align 4
-  %add.ptr = getelementptr inbounds i32, i32* %p, i64 1
-  %tmp1 = load i32, i32* %add.ptr, align 4
+define i64 @ldp_half_zext_sext_int(ptr %q, ptr %p) nounwind {
+  %tmp0 = load i64, ptr %q, align 4
+  %tmp = load i32, ptr %p, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 1
+  %tmp1 = load i32, ptr %add.ptr, align 4
   %sexttmp = zext i32 %tmp to i64
   %sexttmp1 = sext i32 %tmp1 to i64
   %add = add nsw i64 %sexttmp1, %sexttmp
@@ -90,11 +90,11 @@ define i64 @ldp_half_zext_sext_int(i64* %q, i32* %p) nounwind {
 ; CHECK-NOT: Cluster ld/st
 ; CHECK: SU(1):   %{{[0-9]+}}:gpr32 = LDRWui
 ; CHECK: SU(2):   %{{[0-9]+}}:gpr32 = LDRWui
-define i32 @ldr_int_volatile(i32* %a) nounwind {
-  %p1 = getelementptr inbounds i32, i32* %a, i32 1
-  %tmp1 = load volatile i32, i32* %p1, align 2
-  %p2 = getelementptr inbounds i32, i32* %a, i32 2
-  %tmp2 = load volatile i32, i32* %p2, align 2
+define i32 @ldr_int_volatile(ptr %a) nounwind {
+  %p1 = getelementptr inbounds i32, ptr %a, i32 1
+  %tmp1 = load volatile i32, ptr %p1, align 2
+  %p2 = getelementptr inbounds i32, ptr %a, i32 2
+  %tmp2 = load volatile i32, ptr %p2, align 2
   %tmp3 = add i32 %tmp1, %tmp2
   ret i32 %tmp3
 }
@@ -105,13 +105,11 @@ define i32 @ldr_int_volatile(i32* %a) nounwind {
 ; CHECK: Cluster ld/st SU(1) - SU(3)
 ; CHECK: SU(1):   %{{[0-9]+}}:fpr128 = LDRQui
 ; CHECK: SU(3):   %{{[0-9]+}}:fpr128 = LDRQui
-define <2 x i64> @ldq_cluster(i64* %p) {
-  %a1 = bitcast i64* %p to <2 x i64>*
-  %tmp1 = load <2 x i64>, < 2 x i64>* %a1, align 8
-  %add.ptr2 = getelementptr inbounds i64, i64* %p, i64 2
-  %a2 = bitcast i64* %add.ptr2 to <2 x i64>*
+define <2 x i64> @ldq_cluster(ptr %p) {
+  %tmp1 = load <2 x i64>, < 2 x i64>* %p, align 8
+  %add.ptr2 = getelementptr inbounds i64, ptr %p, i64 2
   %tmp2 = add nsw <2 x i64> %tmp1, %tmp1
-  %tmp3 = load <2 x i64>, <2 x i64>* %a2, align 8
+  %tmp3 = load <2 x i64>, ptr %add.ptr2, align 8
   %res  = mul nsw <2 x i64> %tmp2, %tmp3
   ret <2 x i64> %res
 }

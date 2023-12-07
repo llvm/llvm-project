@@ -17,6 +17,7 @@
 #define MLIR_ANALYSIS_DATAFLOW_CONSTANTPROPAGATIONANALYSIS_H
 
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
+#include <optional>
 
 namespace mlir {
 namespace dataflow {
@@ -82,7 +83,7 @@ public:
 
 private:
   /// The constant value.
-  Optional<Attribute> constant;
+  std::optional<Attribute> constant;
   /// A dialect instance that can be used to materialize the constant.
   Dialect *dialect = nullptr;
 };
@@ -96,9 +97,9 @@ private:
 /// operands, by speculatively folding operations. When combined with dead-code
 /// analysis, this becomes sparse conditional constant propagation (SCCP).
 class SparseConstantPropagation
-    : public SparseDataFlowAnalysis<Lattice<ConstantValue>> {
+    : public SparseForwardDataFlowAnalysis<Lattice<ConstantValue>> {
 public:
-  using SparseDataFlowAnalysis::SparseDataFlowAnalysis;
+  using SparseForwardDataFlowAnalysis::SparseForwardDataFlowAnalysis;
 
   void visitOperation(Operation *op,
                       ArrayRef<const Lattice<ConstantValue> *> operands,

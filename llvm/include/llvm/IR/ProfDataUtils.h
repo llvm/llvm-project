@@ -34,6 +34,27 @@ bool isBranchWeightMD(const MDNode *ProfileData);
 /// otherwise.
 bool hasBranchWeightMD(const Instruction &I);
 
+/// Checks if an instructions has valid Branch Weight Metadata
+///
+/// \param I The instruction to check
+/// \returns True if I has an MD_prof node containing valid Branch Weights,
+/// i.e., one weight for each successor. False otherwise.
+bool hasValidBranchWeightMD(const Instruction &I);
+
+/// Get the branch weights metadata node
+///
+/// \param I The Instruction to get the weights from.
+/// \returns A pointer to I's branch weights metadata node, if it exists.
+/// Nullptr otherwise.
+MDNode *getBranchWeightMDNode(const Instruction &I);
+
+/// Get the valid branch weights metadata node
+///
+/// \param I The Instruction to get the weights from.
+/// \returns A pointer to I's valid branch weights metadata node, if it exists.
+/// Nullptr otherwise.
+MDNode *getValidBranchWeightMDNode(const Instruction &I);
+
 /// Extract branch weights from MD_prof metadata
 ///
 /// \param ProfileData A pointer to an MDNode.
@@ -69,6 +90,14 @@ bool extractBranchWeights(const Instruction &I, uint64_t &TrueVal,
 /// \returns True on success with profile total weights filled in. False if no
 /// metadata was found.
 bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalWeights);
+
+/// Retrieve the total of all weights from an instruction.
+///
+/// \param I The instruction to extract the total weight from
+/// \param [out] TotalWeights input variable to fill with total weights
+/// \returns True on success with profile total weights filled in. False if no
+/// metadata was found.
+bool extractProfTotalWeight(const Instruction &I, uint64_t &TotalWeights);
 
 } // namespace llvm
 #endif

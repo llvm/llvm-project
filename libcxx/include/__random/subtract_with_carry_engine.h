@@ -18,7 +18,6 @@
 #include <cstdint>
 #include <iosfwd>
 #include <limits>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -102,26 +101,21 @@ public:
       seed(__sd);
     }
 #endif
-    template<class _Sseq>
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, subtract_with_carry_engine>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        explicit subtract_with_carry_engine(_Sseq& __q,
-        typename enable_if<__is_seed_sequence<_Sseq, subtract_with_carry_engine>::value>::type* = 0)
+        explicit subtract_with_carry_engine(_Sseq& __q)
         {seed(__q);}
     _LIBCPP_INLINE_VISIBILITY
     void seed(result_type __sd = default_seed)
         {seed(__sd, integral_constant<unsigned, 1 + (__w - 1) / 32>());}
-    template<class _Sseq>
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, subtract_with_carry_engine>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-            __is_seed_sequence<_Sseq, subtract_with_carry_engine>::value,
-            void
-        >::type
+        void
         seed(_Sseq& __q)
             {__seed(__q, integral_constant<unsigned, 1 + (__w - 1) / 32>());}
 
     // generating functions
-    result_type operator()();
+    _LIBCPP_HIDE_FROM_ABI result_type operator()();
     _LIBCPP_INLINE_VISIBILITY
     void discard(unsigned long long __z) {for (; __z; --__z) operator()();}
 
@@ -155,12 +149,12 @@ public:
 
 private:
 
-    void seed(result_type __sd, integral_constant<unsigned, 1>);
-    void seed(result_type __sd, integral_constant<unsigned, 2>);
+    _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd, integral_constant<unsigned, 1>);
+    _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd, integral_constant<unsigned, 2>);
     template<class _Sseq>
-        void __seed(_Sseq& __q, integral_constant<unsigned, 1>);
+    _LIBCPP_HIDE_FROM_ABI void __seed(_Sseq& __q, integral_constant<unsigned, 1>);
     template<class _Sseq>
-        void __seed(_Sseq& __q, integral_constant<unsigned, 2>);
+    _LIBCPP_HIDE_FROM_ABI void __seed(_Sseq& __q, integral_constant<unsigned, 2>);
 };
 
 template<class _UIntType, size_t __w, size_t __s, size_t __r>

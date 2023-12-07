@@ -11,10 +11,10 @@ while.body.lr.ph:
   br label %while.body
 
 while.body:
-  %it.sroa.0.091 = phi i32* [ undef, %while.body.lr.ph ], [ %incdec.ptr.i, %while.body ]
-  %incdec.ptr.i = getelementptr inbounds i32, i32* %it.sroa.0.091, i64 1
+  %it.sroa.0.091 = phi ptr [ undef, %while.body.lr.ph ], [ %incdec.ptr.i, %while.body ]
+  %incdec.ptr.i = getelementptr inbounds i32, ptr %it.sroa.0.091, i64 1
   %inc32 = add i32 undef, 1                                        ; <------------- Make sure we don't set NSW flags to the undef.
-  %cmp.i11 = icmp eq i32* %incdec.ptr.i, undef
+  %cmp.i11 = icmp eq ptr %incdec.ptr.i, undef
   br i1 %cmp.i11, label %while.end, label %while.body
 
 while.end:

@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=thumbv7-linux -mattr=+thumb2 | FileCheck %s -check-prefix=LINUX
 ; XFAIL: *
 
-@t = weak global i32 ()* null           ; <i32 ()**> [#uses=1]
+@t = weak global ptr null           ; <ptr> [#uses=1]
 
 declare void @g(i32, i32, i32, i32)
 
@@ -22,7 +22,7 @@ define void @h() {
 
 ; LINUX-LABEL: h:
 ; LINUX: bx r0 @ TAILCALL
-        %tmp = load i32 ()*, i32 ()** @t         ; <i32 ()*> [#uses=1]
+        %tmp = load ptr, ptr @t         ; <ptr> [#uses=1]
         %tmp.upgrd.2 = tail call i32 %tmp( )            ; <i32> [#uses=0]
         ret void
 }

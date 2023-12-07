@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "clang/Frontend/LayoutOverrideSource.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Basic/CharInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include <fstream>
@@ -24,6 +25,18 @@ static std::string parseName(StringRef S) {
     ++Offset;
 
   return S.substr(0, Offset).str();
+}
+
+/// Parse an unsigned integer and move S to the next non-digit character.
+static bool parseUnsigned(StringRef &S, unsigned long long &ULL) {
+  if (S.empty() || !isDigit(S[0]))
+    return false;
+  unsigned Idx = 1;
+  while (Idx < S.size() && isDigit(S[Idx]))
+    ++Idx;
+  (void)S.substr(0, Idx).getAsInteger(10, ULL);
+  S = S.substr(Idx);
+  return true;
 }
 
 LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
@@ -80,8 +93,8 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
       LineStr = LineStr.substr(Pos + strlen(" Size:"));
 
       unsigned long long Size = 0;
-      (void)LineStr.getAsInteger(10, Size);
-      CurrentLayout.Size = Size;
+      if (parseUnsigned(LineStr, Size))
+        CurrentLayout.Size = Size;
       continue;
     }
 
@@ -92,12 +105,13 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
       LineStr = LineStr.substr(Pos + strlen("Alignment:"));
 
       unsigned long long Alignment = 0;
-      (void)LineStr.getAsInteger(10, Alignment);
-      CurrentLayout.Align = Alignment;
+      if (parseUnsigned(LineStr, Alignment))
+        CurrentLayout.Align = Alignment;
       continue;
     }
 
-    // Check for the size/alignment of the type.
+    // Check for the size/alignment of the type. The number follows "size=" or
+    // "align=" indicates number of bytes.
     Pos = LineStr.find("sizeof=");
     if (Pos != StringRef::npos) {
       /* Skip past the sizeof= prefix. */
@@ -105,8 +119,8 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
 
       // Parse size.
       unsigned long long Size = 0;
-      (void)LineStr.getAsInteger(10, Size);
-      CurrentLayout.Size = Size;
+      if (parseUnsigned(LineStr, Size))
+        CurrentLayout.Size = Size * 8;
 
       Pos = LineStr.find("align=");
       if (Pos != StringRef::npos) {
@@ -115,8 +129,8 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
 
         // Parse alignment.
         unsigned long long Alignment = 0;
-        (void)LineStr.getAsInteger(10, Alignment);
-        CurrentLayout.Align = Alignment;
+        if (parseUnsigned(LineStr, Alignment))
+          CurrentLayout.Align = Alignment * 8;
       }
 
       continue;
@@ -124,25 +138,51 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
 
     // Check for the field offsets of the type.
     Pos = LineStr.find("FieldOffsets: [");
-    if (Pos == StringRef::npos)
-      continue;
+    if (Pos != StringRef::npos) {
+      LineStr = LineStr.substr(Pos + strlen("FieldOffsets: ["));
+      while (!LineStr.empty() && isDigit(LineStr[0])) {
+        unsigned long long Offset = 0;
+        if (parseUnsigned(LineStr, Offset))
+          CurrentLayout.FieldOffsets.push_back(Offset);
 
-    LineStr = LineStr.substr(Pos + strlen("FieldOffsets: ["));
-    while (!LineStr.empty() && isDigit(LineStr[0])) {
-      // Parse this offset.
-      unsigned Idx = 1;
-      while (Idx < LineStr.size() && isDigit(LineStr[Idx]))
-        ++Idx;
-
-      unsigned long long Offset = 0;
-      (void)LineStr.substr(0, Idx).getAsInteger(10, Offset);
-
-      CurrentLayout.FieldOffsets.push_back(Offset);
-
-      // Skip over this offset, the following comma, and any spaces.
-      LineStr = LineStr.substr(Idx + 1);
-      while (!LineStr.empty() && isWhitespace(LineStr[0]))
+        // Skip over this offset, the following comma, and any spaces.
         LineStr = LineStr.substr(1);
+        while (!LineStr.empty() && isWhitespace(LineStr[0]))
+          LineStr = LineStr.substr(1);
+      }
+    }
+
+    // Check for the virtual base offsets.
+    Pos = LineStr.find("VBaseOffsets: [");
+    if (Pos != StringRef::npos) {
+      LineStr = LineStr.substr(Pos + strlen("VBaseOffsets: ["));
+      while (!LineStr.empty() && isDigit(LineStr[0])) {
+        unsigned long long Offset = 0;
+        if (parseUnsigned(LineStr, Offset))
+          CurrentLayout.VBaseOffsets.push_back(CharUnits::fromQuantity(Offset));
+
+        // Skip over this offset, the following comma, and any spaces.
+        LineStr = LineStr.substr(1);
+        while (!LineStr.empty() && isWhitespace(LineStr[0]))
+          LineStr = LineStr.substr(1);
+      }
+      continue;
+    }
+
+    // Check for the base offsets.
+    Pos = LineStr.find("BaseOffsets: [");
+    if (Pos != StringRef::npos) {
+      LineStr = LineStr.substr(Pos + strlen("BaseOffsets: ["));
+      while (!LineStr.empty() && isDigit(LineStr[0])) {
+        unsigned long long Offset = 0;
+        if (parseUnsigned(LineStr, Offset))
+          CurrentLayout.BaseOffsets.push_back(CharUnits::fromQuantity(Offset));
+
+        // Skip over this offset, the following comma, and any spaces.
+        LineStr = LineStr.substr(1);
+        while (!LineStr.empty() && isWhitespace(LineStr[0]))
+          LineStr = LineStr.substr(1);
+      }
     }
   }
 
@@ -181,6 +221,24 @@ LayoutOverrideSource::layoutRecordType(const RecordDecl *Record,
   // Wrong number of fields.
   if (NumFields != Known->second.FieldOffsets.size())
     return false;
+
+  // Provide base offsets.
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(Record)) {
+    unsigned NumNB = 0;
+    unsigned NumVB = 0;
+    for (const auto &I : RD->vbases()) {
+      if (NumVB >= Known->second.VBaseOffsets.size())
+        continue;
+      const CXXRecordDecl *VBase = I.getType()->getAsCXXRecordDecl();
+      VirtualBaseOffsets[VBase] = Known->second.VBaseOffsets[NumVB++];
+    }
+    for (const auto &I : RD->bases()) {
+      if (I.isVirtual() || NumNB >= Known->second.BaseOffsets.size())
+        continue;
+      const CXXRecordDecl *Base = I.getType()->getAsCXXRecordDecl();
+      BaseOffsets[Base] = Known->second.BaseOffsets[NumNB++];
+    }
+  }
 
   Size = Known->second.Size;
   Alignment = Known->second.Align;

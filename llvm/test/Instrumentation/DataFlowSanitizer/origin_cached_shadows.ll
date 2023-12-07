@@ -8,26 +8,23 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: @__dfsan_arg_tls = external thread_local(initialexec) global [[TLS_ARR:\[100 x i64\]]]
-; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
-; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
-
 define void @cached_shadows(double %arg) {
   ; CHECK: @cached_shadows.dfsan
-  ; CHECK:  [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align
-  ; CHECK:  [[AS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
+  ; CHECK:  [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align
+  ; CHECK:  [[AS:%.*]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN:2]]
   ; CHECK: [[L1:.+]]:
-  ; CHECK:  {{.*}} = phi i[[#SBITS]]
+  ; CHECK:  {{.*}} = phi i8
   ; CHECK:  {{.*}} = phi i32
   ; CHECK:  {{.*}} = phi double [ 3.000000e+00
-  ; CHECK:  [[S_L1:%.*]] = phi i[[#SBITS]] [ 0, %[[L0:.*]] ], [ [[S_L7:%.*]], %[[L7:.*]] ]
+  ; CHECK:  [[S_L1:%.*]] = phi i8 [ 0, %[[L0:.*]] ], [ [[S_L7:%.*]], %[[L7:.*]] ]
   ; CHECK:  [[O_L1:%.*]] = phi i32 [ 0, %[[L0]] ], [ [[O_L7:%.*]], %[[L7]] ]
   ; CHECK:  [[V_L1:%.*]] = phi double [ 4.000000e+00, %[[L0]] ], [ [[V_L7:%.*]], %[[L7]] ]
   ; CHECK:  br i1 {{%.+}}, label %[[L2:.*]], label %[[L4:.*]]
   ; CHECK: [[L2]]:
   ; CHECK:  br i1 {{%.+}}, label %[[L3:.+]], label %[[L7]]
   ; CHECK: [[L3]]:
-  ; CHECK:  [[S_L3:%.*]] = or i[[#SBITS]]
-  ; CHECK:  [[AS_NE_L3:%.*]] = icmp ne i[[#SBITS]] [[AS]], 0
+  ; CHECK:  [[S_L3:%.*]] = or i8
+  ; CHECK:  [[AS_NE_L3:%.*]] = icmp ne i8 [[AS]], 0
   ; CHECK:  [[O_L3:%.*]] = select i1 [[AS_NE_L3]], i32 %{{[0-9]+}}, i32 [[O_L1]]
   ; CHECK:  [[V_L3:%.*]] = fsub double [[V_L1]], %{{.+}}
   ; CHECK:  br label %[[L7]]
@@ -36,13 +33,13 @@ define void @cached_shadows(double %arg) {
   ; CHECK: [[L5]]:
   ; CHECK:  br label %[[L6]]
   ; CHECK: [[L6]]:
-  ; CHECK:  [[S_L6:%.*]] = or i[[#SBITS]]
-  ; CHECK:  [[AS_NE_L6:%.*]] = icmp ne i[[#SBITS]] [[AS]], 0
+  ; CHECK:  [[S_L6:%.*]] = or i8
+  ; CHECK:  [[AS_NE_L6:%.*]] = icmp ne i8 [[AS]], 0
   ; CHECK:  [[O_L6:%.*]] = select i1 [[AS_NE_L6]], i32 [[AO]], i32 [[O_L1]]
   ; CHECK:  [[V_L6:%.*]] = fadd double [[V_L1]], %{{.+}}
   ; CHECK:  br label %[[L7]]
   ; CHECK: [[L7]]:
-  ; CHECK:  [[S_L7]] = phi i[[#SBITS]] [ [[S_L3]], %[[L3]] ], [ [[S_L1]], %[[L2]] ], [ [[S_L6]], %[[L6]] ]
+  ; CHECK:  [[S_L7]] = phi i8 [ [[S_L3]], %[[L3]] ], [ [[S_L1]], %[[L2]] ], [ [[S_L6]], %[[L6]] ]
   ; CHECK:  [[O_L7]] = phi i32 [ [[O_L3]], %[[L3]] ], [ [[O_L1]], %[[L2]] ], [ [[O_L6]], %[[L6]] ]
   ; CHECK:  [[V_L7]] = phi double [ [[V_L3]], %[[L3]] ], [ [[V_L1]], %[[L2]] ], [ [[V_L6]], %[[L6]] ]
   ; CHECK:  br i1 %{{.+}}, label %[[L1]], label %[[L8:.+]]
@@ -50,18 +47,18 @@ define void @cached_shadows(double %arg) {
 bb:
   %i = alloca double, align 8
   %i1 = alloca double, align 8
-  %i2 = bitcast double* %i to i8*
-  store volatile double 1.000000e+00, double* %i, align 8
-  %i3 = bitcast double* %i1 to i8*
-  store volatile double 2.000000e+00, double* %i1, align 8
+  %i2 = bitcast ptr %i to ptr
+  store volatile double 1.000000e+00, ptr %i, align 8
+  %i3 = bitcast ptr %i1 to ptr
+  store volatile double 2.000000e+00, ptr %i1, align 8
   br label %bb4
 
 bb4:                                              ; preds = %bb16, %bb
   %i5 = phi double [ 3.000000e+00, %bb ], [ %i17, %bb16 ]
   %i6 = phi double [ 4.000000e+00, %bb ], [ %i18, %bb16 ]
-  %i7 = load volatile double, double* %i1, align 8
+  %i7 = load volatile double, ptr %i1, align 8
   %i8 = fcmp une double %i7, 0.000000e+00
-  %i9 = load volatile double, double* %i1, align 8
+  %i9 = load volatile double, ptr %i1, align 8
   br i1 %i8, label %bb10, label %bb14
 
 bb10:                                             ; preds = %bb4
@@ -73,7 +70,7 @@ bb12:                                             ; preds = %bb10
   br label %bb16
 
 bb14:                                             ; preds = %bb4
-  store volatile double %i9, double* %i, align 8
+  store volatile double %i9, ptr %i, align 8
   %i15 = fadd double %i6, %arg
   br label %bb16
 

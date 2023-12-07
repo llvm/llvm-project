@@ -33,7 +33,9 @@ if(LLVM_BUILD_INSTRUMENTED)
 endif()
 
 find_program(DTRACE dtrace)
-if(APPLE AND DTRACE)
+# TODO: Look into supporting this for the driver build. It will require changing
+# the perf-helper.py file to understand to call `llvm` as `llvm clang`.
+if(APPLE AND DTRACE AND NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/order-files.lit.site.cfg.in
     ${CMAKE_CURRENT_BINARY_DIR}/order-files/lit.site.cfg
@@ -58,4 +60,27 @@ if(APPLE AND DTRACE)
     COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py gen-order-file --binary $<TARGET_FILE:clang> --output ${CLANG_ORDER_FILE} ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating order file"
     DEPENDS generate-dtrace-logs)
+endif()
+
+if(CLANG_BOLT_INSTRUMENT AND NOT LLVM_BUILD_INSTRUMENTED)
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/bolt.lit.site.cfg.in
+    ${CMAKE_CURRENT_BINARY_DIR}/bolt-fdata/lit.site.cfg
+    )
+
+  add_lit_testsuite(generate-bolt-fdata "Generating BOLT profile for Clang"
+    ${CMAKE_CURRENT_BINARY_DIR}/bolt-fdata/
+    EXCLUDE_FROM_CHECK_ALL
+    DEPENDS clang-instrumented clear-bolt-fdata
+    )
+
+  add_custom_target(clear-bolt-fdata
+    COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} fdata
+    COMMENT "Clearing old BOLT fdata")
+
+  # Merge profiles into one using merge-fdata
+  add_custom_target(clang-bolt-profile
+    COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py merge-fdata $<TARGET_FILE:merge-fdata> ${CMAKE_CURRENT_BINARY_DIR}/prof.fdata ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Merging BOLT fdata"
+    DEPENDS merge-fdata generate-bolt-fdata)
 endif()

@@ -14,9 +14,8 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/FunctionInterfaces.h"
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TensorEncoding.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Sequence.h"
@@ -88,38 +87,47 @@ IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
 //===----------------------------------------------------------------------===//
 
 unsigned FloatType::getWidth() {
-  if (isa<Float8E5M2Type, Float8E4M3FNType>())
+  if (llvm::isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
+          Float8E4M3FNUZType, Float8E4M3B11FNUZType>(*this))
     return 8;
-  if (isa<Float16Type, BFloat16Type>())
+  if (llvm::isa<Float16Type, BFloat16Type>(*this))
     return 16;
-  if (isa<Float32Type>())
+  if (llvm::isa<Float32Type, FloatTF32Type>(*this))
     return 32;
-  if (isa<Float64Type>())
+  if (llvm::isa<Float64Type>(*this))
     return 64;
-  if (isa<Float80Type>())
+  if (llvm::isa<Float80Type>(*this))
     return 80;
-  if (isa<Float128Type>())
+  if (llvm::isa<Float128Type>(*this))
     return 128;
   llvm_unreachable("unexpected float type");
 }
 
 /// Returns the floating semantics for the given type.
 const llvm::fltSemantics &FloatType::getFloatSemantics() {
-  if (isa<Float8E5M2Type>())
+  if (llvm::isa<Float8E5M2Type>(*this))
     return APFloat::Float8E5M2();
-  if (isa<Float8E4M3FNType>())
+  if (llvm::isa<Float8E4M3FNType>(*this))
     return APFloat::Float8E4M3FN();
-  if (isa<BFloat16Type>())
+  if (llvm::isa<Float8E5M2FNUZType>(*this))
+    return APFloat::Float8E5M2FNUZ();
+  if (llvm::isa<Float8E4M3FNUZType>(*this))
+    return APFloat::Float8E4M3FNUZ();
+  if (llvm::isa<Float8E4M3B11FNUZType>(*this))
+    return APFloat::Float8E4M3B11FNUZ();
+  if (llvm::isa<BFloat16Type>(*this))
     return APFloat::BFloat();
-  if (isa<Float16Type>())
+  if (llvm::isa<Float16Type>(*this))
     return APFloat::IEEEhalf();
-  if (isa<Float32Type>())
+  if (llvm::isa<FloatTF32Type>(*this))
+    return APFloat::FloatTF32();
+  if (llvm::isa<Float32Type>(*this))
     return APFloat::IEEEsingle();
-  if (isa<Float64Type>())
+  if (llvm::isa<Float64Type>(*this))
     return APFloat::IEEEdouble();
-  if (isa<Float80Type>())
+  if (llvm::isa<Float80Type>(*this))
     return APFloat::x87DoubleExtended();
-  if (isa<Float128Type>())
+  if (llvm::isa<Float128Type>(*this))
     return APFloat::IEEEquad();
   llvm_unreachable("non-floating point type used");
 }
@@ -170,10 +178,10 @@ FunctionType FunctionType::getWithArgsAndResults(
     ArrayRef<unsigned> argIndices, TypeRange argTypes,
     ArrayRef<unsigned> resultIndices, TypeRange resultTypes) {
   SmallVector<Type> argStorage, resultStorage;
-  TypeRange newArgTypes = function_interface_impl::insertTypesInto(
-      getInputs(), argIndices, argTypes, argStorage);
-  TypeRange newResultTypes = function_interface_impl::insertTypesInto(
-      getResults(), resultIndices, resultTypes, resultStorage);
+  TypeRange newArgTypes =
+      insertTypesInto(getInputs(), argIndices, argTypes, argStorage);
+  TypeRange newResultTypes =
+      insertTypesInto(getResults(), resultIndices, resultTypes, resultStorage);
   return clone(newArgTypes, newResultTypes);
 }
 
@@ -182,10 +190,9 @@ FunctionType
 FunctionType::getWithoutArgsAndResults(const BitVector &argIndices,
                                        const BitVector &resultIndices) {
   SmallVector<Type> argStorage, resultStorage;
-  TypeRange newArgTypes = function_interface_impl::filterTypesOut(
-      getInputs(), argIndices, argStorage);
-  TypeRange newResultTypes = function_interface_impl::filterTypesOut(
-      getResults(), resultIndices, resultStorage);
+  TypeRange newArgTypes = filterTypesOut(getInputs(), argIndices, argStorage);
+  TypeRange newResultTypes =
+      filterTypesOut(getResults(), resultIndices, resultStorage);
   return clone(newArgTypes, newResultTypes);
 }
 
@@ -220,7 +227,7 @@ LogicalResult OpaqueType::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
                                  ArrayRef<int64_t> shape, Type elementType,
-                                 unsigned numScalableDims) {
+                                 ArrayRef<bool> scalableDims) {
   if (!isValidElementType(elementType))
     return emitError()
            << "vector elements must be int/index/float type but got "
@@ -231,25 +238,29 @@ LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
            << "vector types must have positive constant sizes but got "
            << shape;
 
+  if (scalableDims.size() != shape.size())
+    return emitError() << "number of dims must match, got "
+                       << scalableDims.size() << " and " << shape.size();
+
   return success();
 }
 
 VectorType VectorType::scaleElementBitwidth(unsigned scale) {
   if (!scale)
     return VectorType();
-  if (auto et = getElementType().dyn_cast<IntegerType>())
+  if (auto et = llvm::dyn_cast<IntegerType>(getElementType()))
     if (auto scaledEt = et.scaleElementBitwidth(scale))
-      return VectorType::get(getShape(), scaledEt, getNumScalableDims());
-  if (auto et = getElementType().dyn_cast<FloatType>())
+      return VectorType::get(getShape(), scaledEt, getScalableDims());
+  if (auto et = llvm::dyn_cast<FloatType>(getElementType()))
     if (auto scaledEt = et.scaleElementBitwidth(scale))
-      return VectorType::get(getShape(), scaledEt, getNumScalableDims());
+      return VectorType::get(getShape(), scaledEt, getScalableDims());
   return VectorType();
 }
 
 VectorType VectorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                  Type elementType) const {
   return VectorType::get(shape.value_or(getShape()), elementType,
-                         getNumScalableDims());
+                         getScalableDims());
 }
 
 //===----------------------------------------------------------------------===//
@@ -262,26 +273,35 @@ Type TensorType::getElementType() const {
           [](auto type) { return type.getElementType(); });
 }
 
-bool TensorType::hasRank() const { return !isa<UnrankedTensorType>(); }
+bool TensorType::hasRank() const { return !llvm::isa<UnrankedTensorType>(*this); }
 
 ArrayRef<int64_t> TensorType::getShape() const {
-  return cast<RankedTensorType>().getShape();
+  return llvm::cast<RankedTensorType>(*this).getShape();
 }
 
 TensorType TensorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                  Type elementType) const {
-  if (auto unrankedTy = dyn_cast<UnrankedTensorType>()) {
+  if (llvm::dyn_cast<UnrankedTensorType>(*this)) {
     if (shape)
       return RankedTensorType::get(*shape, elementType);
     return UnrankedTensorType::get(elementType);
   }
 
-  auto rankedTy = cast<RankedTensorType>();
+  auto rankedTy = llvm::cast<RankedTensorType>(*this);
   if (!shape)
     return RankedTensorType::get(rankedTy.getShape(), elementType,
                                  rankedTy.getEncoding());
   return RankedTensorType::get(shape.value_or(rankedTy.getShape()), elementType,
                                rankedTy.getEncoding());
+}
+
+RankedTensorType TensorType::clone(::llvm::ArrayRef<int64_t> shape,
+                                   Type elementType) const {
+  return ::llvm::cast<RankedTensorType>(cloneWith(shape, elementType));
+}
+
+RankedTensorType TensorType::clone(::llvm::ArrayRef<int64_t> shape) const {
+  return ::llvm::cast<RankedTensorType>(cloneWith(shape, getElementType()));
 }
 
 // Check if "elementType" can be an element type of a tensor.
@@ -298,8 +318,8 @@ bool TensorType::isValidElementType(Type type) {
   // Note: Non standard/builtin types are allowed to exist within tensor
   // types. Dialects are expected to verify that tensor types have a valid
   // element type within that dialect.
-  return type.isa<ComplexType, FloatType, IntegerType, OpaqueType, VectorType,
-                  IndexType>() ||
+  return llvm::isa<ComplexType, FloatType, IntegerType, OpaqueType, VectorType,
+                   IndexType>(type) ||
          !llvm::isa<BuiltinDialect>(type.getDialect());
 }
 
@@ -314,7 +334,7 @@ RankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
   for (int64_t s : shape)
     if (s < 0 && !ShapedType::isDynamic(s))
       return emitError() << "invalid tensor dimension size";
-  if (auto v = encoding.dyn_cast_or_null<VerifiableTensorEncoding>())
+  if (auto v = llvm::dyn_cast_or_null<VerifiableTensorEncoding>(encoding))
     if (failed(v.verifyEncoding(shape, elementType, emitError)))
       return failure();
   return checkTensorElementType(emitError, elementType);
@@ -340,15 +360,15 @@ Type BaseMemRefType::getElementType() const {
           [](auto type) { return type.getElementType(); });
 }
 
-bool BaseMemRefType::hasRank() const { return !isa<UnrankedMemRefType>(); }
+bool BaseMemRefType::hasRank() const { return !llvm::isa<UnrankedMemRefType>(*this); }
 
 ArrayRef<int64_t> BaseMemRefType::getShape() const {
-  return cast<MemRefType>().getShape();
+  return llvm::cast<MemRefType>(*this).getShape();
 }
 
 BaseMemRefType BaseMemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                          Type elementType) const {
-  if (auto unrankedTy = dyn_cast<UnrankedMemRefType>()) {
+  if (llvm::dyn_cast<UnrankedMemRefType>(*this)) {
     if (!shape)
       return UnrankedMemRefType::get(elementType, getMemorySpace());
     MemRefType::Builder builder(*shape, elementType);
@@ -356,23 +376,32 @@ BaseMemRefType BaseMemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
     return builder;
   }
 
-  MemRefType::Builder builder(cast<MemRefType>());
+  MemRefType::Builder builder(llvm::cast<MemRefType>(*this));
   if (shape)
     builder.setShape(*shape);
   builder.setElementType(elementType);
   return builder;
 }
 
+MemRefType BaseMemRefType::clone(::llvm::ArrayRef<int64_t> shape,
+                                 Type elementType) const {
+  return ::llvm::cast<MemRefType>(cloneWith(shape, elementType));
+}
+
+MemRefType BaseMemRefType::clone(::llvm::ArrayRef<int64_t> shape) const {
+  return ::llvm::cast<MemRefType>(cloneWith(shape, getElementType()));
+}
+
 Attribute BaseMemRefType::getMemorySpace() const {
-  if (auto rankedMemRefTy = dyn_cast<MemRefType>())
+  if (auto rankedMemRefTy = llvm::dyn_cast<MemRefType>(*this))
     return rankedMemRefTy.getMemorySpace();
-  return cast<UnrankedMemRefType>().getMemorySpace();
+  return llvm::cast<UnrankedMemRefType>(*this).getMemorySpace();
 }
 
 unsigned BaseMemRefType::getMemorySpaceAsInt() const {
-  if (auto rankedMemRefTy = dyn_cast<MemRefType>())
+  if (auto rankedMemRefTy = llvm::dyn_cast<MemRefType>(*this))
     return rankedMemRefTy.getMemorySpaceAsInt();
-  return cast<UnrankedMemRefType>().getMemorySpaceAsInt();
+  return llvm::cast<UnrankedMemRefType>(*this).getMemorySpaceAsInt();
 }
 
 //===----------------------------------------------------------------------===//
@@ -419,9 +448,9 @@ mlir::isRankReducedType(ShapedType originalType,
   if (originalType == candidateReducedType)
     return SliceVerificationResult::Success;
 
-  ShapedType originalShapedType = originalType.cast<ShapedType>();
+  ShapedType originalShapedType = llvm::cast<ShapedType>(originalType);
   ShapedType candidateReducedShapedType =
-      candidateReducedType.cast<ShapedType>();
+      llvm::cast<ShapedType>(candidateReducedType);
 
   // Rank and size logic is valid for all ShapedTypes.
   ArrayRef<int64_t> originalShape = originalShapedType.getShape();
@@ -452,7 +481,7 @@ bool mlir::detail::isSupportedMemorySpace(Attribute memorySpace) {
     return true;
 
   // Supported built-in attributes.
-  if (memorySpace.isa<IntegerAttr, StringAttr, DictionaryAttr>())
+  if (llvm::isa<IntegerAttr, StringAttr, DictionaryAttr>(memorySpace))
     return true;
 
   // Allow custom dialect attributes.
@@ -471,7 +500,7 @@ Attribute mlir::detail::wrapIntegerMemorySpace(unsigned memorySpace,
 }
 
 Attribute mlir::detail::skipDefaultMemorySpace(Attribute memorySpace) {
-  IntegerAttr intMemorySpace = memorySpace.dyn_cast_or_null<IntegerAttr>();
+  IntegerAttr intMemorySpace = llvm::dyn_cast_or_null<IntegerAttr>(memorySpace);
   if (intMemorySpace && intMemorySpace.getValue() == 0)
     return nullptr;
 
@@ -482,10 +511,10 @@ unsigned mlir::detail::getMemorySpaceAsInt(Attribute memorySpace) {
   if (!memorySpace)
     return 0;
 
-  assert(memorySpace.isa<IntegerAttr>() &&
+  assert(llvm::isa<IntegerAttr>(memorySpace) &&
          "Using `getMemorySpaceInteger` with non-Integer attribute");
 
-  return static_cast<unsigned>(memorySpace.cast<IntegerAttr>().getInt());
+  return static_cast<unsigned>(llvm::cast<IntegerAttr>(memorySpace).getInt());
 }
 
 unsigned MemRefType::getMemorySpaceAsInt() const {
@@ -532,7 +561,7 @@ MemRefType MemRefType::get(ArrayRef<int64_t> shape, Type elementType,
                                             elementType.getContext());
 
   // Wrap AffineMap into Attribute.
-  Attribute layout = AffineMapAttr::get(map);
+  auto layout = AffineMapAttr::get(map);
 
   // Drop default memory space value and replace it with empty attribute.
   memorySpace = skipDefaultMemorySpace(memorySpace);
@@ -552,7 +581,7 @@ MemRefType::getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
                                             elementType.getContext());
 
   // Wrap AffineMap into Attribute.
-  Attribute layout = AffineMapAttr::get(map);
+  auto layout = AffineMapAttr::get(map);
 
   // Drop default memory space value and replace it with empty attribute.
   memorySpace = skipDefaultMemorySpace(memorySpace);
@@ -570,7 +599,7 @@ MemRefType MemRefType::get(ArrayRef<int64_t> shape, Type elementType,
                                             elementType.getContext());
 
   // Wrap AffineMap into Attribute.
-  Attribute layout = AffineMapAttr::get(map);
+  auto layout = AffineMapAttr::get(map);
 
   // Convert deprecated integer-like memory space to Attribute.
   Attribute memorySpace =
@@ -591,7 +620,7 @@ MemRefType::getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
                                             elementType.getContext());
 
   // Wrap AffineMap into Attribute.
-  Attribute layout = AffineMapAttr::get(map);
+  auto layout = AffineMapAttr::get(map);
 
   // Convert deprecated integer-like memory space to Attribute.
   Attribute memorySpace =
@@ -779,7 +808,7 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
                                         SmallVectorImpl<int64_t> &strides,
                                         int64_t &offset) {
   // Happy path: the type uses the strided layout directly.
-  if (auto strided = t.getLayout().dyn_cast<StridedLayoutAttr>()) {
+  if (auto strided = llvm::dyn_cast<StridedLayoutAttr>(t.getLayout())) {
     llvm::append_range(strides, strided.getStrides());
     offset = strided.getOffset();
     return success();
@@ -827,7 +856,7 @@ ArrayRef<Type> TupleType::getTypes() const { return getImpl()->getTypes(); }
 /// (i32, tensor<i32>, f32, i64)
 void TupleType::getFlattenedTypes(SmallVectorImpl<Type> &types) {
   for (Type type : getTypes()) {
-    if (auto nestedTuple = type.dyn_cast<TupleType>())
+    if (auto nestedTuple = llvm::dyn_cast<TupleType>(type))
       nestedTuple.getFlattenedTypes(types);
     else
       types.push_back(type);
@@ -925,10 +954,16 @@ AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
   return makeCanonicalStridedLayoutExpr(sizes, exprs, context);
 }
 
-/// Return true if the layout for `t` is compatible with strided semantics.
 bool mlir::isStrided(MemRefType t) {
   int64_t offset;
   SmallVector<int64_t, 4> strides;
   auto res = getStridesAndOffset(t, strides, offset);
   return succeeded(res);
+}
+
+bool mlir::isLastMemrefDimUnitStride(MemRefType type) {
+  int64_t offset;
+  SmallVector<int64_t> strides;
+  auto successStrides = getStridesAndOffset(type, strides, offset);
+  return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
 }

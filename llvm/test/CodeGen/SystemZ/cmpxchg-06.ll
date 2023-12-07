@@ -1,4 +1,4 @@
-; Test 64-bit compare and swap.
+; Test 128-bit compare and swap.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 

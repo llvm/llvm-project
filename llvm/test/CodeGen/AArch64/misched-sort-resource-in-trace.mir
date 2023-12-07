@@ -1,0 +1,53 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=exynos-m3 -verify-machineinstrs \
+# RUN: -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s \
+# RUN:  -misched-topdown=true -sched-print-cycles=true \
+# RUN:  -misched-dump-schedule-trace=true --misched-sort-resources-in-trace=true 2>&1 | FileCheck --check-prefix=SORTED %s
+
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=exynos-m3 -verify-machineinstrs \
+# RUN: -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s \
+# RUN:  -misched-topdown=true -sched-print-cycles=true \
+# RUN:  -misched-dump-schedule-trace=true --misched-sort-resources-in-trace=false 2>&1 | FileCheck --check-prefix=UNSORTED %s
+
+# REQUIRES: asserts, aarch64-registered-target
+---
+name: test
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $x0, $x1, $x3, $x4, $q2
+  $x0, $q2 = LD1i32_POST $q2, 0, $x0, $x0 :: ("aarch64-strided-access" load (s32))
+  $x1, $q2 = LD1i32_POST $q2, 0, $x1, $x1 :: ("aarch64-strided-access" load (s32))
+...
+
+
+# SORTED-LABEL: *** Final schedule for %bb.0 ***
+# SORTED-NEXT:  * Schedule table (TopDown):
+# SORTED-NEXT:   i: issue
+# SORTED-NEXT:   x: resource booked
+# SORTED-NEXT: Cycle              | 0  | 1  | 2  |
+# SORTED-NEXT: SU(0)              | i  |    |    |
+# SORTED-NEXT:          M3UnitALU | x  |    |    |
+# SORTED-NEXT:         M3UnitNALU | x  |    |    |
+# SORTED-NEXT:            M3UnitL | x  | x  |    |
+# SORTED-NEXT: SU(1)              |    | i  |    |
+# SORTED-NEXT:          M3UnitALU |    | x  |    |
+# SORTED-NEXT:         M3UnitNALU |    | x  |    |
+# SORTED-NEXT:            M3UnitL |    | x  | x  |
+# SORTED-NEXT: SU(0) [TopReadyCycle = 0, BottomReadyCycle = 0]: $x0, $q2 = LD1i32_POST $q2(tied-def 1), 0, $x0(tied-def 0), $x0 :: ("aarch64-strided-access" load (s32))
+# SORTED-NEXT: SU(1) [TopReadyCycle = 1, BottomReadyCycle = 6]:   $x1, $q2 = LD1i32_POST $q2(tied-def 1), 0, $x1(tied-def 0), $x1 :: ("aarch64-strided-access" load (s32))
+
+# UNSORTED-LABEL: *** Final schedule for %bb.0 ***
+# UNSORTED-NEXT:  * Schedule table (TopDown):
+# UNSORTED-NEXT:   i: issue
+# UNSORTED-NEXT:   x: resource booked
+# UNSORTED-NEXT: Cycle              | 0  | 1  | 2  |
+# UNSORTED-NEXT: SU(0)              | i  |    |    |
+# UNSORTED-NEXT:          M3UnitALU | x  |    |    |
+# UNSORTED-NEXT:            M3UnitL | x  | x  |    |
+# UNSORTED-NEXT:         M3UnitNALU | x  |    |    |
+# UNSORTED-NEXT: SU(1)              |    | i  |    |
+# UNSORTED-NEXT:          M3UnitALU |    | x  |    |
+# UNSORTED-NEXT:            M3UnitL |    | x  | x  |
+# UNSORTED-NEXT:         M3UnitNALU |    | x  |    |
+# UNSORTED-NEXT: SU(0) [TopReadyCycle = 0, BottomReadyCycle = 0]: $x0, $q2 = LD1i32_POST $q2(tied-def 1), 0, $x0(tied-def 0), $x0 :: ("aarch64-strided-access" load (s32))
+# UNSORTED-NEXT: SU(1) [TopReadyCycle = 1, BottomReadyCycle = 6]:   $x1, $q2 = LD1i32_POST $q2(tied-def 1), 0, $x1(tied-def 0), $x1 :: ("aarch64-strided-access" load (s32))

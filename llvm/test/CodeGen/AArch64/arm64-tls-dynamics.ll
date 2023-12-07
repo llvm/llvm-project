@@ -18,7 +18,7 @@
 define i32 @test_generaldynamic() {
 ; CHECK-LABEL: test_generaldynamic:
 
-  %val = load i32, i32* @general_dynamic_var
+  %val = load i32, ptr @general_dynamic_var
   ret i32 %val
 
 ; CHECK: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc:general_dynamic_var
@@ -51,10 +51,10 @@ define i32 @test_generaldynamic() {
 
 }
 
-define i32* @test_generaldynamic_addr() {
+define ptr @test_generaldynamic_addr() {
 ; CHECK-LABEL: test_generaldynamic_addr:
 
-  ret i32* @general_dynamic_var
+  ret ptr @general_dynamic_var
 
 ; CHECK: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc:general_dynamic_var
 ; CHECK-NEXT: ldr [[CALLEE:x[0-9]+]], [x[[TLSDESC_HI]], :tlsdesc_lo12:general_dynamic_var]
@@ -82,7 +82,7 @@ define i32* @test_generaldynamic_addr() {
 define i32 @test_localdynamic() {
 ; CHECK-LABEL: test_localdynamic:
 
-  %val = load i32, i32* @local_dynamic_var
+  %val = load i32, ptr @local_dynamic_var
   ret i32 %val
 
 ; CHECK: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc:_TLS_MODULE_BASE_
@@ -118,7 +118,7 @@ define i32 @test_localdynamic() {
 
 }
 
-define i32* @test_localdynamic_addr() {
+define ptr @test_localdynamic_addr() {
 ; CHECK-LABEL: test_localdynamic_addr:
 
 ; CHECK: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc:_TLS_MODULE_BASE_
@@ -138,7 +138,7 @@ define i32* @test_localdynamic_addr() {
 ; CHECK-NOLD-NEXT: blr [[CALLEE]]
 ; CHECK-NOLD: mrs x[[TPIDR:[0-9]+]], TPIDR_EL0
 ; CHECK-NOLD: add x0, x[[TPIDR]], x0
-  ret i32* @local_dynamic_var
+  ret ptr @local_dynamic_var
 
 ; CHECK-RELOC: R_AARCH64_TLSDESC_ADR_PAGE21
 ; CHECK-RELOC: R_AARCH64_TLSDESC_LD64_LO12
@@ -161,8 +161,8 @@ define i32* @test_localdynamic_addr() {
 define i32 @test_localdynamic_deduplicate() {
 ; CHECK-LABEL: test_localdynamic_deduplicate:
 
-  %val = load i32, i32* @local_dynamic_var
-  %val2 = load i32, i32* @local_dynamic_var2
+  %val = load i32, ptr @local_dynamic_var
+  %val2 = load i32, ptr @local_dynamic_var2
 
   %sum = add i32 %val, %val2
   ret i32 %sum

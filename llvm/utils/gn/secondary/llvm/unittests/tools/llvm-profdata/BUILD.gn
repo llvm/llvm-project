@@ -1,0 +1,13 @@
+import("//third-party/unittest/unittest.gni")
+
+unittest("LLVMProfdataTests") {
+  deps = [
+    "//llvm/lib/ProfileData",
+    "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
+  ]
+  sources = [
+    "MD5CollisionTest.cpp",
+    "OutputSizeLimitTest.cpp",
+  ]
+}

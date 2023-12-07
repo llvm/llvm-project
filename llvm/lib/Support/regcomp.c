@@ -329,7 +329,15 @@ llvm_regcomp(llvm_regex_t *preg, const char *pattern, int cflags)
 
 	/* set things up */
 	p->g = g;
+	/* suppress warning from the following explicit cast. */
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#endif /* __GNUC__ */
 	p->next = (char *)pattern;	/* convenience; we do not modify it */
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif /* __GNUC__ */
 	p->end = p->next + len;
 	p->error = 0;
 	p->ncsalloc = 0;
@@ -525,8 +533,8 @@ p_ere_exp(struct parse *p)
 			assert(backrefnum <= p->g->nsub);
 			EMIT(OBACK_, backrefnum);
 			assert(p->pbegin[backrefnum] != 0);
-			assert(OP(p->strip[p->pbegin[backrefnum]]) != OLPAREN);
-			assert(OP(p->strip[p->pend[backrefnum]]) != ORPAREN);
+			assert(OP(p->strip[p->pbegin[backrefnum]]) == OLPAREN);
+			assert(OP(p->strip[p->pend[backrefnum]]) == ORPAREN);
 			(void) dupl(p, p->pbegin[backrefnum]+1, p->pend[backrefnum]);
 			EMIT(O_BACK, backrefnum);
 			p->g->backrefs = 1;

@@ -23,6 +23,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InlineAsm.h"
@@ -42,7 +43,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -510,7 +510,9 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
 
   if (!DispSpec.isImm()) {
     if (NeedPlus) O << " + ";
-    PrintOperand(MI, OpNo + X86::AddrDisp, O);
+    // Do not add `offset` operator. Matches the behaviour of
+    // X86IntelInstPrinter::printMemReference.
+    PrintSymbolOperand(DispSpec, O);
   } else {
     int64_t DispVal = DispSpec.getImm();
     if (DispVal || (!IndexReg.getReg() && !HasBaseReg)) {
@@ -546,6 +548,8 @@ static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
     break;
   case 'h': // Print QImode high register
     Reg = getX86SubSuperRegister(Reg, 8, true);
+    if (!Reg.isValid())
+      return true;
     break;
   case 'w': // Print HImode register
     Reg = getX86SubSuperRegister(Reg, 16);

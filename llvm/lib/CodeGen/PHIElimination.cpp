@@ -63,9 +63,9 @@ static cl::opt<bool> NoPhiElimLiveOutEarlyExit(
 namespace {
 
   class PHIElimination : public MachineFunctionPass {
-    MachineRegisterInfo *MRI; // Machine register information
-    LiveVariables *LV;
-    LiveIntervals *LIS;
+    MachineRegisterInfo *MRI = nullptr; // Machine register information
+    LiveVariables *LV = nullptr;
+    LiveIntervals *LIS = nullptr;
 
   public:
     static char ID; // Pass identification, replacement for typeid
@@ -441,7 +441,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
     unsigned SrcSubReg = MPhi->getOperand(i*2+1).getSubReg();
     bool SrcUndef = MPhi->getOperand(i*2+1).isUndef() ||
       isImplicitlyDefined(SrcReg, *MRI);
-    assert(Register::isVirtualRegister(SrcReg) &&
+    assert(SrcReg.isVirtual() &&
            "Machine PHI Operands must all be virtual registers!");
 
     // Get the MachineBasicBlock equivalent of the BasicBlock that is the source

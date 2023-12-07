@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s readability-simplify-subscript-expr %t \
 // RUN: -config="{CheckOptions: \
-// RUN: [{key: readability-simplify-subscript-expr.Types, \
-// RUN:   value: '::std::basic_string;::std::basic_string_view;MyVector'}]}" --
+// RUN: {readability-simplify-subscript-expr.Types: \
+// RUN:    '::std::basic_string;::std::basic_string_view;MyVector'}}" --
 
 namespace std {
 

@@ -36,7 +36,7 @@ def utf16_summary(value, unused):
     error = lldb.SBError()
     string_data = value.process.ReadMemory(pointer, length, error)
     # utf8 is safe to emit as-is on OSX
-    return '"%s"' % (string_data.decode('utf-16').encode('utf-8'))
+    return '"%s"' % (string_data.decode("utf-16").encode("utf-8"))
 
 
 def utf32_summary(value, unused):
@@ -50,4 +50,4 @@ def utf32_summary(value, unused):
     error = lldb.SBError()
     string_data = value.process.ReadMemory(pointer, length, error)
     # utf8 is safe to emit as-is on OSX
-    return '"%s"' % (string_data.decode('utf-32').encode('utf-8'))
+    return '"%s"' % (string_data.decode("utf-32").encode("utf-8"))

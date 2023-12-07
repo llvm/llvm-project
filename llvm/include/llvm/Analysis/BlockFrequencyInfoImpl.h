@@ -25,6 +25,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
@@ -311,14 +312,14 @@ public:
     /// the context of distributing mass, L will be the number of loop headers
     /// an early exit edge jumps out of.
     BlockNode getResolvedNode() const {
-      auto L = getPackagedLoop();
+      auto *L = getPackagedLoop();
       return L ? L->getHeader() : Node;
     }
 
     LoopData *getPackagedLoop() const {
       if (!Loop || !Loop->IsPackaged)
         return nullptr;
-      auto L = Loop;
+      auto *L = Loop;
       while (L->Parent && L->Parent->IsPackaged)
         L = L->Parent;
       return L;
@@ -1381,7 +1382,7 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::applyIterativeInference() {
   if (ReachableBlocks.empty())
     return;
 
-  // The map is used to to index successors/predecessors of reachable blocks in
+  // The map is used to index successors/predecessors of reachable blocks in
   // the ReachableBlocks vector
   DenseMap<const BlockT *, size_t> BlockIndex;
   // Extract initial frequencies for the reachable blocks
@@ -1579,7 +1580,7 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
     SmallPtrSet<const BlockT *, 2> UniqueSuccs;
     for (const auto SI : children<const BlockT *>(BB)) {
       // Ignore cold blocks
-      if (BlockIndex.find(SI) == BlockIndex.end())
+      if (!BlockIndex.contains(SI))
         continue;
       // Ignore parallel edges between BB and SI blocks
       if (!UniqueSuccs.insert(SI).second)
@@ -1655,7 +1656,7 @@ template <class BT> struct BlockEdgesAdder {
   void operator()(IrreducibleGraph &G, IrreducibleGraph::IrrNode &Irr,
                   const LoopData *OuterLoop) {
     const BlockT *BB = BFI.RPOT[Irr.Node.Index];
-    for (const auto Succ : children<const BlockT *>(BB))
+    for (const auto *Succ : children<const BlockT *>(BB))
       G.addEdge(Irr, BFI.getNode(Succ), OuterLoop);
   }
 };

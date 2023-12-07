@@ -10,12 +10,14 @@ static_library("AsmParser") {
   output_name = "LLVMARMAsmParser"
   deps = [
     ":ARMGenAsmMatcher",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/Support",
     "//llvm/lib/Target/ARM/MCTargetDesc",
     "//llvm/lib/Target/ARM/TargetInfo",
     "//llvm/lib/Target/ARM/Utils",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ ".." ]
   sources = [ "ARMAsmParser.cpp" ]

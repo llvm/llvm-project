@@ -14,8 +14,6 @@
 
 namespace lldb_private {
 
-enum class DWARFEnumState { MoreItems, Complete };
-
 typedef uint32_t DRC_class; // Holds DRC_* class bitfields
 
 const char *DW_TAG_value_to_name(uint32_t val);

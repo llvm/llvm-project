@@ -17,16 +17,16 @@ MLIR provides an implementation of an LSP language server for `.mlir` text files
 in the form of the `mlir-lsp-server` tool. This tool interacts with the MLIR C++
 API to support rich language queries, such as "Find Definition".
 
-### Supporting custom dialects and passes
+### Supporting custom dialects
 
 `mlir-lsp-server`, like many other MLIR based tools, relies on having the
 appropriate dialects registered to be able to parse in the custom assembly
 formats used in the textual .mlir files. The `mlir-lsp-server` found within the
-main MLIR repository provides support for all of the upstream MLIR dialects and
-passes. Downstream and out-of-tree users will need to provide a custom
+main MLIR repository provides support for all of the upstream MLIR dialects.
+Downstream and out-of-tree users will need to provide a custom
 `mlir-lsp-server` executable that registers the entities that they are
 interested in. The implementation of `mlir-lsp-server` is provided as a library,
-making it easy for downstream users to register their dialect/passes and simply
+making it easy for downstream users to register their dialect and simply
 call into the main implementation. A simple example is shown below:
 
 ```c++
@@ -35,7 +35,6 @@ call into the main implementation. A simple example is shown below:
 int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
   registerMyDialects(registry);
-  registerMyPasses();
   return mlir::failed(mlir::MlirLspServerMain(argc, argv, registry));
 }
 ```

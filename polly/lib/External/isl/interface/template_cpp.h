@@ -99,7 +99,7 @@ class template_cpp_generator : public cpp_generator {
 	struct class_impl_printer;
 
 	void add_template_class(const isl_class &clazz, const std::string &name,
-		const std::vector<Kind> &base_kinds);
+		const std::vector<Kind> &class_tuples);
 public:
 	template_cpp_generator(clang::SourceManager &SM,
 		std::set<clang::RecordDecl *> &exported_types,

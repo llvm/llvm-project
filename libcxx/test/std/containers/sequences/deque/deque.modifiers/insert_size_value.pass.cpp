@@ -12,6 +12,7 @@
 
 // iterator insert (const_iterator p, size_type n, const value_type& v);
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 #include <cstddef>
@@ -51,6 +52,7 @@ test(int P, C& c1, int size, int x)
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize + size);
     assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);
@@ -152,6 +154,15 @@ int main(int, char**)
             for (int k = 0; k < N; ++k)
                 testN<std::deque<int, min_allocator<int>> >(rng[i], rng[j], rng[k]);
     self_reference_test<std::deque<int, min_allocator<int>> >();
+    }
+    {
+    int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
+    const int N = sizeof(rng)/sizeof(rng[0]);
+    for (int i = 0; i < N; ++i)
+        for (int j = 0; j < N; ++j)
+            for (int k = 0; k < N; ++k)
+                testN<std::deque<int, safe_allocator<int>> >(rng[i], rng[j], rng[k]);
+    self_reference_test<std::deque<int, safe_allocator<int>> >();
     }
 #endif
 

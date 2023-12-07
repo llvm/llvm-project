@@ -6,4 +6,5 @@ add_lldb_library(lldbIntelMPX
 
   LINK_COMPONENTS
     Support
+    TargetParser
   )

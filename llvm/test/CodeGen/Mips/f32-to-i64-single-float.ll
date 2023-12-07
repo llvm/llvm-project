@@ -3,7 +3,7 @@
 ; This test casts a 32-bit float to a 64-bit int. This would cause a crash due
 ; to LLVM incorrectly lowering the float on single-float platforms.
 
-define void @foo(float* %in, i64* %out) {
+define void @foo(ptr %in, ptr %out) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    daddiu $sp, $sp, -16
@@ -39,14 +39,14 @@ define void @foo(float* %in, i64* %out) {
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    daddiu $sp, $sp, 16
 entry:
-  %in.addr = alloca float*, align 8
-  %out.addr = alloca i64*, align 8
-  store float* %in, float** %in.addr, align 8
-  store i64* %out, i64** %out.addr, align 8
-  %0 = load float*, float** %in.addr, align 8
-  %1 = load float, float* %0, align 4
+  %in.addr = alloca ptr, align 8
+  %out.addr = alloca ptr, align 8
+  store ptr %in, ptr %in.addr, align 8
+  store ptr %out, ptr %out.addr, align 8
+  %0 = load ptr, ptr %in.addr, align 8
+  %1 = load float, ptr %0, align 4
   %conv = fptosi float %1 to i64
-  %2 = load i64*, i64** %out.addr, align 8
-  store i64 %conv, i64* %2, align 8
+  %2 = load ptr, ptr %out.addr, align 8
+  store i64 %conv, ptr %2, align 8
   ret void
 }

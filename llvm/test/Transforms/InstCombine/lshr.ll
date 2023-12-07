@@ -947,8 +947,8 @@ define i32 @not_narrow_bswap(i24 %x) {
 
 define i8 @not_signbit(i8 %x) {
 ; CHECK-LABEL: @not_signbit(
-; CHECK-NEXT:    [[A:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[A]], 7
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[ISNOTNEG]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = xor i8 %x, -1
@@ -958,8 +958,8 @@ define i8 @not_signbit(i8 %x) {
 
 define <2 x i6> @not_signbit_vec(<2 x i6> %x) {
 ; CHECK-LABEL: @not_signbit_vec(
-; CHECK-NEXT:    [[A:%.*]] = xor <2 x i6> [[X:%.*]], <i6 -1, i6 poison>
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i6> [[A]], <i6 5, i6 poison>
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <2 x i6> [[X:%.*]], <i6 -1, i6 -1>
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[ISNOTNEG]] to <2 x i6>
 ; CHECK-NEXT:    ret <2 x i6> [[R]]
 ;
   %a = xor <2 x i6> %x, <i6 -1, i6 poison>
@@ -969,8 +969,8 @@ define <2 x i6> @not_signbit_vec(<2 x i6> %x) {
 
 define i8 @not_signbit_alt_xor(i8 %x) {
 ; CHECK-LABEL: @not_signbit_alt_xor(
-; CHECK-NEXT:    [[A:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[A]], 7
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[ISNOTNEG]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = xor i8 %x, -2
@@ -1004,9 +1004,8 @@ define i32 @not_signbit_use(i32 %x) {
 
 define i32 @not_signbit_zext(i16 %x) {
 ; CHECK-LABEL: @not_signbit_zext(
-; CHECK-NEXT:    [[A:%.*]] = xor i16 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = lshr i16 [[A]], 15
-; CHECK-NEXT:    [[R2:%.*]] = zext i16 [[R]] to i32
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i16 [[X:%.*]], -1
+; CHECK-NEXT:    [[R2:%.*]] = zext i1 [[ISNOTNEG]] to i32
 ; CHECK-NEXT:    ret i32 [[R2]]
 ;
   %a = xor i16 %x, -1
@@ -1017,9 +1016,8 @@ define i32 @not_signbit_zext(i16 %x) {
 
 define i8 @not_signbit_trunc(i16 %x) {
 ; CHECK-LABEL: @not_signbit_trunc(
-; CHECK-NEXT:    [[A:%.*]] = xor i16 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = lshr i16 [[A]], 15
-; CHECK-NEXT:    [[R2:%.*]] = trunc i16 [[R]] to i8
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i16 [[X:%.*]], -1
+; CHECK-NEXT:    [[R2:%.*]] = zext i1 [[ISNOTNEG]] to i8
 ; CHECK-NEXT:    ret i8 [[R2]]
 ;
   %a = xor i16 %x, -1
@@ -1045,10 +1043,9 @@ define i2 @bool_add_lshr(i1 %a, i1 %b) {
 
 define i4 @not_bool_add_lshr(i2 %a, i2 %b) {
 ; CHECK-LABEL: @not_bool_add_lshr(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i2 [[A:%.*]] to i4
-; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i2 [[B:%.*]] to i4
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i4 [[ZEXT_A]], [[ZEXT_B]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i4 [[ADD]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i2 [[A:%.*]], -1
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i2 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i4
 ; CHECK-NEXT:    ret i4 [[LSHR]]
 ;
   %zext.a = zext i2 %a to i4

@@ -16,8 +16,8 @@ nullptr_t f(nullptr_t null)
   p = null;
   int *pi = nullptr;
   pi = null;
-  null = 0; // expected-error {{assigning to 'nullptr_t' from incompatible type 'int'}}
-  bool b = nullptr; // expected-error {{initializing 'bool' with an expression of incompatible type 'nullptr_t'}}
+  null = 0;
+  bool b = nullptr;
 
   // Can't convert nullptr to integral implicitly.
   uintptr_t i = nullptr; // expected-error-re {{initializing 'uintptr_t' (aka '{{.*}}') with an expression of incompatible type 'nullptr_t'}}
@@ -76,6 +76,9 @@ void h() {
 }
 
 static_assert(sizeof(nullptr_t) == sizeof(void*), "");
+
+static_assert(!nullptr, "");
+static_assert(!(bool){nullptr}, "");
 
 static_assert(!(nullptr < nullptr), ""); // expected-error {{invalid operands to binary expression}}
 static_assert(!(nullptr > nullptr), ""); // expected-error {{invalid operands to binary expression}}

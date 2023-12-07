@@ -50,12 +50,6 @@
 // RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1       \
-// RUN:     --target=mipsel-unknown-linux-android \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:     --gcc-toolchain="" \
-// RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s
-//
-// RUN: %clang -### %s -fsyntax-only 2>&1       \
 // RUN:     --target=i386-unknown-linux-android \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     --gcc-toolchain="" \
@@ -68,7 +62,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1       \
-// RUN:     --target=aarch64-none-none-eabi \
+// RUN:     --target=aarch64-none-elf \
 // RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s
 
 // RUN: %clang -### %s -fsyntax-only 2>&1       \
@@ -84,7 +78,11 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1       \
 // RUN:     --target=i386-unknown-freebsd11 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-INIT-ARRAY %s
-
+//
+// RUN: %clang -### %s -fsyntax-only 2>&1       \
+// RUN:     --target=i386-unknown-freebsd \
+// RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s
+//
 // RUN: %clang -### %s -fsyntax-only 2>&1       \
 // RUN:     --target=i386-unknown-freebsd12 \
 // RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s

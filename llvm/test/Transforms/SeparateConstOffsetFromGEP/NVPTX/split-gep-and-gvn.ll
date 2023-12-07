@@ -1,8 +1,8 @@
-; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_20 \
-; RUN:     | FileCheck %s --check-prefix=PTX
 ; RUN: opt < %s -mtriple=nvptx64-nvidia-cuda -S -passes=separate-const-offset-from-gep,gvn \
 ; RUN:       -reassociate-geps-verify-no-dead-code \
 ; RUN:     | FileCheck %s --check-prefix=IR
+; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_20 \
+; RUN:     | FileCheck %s --check-prefix=PTX
 
 ; Verifies the SeparateConstOffsetFromGEP pass.
 ; The following code computes

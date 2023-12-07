@@ -57,7 +57,9 @@
     %6 = load i32, i32* %variableLocal11, align 8
     %variableLocal2 = getelementptr inbounds %struct.firstStruct, %struct.firstStruct* %5, i64 0, i32 1
     %7 = load i8, i8* %variableLocal2, align 4
-    tail call void @func3(i32 %6, i8 zeroext %7, i8 zeroext 5, i8* inttoptr (i64 or (i64 ptrtoint ([7 x i8]* @.str to i64), i64 -92238) to i8*), i32 %variable2)
+    %or = or i64 ptrtoint ([7 x i8]* @.str to i64), -92238
+    %ptr = inttoptr i64 %or to i8*
+    tail call void @func3(i32 %6, i8 zeroext %7, i8 zeroext 5, i8* %ptr, i32 %variable2)
     br label %cleanup
 
   private.exit:                                     ; preds = %if.end
@@ -333,14 +335,14 @@ body:             |
     successors: %bb.6(0x30000000), %bb.7(0x50000000)
     liveins: $rax, $r12, $r15
 
-    CMP32mi8 renamable $r15, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_perf2, align 8)
+    CMP32mi renamable $r15, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_perf2, align 8)
     JCC_1 %bb.7, 5, implicit $eflags, debug-location !57
 
   bb.6.lor.lhs.false:
     successors: %bb.8(0x30000000), %bb.7(0x50000000)
     liveins: $rax, $r12, $r15
 
-    CMP32mi8 killed renamable $r15, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_bw)
+    CMP32mi killed renamable $r15, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_bw)
     JCC_1 %bb.8, 4, implicit $eflags, debug-location !57
 
   bb.7.if.then14:
@@ -375,7 +377,7 @@ body:             |
     liveins: $ecx
 
     $eax = MOV32rr killed $ecx
-    $rsp = ADD64ri8 $rsp, 8, implicit-def dead $eflags
+    $rsp = ADD64ri32 $rsp, 8, implicit-def dead $eflags
     $rbx = POP64r implicit-def $rsp, implicit $rsp
     $r12 = POP64r implicit-def $rsp, implicit $rsp
     $r13 = POP64r implicit-def $rsp, implicit $rsp

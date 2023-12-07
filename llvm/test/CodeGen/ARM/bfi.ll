@@ -3,7 +3,7 @@
 
 %struct.F = type { [3 x i8], i8 }
 
-@X = common global %struct.F zeroinitializer, align 4 ; <%struct.F*> [#uses=1]
+@X = common global %struct.F zeroinitializer, align 4 ; <ptr> [#uses=1]
 
 define void @f1([1 x i32] %f.coerce0) nounwind {
 ; CHECK-LABEL: f1:
@@ -16,10 +16,10 @@ define void @f1([1 x i32] %f.coerce0) nounwind {
 ; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* bitcast (%struct.F* @X to i32*), align 4 ; <i32> [#uses=1]
+  %0 = load i32, ptr @X, align 4 ; <i32> [#uses=1]
   %1 = and i32 %0, -62914561                      ; <i32> [#uses=1]
   %2 = or i32 %1, 41943040                        ; <i32> [#uses=1]
-  store i32 %2, i32* bitcast (%struct.F* @X to i32*), align 4
+  store i32 %2, ptr @X, align 4
   ret void
 }
 
@@ -394,7 +394,7 @@ define void @bfi3_uses(i32 %a, i32 %b) {
   ret void
 }
 
-define i32 @bfi4(i32 %A, i2 zeroext %BB, i32* %d) {
+define i32 @bfi4(i32 %A, i2 zeroext %BB, ptr %d) {
 ; CHECK-LABEL: bfi4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r11, lr}
@@ -422,7 +422,7 @@ entry:
   %tobool21.not = icmp eq i32 %and20, 0
   %or26 = or i32 %spec.select112, 1032
   %spec.select114 = select i1 %tobool21.not, i32 %spec.select112, i32 %or26
-  store i32 %spec.select114, i32* %d, align 4
+  store i32 %spec.select114, ptr %d, align 4
   %and29 = shl i32 %A, 8
   %l2 = and i32 %and29, 2048
   %l3 = or i32 %l2, %spec.select114
@@ -433,7 +433,7 @@ entry:
   %and45 = shl i32 %A, 1
   %l4 = and i32 %and45, 128
   %l5 = or i32 %l4, %spec.select
-  store i32 %l5, i32* %d, align 4
+  store i32 %l5, ptr %d, align 4
   %and52 = and i32 %A, 128
   ret i32 %and52
 }

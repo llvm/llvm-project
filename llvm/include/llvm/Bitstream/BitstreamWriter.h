@@ -111,7 +111,7 @@ public:
   /// valid. Flushing only occurs at (sub)block boundaries.
   BitstreamWriter(SmallVectorImpl<char> &O, raw_fd_stream *FS = nullptr,
                   uint32_t FlushThreshold = 512)
-      : Out(O), FS(FS), FlushThreshold(FlushThreshold << 20), CurBit(0),
+      : Out(O), FS(FS), FlushThreshold(uint64_t(FlushThreshold) << 20), CurBit(0),
         CurValue(0), CurCodeSize(2) {}
 
   ~BitstreamWriter() {
@@ -129,20 +129,20 @@ public:
   // Basic Primitives for emitting bits to the stream.
   //===--------------------------------------------------------------------===//
 
-  /// Backpatch a 32-bit word in the output at the given bit offset
-  /// with the specified value.
-  void BackpatchWord(uint64_t BitNo, unsigned NewWord) {
+  /// Backpatch a byte in the output at the given bit offset with the specified
+  /// value.
+  void BackpatchByte(uint64_t BitNo, uint8_t NewByte) {
     using namespace llvm::support;
     uint64_t ByteNo = BitNo / 8;
     uint64_t StartBit = BitNo & 7;
     uint64_t NumOfFlushedBytes = GetNumOfFlushedBytes();
 
     if (ByteNo >= NumOfFlushedBytes) {
-      assert((!endian::readAtBitAlignment<uint32_t, little, unaligned>(
+      assert((!endian::readAtBitAlignment<uint8_t, little, unaligned>(
                  &Out[ByteNo - NumOfFlushedBytes], StartBit)) &&
              "Expected to be patching over 0-value placeholders");
-      endian::writeAtBitAlignment<uint32_t, little, unaligned>(
-          &Out[ByteNo - NumOfFlushedBytes], NewWord, StartBit);
+      endian::writeAtBitAlignment<uint8_t, little, unaligned>(
+          &Out[ByteNo - NumOfFlushedBytes], NewByte, StartBit);
       return;
     }
 
@@ -151,8 +151,8 @@ public:
     uint64_t CurPos = FS->tell();
 
     // Copy data to update into Bytes from the file FS and the buffer Out.
-    char Bytes[9]; // Use one more byte to silence a warning from Visual C++.
-    size_t BytesNum = StartBit ? 8 : 4;
+    char Bytes[3]; // Use one more byte to silence a warning from Visual C++.
+    size_t BytesNum = StartBit ? 2 : 1;
     size_t BytesFromDisk = std::min(static_cast<uint64_t>(BytesNum), NumOfFlushedBytes - ByteNo);
     size_t BytesFromBuffer = BytesNum - BytesFromDisk;
 
@@ -170,14 +170,14 @@ public:
       assert(BytesRead >= 0 && static_cast<size_t>(BytesRead) == BytesFromDisk);
       for (size_t i = 0; i < BytesFromBuffer; ++i)
         Bytes[BytesFromDisk + i] = Out[i];
-      assert((!endian::readAtBitAlignment<uint32_t, little, unaligned>(
+      assert((!endian::readAtBitAlignment<uint8_t, little, unaligned>(
                  Bytes, StartBit)) &&
              "Expected to be patching over 0-value placeholders");
     }
 
     // Update Bytes in terms of bit offset and value.
-    endian::writeAtBitAlignment<uint32_t, little, unaligned>(Bytes, NewWord,
-                                                             StartBit);
+    endian::writeAtBitAlignment<uint8_t, little, unaligned>(Bytes, NewByte,
+                                                            StartBit);
 
     // Copy updated data back to the file FS and the buffer Out.
     FS->seek(ByteNo);
@@ -187,6 +187,16 @@ public:
 
     // Restore the file position.
     FS->seek(CurPos);
+  }
+
+  void BackpatchHalfWord(uint64_t BitNo, uint16_t Val) {
+    BackpatchByte(BitNo, (uint8_t)Val);
+    BackpatchByte(BitNo + 8, (uint8_t)(Val >> 8));
+  }
+
+  void BackpatchWord(uint64_t BitNo, unsigned Val) {
+    BackpatchHalfWord(BitNo, (uint16_t)Val);
+    BackpatchHalfWord(BitNo + 16, (uint16_t)(Val >> 16));
   }
 
   void BackpatchWord64(uint64_t BitNo, uint64_t Val) {
@@ -474,7 +484,7 @@ public:
       Out.push_back(0);
   }
   void emitBlob(StringRef Bytes, bool ShouldEmitSize = true) {
-    emitBlob(makeArrayRef((const uint8_t *)Bytes.data(), Bytes.size()),
+    emitBlob(ArrayRef((const uint8_t *)Bytes.data(), Bytes.size()),
              ShouldEmitSize);
   }
 
@@ -485,7 +495,7 @@ public:
     if (!Abbrev) {
       // If we don't have an abbrev to use, emit this in its fully unabbreviated
       // form.
-      auto Count = static_cast<uint32_t>(makeArrayRef(Vals).size());
+      auto Count = static_cast<uint32_t>(std::size(Vals));
       EmitCode(bitc::UNABBREV_RECORD);
       EmitVBR(Code, 6);
       EmitVBR(Count, 6);
@@ -494,7 +504,7 @@ public:
       return;
     }
 
-    EmitRecordWithAbbrevImpl(Abbrev, makeArrayRef(Vals), StringRef(), Code);
+    EmitRecordWithAbbrevImpl(Abbrev, ArrayRef(Vals), StringRef(), Code);
   }
 
   /// EmitRecordWithAbbrev - Emit a record with the specified abbreviation.
@@ -502,8 +512,7 @@ public:
   /// the first entry.
   template <typename Container>
   void EmitRecordWithAbbrev(unsigned Abbrev, const Container &Vals) {
-    EmitRecordWithAbbrevImpl(Abbrev, makeArrayRef(Vals), StringRef(),
-                             std::nullopt);
+    EmitRecordWithAbbrevImpl(Abbrev, ArrayRef(Vals), StringRef(), std::nullopt);
   }
 
   /// EmitRecordWithBlob - Emit the specified record to the stream, using an
@@ -514,12 +523,12 @@ public:
   template <typename Container>
   void EmitRecordWithBlob(unsigned Abbrev, const Container &Vals,
                           StringRef Blob) {
-    EmitRecordWithAbbrevImpl(Abbrev, makeArrayRef(Vals), Blob, std::nullopt);
+    EmitRecordWithAbbrevImpl(Abbrev, ArrayRef(Vals), Blob, std::nullopt);
   }
   template <typename Container>
   void EmitRecordWithBlob(unsigned Abbrev, const Container &Vals,
                           const char *BlobData, unsigned BlobLen) {
-    return EmitRecordWithAbbrevImpl(Abbrev, makeArrayRef(Vals),
+    return EmitRecordWithAbbrevImpl(Abbrev, ArrayRef(Vals),
                                     StringRef(BlobData, BlobLen), std::nullopt);
   }
 
@@ -528,14 +537,13 @@ public:
   template <typename Container>
   void EmitRecordWithArray(unsigned Abbrev, const Container &Vals,
                            StringRef Array) {
-    EmitRecordWithAbbrevImpl(Abbrev, makeArrayRef(Vals), Array, std::nullopt);
+    EmitRecordWithAbbrevImpl(Abbrev, ArrayRef(Vals), Array, std::nullopt);
   }
   template <typename Container>
   void EmitRecordWithArray(unsigned Abbrev, const Container &Vals,
                            const char *ArrayData, unsigned ArrayLen) {
-    return EmitRecordWithAbbrevImpl(Abbrev, makeArrayRef(Vals),
-                                    StringRef(ArrayData, ArrayLen),
-                                    std::nullopt);
+    return EmitRecordWithAbbrevImpl(
+        Abbrev, ArrayRef(Vals), StringRef(ArrayData, ArrayLen), std::nullopt);
   }
 
   //===--------------------------------------------------------------------===//

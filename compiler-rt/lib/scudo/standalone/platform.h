@@ -37,6 +37,12 @@
 #define SCUDO_TRUSTY 0
 #endif
 
+#if defined(__riscv) && (__riscv_xlen == 64)
+#define SCUDO_RISCV64 1
+#else
+#define SCUDO_RISCV64 0
+#endif
+
 #if defined(__LP64__)
 #define SCUDO_WORDSIZE 64U
 #else
@@ -51,6 +57,24 @@
 
 #ifndef SCUDO_CAN_USE_PRIMARY64
 #define SCUDO_CAN_USE_PRIMARY64 (SCUDO_WORDSIZE == 64U)
+#endif
+
+#ifndef SCUDO_CAN_USE_MTE
+#define SCUDO_CAN_USE_MTE (SCUDO_LINUX || SCUDO_TRUSTY)
+#endif
+
+// Use smaller table sizes for fuzzing in order to reduce input size.
+// Trusty just has less available memory.
+#ifndef SCUDO_SMALL_STACK_DEPOT
+#if defined(SCUDO_FUZZ) || SCUDO_TRUSTY
+#define SCUDO_SMALL_STACK_DEPOT 1
+#else
+#define SCUDO_SMALL_STACK_DEPOT 0
+#endif
+#endif
+
+#ifndef SCUDO_ENABLE_HOOKS
+#define SCUDO_ENABLE_HOOKS 0
 #endif
 
 #ifndef SCUDO_MIN_ALIGNMENT_LOG

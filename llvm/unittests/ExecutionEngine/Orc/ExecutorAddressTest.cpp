@@ -100,6 +100,11 @@ TEST(ExecutorAddrTest, AddrRanges) {
   EXPECT_FALSE(R1.overlaps(R2));
   EXPECT_TRUE(R1.overlaps(R3));
   EXPECT_TRUE(R1.overlaps(R4));
+
+  EXPECT_LE(R0, R0);
+  EXPECT_LT(R0, R1);
+  EXPECT_GE(R0, R0);
+  EXPECT_GT(R1, R0);
 }
 
 } // namespace

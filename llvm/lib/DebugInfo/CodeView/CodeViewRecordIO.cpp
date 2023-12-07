@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
@@ -68,7 +69,7 @@ uint32_t CodeViewRecordIO::maxFieldLength() const {
   // the general case.
   uint32_t Offset = getCurrentOffset();
   std::optional<uint32_t> Min = Limits.front().bytesRemaining(Offset);
-  for (auto X : makeArrayRef(Limits).drop_front()) {
+  for (auto X : ArrayRef(Limits).drop_front()) {
     std::optional<uint32_t> ThisMin = X.bytesRemaining(Offset);
     if (ThisMin)
       Min = Min ? std::min(*Min, *ThisMin) : *ThisMin;

@@ -36,10 +36,9 @@ b3:                                               ; preds = %b1, %b0
   %v4 = phi i32 [ 0, %b0 ], [ %v2, %b1 ]
   %v5 = or i32 %v4, 1
   %v6 = add nsw i32 %v5, -1
-  %v7 = getelementptr inbounds [1000000 x i16], [1000000 x i16]* @array, i32 0, i32 %v6
-  %v8 = getelementptr i16, i16* %v7, i32 88
-  %v9 = bitcast i16* %v8 to <8 x i16>*
-  store <8 x i16> zeroinitializer, <8 x i16>* %v9, align 8
+  %v7 = getelementptr inbounds [1000000 x i16], ptr @array, i32 0, i32 %v6
+  %v8 = getelementptr i16, ptr %v7, i32 88
+  store <8 x i16> zeroinitializer, ptr %v8, align 8
   ret void
 }
 

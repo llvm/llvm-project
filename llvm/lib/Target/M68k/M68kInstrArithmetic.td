@@ -148,7 +148,7 @@ class MxBiArOp_R_RI<string MN, SDNode NODE, MxType TYPE, bits<4> CMD>
              [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, TYPE.IPat:$opd))]> {
   let Inst = (ascend
     (descend 0b0000, CMD,
-             !cast<MxNewEncSize>("MxNewEncSize"#TYPE.Size).Value,
+             !cast<MxEncSize>("MxEncSize"#TYPE.Size).Value,
              // The destination cannot be address register, so it's always
              // the MODE for data register direct mode.
              /*MODE*/0b000,
@@ -181,7 +181,7 @@ class MxBiArOp_MI<string MN, MxType TYPE,
              MN#"."#TYPE.Prefix#"\t$opd, $dst", []> {
   let Inst = (ascend
     (descend 0b0000, CMD,
-             !cast<MxNewEncSize>("MxNewEncSize"#TYPE.Size).Value,
+             !cast<MxEncSize>("MxEncSize"#TYPE.Size).Value,
              DST_ENC.EA),
     // Source (i.e. immediate value) encoding
     MxEncAddrMode_i<"opd", TYPE.Size>.Supplement,
@@ -293,6 +293,8 @@ multiclass MxBiArOp_AF<string MN, SDNode NODE, bits<4> CMD> {
                                   CMD, MxEncAddrMode_p<"opd">>;
   def NAME#"32aj" : MxBiArOp_R_RM<MN, NODE, MxType32a, MxType32.JOp, MxType32.JPat,
                                   CMD, MxEncAddrMode_j<"opd">>;
+  def NAME#"32ab" : MxBiArOp_R_RM<MN, NODE, MxType32a, MxType32.BOp, MxType32.BPat,
+                                  CMD, MxEncAddrMode_abs<"opd", true>>;
   def NAME#"32ai" : MxBiArOp_R_RI_xEA<MN, NODE, MxType32a, CMD>;
 
   def NAME#"32ar" : MxBiArOp_R_RR_xEA<MN, NODE, MxType32a, MxType32r, CMD>;
@@ -310,6 +312,12 @@ defm ADD : MxBiArOp_AF<"adda", MxAdd, 0xD>;
 defm SUB : MxBiArOp_DF<"sub",  MxSub, 0, 0x9, 0x4>;
 defm SUB : MxBiArOp_AF<"suba", MxSub, 0x9>;
 
+// This pattern is used to enable the instruction selector to select ADD32ab
+// for global values that are allocated in thread-local storage, i.e.:
+//   t8: i32 = ISD::ADD GLOBAL_OFFSET_TABLE, TargetGlobalTLSAddress:i32<ptr @myvar>
+//     ====>
+//   t8: i32,i8 = ADD32ab GLOBAL_OFFSET_TABLE, TargetGlobalTLSAddress:i32<ptr @myvar>
+def : Pat<(add MxARD32:$src, tglobaltlsaddr:$opd), (ADD32ab MxARD32:$src, MxAL32:$opd)>;
 
 let Uses = [CCR], Defs = [CCR] in {
 let Constraints = "$src = $dst" in {
@@ -409,7 +417,7 @@ class MxCmp_RI<MxType TYPE>
              [(set CCR, (MxCmp TYPE.IPat:$imm, TYPE.VT:$reg))]> {
   let Inst = (ascend
     (descend 0b00001100,
-             !cast<MxNewEncSize>("MxNewEncSize"#TYPE.Size).Value,
+             !cast<MxEncSize>("MxEncSize"#TYPE.Size).Value,
              // The destination cannot be address register, so it's always
              // the MODE for data register direct mode.
              /*MODE*/0b000,
@@ -428,7 +436,7 @@ class MxCmp_MI<MxType TYPE, MxOperand MEMOpd, ComplexPattern MEMPat,
              [(set CCR, (MxCmp TYPE.IPat:$imm, (load MEMPat:$mem)))]> {
   let Inst = (ascend
     (descend 0b00001100,
-             !cast<MxNewEncSize>("MxNewEncSize"#TYPE.Size).Value,
+             !cast<MxEncSize>("MxEncSize"#TYPE.Size).Value,
              MEM_ENC.EA),
     // Source (i.e. immediate value) encoding
     MxEncAddrMode_i<"imm", TYPE.Size>.Supplement,
@@ -446,7 +454,7 @@ class MxCmp_BI<MxType TYPE>
   defvar AbsEncoding = MxEncAddrMode_abs<"abs", true>;
   let Inst = (ascend
     (descend 0b00001100,
-             !cast<MxNewEncSize>("MxNewEncSize"#TYPE.Size).Value,
+             !cast<MxEncSize>("MxEncSize"#TYPE.Size).Value,
              AbsEncoding.EA),
     // Source (i.e. immediate value) encoding
     MxEncAddrMode_i<"imm", TYPE.Size>.Supplement,
@@ -581,6 +589,22 @@ class MxDiMuOp_DD<string MN, bits<4> CMD, bit SIGNED = false,
   );
 }
 
+// $dreg <- $dreg op $dreg
+class MxDiMuOp_DD_Long<string MN, bits<10> CMD, bit SIGNED = false>
+    : MxInst<(outs MxDRD32:$dst), (ins MxDRD32:$src, MxDRD32:$opd), MN#"\t$opd, $dst", []> {
+  let Inst = (ascend
+    (descend CMD,
+      /*MODE*/0b000, /*REGISTER*/(operand "$opd", 3)),
+    (descend 0b0,
+      // REGISTER
+      (operand "$dst", 3),
+      !if(SIGNED, 0b1, 0b0),
+      /*SIZE*/0b0, 0b0000000,
+      // Dr REGISTER
+      0b000)
+  );
+}
+
 // $reg <- $reg op $imm
 class MxDiMuOp_DI<string MN, bits<4> CMD, bit SIGNED = false,
                   MxOperand DST, MxOperand OPD>
@@ -609,6 +633,9 @@ multiclass MxDiMuOp<string MN, bits<4> CMD, bit isComm = 0> {
 }
 
 defm DIV : MxDiMuOp<"div", 0x8>;
+
+def SDIVd32d32 : MxDiMuOp_DD_Long<"divs.l", 0x131, /*SIGNED*/true>;
+def UDIVd32d32 : MxDiMuOp_DD_Long<"divu.l", 0x131, /*SIGNED*/false>;
 
 // This is used to cast immediates to 16-bits for operations which don't
 // support smaller immediate sizes.
@@ -659,6 +686,12 @@ def : Pat<(urem i16:$dst, i16:$opd),
              MxSubRegIndex16Lo)>;
 
 
+// RR i32
+def : Pat<(sdiv i32:$dst, i32:$opd), (SDIVd32d32 $dst, $opd)>;
+
+def : Pat<(udiv i32:$dst, i32:$opd), (UDIVd32d32 $dst, $opd)>;
+
+
 // RI i8
 def : Pat<(sdiv i8:$dst, MximmSExt8:$opd),
           (EXTRACT_SUBREG
@@ -704,6 +737,9 @@ def : Pat<(urem i16:$dst, MximmSExt16:$opd),
 
 defm MUL : MxDiMuOp<"mul", 0xC, 1>;
 
+def SMULd32d32 : MxDiMuOp_DD_Long<"muls.l", 0x130, /*SIGNED*/true>;
+def UMULd32d32 : MxDiMuOp_DD_Long<"mulu.l", 0x130, /*SIGNED*/false>;
+
 // RR
 def : Pat<(mul i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
@@ -719,6 +755,8 @@ def : Pat<(mulhu i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
             (LSR32di (LSR32di (UMULd32d16 (MOVXd32d16 $dst), $opd), 8), 8),
              MxSubRegIndex16Lo)>;
+
+def : Pat<(mul i32:$dst, i32:$opd), (SMULd32d32 $dst, $opd)>;
 
 
 // RI
@@ -756,7 +794,7 @@ class MxNeg_D<MxType TYPE>
              "neg."#TYPE.Prefix#"\t$dst",
              [(set TYPE.VT:$dst, (ineg TYPE.VT:$src))]> {
   let Inst = (descend 0b01000100,
-    /*SIZE*/!cast<MxNewEncSize>("MxNewEncSize"#TYPE.Size).Value,
+    /*SIZE*/!cast<MxEncSize>("MxEncSize"#TYPE.Size).Value,
     //MODE without last bit
     0b00,
     //REGISTER prefixed by D/A bit
@@ -770,7 +808,7 @@ class MxNegX_D<MxType TYPE>
              "negx."#TYPE.Prefix#"\t$dst",
              [(set TYPE.VT:$dst, (MxSubX 0, TYPE.VT:$src, CCR))]> {
   let Inst = (descend 0b01000000,
-    /*SIZE*/!cast<MxNewEncSize>("MxNewEncSize"#TYPE.Size).Value,
+    /*SIZE*/!cast<MxEncSize>("MxEncSize"#TYPE.Size).Value,
     //MODE without last bit
     0b00,
     //REGISTER prefixed by D/A bit
@@ -790,6 +828,12 @@ foreach S = [8, 16, 32] in {
 def : Pat<(MxSub 0, i8 :$src), (NEG8d  MxDRD8 :$src)>;
 def : Pat<(MxSub 0, i16:$src), (NEG16d MxDRD16:$src)>;
 def : Pat<(MxSub 0, i32:$src), (NEG32d MxDRD32:$src)>;
+// SExt of i1 values.
+// Although we specify `ZeroOrOneBooleanContent` for boolean content,
+// we're still adding an AND here as we don't know the origin of the i1 value.
+def : Pat<(sext_inreg i8:$src,  i1), (NEG8d  (AND8di  MxDRD8:$src,  1))>;
+def : Pat<(sext_inreg i16:$src, i1), (NEG16d (AND16di MxDRD16:$src, 1))>;
+def : Pat<(sext_inreg i32:$src, i1), (NEG32d (AND32di MxDRD32:$src, 1))>;
 
 //===----------------------------------------------------------------------===//
 // no-CCR Patterns
@@ -949,3 +993,110 @@ multiclass BitwisePat<string INST, SDNode OP> {
 defm : BitwisePat<"AND", and>;
 defm : BitwisePat<"OR",  or>;
 defm : BitwisePat<"XOR", xor>;
+
+//===----------------------------------------------------------------------===//
+// Floating point arithmetic instruction
+//===----------------------------------------------------------------------===//
+
+let Defs = [FPS] in
+class MxFArithBase_FF<dag outs, dag ins, string asm, string rounding,
+                      list<dag> patterns>
+    : MxInst<outs, ins, asm, patterns> {
+  let Uses = !if(!eq(rounding, ""), [FPC], []);
+
+  let Predicates = !if(!eq(rounding, ""), [AtLeastM68881], [AtLeastM68040]);
+}
+
+class MxFPOpModeSelector<string rounding, bits<7> single, bits<7> double,
+                         bits<7> extended> {
+  bits<7> Mode = !cond(!eq(rounding, "s"): single,
+                       !eq(rounding, "d"): double,
+                       !eq(rounding, ""): extended);
+}
+
+//===----------------------------------------------------------------------===//
+// Unary floating point instruction
+//===----------------------------------------------------------------------===//
+
+class MxFUnary_FF<MxOpBundle Opnd, string rounding,
+                  string mnemonic, bits<7> opmode>
+    : MxFArithBase_FF<(outs Opnd.Op:$dst), (ins Opnd.Op:$src),
+                    "f"#rounding#mnemonic#".x\t$src, $dst", rounding, [(null_frag)]> {
+  let Inst = (ascend
+  (descend 0b1111,
+    /*COPROCESSOR ID*/0b001,
+    0b000,
+    /*MODE+REGISTER*/0b000000),
+  (descend 0b0, /* R/M */ 0b0, 0b0,
+    /*SOURCE SPECIFIER*/
+    (operand "$src", 3),
+    /*DESTINATION*/
+    (operand "$dst", 3),
+    /*OPMODE*/
+    opmode)
+  );
+}
+
+multiclass MxFUnaryOp<string mnemonic, bits<7> single, bits<7> double,
+                      bits<7> extended> {
+  foreach rounding = ["", "s", "d"] in {
+    defvar opmode = MxFPOpModeSelector<rounding, single, double, extended>.Mode;
+
+    def F # !toupper(rounding) # !substr(NAME, 1) # "80fp_fp"
+      : MxFUnary_FF<MxOp80AddrMode_fpr, rounding, mnemonic, opmode>;
+  
+    let isCodeGenOnly = 1 in
+    foreach size = [32, 64] in
+      def F # !toupper(rounding) # !substr(NAME, 1) # size # "fp_fp"
+        : MxFUnary_FF<!cast<MxOpBundle>("MxOp"#size#"AddrMode_fpr"),
+                      rounding, mnemonic, opmode>;
+  }
+}
+
+defm FABS : MxFUnaryOp<"abs", 0b1011000, 0b1011100, 0b0011000>;
+defm FNEG : MxFUnaryOp<"neg", 0b1011010, 0b1011110, 0b0011010>;
+
+//===----------------------------------------------------------------------===//
+// Binary floating point instruction
+//===----------------------------------------------------------------------===//
+
+let Constraints = "$src = $dst" in
+class MxFBinary_FF<MxOpBundle Opnd, string rounding,
+                   string mnemonic, bits<7> opmode>
+    : MxFArithBase_FF<(outs Opnd.Op:$dst), (ins Opnd.Op:$src, Opnd.Op:$opd),
+                      "f"#rounding#mnemonic#".x\t$opd, $dst", rounding, [(null_frag)]> {
+  let Inst = (ascend
+  (descend 0b1111,
+    /*COPROCESSOR ID*/0b001,
+    0b000,
+    /*MODE+REGISTER*/0b000000),
+  (descend 0b0, /* R/M */ 0b0, 0b0,
+    /*SOURCE SPECIFIER*/
+    (operand "$opd", 3),
+    /*DESTINATION*/
+    (operand "$dst", 3),
+    /*OPMODE*/
+    opmode)
+  );
+}
+
+multiclass MxFBinaryOp<string mnemonic, bits<7> single, bits<7> double,
+                      bits<7> extended> {
+  foreach rounding = ["", "s", "d"] in {
+    defvar opmode = MxFPOpModeSelector<rounding, single, double, extended>.Mode;
+
+    def F # !toupper(rounding) # !substr(NAME, 1) # "80fp_fp"
+      : MxFBinary_FF<MxOp80AddrMode_fpr, rounding, mnemonic, opmode>;
+
+    let isCodeGenOnly = 1 in
+    foreach size = [32, 64] in
+      def F # !toupper(rounding) # !substr(NAME, 1) # size # "fp_fp"
+        : MxFBinary_FF<!cast<MxOpBundle>("MxOp"#size#"AddrMode_fpr"),
+                        rounding, mnemonic, opmode>;
+  }
+}
+
+defm FADD : MxFBinaryOp<"add", 0b1100010, 0b1100110, 0b0100010>;
+defm FSUB : MxFBinaryOp<"sub", 0b1101000, 0b1101100, 0b0101000>;
+defm FMUL : MxFBinaryOp<"mul", 0b1100011, 0b1100111, 0b0100011>;
+defm FDIV : MxFBinaryOp<"div", 0b1100000, 0b1100100, 0b0100000>;

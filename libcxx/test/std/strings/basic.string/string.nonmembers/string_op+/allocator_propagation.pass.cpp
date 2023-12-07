@@ -27,7 +27,7 @@ public:
       : soccc_count(soccc_count_), self_soccc_count(self_coccc_count_) {}
 
   template <class U>
-  constexpr soccc_allocator(const soccc_allocator<U>& a) : soccc_count(a.soccc_count) {}
+  constexpr soccc_allocator(const soccc_allocator<U>& a) : soccc_count(a.get_soccc()) {}
 
   constexpr T* allocate(std::size_t n) { return std::allocator<T>().allocate(n); }
   constexpr void deallocate(T* p, std::size_t s) { std::allocator<T>().deallocate(p, s); }
@@ -37,12 +37,17 @@ public:
     return soccc_allocator(soccc_count, self_soccc_count + 1);
   }
 
-  constexpr auto get_soccc() { return soccc_count; }
-  constexpr auto get_self_soccc() { return self_soccc_count; }
+  constexpr auto get_soccc() const { return soccc_count; }
+  constexpr auto get_self_soccc() const { return self_soccc_count; }
 
   typedef std::true_type propagate_on_container_copy_assignment;
   typedef std::true_type propagate_on_container_move_assignment;
   typedef std::true_type propagate_on_container_swap;
+
+  template <class U>
+  constexpr bool operator==(const soccc_allocator<U>& that) const {
+    return soccc_count == that.get_soccc();
+  }
 };
 
 template <class CharT>
@@ -191,9 +196,9 @@ int main(int, char**) {
 #endif
 #if TEST_STD_VER > 17
   static_assert(test<char>());
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
   static_assert(test<wchar_t>());
-#endif
+#  endif
 #endif
 
   return 0;

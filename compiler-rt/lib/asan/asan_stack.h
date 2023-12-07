@@ -32,24 +32,24 @@ u32 GetMallocContextSize();
 // as early as possible (in functions exposed to the user), as we generally
 // don't want stack trace to contain functions from ASan internals.
 
-#define GET_STACK_TRACE(max_size, fast)                          \
-  BufferedStackTrace stack;                                      \
-  if (max_size <= 2) {                                           \
-    stack.size = max_size;                                       \
-    if (max_size > 0) {                                          \
-      stack.top_frame_bp = GET_CURRENT_FRAME();                  \
-      stack.trace_buffer[0] = StackTrace::GetCurrentPc();        \
-      if (max_size > 1) stack.trace_buffer[1] = GET_CALLER_PC(); \
-    }                                                            \
-  } else {                                                       \
-    stack.Unwind(StackTrace::GetCurrentPc(),                     \
-                 GET_CURRENT_FRAME(), nullptr, fast, max_size);  \
+#define GET_STACK_TRACE(max_size, fast)                                    \
+  UNINITIALIZED BufferedStackTrace stack;                                  \
+  if (max_size <= 2) {                                                     \
+    stack.size = max_size;                                                 \
+    if (max_size > 0) {                                                    \
+      stack.top_frame_bp = GET_CURRENT_FRAME();                            \
+      stack.trace_buffer[0] = StackTrace::GetCurrentPc();                  \
+      if (max_size > 1)                                                    \
+        stack.trace_buffer[1] = GET_CALLER_PC();                           \
+    }                                                                      \
+  } else {                                                                 \
+    stack.Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr, \
+                 fast, max_size);                                          \
   }
 
-#define GET_STACK_TRACE_FATAL(pc, bp)              \
-  BufferedStackTrace stack;                        \
-  stack.Unwind(pc, bp, nullptr,                    \
-               common_flags()->fast_unwind_on_fatal)
+#define GET_STACK_TRACE_FATAL(pc, bp)     \
+  UNINITIALIZED BufferedStackTrace stack; \
+  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal)
 
 #define GET_STACK_TRACE_FATAL_HERE                                \
   GET_STACK_TRACE(kStackTraceMax, common_flags()->fast_unwind_on_fatal)

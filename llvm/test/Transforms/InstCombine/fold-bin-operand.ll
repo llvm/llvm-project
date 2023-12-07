@@ -29,8 +29,8 @@ define i32 @g(i32 %x) {
 define i32 @h(i1 %A, i32 %B) {
 ; CHECK-LABEL: @h(
 ; CHECK-NEXT:  EntryBlock:
-; CHECK-NEXT:    [[B_OP:%.*]] = add i32 [[B:%.*]], 2
-; CHECK-NEXT:    [[OP:%.*]] = select i1 [[A:%.*]], i32 3, i32 [[B_OP]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[B:%.*]], 2
+; CHECK-NEXT:    [[OP:%.*]] = select i1 [[A:%.*]], i32 3, i32 [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[OP]]
 ;
 EntryBlock:

@@ -7,10 +7,10 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
-class TestTailCallFrameSBAPI(TestBase):
 
-    @skipIf(compiler="clang", compiler_version=['<', '10.0'])
-    @skipIf(dwarf_version=['<', '4'])
+class TestTailCallFrameSBAPI(TestBase):
+    @skipIf(compiler="clang", compiler_version=["<", "10.0"])
+    @skipIf(dwarf_version=["<", "4"])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
     def test_tail_call_frame_sbapi(self):
         self.build()
@@ -23,11 +23,12 @@ class TestTailCallFrameSBAPI(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        breakpoint = target.BreakpointCreateBySourceRegex("break here",
-                lldb.SBFileSpec("main.cpp"))
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() == 1,
-                        VALID_BREAKPOINT)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            "break here", lldb.SBFileSpec("main.cpp")
+        )
+        self.assertTrue(
+            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        )
 
         error = lldb.SBError()
         launch_info = target.GetLaunchInfo()
@@ -35,11 +36,10 @@ class TestTailCallFrameSBAPI(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Did we hit our breakpoint?
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process,
-                breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
         self.assertEqual(
-            len(threads), 1,
-            "There should be a thread stopped at our breakpoint")
+            len(threads), 1, "There should be a thread stopped at our breakpoint"
+        )
 
         self.assertEqual(breakpoint.GetHitCount(), 1)
 

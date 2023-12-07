@@ -7,15 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 namespace tooling {
@@ -48,28 +49,9 @@ public:
 
 private:
   std::vector<CompileCommand> expand(std::vector<CompileCommand> Cmds) const {
-    for (auto &Cmd : Cmds) {
-      bool SeenRSPFile = false;
-      llvm::SmallVector<const char *, 20> Argv;
-      Argv.reserve(Cmd.CommandLine.size());
-      for (auto &Arg : Cmd.CommandLine) {
-        Argv.push_back(Arg.c_str());
-        if (!Arg.empty())
-          SeenRSPFile |= Arg.front() == '@';
-      }
-      if (!SeenRSPFile)
-        continue;
-      llvm::BumpPtrAllocator Alloc;
-      llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
-      llvm::Error Err = ECtx.setVFS(FS.get())
-                            .setCurrentDir(Cmd.Directory)
-                            .expandResponseFiles(Argv);
-      if (Err)
-        llvm::errs() << Err;
-      // Don't assign directly, Argv aliases CommandLine.
-      std::vector<std::string> ExpandedArgv(Argv.begin(), Argv.end());
-      Cmd.CommandLine = std::move(ExpandedArgv);
-    }
+    for (auto &Cmd : Cmds)
+      tooling::addExpandedResponseFiles(Cmd.CommandLine, Cmd.Directory,
+                                        Tokenizer, *FS);
     return Cmds;
   }
 

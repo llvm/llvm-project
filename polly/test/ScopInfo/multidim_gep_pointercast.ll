@@ -10,10 +10,9 @@
 ;        *((<4 x short> *)&A[7 * i][0]) = *((<4 x short>)&B[7 * i][0]);
 ;    }
 ;
-define void @f([4 x i16]* %A, i32 %N, i32 %P) {
+define void @f(ptr %A, i32 %N, i32 %P) {
 entry:
-  %arrayidx1 = getelementptr inbounds [4 x i16], [4 x i16]* %A, i32 %P, i64 0
-  %tmp = bitcast i16* %arrayidx1 to [4 x i16]*
+  %arrayidx1 = getelementptr inbounds [4 x i16], ptr %A, i32 %P, i64 0
   br label %for.cond
 
 for.cond:
@@ -23,12 +22,10 @@ for.cond:
 
 for.body:
   %mul = mul nsw i32 %indvars.iv, 7
-  %arrayidx4 = getelementptr inbounds [4 x i16], [4 x i16]* %tmp, i32 %mul, i64 0
-  %bc4 = bitcast i16* %arrayidx4 to <4 x i16>*
-  %tmp3 = load <4 x i16>, <4 x i16>* %bc4
-  %arrayidx8 = getelementptr inbounds [4 x i16], [4 x i16]* %A, i32 %mul, i64 0
-  %bc8 = bitcast i16* %arrayidx8 to <4 x i16>*
-  store <4 x i16> %tmp3, <4 x i16>* %bc8
+  %arrayidx4 = getelementptr inbounds [4 x i16], ptr %arrayidx1, i32 %mul, i64 0
+  %tmp3 = load <4 x i16>, ptr %arrayidx4
+  %arrayidx8 = getelementptr inbounds [4 x i16], ptr %A, i32 %mul, i64 0
+  store <4 x i16> %tmp3, ptr %arrayidx8
   br label %for.inc
 
 for.inc:

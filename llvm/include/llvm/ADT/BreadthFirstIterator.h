@@ -19,10 +19,10 @@
 #define LLVM_ADT_BREADTHFIRSTITERATOR_H
 
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include <iterator>
+#include <optional>
 #include <queue>
 #include <utility>
 
@@ -50,18 +50,18 @@ public:
   using value_type = typename GT::NodeRef;
   using difference_type = std::ptrdiff_t;
   using pointer = value_type *;
-  using reference = value_type &;
+  using reference = const value_type &;
 
 private:
   using NodeRef = typename GT::NodeRef;
   using ChildItTy = typename GT::ChildIteratorType;
 
   // First element is the node reference, second is the next child to visit.
-  using QueueElement = std::pair<NodeRef, Optional<ChildItTy>>;
+  using QueueElement = std::pair<NodeRef, std::optional<ChildItTy>>;
 
   // Visit queue - used to maintain BFS ordering.
-  // Optional<> because we need markers for levels.
-  std::queue<Optional<QueueElement>> VisitQueue;
+  // std::optional<> because we need markers for levels.
+  std::queue<std::optional<QueueElement>> VisitQueue;
 
   // Current level.
   unsigned Level = 0;
@@ -78,10 +78,10 @@ private:
   inline bf_iterator() = default;
 
   inline void toNext() {
-    Optional<QueueElement> Head = VisitQueue.front();
+    std::optional<QueueElement> Head = VisitQueue.front();
     QueueElement H = *Head;
     NodeRef Node = H.first;
-    Optional<ChildItTy> &ChildIt = H.second;
+    std::optional<ChildItTy> &ChildIt = H.second;
 
     if (!ChildIt)
       ChildIt.emplace(GT::child_begin(Node));
@@ -123,7 +123,7 @@ public:
 
   bool operator!=(const bf_iterator &RHS) const { return !(*this == RHS); }
 
-  const NodeRef &operator*() const { return VisitQueue.front()->first; }
+  reference operator*() const { return VisitQueue.front()->first; }
 
   // This is a nonstandard operator-> that dereferences the pointer an extra
   // time so that you can actually call methods on the node, because the

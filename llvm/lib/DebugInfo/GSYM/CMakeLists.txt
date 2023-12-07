@@ -22,5 +22,6 @@ add_llvm_component_library(LLVMDebugInfoGSYM
   MC
   Object
   Support
+  TargetParser
   DebugInfoDWARF
   )

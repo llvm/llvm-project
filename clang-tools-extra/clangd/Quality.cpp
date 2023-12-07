@@ -26,6 +26,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cmath>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -303,6 +304,8 @@ void SymbolRelevanceSignals::computeASTSignals(
       (SemaResult.Kind != CodeCompletionResult::RK_Pattern))
     return;
   if (const NamedDecl *ND = SemaResult.getDeclaration()) {
+    if (hasUnstableLinkage(ND))
+      return;
     auto ID = getSymbolID(ND);
     if (!ID)
       return;
@@ -365,7 +368,7 @@ static float scopeProximityScore(unsigned ScopeDistance) {
   return std::max(0.65, 2.0 * std::pow(0.6, ScopeDistance / 2.0));
 }
 
-static llvm::Optional<llvm::StringRef>
+static std::optional<llvm::StringRef>
 wordMatching(llvm::StringRef Name, const llvm::StringSet<> *ContextWords) {
   if (ContextWords)
     for (const auto &Word : ContextWords->keys())
@@ -535,7 +538,7 @@ static uint32_t encodeFloat(float F) {
   constexpr uint32_t TopBit = ~(~uint32_t{0} >> 1);
 
   // Get the bits of the float. Endianness is the same as for integers.
-  uint32_t U = llvm::FloatToBits(F);
+  uint32_t U = llvm::bit_cast<uint32_t>(F);
   // IEEE 754 floats compare like sign-magnitude integers.
   if (U & TopBit)    // Negative float.
     return 0 - U;    // Map onto the low half of integers, order reversed.

@@ -15,6 +15,7 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
+#include <optional>
 
 using namespace clang;
 
@@ -49,7 +50,7 @@ static void Accumulate(SMap &SM, CFGBlock *B) {
   // First walk the block-level expressions.
   for (CFGBlock::iterator I = B->begin(), E = B->end(); I != E; ++I) {
     const CFGElement &CE = *I;
-    Optional<CFGStmt> CS = CE.getAs<CFGStmt>();
+    std::optional<CFGStmt> CS = CE.getAs<CFGStmt>();
     if (!CS)
       continue;
 

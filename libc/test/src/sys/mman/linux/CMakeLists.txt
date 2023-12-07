@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_sys_mman_unittests)
+add_custom_target(libc_sys_mman_unittests)
 
 add_libc_unittest(
   mmap_test
@@ -7,7 +7,6 @@ add_libc_unittest(
   SRCS
     mmap_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.sys_mman
     libc.src.errno.errno
     libc.src.sys.mman.mmap
@@ -23,7 +22,6 @@ if (NOT LLVM_USE_SANITIZER)
     SRCS
       mprotect_test.cpp
     DEPENDS
-      libc.include.errno
       libc.include.sys_mman
       libc.include.signal
       libc.src.errno.errno
@@ -41,7 +39,6 @@ add_libc_unittest(
   SRCS
   madvise_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.sys_mman
     libc.src.errno.errno
     libc.src.sys.mman.mmap
@@ -58,7 +55,6 @@ add_libc_unittest(
   SRCS
   posix_madvise_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.sys_mman
     libc.src.errno.errno
     libc.src.sys.mman.mmap

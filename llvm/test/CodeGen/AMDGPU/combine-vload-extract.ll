@@ -42,16 +42,11 @@ define amdgpu_kernel void @vectorLoadShuffle(ptr %in, ptr %out) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    flat_load_dword v2, v[0:1]
-; GCN-NEXT:    s_mov_b32 s0, 0x6050400
+; GCN-NEXT:    s_mov_b32 s0, 0x7050604
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_bfe_u32 v3, v2, 16, 8
-; GCN-NEXT:    v_lshlrev_b32_e32 v4, 8, v2
-; GCN-NEXT:    v_perm_b32 v3, v3, v2, s0
-; GCN-NEXT:    v_and_b32_e32 v4, 0xff0000, v4
-; GCN-NEXT:    v_and_b32_e32 v2, 0xff000000, v2
-; GCN-NEXT:    v_or3_b32 v2, v3, v4, v2
+; GCN-NEXT:    v_perm_b32 v2, v2, v2, s0
 ; GCN-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -238,9 +233,9 @@ define i64 @load_3xi16_noncombine(ptr addrspace(1) %p) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v2, v[0:1], off
 ; GCN-NEXT:    global_load_dword v3, v[0:1], off offset:4
-; GCN-NEXT:    s_mov_b32 s4, 0xffff0000
+; GCN-NEXT:    s_mov_b32 s4, 0x3020504
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_and_or_b32 v0, v3, s4, v2
+; GCN-NEXT:    v_perm_b32 v0, v2, v3, s4
 ; GCN-NEXT:    v_and_b32_e32 v1, 0xffff, v3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, ptr addrspace(1) %p, i32 3

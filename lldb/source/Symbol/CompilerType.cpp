@@ -9,7 +9,6 @@
 #include "lldb/Symbol/CompilerType.h"
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -22,6 +21,7 @@
 
 #include <iterator>
 #include <mutex>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -153,6 +153,13 @@ bool CompilerType::IsFunctionPointerType() const {
   return false;
 }
 
+bool CompilerType::IsMemberFunctionPointerType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsMemberFunctionPointerType(m_type);
+  return false;
+}
+
 bool CompilerType::IsBlockPointerType(
     CompilerType *function_pointer_type_ptr) const {
   if (IsValid())
@@ -257,6 +264,13 @@ bool CompilerType::IsScalarType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->IsScalarType(m_type);
+  return false;
+}
+
+bool CompilerType::IsTemplateType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsTemplateType(m_type);
   return false;
 }
 
@@ -540,7 +554,7 @@ CompilerType::GetBasicTypeFromAST(lldb::BasicType basic_type) const {
 }
 // Exploring the type
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -548,14 +562,15 @@ CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
   return {};
 }
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
-  if (llvm::Optional<uint64_t> bit_size = GetBitSize(exe_scope))
+  if (std::optional<uint64_t> bit_size = GetBitSize(exe_scope))
     return (*bit_size + 7) / 8;
   return {};
 }
 
-llvm::Optional<size_t> CompilerType::GetTypeBitAlign(ExecutionContextScope *exe_scope) const {
+std::optional<size_t>
+CompilerType::GetTypeBitAlign(ExecutionContextScope *exe_scope) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetTypeBitAlign(m_type, exe_scope);
@@ -725,9 +740,9 @@ CompilerType CompilerType::GetChildCompilerTypeAtIndex(
 // index 1 is the child index for "m_b" within class A
 
 size_t CompilerType::GetIndexOfChildMemberWithName(
-    const char *name, bool omit_empty_base_classes,
+    llvm::StringRef name, bool omit_empty_base_classes,
     std::vector<uint32_t> &child_indexes) const {
-  if (IsValid() && name && name[0]) {
+  if (IsValid() && !name.empty()) {
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetIndexOfChildMemberWithName(
         m_type, name, omit_empty_base_classes, child_indexes);
@@ -760,7 +775,7 @@ CompilerType CompilerType::GetTypeTemplateArgument(size_t idx,
   return CompilerType();
 }
 
-llvm::Optional<CompilerType::IntegralTemplateArgument>
+std::optional<CompilerType::IntegralTemplateArgument>
 CompilerType::GetIntegralTemplateArgument(size_t idx, bool expand_pack) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -794,12 +809,12 @@ bool CompilerType::IsMeaninglessWithoutDynamicResolution() const {
 // matches can include base class names.
 
 uint32_t
-CompilerType::GetIndexOfChildWithName(const char *name,
+CompilerType::GetIndexOfChildWithName(llvm::StringRef name,
                                       bool omit_empty_base_classes) const {
-  if (IsValid() && name && name[0]) {
+  if (IsValid() && !name.empty()) {
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetIndexOfChildWithName(m_type, name,
-                                                  omit_empty_base_classes);
+                                                     omit_empty_base_classes);
   }
   return UINT32_MAX;
 }
@@ -814,7 +829,7 @@ void CompilerType::DumpValue(ExecutionContext *exe_ctx, Stream *s,
                              bool show_summary, bool verbose, uint32_t depth) {
   if (!IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      type_system_sp->DumpValue(m_type, exe_ctx, s, format, data,
+      type_system_sp->DumpValue(m_type, exe_ctx, *s, format, data,
                                 data_byte_offset, data_byte_size,
                                 bitfield_bit_size, bitfield_bit_offset,
                                 show_types, show_summary, verbose, depth);
@@ -828,9 +843,9 @@ bool CompilerType::DumpTypeValue(Stream *s, lldb::Format format,
                                  ExecutionContextScope *exe_scope) {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->DumpTypeValue(m_type, s, format, data, byte_offset,
-                                           byte_size, bitfield_bit_size,
-                                           bitfield_bit_offset, exe_scope);
+      return type_system_sp->DumpTypeValue(
+          m_type, *s, format, data, byte_offset, byte_size, bitfield_bit_size,
+          bitfield_bit_offset, exe_scope);
   return false;
 }
 
@@ -840,7 +855,7 @@ void CompilerType::DumpSummary(ExecutionContext *exe_ctx, Stream *s,
                                size_t data_byte_size) {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      type_system_sp->DumpSummary(m_type, exe_ctx, s, data, data_byte_offset,
+      type_system_sp->DumpSummary(m_type, exe_ctx, *s, data, data_byte_offset,
                                   data_byte_size);
 }
 
@@ -854,7 +869,7 @@ void CompilerType::DumpTypeDescription(Stream *s,
                                        lldb::DescriptionLevel level) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      type_system_sp->DumpTypeDescription(m_type, s, level);
+      type_system_sp->DumpTypeDescription(m_type, *s, level);
 }
 
 #ifndef NDEBUG
@@ -882,7 +897,7 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
     if (encoding == lldb::eEncodingInvalid || count != 1)
       return false;
 
-    llvm::Optional<uint64_t> byte_size = GetByteSize(exe_scope);
+    std::optional<uint64_t> byte_size = GetByteSize(exe_scope);
     if (!byte_size)
       return false;
     lldb::offset_t offset = data_byte_offset;

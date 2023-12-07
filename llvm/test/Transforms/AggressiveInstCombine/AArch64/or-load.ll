@@ -1869,8 +1869,8 @@ define i32 @loadCombine_4consecutive_badinsert2(ptr %p) {
 
 define i32 @loadCombine_4consecutive_badinsert3(ptr %p) {
 ; LE-LABEL: @loadCombine_4consecutive_badinsert3(
-; LE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
-; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P1]], align 1
+; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[TMP1]], align 1
 ; LE-NEXT:    ret i32 [[L1]]
 ;
 ; BE-LABEL: @loadCombine_4consecutive_badinsert3(
@@ -2084,4 +2084,83 @@ define i32 @loadCombine_4consecutive_badinsert6(ptr %p) {
   %o2 = or i32 %o1, %s2
   %o3 = or i32 %o2, %e1
   ret i32 %o3
+}
+
+define void @nested_gep(ptr %p, ptr %dest) {
+; LE-LABEL: @nested_gep(
+; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 68
+; LE-NEXT:    [[LD2:%.*]] = load i64, ptr [[TMP1]], align 4
+; LE-NEXT:    [[TRUNC:%.*]] = trunc i64 [[LD2]] to i32
+; LE-NEXT:    store i32 [[TRUNC]], ptr [[DEST:%.*]], align 4
+; LE-NEXT:    ret void
+;
+; BE-LABEL: @nested_gep(
+; BE-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 72
+; BE-NEXT:    [[LD1:%.*]] = load i32, ptr [[GEP1]], align 4
+; BE-NEXT:    [[LD1_ZEXT:%.*]] = zext i32 [[LD1]] to i64
+; BE-NEXT:    [[LD1_SHL:%.*]] = shl nuw i64 [[LD1_ZEXT]], 32
+; BE-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 64
+; BE-NEXT:    [[FINAL_PTR:%.*]] = getelementptr inbounds i8, ptr [[GEP2]], i64 4
+; BE-NEXT:    [[LD2:%.*]] = load i32, ptr [[FINAL_PTR]], align 4
+; BE-NEXT:    [[LD2_ZEXT:%.*]] = zext i32 [[LD2]] to i64
+; BE-NEXT:    [[OR:%.*]] = or i64 [[LD1_SHL]], [[LD2_ZEXT]]
+; BE-NEXT:    [[ADD:%.*]] = add i64 [[OR]], 0
+; BE-NEXT:    [[TRUNC:%.*]] = trunc i64 [[ADD]] to i32
+; BE-NEXT:    store i32 [[TRUNC]], ptr [[DEST:%.*]], align 4
+; BE-NEXT:    ret void
+;
+  %gep1 = getelementptr inbounds i8, ptr %p, i64 72
+  %ld1 = load i32, ptr %gep1, align 4
+  %ld1_zext = zext i32 %ld1 to i64
+  %ld1_shl = shl nuw i64 %ld1_zext, 32
+  %gep2 = getelementptr inbounds i8, ptr %p, i64 64
+  ; Don't move final_ptr before gep2
+  %final_ptr = getelementptr inbounds i8, ptr %gep2, i64 4
+  %ld2 = load i32, ptr %final_ptr, align 4
+  %ld2_zext = zext i32 %ld2 to i64
+  %or = or i64 %ld1_shl, %ld2_zext
+  %add = add i64 %or, 0
+  %trunc = trunc i64 %add to i32
+  store i32 %trunc, ptr %dest, align 4
+  ret void
+}
+
+
+define void @bitcast_gep(ptr %p, ptr %dest) {
+; LE-LABEL: @bitcast_gep(
+; LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 68
+; LE-NEXT:    [[LD2:%.*]] = load i64, ptr [[TMP1]], align 4
+; LE-NEXT:    [[TRUNC:%.*]] = trunc i64 [[LD2]] to i32
+; LE-NEXT:    store i32 [[TRUNC]], ptr [[DEST:%.*]], align 4
+; LE-NEXT:    ret void
+;
+; BE-LABEL: @bitcast_gep(
+; BE-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 72
+; BE-NEXT:    [[LD1:%.*]] = load i32, ptr [[GEP1]], align 4
+; BE-NEXT:    [[LD1_ZEXT:%.*]] = zext i32 [[LD1]] to i64
+; BE-NEXT:    [[LD1_SHL:%.*]] = shl nuw i64 [[LD1_ZEXT]], 32
+; BE-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 68
+; BE-NEXT:    [[FINAL_PTR:%.*]] = bitcast ptr [[GEP2]] to ptr
+; BE-NEXT:    [[LD2:%.*]] = load i32, ptr [[FINAL_PTR]], align 4
+; BE-NEXT:    [[LD2_ZEXT:%.*]] = zext i32 [[LD2]] to i64
+; BE-NEXT:    [[OR:%.*]] = or i64 [[LD1_SHL]], [[LD2_ZEXT]]
+; BE-NEXT:    [[ADD:%.*]] = add i64 [[OR]], 0
+; BE-NEXT:    [[TRUNC:%.*]] = trunc i64 [[ADD]] to i32
+; BE-NEXT:    store i32 [[TRUNC]], ptr [[DEST:%.*]], align 4
+; BE-NEXT:    ret void
+;
+  %gep1 = getelementptr inbounds i8, ptr %p, i64 72
+  %ld1 = load i32, ptr %gep1, align 4
+  %ld1_zext = zext i32 %ld1 to i64
+  %ld1_shl = shl nuw i64 %ld1_zext, 32
+  %gep2 = getelementptr inbounds i8, ptr %p, i64 68
+  ; Don't move final_ptr before gep2
+  %final_ptr = bitcast ptr %gep2 to ptr
+  %ld2 = load i32, ptr %final_ptr, align 4
+  %ld2_zext = zext i32 %ld2 to i64
+  %or = or i64 %ld1_shl, %ld2_zext
+  %add = add i64 %or, 0
+  %trunc = trunc i64 %add to i32
+  store i32 %trunc, ptr %dest, align 4
+  ret void
 }

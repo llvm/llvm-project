@@ -13,8 +13,8 @@ define i16 @passthru(i16 returned %x) {
 define i16 @test(i16 %arg) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[ZERO:%.*]] = call i16 @passthru(i16 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smax.i16(i16 [[ARG:%.*]], i16 0)
-; CHECK-NEXT:    ret i16 [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = call i16 @llvm.smax.i16(i16 [[ARG:%.*]], i16 0)
+; CHECK-NEXT:    ret i16 [[RET]]
 ;
   %zero = call i16 @passthru(i16 0)
   %sub = sub nuw nsw i16 %arg, %zero

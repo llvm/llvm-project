@@ -212,7 +212,7 @@ entry:
   ret i64 %r
 }
 
-define i8* @tst_select_word_cst(i8* %a, i8* %b) {
+define ptr @tst_select_word_cst(ptr %a, ptr %b) {
   ; ALL-LABEL: tst_select_word_cst:
 
   ; M2:         addiu   $[[T0:[0-9]+]], $zero, -1
@@ -268,7 +268,7 @@ define i8* @tst_select_word_cst(i8* %a, i8* %b) {
   ; MM32R6:     sltu    $[[T2:[0-9]+]], $zero, $[[T1]]
   ; MM32R6:     seleqz  $2, $4, $[[T2]]
 
-  %cmp = icmp eq i8* %b, inttoptr (i64 -1 to i8*)
-  %r = select i1 %cmp, i8* %a, i8* null
-  ret i8* %r
+  %cmp = icmp eq ptr %b, inttoptr (i64 -1 to ptr)
+  %r = select i1 %cmp, ptr %a, ptr null
+  ret ptr %r
 }

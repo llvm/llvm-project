@@ -4,13 +4,12 @@
 @i = linkonce_odr global i32 1
 
 ; MACHO: ltmp0:
-; MACHO-NEXT: .long 1
+; MACHO-NEXT: .long 1  ## 0x1
 ; MACHO-NEXT: .alt_entry _f
-; MACHO-NEXT: _f:
+; MACHO-NEXT: _f:  ## @f
 ; ELF: .type f,@function
-; ELF-NEXT: .long	1
-; ELF-NEXT: # 0x1
-; ELF-NEXT: f:
+; ELF-NEXT: .long	1  # 0x1
+; ELF-NEXT: f:  # @f
 define void @f() prefix i32 1 {
   ret void
 }

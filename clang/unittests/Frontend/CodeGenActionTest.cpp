@@ -82,9 +82,10 @@ TEST(CodeGenTest, DebugInfoCWDCodeGen) {
   // Check that debug info is accessing the current working directory from the
   // VFS instead of calling \p llvm::sys::fs::current_path() directly.
 
-  auto VFS = std::make_unique<llvm::vfs::InMemoryFileSystem>();
-  VFS->setCurrentWorkingDirectory("/in-memory-fs-cwd");
   auto Sept = llvm::sys::path::get_separator();
+  auto VFS = std::make_unique<llvm::vfs::InMemoryFileSystem>();
+  VFS->setCurrentWorkingDirectory(
+      std::string(llvm::formatv("{0}in-memory-fs-cwd", Sept)));
   std::string TestPath =
       std::string(llvm::formatv("{0}in-memory-fs-cwd{0}test.cpp", Sept));
   VFS->addFile(TestPath, 0, llvm::MemoryBuffer::getMemBuffer("int x;\n"));

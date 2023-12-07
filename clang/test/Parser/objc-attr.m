@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fdouble-square-bracket-attributes -triple x86_64-apple-macosx10.10.0 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64-apple-macosx10.10.0 -verify %s
 // expected-no-diagnostics
 
 @interface NSObject

@@ -980,8 +980,8 @@ define i1 @slt_offset_nsw(i8 %a, i8 %c) {
 define i32 @increment_max(i32 %x) {
 ; CHECK-LABEL: @increment_max(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 -1)
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], 1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i32 [[S]]
 ;
   %a = add nsw i32 %x, 1
   %c = icmp sgt i32 %a, 0
@@ -992,8 +992,8 @@ define i32 @increment_max(i32 %x) {
 define i32 @decrement_max(i32 %x) {
 ; CHECK-LABEL: @decrement_max(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i32 [[S]]
 ;
   %a = add nsw i32 %x, -1
   %c = icmp sgt i32 %a, 0
@@ -1004,8 +1004,8 @@ define i32 @decrement_max(i32 %x) {
 define i32 @increment_min(i32 %x) {
 ; CHECK-LABEL: @increment_min(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 -1)
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], 1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i32 [[S]]
 ;
   %a = add nsw i32 %x, 1
   %c = icmp slt i32 %a, 0
@@ -1016,8 +1016,8 @@ define i32 @increment_min(i32 %x) {
 define i32 @decrement_min(i32 %x) {
 ; CHECK-LABEL: @decrement_min(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i32 [[S]]
 ;
   %a = add nsw i32 %x, -1
   %c = icmp slt i32 %a, 0

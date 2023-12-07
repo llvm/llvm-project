@@ -8,6 +8,7 @@
 
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -58,10 +59,14 @@ void MCPseudoProbe::emit(MCObjectStreamer *MCOS,
   // Type (bit 0 to 3), with bit 4 to 6 for attributes.
   // Flag (bit 7, 0 - code address, 1 - address delta). This indicates whether
   // the following field is a symbolic code address or an address delta.
+  // Emit FS discriminator
   assert(Type <= 0xF && "Probe type too big to encode, exceeding 15");
-  assert(Attributes <= 0x7 &&
+  auto NewAttributes = Attributes;
+  if (Discriminator)
+    NewAttributes |= (uint32_t)PseudoProbeAttributes::HasDiscriminator;
+  assert(NewAttributes <= 0x7 &&
          "Probe attributes too big to encode, exceeding 7");
-  uint8_t PackedType = Type | (Attributes << 4);
+  uint8_t PackedType = Type | (NewAttributes << 4);
   uint8_t Flag =
       !IsSentinel ? ((int8_t)MCPseudoProbeFlag::AddressDelta << 7) : 0;
   MCOS->emitInt8(Flag | PackedType);
@@ -80,6 +85,9 @@ void MCPseudoProbe::emit(MCObjectStreamer *MCOS,
     // Emit the GUID of the split function that the sentinel probe represents.
     MCOS->emitInt64(Guid);
   }
+
+  if (Discriminator)
+    MCOS->emitULEB128IntValue(Discriminator);
 
   LLVM_DEBUG({
     dbgs().indent(MCPseudoProbeTable::DdgPrintIndent);
@@ -222,11 +230,11 @@ void MCPseudoProbeSections::emit(MCObjectStreamer *MCOS) {
 
       for (const auto &Inlinee : Inlinees) {
         // Emit the group guarded by a sentinel probe.
-        MCPseudoProbe SentinelProbe(const_cast<MCSymbol *>(FuncSym),
-                                    MD5Hash(FuncSym->getName()),
-                                    (uint32_t)PseudoProbeReservedId::Invalid,
-                                    (uint32_t)PseudoProbeType::Block,
-                                    (uint32_t)PseudoProbeAttributes::Sentinel);
+        MCPseudoProbe SentinelProbe(
+            const_cast<MCSymbol *>(FuncSym), MD5Hash(FuncSym->getName()),
+            (uint32_t)PseudoProbeReservedId::Invalid,
+            (uint32_t)PseudoProbeType::Block,
+            (uint32_t)PseudoProbeAttributes::Sentinel, 0);
         const MCPseudoProbe *Probe = &SentinelProbe;
         Inlinee.second->emit(MCOS, Probe);
       }
@@ -310,6 +318,8 @@ void MCDecodedPseudoProbe::print(raw_ostream &OS,
     OS << Guid << " ";
   }
   OS << "Index: " << Index << "  ";
+  if (Discriminator)
+    OS << "Discriminator: " << Discriminator << "  ";
   OS << "Type: " << PseudoProbeTypeStr[static_cast<uint8_t>(Type)] << "  ";
   std::string InlineContextStr = getInlineContextStr(GUID2FuncMAP);
   if (InlineContextStr.size()) {
@@ -491,11 +501,19 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
       }
     }
 
+    uint32_t Discriminator = 0;
+    if (hasDiscriminator(Attr)) {
+      auto ErrorOrDiscriminator = readUnsignedNumber<uint32_t>();
+      if (!ErrorOrDiscriminator)
+        return false;
+      Discriminator = std::move(*ErrorOrDiscriminator);
+    }
+
     if (Cur && !isSentinelProbe(Attr)) {
       // Populate Address2ProbesMap
       auto &Probes = Address2ProbesMap[Addr];
       Probes.emplace_back(Addr, Cur->Guid, Index, PseudoProbeType(Kind), Attr,
-                          Cur);
+                          Discriminator, Cur);
       Cur->addProbes(&Probes.back());
     }
     LastAddr = Addr;
@@ -566,10 +584,20 @@ MCPseudoProbeDecoder::getCallProbeForAddr(uint64_t Address) const {
   const MCDecodedPseudoProbe *CallProbe = nullptr;
   for (const auto &Probe : Probes) {
     if (Probe.isCall()) {
-      assert(!CallProbe &&
-             "There should be only one call probe corresponding to address "
-             "which is a callsite.");
+      // Disabling the assert and returning first call probe seen so far.
+      // Subsequent call probes, if any, are ignored. Due to the the way
+      // .pseudo_probe section is decoded, probes of the same-named independent
+      // static functions are merged thus multiple call probes may be seen for a
+      // callsite. This should only happen to compiler-generated statics, with
+      // -funique-internal-linkage-names where user statics get unique names.
+      //
+      // TODO: re-enable or narrow down the assert to static functions only.
+      //
+      // assert(!CallProbe &&
+      //        "There should be only one call probe corresponding to address "
+      //        "which is a callsite.");
       CallProbe = &Probe;
+      break;
     }
   }
   return CallProbe;

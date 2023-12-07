@@ -32,3 +32,9 @@ bool llvm::hasAliasUse(Function &F) {
       return isa<GlobalAlias>(U) || isa<GlobalIFunc>(U);
     });
 }
+
+bool llvm::hasAliasOrBlockAddressUse(Function &F) {
+  return any_of(F.users(), [](User *U) {
+    return isa<GlobalAlias, GlobalIFunc, BlockAddress>(U);
+  });
+}

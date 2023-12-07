@@ -67,7 +67,7 @@ at the top level of an `AffineScope` op (i.e., immediately enclosed by the
 latter), 3. a value that dominates the `AffineScope` op enclosing the value's
 use, 4. the result of a
 constant operation, 5. the result of an
-[`affine.apply` operation](#affineapply-affineapplyop) that recursively takes as
+[`affine.apply` operation](#affineapply-mliraffineapplyop) that recursively takes as
 arguments any valid symbolic identifiers, or 6. the result of a
 [`dim` operation](MemRef.md/#memrefdim-mlirmemrefdimop) on either a memref that
 is an argument to a `AffineScope` op or a memref where the corresponding
@@ -78,9 +78,9 @@ dimension is either static or a dynamic one in turn bound to a valid symbol.
 Note that as a result of rule (3) above, symbol validity is sensitive to the
 location of the SSA use. Dimensions may be bound not only to anything that a
 symbol is bound to, but also to induction variables of enclosing
-[`affine.for`](#affinefor-affineforop) and
-[`affine.parallel`](#affineparallel-affineparallelop) operations, and the result
-of an [`affine.apply` operation](#affineapply-affineapplyop) (which recursively
+[`affine.for`](#affinefor-mliraffineforop) and
+[`affine.parallel`](#affineparallel-mliraffineparallelop) operations, and the result
+of an [`affine.apply` operation](#affineapply-mliraffineapplyop) (which recursively
 may use other dimensions and symbols).
 
 ### Affine Expressions
@@ -142,7 +142,7 @@ Syntax:
 
 ```
 affine-map-inline
-   ::= dim-and-symbol-id-lists `->` multi-dim-affine-expr
+   ::= dim-and-symbol-value-lists `->` multi-dim-affine-expr
 ```
 
 The identifiers in the dimensions and symbols lists must be unique. These are
@@ -155,9 +155,9 @@ dimension indices and symbols into a list of results, with affine expressions
 combining the indices and symbols. Affine maps distinguish between
 [indices and symbols](#dimensions-and-symbols) because indices are inputs to the
 affine map when the map is called (through an operation such as
-[affine.apply](#affineapply-affineapplyop)), whereas symbols are bound when the
+[affine.apply](#affineapply-mliraffineapplyop)), whereas symbols are bound when the
 map is established (e.g. when a memref is formed, establishing a memory
-[layout map](Builtin.md/#layout-map)).
+[layout map](Builtin.md/#layout)).
 
 Affine maps are used for various core structures in MLIR. The restrictions we
 impose on their form allows powerful analysis and transformation, while keeping
@@ -227,7 +227,7 @@ Syntax of semi-affine maps:
 
 ```
 semi-affine-map-inline
-   ::= dim-and-symbol-id-lists `->` multi-dim-semi-affine-expr
+   ::= dim-and-symbol-value-lists `->` multi-dim-semi-affine-expr
 ```
 
 Semi-affine maps may be defined inline at the point of use, or may be hoisted to
@@ -271,7 +271,7 @@ name.
 integer-set-id ::= `#` suffix-id
 
 integer-set-inline
-   ::= dim-and-symbol-id-lists `:` '(' affine-constraint-conjunction? ')'
+   ::= dim-and-symbol-value-lists `:` '(' affine-constraint-conjunction? ')'
 
 // Declarations of integer sets are at the top of the file.
 integer-set-decl ::= integer-set-id `=` integer-set-inline
@@ -306,72 +306,12 @@ affine.if #set42(%i, %j)[%M, %N] {
 
 [include "Dialects/AffineOps.md"]
 
-### 'affine.load' operation
+### `affine.dma_start` (mlir::AffineDmaStartOp)
 
 Syntax:
 
 ```
-operation ::= ssa-id `=` `affine.load` ssa-use `[` multi-dim-affine-map-of-ssa-ids `]` `:` memref-type
-```
-
-The `affine.load` op reads an element from a memref, where the index for each
-memref dimension is an affine expression of loop induction variables and
-symbols. The output of 'affine.load' is a new value with the same type as the
-elements of the memref. An affine expression of loop IVs and symbols must be
-specified for each dimension of the memref. The keyword 'symbol' can be used to
-indicate SSA identifiers which are symbolic.
-
-Example:
-
-```mlir
-
-  Example 1:
-
-    %1 = affine.load %0[%i0 + 3, %i1 + 7] : memref<100x100xf32>
-
-  Example 2: Uses 'symbol' keyword for symbols '%n' and '%m'.
-
-    %1 = affine.load %0[%i0 + symbol(%n), %i1 + symbol(%m)]
-      : memref<100x100xf32>
-
-```
-
-### 'affine.store' operation
-
-Syntax:
-
-```
-operation ::= ssa-id `=` `affine.store` ssa-use, ssa-use `[` multi-dim-affine-map-of-ssa-ids `]` `:` memref-type
-```
-
-The `affine.store` op writes an element to a memref, where the index for each
-memref dimension is an affine expression of loop induction variables and
-symbols. The 'affine.store' op stores a new value which is the same type as the
-elements of the memref. An affine expression of loop IVs and symbols must be
-specified for each dimension of the memref. The keyword 'symbol' can be used to
-indicate SSA identifiers which are symbolic.
-
-Example:
-
-```mlir
-
-    Example 1:
-
-      affine.store %v0, %0[%i0 + 3, %i1 + 7] : memref<100x100xf32>
-
-    Example 2: Uses 'symbol' keyword for symbols '%n' and '%m'.
-
-      affine.store %v0, %0[%i0 + symbol(%n), %i1 + symbol(%m)]
-        : memref<100x100xf32>
-
-```
-
-### 'affine.dma_start' operation
-
-Syntax:
-
-```
-operation ::= `affine.dma_Start` ssa-use `[` multi-dim-affine-map-of-ssa-ids `]`, `[` multi-dim-affine-map-of-ssa-ids `]`, `[` multi-dim-affine-map-of-ssa-ids `]`, ssa-use `:` memref-type
+operation ::= `affine.dma_start` ssa-use `[` multi-dim-affine-map-of-ssa-ids `]`, `[` multi-dim-affine-map-of-ssa-ids `]`, `[` multi-dim-affine-map-of-ssa-ids `]`, ssa-use `:` memref-type
 ```
 
 The `affine.dma_start` op starts a non-blocking DMA operation that transfers
@@ -392,42 +332,47 @@ stride until %num_elements are transferred. Either both or no stride arguments
 should be specified. The value of 'num_elements' must be a multiple of
 'number_of_elements_per_stride'.
 
-Example:
+Example 1:
+
+For example, a `DmaStartOp` operation that transfers 256 elements of a memref
+`%src` in memory space 0 at indices `[%i + 3, %j]` to memref `%dst` in memory
+space 1 at indices `[%k + 7, %l]`, would be specified as follows:
+
 
 ```mlir
-For example, a DmaStartOp operation that transfers 256 elements of a memref
-'%src' in memory space 0 at indices [%i + 3, %j] to memref '%dst' in memory
-space 1 at indices [%k + 7, %l], would be specified as follows:
-
-  %num_elements = arith.constant 256
-  %idx = arith.constant 0 : index
-  %tag = memref.alloc() : memref<1xi32, 4>
-  affine.dma_start %src[%i + 3, %j], %dst[%k + 7, %l], %tag[%idx],
-    %num_elements :
-      memref<40x128xf32, 0>, memref<2x1024xf32, 1>, memref<1xi32, 2>
-
-  If %stride and %num_elt_per_stride are specified, the DMA is expected to
-  transfer %num_elt_per_stride elements every %stride elements apart from
-  memory space 0 until %num_elements are transferred.
-
-  affine.dma_start %src[%i, %j], %dst[%k, %l], %tag[%idx], %num_elements,
-    %stride, %num_elt_per_stride : ...
+%num_elements = arith.constant 256
+%idx = arith.constant 0 : index
+%tag = memref.alloc() : memref<1xi32, 4>
+affine.dma_start %src[%i + 3, %j], %dst[%k + 7, %l], %tag[%idx],
+  %num_elements :
+    memref<40x128xf32, 0>, memref<2x1024xf32, 1>, memref<1xi32, 2>
 ```
 
-### 'affine.dma_wait' operation
+Example 2:
+
+If `%stride` and `%num_elt_per_stride` are specified, the DMA is expected to
+transfer `%num_elt_per_stride` elements every `%stride elements` apart from
+memory space 0 until `%num_elements` are transferred.
+
+```mlir
+affine.dma_start %src[%i, %j], %dst[%k, %l], %tag[%idx], %num_elements,
+  %stride, %num_elt_per_stride : ...
+```
+
+### `affine.dma_wait` (mlir::AffineDmaWaitOp)
 
 Syntax:
 
 ```
-operation ::= `affine.dma_Start` ssa-use `[` multi-dim-affine-map-of-ssa-ids `]`, `[` multi-dim-affine-map-of-ssa-ids `]`, `[` multi-dim-affine-map-of-ssa-ids `]`, ssa-use `:` memref-type
+operation ::= `affine.dma_wait` ssa-use `[` multi-dim-affine-map-of-ssa-ids `]`, ssa-use `:` memref-type
 ```
 
 The `affine.dma_start` op blocks until the completion of a DMA operation
-associated with the tag element '%tag[%index]'. %tag is a memref, and %index has
+associated with the tag element `%tag[%index]`. `%tag` is a memref, and `%index` has
 to be an index with the same restrictions as any load/store index. In
 particular, index for each memref dimension must be an affine expression of loop
-induction variables and symbols. %num_elements is the number of elements
-associated with the DMA operation. For example:
+induction variables and symbols. `%num_elements` is the number of elements
+associated with the DMA operation.
 
 Example:
 

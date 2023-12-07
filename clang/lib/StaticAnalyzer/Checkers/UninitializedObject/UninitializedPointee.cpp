@@ -19,6 +19,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::ento;
@@ -122,8 +123,8 @@ struct DereferenceInfo {
 /// Dereferences \p FR and returns with the pointee's region, and whether it
 /// needs to be casted back to it's location type. If for whatever reason
 /// dereferencing fails, returns std::nullopt.
-static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
-                                                   const FieldRegion *FR);
+static std::optional<DereferenceInfo> dereference(ProgramStateRef State,
+                                                  const FieldRegion *FR);
 
 /// Returns whether \p T can be (transitively) dereferenced to a void pointer
 /// type (void*, void**, ...).
@@ -159,7 +160,7 @@ bool FindUninitializedFields::isDereferencableUninit(
 
   // At this point the pointer itself is initialized and points to a valid
   // location, we'll now check the pointee.
-  llvm::Optional<DereferenceInfo> DerefInfo = dereference(State, FR);
+  std::optional<DereferenceInfo> DerefInfo = dereference(State, FR);
   if (!DerefInfo) {
     IsAnyFieldInitialized = true;
     return false;
@@ -217,8 +218,8 @@ bool FindUninitializedFields::isDereferencableUninit(
 //                           Utility functions.
 //===----------------------------------------------------------------------===//
 
-static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
-                                                   const FieldRegion *FR) {
+static std::optional<DereferenceInfo> dereference(ProgramStateRef State,
+                                                  const FieldRegion *FR) {
 
   llvm::SmallSet<const TypedValueRegion *, 5> VisitedRegions;
 

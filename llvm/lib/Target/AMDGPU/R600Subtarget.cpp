@@ -28,7 +28,9 @@ R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
       InstrInfo(*this),
       FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
       TLInfo(TM, initializeSubtargetDependencies(TT, GPU, FS)),
-      InstrItins(getInstrItineraryForCPU(GPU)) {}
+      InstrItins(getInstrItineraryForCPU(GPU)) {
+  AddressableLocalMemorySize = LocalMemorySize;
+}
 
 R600Subtarget &R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
                                                               StringRef GPU,

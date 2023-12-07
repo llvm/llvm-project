@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++2b %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 
 namespace dr600 { // dr600: yes
 struct S {
@@ -99,6 +99,34 @@ namespace dr606 { // dr606: yes
   }
 #endif
 }
+
+namespace dr607 { // dr607: yes
+namespace example1 {
+struct Y {};
+
+template <typename T> struct X : public virtual Y {};
+
+template <typename T> class A : public X<T> {
+  template <typename S> A(S) : S() {}
+};
+
+template A<int>::A(Y);
+} // namespace example1
+
+namespace example2 {
+namespace N {
+struct B {
+  B(int);
+};
+typedef B typedef_B;
+struct D : B {
+  D();
+};
+} // namespace N
+
+N::D::D() : typedef_B(0) {}
+} // namespace example2
+} // namespace dr607
 
 namespace dr608 { // dr608: yes
   struct A { virtual void f(); };
@@ -206,7 +234,7 @@ namespace dr619 { // dr619: yes
 
 // dr620: dup 568
 
-namespace dr621 {
+namespace dr621 { // dr621: yes
   template<typename T> T f();
   template<> int f() {} // expected-note {{previous}}
   template<> int f<int>() {} // expected-error {{redefinition}}
@@ -663,7 +691,7 @@ namespace dr656 { // dr656: yes
 }
 
 namespace dr657 { // dr657: partial
-  struct Abs { virtual void x() = 0; };
+  struct Abs { virtual void x() = 0; }; // expected-note {{unimplemented pure virtual method 'x' in 'Abs'}}
   struct Der : public Abs { virtual void x(); };
 
   struct Cnvt { template<typename F> Cnvt(F); };
@@ -679,10 +707,8 @@ namespace dr657 { // dr657: partial
   // FIXME: The following examples demonstrate that we might be accepting the
   // above cases for the wrong reason.
 
-  // FIXME: We should reject this.
-  struct C { C(Abs) {} };
-  // FIXME: We should reject this.
-  struct Q { operator Abs() { __builtin_unreachable(); } } q;
+  struct C { C(Abs) {} }; // expected-error {{parameter type 'Abs' is an abstract class}}
+  struct Q { operator Abs() { __builtin_unreachable(); } } q; // expected-error {{return type 'Abs' is an abstract class}}
 #if __cplusplus >= 201703L
   // FIXME: We should *definitely* reject this.
   C c = Q().operator Abs();
@@ -1052,9 +1078,10 @@ namespace dr686 { // dr686: yes
     (void)const_cast<struct E{}*>(0); // expected-error {{cannot be defined in a type specifier}}
     (void)sizeof(struct F*);
     (void)sizeof(struct F{}*); // expected-error {{cannot be defined in a type specifier}}
-    (void)new struct G*;
-    (void)new struct G{}*; // expected-error {{cannot be defined in a type specifier}}
+    (void)new struct G*; // expected-note {{forward}}
+    (void)new struct G{}*; // expected-error {{incomplete}}
 #if __cplusplus >= 201103L
+    // expected-error@-2 {{expected expression}}
     (void)alignof(struct H*);
     (void)alignof(struct H{}*); // expected-error {{cannot be defined in a type specifier}}
 #endif

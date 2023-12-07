@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -53,6 +54,7 @@
 #include <deque>
 #include <iterator>
 #include <limits>
+#include <map>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -406,7 +408,7 @@ class MetadataLoader::MetadataLoaderImpl {
   BitstreamCursor &Stream;
   LLVMContext &Context;
   Module &TheModule;
-  std::function<Type *(unsigned)> getTypeByID;
+  MetadataLoaderCallbacks Callbacks;
 
   /// Cursor associated with the lazy-loading of Metadata. This is the easy way
   /// to keep around the right "context" (Abbrev list) to be able to jump in
@@ -462,6 +464,9 @@ class MetadataLoader::MetadataLoaderImpl {
   bool HasSeenOldLoopTags = false;
   bool NeedUpgradeToDIGlobalVariableExpression = false;
   bool NeedDeclareExpressionUpgrade = false;
+
+  /// Map DILocalScope to the enclosing DISubprogram, if any.
+  DenseMap<DILocalScope *, DISubprogram *> ParentSubprogram;
 
   /// True if metadata is being parsed for a module being ThinLTO imported.
   bool IsImporting = false;
@@ -519,6 +524,84 @@ class MetadataLoader::MetadataLoaderImpl {
         } else
           GV.addMetadata(LLVMContext::MD_dbg, *MD);
     }
+  }
+
+  DISubprogram *findEnclosingSubprogram(DILocalScope *S) {
+    if (!S)
+      return nullptr;
+    if (auto *SP = ParentSubprogram[S]) {
+      return SP;
+    }
+
+    DILocalScope *InitialScope = S;
+    DenseSet<DILocalScope *> Visited;
+    while (S && !isa<DISubprogram>(S)) {
+      S = dyn_cast_or_null<DILocalScope>(S->getScope());
+      if (Visited.contains(S))
+        break;
+      Visited.insert(S);
+    }
+    ParentSubprogram[InitialScope] = llvm::dyn_cast_or_null<DISubprogram>(S);
+
+    return ParentSubprogram[InitialScope];
+  }
+
+  /// Move local imports from DICompileUnit's 'imports' field to
+  /// DISubprogram's retainedNodes.
+  void upgradeCULocals() {
+    if (NamedMDNode *CUNodes = TheModule.getNamedMetadata("llvm.dbg.cu")) {
+      for (unsigned I = 0, E = CUNodes->getNumOperands(); I != E; ++I) {
+        auto *CU = dyn_cast<DICompileUnit>(CUNodes->getOperand(I));
+        if (!CU)
+          continue;
+
+        if (CU->getRawImportedEntities()) {
+          // Collect a set of imported entities to be moved.
+          SetVector<Metadata *> EntitiesToRemove;
+          for (Metadata *Op : CU->getImportedEntities()->operands()) {
+            auto *IE = cast<DIImportedEntity>(Op);
+            if (dyn_cast_or_null<DILocalScope>(IE->getScope())) {
+              EntitiesToRemove.insert(IE);
+            }
+          }
+
+          if (!EntitiesToRemove.empty()) {
+            // Make a new list of CU's 'imports'.
+            SmallVector<Metadata *> NewImports;
+            for (Metadata *Op : CU->getImportedEntities()->operands()) {
+              if (!EntitiesToRemove.contains(cast<DIImportedEntity>(Op))) {
+                NewImports.push_back(Op);
+              }
+            }
+
+            // Find DISubprogram corresponding to each entity.
+            std::map<DISubprogram *, SmallVector<Metadata *>> SPToEntities;
+            for (auto *I : EntitiesToRemove) {
+              auto *Entity = cast<DIImportedEntity>(I);
+              if (auto *SP = findEnclosingSubprogram(
+                      cast<DILocalScope>(Entity->getScope()))) {
+                SPToEntities[SP].push_back(Entity);
+              }
+            }
+
+            // Update DISubprograms' retainedNodes.
+            for (auto I = SPToEntities.begin(); I != SPToEntities.end(); ++I) {
+              auto *SP = I->first;
+              auto RetainedNodes = SP->getRetainedNodes();
+              SmallVector<Metadata *> MDs(RetainedNodes.begin(),
+                                          RetainedNodes.end());
+              MDs.append(I->second);
+              SP->replaceRetainedNodes(MDNode::get(Context, MDs));
+            }
+
+            // Remove entities with local scope from CU.
+            CU->replaceImportedEntities(MDTuple::get(Context, NewImports));
+          }
+        }
+      }
+    }
+
+    ParentSubprogram.clear();
   }
 
   /// Remove a leading DW_OP_deref from DIExpressions in a dbg.declare that
@@ -625,16 +708,18 @@ class MetadataLoader::MetadataLoaderImpl {
   void upgradeDebugInfo() {
     upgradeCUSubprograms();
     upgradeCUVariables();
+    upgradeCULocals();
   }
+
+  void callMDTypeCallback(Metadata **Val, unsigned TypeID);
 
 public:
   MetadataLoaderImpl(BitstreamCursor &Stream, Module &TheModule,
                      BitcodeReaderValueList &ValueList,
-                     std::function<Type *(unsigned)> getTypeByID,
-                     bool IsImporting)
+                     MetadataLoaderCallbacks Callbacks, bool IsImporting)
       : MetadataList(TheModule.getContext(), Stream.SizeInBytes()),
         ValueList(ValueList), Stream(Stream), Context(TheModule.getContext()),
-        TheModule(TheModule), getTypeByID(std::move(getTypeByID)),
+        TheModule(TheModule), Callbacks(std::move(Callbacks)),
         IsImporting(IsImporting) {}
 
   Error parseMetadata(bool ModuleLevel);
@@ -952,6 +1037,14 @@ Expected<bool> MetadataLoader::MetadataLoaderImpl::loadGlobalDeclAttachments() {
   }
 }
 
+void MetadataLoader::MetadataLoaderImpl::callMDTypeCallback(Metadata **Val,
+                                                            unsigned TypeID) {
+  if (Callbacks.MDType) {
+    (*Callbacks.MDType)(Val, TypeID, Callbacks.GetTypeByID,
+                        Callbacks.GetContainedTypeID);
+  }
+}
+
 /// Parse a METADATA_BLOCK. If ModuleLevel is true then we are parsing
 /// module level metadata.
 Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
@@ -1221,7 +1314,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     unsigned TyID = Record[0];
-    Type *Ty = getTypeByID(TyID);
+    Type *Ty = Callbacks.GetTypeByID(TyID);
     if (Ty->isMetadataTy() || Ty->isVoidTy()) {
       dropRecord();
       break;
@@ -1245,7 +1338,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     SmallVector<Metadata *, 8> Elts;
     for (unsigned i = 0; i != Size; i += 2) {
       unsigned TyID = Record[i];
-      Type *Ty = getTypeByID(TyID);
+      Type *Ty = Callbacks.GetTypeByID(TyID);
       if (!Ty)
         return error("Invalid record");
       if (Ty->isMetadataTy())
@@ -1255,9 +1348,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                                             /*ConstExprInsertBB*/ nullptr);
         if (!V)
           return error("Invalid value reference from old metadata");
-        auto *MD = ValueAsMetadata::get(V);
+        Metadata *MD = ValueAsMetadata::get(V);
         assert(isa<ConstantAsMetadata>(MD) &&
                "Expected non-function-local metadata");
+        callMDTypeCallback(&MD, TyID);
         Elts.push_back(MD);
       } else
         Elts.push_back(nullptr);
@@ -1271,7 +1365,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     unsigned TyID = Record[0];
-    Type *Ty = getTypeByID(TyID);
+    Type *Ty = Callbacks.GetTypeByID(TyID);
     if (Ty->isMetadataTy() || Ty->isVoidTy())
       return error("Invalid record");
 
@@ -1280,7 +1374,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (!V)
       return error("Invalid value reference from metadata");
 
-    MetadataList.assignValue(ValueAsMetadata::get(V), NextMetadataNo);
+    Metadata *MD = ValueAsMetadata::get(V);
+    callMDTypeCallback(&MD, TyID);
+    MetadataList.assignValue(MD, NextMetadataNo);
     NextMetadataNo++;
     break;
   }
@@ -1393,7 +1489,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (IsBigInt) {
       const uint64_t BitWidth = Record[1];
       const size_t NumWords = Record.size() - 3;
-      Value = readWideAPInt(makeArrayRef(&Record[3], NumWords), BitWidth);
+      Value = readWideAPInt(ArrayRef(&Record[3], NumWords), BitWidth);
     } else
       Value = APInt(64, unrotateSign(Record[1]), !IsUnsigned);
 
@@ -2359,9 +2455,9 @@ MetadataLoader::~MetadataLoader() = default;
 MetadataLoader::MetadataLoader(BitstreamCursor &Stream, Module &TheModule,
                                BitcodeReaderValueList &ValueList,
                                bool IsImporting,
-                               std::function<Type *(unsigned)> getTypeByID)
+                               MetadataLoaderCallbacks Callbacks)
     : Pimpl(std::make_unique<MetadataLoaderImpl>(
-          Stream, TheModule, ValueList, std::move(getTypeByID), IsImporting)) {}
+          Stream, TheModule, ValueList, std::move(Callbacks), IsImporting)) {}
 
 Error MetadataLoader::parseMetadata(bool ModuleLevel) {
   return Pimpl->parseMetadata(ModuleLevel);

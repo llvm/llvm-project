@@ -26,12 +26,12 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <cassert>
 #include <cstdint>
 
@@ -53,7 +53,7 @@ public:
   SparcMCCodeEmitter &operator=(const SparcMCCodeEmitter &) = delete;
   ~SparcMCCodeEmitter() override = default;
 
-  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
@@ -87,11 +87,12 @@ public:
 
 } // end anonymous namespace
 
-void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                           SmallVectorImpl<char> &CB,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
   unsigned Bits = getBinaryCodeForInstr(MI, Fixups, STI);
-  support::endian::write(OS, Bits,
+  support::endian::write(CB, Bits,
                          Ctx.getAsmInfo()->isLittleEndian() ? support::little
                                                             : support::big);
 
@@ -235,10 +236,8 @@ getBranchOnRegTargetOpValue(const MCInst &MI, unsigned OpNo,
   if (MO.isReg() || MO.isImm())
     return getMachineOpValue(MI, MO, Fixups, STI);
 
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   (MCFixupKind)Sparc::fixup_sparc_br16_2));
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   (MCFixupKind)Sparc::fixup_sparc_br16_14));
+  Fixups.push_back(
+      MCFixup::create(0, MO.getExpr(), (MCFixupKind)Sparc::fixup_sparc_br16));
 
   return 0;
 }

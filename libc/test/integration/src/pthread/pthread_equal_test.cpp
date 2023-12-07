@@ -15,9 +15,10 @@
 #include "src/pthread/pthread_mutex_unlock.h"
 #include "src/pthread/pthread_self.h"
 
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
+#include <stdint.h> // uintptr_t
 
 pthread_t child_thread;
 pthread_mutex_t mutex;

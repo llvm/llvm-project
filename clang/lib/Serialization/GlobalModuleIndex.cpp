@@ -25,12 +25,12 @@
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 using namespace clang;
 using namespace serialization;
@@ -279,15 +279,6 @@ GlobalModuleIndex::readIndex(StringRef Path) {
 
   return std::make_pair(new GlobalModuleIndex(std::move(Buffer), std::move(Cursor)),
                         llvm::Error::success());
-}
-
-void
-GlobalModuleIndex::getKnownModules(SmallVectorImpl<ModuleFile *> &ModuleFiles) {
-  ModuleFiles.clear();
-  for (unsigned I = 0, N = Modules.size(); I != N; ++I) {
-    if (ModuleFile *MF = Modules[I].File)
-      ModuleFiles.push_back(MF);
-  }
 }
 
 void GlobalModuleIndex::getModuleDependencies(
@@ -634,6 +625,9 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
         // Skip the imported kind
         ++Idx;
 
+        // Skip if it is standard C++ module
+        ++Idx;
+
         // Skip the import location
         ++Idx;
 
@@ -703,9 +697,12 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
     }
 
     // Get Signature.
-    if (State == DiagnosticOptionsBlock && Code == SIGNATURE)
-      getModuleFileInfo(File).Signature = ASTFileSignature::create(
-          Record.begin(), Record.begin() + ASTFileSignature::size);
+    if (State == DiagnosticOptionsBlock && Code == SIGNATURE) {
+      auto Signature = ASTFileSignature::create(Blob.begin(), Blob.end());
+      assert(Signature != ASTFileSignature::createDummy() &&
+             "Dummy AST file signature not backpatched in ASTWriter.");
+      getModuleFileInfo(File).Signature = Signature;
+    }
 
     // We don't care about this record.
   }
@@ -913,8 +910,10 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
                                      "failed writing index");
   }
 
-  return llvm::writeFileAtomically((IndexPath + "-%%%%%%%%").str(), IndexPath,
-                                   OutputBuffer);
+  return llvm::writeToOutput(IndexPath, [&OutputBuffer](llvm::raw_ostream &OS) {
+    OS << OutputBuffer;
+    return llvm::Error::success();
+  });
 }
 
 namespace {

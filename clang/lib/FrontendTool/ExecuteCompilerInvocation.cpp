@@ -178,6 +178,14 @@ CreateFrontendAction(CompilerInstance &CI) {
   }
 #endif
 
+  // Wrap the base FE action in an extract api action to generate
+  // symbol graph as a biproduct of comilation ( enabled with
+  // --emit-symbol-graph option )
+  if (!FEOpts.SymbolGraphOutputDir.empty()) {
+    CI.getCodeGenOpts().ClearASTBeforeBackend = false;
+    Act = std::make_unique<WrappingExtractAPIAction>(std::move(Act));
+  }
+
   // If there are any AST files to merge, create a frontend action
   // adaptor to perform the merge.
   if (!FEOpts.ASTMergeFiles.empty())
@@ -193,8 +201,8 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     driver::getDriverOptTable().printHelp(
         llvm::outs(), "clang -cc1 [options] file...",
         "LLVM 'Clang' Compiler: http://clang.llvm.org",
-        /*Include=*/driver::options::CC1Option,
-        /*Exclude=*/0, /*ShowAllAliases=*/false);
+        /*ShowHidden=*/false, /*ShowAllAliases=*/false,
+        llvm::opt::Visibility(driver::options::CC1Option));
     return true;
   }
 
@@ -225,7 +233,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
 #if CLANG_ENABLE_STATIC_ANALYZER
   // These should happen AFTER plugins have been loaded!
 
-  AnalyzerOptions &AnOpts = *Clang->getAnalyzerOpts();
+  AnalyzerOptions &AnOpts = Clang->getAnalyzerOpts();
 
   // Honor -analyzer-checker-help and -analyzer-checker-help-hidden.
   if (AnOpts.ShowCheckerHelp || AnOpts.ShowCheckerHelpAlpha ||

@@ -1,10 +1,10 @@
-; RUN: llvm-as -opaque-pointers < %s | llvm-dis -opaque-pointers | llvm-as -opaque-pointers | llvm-dis -opaque-pointers | FileCheck %s
-; RUN: verify-uselistorder -opaque-pointers %s
+; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
+; RUN: verify-uselistorder %s
 
 ; CHECK: @global = external global ptr
 @global = external global ptr
 
-; CHECK: @global_const_gep = global ptr getelementptr inbounds (i47, ptr @global, i64 1)
+; CHECK: @global_const_gep = global ptr getelementptr (i47, ptr @global, i64 1)
 @global_const_gep = global ptr getelementptr (i47, ptr @global, i64 1)
 
 ; CHECK: @fptr1 = external global ptr

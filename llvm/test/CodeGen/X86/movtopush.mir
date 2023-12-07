@@ -9,7 +9,7 @@
 
   declare void @good(i32, i32, i32, i32)
 
-  declare void @struct(%struct.s* byval(%struct.s), i32, i32, i32)
+  declare void @struct(ptr byval(%struct.s), i32, i32, i32)
 
   ; Function Attrs: optsize
   define void @test9() #0 {
@@ -18,14 +18,14 @@
     %q = alloca i32, align 4
     %s = alloca %struct.s, align 4
     call void @good(i32 1, i32 2, i32 3, i32 4)
-    %pv = ptrtoint i32* %p to i32
-    %qv = ptrtoint i32* %q to i32
-    call void @struct(%struct.s* byval(%struct.s) %s, i32 6, i32 %qv, i32 %pv)
+    %pv = ptrtoint ptr %p to i32
+    %qv = ptrtoint ptr %q to i32
+    call void @struct(ptr byval(%struct.s) %s, i32 6, i32 %qv, i32 %pv)
     ret void
   }
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { optsize }
   attributes #1 = { nounwind }
@@ -34,10 +34,10 @@
 ---
 # CHECK-LABEL: test9
 # CHECK:      ADJCALLSTACKDOWN32 16, 0, 16, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
-# CHECK-NEXT: PUSH32i8 4, implicit-def $esp, implicit $esp
-# CHECK-NEXT: PUSH32i8 3, implicit-def $esp, implicit $esp
-# CHECK-NEXT: PUSH32i8 2, implicit-def $esp, implicit $esp
-# CHECK-NEXT: PUSH32i8 1, implicit-def $esp, implicit $esp
+# CHECK-NEXT: PUSH32i 4, implicit-def $esp, implicit $esp
+# CHECK-NEXT: PUSH32i 3, implicit-def $esp, implicit $esp
+# CHECK-NEXT: PUSH32i 2, implicit-def $esp, implicit $esp
+# CHECK-NEXT: PUSH32i 1, implicit-def $esp, implicit $esp
 # CHECK-NEXT: CALLpcrel32 @good, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
 # CHECK-NEXT: ADJCALLSTACKUP32 16, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
 # CHECK-NEXT: ADJCALLSTACKDOWN32 20, 0, 20, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
@@ -47,7 +47,7 @@
 # CHECK-NEXT: %5:gr32 = LEA32r %stack.1.q, 1, $noreg, 0, $noreg
 # CHECK-NEXT: PUSH32r %4, implicit-def $esp, implicit $esp
 # CHECK-NEXT: PUSH32r %5, implicit-def $esp, implicit $esp
-# CHECK-NEXT: PUSH32i8 6, implicit-def $esp, implicit $esp
+# CHECK-NEXT: PUSH32i 6, implicit-def $esp, implicit $esp
 # CHECK-NEXT: PUSH32r %2, implicit-def $esp, implicit $esp
 # CHECK-NEXT: PUSH32r %1, implicit-def $esp, implicit $esp
 # CHECK-NEXT: CALLpcrel32 @struct, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp

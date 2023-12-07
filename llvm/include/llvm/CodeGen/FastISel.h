@@ -19,13 +19,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/Support/MachineValueType.h"
 #include <cstdint>
 #include <utility>
 
@@ -213,7 +213,6 @@ protected:
   const TargetRegisterInfo &TRI;
   const TargetLibraryInfo *LibInfo;
   bool SkipTargetIndependentISel;
-  bool UseInstrRefDebugInfo = false;
 
   /// The position of the last instruction for materializing constants
   /// for use in the current block. It resets to EmitStartPt when it makes sense
@@ -319,12 +318,6 @@ public:
 
   /// Reset InsertPt to the given old insert position.
   void leaveLocalValueArea(SavePoint Old);
-
-  /// Signal whether instruction referencing variable locations are desired for
-  /// this function's debug-info.
-  void useInstrRefDebugInfo(bool Flag) {
-    UseInstrRefDebugInfo = Flag;
-  }
 
 protected:
   explicit FastISel(FunctionLoweringInfo &FuncInfo,

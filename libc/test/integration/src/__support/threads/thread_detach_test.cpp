@@ -8,7 +8,7 @@
 
 #include "src/__support/threads/mutex.h"
 #include "src/__support/threads/thread.h"
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 __llvm_libc::Mutex mutex(false, false, false);
 
@@ -35,7 +35,7 @@ void detach_simple_test() {
 void detach_cleanup_test() {
   mutex.lock();
   __llvm_libc::Thread th;
-  ASSERT_EQ(0, th.run(func, nullptr, nullptr, 0));
+  ASSERT_EQ(0, th.run(func, nullptr));
 
   // Since |mutex| is held by the current thread, we will release it
   // to let |th| run.

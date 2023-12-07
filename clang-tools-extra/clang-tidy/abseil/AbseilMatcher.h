@@ -10,8 +10,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <algorithm>
 
-namespace clang {
-namespace ast_matchers {
+namespace clang::ast_matchers {
 
 /// Matches AST nodes that were found within Abseil files.
 ///
@@ -57,5 +56,4 @@ AST_POLYMORPHIC_MATCHER(
   });
 }
 
-} // namespace ast_matchers
-} // namespace clang
+} // namespace clang::ast_matchers

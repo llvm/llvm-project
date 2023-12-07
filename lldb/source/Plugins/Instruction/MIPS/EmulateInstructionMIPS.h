@@ -26,6 +26,7 @@ namespace lldb_private {
 
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Utility/Status.h"
+#include <optional>
 
 class EmulateInstructionMIPS : public lldb_private::EmulateInstruction {
 public:
@@ -74,13 +75,13 @@ public:
                       const lldb_private::Address &inst_addr,
                       lldb_private::Target *target) override;
 
-  bool TestEmulation(lldb_private::Stream *out_stream,
+  bool TestEmulation(lldb_private::Stream &out_stream,
                      lldb_private::ArchSpec &arch,
                      lldb_private::OptionValueDictionary *test_data) override {
     return false;
   }
 
-  llvm::Optional<lldb_private::RegisterInfo>
+  std::optional<lldb_private::RegisterInfo>
   GetRegisterInfo(lldb::RegisterKind reg_kind, uint32_t reg_num) override;
 
   bool

@@ -1,9 +1,14 @@
-// RUN: %clang_cl_asan -Od %p/dll_host.cpp -Fe%t
-// RUN: %clang_cl_asan -LD -Od %s -Fe%t.dll
+// RUN: %clang_cl_asan %Od %p/dll_host.cpp %Fe%t
+// RUN: %clang_cl_asan %LD %Od %s %Fe%t.dll
 // RUN: %run %t %t.dll | FileCheck %s
 
 #include <malloc.h>
 #include <stdio.h>
+
+#ifdef __MINGW32__
+// FIXME: remove after mingw-w64 adds this declaration.
+extern "C" size_t __cdecl _aligned_msize(void *_Memory, size_t _Alignment, size_t _Offset);
+#endif
 
 #define CHECK_ALIGNED(ptr,alignment) \
   do { \

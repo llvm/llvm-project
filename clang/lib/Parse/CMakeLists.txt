@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   MC
   MCParser
   Support
+  TargetParser
   )
 
 add_clang_library(clangParse
@@ -31,4 +32,5 @@ add_clang_library(clangParse
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )

@@ -9,9 +9,13 @@
 # RUN: llvm-lipo %t.i386.o %t.x86_64.o -create -o %t.fat.o
 # RUN: %lld -o /dev/null %t.fat.o
 # RUN: llvm-lipo %t.i386.o -create -o %t.noarch.o
-# RUN: not %lld -o /dev/null %t.noarch.o 2>&1 | \
+# RUN: not %no-fatal-warnings-lld -o /dev/null %t.noarch.o 2>&1 | \
 # RUN:    FileCheck %s -DFILE=%t.noarch.o
-# CHECK: error: unable to find matching architecture in [[FILE]]
+# CHECK: warning: [[FILE]]: ignoring file because it is universal (i386) but does not contain the x86_64 architecture
+
+# RUN: not %lld -arch arm64 -o /dev/null %t.fat.o 2>&1 | \
+# RUN:    FileCheck --check-prefix=CHECK-FAT %s -DFILE=%t.fat.o
+# CHECK-FAT: error: [[FILE]]: ignoring file because it is universal (i386,x86_64) but does not contain the arm64 architecture
 
 ## Validates that we read the cpu-subtype correctly from a fat exec.
 # RUN: %lld -o %t.x86_64.out %t.x86_64.o
@@ -19,9 +23,13 @@
 # RUN: llvm-lipo %t.x86_64.out %t.arm64.out -create -o %t.fat.exec.out
 # RUN: %lld -arch x86_64 %t.x86_64.o -bundle_loader %t.fat.exec.out -bundle -o %t.fat.bundle
 
-## FIXME: Re-enable this test, which is failing on arm64, once we figured out why
-## %t.fat.bundle is produced as an arm64.
-# RUN llvm-otool -h %t.fat.bundle -f %t.fat.exec.out | FileCheck %s --check-prefix=CPU-SUB
+# RUN: llvm-otool -h %t.fat.bundle > %t.bundle_header.txt
+# RUN: llvm-otool -f %t.fat.exec.out >> %t.bundle_header.txt
+# RUN: cat %t.bundle_header.txt | FileCheck %s --check-prefix=CPU-SUB
+
+# CPU-SUB:            magic     cputype      cpusubtype   caps      filetype   ncmds sizeofcmds      flags
+# CPU-SUB-NEXT:  0xfeedfacf     16777223              3  0x{{.+}}    {{.+}}  {{.+}}    {{.+}}      {{.+}}
+
 # CPU-SUB: Fat headers
 # CPU-SUB: nfat_arch 2
 # CPU-SUB: architecture 0
@@ -30,9 +38,6 @@
 # CPU-SUB: architecture 1
 # CPU-SUB-NEXT:    cputype 16777228
 # CPU-SUB-NEXT:    cpusubtype 0
-
-# CPU-SUB:            magic     cputype      cpusubtype   caps      filetype   ncmds sizeofcmds      flags
-# CPU-SUB-NEXT:  0xfeedfacf     16777223              3  0x{{.+}}    {{.+}}  {{.+}}    {{.+}}      {{.+}}
 
 .text
 .global _main

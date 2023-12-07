@@ -8,7 +8,7 @@
 ; CHECK-NEXT:    LAA: Runtime check not found !!
 ; CHECK-NEXT:    Loop instructions not suitable for LoopVersioningLICM
 
-define i32 @foo(i32* nocapture %var1, i32 %itr) #0 {
+define i32 @foo(ptr nocapture %var1, i32 %itr) #0 {
 entry:
   %cmp18 = icmp eq i32 %itr, 0
   br i1 %cmp18, label %for.end8, label %for.cond1.preheader
@@ -25,10 +25,10 @@ for.body3.lr.ph:                                  ; preds = %for.cond1.preheader
 
 for.body3:                                        ; preds = %for.body3, %for.body3.lr.ph
   %indvars.iv = phi i64 [ %0, %for.body3.lr.ph ], [ %indvars.iv.next, %for.body3 ]
-  %arrayidx = getelementptr inbounds i32, i32* %var1, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %var1, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %1, %itr
-  store i32 %add, i32* %arrayidx, align 4
+  store i32 %add, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %itr

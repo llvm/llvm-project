@@ -5,7 +5,7 @@
 target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
 target triple = "hexagon"
 
-define void @foo(i32 %N, i32* nocapture %C, i16* nocapture %A, i16 signext %val) #0 {
+define void @foo(i32 %N, ptr nocapture %C, ptr nocapture %A, i16 signext %val) #0 {
 entry:
   %cmp14 = icmp eq i32 %N, 0
   br i1 %cmp14, label %for.end11, label %for.cond1.preheader.single_entry.preheader
@@ -45,24 +45,22 @@ polly.loop_body.lr.ph:                            ; preds = %for.cond1.preheader
   %4 = extractelement <2 x i32> %3, i32 0
   %5 = call i64 @llvm.hexagon.A2.combinew(i32 %p_conv4, i32 %p_conv4)
   %6 = bitcast i64 %5 to <2 x i32>
-  %p_arrayidx8.gep = getelementptr i32, i32* %C, i32 %4
-  %p_arrayidx.gep = getelementptr i16, i16* %A, i32 %4
+  %p_arrayidx8.gep = getelementptr i32, ptr %C, i32 %4
+  %p_arrayidx.gep = getelementptr i16, ptr %A, i32 %4
   br label %polly.loop_body
 
 polly.loop_body:                                  ; preds = %polly.loop_body.lr.ph, %polly.loop_body
-  %p_arrayidx8.phi = phi i32* [ %p_arrayidx8.gep, %polly.loop_body.lr.ph ], [ %p_arrayidx8.inc, %polly.loop_body ]
-  %p_arrayidx.phi = phi i16* [ %p_arrayidx.gep, %polly.loop_body.lr.ph ], [ %p_arrayidx.inc, %polly.loop_body ]
+  %p_arrayidx8.phi = phi ptr [ %p_arrayidx8.gep, %polly.loop_body.lr.ph ], [ %p_arrayidx8.inc, %polly.loop_body ]
+  %p_arrayidx.phi = phi ptr [ %p_arrayidx.gep, %polly.loop_body.lr.ph ], [ %p_arrayidx.inc, %polly.loop_body ]
   %polly.loopiv38 = phi i32 [ 0, %polly.loop_body.lr.ph ], [ %polly.next_loopiv, %polly.loop_body ]
   %polly.next_loopiv = add nsw i32 %polly.loopiv38, 2
-  %vector_ptr = bitcast i16* %p_arrayidx.phi to <2 x i16>*
-  %_p_vec_full = load <2 x i16>, <2 x i16>* %vector_ptr, align 2
+  %_p_vec_full = load <2 x i16>, ptr %p_arrayidx.phi, align 2
   %7 = sext <2 x i16> %_p_vec_full to <2 x i32>
   %mul5p_vec = mul <2 x i32> %7, %6
-  %vector_ptr21 = bitcast i32* %p_arrayidx8.phi to <2 x i32>*
-  store <2 x i32> %mul5p_vec, <2 x i32>* %vector_ptr21, align 4
+  store <2 x i32> %mul5p_vec, ptr %p_arrayidx8.phi, align 4
   %8 = icmp slt i32 %polly.next_loopiv, %leftover_lb
-  %p_arrayidx8.inc = getelementptr i32, i32* %p_arrayidx8.phi, i32 2
-  %p_arrayidx.inc = getelementptr i16, i16* %p_arrayidx.phi, i32 2
+  %p_arrayidx8.inc = getelementptr i32, ptr %p_arrayidx8.phi, i32 2
+  %p_arrayidx.inc = getelementptr i16, ptr %p_arrayidx.phi, i32 2
   br i1 %8, label %polly.loop_body, label %polly.loop_header26.preheader.loopexit
 
 polly.loop_header26.preheader.loopexit:           ; preds = %polly.loop_body
@@ -80,12 +78,12 @@ polly.stmt.for.body331:                           ; preds = %polly.stmt.for.body
   %polly.loopiv2939 = phi i32 [ %polly.next_loopiv30, %polly.stmt.for.body331 ], [ %polly.loopiv29.ph, %polly.stmt.for.body331.preheader ]
   %polly.next_loopiv30 = add nsw i32 %polly.loopiv2939, 1
   %p_32 = add i32 %polly.loopiv2939, %1
-  %p_arrayidx833 = getelementptr i32, i32* %C, i32 %p_32
-  %p_arrayidx34 = getelementptr i16, i16* %A, i32 %p_32
-  %_p_scalar_ = load i16, i16* %p_arrayidx34, align 2
+  %p_arrayidx833 = getelementptr i32, ptr %C, i32 %p_32
+  %p_arrayidx34 = getelementptr i16, ptr %A, i32 %p_32
+  %_p_scalar_ = load i16, ptr %p_arrayidx34, align 2
   %p_conv = sext i16 %_p_scalar_ to i32
   %p_mul5 = mul nsw i32 %p_conv, %p_conv4
-  store i32 %p_mul5, i32* %p_arrayidx833, align 4
+  store i32 %p_mul5, ptr %p_arrayidx833, align 4
   %exitcond = icmp eq i32 %polly.next_loopiv30, %N
   br i1 %exitcond, label %for.inc9.loopexit, label %polly.stmt.for.body331
 }

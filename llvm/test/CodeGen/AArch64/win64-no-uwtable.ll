@@ -20,7 +20,7 @@ define dso_local void @SEHfilter() nounwind "frame-pointer"="all" {
 ; CHECK-NEXT:  .LBB0_2:                                // %if.end.i
 ; CHECK-NEXT:  bl      f
 ; CHECK-NEXT:  brk     #0x1
-  %1 = load i32, i32* undef, align 4
+  %1 = load i32, ptr undef, align 4
   tail call void @g()
   %tobool.i = icmp eq i32 %1, 0
   br i1 %tobool.i, label %if.end.i, label %exit

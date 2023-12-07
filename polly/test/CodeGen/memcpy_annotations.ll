@@ -9,9 +9,9 @@
 ; }
 ;
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i32, i1)
 
-define void @func(i32 %n, i8* noalias nonnull %A, i8* noalias nonnull %B) {
+define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %for
 
@@ -21,7 +21,7 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %A, i8* %B, i64 8, i32 4, i1 false)
+      call void @llvm.memcpy.p0.p0.i64(ptr nonnull %A, ptr %B, i64 8, i32 4, i1 false)
       br label %inc
 
 inc:

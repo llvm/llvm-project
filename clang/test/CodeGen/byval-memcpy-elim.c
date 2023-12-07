@@ -21,7 +21,6 @@ void test1(struct Test1S *A, struct Test2S *B) {
 
 // The above gets tricker when the byval argument requires higher alignment
 // than the natural alignment of the type in question.
-// rdar://9483886
 
 // Make sure we do generate a memcpy when we cannot guarantee alignment.
 struct Test3S {

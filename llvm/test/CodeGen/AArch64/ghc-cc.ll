@@ -51,7 +51,7 @@ entry:
   ; CHECK-NEXT:  bl      bar_i64
   ; CHECK-NEXT:  ret
 
-  %0 = load i64, i64* @base
+  %0 = load i64, ptr @base
   tail call ghccc void @bar_i64( i64 %0 ) nounwind
   ret void
 }
@@ -64,7 +64,7 @@ entry:
   ; CHECK-NEXT:  bl      bar_float
   ; CHECK-NEXT:  ret
 
-  %0 = load float, float* @f1
+  %0 = load float, ptr @f1
   tail call ghccc void @bar_float( float %0 ) nounwind
   ret void
 }
@@ -77,7 +77,7 @@ entry:
   ; CHECK-NEXT:  bl      bar_double
   ; CHECK-NEXT:  ret
 
-  %0 = load double, double* @d1
+  %0 = load double, ptr @d1
   tail call ghccc void @bar_double( double %0 ) nounwind
   ret void
 }

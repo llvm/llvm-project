@@ -4,7 +4,7 @@
 ; RUN: llc -march=mips64 -O0 -mcpu=mips64r6 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPSR6
 ; RUN: llc -march=mips64el -O0 -mcpu=mips64r6 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPSR6
 
-define i64 @test_max(i64* nocapture %ptr, i64 signext %val) {
+define i64 @test_max(ptr nocapture %ptr, i64 signext %val) {
 ; MIPS-LABEL: test_max:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    sync
@@ -38,11 +38,11 @@ define i64 @test_max(i64* nocapture %ptr, i64 signext %val) {
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw max i64* %ptr, i64 %val seq_cst
+  %0 = atomicrmw max ptr %ptr, i64 %val seq_cst
   ret i64 %0
 }
 
-define i64 @test_min(i64* nocapture %ptr, i64 signext %val) {
+define i64 @test_min(ptr nocapture %ptr, i64 signext %val) {
 ; MIPS-LABEL: test_min:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    sync
@@ -76,11 +76,11 @@ define i64 @test_min(i64* nocapture %ptr, i64 signext %val) {
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw min i64* %ptr, i64 %val seq_cst
+  %0 = atomicrmw min ptr %ptr, i64 %val seq_cst
   ret i64 %0
 }
 
-define i64 @test_umax(i64* nocapture %ptr, i64 zeroext %val) {
+define i64 @test_umax(ptr nocapture %ptr, i64 zeroext %val) {
 ; MIPS-LABEL: test_umax:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    sync
@@ -114,11 +114,11 @@ define i64 @test_umax(i64* nocapture %ptr, i64 zeroext %val) {
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw umax i64* %ptr, i64 %val seq_cst
+  %0 = atomicrmw umax ptr %ptr, i64 %val seq_cst
   ret i64 %0
 }
 
-define i64 @test_umin(i64* nocapture %ptr, i64 zeroext %val) {
+define i64 @test_umin(ptr nocapture %ptr, i64 zeroext %val) {
 ; MIPS-LABEL: test_umin:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    sync
@@ -152,7 +152,7 @@ define i64 @test_umin(i64* nocapture %ptr, i64 zeroext %val) {
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw umin i64* %ptr, i64 %val seq_cst
+  %0 = atomicrmw umin ptr %ptr, i64 %val seq_cst
   ret i64 %0
 }
 

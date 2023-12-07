@@ -17,11 +17,9 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S s)
-{
-    s.clear();
-    assert(s.size() == 0);
+TEST_CONSTEXPR_CXX20 void test(S s) {
+  s.clear();
+  assert(s.size() == 0);
 }
 
 template <class S>
@@ -47,8 +45,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

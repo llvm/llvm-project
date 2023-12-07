@@ -212,7 +212,7 @@ bb17:		; preds = %cond_false, %cond_true, %entry
 	ret i32 %a_addr.026.1
 }
 
-@x = external global i32*		; <i32**> [#uses=1]
+@x = external global ptr		; <ptr> [#uses=1]
 
 define void @foo(i32 %a) nounwind {
 ; V01-LABEL: foo:
@@ -234,8 +234,8 @@ define void @foo(i32 %a) nounwind {
 ; V23-NEXT:    str r0, [r1]
 ; V23-NEXT:    bx lr
 entry:
-	%tmp = load i32*, i32** @x		; <i32*> [#uses=1]
-	store i32 %a, i32* %tmp
+	%tmp = load ptr, ptr @x		; <ptr> [#uses=1]
+	store i32 %a, ptr %tmp
 	ret void
 }
 

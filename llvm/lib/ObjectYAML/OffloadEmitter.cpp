@@ -28,12 +28,9 @@ bool yaml2offload(Binary &Doc, raw_ostream &Out, ErrorHandler EH) {
     if (Member.Flags)
       Image.Flags = *Member.Flags;
 
-    StringMap<StringRef> &StringData = Image.StringData;
-    if (Member.StringEntries) {
-      for (const auto &Entry : *Member.StringEntries) {
-        StringData[Entry.Key] = Entry.Value;
-      }
-    }
+    if (Member.StringEntries)
+      for (const auto &Entry : *Member.StringEntries)
+        Image.StringData[Entry.Key] = Entry.Value;
 
     SmallVector<char, 1024> Data;
     raw_svector_ostream OS(Data);
@@ -41,14 +38,10 @@ bool yaml2offload(Binary &Doc, raw_ostream &Out, ErrorHandler EH) {
       Member.Content->writeAsBinary(OS);
     Image.Image = MemoryBuffer::getMemBufferCopy(OS.str());
 
-    std::unique_ptr<MemoryBuffer> Binary = object::OffloadBinary::write(Image);
-
     // Copy the data to a new buffer so we can modify the bytes directly.
-    SmallVector<char> NewBuffer;
-    std::copy(Binary->getBufferStart(), Binary->getBufferEnd(),
-              std::back_inserter(NewBuffer));
+    auto Buffer = object::OffloadBinary::write(Image);
     auto *TheHeader =
-        reinterpret_cast<object::OffloadBinary::Header *>(&NewBuffer[0]);
+        reinterpret_cast<object::OffloadBinary::Header *>(&Buffer[0]);
     if (Doc.Version)
       TheHeader->Version = *Doc.Version;
     if (Doc.Size)
@@ -58,7 +51,7 @@ bool yaml2offload(Binary &Doc, raw_ostream &Out, ErrorHandler EH) {
     if (Doc.EntrySize)
       TheHeader->EntrySize = *Doc.EntrySize;
 
-    Out.write(NewBuffer.begin(), NewBuffer.size());
+    Out.write(Buffer.begin(), Buffer.size());
   }
 
   return true;

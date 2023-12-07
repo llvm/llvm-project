@@ -19,36 +19,36 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-%struct.b = type { double** }
+%struct.b = type { ptr }
 
-define void @a(%struct.b* nocapture readonly %A) #0 !dbg !4 {
+define void @a(ptr nocapture readonly %A) #0 !dbg !4 {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  tail call void @llvm.dbg.value(metadata %struct.b* %A, i64 0, metadata !16, metadata !DIExpression()), !dbg !23
+  tail call void @llvm.dbg.value(metadata ptr %A, i64 0, metadata !16, metadata !DIExpression()), !dbg !23
   tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !17, metadata !DIExpression()), !dbg !25
   br label %for.body, !dbg !27
 
 for.body:                                         ; preds = %for.body, %entry.split
   %indvar4 = phi i64 [ %indvar.next, %for.body ], [ 0, %entry.split ]
-  %b = getelementptr inbounds %struct.b, %struct.b* %A, i64 %indvar4, i32 0, !dbg !26
+  %b = getelementptr inbounds %struct.b, ptr %A, i64 %indvar4, i32 0, !dbg !26
   %0 = mul i64 %indvar4, 4, !dbg !26
   %1 = add i64 %0, 3, !dbg !26
   %2 = add i64 %0, 2, !dbg !26
   %3 = add i64 %0, 1, !dbg !26
-  %4 = load double**, double*** %b, align 8, !dbg !26, !tbaa !28
-  %arrayidx = getelementptr double*, double** %4, i64 %0, !dbg !26
-  store double* null, double** %arrayidx, align 8, !dbg !26, !tbaa !33
-  %5 = load double**, double*** %b, align 8, !dbg !26, !tbaa !28
-  %arrayidx.1 = getelementptr double*, double** %5, i64 %3, !dbg !26
-  store double* null, double** %arrayidx.1, align 8, !dbg !26, !tbaa !33
-  %6 = load double**, double*** %b, align 8, !dbg !26, !tbaa !28
-  %arrayidx.2 = getelementptr double*, double** %6, i64 %2, !dbg !26
-  store double* null, double** %arrayidx.2, align 8, !dbg !26, !tbaa !33
-  %7 = load double**, double*** %b, align 8, !dbg !26, !tbaa !28
-  %arrayidx.3 = getelementptr double*, double** %7, i64 %1, !dbg !26
-  store double* null, double** %arrayidx.3, align 8, !dbg !26, !tbaa !33
+  %4 = load ptr, ptr %b, align 8, !dbg !26, !tbaa !28
+  %arrayidx = getelementptr ptr, ptr %4, i64 %0, !dbg !26
+  store ptr null, ptr %arrayidx, align 8, !dbg !26, !tbaa !33
+  %5 = load ptr, ptr %b, align 8, !dbg !26, !tbaa !28
+  %arrayidx.1 = getelementptr ptr, ptr %5, i64 %3, !dbg !26
+  store ptr null, ptr %arrayidx.1, align 8, !dbg !26, !tbaa !33
+  %6 = load ptr, ptr %b, align 8, !dbg !26, !tbaa !28
+  %arrayidx.2 = getelementptr ptr, ptr %6, i64 %2, !dbg !26
+  store ptr null, ptr %arrayidx.2, align 8, !dbg !26, !tbaa !33
+  %7 = load ptr, ptr %b, align 8, !dbg !26, !tbaa !28
+  %arrayidx.3 = getelementptr ptr, ptr %7, i64 %1, !dbg !26
+  store ptr null, ptr %arrayidx.3, align 8, !dbg !26, !tbaa !33
   %indvar.next = add i64 %indvar4, 1, !dbg !27
   %exitcond = icmp eq i64 %indvar.next, 8, !dbg !27
   br i1 %exitcond, label %for.end, label %for.body, !dbg !27

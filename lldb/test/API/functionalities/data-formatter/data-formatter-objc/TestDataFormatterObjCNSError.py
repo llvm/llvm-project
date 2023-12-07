@@ -13,7 +13,6 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 
 class ObjCDataFormatterNSError(ObjCDataFormatterTestCase):
-
     def test_nserror_with_run_command(self):
         """Test formatters for NSError."""
         self.appkit_tester_impl(self.nserror_data_formatter_commands, True)
@@ -24,16 +23,15 @@ class ObjCDataFormatterNSError(ObjCDataFormatterTestCase):
         self.appkit_tester_impl(self.nserror_data_formatter_commands, False)
 
     def nserror_data_formatter_commands(self):
-        self.expect(
-            'frame variable nserror', substrs=['domain: @"Foobar" - code: 12'])
+        self.expect("frame variable nserror", substrs=['domain: @"Foobar" - code: 12'])
 
         self.expect(
-            'frame variable nserrorptr',
-            substrs=['domain: @"Foobar" - code: 12'])
+            "frame variable nserrorptr", substrs=['domain: @"Foobar" - code: 12']
+        )
+
+        self.expect("frame variable nserror->_userInfo", substrs=["2 key/value pairs"])
 
         self.expect(
-            'frame variable nserror->_userInfo', substrs=['2 key/value pairs'])
-
-        self.expect(
-            'frame variable nserror->_userInfo --ptr-depth 1 -d run-target',
-            substrs=['@"a"', "1", '@"b"', "2"])
+            "frame variable nserror->_userInfo --ptr-depth 1 -d run-target",
+            substrs=['@"a"', "1", '@"b"', "2"],
+        )

@@ -13,8 +13,8 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
@@ -24,19 +24,22 @@ using namespace mlir;
 /// Create a function with the same signature as the parent function of `op`
 /// with name being the function name and a `suffix`.
 static LogicalResult createBackwardSliceFunction(Operation *op,
-                                                 StringRef suffix) {
+                                                 StringRef suffix,
+                                                 bool omitBlockArguments) {
   func::FuncOp parentFuncOp = op->getParentOfType<func::FuncOp>();
   OpBuilder builder(parentFuncOp);
   Location loc = op->getLoc();
   std::string clonedFuncOpName = parentFuncOp.getName().str() + suffix.str();
   func::FuncOp clonedFuncOp = builder.create<func::FuncOp>(
       loc, clonedFuncOpName, parentFuncOp.getFunctionType());
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   builder.setInsertionPointToEnd(clonedFuncOp.addEntryBlock());
   for (const auto &arg : enumerate(parentFuncOp.getArguments()))
     mapper.map(arg.value(), clonedFuncOp.getArgument(arg.index()));
   SetVector<Operation *> slice;
-  getBackwardSlice(op, &slice);
+  BackwardSliceOptions options;
+  options.omitBlockArguments = omitBlockArguments;
+  getBackwardSlice(op, &slice, options);
   for (Operation *slicedOp : slice)
     builder.clone(*slicedOp, mapper);
   builder.create<func::ReturnOp>(loc);
@@ -53,6 +56,13 @@ struct SliceAnalysisTestPass
   StringRef getDescription() const final {
     return "Test Slice analysis functionality.";
   }
+
+  Option<bool> omitBlockArguments{
+      *this, "omit-block-arguments",
+      llvm::cl::desc("Test Slice analysis with multiple blocks but slice "
+                     "omiting block arguments"),
+      llvm::cl::init(true)};
+
   void runOnOperation() override;
   SliceAnalysisTestPass() = default;
   SliceAnalysisTestPass(const SliceAnalysisTestPass &) {}
@@ -71,7 +81,7 @@ void SliceAnalysisTestPass::runOnOperation() {
         return WalkResult::advance();
       std::string append =
           std::string("__backward_slice__") + std::to_string(opNum);
-      (void)createBackwardSliceFunction(op, append);
+      (void)createBackwardSliceFunction(op, append, omitBlockArguments);
       opNum++;
       return WalkResult::advance();
     });

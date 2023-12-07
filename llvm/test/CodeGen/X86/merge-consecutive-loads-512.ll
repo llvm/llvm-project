@@ -305,19 +305,15 @@ define <16 x float> @merge_16f32_f32_0uu3uuuuuuuuCuEF(ptr %ptr) nounwind uwtable
 define <16 x float> @merge_16f32_f32_0uu3zzuuuuuzCuEF(ptr %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_16f32_f32_0uu3zzuuuuuzCuEF:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovups (%rdi), %zmm1
-; ALL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; ALL-NEXT:    vmovaps {{.*#+}} zmm0 = <0,u,u,3,20,21,u,u,u,u,u,u,12,29,14,15>
-; ALL-NEXT:    vpermi2ps %zmm2, %zmm1, %zmm0
+; ALL-NEXT:    vmovdqu64 (%rdi), %zmm0
+; ALL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; ALL-NEXT:    retq
 ;
 ; X86-AVX512F-LABEL: merge_16f32_f32_0uu3zzuuuuuzCuEF:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512F-NEXT:    vmovups (%eax), %zmm1
-; X86-AVX512F-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X86-AVX512F-NEXT:    vmovaps {{.*#+}} zmm0 = <0,u,u,3,20,21,u,u,u,u,u,u,12,29,14,15>
-; X86-AVX512F-NEXT:    vpermi2ps %zmm2, %zmm1, %zmm0
+; X86-AVX512F-NEXT:    vmovdqu64 (%eax), %zmm0
+; X86-AVX512F-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
 ; X86-AVX512F-NEXT:    retl
   %ptr3 = getelementptr inbounds float, ptr %ptr, i64 3
   %ptrC = getelementptr inbounds float, ptr %ptr, i64 12

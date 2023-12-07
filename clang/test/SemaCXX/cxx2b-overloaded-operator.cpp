@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c++2b %s
+// RUN: %clang_cc1 -verify -std=c++23 %s
 
 namespace N {
 
@@ -73,3 +73,47 @@ struct T2 {
 static_assert(T2{}[] == 1);
 static_assert(T2{}[1] == 2);
 static_assert(T2{}[1, 1] == 3);
+
+namespace test_packs {
+
+struct foo_t {
+template<typename... Ts>
+constexpr int operator[](Ts... idx) {
+    return (0 + ... + idx);
+}
+};
+
+template<int... Is>
+constexpr int cxx_subscript() {
+  foo_t foo;
+  return foo[Is...];
+}
+
+template<int... Is>
+int cxx_subscript_unexpanded() {
+  foo_t foo;
+  return foo[Is]; // expected-error {{expression contains unexpanded parameter pack 'Is'}}
+}
+
+template<int... Is>
+constexpr int c_array() {
+  int arr[] = {1, 2, 3};
+  return arr[Is...]; // expected-error 2{{type 'int[3]' does not provide a subscript operator}}
+}
+
+template<int... Is>
+int c_array_unexpanded() {
+  int arr[] = {1, 2, 3};
+  return arr[Is]; // expected-error {{expression contains unexpanded parameter pack 'Is'}}
+}
+
+void test() {
+  static_assert(cxx_subscript<1, 2, 3>() == 6);
+  static_assert(c_array<1>() == 2);
+
+  c_array<>(); // expected-note {{in instantiation}}
+  c_array<1>();
+  c_array<1, 2>(); // expected-note {{in instantiation}}
+}
+
+}

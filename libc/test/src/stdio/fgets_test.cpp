@@ -12,9 +12,9 @@
 #include "src/stdio/fgets.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fwrite.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 
 TEST(LlvmLibcFgetsTest, WriteAndReadCharacters) {
@@ -36,7 +36,7 @@ TEST(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   // This is an error and not a real EOF.
   ASSERT_EQ(__llvm_libc::feof(file), 0);
   ASSERT_NE(__llvm_libc::ferror(file), 0);
-  errno = 0;
+  libc_errno = 0;
 
   ASSERT_EQ(0, __llvm_libc::fclose(file));
 
@@ -48,7 +48,7 @@ TEST(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   output = __llvm_libc::fgets(buff, 1, file);
   ASSERT_TRUE(output == buff);
   ASSERT_EQ(buff[0], '\0');
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
 
   // If we request less than 1 byte, it should do nothing and return nullptr.
   // This is also implementation defined.
@@ -76,13 +76,13 @@ TEST(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   // fails to read anything.
   ASSERT_NE(__llvm_libc::feof(file), 0);
   ASSERT_EQ(__llvm_libc::ferror(file), 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
 
   // Reading more should be an EOF, but not an error.
   output = __llvm_libc::fgets(buff, 8, file);
   ASSERT_TRUE(output == nullptr);
   ASSERT_NE(__llvm_libc::feof(file), 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
 
   ASSERT_EQ(0, __llvm_libc::fclose(file));
 }

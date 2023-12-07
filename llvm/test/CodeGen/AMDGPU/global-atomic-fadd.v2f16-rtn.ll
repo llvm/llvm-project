@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GFX90A_GFX940 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GFX90A_GFX940 %s
 
-define amdgpu_ps <2 x half> @global_atomic_fadd_v2f16_rtn_intrinsic(<2 x half> addrspace(1)* %ptr, <2 x half> %data) {
+define amdgpu_ps <2 x half> @global_atomic_fadd_v2f16_rtn_intrinsic(ptr addrspace(1) %ptr, <2 x half> %data) {
   ; GFX90A_GFX940-LABEL: name: global_atomic_fadd_v2f16_rtn_intrinsic
   ; GFX90A_GFX940: bb.0 (%ir-block.0):
   ; GFX90A_GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -15,11 +15,11 @@ define amdgpu_ps <2 x half> @global_atomic_fadd_v2f16_rtn_intrinsic(<2 x half> a
   ; GFX90A_GFX940-NEXT:   [[GLOBAL_ATOMIC_PK_ADD_F16_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_PK_ADD_F16_RTN killed [[COPY3]], [[COPY]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.ptr, addrspace 1)
   ; GFX90A_GFX940-NEXT:   $vgpr0 = COPY [[GLOBAL_ATOMIC_PK_ADD_F16_RTN]]
   ; GFX90A_GFX940-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
-  %ret = call <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1v2f16.v2f16(<2 x half> addrspace(1)* %ptr, <2 x half> %data)
+  %ret = call <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1) %ptr, <2 x half> %data)
   ret <2 x half> %ret
 }
 
-define amdgpu_ps <2 x half> @global_atomic_fadd_v2f16_saddr_rtn_intrinsic(<2 x half> addrspace(1)* inreg %ptr, <2 x half> %data) {
+define amdgpu_ps <2 x half> @global_atomic_fadd_v2f16_saddr_rtn_intrinsic(ptr addrspace(1) inreg %ptr, <2 x half> %data) {
   ; GFX90A_GFX940-LABEL: name: global_atomic_fadd_v2f16_saddr_rtn_intrinsic
   ; GFX90A_GFX940: bb.0 (%ir-block.0):
   ; GFX90A_GFX940-NEXT:   liveins: $sgpr0, $sgpr1, $vgpr0
@@ -32,11 +32,11 @@ define amdgpu_ps <2 x half> @global_atomic_fadd_v2f16_saddr_rtn_intrinsic(<2 x h
   ; GFX90A_GFX940-NEXT:   [[GLOBAL_ATOMIC_PK_ADD_F16_SADDR_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_PK_ADD_F16_SADDR_RTN killed [[V_MOV_B32_e32_]], [[COPY]], killed [[REG_SEQUENCE]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.ptr, addrspace 1)
   ; GFX90A_GFX940-NEXT:   $vgpr0 = COPY [[GLOBAL_ATOMIC_PK_ADD_F16_SADDR_RTN]]
   ; GFX90A_GFX940-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
-  %ret = call <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1v2f16.v2f16(<2 x half> addrspace(1)* %ptr, <2 x half> %data)
+  %ret = call <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1) %ptr, <2 x half> %data)
   ret <2 x half> %ret
 }
 
-define amdgpu_ps <2 x half> @global_atomic_fadd_v2f16_rtn_flat_intrinsic(<2 x half> addrspace(1)* %ptr, <2 x half> %data) {
+define amdgpu_ps <2 x half> @global_atomic_fadd_v2f16_rtn_flat_intrinsic(ptr addrspace(1) %ptr, <2 x half> %data) {
   ; GFX90A_GFX940-LABEL: name: global_atomic_fadd_v2f16_rtn_flat_intrinsic
   ; GFX90A_GFX940: bb.0 (%ir-block.0):
   ; GFX90A_GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -49,11 +49,11 @@ define amdgpu_ps <2 x half> @global_atomic_fadd_v2f16_rtn_flat_intrinsic(<2 x ha
   ; GFX90A_GFX940-NEXT:   [[GLOBAL_ATOMIC_PK_ADD_F16_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_PK_ADD_F16_RTN killed [[COPY3]], [[COPY]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.ptr, addrspace 1)
   ; GFX90A_GFX940-NEXT:   $vgpr0 = COPY [[GLOBAL_ATOMIC_PK_ADD_F16_RTN]]
   ; GFX90A_GFX940-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
-  %ret = call <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p1v2f16.v2f16(<2 x half> addrspace(1)* %ptr, <2 x half> %data)
+  %ret = call <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1) %ptr, <2 x half> %data)
   ret <2 x half> %ret
 }
 
-define amdgpu_ps <2 x half> @global_atomic_fadd_v2f16_saddr_rtn_flat_intrinsic(<2 x half> addrspace(1)* inreg %ptr, <2 x half> %data) {
+define amdgpu_ps <2 x half> @global_atomic_fadd_v2f16_saddr_rtn_flat_intrinsic(ptr addrspace(1) inreg %ptr, <2 x half> %data) {
   ; GFX90A_GFX940-LABEL: name: global_atomic_fadd_v2f16_saddr_rtn_flat_intrinsic
   ; GFX90A_GFX940: bb.0 (%ir-block.0):
   ; GFX90A_GFX940-NEXT:   liveins: $sgpr0, $sgpr1, $vgpr0
@@ -66,9 +66,9 @@ define amdgpu_ps <2 x half> @global_atomic_fadd_v2f16_saddr_rtn_flat_intrinsic(<
   ; GFX90A_GFX940-NEXT:   [[GLOBAL_ATOMIC_PK_ADD_F16_SADDR_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_PK_ADD_F16_SADDR_RTN killed [[V_MOV_B32_e32_]], [[COPY]], killed [[REG_SEQUENCE]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.ptr, addrspace 1)
   ; GFX90A_GFX940-NEXT:   $vgpr0 = COPY [[GLOBAL_ATOMIC_PK_ADD_F16_SADDR_RTN]]
   ; GFX90A_GFX940-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
-  %ret = call <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p1v2f16.v2f16(<2 x half> addrspace(1)* %ptr, <2 x half> %data)
+  %ret = call <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1) %ptr, <2 x half> %data)
   ret <2 x half> %ret
 }
 
-declare <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1v2f16.v2f16(<2 x half> addrspace(1)*, <2 x half>)
-declare <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p1v2f16.v2f16(<2 x half> addrspace(1)*, <2 x half>)
+declare <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1), <2 x half>)
+declare <2 x half> @llvm.amdgcn.flat.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1), <2 x half>)

@@ -301,7 +301,7 @@ ParallelSnippetGenerator::generateCodeTemplates(
           ? State.getExegesisTarget().getScratchMemoryRegister(
                 State.getTargetMachine().getTargetTriple())
           : 0;
-  const AliasingConfigurations SelfAliasing(Instr, Instr);
+  const AliasingConfigurations SelfAliasing(Instr, Instr, ForbiddenRegisters);
   if (SelfAliasing.empty()) {
     CT.Info = "instruction is parallel, repeating a random one.";
     CT.Instructions.push_back(std::move(Variant));

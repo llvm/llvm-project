@@ -32,7 +32,52 @@ public:
 };
 
 std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
-getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params);
+getDefaultInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params,
+                      ModuleAnalysisManager &MAM, Module &M);
+
+std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
+getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params,
+               ModuleAnalysisManager &MAM, Module &M);
+
+/// Used for dynamically loading instances of InlineOrder as plugins
+///
+/// Plugins must implement an InlineOrderFactory, for an example refer to:
+/// llvm/unittests/Analysis/InlineOrderPlugin/InlineOrderPlugin.cpp
+///
+/// If a PluginInlineOrderAnalysis has been registered with the
+/// current ModuleAnalysisManager, llvm::getInlineOrder returns an
+/// InlineOrder created by the PluginInlineOrderAnalysis' Factory.
+///
+class PluginInlineOrderAnalysis
+    : public AnalysisInfoMixin<PluginInlineOrderAnalysis> {
+public:
+  static AnalysisKey Key;
+
+  typedef std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>> (
+      *InlineOrderFactory)(FunctionAnalysisManager &FAM,
+                           const InlineParams &Params,
+                           ModuleAnalysisManager &MAM, Module &M);
+
+  PluginInlineOrderAnalysis(InlineOrderFactory Factory) : Factory(Factory) {
+    HasBeenRegistered = true;
+    assert(Factory != nullptr &&
+           "The plugin inline order factory should not be a null pointer.");
+  }
+
+  struct Result {
+    InlineOrderFactory Factory;
+  };
+
+  Result run(Module &, ModuleAnalysisManager &) { return {Factory}; }
+  Result getResult() { return {Factory}; }
+
+  static bool isRegistered() { return HasBeenRegistered; }
+  static void unregister() { HasBeenRegistered = false; }
+
+private:
+  static bool HasBeenRegistered;
+  InlineOrderFactory Factory;
+};
 
 } // namespace llvm
 #endif // LLVM_ANALYSIS_INLINEORDER_H

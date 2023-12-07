@@ -1,9 +1,8 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fblocks -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fblocks -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s
 // Ensure that we generate a line table entry for the block cleanup.
 // CHECK: define {{.*}} @__main_block_invoke
 // CHECK: _NSConcreteStackBlock
-// CHECK: = bitcast {{.*}}, !dbg ![[L1:[0-9]+]]
-// CHECK-NOT:  call {{.*}} @_Block_object_dispose{{.*}}, !dbg ![[L1]]
+// CHECK: call {{.*}} @_Block_object_dispose{{.*}}, !dbg ![[L1:[0-9]+]]
 // CHECK: ret
 
 void * _NSConcreteStackBlock;

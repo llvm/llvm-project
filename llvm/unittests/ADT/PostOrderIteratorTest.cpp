@@ -36,6 +36,10 @@ TEST(PostOrderIteratorTest, Compiles) {
   PIExt.insertEdge(std::optional<BasicBlock *>(), NullBB);
 }
 
+static_assert(
+    std::is_convertible_v<decltype(*std::declval<po_iterator<Graph<3>>>()),
+                          typename po_iterator<Graph<3>>::reference>);
+
 // Test post-order and reverse post-order traversals for simple graph type.
 TEST(PostOrderIteratorTest, PostOrderAndReversePostOrderTraverrsal) {
   Graph<6> G;

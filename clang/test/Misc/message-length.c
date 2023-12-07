@@ -28,7 +28,7 @@ void a_very_long_line(int *ip, float *FloatPointer) {
 #pragma STDC CX_LIMITED_RANGE    // some long comment text and a brace, eh {}
 
 // CHECK: FILE:23:78
-// CHECK: {{^  ...// some long comment text and a brace, eh {}}}
+// CHECK: {{^   23 |  ...// some long comment text and a brace, eh {}}}
 
 struct A { int x; };
 void h(struct A *a) {

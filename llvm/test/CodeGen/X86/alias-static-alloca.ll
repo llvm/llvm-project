@@ -7,15 +7,17 @@
 define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    movl %esi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    leal (%rsi,%rdx), %eax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    addl %edi, %esi
+; CHECK-NEXT:    leal (%rdx,%rcx), %eax
+; CHECK-NEXT:    addl %esi, %eax
 ; CHECK-NEXT:    retq
 entry:
   %a0 = alloca i32

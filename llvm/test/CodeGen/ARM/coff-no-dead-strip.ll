@@ -4,7 +4,7 @@
 @j = weak global i32 0
 @k = internal global i32 0
 
-@llvm.used = appending global [3 x i8*] [i8* bitcast (i32* @i to i8*), i8* bitcast (i32* @j to i8*), i8* bitcast (i32* @k to i8*)]
+@llvm.used = appending global [3 x ptr] [ptr @i, ptr @j, ptr @k]
 
 ; CHECK: .section .drectve
 ; CHECK: .ascii " /INCLUDE:i"

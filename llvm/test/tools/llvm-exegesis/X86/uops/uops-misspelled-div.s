@@ -1,4 +1,4 @@
-# RUN: not llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=uops --skip-measurements -snippets-file=%s 2>&1 | FileCheck %s
+# RUN: not llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=uops --benchmark-phase=assemble-measured-code -snippets-file=%s 2>&1 | FileCheck %s
 
 # llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64-DEFREG CL 1
 # llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64-DEFREG AX 1

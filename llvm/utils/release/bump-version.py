@@ -68,7 +68,9 @@ class CMakeProcessor(Processor):
                     line,
                 )
             else:
-                nline = re.sub(r"set\(LLVM_VERSION_SUFFIX(.*)\)", f"set(LLVM_VERSION_SUFFIX)", line)
+                nline = re.sub(
+                    r"set\(LLVM_VERSION_SUFFIX(.*)\)", f"set(LLVM_VERSION_SUFFIX)", line
+                )
 
         # Check the rest of the LLVM_VERSION_ lines.
         elif "set(LLVM_VERSION_" in line:
@@ -78,45 +80,8 @@ class CMakeProcessor(Processor):
                 ("PATCH", self.patch),
             ):
                 nline = re.sub(
-                    fr"set\(LLVM_VERSION_{c} (\d+)",
-                    fr"set(LLVM_VERSION_{c} {cver}",
-                    line,
-                )
-                if nline != line:
-                    break
-
-        return nline
-
-
-# Process the many bazel files.
-class BazelProcessor(Processor):
-    def process_line(self, line: str) -> str:
-        # This matches the CLANG_VERSION line of clang/Config/config.h
-        nline = line
-        if "CLANG_VERSION " in line:
-            nline = re.sub(
-                r"#define CLANG_VERSION (.*)'",
-                f"#define CLANG_VERSION {self.version_str(include_suffix=False)}'",
-                line,
-            )
-        # Match version strings of LLVM, Clang and LLD overlay headers
-        elif "LLVM_VERSION_STRING" in line or "CLANG_VERSION_STRING" in line or "LLD_VERSION_STRING" in line:
-            nline = re.sub(
-                r"#define (LLVM|CLANG|LLD)_VERSION_STRING ([\\\"]+)[0-9\.rcgit-]+([\\\"]+)",
-                rf"#define \g<1>_VERSION_STRING \g<2>{self.version_str()}\g<3>",
-                line,
-            )
-        # Match the split out MAJOR/MINOR/PATCH versions of LLVM and Clang overlay headers
-        # in LLVM the define is called _PATCH and in clang it's called _PATCHLEVEL
-        elif "LLVM_VERSION_" in line or "CLANG_VERSION_" in line:
-            for c, cver in (
-                ("(MAJOR)", self.major),
-                ("(MINOR)", self.minor),
-                ("(PATCH|PATCHLEVEL)", self.patch),
-            ):
-                nline = re.sub(
-                    fr"(LLVM|CLANG)_VERSION_{c} \d+",
-                    rf"\g<1>_VERSION_\g<2> {cver}",
+                    rf"set\(LLVM_VERSION_{c} (\d+)",
+                    rf"set(LLVM_VERSION_{c} {cver}",
                     line,
                 )
                 if nline != line:
@@ -134,7 +99,9 @@ class GNIProcessor(Processor):
                 ("minor", self.minor),
                 ("patch", self.patch),
             ):
-                nline = re.sub(fr"llvm_version_{c} = \d+", f"llvm_version_{c} = {cver}", line)
+                nline = re.sub(
+                    rf"llvm_version_{c} = \d+", f"llvm_version_{c} = {cver}", line
+                )
                 if nline != line:
                     return nline
 
@@ -146,7 +113,7 @@ class LitProcessor(Processor):
     def process_line(self, line: str) -> str:
         if "__versioninfo__" in line:
             nline = re.sub(
-                fr"__versioninfo__(.*)\((\d+), (\d+), (\d+)\)",
+                rf"__versioninfo__(.*)\((\d+), (\d+), (\d+)\)",
                 f"__versioninfo__\\1({self.major}, {self.minor}, {self.patch})",
                 line,
             )
@@ -163,7 +130,7 @@ class LibCXXProcessor(Processor):
             verstr = f"{str(self.major).zfill(2)}{str(self.minor).zfill(2)}{str(self.patch).zfill(2)}"
 
             nline = re.sub(
-                fr"_LIBCPP_VERSION (\d+)",
+                rf"_LIBCPP_VERSION (\d+)",
                 f"_LIBCPP_VERSION {verstr}",
                 line,
             )
@@ -213,23 +180,6 @@ if __name__ == "__main__":
         (
             "llvm/utils/gn/secondary/llvm/version.gni",
             GNIProcessor(),
-        ),
-        # Bazel build system
-        (
-            "utils/bazel/llvm-project-overlay/llvm/include/llvm/Config/llvm-config.h",
-            BazelProcessor(),
-        ),
-        (
-            "utils/bazel/llvm-project-overlay/clang/BUILD.bazel",
-            BazelProcessor(),
-        ),
-        (
-            "utils/bazel/llvm-project-overlay/clang/include/clang/Config/config.h",
-            BazelProcessor(),
-        ),
-        (
-            "utils/bazel/llvm-project-overlay/lld/BUILD.bazel",
-            BazelProcessor(),
         ),
         (
             "libcxx/include/__config",

@@ -4,6 +4,9 @@
 define void @invariant_store_red_exit_is_phi(ptr %dst, ptr readonly %src, i64 %n) {
 ; CHECK-LABEL: @invariant_store_red_exit_is_phi(
 ; CHECK: vector.ph:
+; CHECK:      %[[N_MINUS_VF:.*]] = sub i64 %n, %[[VSCALE_X_4:.*]]
+; CHECK:      %[[CMP:.*]] = icmp ugt i64 %n, %[[VSCALE_X_4]]
+; CHECK:      %[[N2:.*]] = select i1 %[[CMP]], i64 %[[N_MINUS_VF]], i64 0
 ; CHECK:      %[[ACTIVE_LANE_MASK_ENTRY:.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 %n)
 ; CHECK: vector.body:
 ; CHECK:      %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 4 x i1> [ %[[ACTIVE_LANE_MASK_ENTRY]], %vector.ph ], [ %[[ACTIVE_LANE_MASK_NEXT:.*]], %vector.body ]
@@ -11,7 +14,7 @@ define void @invariant_store_red_exit_is_phi(ptr %dst, ptr readonly %src, i64 %n
 ; CHECK:      %[[LOAD:.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0
 ; CHECK-NEXT: %[[ADD:.*]] = add <vscale x 4 x i32> %[[VEC_PHI]], %[[LOAD]]
 ; CHECK-NEXT: %[[SELECT:.*]] = select <vscale x 4 x i1> %[[ACTIVE_LANE_MASK]], <vscale x 4 x i32> %[[ADD]], <vscale x 4 x i32> %[[VEC_PHI]]
-; CHECK:      %[[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 %{{.*}}, i64 %n)
+; CHECK:      %[[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 %{{.*}}, i64 %[[N2]])
 ; CHECK: middle.block:
 ; CHECK-NEXT: %[[SUM:.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %[[SELECT]])
 ; CHECK-NEXT: store i32 %[[SUM]], ptr %dst, align 4

@@ -128,7 +128,6 @@ enum {
   dwarf_gpr_t7 = dwarf_gpr_r19,
   dwarf_gpr_t8 = dwarf_gpr_r20,
   dwarf_gpr_fp = dwarf_gpr_r22,
-  dwarf_gpr_s9 = dwarf_gpr_r22,
   dwarf_gpr_s0 = dwarf_gpr_r23,
   dwarf_gpr_s1 = dwarf_gpr_r24,
   dwarf_gpr_s2 = dwarf_gpr_r25,

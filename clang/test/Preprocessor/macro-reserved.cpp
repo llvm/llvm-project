@@ -12,7 +12,7 @@
 #undef _HAVE_X
 #undef X__Y
 
-#undef __cplusplus
+#undef __cplusplus // expected-warning {{undefining builtin macro}}
 #define __cplusplus
 
 // allowlisted definitions

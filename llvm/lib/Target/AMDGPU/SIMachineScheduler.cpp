@@ -329,7 +329,7 @@ void SIScheduleBlock::initRegPressure(MachineBasicBlock::iterator BeginBlock,
 
   // Do not Track Physical Registers, because it messes up.
   for (const auto &RegMaskPair : RPTracker.getPressure().LiveInRegs) {
-    if (Register::isVirtualRegister(RegMaskPair.RegUnit))
+    if (RegMaskPair.RegUnit.isVirtual())
       LiveInRegs.insert(RegMaskPair.RegUnit);
   }
   LiveOutRegs.clear();
@@ -1883,7 +1883,7 @@ void SIScheduleDAGMI::schedule()
   LLVM_DEBUG(dbgs() << "Preparing Scheduling\n");
 
   buildDAGWithRegPressure();
-  postprocessDAG();
+  postProcessDAG();
 
   LLVM_DEBUG(dump());
   if (PrintDAGs)

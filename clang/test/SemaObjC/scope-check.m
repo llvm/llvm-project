@@ -15,7 +15,7 @@ L2: ;
   } @finally {// expected-note {{jump bypasses initialization of @finally block}}
 L3: ;
   }
-  
+
   @try {
     goto L4; // expected-error{{cannot jump}}
     goto L5; // expected-error{{cannot jump}}
@@ -27,8 +27,8 @@ L3: ;
   } @finally { // expected-note {{jump bypasses initialization of @finally block}}
   L4: ;
   }
- 
-  
+
+
   @try { // expected-note 2 {{jump bypasses initialization of @try block}}
   L7: ;
   } @catch (C *c) {
@@ -36,21 +36,18 @@ L3: ;
   } @finally {
     goto L7; // expected-error{{cannot jump}}
   }
-  
+
   goto L8;  // expected-error{{cannot jump}}
-  @try { 
+  @try {
   } @catch (A *c) {
   } @catch (B *c) {
   } @catch (C *c) { // expected-note {{jump bypasses initialization of @catch block}}
   L8: ;
   }
-  
-  // rdar://6810106
   id X;
   goto L9;    // expected-error{{cannot jump}}
-  goto L10;   // ok
-  @synchronized    // expected-note {{jump bypasses initialization of @synchronized block}}
-  ( ({ L10: ; X; })) {
+  @synchronized (X)  // expected-note {{jump bypasses initialization of @synchronized block}}
+  {
   L9:
     ;
   }
@@ -63,7 +60,6 @@ void test2(int a) {
   return;
 }
 
-// rdar://6803963
 void test3(void) {
   @try {
     goto blargh;
@@ -90,7 +86,7 @@ void test3(void) {
     goto L0;     // expected-error {{cannot jump}}
     typedef int A[n];  // expected-note {{jump bypasses initialization of VLA typedef}}
   L0:
-    
+
     goto L1;      // expected-error {{cannot jump}}
     A b, c[10];        // expected-note 2 {{jump bypasses initialization of variable length array}}
   L1:

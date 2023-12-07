@@ -5,7 +5,7 @@
 ; RUN:   | FileCheck --check-prefixes=NOLIB %s
 
 ; Check Y = FNEG(X) -> Y = X ^ sign mask and no lib call is generated.
-define void @test1(float* %a, float* %b) {
+define void @test1(ptr %a, ptr %b) {
 ; ARM-LABEL: test1:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r1, [r1]
@@ -16,13 +16,13 @@ define void @test1(float* %a, float* %b) {
 ; NOLIB:       eor
 ; NOLIB-NOT:   bl __aeabi_fsub
 entry:
-  %0 = load float, float* %b
+  %0 = load float, ptr %b
   %neg = fneg float %0
-  store float %neg, float* %a
+  store float %neg, ptr %a
   ret void
 }
 
-define void @test2(double* %a, double* %b) {
+define void @test2(ptr %a, ptr %b) {
 ; ARM-LABEL: test2:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r2, [r1]
@@ -35,13 +35,13 @@ define void @test2(double* %a, double* %b) {
 ; NOLIB:       eor
 ; NOLIB-NOT:   bl __aeabi_dsub
 entry:
-  %0 = load double, double* %b
+  %0 = load double, ptr %b
   %neg = fneg double %0
-  store double %neg, double* %a
+  store double %neg, ptr %a
   ret void
 }
 
-define void @test3(fp128* %a, fp128* %b) {
+define void @test3(ptr %a, ptr %b) {
 ; ARM-LABEL: test3:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldm r1, {r2, r3, r12}
@@ -54,8 +54,8 @@ define void @test3(fp128* %a, fp128* %b) {
 ; NOLIB:       eor
 ; NOLIB-NOT:   bl __subtf3
 entry:
-  %0 = load fp128, fp128* %b
+  %0 = load fp128, ptr %b
   %neg = fneg fp128 %0
-  store fp128 %neg, fp128* %a
+  store fp128 %neg, ptr %a
   ret void
 }

@@ -2,11 +2,11 @@
 
 %swift.error = type opaque
 
-declare swiftcc void @f(%swift.error** swifterror)
+declare swiftcc void @f(ptr swifterror)
 
-define swiftcc void @g(i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, %swift.error** swifterror %error) {
+define swiftcc void @g(ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr swifterror %error) {
 entry:
-  call swiftcc void @f(%swift.error** nonnull nocapture swifterror %error)
+  call swiftcc void @f(ptr nonnull nocapture swifterror %error)
   ret void
 }
 

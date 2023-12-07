@@ -30,6 +30,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "msp430-isel"
+#define PASS_NAME "MSP430 DAG->DAG Pattern Instruction Selection"
 
 namespace {
   struct MSP430ISelAddressMode {
@@ -92,14 +93,12 @@ namespace {
   public:
     static char ID;
 
+    MSP430DAGToDAGISel() = delete;
+
     MSP430DAGToDAGISel(MSP430TargetMachine &TM, CodeGenOpt::Level OptLevel)
         : SelectionDAGISel(ID, TM, OptLevel) {}
 
   private:
-    StringRef getPassName() const override {
-      return "MSP430 DAG->DAG Pattern Instruction Selection";
-    }
-
     bool MatchAddress(SDValue N, MSP430ISelAddressMode &AM);
     bool MatchWrapper(SDValue N, MSP430ISelAddressMode &AM);
     bool MatchAddressBase(SDValue N, MSP430ISelAddressMode &AM);
@@ -122,6 +121,8 @@ namespace {
 }  // end anonymous namespace
 
 char MSP430DAGToDAGISel::ID;
+
+INITIALIZE_PASS(MSP430DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// createMSP430ISelDag - This pass converts a legalized DAG into a
 /// MSP430-specific DAG, ready for instruction scheduling.

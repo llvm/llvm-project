@@ -5,7 +5,7 @@
 
 @SomeGlobal = external dso_local global i8
 
-define dso_local i32 @foo(i32 %arg) local_unnamed_addr personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*) {
+define dso_local i32 @foo(i32 %arg) local_unnamed_addr personality ptr @__gxx_personality_sj0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -261,7 +261,7 @@ entry:
   invoke void @errorbar() to label %exit unwind label %handle
 
 handle:
-  %error = landingpad { i8*, i32 } catch i8* @SomeGlobal
+  %error = landingpad { ptr, i32 } catch ptr @SomeGlobal
   ret i32 1
 
 exit:

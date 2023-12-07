@@ -2,25 +2,25 @@
 # RUN: llc -mtriple=mipsel-linux-gnu -mcpu=mips32r5 -mattr=+msa,+fp64,+nan2008 -run-pass=regbankselect -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=P5600
 --- |
 
-  define void @sdiv_v16i8(<16 x i8>* %a, <16 x i8>* %b, <16 x i8>* %c) { entry: ret void }
-  define void @sdiv_v8i16(<8 x i16>* %a, <8 x i16>* %b, <8 x i16>* %c) { entry: ret void }
-  define void @sdiv_v4i32(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c) { entry: ret void }
-  define void @sdiv_v2i64(<2 x i64>* %a, <2 x i64>* %b, <2 x i64>* %c) { entry: ret void }
+  define void @sdiv_v16i8(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @sdiv_v8i16(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @sdiv_v4i32(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @sdiv_v2i64(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
-  define void @srem_v16i8(<16 x i8>* %a, <16 x i8>* %b, <16 x i8>* %c) { entry: ret void }
-  define void @srem_v8i16(<8 x i16>* %a, <8 x i16>* %b, <8 x i16>* %c) { entry: ret void }
-  define void @srem_v4i32(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c) { entry: ret void }
-  define void @srem_v2i64(<2 x i64>* %a, <2 x i64>* %b, <2 x i64>* %c) { entry: ret void }
+  define void @srem_v16i8(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @srem_v8i16(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @srem_v4i32(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @srem_v2i64(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
-  define void @udiv_v16u8(<16 x i8>* %a, <16 x i8>* %b, <16 x i8>* %c) { entry: ret void }
-  define void @udiv_v8u16(<8 x i16>* %a, <8 x i16>* %b, <8 x i16>* %c) { entry: ret void }
-  define void @udiv_v4u32(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c) { entry: ret void }
-  define void @udiv_v2u64(<2 x i64>* %a, <2 x i64>* %b, <2 x i64>* %c) { entry: ret void }
+  define void @udiv_v16u8(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @udiv_v8u16(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @udiv_v4u32(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @udiv_v2u64(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
-  define void @urem_v16u8(<16 x i8>* %a, <16 x i8>* %b, <16 x i8>* %c) { entry: ret void }
-  define void @urem_v8u16(<8 x i16>* %a, <8 x i16>* %b, <8 x i16>* %c) { entry: ret void }
-  define void @urem_v4u32(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c) { entry: ret void }
-  define void @urem_v2u64(<2 x i64>* %a, <2 x i64>* %b, <2 x i64>* %c) { entry: ret void }
+  define void @urem_v16u8(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @urem_v8u16(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @urem_v4u32(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @urem_v2u64(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
 ...
 ---

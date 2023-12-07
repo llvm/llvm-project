@@ -22,9 +22,9 @@
 // CHECK-PS5-LINKER: /prospero-lld
 // SHARED: "--shared"
 
-// RUN: env "PATH=%t:%PATH%" %clang -### -target x86_64-scei-ps4 %s -fuse-ld=gold 2>&1 \
+// RUN: env "PATH=%t:%PATH%" not %clang -### --target=x86_64-scei-ps4 %s -fuse-ld=gold 2>&1 \
 // RUN:   | FileCheck --check-prefix=ERROR %s
-// RUN: env "PATH=%t:%PATH%" %clang -### -target x86_64-sie-ps5 %s -fuse-ld=gold 2>&1 \
+// RUN: env "PATH=%t:%PATH%" not %clang -### --target=x86_64-sie-ps5 %s -fuse-ld=gold 2>&1 \
 // RUN:   | FileCheck --check-prefix=ERROR %s
 
 // ERROR: error: unsupported option '-fuse-ld' for target 'x86_64-{{(scei|sie)}}-ps{{[45]}}'

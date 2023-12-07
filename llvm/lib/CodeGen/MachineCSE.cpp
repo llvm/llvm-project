@@ -65,15 +65,19 @@ static cl::opt<int>
     CSUsesThreshold("csuses-threshold", cl::Hidden, cl::init(1024),
                     cl::desc("Threshold for the size of CSUses"));
 
+static cl::opt<bool> AggressiveMachineCSE(
+    "aggressive-machine-cse", cl::Hidden, cl::init(false),
+    cl::desc("Override the profitability heuristics for Machine CSE"));
+
 namespace {
 
   class MachineCSE : public MachineFunctionPass {
-    const TargetInstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    AliasAnalysis *AA;
-    MachineDominatorTree *DT;
-    MachineRegisterInfo *MRI;
-    MachineBlockFrequencyInfo *MBFI;
+    const TargetInstrInfo *TII = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    AliasAnalysis *AA = nullptr;
+    MachineDominatorTree *DT = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
+    MachineBlockFrequencyInfo *MBFI = nullptr;
 
   public:
     static char ID; // Pass identification
@@ -175,18 +179,16 @@ INITIALIZE_PASS_END(MachineCSE, DEBUG_TYPE,
 bool MachineCSE::PerformTrivialCopyPropagation(MachineInstr *MI,
                                                MachineBasicBlock *MBB) {
   bool Changed = false;
-  for (MachineOperand &MO : MI->operands()) {
-    if (!MO.isReg() || !MO.isUse())
-      continue;
+  for (MachineOperand &MO : MI->all_uses()) {
     Register Reg = MO.getReg();
-    if (!Register::isVirtualRegister(Reg))
+    if (!Reg.isVirtual())
       continue;
     bool OnlyOneUse = MRI->hasOneNonDBGUse(Reg);
     MachineInstr *DefMI = MRI->getVRegDef(Reg);
     if (!DefMI->isCopy())
       continue;
     Register SrcReg = DefMI->getOperand(1).getReg();
-    if (!Register::isVirtualRegister(SrcReg))
+    if (!SrcReg.isVirtual())
       continue;
     if (DefMI->getOperand(0).getSubReg())
       continue;
@@ -291,13 +293,11 @@ bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
                                        PhysDefVector &PhysDefs,
                                        bool &PhysUseDef) const {
   // First, add all uses to PhysRefs.
-  for (const MachineOperand &MO : MI->operands()) {
-    if (!MO.isReg() || MO.isDef())
-      continue;
+  for (const MachineOperand &MO : MI->all_uses()) {
     Register Reg = MO.getReg();
     if (!Reg)
       continue;
-    if (Register::isVirtualRegister(Reg))
+    if (Reg.isVirtual())
       continue;
     // Reading either caller preserved or constant physregs is ok.
     if (!isCallerPreservedOrConstPhysReg(Reg.asMCReg(), MO, *MI->getMF(), *TRI,
@@ -317,7 +317,7 @@ bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
     Register Reg = MO.getReg();
     if (!Reg)
       continue;
-    if (Register::isVirtualRegister(Reg))
+    if (Reg.isVirtual())
       continue;
     // Check against PhysRefs even if the def is "dead".
     if (PhysRefs.count(Reg.asMCReg()))
@@ -392,7 +392,7 @@ bool MachineCSE::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
       if (!MO.isReg() || !MO.isDef())
         continue;
       Register MOReg = MO.getReg();
-      if (Register::isVirtualRegister(MOReg))
+      if (MOReg.isVirtual())
         continue;
       if (PhysRefs.count(MOReg.asMCReg()))
         return false;
@@ -407,7 +407,7 @@ bool MachineCSE::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
 
 bool MachineCSE::isCSECandidate(MachineInstr *MI) {
   if (MI->isPosition() || MI->isPHI() || MI->isImplicitDef() || MI->isKill() ||
-      MI->isInlineAsm() || MI->isDebugInstr())
+      MI->isInlineAsm() || MI->isDebugInstr() || MI->isJumpTableDebugInfo())
     return false;
 
   // Ignore copies.
@@ -443,12 +443,15 @@ bool MachineCSE::isCSECandidate(MachineInstr *MI) {
 /// defined.
 bool MachineCSE::isProfitableToCSE(Register CSReg, Register Reg,
                                    MachineBasicBlock *CSBB, MachineInstr *MI) {
+  if (AggressiveMachineCSE)
+    return true;
+
   // FIXME: Heuristics that works around the lack the live range splitting.
 
   // If CSReg is used at all uses of Reg, CSE should not increase register
   // pressure of CSReg.
   bool MayIncreasePressure = true;
-  if (Register::isVirtualRegister(CSReg) && Register::isVirtualRegister(Reg)) {
+  if (CSReg.isVirtual() && Reg.isVirtual()) {
     MayIncreasePressure = false;
     SmallPtrSet<MachineInstr*, 8> CSUses;
     int NumOfUses = 0;
@@ -483,8 +486,8 @@ bool MachineCSE::isProfitableToCSE(Register CSReg, Register Reg,
   // Heuristics #2: If the expression doesn't not use a vr and the only use
   // of the redundant computation are copies, do not cse.
   bool HasVRegUse = false;
-  for (const MachineOperand &MO : MI->operands()) {
-    if (MO.isReg() && MO.isUse() && Register::isVirtualRegister(MO.getReg())) {
+  for (const MachineOperand &MO : MI->all_uses()) {
+    if (MO.getReg().isVirtual()) {
       HasVRegUse = true;
       break;
     }
@@ -648,8 +651,7 @@ bool MachineCSE::ProcessBlockCSE(MachineBasicBlock *MBB) {
         continue;
       }
 
-      assert(Register::isVirtualRegister(OldReg) &&
-             Register::isVirtualRegister(NewReg) &&
+      assert(OldReg.isVirtual() && NewReg.isVirtual() &&
              "Do not CSE physical register defs!");
 
       if (!isProfitableToCSE(NewReg, OldReg, CSMI->getParent(), &MI)) {
@@ -812,7 +814,7 @@ bool MachineCSE::isPRECandidate(MachineInstr *MI,
     return false;
 
   for (const MachineOperand &MO : MI->operands()) {
-    if (MO.isReg() && !Register::isVirtualRegister(MO.getReg())) {
+    if (MO.isReg() && !MO.getReg().isVirtual()) {
       if (MO.isDef())
         return false;
       else

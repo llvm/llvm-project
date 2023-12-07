@@ -184,8 +184,8 @@ static SymbolMap toSymbolMap(LLVMOrcCSymbolMapPairs Syms, size_t NumPairs) {
   SymbolMap SM;
   for (size_t I = 0; I != NumPairs; ++I) {
     JITSymbolFlags Flags = toJITSymbolFlags(Syms[I].Sym.Flags);
-    SM[OrcV2CAPIHelper::moveToSymbolStringPtr(unwrap(Syms[I].Name))] =
-        JITEvaluatedSymbol(Syms[I].Sym.Address, Flags);
+    SM[OrcV2CAPIHelper::moveToSymbolStringPtr(unwrap(Syms[I].Name))] = {
+        ExecutorAddr(Syms[I].Sym.Address), Flags};
   }
   return SM;
 }
@@ -269,8 +269,8 @@ static LLVMOrcSymbolLookupFlags fromSymbolLookupFlags(SymbolLookupFlags SLF) {
 }
 
 static LLVMJITEvaluatedSymbol
-fromJITEvaluatedSymbol(const JITEvaluatedSymbol &S) {
-  return {S.getAddress(), fromJITSymbolFlags(S.getFlags())};
+fromExecutorSymbolDef(const ExecutorSymbolDef &S) {
+  return {S.getAddress().getValue(), fromJITSymbolFlags(S.getFlags())};
 }
 
 } // end anonymous namespace
@@ -385,7 +385,7 @@ void LLVMOrcExecutionSessionLookup(
           for (auto &KV : *Result)
             CResult.push_back(LLVMOrcCSymbolMapPair{
                 wrap(OrcV2CAPIHelper::getRawPoolEntryPtr(KV.first)),
-                fromJITEvaluatedSymbol(KV.second)});
+                fromExecutorSymbolDef(KV.second)});
           HandleResult(LLVMErrorSuccess, CResult.data(), CResult.size(), Ctx);
         } else
           HandleResult(wrap(Result.takeError()), nullptr, 0, Ctx);
@@ -741,31 +741,19 @@ LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForPath(
 
 LLVMErrorRef LLVMOrcCreateStaticLibrarySearchGeneratorForPath(
     LLVMOrcDefinitionGeneratorRef *Result, LLVMOrcObjectLayerRef ObjLayer,
-    const char *FileName, const char *TargetTriple) {
+    const char *FileName) {
   assert(Result && "Result can not be null");
   assert(FileName && "Filename can not be null");
   assert(ObjLayer && "ObjectLayer can not be null");
 
-  if (TargetTriple) {
-    auto TT = Triple(TargetTriple);
-    auto LibrarySymsGenerator =
-        StaticLibraryDefinitionGenerator::Load(*unwrap(ObjLayer), FileName, TT);
-    if (!LibrarySymsGenerator) {
-      *Result = nullptr;
-      return wrap(LibrarySymsGenerator.takeError());
-    }
-    *Result = wrap(LibrarySymsGenerator->release());
-    return LLVMErrorSuccess;
-  } else {
-    auto LibrarySymsGenerator =
-        StaticLibraryDefinitionGenerator::Load(*unwrap(ObjLayer), FileName);
-    if (!LibrarySymsGenerator) {
-      *Result = nullptr;
-      return wrap(LibrarySymsGenerator.takeError());
-    }
-    *Result = wrap(LibrarySymsGenerator->release());
-    return LLVMErrorSuccess;
+  auto LibrarySymsGenerator =
+      StaticLibraryDefinitionGenerator::Load(*unwrap(ObjLayer), FileName);
+  if (!LibrarySymsGenerator) {
+    *Result = nullptr;
+    return wrap(LibrarySymsGenerator.takeError());
   }
+  *Result = wrap(LibrarySymsGenerator->release());
+  return LLVMErrorSuccess;
 }
 
 LLVMOrcThreadSafeContextRef LLVMOrcCreateNewThreadSafeContext(void) {
@@ -859,9 +847,9 @@ LLVMErrorRef LLVMOrcObjectLayerAddObjectFile(LLVMOrcObjectLayerRef ObjLayer,
       *unwrap(JD), std::unique_ptr<MemoryBuffer>(unwrap(ObjBuffer))));
 }
 
-LLVMErrorRef LLVMOrcLLJITAddObjectFileWithRT(LLVMOrcObjectLayerRef ObjLayer,
-                                             LLVMOrcResourceTrackerRef RT,
-                                             LLVMMemoryBufferRef ObjBuffer) {
+LLVMErrorRef LLVMOrcObjectLayerAddObjectFileWithRT(LLVMOrcObjectLayerRef ObjLayer,
+                                                   LLVMOrcResourceTrackerRef RT,
+                                                   LLVMMemoryBufferRef ObjBuffer) {
   return wrap(
       unwrap(ObjLayer)->add(ResourceTrackerSP(unwrap(RT)),
                             std::unique_ptr<MemoryBuffer>(unwrap(ObjBuffer))));
@@ -1210,8 +1198,8 @@ LLVMErrorRef LLVMOrcCreateLocalLazyCallThroughManager(
     const char *TargetTriple, LLVMOrcExecutionSessionRef ES,
     LLVMOrcJITTargetAddress ErrorHandlerAddr,
     LLVMOrcLazyCallThroughManagerRef *Result) {
-  auto LCTM = createLocalLazyCallThroughManager(Triple(TargetTriple),
-                                                *unwrap(ES), ErrorHandlerAddr);
+  auto LCTM = createLocalLazyCallThroughManager(
+      Triple(TargetTriple), *unwrap(ES), ExecutorAddr(ErrorHandlerAddr));
 
   if (!LCTM)
     return wrap(LCTM.takeError());

@@ -8,9 +8,10 @@ define i32 @foo(i1 %which) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
 ; CHECK:       delay:
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 icmp eq (ptr @A, ptr @B), i32 2, i32 1
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
-; CHECK-NEXT:    [[USE2:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ select (i1 icmp eq (ptr @A, ptr @B), i32 2, i32 1), [[DELAY]] ]
+; CHECK-NEXT:    [[USE2:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[TMP0]], [[DELAY]] ]
 ; CHECK-NEXT:    ret i32 [[USE2]]
 ;
 entry:
@@ -167,10 +168,10 @@ define i32 @phi_trans(i1 %c, i1 %c2, i32 %v) {
 ; CHECK:       else:
 ; CHECK-NEXT:    [[V3:%.*]] = mul i32 [[V]], 3
 ; CHECK-NEXT:    [[V5:%.*]] = lshr i32 [[V]], 1
-; CHECK-NEXT:    [[PHI_SEL:%.*]] = select i1 [[C2:%.*]], i32 [[V3]], i32 [[V5]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[C2:%.*]], i32 [[V3]], i32 [[V5]]
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ [[V2]], [[IF]] ], [ [[PHI_SEL]], [[ELSE]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ [[V2]], [[IF]] ], [ [[TMP0]], [[ELSE]] ]
 ; CHECK-NEXT:    ret i32 [[PHI1]]
 ;
 entry:

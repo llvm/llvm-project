@@ -11,6 +11,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/SourceMgr.h"
+#include <optional>
 
 namespace mlir {
 namespace pdll {
@@ -76,12 +77,12 @@ public:
 
   /// Signal code completion for the signature of an operation's operands.
   virtual void
-  codeCompleteOperationOperandsSignature(Optional<StringRef> opName,
+  codeCompleteOperationOperandsSignature(std::optional<StringRef> opName,
                                          unsigned currentNumOperands) {}
 
   /// Signal code completion for the signature of an operation's results.
   virtual void
-  codeCompleteOperationResultsSignature(Optional<StringRef> opName,
+  codeCompleteOperationResultsSignature(std::optional<StringRef> opName,
                                         unsigned currentNumResults) {}
 
 protected:

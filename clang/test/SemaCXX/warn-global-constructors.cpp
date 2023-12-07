@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -Wglobal-constructors %s -verify
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -Wglobal-constructors %s -verify=expected,cxx11
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -Wglobal-constructors %s -verify=expected
 
 int opaque_int();
 
@@ -144,4 +145,23 @@ namespace bitfields {
   HasUnnamedBitfield explicitMutable{1, 2};
   const HasUnnamedBitfield nonConstexprConst{1}; // expected-warning {{global constructor}}
   HasUnnamedBitfield nonConstexprMutable{1}; // expected-warning {{global constructor}}
+}
+
+namespace test7 {
+#if __cplusplus >= 202002L
+#define CPP20_CONSTEXPR constexpr
+#else
+#define CPP20_CONSTEXPR
+#endif
+  struct S {
+    CPP20_CONSTEXPR ~S() {}
+  };
+  S s; // cxx11-warning {{global destructor}}
+
+  struct T {
+    CPP20_CONSTEXPR ~T() { if (b) {} }
+    bool b;
+  };
+  T t; // expected-warning {{global destructor}}
+#undef CPP20_CONSTEXPR
 }

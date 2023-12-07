@@ -18,10 +18,10 @@
 #include "ToolRefactoringResultConsumer.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 #include <map>
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -95,7 +95,8 @@ struct TestSelectionRangesInFile {
 ///
 /// \returns std::nullopt on failure (errors are emitted to stderr), or a set of
 /// grouped source ranges in the given file otherwise.
-Optional<TestSelectionRangesInFile> findTestSelectionRanges(StringRef Filename);
+std::optional<TestSelectionRangesInFile>
+findTestSelectionRanges(StringRef Filename);
 
 } // end namespace refactor
 } // end namespace clang

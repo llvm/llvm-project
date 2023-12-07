@@ -39,9 +39,9 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; CHECK-NEXT:    s_endpgm
 
 bb:
-  %cond = load i1, i1 addrspace(4)* null
-  %tmp = select i1 %cond, void (i8*, i32, i8*)* bitcast (void ()* @wobble to void (i8*, i32, i8*)*), void (i8*, i32, i8*)* bitcast (void ()* @snork to void (i8*, i32, i8*)*)
-  call void %tmp(i8* undef, i32 undef, i8* undef)
+  %cond = load i1, ptr addrspace(4) null
+  %tmp = select i1 %cond, ptr @wobble, ptr @snork
+  call void %tmp(ptr undef, i32 undef, ptr undef)
   ret void
 }
 

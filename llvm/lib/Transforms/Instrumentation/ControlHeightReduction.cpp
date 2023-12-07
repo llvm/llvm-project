@@ -29,7 +29,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -575,32 +575,26 @@ checkHoistValue(Value *V, Instruction *InsertPoint, DominatorTree &DT,
   return true;
 }
 
-// Returns true and sets the true probability and false probability of an
-// MD_prof metadata if it's well-formed.
-static bool checkMDProf(MDNode *MD, BranchProbability &TrueProb,
-                        BranchProbability &FalseProb) {
-  if (!MD) return false;
-  MDString *MDName = cast<MDString>(MD->getOperand(0));
-  if (MDName->getString() != "branch_weights" ||
-      MD->getNumOperands() != 3)
+// Constructs the true and false branch probabilities if the the instruction has
+// valid branch weights. Returns true when this was successful, false otherwise.
+static bool extractBranchProbabilities(Instruction *I,
+                                       BranchProbability &TrueProb,
+                                       BranchProbability &FalseProb) {
+  uint64_t TrueWeight;
+  uint64_t FalseWeight;
+  if (!extractBranchWeights(*I, TrueWeight, FalseWeight))
     return false;
-  ConstantInt *TrueWeight = mdconst::extract<ConstantInt>(MD->getOperand(1));
-  ConstantInt *FalseWeight = mdconst::extract<ConstantInt>(MD->getOperand(2));
-  if (!TrueWeight || !FalseWeight)
-    return false;
-  uint64_t TrueWt = TrueWeight->getValue().getZExtValue();
-  uint64_t FalseWt = FalseWeight->getValue().getZExtValue();
-  uint64_t SumWt = TrueWt + FalseWt;
+  uint64_t SumWeight = TrueWeight + FalseWeight;
 
-  assert(SumWt >= TrueWt && SumWt >= FalseWt &&
+  assert(SumWeight >= TrueWeight && SumWeight >= FalseWeight &&
          "Overflow calculating branch probabilities.");
 
   // Guard against 0-to-0 branch weights to avoid a division-by-zero crash.
-  if (SumWt == 0)
+  if (SumWeight == 0)
     return false;
 
-  TrueProb = BranchProbability::getBranchProbability(TrueWt, SumWt);
-  FalseProb = BranchProbability::getBranchProbability(FalseWt, SumWt);
+  TrueProb = BranchProbability::getBranchProbability(TrueWeight, SumWeight);
+  FalseProb = BranchProbability::getBranchProbability(FalseWeight, SumWeight);
   return true;
 }
 
@@ -639,8 +633,7 @@ static bool checkBiasedBranch(BranchInst *BI, Region *R,
   if (!BI->isConditional())
     return false;
   BranchProbability ThenProb, ElseProb;
-  if (!checkMDProf(BI->getMetadata(LLVMContext::MD_prof),
-                   ThenProb, ElseProb))
+  if (!extractBranchProbabilities(BI, ThenProb, ElseProb))
     return false;
   BasicBlock *IfThen = BI->getSuccessor(0);
   BasicBlock *IfElse = BI->getSuccessor(1);
@@ -669,8 +662,7 @@ static bool checkBiasedSelect(
     DenseSet<SelectInst *> &FalseBiasedSelectsGlobal,
     DenseMap<SelectInst *, BranchProbability> &SelectBiasMap) {
   BranchProbability TrueProb, FalseProb;
-  if (!checkMDProf(SI->getMetadata(LLVMContext::MD_prof),
-                   TrueProb, FalseProb))
+  if (!extractBranchProbabilities(SI, TrueProb, FalseProb))
     return false;
   CHR_DEBUG(dbgs() << "SI " << *SI << " ");
   CHR_DEBUG(dbgs() << "TrueProb " << TrueProb << " ");
@@ -1785,6 +1777,13 @@ void CHR::cloneScopeBlocks(CHRScope *Scope,
       BasicBlock *NewBB = CloneBasicBlock(BB, VMap, ".nonchr", &F);
       NewBlocks.push_back(NewBB);
       VMap[BB] = NewBB;
+
+      // Unreachable predecessors will not be cloned and will not have an edge
+      // to the cloned block. As such, also remove them from any phi nodes.
+      for (PHINode &PN : make_early_inc_range(NewBB->phis()))
+        PN.removeIncomingValueIf([&](unsigned Idx) {
+          return !DT.isReachableFromEntry(PN.getIncomingBlock(Idx));
+        });
     }
 
   // Place the cloned blocks right after the original blocks (right before the
@@ -1895,8 +1894,7 @@ void CHR::fixupBranch(Region *R, CHRScope *Scope,
   assert((IsTrueBiased || Scope->FalseBiasedRegions.count(R)) &&
          "Must be truthy or falsy");
   auto *BI = cast<BranchInst>(R->getEntry()->getTerminator());
-  assert(BranchBiasMap.find(R) != BranchBiasMap.end() &&
-         "Must be in the bias map");
+  assert(BranchBiasMap.contains(R) && "Must be in the bias map");
   BranchProbability Bias = BranchBiasMap[R];
   assert(Bias >= getCHRBiasThreshold() && "Must be highly biased");
   // Take the min.
@@ -1938,8 +1936,7 @@ void CHR::fixupSelect(SelectInst *SI, CHRScope *Scope,
   bool IsTrueBiased = Scope->TrueBiasedSelects.count(SI);
   assert((IsTrueBiased ||
           Scope->FalseBiasedSelects.count(SI)) && "Must be biased");
-  assert(SelectBiasMap.find(SI) != SelectBiasMap.end() &&
-         "Must be in the bias map");
+  assert(SelectBiasMap.contains(SI) && "Must be in the bias map");
   BranchProbability Bias = SelectBiasMap[SI];
   assert(Bias >= getCHRBiasThreshold() && "Must be highly biased");
   // Take the min.
@@ -1969,11 +1966,8 @@ void CHR::addToMergedCondition(bool IsTrueBiased, Value *Cond,
       Cond = IRB.CreateXor(ConstantInt::getTrue(F.getContext()), Cond);
   }
 
-  // Select conditions can be poison, while branching on poison is immediate
-  // undefined behavior. As such, we need to freeze potentially poisonous
-  // conditions derived from selects.
-  if (isa<SelectInst>(BranchOrSelect) &&
-      !isGuaranteedNotToBeUndefOrPoison(Cond))
+  // Freeze potentially poisonous conditions.
+  if (!isGuaranteedNotToBeUndefOrPoison(Cond))
     Cond = IRB.CreateFreeze(Cond);
 
   // Use logical and to avoid propagating poison from later conditions.
@@ -2087,10 +2081,14 @@ ControlHeightReductionPass::ControlHeightReductionPass() {
 PreservedAnalyses ControlHeightReductionPass::run(
     Function &F,
     FunctionAnalysisManager &FAM) {
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  auto PPSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  // If there is no profile summary, we should not do CHR.
+  if (!PPSI || !PPSI->hasProfileSummary())
+    return PreservedAnalyses::all();
+  auto &PSI = *PPSI;
   auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  auto &PSI = *MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto &RI = FAM.getResult<RegionInfoAnalysis>(F);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   bool Changed = CHR(F, BFI, DT, PSI, RI, ORE).run();

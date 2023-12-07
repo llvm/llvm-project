@@ -1,4 +1,4 @@
-; RUN: llc -enable-aa-sched-mi -march=hexagon -mcpu=hexagonv5 -rdf-opt=0 \
+; RUN: llc -enable-aa-sched-mi -march=hexagon -mcpu=hexagonv5 -rdf-opt=0 -disable-cgp-delete-phis \
 ; RUN:      < %s | FileCheck %s
 
 ; CHECK: {
@@ -7,9 +7,9 @@
 ; CHECK: }
 
 
-define void @f0(i32* %a0) #0 {
+define void @f0(ptr %a0) #0 {
 b0:
-  store i32 -1, i32* %a0, align 8, !tbaa !0
+  store i32 -1, ptr %a0, align 8, !tbaa !0
   br label %b4
 
 b1:                                               ; preds = %b3
@@ -24,14 +24,13 @@ b3:                                               ; preds = %b4
 
 b4:                                               ; preds = %b4, %b0
   %v1 = phi <2 x i32> [ %v6, %b4 ], [ zeroinitializer, %b0 ]
-  %v2 = phi i32* [ %v9, %b4 ], [ %a0, %b0 ]
+  %v2 = phi ptr [ %v9, %b4 ], [ %a0, %b0 ]
   %v3 = phi i32 [ %v7, %b4 ], [ 0, %b0 ]
-  %v4 = bitcast i32* %v2 to <2 x i32>*
-  %v5 = load <2 x i32>, <2 x i32>* %v4, align 8
+  %v5 = load <2 x i32>, ptr %v2, align 8
   %v6 = add <2 x i32> %v5, %v1
   %v7 = add nsw i32 %v3, 2
   %v8 = icmp slt i32 %v3, 4
-  %v9 = getelementptr i32, i32* %v2, i32 2
+  %v9 = getelementptr i32, ptr %v2, i32 2
   br i1 %v8, label %b4, label %b3
 }
 

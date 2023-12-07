@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
+
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Index/IR/IndexAttrs.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
@@ -268,6 +270,10 @@ using ConvertIndexMaxS =
     mlir::OneToOneConvertToLLVMPattern<MaxSOp, LLVM::SMaxOp>;
 using ConvertIndexMaxU =
     mlir::OneToOneConvertToLLVMPattern<MaxUOp, LLVM::UMaxOp>;
+using ConvertIndexMinS =
+    mlir::OneToOneConvertToLLVMPattern<MinSOp, LLVM::SMinOp>;
+using ConvertIndexMinU =
+    mlir::OneToOneConvertToLLVMPattern<MinUOp, LLVM::UMinOp>;
 using ConvertIndexShl = mlir::OneToOneConvertToLLVMPattern<ShlOp, LLVM::ShlOp>;
 using ConvertIndexShrS =
     mlir::OneToOneConvertToLLVMPattern<ShrSOp, LLVM::AShrOp>;
@@ -298,6 +304,8 @@ void index::populateIndexToLLVMConversionPatterns(
       ConvertIndexRemU,
       ConvertIndexMaxS,
       ConvertIndexMaxU,
+      ConvertIndexMinS,
+      ConvertIndexMinU,
       ConvertIndexShl,
       ConvertIndexShrS,
       ConvertIndexShrU,
@@ -358,4 +366,33 @@ void ConvertIndexToLLVMPass::runOnOperation() {
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     return signalPassFailure();
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertToLLVMPatternInterface implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Implement the interface to convert Index to LLVM.
+struct IndexToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<LLVM::LLVMDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateIndexToLLVMConversionPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::index::registerConvertIndexToLLVMInterface(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, index::IndexDialect *dialect) {
+    dialect->addInterfaces<IndexToLLVMDialectInterface>();
+  });
 }

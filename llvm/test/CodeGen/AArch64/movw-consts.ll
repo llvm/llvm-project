@@ -13,7 +13,7 @@ define i64 @test0() {
 define i64 @test1() {
 ; CHECK-LABEL: test1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    ret
   ret i64 1
 }
@@ -21,7 +21,7 @@ define i64 @test1() {
 define i64 @test2() {
 ; CHECK-LABEL: test2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, #65535
+; CHECK-NEXT:    mov w0, #65535 ; =0xffff
 ; CHECK-NEXT:    ret
   ret i64 65535
 }
@@ -29,7 +29,7 @@ define i64 @test2() {
 define i64 @test3() {
 ; CHECK-LABEL: test3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, #65536
+; CHECK-NEXT:    mov w0, #65536 ; =0x10000
 ; CHECK-NEXT:    ret
   ret i64 65536
 }
@@ -37,7 +37,7 @@ define i64 @test3() {
 define i64 @test4() {
 ; CHECK-LABEL: test4:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, #-65536
+; CHECK-NEXT:    mov w0, #-65536 ; =0xffff0000
 ; CHECK-NEXT:    ret
   ret i64 4294901760
 }
@@ -45,7 +45,7 @@ define i64 @test4() {
 define i64 @test5() {
 ; CHECK-LABEL: test5:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x0, #4294967296
+; CHECK-NEXT:    mov x0, #4294967296 ; =0x100000000
 ; CHECK-NEXT:    ret
   ret i64 4294967296
 }
@@ -53,7 +53,7 @@ define i64 @test5() {
 define i64 @test6() {
 ; CHECK-LABEL: test6:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x0, #281470681743360
+; CHECK-NEXT:    mov x0, #281470681743360 ; =0xffff00000000
 ; CHECK-NEXT:    ret
   ret i64 281470681743360
 }
@@ -61,7 +61,7 @@ define i64 @test6() {
 define i64 @test7() {
 ; CHECK-LABEL: test7:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x0, #281474976710656
+; CHECK-NEXT:    mov x0, #281474976710656 ; =0x1000000000000
 ; CHECK-NEXT:    ret
   ret i64 281474976710656
 }
@@ -71,7 +71,7 @@ define i64 @test7() {
 define i64 @test8() {
 ; CHECK-LABEL: test8:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, #-60876
+; CHECK-NEXT:    mov w0, #-60876 ; =0xffff1234
 ; CHECK-NEXT:    ret
   ret i64 4294906420
 }
@@ -79,7 +79,7 @@ define i64 @test8() {
 define i64 @test9() {
 ; CHECK-LABEL: test9:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x0, #-1
+; CHECK-NEXT:    mov x0, #-1 ; =0xffffffffffffffff
 ; CHECK-NEXT:    ret
   ret i64 -1
 }
@@ -87,7 +87,7 @@ define i64 @test9() {
 define i64 @test10() {
 ; CHECK-LABEL: test10:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x0, #-3989504001
+; CHECK-NEXT:    mov x0, #-3989504001 ; =0xffffffff1234ffff
 ; CHECK-NEXT:    ret
   ret i64 18446744069720047615
 }
@@ -102,7 +102,7 @@ define void @test11() {
 ; CHECK-NEXT:    adrp x8, _var32@PAGE
 ; CHECK-NEXT:    str wzr, [x8, _var32@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 0, i32* @var32
+  store i32 0, ptr @var32
   ret void
 }
 
@@ -110,10 +110,10 @@ define void @test12() {
 ; CHECK-LABEL: test12:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    adrp x8, _var32@PAGE
-; CHECK-NEXT:    mov w9, #1
+; CHECK-NEXT:    mov w9, #1 ; =0x1
 ; CHECK-NEXT:    str w9, [x8, _var32@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 1, i32* @var32
+  store i32 1, ptr @var32
   ret void
 }
 
@@ -121,10 +121,10 @@ define void @test13() {
 ; CHECK-LABEL: test13:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    adrp x8, _var32@PAGE
-; CHECK-NEXT:    mov w9, #65535
+; CHECK-NEXT:    mov w9, #65535 ; =0xffff
 ; CHECK-NEXT:    str w9, [x8, _var32@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 65535, i32* @var32
+  store i32 65535, ptr @var32
   ret void
 }
 
@@ -132,10 +132,10 @@ define void @test14() {
 ; CHECK-LABEL: test14:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    adrp x8, _var32@PAGE
-; CHECK-NEXT:    mov w9, #65536
+; CHECK-NEXT:    mov w9, #65536 ; =0x10000
 ; CHECK-NEXT:    str w9, [x8, _var32@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 65536, i32* @var32
+  store i32 65536, ptr @var32
   ret void
 }
 
@@ -143,10 +143,10 @@ define void @test15() {
 ; CHECK-LABEL: test15:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    adrp x8, _var32@PAGE
-; CHECK-NEXT:    mov w9, #-65536
+; CHECK-NEXT:    mov w9, #-65536 ; =0xffff0000
 ; CHECK-NEXT:    str w9, [x8, _var32@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 4294901760, i32* @var32
+  store i32 4294901760, ptr @var32
   ret void
 }
 
@@ -154,17 +154,17 @@ define void @test16() {
 ; CHECK-LABEL: test16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    adrp x8, _var32@PAGE
-; CHECK-NEXT:    mov w9, #-1
+; CHECK-NEXT:    mov w9, #-1 ; =0xffffffff
 ; CHECK-NEXT:    str w9, [x8, _var32@PAGEOFF]
 ; CHECK-NEXT:    ret
-  store i32 -1, i32* @var32
+  store i32 -1, ptr @var32
   ret void
 }
 
 define i64 @test17() {
 ; CHECK-LABEL: test17:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x0, #-3
+; CHECK-NEXT:    mov x0, #-3 ; =0xfffffffffffffffd
 ; CHECK-NEXT:    ret
 
   ; Mustn't MOVN w0 here.

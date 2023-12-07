@@ -13,7 +13,7 @@
 // __debug_less checks that a comparator actually provides a strict-weak ordering.
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-debug-mode, c++03
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
 
 #include <algorithm>
 #include <cassert>
@@ -206,10 +206,10 @@ void test_non_const_arg_cmp() {
 
 struct ValueIterator {
     typedef std::input_iterator_tag iterator_category;
-    typedef size_t value_type;
-    typedef ptrdiff_t difference_type;
-    typedef size_t reference;
-    typedef size_t* pointer;
+    typedef std::size_t value_type;
+    typedef std::ptrdiff_t difference_type;
+    typedef std::size_t reference;
+    typedef std::size_t* pointer;
 
     ValueIterator() { }
 

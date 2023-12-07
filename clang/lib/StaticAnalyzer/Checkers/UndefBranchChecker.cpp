@@ -18,6 +18,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include <optional>
 #include <utility>
 
 using namespace clang;
@@ -26,7 +27,7 @@ using namespace ento;
 namespace {
 
 class UndefBranchChecker : public Checker<check::BranchCondition> {
-  mutable std::unique_ptr<BuiltinBug> BT;
+  mutable std::unique_ptr<BugType> BT;
 
   struct FindUndefExpr {
     ProgramStateRef St;
@@ -70,8 +71,8 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
     ExplodedNode *N = Ctx.generateErrorNode();
     if (N) {
       if (!BT)
-        BT.reset(new BuiltinBug(
-            this, "Branch condition evaluates to a garbage value"));
+        BT.reset(
+            new BugType(this, "Branch condition evaluates to a garbage value"));
 
       // What's going on here: we want to highlight the subexpression of the
       // condition that is the most likely source of the "uninitialized
@@ -93,7 +94,7 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
       ProgramPoint P = PrevN->getLocation();
       ProgramStateRef St = N->getState();
 
-      if (Optional<PostStmt> PS = P.getAs<PostStmt>())
+      if (std::optional<PostStmt> PS = P.getAs<PostStmt>())
         if (PS->getStmt() == Ex)
           St = PrevN->getState();
 

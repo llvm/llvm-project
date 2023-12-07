@@ -8,6 +8,7 @@
 
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include <optional>
 #include "mlir/Interfaces/InferIntRangeInterface.cpp.inc"
 
 using namespace mlir;
@@ -29,7 +30,7 @@ const APInt &ConstantIntRanges::smax() const { return smaxVal; }
 unsigned ConstantIntRanges::getStorageBitwidth(Type type) {
   if (type.isIndex())
     return IndexType::kInternalStorageBitWidth;
-  if (auto integerType = type.dyn_cast<IntegerType>())
+  if (auto integerType = dyn_cast<IntegerType>(type))
     return integerType.getWidth();
   // Non-integer types have their bounds stored in width 0 `APInt`s.
   return 0;
@@ -112,7 +113,7 @@ ConstantIntRanges::intersection(const ConstantIntRanges &other) const {
   return {uminIntersect, umaxIntersect, sminIntersect, smaxIntersect};
 }
 
-Optional<APInt> ConstantIntRanges::getConstantValue() const {
+std::optional<APInt> ConstantIntRanges::getConstantValue() const {
   // Note: we need to exclude the trivially-equal width 0 values here.
   if (umin() == umax() && umin().getBitWidth() != 0)
     return umin();

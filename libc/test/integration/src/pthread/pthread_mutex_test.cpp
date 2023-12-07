@@ -14,9 +14,10 @@
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
 
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
+#include <stdint.h> // uintptr_t
 
 constexpr int START = 0;
 constexpr int MAX = 10000;

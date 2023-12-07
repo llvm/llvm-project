@@ -5,12 +5,26 @@
 ; from allocas that get optimized out.
 
 ; Check the case where the alloca in question has a single store.
-define ptr @single_store(ptr %arg) {
-; CHECK-LABEL: @single_store(
+define ptr @single_store_noundef(ptr %arg) {
+; CHECK-LABEL: @single_store_noundef(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr [[ARG_LOAD]], null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    ret ptr [[ARG_LOAD]]
+;
+entry:
+  %buf = alloca ptr
+  %arg.load = load ptr, ptr %arg, align 8
+  store ptr %arg.load, ptr %buf, align 8
+  %buf.load = load ptr, ptr %buf, !nonnull !0, !noundef !0
+  ret ptr %buf.load
+}
+
+define ptr @single_store_missing_noundef(ptr %arg) {
+; CHECK-LABEL: @single_store_missing_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    ret ptr [[ARG_LOAD]]
 ;
 entry:
@@ -23,12 +37,27 @@ entry:
 
 ; Check the case where the alloca in question has more than one
 ; store but still within one basic block.
-define ptr @single_block(ptr %arg) {
-; CHECK-LABEL: @single_block(
+define ptr @single_block_noundef(ptr %arg) {
+; CHECK-LABEL: @single_block_noundef(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr [[ARG_LOAD]], null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    ret ptr [[ARG_LOAD]]
+;
+entry:
+  %buf = alloca ptr
+  %arg.load = load ptr, ptr %arg, align 8
+  store ptr null, ptr %buf, align 8
+  store ptr %arg.load, ptr %buf, align 8
+  %buf.load = load ptr, ptr %buf, !nonnull !0, !noundef !0
+  ret ptr %buf.load
+}
+
+define ptr @single_block_missing_noundef(ptr %arg) {
+; CHECK-LABEL: @single_block_missing_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    ret ptr [[ARG_LOAD]]
 ;
 entry:
@@ -42,14 +71,33 @@ entry:
 
 ; Check the case where the alloca in question has more than one
 ; store and also reads ands writes in multiple blocks.
-define ptr @multi_block(ptr %arg) {
-; CHECK-LABEL: @multi_block(
+define ptr @multi_block_noundef(ptr %arg) {
+; CHECK-LABEL: @multi_block_noundef(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr [[ARG_LOAD]], null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    ret ptr [[ARG_LOAD]]
+;
+entry:
+  %buf = alloca ptr
+  %arg.load = load ptr, ptr %arg, align 8
+  store ptr null, ptr %buf, align 8
+  br label %next
+next:
+  store ptr %arg.load, ptr %buf, align 8
+  %buf.load = load ptr, ptr %buf, !nonnull !0, !noundef !0
+  ret ptr %buf.load
+}
+
+define ptr @multi_block_missing_noundef(ptr %arg) {
+; CHECK-LABEL: @multi_block_missing_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
+; CHECK-NEXT:    br label [[NEXT:%.*]]
+; CHECK:       next:
 ; CHECK-NEXT:    ret ptr [[ARG_LOAD]]
 ;
 entry:
@@ -101,7 +149,7 @@ define ptr @no_store_single_load() {
 ;
 entry:
   %buf = alloca ptr
-  %buf.load = load ptr, ptr %buf, !nonnull !0
+  %buf.load = load ptr, ptr %buf, !nonnull !0, !noundef !0
   ret ptr %buf.load
 }
 
@@ -123,11 +171,11 @@ entry:
   br i1 %c, label %if, label %else
 
 if:
-  %buf.load = load ptr, ptr %buf, !nonnull !0
+  %buf.load = load ptr, ptr %buf, !nonnull !0, !noundef !0
   ret ptr %buf.load
 
   else:
-  %buf.load2 = load ptr, ptr %buf, !nonnull !0
+  %buf.load2 = load ptr, ptr %buf, !nonnull !0, !noundef !0
   ret ptr %buf.load2
 }
 

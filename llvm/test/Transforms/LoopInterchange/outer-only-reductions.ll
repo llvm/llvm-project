@@ -39,8 +39,8 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   br i1 %exitcond, label %outer.inc, label %for.body3
 
 outer.inc:                     ; preds = %for.body3
-  %arrayidx5 = getelementptr inbounds [500 x [500 x i32]], [500 x [500 x i32]]* @A, i64 0, i64 %indvars.iv, i64 %indvars.iv18
-  %0 = load i32, i32* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [500 x [500 x i32]], ptr @A, i64 0, i64 %indvars.iv, i64 %indvars.iv18
+  %0 = load i32, ptr %arrayidx5
   %add = add nsw i32 %add15, %0
   %indvars.iv.next19 = add nuw nsw i64 %indvars.iv18, 1
   %lftr.wideiv20 = trunc i64 %indvars.iv.next19 to i32

@@ -316,7 +316,7 @@ Instruction *InstCombinerImpl::foldPHIArgIntToPtrToPHI(PHINode &PN) {
   for (unsigned OpNum = 0; OpNum != PN.getNumIncomingValues(); ++OpNum) {
     if (auto *NewOp =
             simplifyIntToPtrRoundTripCast(PN.getIncomingValue(OpNum))) {
-      PN.setIncomingValue(OpNum, NewOp);
+      replaceOperand(PN, OpNum, NewOp);
       OperandWithRoundTripCast = true;
     }
   }
@@ -605,7 +605,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   Value *Base = FixedOperands[0];
   GetElementPtrInst *NewGEP =
       GetElementPtrInst::Create(FirstInst->getSourceElementType(), Base,
-                                makeArrayRef(FixedOperands).slice(1));
+                                ArrayRef(FixedOperands).slice(1));
   if (AllInBounds) NewGEP->setIsInBounds();
   PHIArgMergedDebugLoc(NewGEP, PN);
   return NewGEP;
@@ -745,6 +745,7 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
     LLVMContext::MD_dereferenceable,
     LLVMContext::MD_dereferenceable_or_null,
     LLVMContext::MD_access_group,
+    LLVMContext::MD_noundef,
   };
 
   for (unsigned ID : KnownIDs)
@@ -1388,11 +1389,10 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
 
   // If all PHI operands are the same operation, pull them through the PHI,
   // reducing code size.
-  if (isa<Instruction>(PN.getIncomingValue(0)) &&
-      isa<Instruction>(PN.getIncomingValue(1)) &&
-      cast<Instruction>(PN.getIncomingValue(0))->getOpcode() ==
-          cast<Instruction>(PN.getIncomingValue(1))->getOpcode() &&
-      PN.getIncomingValue(0)->hasOneUser())
+  auto *Inst0 = dyn_cast<Instruction>(PN.getIncomingValue(0));
+  auto *Inst1 = dyn_cast<Instruction>(PN.getIncomingValue(1));
+  if (Inst0 && Inst1 && Inst0->getOpcode() == Inst1->getOpcode() &&
+      Inst0->hasOneUser())
     if (Instruction *Result = foldPHIArgOpIntoPHI(PN))
       return Result;
 

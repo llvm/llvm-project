@@ -149,17 +149,17 @@ define i32 @not_a_masked_merge2(i32 %a0, i32 %a1, i32 %a2) {
 ; NOBMI-LABEL: not_a_masked_merge2:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    movl %edi, %eax
+; NOBMI-NEXT:    orl %edi, %esi
 ; NOBMI-NEXT:    notl %eax
 ; NOBMI-NEXT:    andl %edx, %eax
 ; NOBMI-NEXT:    orl %esi, %eax
-; NOBMI-NEXT:    orl %edi, %eax
 ; NOBMI-NEXT:    retq
 ;
 ; BMI-LABEL: not_a_masked_merge2:
 ; BMI:       # %bb.0:
+; BMI-NEXT:    orl %edi, %esi
 ; BMI-NEXT:    andnl %edx, %edi, %eax
 ; BMI-NEXT:    orl %esi, %eax
-; BMI-NEXT:    orl %edi, %eax
 ; BMI-NEXT:    retq
   %not_an_and0 = or i32 %a0, %a1
   %not = xor i32 %a0, -1
@@ -187,21 +187,11 @@ define i32 @not_a_masked_merge3(i32 %a0, i32 %a1, i32 %a2) {
 
 ; not a masked merge: `not` operand must not be on same `and`.
 define i32 @not_a_masked_merge4(i32 %a0, i32 %a1, i32 %a2) {
-; NOBMI-LABEL: not_a_masked_merge4:
-; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    andl %esi, %edi
-; NOBMI-NEXT:    movl %edx, %eax
-; NOBMI-NEXT:    notl %eax
-; NOBMI-NEXT:    andl %edx, %eax
-; NOBMI-NEXT:    orl %edi, %eax
-; NOBMI-NEXT:    retq
-;
-; BMI-LABEL: not_a_masked_merge4:
-; BMI:       # %bb.0:
-; BMI-NEXT:    andl %esi, %edi
-; BMI-NEXT:    andnl %edx, %edx, %eax
-; BMI-NEXT:    orl %edi, %eax
-; BMI-NEXT:    retq
+; CHECK-LABEL: not_a_masked_merge4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    retq
   %and0 = and i32 %a0, %a1
   %not = xor i32 %a2, -1
   %and1 = and i32 %not, %a2

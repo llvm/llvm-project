@@ -55,7 +55,7 @@ define arm_aapcs_vfpcc <4 x float> @t5(<4 x float> %q, float %f) {
 
 ; Test that DPair can be successfully passed as QPR.
 ; CHECK-LABEL: test_DPair1:
-define void @test_DPair1(i32 %vsout, i8* nocapture %out, float %x, float %y) {
+define void @test_DPair1(i32 %vsout, ptr nocapture %out, float %x, float %y) {
 entry:
   %0 = insertelement <4 x float> undef, float %x, i32 1
   %1 = insertelement <4 x float> %0, float %y, i32 0
@@ -77,7 +77,7 @@ sw.bb6:                                           ; preds = %sw.bb, %entry
   %sum.0 = phi <4 x float> [ %1, %entry ], [ %2, %sw.bb ]
   %3 = extractelement <4 x float> %sum.0, i32 0
   %conv = fptoui float %3 to i8
-  store i8 %conv, i8* %out, align 1
+  store i8 %conv, ptr %out, align 1
   ret void
 
 sw.epilog:                                        ; preds = %entry
@@ -85,7 +85,7 @@ sw.epilog:                                        ; preds = %entry
 }
 
 ; CHECK-LABEL: test_DPair2:
-define void @test_DPair2(i32 %vsout, i8* nocapture %out, float %x) {
+define void @test_DPair2(i32 %vsout, ptr nocapture %out, float %x) {
 entry:
   %0 = insertelement <4 x float> undef, float %x, i32 0
   ; CHECK-ENABLED: vdup.32 q{{[0-9]*}}, d{{[0-9]*}}[0]
@@ -103,7 +103,7 @@ sw.bb1:                                           ; preds = %entry, %sw.bb
   %sum.0 = phi <4 x float> [ %0, %entry ], [ %1, %sw.bb ]
   %2 = extractelement <4 x float> %sum.0, i32 0
   %conv = fptoui float %2 to i8
-  store i8 %conv, i8* %out, align 1
+  store i8 %conv, ptr %out, align 1
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %entry, %sw.bb1

@@ -3,7 +3,7 @@
 
 declare arm_aapcscc i32 @int_varargs_target(i32, ...)
 
-define arm_aapcscc i32 @test_call_to_varargs_with_ints(i32 *%a, i32 %b) {
+define arm_aapcscc i32 @test_call_to_varargs_with_ints(ptr %a, i32 %b) {
 ; CHECK-LABEL: name: test_call_to_varargs_with_ints
 ; CHECK-DAG: [[AVREG:%[0-9]+]]:_(p0) = COPY $r0
 ; CHECK-DAG: [[BVREG:%[0-9]+]]:_(s32) = COPY $r1
@@ -28,7 +28,7 @@ define arm_aapcscc i32 @test_call_to_varargs_with_ints(i32 *%a, i32 %b) {
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
 entry:
-  %r = notail call arm_aapcscc i32(i32, ...) @int_varargs_target(i32 %b, i32 *%a, i32 %b, i32 *%a, i32 %b, i32 *%a)
+  %r = notail call arm_aapcscc i32(i32, ...) @int_varargs_target(i32 %b, ptr %a, i32 %b, ptr %a, i32 %b, ptr %a)
   ret i32 %r
 }
 
@@ -80,7 +80,7 @@ entry:
   ret float %r
 }
 
-define arm_aapcs_vfpcc float @test_indirect_call_to_varargs(float (float, double, ...) *%fptr, float %a, double %b) {
+define arm_aapcs_vfpcc float @test_indirect_call_to_varargs(ptr %fptr, float %a, double %b) {
 ; CHECK-LABEL: name: test_indirect_call_to_varargs
 ; CHECK-DAG: [[FPTRVREG:%[0-9]+]]:gpr(p0) = COPY $r0
 ; CHECK-DAG: [[AVREG:%[0-9]+]]:_(s32) = COPY $s0

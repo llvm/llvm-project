@@ -22,7 +22,7 @@ class Tool(ToolBase):
 
     @property
     def name(self):
-        return 'DExTer list debuggers'
+        return "DExTer list debuggers"
 
     def add_tool_arguments(self, parser, defaults):
         parser.description = Tool.__doc__
@@ -32,7 +32,7 @@ class Tool(ToolBase):
         handle_debugger_tool_base_options(self.context, defaults)
 
     def go(self) -> ReturnCode:
-        with Timer('list debuggers'):
+        with Timer("list debuggers"):
             try:
                 Debuggers(self.context).list()
             except DebuggerException as e:

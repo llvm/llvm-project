@@ -11,15 +11,17 @@
 #include "DXILMetadata.h"
 #include "DXILResource.h"
 #include "DXILResourceAnalysis.h"
+#include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
+using namespace llvm::dxil;
 
 namespace {
 class DXILTranslateMetadata : public ModulePass {
@@ -32,6 +34,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<DXILResourceWrapper>();
+    AU.addRequired<ShaderFlagsAnalysisWrapper>();
   }
 
   bool runOnModule(Module &M) override;
@@ -49,6 +52,11 @@ bool DXILTranslateMetadata::runOnModule(Module &M) {
   const dxil::Resources &Res =
       getAnalysis<DXILResourceWrapper>().getDXILResource();
   Res.write(M);
+
+  const uint64_t Flags =
+      (uint64_t)(getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags());
+  dxil::createEntryMD(M, Flags);
+
   return false;
 }
 
@@ -61,5 +69,6 @@ ModulePass *llvm::createDXILTranslateMetadataPass() {
 INITIALIZE_PASS_BEGIN(DXILTranslateMetadata, "dxil-metadata-emit",
                       "DXIL Metadata Emit", false, false)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapper)
+INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
 INITIALIZE_PASS_END(DXILTranslateMetadata, "dxil-metadata-emit",
                     "DXIL Metadata Emit", false, false)

@@ -11,13 +11,13 @@
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 
 #include <functional>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 namespace lldb_private {
@@ -42,8 +42,10 @@ public:
   void Report(llvm::StringRef message);
 
   using Callback = std::function<llvm::Error(const FileSpec &)>;
+  using CallbackID = uint64_t;
 
-  void AddCallback(Callback callback);
+  CallbackID AddCallback(Callback callback);
+  void RemoveCallback(CallbackID id);
 
   static Diagnostics &Instance();
 
@@ -55,13 +57,27 @@ public:
   static llvm::Expected<FileSpec> CreateUniqueDirectory();
 
 private:
-  static llvm::Optional<Diagnostics> &InstanceImpl();
+  static std::optional<Diagnostics> &InstanceImpl();
 
   llvm::Error DumpDiangosticsLog(const FileSpec &dir) const;
 
   RotatingLogHandler m_log_handler;
 
-  llvm::SmallVector<Callback, 4> m_callbacks;
+  struct CallbackEntry {
+    CallbackEntry(CallbackID id, Callback callback)
+        : id(id), callback(std::move(callback)) {}
+    CallbackID id;
+    Callback callback;
+  };
+
+  /// Monotonically increasing callback identifier. Unique per Diagnostic
+  /// instance.
+  CallbackID m_callback_id;
+
+  /// List of callback entries.
+  llvm::SmallVector<CallbackEntry, 4> m_callbacks;
+
+  /// Mutex to protect callback list and callback identifier.
   std::mutex m_callbacks_mutex;
 };
 

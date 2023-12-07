@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "llvm/ADT/DenseMap.h"
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 /// Flags the usages of `else` after `return`.
 ///
@@ -41,8 +39,6 @@ private:
   ConditionalBranchMap PPConditionals;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_ELSEAFTERRETURNCHECK_H

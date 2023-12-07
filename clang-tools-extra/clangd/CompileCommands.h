@@ -12,7 +12,9 @@
 #include "support/Threading.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
 #include <deque>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -27,11 +29,11 @@ namespace clangd {
 //  - injecting -isysroot flags on mac as the system clang does
 struct CommandMangler {
   // Absolute path to clang.
-  llvm::Optional<std::string> ClangPath;
+  std::optional<std::string> ClangPath;
   // Directory containing builtin headers.
-  llvm::Optional<std::string> ResourceDir;
+  std::optional<std::string> ResourceDir;
   // Root for searching for standard library (passed to -isysroot).
-  llvm::Optional<std::string> Sysroot;
+  std::optional<std::string> Sysroot;
   SystemIncludeExtractorFn SystemIncludeExtractor;
 
   // A command-mangler that doesn't know anything about the system.
@@ -49,10 +51,11 @@ struct CommandMangler {
                   llvm::StringRef TargetFile) const;
 
 private:
-  CommandMangler() = default;
+  CommandMangler();
 
   Memoize<llvm::StringMap<std::string>> ResolvedDrivers;
   Memoize<llvm::StringMap<std::string>> ResolvedDriversNoFollow;
+  llvm::cl::TokenizerCallback Tokenizer;
 };
 
 // Removes args from a command-line in a semantically-aware way.

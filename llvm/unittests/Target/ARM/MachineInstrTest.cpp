@@ -79,7 +79,7 @@ TEST(MachineInstructionDoubleWidthResult, IsCorrect) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;
@@ -235,7 +235,7 @@ TEST(MachineInstructionHorizontalReduction, IsCorrect) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;
@@ -334,7 +334,7 @@ TEST(MachineInstructionRetainsPreviousHalfElement, IsCorrect) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;
@@ -1040,7 +1040,7 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;
@@ -1181,7 +1181,7 @@ TEST(MachineInstr, HasSideEffects) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;
@@ -2061,7 +2061,7 @@ TEST(MachineInstr, MVEVecSize) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;

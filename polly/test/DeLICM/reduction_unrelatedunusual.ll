@@ -15,7 +15,7 @@
 ;      }
 ;    }
 ;
-define void @func(double* noalias nonnull %A, double* noalias nonnull %C) {
+define void @func(ptr noalias nonnull %A, ptr noalias nonnull %C) {
 entry:
   br label %outer.for
 
@@ -35,8 +35,8 @@ outer.for:
 
         body:
           %add = fadd double %phi, 4.2
-          store double 21.0, double* %C
-          store double 41.0, double* %C
+          store double 21.0, ptr %C
+          store double 41.0, ptr %C
           br label %reduction.inc
 
 
@@ -46,8 +46,8 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %phi, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %phi, ptr %A_idx
       br label %outer.inc
 
 

@@ -388,7 +388,7 @@ void test_macro13(int in, int &out) {
 
 void test_chain1(int in, int &out) {
   if (in > 77)
-// CHECK-MESSAGES: :[[@LINE+1]]:5: warning: repeated branch in conditional chain [bugprone-branch-clone]
+// CHECK-MESSAGES: :[[@LINE+1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
     out++;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: note: end of the original
   else if (in > 55)
@@ -400,7 +400,7 @@ void test_chain1(int in, int &out) {
 
 void test_chain2(int in, int &out) {
   if (in > 77)
-// CHECK-MESSAGES: :[[@LINE+1]]:5: warning: repeated branch in conditional chain [bugprone-branch-clone]
+// CHECK-MESSAGES: :[[@LINE+1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
     out++;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: note: end of the original
   else if (in > 55)
@@ -422,7 +422,7 @@ void test_chain2(int in, int &out) {
 
 void test_chain3(int in, int &out) {
   if (in > 77) {
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: repeated branch in conditional chain [bugprone-branch-clone]
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: repeated branch body in conditional chain [bugprone-branch-clone]
     out++;
     out++;
 // CHECK-MESSAGES: :[[@LINE+1]]:4: note: end of the original
@@ -452,7 +452,7 @@ void test_chain3(int in, int &out) {
 // describes all branches of the first one before mentioning the second one.
 void test_chain4(int in, int &out) {
   if (in > 77) {
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: repeated branch in conditional chain [bugprone-branch-clone]
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: repeated branch body in conditional chain [bugprone-branch-clone]
     out++;
     out++;
 // CHECK-MESSAGES: :[[@LINE+1]]:4: note: end of the original
@@ -463,7 +463,7 @@ void test_chain4(int in, int &out) {
     out++;
     out++;
   } else if (in > 42)
-// CHECK-MESSAGES: :[[@LINE+1]]:5: warning: repeated branch in conditional chain [bugprone-branch-clone]
+// CHECK-MESSAGES: :[[@LINE+1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
     out--;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: note: end of the original
   else if (in > 28) {
@@ -485,7 +485,7 @@ void test_chain4(int in, int &out) {
 
 void test_chain5(int in, int &out) {
   if (in > 77)
-// CHECK-MESSAGES: :[[@LINE+1]]:5: warning: repeated branch in conditional chain [bugprone-branch-clone]
+// CHECK-MESSAGES: :[[@LINE+1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
     out++;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: note: end of the original
   else if (in > 55)
@@ -507,7 +507,7 @@ void test_chain5(int in, int &out) {
 
 void test_chain6(int in, int &out) {
   if (in > 77) {
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: repeated branch in conditional chain [bugprone-branch-clone]
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: repeated branch body in conditional chain [bugprone-branch-clone]
     out++;
     out++;
 // CHECK-MESSAGES: :[[@LINE+1]]:4: note: end of the original
@@ -538,7 +538,7 @@ void test_nested(int a, int b, int c, int &out) {
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: if with identical then and else branches [bugprone-branch-clone]
 // CHECK-MESSAGES: :[[@LINE+27]]:5: note: else branch starts here
     if (b > 5) {
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: repeated branch in conditional chain [bugprone-branch-clone]
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: repeated branch body in conditional chain [bugprone-branch-clone]
 // CHECK-MESSAGES: :[[@LINE+9]]:6: note: end of the original
 // CHECK-MESSAGES: :[[@LINE+8]]:24: note: clone 1 starts here
 // CHECK-MESSAGES: :[[@LINE+14]]:12: note: clone 2 starts here
@@ -565,7 +565,7 @@ void test_nested(int a, int b, int c, int &out) {
     }
   } else {
     if (b > 5) {
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: repeated branch in conditional chain [bugprone-branch-clone]
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: repeated branch body in conditional chain [bugprone-branch-clone]
 // CHECK-MESSAGES: :[[@LINE+9]]:6: note: end of the original
 // CHECK-MESSAGES: :[[@LINE+8]]:24: note: clone 1 starts here
 // CHECK-MESSAGES: :[[@LINE+14]]:12: note: clone 2 starts here
@@ -948,7 +948,7 @@ char no_real_body(int in, int &out) {
     return 'A';
 
   if (in > 77)
-// CHECK-MESSAGES: :[[@LINE+1]]:5: warning: repeated branch in conditional chain [bugprone-branch-clone]
+// CHECK-MESSAGES: :[[@LINE+1]]:5: warning: repeated branch body in conditional chain [bugprone-branch-clone]
     out++;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: note: end of the original
   else if (in > 55)
@@ -1022,5 +1022,50 @@ void dontCrash() {
   // CHECK-MESSAGES: :[[@LINE-11]]:3: note: expanded from macro 'SEMICOLON_CASE_COLON'
   // CHECK-MESSAGES: :[[@LINE+1]]:23: note: last of these clones ends here
   SEMICOLON_CASE_COLON(3);
+  }
+}
+
+namespace PR62693 {
+  class Object {
+    public:
+      template <typename T>
+        bool ConvertableTo() const;
+
+      template <typename T>
+        void Handle();
+  };
+
+  template <typename T>
+  void update(Object &a) {
+    if (a.ConvertableTo<char *>()) {
+      a.Handle<char *>();
+    } else {
+      a.Handle<T>();
+    }
+  }
+
+  template <typename T>
+  void update2(Object &a) {
+    if (a.ConvertableTo<char *>()) {
+      a.Handle<char *>();
+    } else {
+      a.Handle<T>();
+    }
+  }
+
+  void foo(Object &a) {
+    update<int>(a);
+    update2<char *>(a);
+  }
+
+  template <typename T>
+  int branch_clone_in_template(T t) {
+    // CHECK-MESSAGES: :[[@LINE+2]]:5: warning: if with identical then and else branches [bugprone-branch-clone]
+    // CHECK-MESSAGES: :[[@LINE+3]]:7: note: else branch starts here
+    if (t) {
+      return 42;
+    } else {
+      return 42;
+    }
   }
 }

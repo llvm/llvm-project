@@ -25,8 +25,8 @@ define i32 @test_01(i32 %A, i64 %Len, ptr %array) {
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[INDVAR]]
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[ZERO_LOOPEXIT_LOOPEXIT4:%.*]], label [[LATCH]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[RES]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[LATCH]], label [[ZERO_LOOPEXIT_LOOPEXIT4:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add nuw nsw i64 [[INDVAR]], 2
 ; CHECK-NEXT:    [[RES2:%.*]] = mul i32 [[RES]], 3
@@ -73,8 +73,8 @@ define i32 @test_01(i32 %A, i64 %Len, ptr %array) {
 ; CHECK:       guarded.postloop:
 ; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[INDVAR_POSTLOOP]]
 ; CHECK-NEXT:    [[RES_POSTLOOP:%.*]] = load i32, ptr [[ADDR_POSTLOOP]], align 4
-; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp eq i32 [[RES_POSTLOOP]], 0
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[ZERO_LOOPEXIT_LOOPEXIT:%.*]], label [[LATCH_POSTLOOP]]
+; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp ne i32 [[RES_POSTLOOP]], 0
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LATCH_POSTLOOP]], label [[ZERO_LOOPEXIT_LOOPEXIT:%.*]]
 ; CHECK:       latch.postloop:
 ; CHECK-NEXT:    [[INDVAR_NEXT_POSTLOOP]] = add nuw nsw i64 [[INDVAR_POSTLOOP]], 2
 ; CHECK-NEXT:    [[RES2_POSTLOOP]] = mul i32 [[RES_POSTLOOP]], 3

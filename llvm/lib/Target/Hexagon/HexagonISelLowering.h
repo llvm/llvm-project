@@ -18,12 +18,12 @@
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InlineAsm.h"
-#include "llvm/Support/MachineValueType.h"
 #include <cstdint>
 #include <utility>
 
@@ -47,7 +47,7 @@ enum NodeType : unsigned {
   CALLnr,      // Function call that does not return.
   CALLR,
 
-  RET_FLAG,    // Return with a flag operand.
+  RET_GLUE,    // Return with a glue operand.
   BARRIER,     // Memory barrier.
   JT,          // Jump table.
   CP,          // Constant pool.
@@ -200,7 +200,7 @@ public:
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerUAddSubO(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerAddSubCarry(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerUAddSubOCarry(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
@@ -223,13 +223,13 @@ public:
   SDValue LowerToTLSLocalExecModel(GlobalAddressSDNode *GA,
       SelectionDAG &DAG) const;
   SDValue GetDynamicTLSAddr(SelectionDAG &DAG, SDValue Chain,
-      GlobalAddressSDNode *GA, SDValue InFlag, EVT PtrVT,
-      unsigned ReturnReg, unsigned char OperandFlags) const;
+      GlobalAddressSDNode *GA, SDValue InGlue, EVT PtrVT,
+      unsigned ReturnReg, unsigned char OperandGlues) const;
   SDValue LowerGLOBAL_OFFSET_TABLE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SmallVectorImpl<SDValue> &InVals) const override;
-  SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
+  SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                           CallingConv::ID CallConv, bool isVarArg,
                           const SmallVectorImpl<ISD::InputArg> &Ins,
                           const SDLoc &dl, SelectionDAG &DAG,
@@ -545,7 +545,6 @@ private:
   SDValue LowerHvxCttz(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxMulLoHi(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxSelect(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxShift(SDValue Op, SelectionDAG &DAG) const;
@@ -565,7 +564,6 @@ private:
   SDValue WidenHvxStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LegalizeHvxResize(SDValue Op, SelectionDAG &DAG) const;
-  SDValue WidenHvxFpIntConv(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxResizeIntoSteps(SDValue Op, SelectionDAG &DAG) const;
   SDValue EqualizeFpIntConversion(SDValue Op, SelectionDAG &DAG) const;
 

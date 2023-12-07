@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_sys_random_unittests)
+add_custom_target(libc_sys_random_unittests)
 
 add_libc_unittest(
   getrandom_test
@@ -7,7 +7,6 @@ add_libc_unittest(
   SRCS
     getrandom_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.math
     libc.include.sys_random
     libc.src.errno.errno

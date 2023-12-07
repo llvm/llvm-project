@@ -63,10 +63,11 @@ struct MapInfo {
 
 static MapInfo gatherMapInfo() {
   MapInfo info;
-  for (InputFile *file : inputFiles)
+  for (InputFile *file : inputFiles) {
+    bool isReferencedFile = false;
+
     if (isa<ObjFile>(file) || isa<BitcodeFile>(file)) {
       uint32_t fileIndex = info.files.size() + 1;
-      bool isReferencedFile = false;
 
       // Gather the dead symbols. We don't have to bother with the live ones
       // because we will pick them up as we iterate over the OutputSections
@@ -104,10 +105,13 @@ static MapInfo gatherMapInfo() {
           }
         }
       }
-
-      if (isReferencedFile)
-        info.files.push_back(file);
+    } else if (const auto *dylibFile = dyn_cast<DylibFile>(file)) {
+      isReferencedFile = dylibFile->isReferenced();
     }
+
+    if (isReferencedFile)
+      info.files.push_back(file);
+  }
 
   // cstrings are not stored in sorted order in their OutputSections, so we sort
   // them here.
@@ -116,6 +120,39 @@ static MapInfo gatherMapInfo() {
       return p1.first < p2.first;
     });
   return info;
+}
+
+// We use this instead of `toString(const InputFile *)` as we don't want to
+// include the dylib install name in our output.
+static void printFileName(raw_fd_ostream &os, const InputFile *f) {
+  if (f->archiveName.empty())
+    os << f->getName();
+  else
+    os << f->archiveName << "(" << path::filename(f->getName()) + ")";
+}
+
+// For printing the contents of the __stubs and __la_symbol_ptr sections.
+static void printStubsEntries(
+    raw_fd_ostream &os,
+    const DenseMap<lld::macho::InputFile *, uint32_t> &readerToFileOrdinal,
+    const OutputSection *osec, size_t entrySize) {
+  for (const Symbol *sym : in.stubs->getEntries())
+    os << format("0x%08llX\t0x%08zX\t[%3u] %s\n",
+                 osec->addr + sym->stubsIndex * entrySize, entrySize,
+                 readerToFileOrdinal.lookup(sym->getFile()),
+                 sym->getName().str().data());
+}
+
+static void printNonLazyPointerSection(raw_fd_ostream &os,
+                                       NonLazyPointerSectionBase *osec) {
+  // ld64 considers stubs to belong to particular files, but considers GOT
+  // entries to be linker-synthesized. Not sure why they made that decision, but
+  // I think we can follow suit unless there's demand for better symbol-to-file
+  // associations.
+  for (const Symbol *sym : osec->getEntries())
+    os << format("0x%08llX\t0x%08zX\t[  0] non-lazy-pointer-to-local: %s\n",
+                 osec->addr + sym->gotIndex * target->wordSize,
+                 target->wordSize, sym->getName().str().data());
 }
 
 void macho::writeMapFile() {
@@ -143,7 +180,9 @@ void macho::writeMapFile() {
   uint32_t fileIndex = 1;
   DenseMap<lld::macho::InputFile *, uint32_t> readerToFileOrdinal;
   for (InputFile *file : info.files) {
-    os << format("[%3u] %s\n", fileIndex, file->getName().str().c_str());
+    os << format("[%3u] ", fileIndex);
+    printFileName(os, file);
+    os << "\n";
     readerToFileOrdinal[file] = fileIndex++;
   }
 
@@ -165,9 +204,10 @@ void macho::writeMapFile() {
       if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
         for (const InputSection *isec : concatOsec->inputs) {
           for (Defined *sym : isec->symbols)
-            os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
-                         sym->size, readerToFileOrdinal[sym->getFile()],
-                         sym->getName().str().data());
+            if (!(isPrivateLabel(sym->getName()) && sym->size == 0))
+              os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
+                           sym->size, readerToFileOrdinal[sym->getFile()],
+                           sym->getName().str().data());
         }
       } else if (osec == in.cStringSection || osec == in.objcMethnameSection) {
         const auto &liveCStrings = info.liveCStringsForSection.lookup(osec);
@@ -185,6 +225,18 @@ void macho::writeMapFile() {
       } else if (osec == (void *)in.unwindInfo) {
         os << format("0x%08llX\t0x%08llX\t[  0] compact unwind info\n",
                      osec->addr, osec->getSize());
+      } else if (osec == in.stubs) {
+        printStubsEntries(os, readerToFileOrdinal, osec, target->stubSize);
+      } else if (osec == in.lazyPointers) {
+        printStubsEntries(os, readerToFileOrdinal, osec, target->wordSize);
+      } else if (osec == in.stubHelper) {
+        // yes, ld64 calls it "helper helper"...
+        os << format("0x%08llX\t0x%08llX\t[  0] helper helper\n", osec->addr,
+                     osec->getSize());
+      } else if (osec == in.got) {
+        printNonLazyPointerSection(os, in.got);
+      } else if (osec == in.tlvPointers) {
+        printNonLazyPointerSection(os, in.tlvPointers);
       }
       // TODO print other synthetic sections
     }

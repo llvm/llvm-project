@@ -7,7 +7,7 @@
 ; for (int j = 0; j < n; j += 1)
 ;   A[0] = A[0];
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -17,10 +17,10 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      %val = load double, double* %A_idx
-      store double 0.0, double* %A
-      store double %val, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      %val = load double, ptr %A_idx
+      store double 0.0, ptr %A
+      store double %val, ptr %A_idx
       br label %inc
 
 inc:

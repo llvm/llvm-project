@@ -50,6 +50,9 @@ code imported into the tree. Generally, our preference is for standards
 conforming, modern, and portable C++ code as the implementation language of
 choice.
 
+For automation, build-systems and utility scripts Python is preferred and
+is widely used in the LLVM repository already.
+
 C++ Standard Versions
 ---------------------
 
@@ -102,24 +105,20 @@ For more information about LLVM's data structures and the tradeoffs they make,
 please consult `that section of the programmer's manual
 <https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task>`_.
 
-Guidelines for Go code
-----------------------
+Python version and Source Code Formatting
+-----------------------------------------
 
-Any code written in the Go programming language is not subject to the
-formatting rules below. Instead, we adopt the formatting rules enforced by
-the `gofmt`_ tool.
+The current minimum version of Python required is documented in the :doc:`GettingStarted`
+section. Python code in the LLVM repository should only use language features
+available in this version of Python.
 
-Go code should strive to be idiomatic. Two good sets of guidelines for what
-this means are `Effective Go`_ and `Go Code Review Comments`_.
+The Python code within the LLVM repository should adhere to the formatting guidelines
+outlined in `PEP-8 <https://peps.python.org/pep-0008/>`_.
 
-.. _gofmt:
-  https://golang.org/cmd/gofmt/
-
-.. _Effective Go:
-  https://golang.org/doc/effective_go.html
-
-.. _Go Code Review Comments:
-  https://github.com/golang/go/wiki/CodeReviewComments
+For consistency and to limit churn, code should be automatically formatted with the
+`black <https://github.com/psf/black>`_ utility. Black allows changing the formatting
+rules based on major version. In order to avoid unnecessary churn in the formatting rules
+we currently use black version 23.x in LLVM.
 
 Mechanical Source Issues
 ========================
@@ -571,7 +570,7 @@ constructor or destructor) should not be added to the code base, and should be
 removed wherever possible.
 
 Globals in different source files are initialized in `arbitrary order
-<https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`, making the code more
+<https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`_, making the code more
 difficult to reason about.
 
 Static constructors have negative impact on launch time of programs that use

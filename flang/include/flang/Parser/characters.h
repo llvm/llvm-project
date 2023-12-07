@@ -14,6 +14,7 @@
 // also to accomodate Fortran tokenization.
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 
@@ -55,6 +56,13 @@ inline constexpr bool IsLegalIdentifierStart(char ch) {
 
 inline constexpr bool IsLegalInIdentifier(char ch) {
   return IsLegalIdentifierStart(ch) || IsDecimalDigit(ch);
+}
+
+inline constexpr bool IsPrintable(char ch) { return ch >= ' ' && ch <= '~'; }
+
+inline constexpr bool IsWhiteSpace(char ch) {
+  return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\v' || ch == '\f' ||
+      ch == '\r';
 }
 
 inline constexpr char ToLowerCaseLetter(char ch) {

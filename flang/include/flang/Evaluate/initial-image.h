@@ -22,12 +22,7 @@ namespace Fortran::evaluate {
 
 class InitialImage {
 public:
-  enum Result {
-    Ok,
-    NotAConstant,
-    OutOfRange,
-    SizeMismatch,
-  };
+  enum Result { Ok, NotAConstant, OutOfRange, SizeMismatch };
 
   explicit InitialImage(std::size_t bytes) : data_(bytes) {}
   InitialImage(InitialImage &&that) = default;
@@ -72,20 +67,22 @@ public:
       } else if (bytes == 0) {
         return Ok;
       } else {
+        Result result{Ok};
         for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
           auto scalar{x.At(at)}; // this is a std string; size() in chars
-          // Subtle: an initializer for a substring may have been
-          // expanded to the length of the entire string.
           auto scalarBytes{scalar.size() * KIND};
-          if (scalarBytes < elementBytes ||
-              (scalarBytes > elementBytes && elements != 0)) {
-            return SizeMismatch;
+          if (scalarBytes != elementBytes) {
+            result = SizeMismatch;
+          }
+          // Blank padding when short
+          for (; scalarBytes < elementBytes; scalarBytes += KIND) {
+            scalar += ' ';
           }
           // TODO endianness
           std::memcpy(&data_.at(offset), scalar.data(), elementBytes);
           offset += elementBytes;
         }
-        return Ok;
+        return result;
       }
     }
   }
@@ -105,7 +102,8 @@ public:
 
   // Conversions to constant initializers
   std::optional<Expr<SomeType>> AsConstant(FoldingContext &,
-      const DynamicType &, const ConstantSubscripts &, bool padWithZero = false,
+      const DynamicType &, std::optional<std::int64_t> charLength,
+      const ConstantSubscripts &, bool padWithZero = false,
       ConstantSubscript offset = 0) const;
   std::optional<Expr<SomeType>> AsConstantPointer(
       ConstantSubscript offset = 0) const;

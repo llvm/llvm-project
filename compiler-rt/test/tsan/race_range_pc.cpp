@@ -2,7 +2,7 @@
 // This test fails on powerpc64 big endian.
 // The Tsan report is returning wrong information about
 // the location of the race.
-// XFAIL: powerpc64-unknown-linux-gnu
+// XFAIL: target=powerpc64-unknown-linux-gnu{{.*}}
 
 #include "test.h"
 

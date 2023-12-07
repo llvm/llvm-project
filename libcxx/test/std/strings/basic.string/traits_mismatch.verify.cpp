@@ -13,4 +13,5 @@
 
 #include <string>
 
-std::basic_string<char, std::char_traits<wchar_t> > s; // expected-error@*:* {{traits_type::char_type must be the same type as CharT}}
+std::basic_string<char, std::char_traits<wchar_t> >
+    s; // expected-error@*:* {{traits_type::char_type must be the same type as CharT}}

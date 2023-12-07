@@ -1,10 +1,10 @@
 ; RUN: llc < %s
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7"
+target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
 target triple = "amdgcn-amd-amdhsa"
 
 @_RSENC_gDcd_______________________________ = external protected addrspace(1) externally_initialized global [4096 x i8], align 16
 
-define protected amdgpu_kernel void @_RSENC_PRInit__________________________________() local_unnamed_addr #0 {
+define protected amdgpu_kernel void @_RSENC_PRInit__________________________________(i1 %c0) local_unnamed_addr #0 {
 entry:
   %runtimeVersionCopy = alloca [128 x i8], align 16, addrspace(5)
   %licenseVersionCopy = alloca [128 x i8], align 16, addrspace(5)
@@ -18,7 +18,7 @@ if.end:                                           ; preds = %entry
   br i1 %cmp13, label %cleanup.cont, label %if.end15
 
 if.end15:                                         ; preds = %if.end
-  br i1 undef, label %cleanup.cont, label %lor.lhs.false17
+  br i1 %c0, label %cleanup.cont, label %lor.lhs.false17
 
 lor.lhs.false17:                                  ; preds = %if.end15
   br label %while.cond.i

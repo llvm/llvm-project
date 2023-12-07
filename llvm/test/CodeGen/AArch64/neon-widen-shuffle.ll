@@ -138,8 +138,8 @@ define <8 x i16> @shuffle_widen_faili1(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, .LCPI12_0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI12_0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -153,8 +153,8 @@ define <8 x i16> @shuffle_widen_fail2(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, .LCPI13_0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -168,8 +168,8 @@ define <8 x i16> @shuffle_widen_fail3(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, .LCPI14_0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI14_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
 entry:

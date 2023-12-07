@@ -12,8 +12,8 @@ entry:
 
 define dso_local void @proxy() personality ptr @__gxx_personality_v0 {
 entry:
-  call void asm sideeffect "call trap", "~{dirflag},~{fpsr},~{flags}"()
-  call void asm sideeffect "call trap", "~{dirflag},~{fpsr},~{flags}"()
+  call void asm sideeffect "call trap", "~{dirflag},~{fpsr},~{flags}"() nounwind
+  call void asm sideeffect "call trap", "~{dirflag},~{fpsr},~{flags}"() nounwind
   ret void
 }
 

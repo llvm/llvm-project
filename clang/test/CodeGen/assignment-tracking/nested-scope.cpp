@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-none-linux-gnu -debug-info-kind=standalone -O0 \
-// RUN:     -emit-llvm  -fexperimental-assignment-tracking %s -o -               \
+// RUN:     -emit-llvm  -fexperimental-assignment-tracking=forced %s -o -        \
+// RUN:     -disable-O0-optnone                                                  \
 // RUN: | FileCheck %s
 
 // Check that dbg.assign intrinsics get a !dbg with with the same scope as

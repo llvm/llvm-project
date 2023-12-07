@@ -27,7 +27,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define i32 @f(i32* %A, i32 %N, i32 %M) {
+define i32 @f(ptr %A, i32 %N, i32 %M) {
 entry:
   %cmp = icmp sgt i32 %M, 0
   call void @llvm.assume(i1 %cmp)
@@ -40,10 +40,10 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp1, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp1 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp1 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %tmp1, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

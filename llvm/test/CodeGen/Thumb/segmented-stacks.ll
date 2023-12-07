@@ -5,11 +5,11 @@
 
 
 ; Just to prevent the alloca from being optimized away
-declare void @dummy_use(i32*, i32)
+declare void @dummy_use(ptr, i32)
 
 define void @test_basic() #0 {
         %mem = alloca i32, i32 10
-        call void @dummy_use (i32* %mem, i32 10)
+        call void @dummy_use (ptr %mem, i32 10)
 	ret void
 
 ; Thumb-android-LABEL:      test_basic:
@@ -19,7 +19,7 @@ define void @test_basic() #0 {
 ; Thumb-android-NEXT: ldr     r4, .LCPI0_0
 ; Thumb-android-NEXT: ldr     r4, [r4]
 ; Thumb-android-NEXT: cmp     r4, r5
-; Thumb-android-NEXT: blo     .LBB0_2
+; Thumb-android-NEXT: bls     .LBB0_2
 
 ; Thumb-android:      mov     r4, #48
 ; Thumb-android-NEXT: mov     r5, #0
@@ -43,7 +43,7 @@ define void @test_basic() #0 {
 ; Thumb-linux-NEXT: ldr     r4, .LCPI0_0
 ; Thumb-linux-NEXT: ldr     r4, [r4]
 ; Thumb-linux-NEXT: cmp     r4, r5
-; Thumb-linux-NEXT: blo     .LBB0_2
+; Thumb-linux-NEXT: bls     .LBB0_2
 
 ; Thumb-linux:      mov     r4, #48
 ; Thumb-linux-NEXT: mov     r5, #0
@@ -58,11 +58,11 @@ define void @test_basic() #0 {
 
 }
 
-define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
-       %addend = load i32 , i32 * %closure
+define i32 @test_nested(ptr nest %closure, i32 %other) #0 {
+       %addend = load i32 , ptr %closure
        %result = add i32 %other, %addend
        %mem = alloca i32, i32 10
-       call void @dummy_use (i32* %mem, i32 10)
+       call void @dummy_use (ptr %mem, i32 10)
        ret i32 %result
 
 ; Thumb-android-LABEL:      test_nested:
@@ -72,7 +72,7 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 ; Thumb-android-NEXT: ldr     r4, .LCPI1_0
 ; Thumb-android-NEXT: ldr     r4, [r4]
 ; Thumb-android-NEXT: cmp     r4, r5
-; Thumb-android-NEXT: blo     .LBB1_2
+; Thumb-android-NEXT: bls     .LBB1_2
 
 ; Thumb-android:      mov     r4, #56
 ; Thumb-android-NEXT: mov     r5, #0
@@ -92,7 +92,7 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 ; Thumb-linux-NEXT: ldr     r4, .LCPI1_0
 ; Thumb-linux-NEXT: ldr     r4, [r4]
 ; Thumb-linux-NEXT: cmp     r4, r5
-; Thumb-linux-NEXT: blo     .LBB1_2
+; Thumb-linux-NEXT: bls     .LBB1_2
 
 ; Thumb-linux:      mov     r4, #56
 ; Thumb-linux-NEXT: mov     r5, #0
@@ -109,7 +109,7 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 
 define void @test_large() #0 {
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 0)
+        call void @dummy_use (ptr %mem, i32 0)
         ret void
 
 ; Thumb-android-LABEL:      test_large:
@@ -121,7 +121,7 @@ define void @test_large() #0 {
 ; Thumb-android-NEXT: ldr     r4, .LCPI2_3
 ; Thumb-android-NEXT: ldr     r4, [r4]
 ; Thumb-android-NEXT: cmp     r4, r5
-; Thumb-android-NEXT: blo     .LBB2_2
+; Thumb-android-NEXT: bls     .LBB2_2
 
 ; Thumb-android:      ldr     r4, .LCPI2_2
 ; Thumb-android-NEXT: mov     r5, #0
@@ -146,7 +146,7 @@ define void @test_large() #0 {
 ; Thumb-linux-NEXT: ldr     r4, .LCPI2_3
 ; Thumb-linux-NEXT: ldr     r4, [r4]
 ; Thumb-linux-NEXT: cmp     r4, r5
-; Thumb-linux-NEXT: blo     .LBB2_2
+; Thumb-linux-NEXT: bls     .LBB2_2
 
 ; Thumb-linux:      ldr     r4, .LCPI2_2
 ; Thumb-linux-NEXT: mov     r5, #0
@@ -163,7 +163,7 @@ define void @test_large() #0 {
 
 define fastcc void @test_fastcc() #0 {
         %mem = alloca i32, i32 10
-        call void @dummy_use (i32* %mem, i32 10)
+        call void @dummy_use (ptr %mem, i32 10)
         ret void
 
 ; Thumb-android-LABEL:      test_fastcc:
@@ -173,7 +173,7 @@ define fastcc void @test_fastcc() #0 {
 ; Thumb-android-NEXT: ldr     r4, .LCPI3_0
 ; Thumb-android-NEXT: ldr     r4, [r4]
 ; Thumb-android-NEXT: cmp     r4, r5
-; Thumb-android-NEXT: blo     .LBB3_2
+; Thumb-android-NEXT: bls     .LBB3_2
 
 ; Thumb-android:      mov     r4, #48
 ; Thumb-android-NEXT: mov     r5, #0
@@ -193,7 +193,7 @@ define fastcc void @test_fastcc() #0 {
 ; Thumb-linux-NEXT: ldr     r4, .LCPI3_0
 ; Thumb-linux-NEXT: ldr     r4, [r4]
 ; Thumb-linux-NEXT: cmp     r4, r5
-; Thumb-linux-NEXT: blo     .LBB3_2
+; Thumb-linux-NEXT: bls     .LBB3_2
 
 ; Thumb-linux:      mov     r4, #48
 ; Thumb-linux-NEXT: mov     r5, #0
@@ -210,7 +210,7 @@ define fastcc void @test_fastcc() #0 {
 
 define fastcc void @test_fastcc_large() #0 {
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 0)
+        call void @dummy_use (ptr %mem, i32 0)
         ret void
 
 ; Thumb-android-LABEL:      test_fastcc_large:
@@ -222,7 +222,7 @@ define fastcc void @test_fastcc_large() #0 {
 ; Thumb-android-NEXT: ldr     r4, .LCPI4_3
 ; Thumb-android-NEXT: ldr     r4, [r4]
 ; Thumb-android-NEXT: cmp     r4, r5
-; Thumb-android-NEXT: blo     .LBB4_2
+; Thumb-android-NEXT: bls     .LBB4_2
 
 ; Thumb-android:      ldr     r4, .LCPI4_2
 ; Thumb-android-NEXT: mov     r5, #0
@@ -247,7 +247,7 @@ define fastcc void @test_fastcc_large() #0 {
 ; Thumb-linux-NEXT: ldr     r4, .LCPI4_3
 ; Thumb-linux-NEXT: ldr     r4, [r4]
 ; Thumb-linux-NEXT: cmp     r4, r5
-; Thumb-linux-NEXT: blo     .LBB4_2
+; Thumb-linux-NEXT: bls     .LBB4_2
 
 ; Thumb-linux:      ldr     r4, .LCPI4_2
 ; Thumb-linux-NEXT: mov     r5, #0

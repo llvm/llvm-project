@@ -39,11 +39,12 @@ class LitTestCase(unittest.TestCase):
 
 def load_test_suite(inputs):
     import platform
-    windows = platform.system() == 'Windows'
+
+    windows = platform.system() == "Windows"
 
     # Create the global config object.
     lit_config = lit.LitConfig.LitConfig(
-        progname='lit',
+        progname="lit",
         path=[],
         quiet=False,
         useValgrind=False,
@@ -52,11 +53,12 @@ def load_test_suite(inputs):
         noExecute=False,
         debug=False,
         isWindows=windows,
-        order='smart',
-        params={})
+        order="smart",
+        params={},
+    )
 
     # Perform test discovery.
-    tests = lit.discovery.find_tests_for_inputs(lit_config, inputs, False)
+    tests = lit.discovery.find_tests_for_inputs(lit_config, inputs)
     test_adaptors = [LitTestCase(t, lit_config) for t in tests]
 
     # Return a unittest test suite which just runs the tests in order.

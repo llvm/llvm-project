@@ -21,6 +21,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_LEGALIZERHELPER_H
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 
@@ -56,6 +57,7 @@ private:
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
   const TargetLowering &TLI;
+  GISelKnownBits *KB;
 
 public:
   enum LegalizeResult {
@@ -74,11 +76,13 @@ public:
   /// Expose LegalizerInfo so the clients can re-use.
   const LegalizerInfo &getLegalizerInfo() const { return LI; }
   const TargetLowering &getTargetLowering() const { return TLI; }
+  GISelKnownBits *getKnownBits() const { return KB; }
 
   LegalizerHelper(MachineFunction &MF, GISelChangeObserver &Observer,
                   MachineIRBuilder &B);
   LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
-                  GISelChangeObserver &Observer, MachineIRBuilder &B);
+                  GISelChangeObserver &Observer, MachineIRBuilder &B,
+                  GISelKnownBits *KB = nullptr);
 
   /// Replace \p MI by a sequence of legal instructions that can implement the
   /// same operation. Note that this means \p MI may be deleted, so any iterator
@@ -242,7 +246,7 @@ private:
   /// needs to be widened to evenly cover \p DstReg, inserts high bits
   /// corresponding to the extension opcode \p PadStrategy.
   ///
-  /// \p VRegs will be cleared, and the the result \p NarrowTy register pieces
+  /// \p VRegs will be cleared, and the result \p NarrowTy register pieces
   /// will replace it. Returns The complete LCMTy that \p VRegs will cover when
   /// merged.
   LLT buildLCMMergePieces(LLT DstTy, LLT NarrowTy, LLT GCDTy,
@@ -324,6 +328,9 @@ public:
                                                            unsigned TypeIdx,
                                                            LLT NarrowTy);
 
+  /// Equalize source and destination vector sizes of G_SHUFFLE_VECTOR.
+  LegalizeResult equalizeVectorShuffleLengths(MachineInstr &MI);
+
   LegalizeResult reduceLoadStoreWidth(GLoadStore &MI, unsigned TypeIdx,
                                       LLT NarrowTy);
 
@@ -350,6 +357,7 @@ public:
   LegalizeResult narrowScalarCTLZ(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult narrowScalarFLDEXP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
   /// Perform Bitcast legalize action on G_EXTRACT_VECTOR_ELT.
   LegalizeResult bitcastExtractVectorElt(MachineInstr &MI, unsigned TypeIdx,
@@ -359,6 +367,7 @@ public:
   LegalizeResult bitcastInsertVectorElt(MachineInstr &MI, unsigned TypeIdx,
                                         LLT CastTy);
 
+  LegalizeResult lowerFConstant(MachineInstr &MI);
   LegalizeResult lowerBitcast(MachineInstr &MI);
   LegalizeResult lowerLoad(GAnyLoad &MI);
   LegalizeResult lowerStore(GStore &MI);
@@ -366,6 +375,7 @@ public:
   LegalizeResult lowerFunnelShiftWithInverse(MachineInstr &MI);
   LegalizeResult lowerFunnelShiftAsShifts(MachineInstr &MI);
   LegalizeResult lowerFunnelShift(MachineInstr &MI);
+  LegalizeResult lowerEXT(MachineInstr &MI);
   LegalizeResult lowerRotateWithReverseRotate(MachineInstr &MI);
   LegalizeResult lowerRotate(MachineInstr &MI);
 
@@ -392,6 +402,8 @@ public:
   LegalizeResult lowerExtractInsertVectorElt(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
+  LegalizeResult lowerStackSave(MachineInstr &MI);
+  LegalizeResult lowerStackRestore(MachineInstr &MI);
   LegalizeResult lowerExtract(MachineInstr &MI);
   LegalizeResult lowerInsert(MachineInstr &MI);
   LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);

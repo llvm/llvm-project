@@ -35,7 +35,7 @@ std::string maybeDemangleSymbol(StringRef name) {
   if (name == "__main_argc_argv")
     return "main";
   if (wasm::config->demangle)
-    return demangle(name.str());
+    return demangle(name);
   return name.str();
 }
 
@@ -77,6 +77,7 @@ DefinedFunction *WasmSym::callDtors;
 DefinedFunction *WasmSym::initMemory;
 DefinedFunction *WasmSym::applyDataRelocs;
 DefinedFunction *WasmSym::applyGlobalRelocs;
+DefinedFunction *WasmSym::applyTLSRelocs;
 DefinedFunction *WasmSym::applyGlobalTLSRelocs;
 DefinedFunction *WasmSym::initTLS;
 DefinedFunction *WasmSym::startFunction;
@@ -220,6 +221,10 @@ void Symbol::setHidden(bool isHidden) {
     flags |= WASM_SYMBOL_VISIBILITY_DEFAULT;
 }
 
+bool Symbol::isImported() const {
+  return isUndefined() && (importName.has_value() || forceImport);
+}
+
 bool Symbol::isExported() const {
   if (!isDefined() || isLocal())
     return false;
@@ -308,7 +313,7 @@ uint64_t DefinedData::getVA() const {
   // output segment (__tls_base).  When building without shared memory, TLS
   // symbols absolute, just like non-TLS.
   if (isTLS() && config->sharedMemory)
-    return getOutputSegmentOffset() + value;
+    return getOutputSegmentOffset();
   if (segment)
     return segment->getVA(value);
   return value;

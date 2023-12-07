@@ -5,17 +5,16 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @hoge(i8* %arg) #0 {
+define void @hoge(ptr %arg) #0 {
 bb:
   br label %bb3
 
 bb3:                                              ; preds = %bb
-  %tmp = load i8, i8* %arg, align 1, !tbaa !1
+  %tmp = load i8, ptr %arg, align 1, !tbaa !1
   br i1 false, label %bb7, label %bb4
 
 bb4:                                              ; preds = %bb3
-  %tmp5 = bitcast i8* %arg to i32*
-  %tmp6 = load i32, i32* %tmp5, align 4, !tbaa !4
+  %tmp6 = load i32, ptr %arg, align 4, !tbaa !4
   br label %bb7
 
 bb7:                                              ; preds = %bb4, %bb3

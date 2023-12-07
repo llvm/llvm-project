@@ -17,12 +17,12 @@ target triple = "aarch64--linux-gnu"
 %struct.A = type { i32, i64, i8 }
 
 ; Function Attrs: norecurse nounwind
-define void @foo1(%struct.A* %a1, %struct.A* readnone %b1) #0 {
+define void @foo1(ptr %a1, ptr readnone %b1) #0 {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  %cmp4 = icmp eq %struct.A* %a1, %b1
+  %cmp4 = icmp eq ptr %a1, %b1
   br i1 %cmp4, label %for.cond.cleanup, label %for.body.preheader
 
 for.body.preheader:                               ; preds = %entry.split
@@ -35,13 +35,12 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
   ret void
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
-  %start.05 = phi %struct.A* [ %incdec.ptr, %for.body ], [ %a1, %for.body.preheader ]
-  %a = getelementptr inbounds %struct.A, %struct.A* %start.05, i64 0, i32 0
-  %0 = load i32, i32* %a, align 8
+  %start.05 = phi ptr [ %incdec.ptr, %for.body ], [ %a1, %for.body.preheader ]
+  %0 = load i32, ptr %start.05, align 8
   %add = add nsw i32 %0, 1
-  store i32 %add, i32* %a, align 8
-  %incdec.ptr = getelementptr inbounds %struct.A, %struct.A* %start.05, i64 1
-  %cmp = icmp eq %struct.A* %incdec.ptr, %b1
+  store i32 %add, ptr %start.05, align 8
+  %incdec.ptr = getelementptr inbounds %struct.A, ptr %start.05, i64 1
+  %cmp = icmp eq ptr %incdec.ptr, %b1
   br i1 %cmp, label %for.cond.cleanup.loopexit, label %for.body
 }
 

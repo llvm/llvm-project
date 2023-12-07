@@ -28,6 +28,14 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "SparcGenInstrInfo.inc"
 
+static cl::opt<unsigned> BPccDisplacementBits(
+    "sparc-bpcc-offset-bits", cl::Hidden, cl::init(19),
+    cl::desc("Restrict range of BPcc/FBPfcc instructions (DEBUG)"));
+
+static cl::opt<unsigned>
+    BPrDisplacementBits("sparc-bpr-offset-bits", cl::Hidden, cl::init(16),
+                        cl::desc("Restrict range of BPr instructions (DEBUG)"));
+
 // Pin the vtable to this file.
 void SparcInstrInfo::anchor() {}
 
@@ -71,11 +79,6 @@ unsigned SparcInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     }
   }
   return 0;
-}
-
-static bool IsIntegerCC(unsigned CC)
-{
-  return  (CC <= SPCC::ICC_VC);
 }
 
 static SPCC::CondCodes GetOppositeBranchCondition(SPCC::CondCodes CC)
@@ -155,9 +158,7 @@ static SPCC::CondCodes GetOppositeBranchCondition(SPCC::CondCodes CC)
   llvm_unreachable("Invalid cond code");
 }
 
-static bool isUncondBranchOpcode(int Opc) {
-  return Opc == SP::BA || Opc == SP::BPA;
-}
+static bool isUncondBranchOpcode(int Opc) { return Opc == SP::BA; }
 
 static bool isI32CondBranchOpcode(int Opc) {
   return Opc == SP::BCOND || Opc == SP::BPICC || Opc == SP::BPICCA ||
@@ -169,11 +170,19 @@ static bool isI64CondBranchOpcode(int Opc) {
          Opc == SP::BPXCCANT;
 }
 
-static bool isFCondBranchOpcode(int Opc) { return Opc == SP::FBCOND; }
+static bool isRegCondBranchOpcode(int Opc) {
+  return Opc == SP::BPR || Opc == SP::BPRA || Opc == SP::BPRNT ||
+         Opc == SP::BPRANT;
+}
+
+static bool isFCondBranchOpcode(int Opc) {
+  return Opc == SP::FBCOND || Opc == SP::FBCONDA || Opc == SP::FBCOND_V9 ||
+         Opc == SP::FBCONDA_V9;
+}
 
 static bool isCondBranchOpcode(int Opc) {
   return isI32CondBranchOpcode(Opc) || isI64CondBranchOpcode(Opc) ||
-         isFCondBranchOpcode(Opc);
+         isRegCondBranchOpcode(Opc) || isFCondBranchOpcode(Opc);
 }
 
 static bool isIndirectBranchOpcode(int Opc) {
@@ -190,7 +199,46 @@ static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
   Cond.push_back(MachineOperand::CreateImm(Opc));
   Cond.push_back(MachineOperand::CreateImm(CC));
 
+  // Branch on register contents need another argument to indicate
+  // the register it branches on.
+  if (isRegCondBranchOpcode(Opc)) {
+      Register Reg = LastInst->getOperand(2).getReg();
+      Cond.push_back(MachineOperand::CreateReg(Reg, false));
+  }
+
   Target = LastInst->getOperand(0).getMBB();
+}
+
+MachineBasicBlock *
+SparcInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  default:
+      llvm_unreachable("unexpected opcode!");
+  case SP::BA:
+  case SP::BCOND:
+  case SP::BCONDA:
+  case SP::FBCOND:
+  case SP::FBCONDA:
+  case SP::BPICC:
+  case SP::BPICCA:
+  case SP::BPICCNT:
+  case SP::BPICCANT:
+  case SP::BPXCC:
+  case SP::BPXCCA:
+  case SP::BPXCCNT:
+  case SP::BPXCCANT:
+  case SP::BPFCC:
+  case SP::BPFCCA:
+  case SP::BPFCCNT:
+  case SP::BPFCCANT:
+  case SP::FBCOND_V9:
+  case SP::FBCONDA_V9:
+  case SP::BPR:
+  case SP::BPRA:
+  case SP::BPRNT:
+  case SP::BPRANT:
+      return MI.getOperand(0).getMBB();
+  }
 }
 
 bool SparcInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
@@ -283,38 +331,44 @@ unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                       const DebugLoc &DL,
                                       int *BytesAdded) const {
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
-  assert((Cond.size() <= 2) &&
-         "Sparc branch conditions should have at most two components!");
-  assert(!BytesAdded && "code size not handled");
+  assert((Cond.size() <= 3) &&
+         "Sparc branch conditions should have at most three components!");
 
   if (Cond.empty()) {
     assert(!FBB && "Unconditional branch with multiple successors!");
-    BuildMI(&MBB, DL, get(Subtarget.isV9() ? SP::BPA : SP::BA)).addMBB(TBB);
+    BuildMI(&MBB, DL, get(SP::BA)).addMBB(TBB);
+    if (BytesAdded)
+      *BytesAdded = 8;
     return 1;
   }
 
   // Conditional branch
   unsigned Opc = Cond[0].getImm();
   unsigned CC = Cond[1].getImm();
-
-  if (IsIntegerCC(CC)) {
-    BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC);
+  if (isRegCondBranchOpcode(Opc)) {
+    Register Reg = Cond[2].getReg();
+    BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC).addReg(Reg);
   } else {
-    BuildMI(&MBB, DL, get(SP::FBCOND)).addMBB(TBB).addImm(CC);
+    BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC);
   }
-  if (!FBB)
-    return 1;
 
-  BuildMI(&MBB, DL, get(Subtarget.isV9() ? SP::BPA : SP::BA)).addMBB(FBB);
+  if (!FBB) {
+    if (BytesAdded)
+      *BytesAdded = 8;
+    return 1;
+  }
+
+  BuildMI(&MBB, DL, get(SP::BA)).addMBB(FBB);
+  if (BytesAdded)
+    *BytesAdded = 16;
   return 2;
 }
 
 unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                       int *BytesRemoved) const {
-  assert(!BytesRemoved && "code size not handled");
-
   MachineBasicBlock::iterator I = MBB.end();
   unsigned Count = 0;
+  int Removed = 0;
   while (I != MBB.begin()) {
     --I;
 
@@ -325,19 +379,60 @@ unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
         !isUncondBranchOpcode(I->getOpcode()))
       break; // Not a branch
 
+    Removed += getInstSizeInBytes(*I);
     I->eraseFromParent();
     I = MBB.end();
     ++Count;
   }
+
+  if (BytesRemoved)
+    *BytesRemoved = Removed;
   return Count;
 }
 
 bool SparcInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
-  assert(Cond.size() <= 2);
+  assert(Cond.size() <= 3);
   SPCC::CondCodes CC = static_cast<SPCC::CondCodes>(Cond[1].getImm());
   Cond[1].setImm(GetOppositeBranchCondition(CC));
   return false;
+}
+
+bool SparcInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
+                                           int64_t Offset) const {
+  assert((Offset & 0b11) == 0 && "Malformed branch offset");
+  switch (BranchOpc) {
+  case SP::BA:
+  case SP::BCOND:
+  case SP::BCONDA:
+  case SP::FBCOND:
+  case SP::FBCONDA:
+    return isIntN(22, Offset >> 2);
+
+  case SP::BPICC:
+  case SP::BPICCA:
+  case SP::BPICCNT:
+  case SP::BPICCANT:
+  case SP::BPXCC:
+  case SP::BPXCCA:
+  case SP::BPXCCNT:
+  case SP::BPXCCANT:
+  case SP::BPFCC:
+  case SP::BPFCCA:
+  case SP::BPFCCNT:
+  case SP::BPFCCANT:
+  case SP::FBCOND_V9:
+  case SP::FBCONDA_V9:
+    return isIntN(BPccDisplacementBits, Offset >> 2);
+
+  case SP::BPR:
+  case SP::BPRA:
+  case SP::BPRNT:
+  case SP::BPRANT:
+    return isIntN(BPrDisplacementBits, Offset >> 2);
+  }
+
+  llvm_unreachable("Unknown branch instruction!");
 }
 
 void SparcInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
@@ -528,6 +623,23 @@ Register SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   BuildMI(FirstMBB, MBBI, dl, get(SP::GETPCX), GlobalBaseReg);
   SparcFI->setGlobalBaseReg(GlobalBaseReg);
   return GlobalBaseReg;
+}
+
+unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+
+  if (MI.isInlineAsm()) {
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const char *AsmStr = MI.getOperand(0).getSymbolName();
+    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+  }
+
+  // If the instruction has a delay slot, be conservative and also include
+  // it for sizing purposes. This is done so that the BranchRelaxation pass
+  // will not mistakenly mark out-of-range branches as in-range.
+  if (MI.hasDelaySlot())
+    return get(Opcode).getSize() * 2;
+  return get(Opcode).getSize();
 }
 
 bool SparcInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {

@@ -3,9 +3,7 @@
 ; CHECK-SPIRV: OpCapability DeviceEnqueue
 ; CHECK-SPIRV: OpTypeQueue
 
-%spirv.Queue = type opaque
-
-define spir_func void @enqueue_simple_block(%spirv.Queue* addrspace(3)* nocapture %q) {
+define spir_func void @enqueue_simple_block(target("spirv.Queue") %q) {
 entry:
   ret void
 }

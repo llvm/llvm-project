@@ -13,8 +13,8 @@
 
 #include <stdarg.h>
 
-#include "utils/UnitTest/PrintfMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/PrintfMatcher.h"
+#include "test/UnitTest/Test.h"
 
 using __llvm_libc::cpp::string_view;
 
@@ -279,7 +279,7 @@ TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
-#ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
 TEST(LlvmLibcPrintfParserTest, IndexModeOneArg) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
@@ -474,4 +474,78 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   EXPECT_PFORMAT_EQ(expected9, format_arr[9]);
 }
 
-#endif // LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck) {
+  __llvm_libc::printf_core::FormatSection format_arr[10];
+  const char *str = "%1$d%2$d%4$d";
+  int arg1 = 1;
+  int arg2 = 2;
+  int arg3 = 3;
+  int arg4 = 4;
+
+  evaluate(format_arr, str, arg1, arg2, arg3, arg4);
+
+  __llvm_libc::printf_core::FormatSection expected0, expected1, expected2;
+
+  expected0.has_conv = true;
+  expected0.raw_string = {str, 4};
+  expected0.conv_val_raw = arg1;
+  expected0.conv_name = 'd';
+
+  EXPECT_PFORMAT_EQ(expected0, format_arr[0]);
+
+  expected1.has_conv = true;
+  expected1.raw_string = {str + 4, 4};
+  expected1.conv_val_raw = arg2;
+  expected1.conv_name = 'd';
+
+  EXPECT_PFORMAT_EQ(expected1, format_arr[1]);
+
+  expected2.has_conv = false;
+  expected2.raw_string = {str + 8, 4};
+
+  EXPECT_PFORMAT_EQ(expected2, format_arr[2]);
+}
+
+TEST(LlvmLibcPrintfParserTest, IndexModeTrailingPercentCrash) {
+  __llvm_libc::printf_core::FormatSection format_arr[10];
+  const char *str = "%2$d%";
+  evaluate(format_arr, str, 1, 2);
+
+  __llvm_libc::printf_core::FormatSection expected0, expected1;
+  expected0.has_conv = false;
+
+  expected0.raw_string = {str, 4};
+  EXPECT_PFORMAT_EQ(expected0, format_arr[0]);
+
+  expected1.has_conv = false;
+
+  expected1.raw_string = {str + 4, 1};
+  EXPECT_PFORMAT_EQ(expected1, format_arr[1]);
+}
+
+TEST(LlvmLibcPrintfParserTest, DoublePercentIsAllowedInvalidIndex) {
+  __llvm_libc::printf_core::FormatSection format_arr[10];
+
+  // Normally this conversion specifier would be raw (due to having a width
+  // defined as an invalid argument) but since it's a % conversion it's allowed
+  // by this specific parser. Any % conversion that is not just "%%" is
+  // undefined, so this is implementation-specific behavior.
+  // The goal is to be consistent. A conversion specifier of "%L%" is also
+  // undefined, but is traditionally displayed as just "%". "%2%" is also
+  // displayed as "%", even though if the width was respected it should be " %".
+  // Finally, "%*%" traditionally is displayed as "%" but also traditionally
+  // consumes an argument, since the * consumes an integer. Therefore, having
+  // "%*2$%" display as "%" is consistent with other printf behavior.
+  const char *str = "%*2$%";
+
+  evaluate(format_arr, str, 1, 2);
+
+  __llvm_libc::printf_core::FormatSection expected0;
+  expected0.has_conv = true;
+
+  expected0.raw_string = str;
+  expected0.conv_name = '%';
+  EXPECT_PFORMAT_EQ(expected0, format_arr[0]);
+}
+
+#endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE

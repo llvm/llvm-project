@@ -166,8 +166,8 @@ define i64 @not_bswap() {
 ; CHECK64-LABEL: not_bswap:
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movzwl var16(%rip), %eax
-; CHECK64-NEXT:    movq %rax, %rcx
-; CHECK64-NEXT:    shrq $8, %rcx
+; CHECK64-NEXT:    movl %eax, %ecx
+; CHECK64-NEXT:    shrl $8, %ecx
 ; CHECK64-NEXT:    shlq $8, %rax
 ; CHECK64-NEXT:    orq %rcx, %rax
 ; CHECK64-NEXT:    retq
@@ -224,9 +224,12 @@ define i64 @finally_useful_bswap() {
 ;
 ; CHECK64-LABEL: finally_useful_bswap:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    movzwl var16(%rip), %eax
-; CHECK64-NEXT:    bswapq %rax
-; CHECK64-NEXT:    shrq $48, %rax
+; CHECK64-NEXT:    movzwl var16(%rip), %ecx
+; CHECK64-NEXT:    movzbl %cl, %eax
+; CHECK64-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; CHECK64-NEXT:    shrl $8, %ecx
+; CHECK64-NEXT:    shlq $8, %rax
+; CHECK64-NEXT:    orq %rcx, %rax
 ; CHECK64-NEXT:    retq
   %init = load i16, ptr @var16
   %big = zext i16 %init to i64

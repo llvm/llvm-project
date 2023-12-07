@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -std=c++14 -triple amdgcn-amd-amdhsa \
 // RUN:   -fcuda-is-device -emit-llvm -o - -x hip %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -std=c++14 -triple amdgcn-amd-amdhsa \
 // RUN:   -fcuda-is-device -emit-llvm -o - -x hip %s | FileCheck -check-prefix=NEG %s
 
 #include "Inputs/cuda.h"
@@ -71,17 +71,17 @@ const int var_host_only = 7;
 // CHECK: store i32 1
 // CHECK: store i32 2
 // CHECK: store i32 3
-// CHECK: load i8, i8* getelementptr {{.*}} @_ZL13constexpr_str.const
+// CHECK: load i8, ptr getelementptr {{.*}} @_ZL13constexpr_str.const
 // CHECK: store i32 4
 // CHECK: store i32 5
 // CHECK: store i32 6
-// CHECK: load i8, i8* getelementptr {{.*}} @_ZL9const_str
-// CHECK: store i32* {{.*}}@_ZL13constexpr_var
-// CHECK: store i32* getelementptr {{.*}} @_ZL16constexpr_struct
-// CHECK: store i32* getelementptr {{.*}} @_ZL15constexpr_array
-// CHECK: store i32* {{.*}}@_ZL9const_var
-// CHECK: store i32* getelementptr {{.*}} @_ZL12const_struct
-// CHECK: store i32* getelementptr {{.*}} @_ZL11const_array
+// CHECK: load i8, ptr getelementptr {{.*}} @_ZL9const_str
+// CHECK: store ptr {{.*}}@_ZL13constexpr_var
+// CHECK: store ptr {{.*}} @_ZL16constexpr_struct
+// CHECK: store ptr getelementptr {{.*}} @_ZL15constexpr_array
+// CHECK: store ptr {{.*}}@_ZL9const_var
+// CHECK: store ptr {{.*}} @_ZL12const_struct
+// CHECK: store ptr getelementptr {{.*}} @_ZL11const_array
 __device__ void dev_fun(int *out, const int **out2) {
   *out = constexpr_var;
   *out = constexpr_struct.x;

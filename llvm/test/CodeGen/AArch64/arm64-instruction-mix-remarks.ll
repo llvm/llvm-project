@@ -24,7 +24,7 @@
 ; YAML:       - INST_madd:   '2'
 ; YAML:       - INST_movz:   '1'
 ; YAML:       - INST_str:    '1'
-define i32 @foo(i32* %ptr, i32 %x, i64 %y) !dbg !3 {
+define i32 @foo(ptr %ptr, i32 %x, i64 %y) !dbg !3 {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldr w9, [x0]
@@ -36,14 +36,14 @@ define i32 @foo(i32* %ptr, i32 %x, i64 %y) !dbg !3 {
 ; CHECK-NEXT:    b.eq LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %else
 ; CHECK-NEXT:    mul w9, w0, w1
-; CHECK-NEXT:    mov w10, #10
 ; CHECK-NEXT:    mul w0, w9, w1
-; CHECK-NEXT:    str w10, [x8]
+; CHECK-NEXT:    mov w9, #10 ; =0xa
+; CHECK-NEXT:    str w9, [x8]
 ; CHECK-NEXT:  LBB0_2: ; %common.ret
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
-  %l = load i32, i32* %ptr, !dbg !4
+  %l = load i32, ptr %ptr, !dbg !4
   %add = add i32 %l, %x, !dbg !4
   %add.ext = zext i32 %add to i64, !dbg !4
   %add.64 = add i64 %add.ext, %y, !dbg !4
@@ -54,7 +54,7 @@ then:
   ret i32 %add, !dbg !5
 
 else:
-  store i32 10, i32* %ptr, !dbg !6
+  store i32 10, ptr %ptr, !dbg !6
   %res = mul i32 %add, %x, !dbg !6
   %res.2 = mul i32 %res, %x, !dbg !6
   ret i32 %res.2, !dbg !6

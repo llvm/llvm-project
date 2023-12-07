@@ -33,3 +33,12 @@ func.func @array_expr_2(%arg0: !fir.ref<!fir.array<10xi32>>) {
 // CHECK-LABEL: func.func @array_expr_2(
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>) {
 // CHECK:   hlfir.as_expr %[[VAL_0]] : (!fir.ref<!fir.array<10xi32>>) -> !hlfir.expr<10xi32>
+
+func.func @array_expr_move(%arg0: !fir.ref<!fir.array<10xi32>>, %must_free: i1) {
+  %0 = hlfir.as_expr %arg0 move %must_free : (!fir.ref<!fir.array<10xi32>>, i1) -> !hlfir.expr<10xi32>
+  return
+}
+// CHECK-LABEL: func.func @array_expr_move(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>,
+// CHECK-SAME:    %[[VAL_1:.*]]: i1) {
+// CHECK:   hlfir.as_expr %[[VAL_0]] move %[[VAL_1]] : (!fir.ref<!fir.array<10xi32>>, i1) -> !hlfir.expr<10xi32>

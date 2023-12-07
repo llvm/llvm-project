@@ -131,7 +131,6 @@ void foo(float *&lr, T *&tr) {
     ++l;
   }
   // CK1:     [[BEND]]:
-  // CK1:     [[CMP:%.+]] = icmp ne ptr %{{.+}}, null
   // CK1:     br i1 [[CMP]], label %[[BTHEN:.+]], label %[[BELSE:.+]]
 
   // CK1:     [[BTHEN]]:
@@ -412,11 +411,11 @@ struct ST {
     // CK2:     [[BP2:%.+]] = getelementptr inbounds [3 x ptr], ptr %{{.+}}, i32 0, i32 2
     // CK2:     store ptr [[RVAL2:%.+]], ptr [[BP2]],
     // CK2:     call void @__tgt_target_data_begin{{.+}}[[MTYPE03]]
+    // CK2:     [[VAL1:%.+]] = load ptr, ptr [[BP1]],
+    // CK2:     store ptr [[VAL1]], ptr [[PVT1:%.+]],
     // CK2:     [[VAL2:%.+]] = load ptr, ptr [[BP2]],
     // CK2:     store ptr [[VAL2]], ptr [[PVT2:%.+]],
     // CK2:     store ptr [[PVT2]], ptr [[_PVT2:%.+]],
-    // CK2:     [[VAL1:%.+]] = load ptr, ptr [[BP1]],
-    // CK2:     store ptr [[VAL1]], ptr [[PVT1:%.+]],
     // CK2:     store ptr [[PVT1]], ptr [[_PVT1:%.+]],
     // CK2:     [[TT2:%.+]] = load ptr, ptr [[_PVT2]],
     // CK2:     [[_TT2:%.+]] = load ptr, ptr [[TT2]],

@@ -13,7 +13,7 @@
 
 define fp128 @retldouble() nounwind {
 entry:
-        %0 = load volatile fp128, fp128* @fp128
+        %0 = load volatile fp128, ptr @fp128
         ret fp128 %0
 }
 

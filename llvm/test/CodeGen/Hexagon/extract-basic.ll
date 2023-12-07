@@ -35,42 +35,40 @@ target triple = "hexagon"
 %struct.structx_t = type { i8, i8, i8, i8 }
 %struct.structy_t = type { i8, i8, i8, i8 }
 
-define void @foo(%struct.structx_t* nocapture %px, %struct.structy_t* nocapture %py) nounwind {
+define void @foo(ptr nocapture %px, ptr nocapture %py) nounwind {
 entry:
-  %0 = bitcast %struct.structy_t* %py to i32*
-  %1 = load i32, i32* %0, align 4
-  %bf.value = and i32 %1, 7
-  %2 = bitcast %struct.structx_t* %px to i32*
-  %3 = load i32, i32* %2, align 4
-  %4 = and i32 %3, -8
-  %5 = or i32 %4, %bf.value
-  store i32 %5, i32* %2, align 4
-  %6 = load i32, i32* %0, align 4
-  %7 = lshr i32 %6, 4
-  %bf.clear1 = shl nuw nsw i32 %7, 3
-  %8 = and i32 %bf.clear1, 56
-  %9 = and i32 %5, -1017
-  %10 = or i32 %8, %9
-  store i32 %10, i32* %2, align 4
-  %11 = load i32, i32* %0, align 4
-  %12 = lshr i32 %11, 7
-  %bf.value4 = shl i32 %12, 10
-  %13 = and i32 %bf.value4, 261120
-  %14 = and i32 %10, -262081
-  %15 = or i32 %14, %13
-  store i32 %15, i32* %2, align 4
-  %16 = load i32, i32* %0, align 4
-  %17 = lshr i32 %16, 16
-  %bf.clear5 = shl i32 %17, 18
-  %18 = and i32 %bf.clear5, 66846720
-  %19 = and i32 %15, -1073480641
-  %20 = or i32 %19, %18
-  store i32 %20, i32* %2, align 4
-  %21 = load i32, i32* %0, align 4
-  %22 = lshr i32 %21, 24
-  %23 = shl i32 %22, 30
-  %24 = and i32 %20, 67107903
-  %25 = or i32 %24, %23
-  store i32 %25, i32* %2, align 4
+  %0 = load i32, ptr %py, align 4
+  %bf.value = and i32 %0, 7
+  %1 = load i32, ptr %px, align 4
+  %2 = and i32 %1, -8
+  %3 = or i32 %2, %bf.value
+  store i32 %3, ptr %px, align 4
+  %4 = load i32, ptr %py, align 4
+  %5 = lshr i32 %4, 4
+  %bf.clear1 = shl nuw nsw i32 %5, 3
+  %6 = and i32 %bf.clear1, 56
+  %7 = and i32 %3, -1017
+  %8 = or i32 %6, %7
+  store i32 %8, ptr %px, align 4
+  %9 = load i32, ptr %py, align 4
+  %10 = lshr i32 %9, 7
+  %bf.value4 = shl i32 %10, 10
+  %11 = and i32 %bf.value4, 261120
+  %12 = and i32 %8, -262081
+  %13 = or i32 %12, %11
+  store i32 %13, ptr %px, align 4
+  %14 = load i32, ptr %py, align 4
+  %15 = lshr i32 %14, 16
+  %bf.clear5 = shl i32 %15, 18
+  %16 = and i32 %bf.clear5, 66846720
+  %17 = and i32 %13, -1073480641
+  %18 = or i32 %17, %16
+  store i32 %18, ptr %px, align 4
+  %19 = load i32, ptr %py, align 4
+  %20 = lshr i32 %19, 24
+  %21 = shl i32 %20, 30
+  %22 = and i32 %18, 67107903
+  %23 = or i32 %22, %21
+  store i32 %23, ptr %px, align 4
   ret void
 }

@@ -211,6 +211,24 @@ define double @fmul_nnan_ninf_nneg_n0.0_commute(i127 %x) {
   ret double %r
 }
 
+; Make sure we can infer %x can't be 0 based on assumes.
+define { float, float } @test_fmul_0_assumed_finite(float %x) {
+; CHECK-LABEL: @test_fmul_0_assumed_finite(
+; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[IS_FINITE_X:%.*]] = fcmp one float [[FABS_X]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_FINITE_X]])
+; CHECK-NEXT:    ret { float, float } { float 0.000000e+00, float -0.000000e+00 }
+;
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %is.finite.x = fcmp one float %fabs.x, 0x7FF0000000000000
+  call void @llvm.assume(i1 %is.finite.x)
+  %mul.0 = fmul float %fabs.x, 0.0
+  %mul.neg0 = fmul float %fabs.x, -0.0
+  %ins.0 = insertvalue { float, float } poison, float %mul.0, 0
+  %ins.1 = insertvalue { float, float } %ins.0, float %mul.neg0, 1
+  ret { float, float } %ins.1
+}
+
 ; negative test - the int could be big enough to round to INF
 
 define double @fmul_nnan_ninf_nneg_0.0_commute(i128 %x) {
@@ -277,12 +295,23 @@ define float @PR22688(float %x) {
 }
 
 declare float @llvm.fabs.f32(float)
+declare double @llvm.fabs.f64(double)
 declare float @llvm.canonicalize.f32(float)
+declare float @llvm.floor.f32(float)
+declare float @llvm.ceil.f32(float)
+declare float @llvm.trunc.f32(float)
+declare float @llvm.rint.f32(float)
+declare float @llvm.nearbyint.f32(float)
+declare float @llvm.round.f32(float)
+declare float @llvm.roundeven.f32(float)
+declare float @llvm.fptrunc.round.f32.f64(double, metadata)
 declare float @llvm.arithmetic.fence.f32(float)
 declare float @llvm.copysign.f32(float, float)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 declare float @llvm.sqrt.f32(float)
 declare float @llvm.maxnum.f32(float, float)
+declare void @llvm.assume(i1 noundef)
+
 
 define float @fabs_select_positive_constants(i32 %c) {
 ; CHECK-LABEL: @fabs_select_positive_constants(
@@ -988,5 +1017,181 @@ define i1 @copysign_unknown_positive(float %unknown, float %unknown.sign) {
 ;
   %copysign = call float @llvm.copysign.f32(float %unknown, float %unknown.sign)
   %cmp = fcmp nnan oge float %copysign, 0.0
+  ret i1 %cmp
+}
+
+; https://alive2.llvm.org/ce/z/Y-EyY3
+define i1 @floor_known_positive(float %a) {
+; CHECK-LABEL: @floor_known_positive(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = call float @llvm.fabs.f32(float %a)
+  %known.positive = call float @llvm.floor.f32(float %fabs)
+  %cmp = fcmp nnan oge float %known.positive, 0.0
+  ret i1 %cmp
+}
+
+define i1 @floor_unknown_positive(float %unknown) {
+; CHECK-LABEL: @floor_unknown_positive(
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.floor.f32(float [[UNKNOWN:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[OP]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %op = call float @llvm.floor.f32(float %unknown)
+  %cmp = fcmp nnan oge float %op, 0.0
+  ret i1 %cmp
+}
+
+; https://alive2.llvm.org/ce/z/3tBUoW
+define i1 @ceil_known_positive(float %a) {
+; CHECK-LABEL: @ceil_known_positive(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = call float @llvm.fabs.f32(float %a)
+  %known.positive = call float @llvm.ceil.f32(float %fabs)
+  %cmp = fcmp nnan oge float %known.positive, 0.0
+  ret i1 %cmp
+}
+
+define i1 @ceil_unknown_positive(float %unknown) {
+; CHECK-LABEL: @ceil_unknown_positive(
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.ceil.f32(float [[UNKNOWN:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[OP]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+
+  %op = call float @llvm.ceil.f32(float %unknown)
+  %cmp = fcmp nnan oge float %op, 0.0
+  ret i1 %cmp
+}
+
+; https://alive2.llvm.org/ce/z/RbyJPX
+define i1 @trunc_known_positive(float %a) {
+; CHECK-LABEL: @trunc_known_positive(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = call float @llvm.fabs.f32(float %a)
+  %known.positive = call float @llvm.trunc.f32(float %fabs)
+  %cmp = fcmp nnan oge float %known.positive, 0.0
+  ret i1 %cmp
+}
+
+define i1 @trunc_unknown_positive(float %unknown) {
+; CHECK-LABEL: @trunc_unknown_positive(
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.trunc.f32(float [[UNKNOWN:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[OP]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %op = call float @llvm.trunc.f32(float %unknown)
+  %cmp = fcmp nnan oge float %op, 0.0
+  ret i1 %cmp
+}
+
+; https://alive2.llvm.org/ce/z/bjC2Jm
+define i1 @rint_known_positive(float %a) {
+; CHECK-LABEL: @rint_known_positive(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = call float @llvm.fabs.f32(float %a)
+  %known.positive = call float @llvm.rint.f32(float %fabs)
+  %cmp = fcmp nnan oge float %known.positive, 0.0
+  ret i1 %cmp
+}
+
+define i1 @rint_unknown_positive(float %unknown) {
+; CHECK-LABEL: @rint_unknown_positive(
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.rint.f32(float [[UNKNOWN:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[OP]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %op = call float @llvm.rint.f32(float %unknown)
+  %cmp = fcmp nnan oge float %op, 0.0
+  ret i1 %cmp
+}
+
+; https://alive2.llvm.org/ce/z/dFiL9n
+define i1 @nearbyint_known_positive(float %a) {
+; CHECK-LABEL: @nearbyint_known_positive(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = call float @llvm.fabs.f32(float %a)
+  %known.positive = call float @llvm.nearbyint.f32(float %fabs)
+  %cmp = fcmp nnan oge float %known.positive, 0.0
+  ret i1 %cmp
+}
+
+define i1 @nearbyint_unknown_positive(float %unknown) {
+; CHECK-LABEL: @nearbyint_unknown_positive(
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.nearbyint.f32(float [[UNKNOWN:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[OP]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %op = call float @llvm.nearbyint.f32(float %unknown)
+  %cmp = fcmp nnan oge float %op, 0.0
+  ret i1 %cmp
+}
+
+; https://alive2.llvm.org/ce/z/kPhS-d
+define i1 @round_known_positive(float %a) {
+; CHECK-LABEL: @round_known_positive(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = call float @llvm.fabs.f32(float %a)
+  %known.positive = call float @llvm.round.f32(float %fabs)
+  %cmp = fcmp nnan oge float %known.positive, 0.0
+  ret i1 %cmp
+}
+
+define i1 @round_unknown_positive(float %unknown) {
+; CHECK-LABEL: @round_unknown_positive(
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.round.f32(float [[UNKNOWN:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[OP]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %op = call float @llvm.round.f32(float %unknown)
+  %cmp = fcmp nnan oge float %op, 0.0
+  ret i1 %cmp
+}
+
+; https://alive2.llvm.org/ce/z/Z_tfsu
+define i1 @roundeven_known_positive(float %a) {
+; CHECK-LABEL: @roundeven_known_positive(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = call float @llvm.fabs.f32(float %a)
+  %known.positive = call float @llvm.roundeven.f32(float %fabs)
+  %cmp = fcmp nnan oge float %known.positive, 0.0
+  ret i1 %cmp
+}
+
+define i1 @roundeven_unknown_positive(float %unknown) {
+; CHECK-LABEL: @roundeven_unknown_positive(
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.roundeven.f32(float [[UNKNOWN:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[OP]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %op = call float @llvm.roundeven.f32(float %unknown)
+  %cmp = fcmp nnan oge float %op, 0.0
+  ret i1 %cmp
+}
+
+define i1 @fptrunc_round_known_positive(double %a) {
+; CHECK-LABEL: @fptrunc_round_known_positive(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = call double @llvm.fabs.f64(double %a)
+  %known.positive = call float @llvm.fptrunc.round.f32.f64(double %fabs, metadata !"round.downward")
+  %cmp = fcmp nnan oge float %known.positive, 0.0
+  ret i1 %cmp
+}
+
+define i1 @fptrunc_round_unknown_positive(double %unknown) {
+; CHECK-LABEL: @fptrunc_round_unknown_positive(
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.fptrunc.round.f32.f64(double [[UNKNOWN:%.*]], metadata !"round.downward")
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[OP]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %op = call float @llvm.fptrunc.round.f32.f64(double %unknown, metadata !"round.downward")
+  %cmp = fcmp nnan oge float %op, 0.0
   ret i1 %cmp
 }

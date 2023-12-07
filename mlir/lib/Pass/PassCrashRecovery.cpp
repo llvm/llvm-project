@@ -158,8 +158,8 @@ void RecoveryReproducerContext::crashHandler(void *) {
 
     // Emit an error using information only available within the context.
     emitError(context->preCrashOperation->getLoc())
-        << "A failure has been detected while processing the MLIR module:"
-        << description;
+        << "A signal was caught while processing the MLIR module:"
+        << description << "; marking pass as failed";
   }
 }
 
@@ -258,6 +258,8 @@ void PassCrashReproducerGenerator::finalize(Operation *rootOp,
                             formatPassOpReproducerMessage(note, value);
                           });
     note << "]: " << description;
+    impl->runningPasses.clear();
+    impl->activeContexts.clear();
     return;
   }
 
@@ -278,6 +280,7 @@ void PassCrashReproducerGenerator::finalize(Operation *rootOp,
   note << ": " << description;
 
   impl->activeContexts.clear();
+  impl->runningPasses.clear();
 }
 
 void PassCrashReproducerGenerator::prepareReproducerFor(Pass *pass,
@@ -359,12 +362,18 @@ struct CrashReproducerInstrumentation : public PassInstrumentation {
   }
 
   void runAfterPassFailed(Pass *pass, Operation *op) override {
+    // Only generate one reproducer per crash reproducer instrumentation.
+    if (alreadyFailed)
+      return;
+
+    alreadyFailed = true;
     generator.finalize(op, /*executionResult=*/failure());
   }
 
 private:
   /// The generator used to create crash reproducers.
   PassCrashReproducerGenerator &generator;
+  bool alreadyFailed = false;
 };
 } // namespace
 

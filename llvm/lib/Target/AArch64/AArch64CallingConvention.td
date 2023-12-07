@@ -82,9 +82,9 @@ def CC_AArch64_AAPCS : CallingConv<[
             nxv2bf16, nxv4bf16, nxv8bf16, nxv2f32, nxv4f32, nxv2f64],
            CCPassIndirect<i64>>,
 
-  CCIfType<[nxv1i1, nxv2i1, nxv4i1, nxv8i1, nxv16i1],
+  CCIfType<[nxv1i1, nxv2i1, nxv4i1, nxv8i1, nxv16i1, aarch64svcount],
            CCAssignToReg<[P0, P1, P2, P3]>>,
-  CCIfType<[nxv1i1, nxv2i1, nxv4i1, nxv8i1, nxv16i1],
+  CCIfType<[nxv1i1, nxv2i1, nxv4i1, nxv8i1, nxv16i1, aarch64svcount],
            CCPassIndirect<i64>>,
 
   // Handle i1, i8, i16, i32, i64, f32, f64 and v2f64 by passing in registers,
@@ -149,7 +149,7 @@ def RetCC_AArch64_AAPCS : CallingConv<[
             nxv2bf16, nxv4bf16, nxv8bf16, nxv2f32, nxv4f32, nxv2f64],
            CCAssignToReg<[Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7]>>,
 
-  CCIfType<[nxv1i1, nxv2i1, nxv4i1, nxv8i1, nxv16i1],
+  CCIfType<[nxv1i1, nxv2i1, nxv4i1, nxv8i1, nxv16i1, aarch64svcount],
            CCAssignToReg<[P0, P1, P2, P3]>>
 ]>;
 
@@ -416,6 +416,12 @@ def CSR_Win_AArch64_AAPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
                                                D8, D9, D10, D11,
                                                D12, D13, D14, D15)>;
 
+def CSR_Win_AArch64_AAPCS_SwiftError
+    : CalleeSavedRegs<(sub CSR_Win_AArch64_AAPCS, X21)>;
+
+def CSR_Win_AArch64_AAPCS_SwiftTail
+    : CalleeSavedRegs<(sub CSR_Win_AArch64_AAPCS, X20, X22)>;
+
 // The Control Flow Guard check call uses a custom calling convention that also
 // preserves X0-X8 and Q0-Q7.
 def CSR_Win_AArch64_CFGuard_Check : CalleeSavedRegs<(add CSR_Win_AArch64_AAPCS,
@@ -489,6 +495,9 @@ def CSR_AArch64_NoRegs : CalleeSavedRegs<(add)>;
 def CSR_AArch64_RT_MostRegs :  CalleeSavedRegs<(add CSR_AArch64_AAPCS,
                                                 (sequence "X%u", 9, 15))>;
 
+def CSR_AArch64_RT_AllRegs :  CalleeSavedRegs<(add CSR_AArch64_RT_MostRegs,
+                                                (sequence "Q%u", 8, 31))>;
+
 def CSR_AArch64_StackProbe_Windows
     : CalleeSavedRegs<(add (sequence "X%u", 0, 15),
                            (sequence "X%u", 18, 28), FP, SP,
@@ -551,6 +560,9 @@ def CSR_Darwin_AArch64_CXX_TLS_ViaCopy
 def CSR_Darwin_AArch64_RT_MostRegs
     : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS, (sequence "X%u", 9, 15))>;
 
+def CSR_Darwin_AArch64_RT_AllRegs
+    : CalleeSavedRegs<(add CSR_Darwin_AArch64_RT_MostRegs, (sequence "Q%u", 8, 31))>;
+
 // Variants of the standard calling conventions for shadow call stack.
 // These all preserve x18 in addition to any other registers.
 def CSR_AArch64_NoRegs_SCS
@@ -561,6 +573,8 @@ def CSR_AArch64_AAPCS_SwiftError_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AAPCS_SwiftError, X18)>;
 def CSR_AArch64_RT_MostRegs_SCS
     : CalleeSavedRegs<(add CSR_AArch64_RT_MostRegs, X18)>;
+def CSR_AArch64_RT_AllRegs_SCS
+    : CalleeSavedRegs<(add CSR_AArch64_RT_AllRegs, X18)>;
 def CSR_AArch64_AAVPCS_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AAVPCS, X18)>;
 def CSR_AArch64_SVE_AAPCS_SCS

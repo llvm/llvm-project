@@ -64,8 +64,8 @@
 @var = global [32 x i64] zeroinitializer
 
 define void @foo() {
-  %1 = load volatile [32 x i64], [32 x i64]* @var
-  store volatile [32 x i64] %1, [32 x i64]* @var
+  %1 = load volatile [32 x i64], ptr @var
+  store volatile [32 x i64] %1, ptr @var
 
 ; X3-NOT: lw gp,
 ; X3-NOT: ld gp,

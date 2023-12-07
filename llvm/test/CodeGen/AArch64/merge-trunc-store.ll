@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=aarch64--    | FileCheck %s --check-prefixes=CHECK,LE
 ; RUN: llc < %s -mtriple=aarch64_be-- | FileCheck %s --check-prefixes=CHECK,BE
 
-define void @le_i16_to_i8(i16 %x, i8* %p0) {
+define void @le_i16_to_i8(i16 %x, ptr %p0) {
 ; LE-LABEL: le_i16_to_i8:
 ; LE:       // %bb.0:
 ; LE-NEXT:    strh w0, [x1]
@@ -17,13 +17,13 @@ define void @le_i16_to_i8(i16 %x, i8* %p0) {
   %sh1 = lshr i16 %x, 8
   %t0 = trunc i16 %x to i8
   %t1 = trunc i16 %sh1 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  store i8 %t0, i8* %p0, align 1
-  store i8 %t1, i8* %p1, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  store i8 %t0, ptr %p0, align 1
+  store i8 %t1, ptr %p1, align 1
   ret void
 }
 
-define void @le_i16_to_i8_order(i16 %x, i8* %p0) {
+define void @le_i16_to_i8_order(i16 %x, ptr %p0) {
 ; LE-LABEL: le_i16_to_i8_order:
 ; LE:       // %bb.0:
 ; LE-NEXT:    strh w0, [x1]
@@ -38,13 +38,13 @@ define void @le_i16_to_i8_order(i16 %x, i8* %p0) {
   %sh1 = lshr i16 %x, 8
   %t0 = trunc i16 %x to i8
   %t1 = trunc i16 %sh1 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  store i8 %t1, i8* %p1, align 1
-  store i8 %t0, i8* %p0, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  store i8 %t1, ptr %p1, align 1
+  store i8 %t0, ptr %p0, align 1
   ret void
 }
 
-define void @be_i16_to_i8_offset(i16 %x, i8* %p0) {
+define void @be_i16_to_i8_offset(i16 %x, ptr %p0) {
 ; LE-LABEL: be_i16_to_i8_offset:
 ; LE:       // %bb.0:
 ; LE-NEXT:    rev w8, w0
@@ -59,14 +59,14 @@ define void @be_i16_to_i8_offset(i16 %x, i8* %p0) {
   %sh1 = lshr i16 %x, 8
   %t0 = trunc i16 %x to i8
   %t1 = trunc i16 %sh1 to i8
-  %p11 = getelementptr inbounds i8, i8* %p0, i64 11
-  %p12 = getelementptr inbounds i8, i8* %p0, i64 12
-  store i8 %t0, i8* %p12, align 1
-  store i8 %t1, i8* %p11, align 1
+  %p11 = getelementptr inbounds i8, ptr %p0, i64 11
+  %p12 = getelementptr inbounds i8, ptr %p0, i64 12
+  store i8 %t0, ptr %p12, align 1
+  store i8 %t1, ptr %p11, align 1
   ret void
 }
 
-define void @be_i16_to_i8_order(i16 %x, i8* %p0) {
+define void @be_i16_to_i8_order(i16 %x, ptr %p0) {
 ; LE-LABEL: be_i16_to_i8_order:
 ; LE:       // %bb.0:
 ; LE-NEXT:    rev w8, w0
@@ -81,13 +81,13 @@ define void @be_i16_to_i8_order(i16 %x, i8* %p0) {
   %sh1 = lshr i16 %x, 8
   %t0 = trunc i16 %x to i8
   %t1 = trunc i16 %sh1 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  store i8 %t1, i8* %p0, align 1
-  store i8 %t0, i8* %p1, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  store i8 %t1, ptr %p0, align 1
+  store i8 %t0, ptr %p1, align 1
   ret void
 }
 
-define void @le_i32_to_i8(i32 %x, i8* %p0) {
+define void @le_i32_to_i8(i32 %x, ptr %p0) {
 ; LE-LABEL: le_i32_to_i8:
 ; LE:       // %bb.0:
 ; LE-NEXT:    str w0, [x1]
@@ -105,17 +105,17 @@ define void @le_i32_to_i8(i32 %x, i8* %p0) {
   %t1 = trunc i32 %sh1 to i8
   %t2 = trunc i32 %sh2 to i8
   %t3 = trunc i32 %sh3 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  %p2 = getelementptr inbounds i8, i8* %p0, i64 2
-  %p3 = getelementptr inbounds i8, i8* %p0, i64 3
-  store i8 %t0, i8* %p0, align 1
-  store i8 %t1, i8* %p1, align 1
-  store i8 %t2, i8* %p2, align 1
-  store i8 %t3, i8* %p3, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i8, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i8, ptr %p0, i64 3
+  store i8 %t0, ptr %p0, align 1
+  store i8 %t1, ptr %p1, align 1
+  store i8 %t2, ptr %p2, align 1
+  store i8 %t3, ptr %p3, align 1
   ret void
 }
 
-define void @le_i32_to_i8_order(i32 %x, i8* %p0) {
+define void @le_i32_to_i8_order(i32 %x, ptr %p0) {
 ; LE-LABEL: le_i32_to_i8_order:
 ; LE:       // %bb.0:
 ; LE-NEXT:    str w0, [x1]
@@ -133,17 +133,17 @@ define void @le_i32_to_i8_order(i32 %x, i8* %p0) {
   %t1 = trunc i32 %sh1 to i8
   %t2 = trunc i32 %sh2 to i8
   %t3 = trunc i32 %sh3 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  %p2 = getelementptr inbounds i8, i8* %p0, i64 2
-  %p3 = getelementptr inbounds i8, i8* %p0, i64 3
-  store i8 %t3, i8* %p3, align 1
-  store i8 %t1, i8* %p1, align 1
-  store i8 %t0, i8* %p0, align 1
-  store i8 %t2, i8* %p2, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i8, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i8, ptr %p0, i64 3
+  store i8 %t3, ptr %p3, align 1
+  store i8 %t1, ptr %p1, align 1
+  store i8 %t0, ptr %p0, align 1
+  store i8 %t2, ptr %p2, align 1
   ret void
 }
 
-define void @be_i32_to_i8(i32 %x, i8* %p0) {
+define void @be_i32_to_i8(i32 %x, ptr %p0) {
 ; LE-LABEL: be_i32_to_i8:
 ; LE:       // %bb.0:
 ; LE-NEXT:    rev w8, w0
@@ -161,17 +161,17 @@ define void @be_i32_to_i8(i32 %x, i8* %p0) {
   %t1 = trunc i32 %sh1 to i8
   %t2 = trunc i32 %sh2 to i8
   %t3 = trunc i32 %sh3 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  %p2 = getelementptr inbounds i8, i8* %p0, i64 2
-  %p3 = getelementptr inbounds i8, i8* %p0, i64 3
-  store i8 %t0, i8* %p3, align 1
-  store i8 %t1, i8* %p2, align 1
-  store i8 %t2, i8* %p1, align 1
-  store i8 %t3, i8* %p0, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i8, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i8, ptr %p0, i64 3
+  store i8 %t0, ptr %p3, align 1
+  store i8 %t1, ptr %p2, align 1
+  store i8 %t2, ptr %p1, align 1
+  store i8 %t3, ptr %p0, align 1
   ret void
 }
 
-define void @be_i32_to_i8_order(i32 %x, i8* %p0) {
+define void @be_i32_to_i8_order(i32 %x, ptr %p0) {
 ; LE-LABEL: be_i32_to_i8_order:
 ; LE:       // %bb.0:
 ; LE-NEXT:    rev w8, w0
@@ -189,17 +189,17 @@ define void @be_i32_to_i8_order(i32 %x, i8* %p0) {
   %t1 = trunc i32 %sh1 to i8
   %t2 = trunc i32 %sh2 to i8
   %t3 = trunc i32 %sh3 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  %p2 = getelementptr inbounds i8, i8* %p0, i64 2
-  %p3 = getelementptr inbounds i8, i8* %p0, i64 3
-  store i8 %t3, i8* %p0, align 1
-  store i8 %t2, i8* %p1, align 1
-  store i8 %t0, i8* %p3, align 1
-  store i8 %t1, i8* %p2, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i8, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i8, ptr %p0, i64 3
+  store i8 %t3, ptr %p0, align 1
+  store i8 %t2, ptr %p1, align 1
+  store i8 %t0, ptr %p3, align 1
+  store i8 %t1, ptr %p2, align 1
   ret void
 }
 
-define void @le_i32_to_i16(i32 %x, i16* %p0) {
+define void @le_i32_to_i16(i32 %x, ptr %p0) {
 ; LE-LABEL: le_i32_to_i16:
 ; LE:       // %bb.0:
 ; LE-NEXT:    str w0, [x1]
@@ -213,13 +213,13 @@ define void @le_i32_to_i16(i32 %x, i16* %p0) {
   %sh1 = lshr i32 %x, 16
   %t0 = trunc i32 %x to i16
   %t1 = trunc i32 %sh1 to i16
-  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
-  store i16 %t0, i16* %p0, align 2
-  store i16 %t1, i16* %p1, align 2
+  %p1 = getelementptr inbounds i16, ptr %p0, i64 1
+  store i16 %t0, ptr %p0, align 2
+  store i16 %t1, ptr %p1, align 2
   ret void
 }
 
-define void @le_i32_to_i16_order(i32 %x, i16* %p0) {
+define void @le_i32_to_i16_order(i32 %x, ptr %p0) {
 ; LE-LABEL: le_i32_to_i16_order:
 ; LE:       // %bb.0:
 ; LE-NEXT:    str w0, [x1]
@@ -233,13 +233,13 @@ define void @le_i32_to_i16_order(i32 %x, i16* %p0) {
   %sh1 = lshr i32 %x, 16
   %t0 = trunc i32 %x to i16
   %t1 = trunc i32 %sh1 to i16
-  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
-  store i16 %t1, i16* %p1, align 2
-  store i16 %t0, i16* %p0, align 2
+  %p1 = getelementptr inbounds i16, ptr %p0, i64 1
+  store i16 %t1, ptr %p1, align 2
+  store i16 %t0, ptr %p0, align 2
   ret void
 }
 
-define void @be_i32_to_i16(i32 %x, i16* %p0) {
+define void @be_i32_to_i16(i32 %x, ptr %p0) {
 ; LE-LABEL: be_i32_to_i16:
 ; LE:       // %bb.0:
 ; LE-NEXT:    ror w8, w0, #16
@@ -253,13 +253,13 @@ define void @be_i32_to_i16(i32 %x, i16* %p0) {
   %sh1 = lshr i32 %x, 16
   %t0 = trunc i32 %x to i16
   %t1 = trunc i32 %sh1 to i16
-  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
-  store i16 %t0, i16* %p1, align 2
-  store i16 %t1, i16* %p0, align 2
+  %p1 = getelementptr inbounds i16, ptr %p0, i64 1
+  store i16 %t0, ptr %p1, align 2
+  store i16 %t1, ptr %p0, align 2
   ret void
 }
 
-define void @be_i32_to_i16_order(i32 %x, i16* %p0) {
+define void @be_i32_to_i16_order(i32 %x, ptr %p0) {
 ; LE-LABEL: be_i32_to_i16_order:
 ; LE:       // %bb.0:
 ; LE-NEXT:    ror w8, w0, #16
@@ -273,13 +273,13 @@ define void @be_i32_to_i16_order(i32 %x, i16* %p0) {
   %sh1 = lshr i32 %x, 16
   %t0 = trunc i32 %x to i16
   %t1 = trunc i32 %sh1 to i16
-  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
-  store i16 %t1, i16* %p0, align 2
-  store i16 %t0, i16* %p1, align 2
+  %p1 = getelementptr inbounds i16, ptr %p0, i64 1
+  store i16 %t1, ptr %p0, align 2
+  store i16 %t0, ptr %p1, align 2
   ret void
 }
 
-define void @le_i64_to_i8(i64 %x, i8* %p0) {
+define void @le_i64_to_i8(i64 %x, ptr %p0) {
 ; LE-LABEL: le_i64_to_i8:
 ; LE:       // %bb.0:
 ; LE-NEXT:    str x0, [x1]
@@ -305,25 +305,25 @@ define void @le_i64_to_i8(i64 %x, i8* %p0) {
   %t5 = trunc i64 %sh5 to i8
   %t6 = trunc i64 %sh6 to i8
   %t7 = trunc i64 %sh7 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  %p2 = getelementptr inbounds i8, i8* %p0, i64 2
-  %p3 = getelementptr inbounds i8, i8* %p0, i64 3
-  %p4 = getelementptr inbounds i8, i8* %p0, i64 4
-  %p5 = getelementptr inbounds i8, i8* %p0, i64 5
-  %p6 = getelementptr inbounds i8, i8* %p0, i64 6
-  %p7 = getelementptr inbounds i8, i8* %p0, i64 7
-  store i8 %t0, i8* %p0, align 1
-  store i8 %t1, i8* %p1, align 1
-  store i8 %t2, i8* %p2, align 1
-  store i8 %t3, i8* %p3, align 1
-  store i8 %t4, i8* %p4, align 1
-  store i8 %t5, i8* %p5, align 1
-  store i8 %t6, i8* %p6, align 1
-  store i8 %t7, i8* %p7, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i8, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i8, ptr %p0, i64 3
+  %p4 = getelementptr inbounds i8, ptr %p0, i64 4
+  %p5 = getelementptr inbounds i8, ptr %p0, i64 5
+  %p6 = getelementptr inbounds i8, ptr %p0, i64 6
+  %p7 = getelementptr inbounds i8, ptr %p0, i64 7
+  store i8 %t0, ptr %p0, align 1
+  store i8 %t1, ptr %p1, align 1
+  store i8 %t2, ptr %p2, align 1
+  store i8 %t3, ptr %p3, align 1
+  store i8 %t4, ptr %p4, align 1
+  store i8 %t5, ptr %p5, align 1
+  store i8 %t6, ptr %p6, align 1
+  store i8 %t7, ptr %p7, align 1
   ret void
 }
 
-define void @le_i64_to_i8_order(i64 %x, i8* %p0) {
+define void @le_i64_to_i8_order(i64 %x, ptr %p0) {
 ; LE-LABEL: le_i64_to_i8_order:
 ; LE:       // %bb.0:
 ; LE-NEXT:    str x0, [x1]
@@ -349,25 +349,25 @@ define void @le_i64_to_i8_order(i64 %x, i8* %p0) {
   %t5 = trunc i64 %sh5 to i8
   %t6 = trunc i64 %sh6 to i8
   %t7 = trunc i64 %sh7 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  %p2 = getelementptr inbounds i8, i8* %p0, i64 2
-  %p3 = getelementptr inbounds i8, i8* %p0, i64 3
-  %p4 = getelementptr inbounds i8, i8* %p0, i64 4
-  %p5 = getelementptr inbounds i8, i8* %p0, i64 5
-  %p6 = getelementptr inbounds i8, i8* %p0, i64 6
-  %p7 = getelementptr inbounds i8, i8* %p0, i64 7
-  store i8 %t5, i8* %p5, align 1
-  store i8 %t0, i8* %p0, align 1
-  store i8 %t3, i8* %p3, align 1
-  store i8 %t7, i8* %p7, align 1
-  store i8 %t1, i8* %p1, align 1
-  store i8 %t6, i8* %p6, align 1
-  store i8 %t2, i8* %p2, align 1
-  store i8 %t4, i8* %p4, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i8, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i8, ptr %p0, i64 3
+  %p4 = getelementptr inbounds i8, ptr %p0, i64 4
+  %p5 = getelementptr inbounds i8, ptr %p0, i64 5
+  %p6 = getelementptr inbounds i8, ptr %p0, i64 6
+  %p7 = getelementptr inbounds i8, ptr %p0, i64 7
+  store i8 %t5, ptr %p5, align 1
+  store i8 %t0, ptr %p0, align 1
+  store i8 %t3, ptr %p3, align 1
+  store i8 %t7, ptr %p7, align 1
+  store i8 %t1, ptr %p1, align 1
+  store i8 %t6, ptr %p6, align 1
+  store i8 %t2, ptr %p2, align 1
+  store i8 %t4, ptr %p4, align 1
   ret void
 }
 
-define void @be_i64_to_i8(i64 %x, i8* %p0) {
+define void @be_i64_to_i8(i64 %x, ptr %p0) {
 ; LE-LABEL: be_i64_to_i8:
 ; LE:       // %bb.0:
 ; LE-NEXT:    rev x8, x0
@@ -393,25 +393,25 @@ define void @be_i64_to_i8(i64 %x, i8* %p0) {
   %t5 = trunc i64 %sh5 to i8
   %t6 = trunc i64 %sh6 to i8
   %t7 = trunc i64 %sh7 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  %p2 = getelementptr inbounds i8, i8* %p0, i64 2
-  %p3 = getelementptr inbounds i8, i8* %p0, i64 3
-  %p4 = getelementptr inbounds i8, i8* %p0, i64 4
-  %p5 = getelementptr inbounds i8, i8* %p0, i64 5
-  %p6 = getelementptr inbounds i8, i8* %p0, i64 6
-  %p7 = getelementptr inbounds i8, i8* %p0, i64 7
-  store i8 %t0, i8* %p7, align 1
-  store i8 %t1, i8* %p6, align 1
-  store i8 %t2, i8* %p5, align 1
-  store i8 %t3, i8* %p4, align 1
-  store i8 %t4, i8* %p3, align 1
-  store i8 %t5, i8* %p2, align 1
-  store i8 %t6, i8* %p1, align 1
-  store i8 %t7, i8* %p0, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i8, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i8, ptr %p0, i64 3
+  %p4 = getelementptr inbounds i8, ptr %p0, i64 4
+  %p5 = getelementptr inbounds i8, ptr %p0, i64 5
+  %p6 = getelementptr inbounds i8, ptr %p0, i64 6
+  %p7 = getelementptr inbounds i8, ptr %p0, i64 7
+  store i8 %t0, ptr %p7, align 1
+  store i8 %t1, ptr %p6, align 1
+  store i8 %t2, ptr %p5, align 1
+  store i8 %t3, ptr %p4, align 1
+  store i8 %t4, ptr %p3, align 1
+  store i8 %t5, ptr %p2, align 1
+  store i8 %t6, ptr %p1, align 1
+  store i8 %t7, ptr %p0, align 1
   ret void
 }
 
-define void @be_i64_to_i8_order(i64 %x, i8* %p0) {
+define void @be_i64_to_i8_order(i64 %x, ptr %p0) {
 ; LE-LABEL: be_i64_to_i8_order:
 ; LE:       // %bb.0:
 ; LE-NEXT:    rev x8, x0
@@ -437,25 +437,25 @@ define void @be_i64_to_i8_order(i64 %x, i8* %p0) {
   %t5 = trunc i64 %sh5 to i8
   %t6 = trunc i64 %sh6 to i8
   %t7 = trunc i64 %sh7 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  %p2 = getelementptr inbounds i8, i8* %p0, i64 2
-  %p3 = getelementptr inbounds i8, i8* %p0, i64 3
-  %p4 = getelementptr inbounds i8, i8* %p0, i64 4
-  %p5 = getelementptr inbounds i8, i8* %p0, i64 5
-  %p6 = getelementptr inbounds i8, i8* %p0, i64 6
-  %p7 = getelementptr inbounds i8, i8* %p0, i64 7
-  store i8 %t7, i8* %p0, align 1
-  store i8 %t6, i8* %p1, align 1
-  store i8 %t5, i8* %p2, align 1
-  store i8 %t4, i8* %p3, align 1
-  store i8 %t3, i8* %p4, align 1
-  store i8 %t2, i8* %p5, align 1
-  store i8 %t1, i8* %p6, align 1
-  store i8 %t0, i8* %p7, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i8, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i8, ptr %p0, i64 3
+  %p4 = getelementptr inbounds i8, ptr %p0, i64 4
+  %p5 = getelementptr inbounds i8, ptr %p0, i64 5
+  %p6 = getelementptr inbounds i8, ptr %p0, i64 6
+  %p7 = getelementptr inbounds i8, ptr %p0, i64 7
+  store i8 %t7, ptr %p0, align 1
+  store i8 %t6, ptr %p1, align 1
+  store i8 %t5, ptr %p2, align 1
+  store i8 %t4, ptr %p3, align 1
+  store i8 %t3, ptr %p4, align 1
+  store i8 %t2, ptr %p5, align 1
+  store i8 %t1, ptr %p6, align 1
+  store i8 %t0, ptr %p7, align 1
   ret void
 }
 
-define void @le_i64_to_i16(i64 %x, i16* %p0) {
+define void @le_i64_to_i16(i64 %x, ptr %p0) {
 ; LE-LABEL: le_i64_to_i16:
 ; LE:       // %bb.0:
 ; LE-NEXT:    str x0, [x1]
@@ -478,17 +478,17 @@ define void @le_i64_to_i16(i64 %x, i16* %p0) {
   %t1 = trunc i64 %sh1 to i16
   %t2 = trunc i64 %sh2 to i16
   %t3 = trunc i64 %sh3 to i16
-  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
-  %p2 = getelementptr inbounds i16, i16* %p0, i64 2
-  %p3 = getelementptr inbounds i16, i16* %p0, i64 3
-  store i16 %t0, i16* %p0, align 2
-  store i16 %t1, i16* %p1, align 2
-  store i16 %t2, i16* %p2, align 2
-  store i16 %t3, i16* %p3, align 2
+  %p1 = getelementptr inbounds i16, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i16, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i16, ptr %p0, i64 3
+  store i16 %t0, ptr %p0, align 2
+  store i16 %t1, ptr %p1, align 2
+  store i16 %t2, ptr %p2, align 2
+  store i16 %t3, ptr %p3, align 2
   ret void
 }
 
-define void @le_i64_to_i16_order(i64 %x, i16* %p0) {
+define void @le_i64_to_i16_order(i64 %x, ptr %p0) {
 ; LE-LABEL: le_i64_to_i16_order:
 ; LE:       // %bb.0:
 ; LE-NEXT:    str x0, [x1]
@@ -511,24 +511,24 @@ define void @le_i64_to_i16_order(i64 %x, i16* %p0) {
   %t1 = trunc i64 %sh1 to i16
   %t2 = trunc i64 %sh2 to i16
   %t3 = trunc i64 %sh3 to i16
-  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
-  %p2 = getelementptr inbounds i16, i16* %p0, i64 2
-  %p3 = getelementptr inbounds i16, i16* %p0, i64 3
-  store i16 %t1, i16* %p1, align 2
-  store i16 %t3, i16* %p3, align 2
-  store i16 %t0, i16* %p0, align 2
-  store i16 %t2, i16* %p2, align 2
+  %p1 = getelementptr inbounds i16, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i16, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i16, ptr %p0, i64 3
+  store i16 %t1, ptr %p1, align 2
+  store i16 %t3, ptr %p3, align 2
+  store i16 %t0, ptr %p0, align 2
+  store i16 %t2, ptr %p2, align 2
   ret void
 }
 
-define void @be_i64_to_i16(i64 %x, i16* %p0) {
+define void @be_i64_to_i16(i64 %x, ptr %p0) {
 ; LE-LABEL: be_i64_to_i16:
 ; LE:       // %bb.0:
-; LE-NEXT:    lsr x8, x0, #32
-; LE-NEXT:    ror w9, w0, #16
+; LE-NEXT:    ror w8, w0, #16
+; LE-NEXT:    lsr x9, x0, #32
 ; LE-NEXT:    lsr x10, x0, #48
-; LE-NEXT:    strh w8, [x1, #2]
-; LE-NEXT:    str w9, [x1, #4]
+; LE-NEXT:    str w8, [x1, #4]
+; LE-NEXT:    strh w9, [x1, #2]
 ; LE-NEXT:    strh w10, [x1]
 ; LE-NEXT:    ret
 ;
@@ -543,17 +543,17 @@ define void @be_i64_to_i16(i64 %x, i16* %p0) {
   %t1 = trunc i64 %sh1 to i16
   %t2 = trunc i64 %sh2 to i16
   %t3 = trunc i64 %sh3 to i16
-  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
-  %p2 = getelementptr inbounds i16, i16* %p0, i64 2
-  %p3 = getelementptr inbounds i16, i16* %p0, i64 3
-  store i16 %t0, i16* %p3, align 2
-  store i16 %t1, i16* %p2, align 2
-  store i16 %t2, i16* %p1, align 2
-  store i16 %t3, i16* %p0, align 2
+  %p1 = getelementptr inbounds i16, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i16, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i16, ptr %p0, i64 3
+  store i16 %t0, ptr %p3, align 2
+  store i16 %t1, ptr %p2, align 2
+  store i16 %t2, ptr %p1, align 2
+  store i16 %t3, ptr %p0, align 2
   ret void
 }
 
-define void @be_i64_to_i16_order(i64 %x, i16* %p0) {
+define void @be_i64_to_i16_order(i64 %x, ptr %p0) {
 ; LE-LABEL: be_i64_to_i16_order:
 ; LE:       // %bb.0:
 ; LE-NEXT:    lsr x8, x0, #48
@@ -576,17 +576,17 @@ define void @be_i64_to_i16_order(i64 %x, i16* %p0) {
   %t1 = trunc i64 %sh1 to i16
   %t2 = trunc i64 %sh2 to i16
   %t3 = trunc i64 %sh3 to i16
-  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
-  %p2 = getelementptr inbounds i16, i16* %p0, i64 2
-  %p3 = getelementptr inbounds i16, i16* %p0, i64 3
-  store i16 %t0, i16* %p3, align 2
-  store i16 %t3, i16* %p0, align 2
-  store i16 %t2, i16* %p1, align 2
-  store i16 %t1, i16* %p2, align 2
+  %p1 = getelementptr inbounds i16, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i16, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i16, ptr %p0, i64 3
+  store i16 %t0, ptr %p3, align 2
+  store i16 %t3, ptr %p0, align 2
+  store i16 %t2, ptr %p1, align 2
+  store i16 %t1, ptr %p2, align 2
   ret void
 }
 
-define void @le_i64_to_i32(i64 %x, i32* %p0) {
+define void @le_i64_to_i32(i64 %x, ptr %p0) {
 ; LE-LABEL: le_i64_to_i32:
 ; LE:       // %bb.0:
 ; LE-NEXT:    str x0, [x1]
@@ -600,13 +600,13 @@ define void @le_i64_to_i32(i64 %x, i32* %p0) {
   %sh1 = lshr i64 %x, 32
   %t0 = trunc i64 %x to i32
   %t1 = trunc i64 %sh1 to i32
-  %p1 = getelementptr inbounds i32, i32* %p0, i64 1
-  store i32 %t0, i32* %p0, align 4
-  store i32 %t1, i32* %p1, align 4
+  %p1 = getelementptr inbounds i32, ptr %p0, i64 1
+  store i32 %t0, ptr %p0, align 4
+  store i32 %t1, ptr %p1, align 4
   ret void
 }
 
-define void @le_i64_to_i32_order(i64 %x, i32* %p0) {
+define void @le_i64_to_i32_order(i64 %x, ptr %p0) {
 ; LE-LABEL: le_i64_to_i32_order:
 ; LE:       // %bb.0:
 ; LE-NEXT:    str x0, [x1]
@@ -620,13 +620,13 @@ define void @le_i64_to_i32_order(i64 %x, i32* %p0) {
   %sh1 = lshr i64 %x, 32
   %t0 = trunc i64 %x to i32
   %t1 = trunc i64 %sh1 to i32
-  %p1 = getelementptr inbounds i32, i32* %p0, i64 1
-  store i32 %t1, i32* %p1, align 4
-  store i32 %t0, i32* %p0, align 4
+  %p1 = getelementptr inbounds i32, ptr %p0, i64 1
+  store i32 %t1, ptr %p1, align 4
+  store i32 %t0, ptr %p0, align 4
   ret void
 }
 
-define void @be_i64_to_i32(i64 %x, i32* %p0) {
+define void @be_i64_to_i32(i64 %x, ptr %p0) {
 ; LE-LABEL: be_i64_to_i32:
 ; LE:       // %bb.0:
 ; LE-NEXT:    ror x8, x0, #32
@@ -640,13 +640,13 @@ define void @be_i64_to_i32(i64 %x, i32* %p0) {
   %sh1 = lshr i64 %x, 32
   %t0 = trunc i64 %x to i32
   %t1 = trunc i64 %sh1 to i32
-  %p1 = getelementptr inbounds i32, i32* %p0, i64 1
-  store i32 %t0, i32* %p1, align 4
-  store i32 %t1, i32* %p0, align 4
+  %p1 = getelementptr inbounds i32, ptr %p0, i64 1
+  store i32 %t0, ptr %p1, align 4
+  store i32 %t1, ptr %p0, align 4
   ret void
 }
 
-define void @be_i64_to_i32_order(i64 %x, i32* %p0) {
+define void @be_i64_to_i32_order(i64 %x, ptr %p0) {
 ; LE-LABEL: be_i64_to_i32_order:
 ; LE:       // %bb.0:
 ; LE-NEXT:    ror x8, x0, #32
@@ -660,15 +660,15 @@ define void @be_i64_to_i32_order(i64 %x, i32* %p0) {
   %sh1 = lshr i64 %x, 32
   %t0 = trunc i64 %x to i32
   %t1 = trunc i64 %sh1 to i32
-  %p1 = getelementptr inbounds i32, i32* %p0, i64 1
-  store i32 %t1, i32* %p0, align 4
-  store i32 %t0, i32* %p1, align 4
+  %p1 = getelementptr inbounds i32, ptr %p0, i64 1
+  store i32 %t1, ptr %p0, align 4
+  store i32 %t0, ptr %p1, align 4
   ret void
 }
 
 ; Negative test - not consecutive addresses
 
-define void @i64_to_i32_wrong_addr(i64 %x, i32* %p0) {
+define void @i64_to_i32_wrong_addr(i64 %x, ptr %p0) {
 ; CHECK-LABEL: i64_to_i32_wrong_addr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x0, #32
@@ -678,15 +678,15 @@ define void @i64_to_i32_wrong_addr(i64 %x, i32* %p0) {
   %sh1 = lshr i64 %x, 32
   %t0 = trunc i64 %x to i32
   %t1 = trunc i64 %sh1 to i32
-  %p3 = getelementptr inbounds i32, i32* %p0, i64 3
-  store i32 %t1, i32* %p3, align 4
-  store i32 %t0, i32* %p0, align 4
+  %p3 = getelementptr inbounds i32, ptr %p0, i64 3
+  store i32 %t1, ptr %p3, align 4
+  store i32 %t0, ptr %p0, align 4
   ret void
 }
 
 ; Negative test - addresses don't line up with shift amounts
 
-define void @i64_to_i16_wrong_order(i64 %x, i16* %p0) {
+define void @i64_to_i16_wrong_order(i64 %x, ptr %p0) {
 ; CHECK-LABEL: i64_to_i16_wrong_order:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x0, #48
@@ -704,19 +704,19 @@ define void @i64_to_i16_wrong_order(i64 %x, i16* %p0) {
   %t1 = trunc i64 %sh1 to i16
   %t2 = trunc i64 %sh2 to i16
   %t3 = trunc i64 %sh3 to i16
-  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
-  %p2 = getelementptr inbounds i16, i16* %p0, i64 2
-  %p3 = getelementptr inbounds i16, i16* %p0, i64 3
-  store i16 %t3, i16* %p3, align 2
-  store i16 %t1, i16* %p2, align 2
-  store i16 %t2, i16* %p1, align 2
-  store i16 %t0, i16* %p0, align 2
+  %p1 = getelementptr inbounds i16, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i16, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i16, ptr %p0, i64 3
+  store i16 %t3, ptr %p3, align 2
+  store i16 %t1, ptr %p2, align 2
+  store i16 %t2, ptr %p1, align 2
+  store i16 %t0, ptr %p0, align 2
   ret void
 }
 
 ; Negative test - no store of 't1'
 
-define void @i32_to_i8_incomplete(i32 %x, i8* %p0) {
+define void @i32_to_i8_incomplete(i32 %x, ptr %p0) {
 ; CHECK-LABEL: i32_to_i8_incomplete:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr w8, w0, #16
@@ -732,33 +732,33 @@ define void @i32_to_i8_incomplete(i32 %x, i8* %p0) {
   %t1 = trunc i32 %sh1 to i8
   %t2 = trunc i32 %sh2 to i8
   %t3 = trunc i32 %sh3 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  %p2 = getelementptr inbounds i8, i8* %p0, i64 2
-  %p3 = getelementptr inbounds i8, i8* %p0, i64 3
-  store i8 %t0, i8* %p0, align 1
-  store i8 %t2, i8* %p2, align 1
-  store i8 %t3, i8* %p3, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i8, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i8, ptr %p0, i64 3
+  store i8 %t0, ptr %p0, align 1
+  store i8 %t2, ptr %p2, align 1
+  store i8 %t3, ptr %p3, align 1
   ret void
 }
 
 ; Negative test - no store of 't3'
 
-define void @i64_to_i8_incomplete(i64 %x, i8* %p0) {
+define void @i64_to_i8_incomplete(i64 %x, ptr %p0) {
 ; CHECK-LABEL: i64_to_i8_incomplete:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x0, #56
 ; CHECK-NEXT:    lsr x9, x0, #48
 ; CHECK-NEXT:    lsr x10, x0, #40
-; CHECK-NEXT:    lsr x11, x0, #32
 ; CHECK-NEXT:    strb w0, [x1, #7]
 ; CHECK-NEXT:    strb w8, [x1]
-; CHECK-NEXT:    lsr x8, x0, #16
+; CHECK-NEXT:    lsr x8, x0, #32
 ; CHECK-NEXT:    strb w9, [x1, #1]
-; CHECK-NEXT:    lsr x9, x0, #8
+; CHECK-NEXT:    lsr x9, x0, #16
 ; CHECK-NEXT:    strb w10, [x1, #2]
-; CHECK-NEXT:    strb w11, [x1, #3]
-; CHECK-NEXT:    strb w8, [x1, #5]
-; CHECK-NEXT:    strb w9, [x1, #6]
+; CHECK-NEXT:    lsr x10, x0, #8
+; CHECK-NEXT:    strb w8, [x1, #3]
+; CHECK-NEXT:    strb w9, [x1, #5]
+; CHECK-NEXT:    strb w10, [x1, #6]
 ; CHECK-NEXT:    ret
   %sh1 = lshr i64 %x, 8
   %sh2 = lshr i64 %x, 16
@@ -775,26 +775,26 @@ define void @i64_to_i8_incomplete(i64 %x, i8* %p0) {
   %t5 = trunc i64 %sh5 to i8
   %t6 = trunc i64 %sh6 to i8
   %t7 = trunc i64 %sh7 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  %p2 = getelementptr inbounds i8, i8* %p0, i64 2
-  %p3 = getelementptr inbounds i8, i8* %p0, i64 3
-  %p4 = getelementptr inbounds i8, i8* %p0, i64 4
-  %p5 = getelementptr inbounds i8, i8* %p0, i64 5
-  %p6 = getelementptr inbounds i8, i8* %p0, i64 6
-  %p7 = getelementptr inbounds i8, i8* %p0, i64 7
-  store i8 %t7, i8* %p0, align 1
-  store i8 %t6, i8* %p1, align 1
-  store i8 %t5, i8* %p2, align 1
-  store i8 %t4, i8* %p3, align 1
-  store i8 %t2, i8* %p5, align 1
-  store i8 %t1, i8* %p6, align 1
-  store i8 %t0, i8* %p7, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i8, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i8, ptr %p0, i64 3
+  %p4 = getelementptr inbounds i8, ptr %p0, i64 4
+  %p5 = getelementptr inbounds i8, ptr %p0, i64 5
+  %p6 = getelementptr inbounds i8, ptr %p0, i64 6
+  %p7 = getelementptr inbounds i8, ptr %p0, i64 7
+  store i8 %t7, ptr %p0, align 1
+  store i8 %t6, ptr %p1, align 1
+  store i8 %t5, ptr %p2, align 1
+  store i8 %t4, ptr %p3, align 1
+  store i8 %t2, ptr %p5, align 1
+  store i8 %t1, ptr %p6, align 1
+  store i8 %t0, ptr %p7, align 1
   ret void
 }
 
 ; Negative test - not consecutive addresses
 
-define void @i32_to_i16_wrong_addr(i32 %x, i16* %p0) {
+define void @i32_to_i16_wrong_addr(i32 %x, ptr %p0) {
 ; CHECK-LABEL: i32_to_i16_wrong_addr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr w8, w0, #16
@@ -804,15 +804,15 @@ define void @i32_to_i16_wrong_addr(i32 %x, i16* %p0) {
   %sh1 = lshr i32 %x, 16
   %t0 = trunc i32 %x to i16
   %t1 = trunc i32 %sh1 to i16
-  %p2 = getelementptr inbounds i16, i16* %p0, i64 2
-  store i16 %t1, i16* %p2, align 2
-  store i16 %t0, i16* %p0, align 2
+  %p2 = getelementptr inbounds i16, ptr %p0, i64 2
+  store i16 %t1, ptr %p2, align 2
+  store i16 %t0, ptr %p0, align 2
   ret void
 }
 
 ; Negative test - addresses don't line up with shift amounts
 
-define void @i32_to_i8_wrong_order(i32 %x, i8* %p0) {
+define void @i32_to_i8_wrong_order(i32 %x, ptr %p0) {
 ; CHECK-LABEL: i32_to_i8_wrong_order:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr w8, w0, #24
@@ -830,12 +830,12 @@ define void @i32_to_i8_wrong_order(i32 %x, i8* %p0) {
   %t1 = trunc i32 %sh1 to i8
   %t2 = trunc i32 %sh2 to i8
   %t3 = trunc i32 %sh3 to i8
-  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
-  %p2 = getelementptr inbounds i8, i8* %p0, i64 2
-  %p3 = getelementptr inbounds i8, i8* %p0, i64 3
-  store i8 %t3, i8* %p1, align 1
-  store i8 %t2, i8* %p0, align 1
-  store i8 %t0, i8* %p3, align 1
-  store i8 %t1, i8* %p2, align 1
+  %p1 = getelementptr inbounds i8, ptr %p0, i64 1
+  %p2 = getelementptr inbounds i8, ptr %p0, i64 2
+  %p3 = getelementptr inbounds i8, ptr %p0, i64 3
+  store i8 %t3, ptr %p1, align 1
+  store i8 %t2, ptr %p0, align 1
+  store i8 %t0, ptr %p3, align 1
+  store i8 %t1, ptr %p2, align 1
   ret void
 }

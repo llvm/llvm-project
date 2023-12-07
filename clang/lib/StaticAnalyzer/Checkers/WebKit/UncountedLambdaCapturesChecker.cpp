@@ -14,6 +14,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -24,7 +25,7 @@ class UncountedLambdaCapturesChecker
 private:
   BugType Bug{this, "Lambda capture of uncounted variable",
               "WebKit coding guidelines"};
-  mutable BugReporter *BR;
+  mutable BugReporter *BR = nullptr;
 
 public:
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -59,10 +60,10 @@ public:
       if (C.capturesVariable()) {
         ValueDecl *CapturedVar = C.getCapturedVar();
         if (auto *CapturedVarType = CapturedVar->getType().getTypePtrOrNull()) {
-          Optional<bool> IsUncountedPtr = isUncountedPtr(CapturedVarType);
-          if (IsUncountedPtr && *IsUncountedPtr) {
-            reportBug(C, CapturedVar, CapturedVarType);
-          }
+            std::optional<bool> IsUncountedPtr = isUncountedPtr(CapturedVarType);
+            if (IsUncountedPtr && *IsUncountedPtr) {
+                reportBug(C, CapturedVar, CapturedVarType);
+            }
         }
       }
     }

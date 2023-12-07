@@ -230,9 +230,9 @@ define i32 @test_mixup_constant_symbolic(i32 %end, i32 %len) {
 ; CHECK-LABEL: 'test_mixup_constant_symbolic'
 ; CHECK-NEXT:  Classifying expressions for: @test_mixup_constant_symbolic
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %backedge ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,1001) S: [0,1001) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,1001) S: [0,1001) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,1002) S: [1,1002) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,1002) S: [1,1002) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop_cond = call i1 @cond()
 ; CHECK-NEXT:    --> %loop_cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_mixup_constant_symbolic
@@ -278,11 +278,11 @@ define i32 @test_mixup_constant_symbolic_merged(i32 %end, i32 %len) {
 ; CHECK-LABEL: 'test_mixup_constant_symbolic_merged'
 ; CHECK-NEXT:  Classifying expressions for: @test_mixup_constant_symbolic_merged
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %backedge ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,1001) S: [0,1001) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,1001) S: [0,1001) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %and = and i1 %zero_check, %range_check
 ; CHECK-NEXT:    --> (%range_check umin %zero_check) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,1002) S: [1,1002) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,1002) S: [1,1002) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop_cond = call i1 @cond()
 ; CHECK-NEXT:    --> %loop_cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_mixup_constant_symbolic_merged

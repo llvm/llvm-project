@@ -1,0 +1,83 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -start-before=si-lower-sgpr-spills -stop-after=greedy,1 -verify-machineinstrs --stress-regalloc=2 -o - %s | FileCheck -check-prefix GCN-REGALLOC %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -start-before=si-lower-sgpr-spills -stop-after=virtregrewriter,1 -verify-machineinstrs --stress-regalloc=2 -o - %s | FileCheck -check-prefix GCN-REWRITER %s
+
+name:            test_wwm_reg_superclass_spill
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
+      stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true}
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  sgprForEXECCopy:   '$sgpr100_sgpr101'
+body:             |
+  bb.0:
+    ; GCN-REGALLOC-NUM-2: %{{[0-9]+}}:av_32 = SI_SPILL_WWM_AV32_RESTORE
+    ; GCN-REGALLOC: S_ENDPGM 0
+    ;
+    ; GCN-REWRITER-NUM-2: renamable $vgpr0 = SI_SPILL_WWM_AV32_RESTORE
+    ; GCN-REWRITER: S_ENDPGM 0
+    $vgpr0 = IMPLICIT_DEF
+    $sgpr0_sgpr1 = IMPLICIT_DEF
+    %temp0:vgpr_32(s32) = COPY $vgpr0
+    %temp1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    $vcc = S_AND_B64 $exec, $sgpr0_sgpr1, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    %temp2:vreg_64 = IMPLICIT_DEF
+    %temp1:vgpr_32 = FLAT_LOAD_DWORD %temp2, 0, 0, implicit $exec, implicit $flat_scr
+
+  bb.2:
+    %temp3:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
+    $sgpr2_sgpr3 = IMPLICIT_DEF
+    $sgpr4_sgpr5 = IMPLICIT_DEF
+    %temp4:vgpr_32 = FLAT_LOAD_UBYTE %temp3, 0, 0, implicit $exec, implicit $flat_scr
+    S_CBRANCH_EXECZ %bb.5, implicit $exec
+    S_BRANCH %bb.4
+
+  bb.3:
+    S_BRANCH %bb.8
+
+  bb.4:
+    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
+    SI_SPILL_S64_SAVE killed $sgpr2_sgpr3, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr56_sgpr57 = S_LOAD_DWORDX2_IMM $sgpr4_sgpr5, 48, 0
+    $sgpr2 = S_MOV_B32 124
+    %temp5:vreg_64 = COPY  $sgpr56_sgpr57
+    %temp6:vreg_64, dead  $sgpr2_sgpr3 = V_MAD_U64_U32_e64 %temp0(s32), killed $sgpr2, %temp5, 0, implicit $exec
+    %temp7:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
+    undef %temp8.sub0:vreg_64 = FLAT_LOAD_DWORD %temp7, 0, 0, implicit $exec, implicit $flat_scr
+    $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM  $sgpr4_sgpr5, 88, 0
+    $sgpr58_sgpr59 = S_LOAD_DWORDX2_IMM  $sgpr4_sgpr5, 104, 0
+    $sgpr62_sgpr63 = S_XOR_B64  $sgpr0_sgpr1, -1, implicit-def dead $scc
+    $sgpr60_sgpr61 = S_MOV_B64 0
+    S_BRANCH %bb.6
+
+  bb.5:
+    S_CBRANCH_EXECZ %bb.8, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.6:
+    liveins: $sgpr0_sgpr1, $sgpr60_sgpr61
+    %temp9:vgpr_32 = nofpexcept V_ADD_F32_e32 0, %temp1, implicit $mode, implicit $exec
+    %temp10:vgpr_32 = V_AND_B32_e32 2147483647, %temp9, implicit $exec
+    %temp11:vgpr_32 = V_AND_B32_e32 65535, %temp4, implicit $exec
+    undef %temp12.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
+    FLAT_STORE_DWORD %temp7, %temp12.sub1, 0, 0, implicit $exec, implicit $flat_scr
+    %temp13:vgpr_32 = V_CNDMASK_B32_e64 0, 1065353216, 0, 0, $sgpr0_sgpr1, implicit $exec
+    $sgpr19 = IMPLICIT_DEF
+    %temp14:vgpr_32 = nofpexcept V_MUL_F32_e64 0, 0, 0, $sgpr19, 0, 0, implicit $mode, implicit $exec
+    $sgpr17 = IMPLICIT_DEF
+
+  bb.7:
+    liveins: $sgpr60_sgpr61
+    $exec = S_OR_B64 $exec, killed $sgpr60_sgpr61, implicit-def $scc
+    $sgpr2_sgpr3 = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_BRANCH %bb.5
+
+  bb.8:
+    S_ENDPGM 0
+
+...

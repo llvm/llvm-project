@@ -11,6 +11,7 @@ executable("llvm-mca") {
     "//llvm/lib/Target:AllTargetsDisassemblers",
     "//llvm/lib/Target:AllTargetsInfos",
     "//llvm/lib/Target:AllTargetsMCAs",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [
     ".",

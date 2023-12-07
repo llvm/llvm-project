@@ -135,6 +135,27 @@ define void @i64test_align1(ptr %b) nounwind uwtable sanitize_address {
 ; CHECK: __asan_report_store_n{{.*}}, i64 8)
 ; CHECK: ret void
 
+define void @i128test_align8(ptr %a) nounwind uwtable sanitize_address {
+entry:
+  store i128 0, ptr %a, align 8
+  ret void
+}
+; CHECK-LABEL: define {{[^@]+}}@i128test_align8(
+; CHECK-S3:      load i16, ptr %[[#]], align 1
+; CHECK-S3-NEXT: icmp ne i16 %[[#]], 0
+; CHECK-S5:      load i8, ptr %[[#]], align 1
+; CHECK-S5:      load i8, ptr %[[#]], align 1
+
+define void @i128test_align16(ptr %a) nounwind uwtable sanitize_address {
+entry:
+  store i128 0, ptr %a, align 16
+  ret void
+}
+; CHECK-LABEL: define {{[^@]+}}@i128test_align16(
+; CHECK-S3:      load i16, ptr %[[#]], align 2
+; CHECK-S3-NEXT: icmp ne i16 %[[#]], 0
+; CHECK-S5:      load i8, ptr %[[#]], align 1
+; CHECK-S5-NEXT: icmp ne i8 %[[#]], 0
 
 define void @i80test(ptr %a, ptr %b) nounwind uwtable sanitize_address {
   entry:

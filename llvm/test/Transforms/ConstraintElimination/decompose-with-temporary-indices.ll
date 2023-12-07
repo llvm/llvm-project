@@ -13,8 +13,6 @@ define i1 @test_uge_temporary_indices_decompose(i8 %start, i8 %n, i8 %idx) {
 ; CHECK-NEXT:    [[START_ADD_1:%.*]] = add nuw nsw i8 [[START]], 1
 ; CHECK-NEXT:    br i1 [[CMP_PRE]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[T_0:%.*]] = icmp ult i8 [[START_ADD_IDX]], [[START_ADD_N]]
-; CHECK-NEXT:    [[F_0:%.*]] = icmp uge i8 [[START_ADD_IDX]], [[START_ADD_N]]
 ; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[START_ADD_1]], [[START_ADD_N]]
 ; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], [[C_1]]
@@ -22,8 +20,6 @@ define i1 @test_uge_temporary_indices_decompose(i8 %start, i8 %n, i8 %idx) {
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_2]]
 ; CHECK-NEXT:    ret i1 [[R_3]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[START_ADD_IDX]], [[START_ADD_N]]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[START_ADD_IDX]], [[START_ADD_N]]
 ; CHECK-NEXT:    [[R_4:%.*]] = xor i1 false, true
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i8 [[START_ADD_1]], [[START_ADD_N]]
 ; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_3]]

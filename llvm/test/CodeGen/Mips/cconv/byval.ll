@@ -33,7 +33,7 @@
 ; O32-SDAG-NOT: t{{.*}}: ch,glue = callseq_start t{{.*}}, TargetConstant:i32<{{.*}}>
 ; O32-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetExternalSymbol:i32'memcpy'
 ; O32-SDAG-NOT: t{{.*}}: ch,glue = callseq_end t{{.*}}, TargetConstant:i32<{{.*}}>
-; O32-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetGlobalAddress:i32<void (%struct.S1*)* @f2>
+; O32-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetGlobalAddress:i32<ptr @f2>
 ; O32-SDAG: t{{.*}}: ch,glue = callseq_end t{{.*}}, TargetConstant:i32<{{.*}}>
 
 ; N32-SDAG-LABEL: Initial selection DAG: %bb.0 'g:entry'
@@ -41,7 +41,7 @@
 ; N32-SDAG-NOT: t{{.*}}: ch,glue = callseq_start t{{.*}}, TargetConstant:i32<{{.*}}>
 ; N32-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetExternalSymbol:i32'memcpy'
 ; N32-SDAG-NOT: t{{.*}}: ch,glue = callseq_end t{{.*}}, TargetConstant:i32<{{.*}}>
-; N32-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetGlobalAddress:i32<void (%struct.S1*)* @f2>
+; N32-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetGlobalAddress:i32<ptr @f2>
 ; N32-SDAG: t{{.*}}: ch,glue = callseq_end t{{.*}}, TargetConstant:i32<{{.*}}>
 
 ; N64-SDAG-LABEL: Initial selection DAG: %bb.0 'g:entry'
@@ -49,7 +49,7 @@
 ; N64-SDAG-NOT: t{{.*}}: ch,glue = callseq_start t{{.*}}, TargetConstant:i64<{{.*}}>
 ; N64-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetExternalSymbol:i64'memcpy'
 ; N64-SDAG-NOT: t{{.*}}: ch,glue = callseq_end t{{.*}}, TargetConstant:i64<{{.*}}>
-; N64-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetGlobalAddress:i64<void (%struct.S1*)* @f2>
+; N64-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetGlobalAddress:i64<ptr @f2>
 ; N64-SDAG: t{{.*}}: ch,glue = callseq_end t{{.*}}, TargetConstant:i64<{{.*}}>
 
 define dso_local void @g() #0 {
@@ -151,12 +151,12 @@ define dso_local void @g() #0 {
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    daddu $sp, $sp, $1
 entry:
-  %a = alloca %struct.S1, align 4
-  call void @f2(%struct.S1* byval(%struct.S1) align 4 %a)
+  %a = alloca %struct.S1, align 8
+  call void @f2(ptr byval(%struct.S1) align 4 %a)
   ret void
 }
 
-declare dso_local void @f2(%struct.S1* byval(%struct.S1) align 4) #1
+declare dso_local void @f2(ptr byval(%struct.S1) align 4) #1
 
 ; O32-SDAG-LABEL: Initial selection DAG: %bb.0 'g2:entry'
 ; O32-SDAG: t{{.*}}: ch,glue = callseq_start t{{.*}}, TargetConstant:i32<{{.*}}>
@@ -166,7 +166,7 @@ declare dso_local void @f2(%struct.S1* byval(%struct.S1) align 4) #1
 ; O32-SDAG-NOT: t{{.*}}: ch,glue = callseq_start t{{.*}}, TargetConstant:i32<{{.*}}>
 ; O32-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetExternalSymbol:i32'memcpy'
 ; O32-SDAG-NOT: t{{.*}}: ch,glue = callseq_end t{{.*}}, TargetConstant:i32<{{.*}}>
-; O32-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetGlobalAddress:i32<void (%struct.S1*)* @f2>
+; O32-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetGlobalAddress:i32<ptr @f2>
 ; O32-SDAG: t{{.*}}: ch,glue = callseq_end t{{.*}}, TargetConstant:i32<{{.*}}>
 
 ; N32-SDAG-LABEL: Initial selection DAG: %bb.0 'g2:entry'
@@ -177,7 +177,7 @@ declare dso_local void @f2(%struct.S1* byval(%struct.S1) align 4) #1
 ; N32-SDAG-NOT: t{{.*}}: ch,glue = callseq_start t{{.*}}, TargetConstant:i32<{{.*}}>
 ; N32-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetExternalSymbol:i32'memcpy'
 ; N32-SDAG-NOT: t{{.*}}: ch,glue = callseq_end t{{.*}}, TargetConstant:i32<{{.*}}>
-; N32-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetGlobalAddress:i32<void (%struct.S1*)* @f2>
+; N32-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetGlobalAddress:i32<ptr @f2>
 ; N32-SDAG: t{{.*}}: ch,glue = callseq_end t{{.*}}, TargetConstant:i32<{{.*}}>
 
 ; N64-SDAG-LABEL: Initial selection DAG: %bb.0 'g2:entry'
@@ -188,10 +188,10 @@ declare dso_local void @f2(%struct.S1* byval(%struct.S1) align 4) #1
 ; N64-SDAG-NOT: t{{.*}}: ch,glue = callseq_start t{{.*}}, TargetConstant:i64<{{.*}}>
 ; N64-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetExternalSymbol:i64'memcpy'
 ; N64-SDAG-NOT: t{{.*}}: ch,glue = callseq_end t{{.*}}, TargetConstant:i64<{{.*}}>
-; N64-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetGlobalAddress:i64<void (%struct.S1*)* @f2>
+; N64-SDAG: t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetGlobalAddress:i64<ptr @f2>
 ; N64-SDAG: t{{.*}}: ch,glue = callseq_end t{{.*}}, TargetConstant:i64<{{.*}}>
 
-define dso_local void @g2(%struct.S1* %a) {
+define dso_local void @g2(ptr %a) {
 ; O32-LABEL: g2:
 ; O32:       # %bb.0: # %entry
 ; O32-NEXT:    lui $1, 1
@@ -340,14 +340,12 @@ define dso_local void @g2(%struct.S1* %a) {
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    daddu $sp, $sp, $1
 entry:
-  %a.addr = alloca %struct.S1*, align 4
-  %byval-temp = alloca %struct.S1, align 4
-  store %struct.S1* %a, %struct.S1** %a.addr, align 4
-  %0 = load %struct.S1*, %struct.S1** %a.addr, align 4
-  %1 = bitcast %struct.S1* %byval-temp to i8*
-  %2 = bitcast %struct.S1* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 1 %2, i32 65520, i1 false)
-  call void @f2(%struct.S1* byval(%struct.S1) align 4 %byval-temp)
+  %a.addr = alloca ptr
+  %byval-temp = alloca %struct.S1, align 8
+  store ptr %a, ptr %a.addr, align 4
+  %0 = load ptr, ptr %a.addr, align 4
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %byval-temp, ptr align 1 %0, i32 65520, i1 false)
+  call void @f2(ptr byval(%struct.S1) align 4 %byval-temp)
   ret void
 }
 
@@ -366,7 +364,7 @@ entry:
 ; N64-SDAG:   t{{.*}}: ch,glue = MipsISD::JmpLink t{{.*}}, TargetExternalSymbol:i64'memcpy'
 ; N64-SDAG:   t{{.*}}: ch,glue = callseq_end t{{.*}}, TargetConstant:i64<0>
 
-define dso_local i32 @g3(%struct.S1* %a, %struct.S1* %b) #0 {
+define dso_local i32 @g3(ptr %a, ptr %b) #0 {
 ; O32-LABEL: g3:
 ; O32:       # %bb.0: # %entry
 ; O32-NEXT:    addiu $sp, $sp, -32
@@ -412,16 +410,14 @@ define dso_local i32 @g3(%struct.S1* %a, %struct.S1* %b) #0 {
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %a.addr = alloca %struct.S1*, align 4
-  %b.addr = alloca %struct.S1*, align 4
-  store %struct.S1* %a, %struct.S1** %a.addr, align 4
-  store %struct.S1* %b, %struct.S1** %b.addr, align 4
-  %0 = load %struct.S1*, %struct.S1** %a.addr, align 4
-  %1 = bitcast %struct.S1* %0 to i8*
-  %2 = load %struct.S1*, %struct.S1** %b.addr, align 4
-  %3 = bitcast %struct.S1* %2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %1, i8* align 1 %3, i32 65520, i1 false)
+  %a.addr = alloca ptr
+  %b.addr = alloca ptr
+  store ptr %a, ptr %a.addr, align 4
+  store ptr %b, ptr %b.addr, align 4
+  %0 = load ptr, ptr %a.addr, align 4
+  %1 = load ptr, ptr %b.addr, align 4
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 %0, ptr align 1 %1, i32 65520, i1 false)
   ret i32 4
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1) #2
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1) #2

@@ -334,7 +334,7 @@ public:
 
 bool lldb_private::formatters::NSArraySummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static ConstString g_TypeHint("NSArray");
+  static constexpr llvm::StringLiteral g_TypeHint("NSArray");
 
   ProcessSP process_sp = valobj.GetProcessSP();
   if (!process_sp)
@@ -445,17 +445,13 @@ bool lldb_private::formatters::NSArraySummaryProvider(
       return false;
   }
 
-  std::string prefix, suffix;
-  if (Language *language = Language::FindPlugin(options.GetLanguage())) {
-    if (!language->GetFormatterPrefixSuffix(valobj, g_TypeHint, prefix,
-                                            suffix)) {
-      prefix.clear();
-      suffix.clear();
-    }
-  }
+  llvm::StringRef prefix, suffix;
+  if (Language *language = Language::FindPlugin(options.GetLanguage()))
+    std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);
 
-  stream.Printf("%s%" PRIu64 " %s%s%s", prefix.c_str(), value, "element",
-                value == 1 ? "" : "s", suffix.c_str());
+  stream << prefix;
+  stream.Printf("%" PRIu64 " %s%s", value, "element", value == 1 ? "" : "s");
+  stream << suffix;
   return true;
 }
 
@@ -463,12 +459,12 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::
     NSArrayMSyntheticFrontEndBase(lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_id_type() {
   if (valobj_sp) {
-    auto *clang_ast_context = ScratchTypeSystemClang::GetForTarget(
+    TypeSystemClangSP scratch_ts_sp = ScratchTypeSystemClang::GetForTarget(
         *valobj_sp->GetExecutionContextRef().GetTargetSP());
-    if (clang_ast_context)
+    if (scratch_ts_sp)
       m_id_type = CompilerType(
-          clang_ast_context->weak_from_this(),
-          clang_ast_context->getASTContext().ObjCBuiltinIdTy.getAsOpaquePtr());
+          scratch_ts_sp->weak_from_this(),
+          scratch_ts_sp->getASTContext().ObjCBuiltinIdTy.getAsOpaquePtr());
     if (valobj_sp->GetProcessSP())
       m_ptr_size = valobj_sp->GetProcessSP()->GetAddressByteSize();
   }
@@ -609,11 +605,11 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
   if (valobj_sp) {
     CompilerType type = valobj_sp->GetCompilerType();
     if (type) {
-      auto *clang_ast_context = ScratchTypeSystemClang::GetForTarget(
+      TypeSystemClangSP scratch_ts_sp = ScratchTypeSystemClang::GetForTarget(
           *valobj_sp->GetExecutionContextRef().GetTargetSP());
-      if (clang_ast_context)
-        m_id_type = clang_ast_context->GetType(
-            clang_ast_context->getASTContext().ObjCBuiltinIdTy);
+      if (scratch_ts_sp)
+        m_id_type = scratch_ts_sp->GetType(
+            scratch_ts_sp->getASTContext().ObjCBuiltinIdTy);
     }
   }
 }
@@ -776,11 +772,10 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::GetChildAtIndex(
   static const ConstString g_zero("[0]");
 
   if (idx == 0) {
-    auto *clang_ast_context =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(*m_backend.GetTargetSP());
-    if (clang_ast_context) {
-      CompilerType id_type(
-          clang_ast_context->GetBasicType(lldb::eBasicTypeObjCID));
+    if (scratch_ts_sp) {
+      CompilerType id_type(scratch_ts_sp->GetBasicType(lldb::eBasicTypeObjCID));
       return m_backend.GetSyntheticChildAtOffset(
           m_backend.GetProcessSP()->GetAddressByteSize(), id_type, true,
           g_zero);

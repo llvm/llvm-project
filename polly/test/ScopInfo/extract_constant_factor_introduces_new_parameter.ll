@@ -18,7 +18,7 @@
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
-define void @barney(i32* %arg, i32* %arg1, double* %arg2, i32* %arg3, i32 %a, i32 %b, i32 %c) {
+define void @barney(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, i32 %a, i32 %b, i32 %c) {
 bb:
   br label %bb10
 
@@ -31,9 +31,9 @@ bb11:                                             ; preds = %bb10
   %tmp8 = add nsw i32 %c, 1
   %tmp12 = mul nsw i32 %b, %a
   %tmp13 = add nsw i32 %tmp8, %tmp12
-  %tmp6 = getelementptr inbounds double, double* %arg2, i32 %tmp5
-  %tmp14 = getelementptr inbounds double, double* %tmp6, i32 %tmp13
-  %tmp15 = load double, double* %tmp14
+  %tmp6 = getelementptr inbounds double, ptr %arg2, i32 %tmp5
+  %tmp14 = getelementptr inbounds double, ptr %tmp6, i32 %tmp13
+  %tmp15 = load double, ptr %tmp14
   br label %bb16
 
 bb16:                                             ; preds = %bb11, %bb10

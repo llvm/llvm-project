@@ -24,6 +24,11 @@ def Standalone_Dialect : Dialect {
         working inside of the LLVM source tree.
     }];
     let cppNamespace = "::mlir::standalone";
+
+    let useDefaultTypePrinterParser = 1;
+    let extraClassDeclaration = [{
+        void registerTypes();
+    }];
 }
 
 //===----------------------------------------------------------------------===//

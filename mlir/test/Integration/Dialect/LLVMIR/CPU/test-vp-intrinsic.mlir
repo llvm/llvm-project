@@ -1,9 +1,13 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm -convert-memref-to-llvm \
-// RUN:             -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-cf-to-llvm \
+// RUN: -convert-vector-to-llvm -convert-index-to-llvm -finalize-memref-to-llvm -convert-func-to-llvm \
+// RUN: -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry \
 // RUN:      --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
+
+// %mlir_native_utils_lib_dir is incorrect on Windows
+// UNSUPPORTED: system-windows
 
 memref.global "private" @gv_i32 : memref<20xi32> =
     dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9,

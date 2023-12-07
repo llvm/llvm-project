@@ -19,19 +19,20 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
-  class FunctionPass;
-  class SparcTargetMachine;
-  class AsmPrinter;
-  class MCInst;
-  class MachineInstr;
+class AsmPrinter;
+class FunctionPass;
+class MCInst;
+class MachineInstr;
+class PassRegistry;
+class SparcTargetMachine;
 
-  FunctionPass *createSparcISelDag(SparcTargetMachine &TM);
-  FunctionPass *createSparcDelaySlotFillerPass();
+FunctionPass *createSparcISelDag(SparcTargetMachine &TM);
+FunctionPass *createSparcDelaySlotFillerPass();
 
-  void LowerSparcMachineInstrToMCInst(const MachineInstr *MI,
-                                      MCInst &OutMI,
-                                      AsmPrinter &AP);
-} // end namespace llvm;
+void LowerSparcMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
+                                    AsmPrinter &AP);
+void initializeSparcDAGToDAGISelPass(PassRegistry &);
+} // namespace llvm
 
 namespace llvm {
   // Enums corresponding to Sparc condition codes, both icc's and fcc's.  These

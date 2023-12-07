@@ -7,11 +7,9 @@
 // RUN: %clang_hwasan -DSIZE=64 -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clang_hwasan -DSIZE=0x1000 -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-// REQUIRES: stable-runtime
-
 // Stack short granules are currently not implemented on x86.
 // RISC-V target doesn't support oldrt
-// XFAIL: x86_64, riscv64
+// XFAIL: target={{(x86_64|riscv64).*}}
 
 #include <stdlib.h>
 #include <sanitizer/hwasan_interface.h>

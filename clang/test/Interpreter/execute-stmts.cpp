@@ -34,5 +34,10 @@ printf("i = %d\n", i);
 for (; i > 4; --i) printf("i = %d\n", i);
 // CHECK-NEXT: i = 5
 
+{++i;}
+
+for (; i > 4; --i) { printf("i = %d\n", i); };
+// CHECK-NEXT: i = 5
+
 int j = i; printf("j = %d\n", j);
 // CHECK-NEXT: j = 4

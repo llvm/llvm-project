@@ -57,12 +57,9 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CodeMoverUtils.h"
@@ -389,7 +386,13 @@ struct FusionCandidateCompare {
   /// Comparison functor to sort two Control Flow Equivalent fusion candidates
   /// into dominance order.
   /// If LHS dominates RHS and RHS post-dominates LHS, return true;
-  /// IF RHS dominates LHS and LHS post-dominates RHS, return false;
+  /// If RHS dominates LHS and LHS post-dominates RHS, return false;
+  /// If both LHS and RHS are not dominating each other then, non-strictly
+  /// post dominate check will decide the order of candidates. If RHS
+  /// non-strictly post dominates LHS then, return true. If LHS non-strictly
+  /// post dominates RHS then, return false. If both are non-strictly post
+  /// dominate each other then, level in the post dominator tree will decide
+  /// the order of candidates.
   bool operator()(const FusionCandidate &LHS,
                   const FusionCandidate &RHS) const {
     const DominatorTree *DT = &(LHS.DT);
@@ -415,9 +418,29 @@ struct FusionCandidateCompare {
       return true;
     }
 
-    // If LHS does not dominate RHS and RHS does not dominate LHS then there is
-    // no dominance relationship between the two FusionCandidates. Thus, they
-    // should not be in the same set together.
+    // If two FusionCandidates are in the same level of dominator tree,
+    // they will not dominate each other, but may still be control flow
+    // equivalent. To sort those FusionCandidates, nonStrictlyPostDominate()
+    // function is needed.
+    bool WrongOrder =
+        nonStrictlyPostDominate(LHSEntryBlock, RHSEntryBlock, DT, LHS.PDT);
+    bool RightOrder =
+        nonStrictlyPostDominate(RHSEntryBlock, LHSEntryBlock, DT, LHS.PDT);
+    if (WrongOrder && RightOrder) {
+      // If common predecessor of LHS and RHS post dominates both
+      // FusionCandidates then, Order of FusionCandidate can be
+      // identified by its level in post dominator tree.
+      DomTreeNode *LNode = LHS.PDT->getNode(LHSEntryBlock);
+      DomTreeNode *RNode = LHS.PDT->getNode(RHSEntryBlock);
+      return LNode->getLevel() > RNode->getLevel();
+    } else if (WrongOrder)
+      return false;
+    else if (RightOrder)
+      return true;
+
+    // If LHS does not non-strict Postdominate RHS and RHS does not non-strict
+    // Postdominate LHS then, there is no dominance relationship between the
+    // two FusionCandidates. Thus, they should not be in the same set together.
     llvm_unreachable(
         "No dominance relationship between these fusion candidates!");
   }
@@ -767,7 +790,8 @@ private:
     LLVM_DEBUG(dbgs() << "Attempting to peel first " << PeelCount
                       << " iterations of the first loop. \n");
 
-    FC0.Peeled = peelLoop(FC0.L, PeelCount, &LI, &SE, DT, &AC, true);
+    ValueToValueMapTy VMap;
+    FC0.Peeled = peelLoop(FC0.L, PeelCount, &LI, &SE, DT, &AC, true, VMap);
     if (FC0.Peeled) {
       LLVM_DEBUG(dbgs() << "Done Peeling\n");
 
@@ -858,8 +882,8 @@ private:
           // Check if the candidates have identical tripcounts (first value of
           // pair), and if not check the difference in the tripcounts between
           // the loops (second value of pair). The difference is not equal to
-          // None iff the loops iterate a constant number of times, and have a
-          // single exit.
+          // std::nullopt iff the loops iterate a constant number of times, and
+          // have a single exit.
           std::pair<bool, std::optional<unsigned>> IdenticalTripCountRes =
               haveIdenticalTripCounts(*FC0, *FC1);
           bool SameTripCount = IdenticalTripCountRes.first;
@@ -895,9 +919,10 @@ private:
             continue;
           }
 
-          if (!FC0->GuardBranch && FC1->GuardBranch) {
-            LLVM_DEBUG(dbgs() << "The second candidate is guarded while the "
-                                 "first one is not. Not fusing.\n");
+          if ((!FC0->GuardBranch && FC1->GuardBranch) ||
+              (FC0->GuardBranch && !FC1->GuardBranch)) {
+            LLVM_DEBUG(dbgs() << "The one of candidate is guarded while the "
+                                 "another one is not. Not fusing.\n");
             reportLoopFusion<OptimizationRemarkMissed>(
                 *FC0, *FC1, OnlySecondCandidateIsGuarded);
             continue;
@@ -1386,7 +1411,7 @@ private:
     }
 
     // Walk through all uses in FC1. For each use, find the reaching def. If the
-    // def is located in FC0 then it is is not safe to fuse.
+    // def is located in FC0 then it is not safe to fuse.
     for (BasicBlock *BB : FC1.L->blocks())
       for (Instruction &I : *BB)
         for (auto &Op : I.operands())
@@ -1466,7 +1491,7 @@ private:
   ///   2. The successors of the guard have the same flow into/around the loop.
   /// If the compare instructions are identical, then the first successor of the
   /// guard must go to the same place (either the preheader of the loop or the
-  /// NonLoopBlock). In other words, the the first successor of both loops must
+  /// NonLoopBlock). In other words, the first successor of both loops must
   /// both go into the loop (i.e., the preheader) or go around the loop (i.e.,
   /// the NonLoopBlock). The same must be true for the second successor.
   bool haveIdenticalGuards(const FusionCandidate &FC0,
@@ -1599,7 +1624,7 @@ private:
     // first, or undef otherwise. This is sound as exiting the first implies the
     // second will exit too, __without__ taking the back-edge. [Their
     // trip-counts are equal after all.
-    // KB: Would this sequence be simpler to just just make FC0.ExitingBlock go
+    // KB: Would this sequence be simpler to just make FC0.ExitingBlock go
     // to FC1.Header? I think this is basically what the three sequences are
     // trying to accomplish; however, doing this directly in the CFG may mean
     // the DT/PDT becomes invalid
@@ -2033,51 +2058,6 @@ private:
     return FC0.L;
   }
 };
-
-struct LoopFuseLegacy : public FunctionPass {
-
-  static char ID;
-
-  LoopFuseLegacy() : FunctionPass(ID) {
-    initializeLoopFuseLegacyPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequiredID(LoopSimplifyID);
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<PostDominatorTreeWrapperPass>();
-    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-    AU.addRequired<DependenceAnalysisWrapperPass>();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-
-    AU.addPreserved<ScalarEvolutionWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<PostDominatorTreeWrapperPass>();
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-
-    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto &DI = getAnalysis<DependenceAnalysisWrapperPass>().getDI();
-    auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-    auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    const TargetTransformInfo &TTI =
-        getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    const DataLayout &DL = F.getParent()->getDataLayout();
-
-    LoopFuser LF(LI, DT, DI, SE, PDT, ORE, DL, AC, TTI);
-    return LF.fuseLoops(F);
-  }
-};
 } // namespace
 
 PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
@@ -2114,19 +2094,3 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserve<LoopAnalysis>();
   return PA;
 }
-
-char LoopFuseLegacy::ID = 0;
-
-INITIALIZE_PASS_BEGIN(LoopFuseLegacy, "loop-fusion", "Loop Fusion", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DependenceAnalysisWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(LoopFuseLegacy, "loop-fusion", "Loop Fusion", false, false)
-
-FunctionPass *llvm::createLoopFusePass() { return new LoopFuseLegacy(); }

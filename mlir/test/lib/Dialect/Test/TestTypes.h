@@ -15,13 +15,13 @@
 #define MLIR_TESTTYPES_H
 
 #include <tuple>
+#include <optional>
 
 #include "TestTraits.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/SubElementInterfaces.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 
@@ -73,9 +73,9 @@ inline mlir::AsmPrinter &operator<<(mlir::AsmPrinter &printer,
 
 /// Overload the attribute parameter parser for optional integers.
 template <>
-struct FieldParser<Optional<int>> {
-  static FailureOr<Optional<int>> parse(AsmParser &parser) {
-    Optional<int> value;
+struct FieldParser<std::optional<int>> {
+  static FailureOr<std::optional<int>> parse(AsmParser &parser) {
+    std::optional<int> value;
     value.emplace();
     OptionalParseResult result = parser.parseOptionalInteger(*value);
     if (result.has_value()) {
@@ -90,9 +90,6 @@ struct FieldParser<Optional<int>> {
 } // namespace mlir
 
 #include "TestTypeInterfaces.h.inc"
-
-#define GET_TYPEDEF_CLASSES
-#include "TestTypeDefs.h.inc"
 
 namespace test {
 
@@ -131,7 +128,6 @@ struct TestRecursiveTypeStorage : public ::mlir::TypeStorage {
 class TestRecursiveType
     : public ::mlir::Type::TypeBase<TestRecursiveType, ::mlir::Type,
                                     TestRecursiveTypeStorage,
-                                    ::mlir::SubElementTypeInterface::Trait,
                                     ::mlir::TypeTrait::IsMutable> {
 public:
   using Base::Base;
@@ -147,20 +143,11 @@ public:
 
   /// Name/key getter.
   ::llvm::StringRef getName() { return getImpl()->name; }
-
-  void walkImmediateSubElements(
-      ::llvm::function_ref<void(::mlir::Attribute)> walkAttrsFn,
-      ::llvm::function_ref<void(::mlir::Type)> walkTypesFn) const {
-    walkTypesFn(getBody());
-  }
-  Type replaceImmediateSubElements(llvm::ArrayRef<mlir::Attribute> replAttrs,
-                                   llvm::ArrayRef<mlir::Type> replTypes) const {
-    // TODO: It's not clear how we support replacing sub-elements of mutable
-    // types.
-    return nullptr;
-  }
 };
 
 } // namespace test
+
+#define GET_TYPEDEF_CLASSES
+#include "TestTypeDefs.h.inc"
 
 #endif // MLIR_TESTTYPES_H

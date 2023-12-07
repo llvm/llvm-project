@@ -11,7 +11,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <fcntl.h>
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -20,10 +20,10 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(ssize_t, readlinkat,
                    (int fd, const char *__restrict path, char *__restrict buf,
                     size_t bufsize)) {
-  ssize_t ret =
-      __llvm_libc::syscall_impl(SYS_readlinkat, fd, path, buf, bufsize);
+  ssize_t ret = __llvm_libc::syscall_impl<ssize_t>(SYS_readlinkat, fd, path,
+                                                   buf, bufsize);
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = static_cast<int>(-ret);
     return -1;
   }
   return ret;

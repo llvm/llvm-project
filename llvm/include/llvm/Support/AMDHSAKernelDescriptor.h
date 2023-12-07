@@ -9,6 +9,13 @@
 /// \file
 /// AMDHSA kernel descriptor definitions. For more information, visit
 /// https://llvm.org/docs/AMDGPUUsage.html#kernel-descriptor
+///
+/// \warning
+/// Any changes to this file should also be audited for corresponding changes
+/// needed in both the assembler and disassembler, namely:
+/// * AMDGPUAsmPrinter.{cpp,h}
+/// * AMDGPUTargetStreamer.{cpp,h}
+/// * AMDGPUDisassembler.{cpp,h}
 //
 //===----------------------------------------------------------------------===//
 

@@ -7,8 +7,7 @@ Coroutines in LLVM
    :depth: 3
 
 .. warning::
-  This is a work in progress. Compatibility across LLVM releases is not
-  guaranteed.
+  Compatibility across LLVM releases is not guaranteed.
 
 Introduction
 ============
@@ -285,7 +284,7 @@ The LLVM IR for this coroutine looks like this:
 
 .. code-block:: llvm
 
-  define i8* @f(i32 %n) {
+  define i8* @f(i32 %n) presplitcoroutine {
   entry:
     %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
     %size = call i32 @llvm.coro.size.i32()
@@ -1607,7 +1606,7 @@ Overview:
 """""""""
 
 The '``llvm.coro.suspend.async``' intrinsic marks the point where
-execution of a async coroutine is suspended and control is passed to a callee.
+execution of an async coroutine is suspended and control is passed to a callee.
 
 Arguments:
 """"""""""
@@ -1705,7 +1704,7 @@ and `coro.promise`_ intrinsics.
 
 CoroSplit
 ---------
-The pass CoroSplit buides coroutine frame and outlines resume and destroy parts
+The pass CoroSplit builds coroutine frame and outlines resume and destroy parts
 into separate functions.
 
 CoroElide

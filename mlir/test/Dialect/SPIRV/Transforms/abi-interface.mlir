@@ -1,4 +1,5 @@
-// RUN: mlir-opt -split-input-file -spirv-lower-abi-attrs %s | FileCheck %s
+// RUN: mlir-opt --split-input-file --spirv-lower-abi-attrs --verify-diagnostics %s \
+// RUN:   | FileCheck %s
 
 module attributes {
   spirv.target_env = #spirv.target_env<
@@ -30,4 +31,11 @@ spirv.module Logical GLSL450 {
   // CHECK: spirv.ExecutionMode [[FN]] "LocalSize", 32, 1, 1
 } // end spirv.module
 
+} // end module
+
+// -----
+
+module {
+// expected-error@+1 {{'spirv.module' op missing SPIR-V target env attribute}}
+spirv.module Logical GLSL450 {}
 } // end module

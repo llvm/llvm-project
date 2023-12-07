@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_CONTROLFLOW_IR_CONTROLFLOWOPS_H
 #define MLIR_DIALECT_CONTROLFLOW_IR_CONTROLFLOWOPS_H
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"

@@ -4,7 +4,7 @@
 declare i32 @test(i32) local_unnamed_addr
 declare i32 @test1(i64) local_unnamed_addr
 
-define i32 @assertzext(i32 %n, i1 %a, i32* %b) local_unnamed_addr {
+define i32 @assertzext(i32 %n, i1 %a, ptr %b) local_unnamed_addr {
 ; CHECK-LABEL: assertzext:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
@@ -34,7 +34,7 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                     ; preds = %entry
-  store i32 0, i32* %b, align 4
+  store i32 0, ptr %b, align 4
   br label %if.end
 
 if.end:                      ; preds = %if.then, %entry

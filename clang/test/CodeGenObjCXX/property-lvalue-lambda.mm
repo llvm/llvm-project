@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -fblocks -disable-llvm-passes -triple x86_64-apple-darwin10 -std=c++17 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -fblocks -disable-llvm-passes -triple x86_64-apple-darwin10 -std=c++17 -emit-llvm -o - %s | FileCheck %s
 
 typedef void (^blk_t)();
 typedef void (*fnptr_t)();
@@ -19,12 +19,12 @@ void t1(X *x) {
   // Check that we call lambda.operator blk_t(), and that we send that result to
   // the setter.
 
-  // CHECK: [[CALL:%.*]] = call void ()* @"_ZZ2t1P1XENK3$_0cvU13block_pointerFvvEEv"
-  // CHECK: call void{{.*}}@objc_msgSend{{.*}}({{.*}} void ()* [[CALL]])
+  // CHECK: [[CALL:%.*]] = call ptr @"_ZZ2t1P1XENK3$_0cvU13block_pointerFvvEEv"
+  // CHECK: call void{{.*}}@objc_msgSend{{.*}}({{.*}} ptr [[CALL]])
   x.blk = [] {};
 
-  // CHECK: [[CALL2:%.*]] = call void ()* @"_ZZ2t1P1XENK3$_1cvPFvvEEv"
-  // CHECK: call void{{.*}}@objc_msgSend{{.*}}({{.*}} void ()* [[CALL2]])
+  // CHECK: [[CALL2:%.*]] = call ptr @"_ZZ2t1P1XENK3$_1cvPFvvEEv"
+  // CHECK: call void{{.*}}@objc_msgSend{{.*}}({{.*}} ptr [[CALL2]])
   x.fnptr = [] {};
 }
 
@@ -35,13 +35,13 @@ void t2(X *x) {
 
   // [x setBlk: operator+([x blk], [] {})]
 
-  // CHECK: call void{{.*}}@objc_msgSend{{.*}}
-  // CHECK: [[PLUS:%.*]] = call void ()* @"_ZplIZ2t2P1XE3$_0EU13block_pointerFvvES4_T_"
+  // CHECK: call ptr{{.*}}@objc_msgSend{{.*}}
+  // CHECK: [[PLUS:%.*]] = call ptr @"_ZplIZ2t2P1XE3$_0EU13block_pointerFvvES4_T_"
   // CHECK: call void{{.*}}@objc_msgSend{{.*}}({{.*}} [[PLUS]])
   x.blk += [] {};
 
-  // CHECK: call void{{.*}}@objc_msgSend{{.*}}
-  // CHECK: [[PLUS:%.*]] = call void ()* @"_ZplIZ2t2P1XE3$_1EPFvvES4_T_"
+  // CHECK: call ptr{{.*}}@objc_msgSend{{.*}}
+  // CHECK: [[PLUS:%.*]] = call ptr @"_ZplIZ2t2P1XE3$_1EPFvvES4_T_"
   // CHECK: call void{{.*}}@objc_msgSend{{.*}}({{.*}} [[PLUS]])
   x.fnptr += [] {};
 }

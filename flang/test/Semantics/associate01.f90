@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Tests of selectors whose defining expressions are pointer-valued functions;
 ! they must be valid targets, but not pointers.
 ! (F'2018 11.1.3.3 p1) "The associating entity does not have the ALLOCATABLE or
@@ -13,6 +13,8 @@ module m1
   function iptr(n)
     integer, intent(in), target :: n
     integer, pointer :: iptr
+    !WARNING: Pointer target is not a definable variable
+    !BECAUSE: 'n' is an INTENT(IN) dummy argument
     iptr => n
   end function
   subroutine test

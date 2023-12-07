@@ -33,6 +33,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/ScopeExit.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -400,6 +401,7 @@ lldb::ProcessSP PlatformPOSIX::Attach(ProcessAttachInfo &attach_info,
           attach_info.SetHijackListener(listener_sp);
         }
         process_sp->HijackProcessEvents(listener_sp);
+        process_sp->SetShadowListener(attach_info.GetShadowListener());
         error = process_sp->Attach(attach_info);
       }
     }
@@ -457,6 +459,7 @@ lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
   LLDB_LOG(log, "successfully created process");
 
   process_sp->HijackProcessEvents(launch_info.GetHijackListener());
+  process_sp->SetShadowListener(launch_info.GetShadowListener());
 
   // Log file actions.
   if (log) {
@@ -626,15 +629,15 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   FunctionCaller *do_dlopen_function = nullptr;
 
   // Fetch the clang types we will need:
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process->GetTarget());
-  if (!ast)
+  if (!scratch_ts_sp)
     return nullptr;
 
-  CompilerType clang_void_pointer_type
-      = ast->GetBasicType(eBasicTypeVoid).GetPointerType();
-  CompilerType clang_char_pointer_type
-        = ast->GetBasicType(eBasicTypeChar).GetPointerType();
+  CompilerType clang_void_pointer_type =
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+  CompilerType clang_char_pointer_type =
+      scratch_ts_sp->GetBasicType(eBasicTypeChar).GetPointerType();
 
   // We are passing four arguments, the basename, the list of places to look,
   // a buffer big enough for all the path + name combos, and
@@ -760,15 +763,14 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   // This will be the address of the storage for paths, if we are using them,
   // or nullptr to signal we aren't.
   lldb::addr_t path_array_addr = 0x0;
-  llvm::Optional<llvm::detail::scope_exit<std::function<void()>>>
+  std::optional<llvm::detail::scope_exit<std::function<void()>>>
       path_array_cleanup;
 
   // This is the address to a buffer large enough to hold the largest path
   // conjoined with the library name we're passing in.  This is a convenience 
   // to avoid having to call malloc in the dlopen function.
   lldb::addr_t buffer_addr = 0x0;
-  llvm::Optional<llvm::detail::scope_exit<std::function<void()>>>
-      buffer_cleanup;
+  std::optional<llvm::detail::scope_exit<std::function<void()>>> buffer_cleanup;
 
   // Set the values into our args and write them to the target:
   if (paths != nullptr) {
@@ -876,15 +878,15 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 
   Value return_value;
   // Fetch the clang types we will need:
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process->GetTarget());
-  if (!ast) {
+  if (!scratch_ts_sp) {
     error.SetErrorString("dlopen error: Unable to get TypeSystemClang");
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
-  CompilerType clang_void_pointer_type
-      = ast->GetBasicType(eBasicTypeVoid).GetPointerType();
+  CompilerType clang_void_pointer_type =
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
 
   return_value.SetCompilerType(clang_void_pointer_type);
   

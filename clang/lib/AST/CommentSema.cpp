@@ -267,7 +267,7 @@ void Sema::actOnParamCommandParamNameArg(ParamCommandComment *Command,
   }
   auto *A = new (Allocator)
       Comment::Argument{SourceRange(ArgLocBegin, ArgLocEnd), Arg};
-  Command->setArgs(llvm::makeArrayRef(A, 1));
+  Command->setArgs(llvm::ArrayRef(A, 1));
 }
 
 void Sema::actOnParamCommandFinish(ParamCommandComment *Command,
@@ -303,7 +303,7 @@ void Sema::actOnTParamCommandParamNameArg(TParamCommandComment *Command,
 
   auto *A = new (Allocator)
       Comment::Argument{SourceRange(ArgLocBegin, ArgLocEnd), Arg};
-  Command->setArgs(llvm::makeArrayRef(A, 1));
+  Command->setArgs(llvm::ArrayRef(A, 1));
 
   if (!isTemplateOrSpecialization()) {
     // We already warned that this \\tparam is not attached to a template decl.
@@ -314,7 +314,7 @@ void Sema::actOnTParamCommandParamNameArg(TParamCommandComment *Command,
       ThisDeclInfo->TemplateParameters;
   SmallVector<unsigned, 2> Position;
   if (resolveTParamReference(Arg, TemplateParameters, &Position)) {
-    Command->setPosition(copyArray(llvm::makeArrayRef(Position)));
+    Command->setPosition(copyArray(llvm::ArrayRef(Position)));
     TParamCommandComment *&PrevCommand = TemplateParameterDocs[Arg];
     if (PrevCommand) {
       SourceRange ArgRange(ArgLocBegin, ArgLocEnd);
@@ -664,12 +664,12 @@ void Sema::checkDeprecatedCommand(const BlockCommandComment *Command) {
       return;
 
     const LangOptions &LO = FD->getLangOpts();
-    const bool DoubleSquareBracket = LO.CPlusPlus14 || LO.C2x;
+    const bool DoubleSquareBracket = LO.CPlusPlus14 || LO.C23;
     StringRef AttributeSpelling =
         DoubleSquareBracket ? "[[deprecated]]" : "__attribute__((deprecated))";
     if (PP) {
       // Try to find a replacement macro:
-      // - In C2x/C++14 we prefer [[deprecated]].
+      // - In C23/C++14 we prefer [[deprecated]].
       // - If not found or an older C/C++ look for __attribute__((deprecated)).
       StringRef MacroName;
       if (DoubleSquareBracket) {

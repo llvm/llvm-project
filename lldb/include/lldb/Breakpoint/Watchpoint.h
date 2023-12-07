@@ -31,9 +31,9 @@ public:
 
     ~WatchpointEventData() override;
 
-    static ConstString GetFlavorString();
+    static llvm::StringRef GetFlavorString();
 
-    ConstString GetFlavor() const override;
+    llvm::StringRef GetFlavor() const override;
 
     lldb::WatchpointEventType GetWatchpointEventType() const;
 
@@ -63,8 +63,6 @@ public:
 
   ~Watchpoint() override;
 
-  void IncrementFalseAlarmsAndReviseHitCount();
-
   bool IsEnabled() const;
 
   // This doesn't really enable/disable the watchpoint.   It is currently just
@@ -89,6 +87,40 @@ public:
   bool IsWatchVariable() const;
   void SetWatchVariable(bool val);
   bool CaptureWatchedValue(const ExecutionContext &exe_ctx);
+
+  /// \struct WatchpointVariableContext
+  /// \brief Represents the context of a watchpoint variable.
+  ///
+  /// This struct encapsulates the information related to a watchpoint variable,
+  /// including the watch ID and the execution context in which it is being
+  /// used. This struct is passed as a Baton to the \b
+  /// VariableWatchpointDisabler breakpoint callback.
+  struct WatchpointVariableContext {
+    /// \brief Constructor for WatchpointVariableContext.
+    /// \param watch_id The ID of the watchpoint.
+    /// \param exe_ctx The execution context associated with the watchpoint.
+    WatchpointVariableContext(lldb::watch_id_t watch_id,
+                              ExecutionContext exe_ctx)
+        : watch_id(watch_id), exe_ctx(exe_ctx) {}
+
+    lldb::watch_id_t watch_id; ///< The ID of the watchpoint.
+    ExecutionContext
+        exe_ctx; ///< The execution context associated with the watchpoint.
+  };
+
+  class WatchpointVariableBaton : public TypedBaton<WatchpointVariableContext> {
+  public:
+    WatchpointVariableBaton(std::unique_ptr<WatchpointVariableContext> Data)
+        : TypedBaton(std::move(Data)) {}
+  };
+
+  bool SetupVariableWatchpointDisabler(lldb::StackFrameSP frame_sp) const;
+
+  /// Callback routine to disable the watchpoint set on a local variable when
+  ///  it goes out of scope.
+  static bool VariableWatchpointDisabler(
+      void *baton, lldb_private::StoppointCallbackContext *context,
+      lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level);
   void Dump(Stream *s) const override;
@@ -180,12 +212,8 @@ private:
   // again, we check the count, if it is more than 1, it means the user-
   // supplied actions actually want the watchpoint to be disabled!
   uint32_t m_watch_read : 1, // 1 if we stop when the watched data is read from
-      m_watch_write : 1,     // 1 if we stop when the watched data is written to
-      m_watch_was_read : 1, // Set to 1 when watchpoint is hit for a read access
-      m_watch_was_written : 1;  // Set to 1 when watchpoint is hit for a write
-                                // access
+      m_watch_write : 1;     // 1 if we stop when the watched data is written to
   uint32_t m_ignore_count;      // Number of times to ignore this watchpoint
-  uint32_t m_false_alarms;      // Number of false alarms.
   std::string m_decl_str;       // Declaration information, if any.
   std::string m_watch_spec_str; // Spec for the watchpoint.
   lldb::ValueObjectSP m_old_value_sp;

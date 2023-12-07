@@ -14,6 +14,7 @@
 #include "Hexagon.h"
 #include "HexagonISelLowering.h"
 #include "HexagonLoopIdiomRecognition.h"
+#include "HexagonMachineFunctionInfo.h"
 #include "HexagonMachineScheduler.h"
 #include "HexagonTargetObjectFile.h"
 #include "HexagonTargetTransformInfo.h"
@@ -22,7 +23,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/VLIWMachineScheduler.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -155,9 +155,9 @@ namespace llvm {
   void initializeHexagonPacketizerPass(PassRegistry&);
   void initializeHexagonRDFOptPass(PassRegistry&);
   void initializeHexagonSplitDoubleRegsPass(PassRegistry&);
+  void initializeHexagonVExtractPass(PassRegistry &);
   void initializeHexagonVectorCombineLegacyPass(PassRegistry&);
   void initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PassRegistry &);
-  void initializeHexagonVExtractPass(PassRegistry&);
   Pass *createHexagonLoopIdiomPass();
   Pass *createHexagonVectorLoopCarriedReuseLegacyPass();
 
@@ -218,6 +218,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonVectorCombineLegacyPass(PR);
   initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PR);
   initializeHexagonVExtractPass(PR);
+  initializeHexagonDAGToDAGISelPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -287,6 +288,13 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 TargetTransformInfo
 HexagonTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(HexagonTTIImpl(this, F));
+}
+
+MachineFunctionInfo *HexagonTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return HexagonMachineFunctionInfo::create<HexagonMachineFunctionInfo>(
+      Allocator, F, STI);
 }
 
 HexagonTargetMachine::~HexagonTargetMachine() = default;

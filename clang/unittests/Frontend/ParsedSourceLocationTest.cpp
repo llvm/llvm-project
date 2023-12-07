@@ -8,6 +8,7 @@
 
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 using namespace clang;
@@ -17,7 +18,7 @@ namespace {
 TEST(ParsedSourceRange, ParseTest) {
   auto Check = [](StringRef Value, StringRef Filename, unsigned BeginLine,
                   unsigned BeginColumn, unsigned EndLine, unsigned EndColumn) {
-    Optional<ParsedSourceRange> PSR = ParsedSourceRange::fromString(Value);
+    std::optional<ParsedSourceRange> PSR = ParsedSourceRange::fromString(Value);
     ASSERT_TRUE(PSR);
     EXPECT_EQ(PSR->FileName, Filename);
     EXPECT_EQ(PSR->Begin.first, BeginLine);

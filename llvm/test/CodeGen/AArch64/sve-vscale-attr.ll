@@ -4,19 +4,19 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define void @func_vscale_none(<16 x i32>* %a, <16 x i32>* %b) #0 {
+define void @func_vscale_none(ptr %a, ptr %b) #0 {
 ; CHECK-NOARG-LABEL: func_vscale_none:
 ; CHECK-NOARG:       // %bb.0:
-; CHECK-NOARG-NEXT:    ldp q0, q1, [x0, #32]
-; CHECK-NOARG-NEXT:    ldp q4, q5, [x1, #32]
-; CHECK-NOARG-NEXT:    add v0.4s, v0.4s, v4.4s
-; CHECK-NOARG-NEXT:    ldp q2, q3, [x0]
-; CHECK-NOARG-NEXT:    add v1.4s, v1.4s, v5.4s
-; CHECK-NOARG-NEXT:    ldp q6, q4, [x1]
-; CHECK-NOARG-NEXT:    stp q0, q1, [x0, #32]
-; CHECK-NOARG-NEXT:    add v2.4s, v2.4s, v6.4s
-; CHECK-NOARG-NEXT:    add v0.4s, v3.4s, v4.4s
-; CHECK-NOARG-NEXT:    stp q2, q0, [x0]
+; CHECK-NOARG-NEXT:    ldp q0, q3, [x1, #32]
+; CHECK-NOARG-NEXT:    ldp q1, q2, [x0, #32]
+; CHECK-NOARG-NEXT:    ldp q4, q6, [x1]
+; CHECK-NOARG-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NOARG-NEXT:    ldp q1, q5, [x0]
+; CHECK-NOARG-NEXT:    add v2.4s, v2.4s, v3.4s
+; CHECK-NOARG-NEXT:    add v1.4s, v1.4s, v4.4s
+; CHECK-NOARG-NEXT:    add v3.4s, v5.4s, v6.4s
+; CHECK-NOARG-NEXT:    stp q0, q2, [x0, #32]
+; CHECK-NOARG-NEXT:    stp q1, q3, [x0]
 ; CHECK-NOARG-NEXT:    ret
 ;
 ; CHECK-ARG-LABEL: func_vscale_none:
@@ -27,43 +27,43 @@ define void @func_vscale_none(<16 x i32>* %a, <16 x i32>* %b) #0 {
 ; CHECK-ARG-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-ARG-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-ARG-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
-  %op2 = load <16 x i32>, <16 x i32>* %b
+  %op1 = load <16 x i32>, ptr %a
+  %op2 = load <16 x i32>, ptr %b
   %res = add <16 x i32> %op1, %op2
-  store <16 x i32> %res, <16 x i32>* %a
+  store <16 x i32> %res, ptr %a
   ret void
 }
 
 attributes #0 = { "target-features"="+sve" }
 
-define void @func_vscale1_1(<16 x i32>* %a, <16 x i32>* %b) #1 {
+define void @func_vscale1_1(ptr %a, ptr %b) #1 {
 ; CHECK-LABEL: func_vscale1_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0, #32]
-; CHECK-NEXT:    ldp q4, q5, [x1, #32]
-; CHECK-NEXT:    add v0.4s, v0.4s, v4.4s
-; CHECK-NEXT:    ldp q2, q3, [x0]
-; CHECK-NEXT:    add v1.4s, v1.4s, v5.4s
-; CHECK-NEXT:    ldp q6, q4, [x1]
-; CHECK-NEXT:    stp q0, q1, [x0, #32]
-; CHECK-NEXT:    add v2.4s, v2.4s, v6.4s
-; CHECK-NEXT:    add v0.4s, v3.4s, v4.4s
-; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    ldp q0, q3, [x1, #32]
+; CHECK-NEXT:    ldp q1, q2, [x0, #32]
+; CHECK-NEXT:    ldp q4, q6, [x1]
+; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ldp q1, q5, [x0]
+; CHECK-NEXT:    add v2.4s, v2.4s, v3.4s
+; CHECK-NEXT:    add v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    add v3.4s, v5.4s, v6.4s
+; CHECK-NEXT:    stp q0, q2, [x0, #32]
+; CHECK-NEXT:    stp q1, q3, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
-  %op2 = load <16 x i32>, <16 x i32>* %b
+  %op1 = load <16 x i32>, ptr %a
+  %op2 = load <16 x i32>, ptr %b
   %res = add <16 x i32> %op1, %op2
-  store <16 x i32> %res, <16 x i32>* %a
+  store <16 x i32> %res, ptr %a
   ret void
 }
 
 attributes #1 = { "target-features"="+sve" vscale_range(1,1) }
 
-define void @func_vscale2_2(<16 x i32>* %a, <16 x i32>* %b) #2 {
+define void @func_vscale2_2(ptr %a, ptr %b) #2 {
 ; CHECK-LABEL: func_vscale2_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #8
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov x8, #8 // =0x8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
@@ -73,20 +73,20 @@ define void @func_vscale2_2(<16 x i32>* %a, <16 x i32>* %b) #2 {
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
-  %op2 = load <16 x i32>, <16 x i32>* %b
+  %op1 = load <16 x i32>, ptr %a
+  %op2 = load <16 x i32>, ptr %b
   %res = add <16 x i32> %op1, %op2
-  store <16 x i32> %res, <16 x i32>* %a
+  store <16 x i32> %res, ptr %a
   ret void
 }
 
 attributes #2 = { "target-features"="+sve" vscale_range(2,2) }
 
-define void @func_vscale2_4(<16 x i32>* %a, <16 x i32>* %b) #3 {
+define void @func_vscale2_4(ptr %a, ptr %b) #3 {
 ; CHECK-LABEL: func_vscale2_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #8
 ; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    mov x8, #8 // =0x8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
@@ -96,16 +96,16 @@ define void @func_vscale2_4(<16 x i32>* %a, <16 x i32>* %b) #3 {
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
-  %op2 = load <16 x i32>, <16 x i32>* %b
+  %op1 = load <16 x i32>, ptr %a
+  %op2 = load <16 x i32>, ptr %b
   %res = add <16 x i32> %op1, %op2
-  store <16 x i32> %res, <16 x i32>* %a
+  store <16 x i32> %res, ptr %a
   ret void
 }
 
 attributes #3 = { "target-features"="+sve" vscale_range(2,4) }
 
-define void @func_vscale4_4(<16 x i32>* %a, <16 x i32>* %b) #4 {
+define void @func_vscale4_4(ptr %a, ptr %b) #4 {
 ; CHECK-LABEL: func_vscale4_4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
@@ -114,16 +114,16 @@ define void @func_vscale4_4(<16 x i32>* %a, <16 x i32>* %b) #4 {
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
-  %op2 = load <16 x i32>, <16 x i32>* %b
+  %op1 = load <16 x i32>, ptr %a
+  %op2 = load <16 x i32>, ptr %b
   %res = add <16 x i32> %op1, %op2
-  store <16 x i32> %res, <16 x i32>* %a
+  store <16 x i32> %res, ptr %a
   ret void
 }
 
 attributes #4 = { "target-features"="+sve" vscale_range(4,4) }
 
-define void @func_vscale8_8(<16 x i32>* %a, <16 x i32>* %b) #5 {
+define void @func_vscale8_8(ptr %a, ptr %b) #5 {
 ; CHECK-LABEL: func_vscale8_8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
@@ -132,10 +132,10 @@ define void @func_vscale8_8(<16 x i32>* %a, <16 x i32>* %b) #5 {
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
-  %op2 = load <16 x i32>, <16 x i32>* %b
+  %op1 = load <16 x i32>, ptr %a
+  %op2 = load <16 x i32>, ptr %b
   %res = add <16 x i32> %op1, %op2
-  store <16 x i32> %res, <16 x i32>* %a
+  store <16 x i32> %res, ptr %a
   ret void
 }
 

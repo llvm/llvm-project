@@ -15,7 +15,7 @@ bb2:                                              ; preds = %bb3, %bb1
 
 bb3:                                              ; preds = %bb2
   %tmp = srem i32 %tmp3, 1024                     ; <i32> [#uses=0]
-  store double undef, double* undef
+  store double undef, ptr undef
   %indvar.next = add i64 %indvar, 1               ; <i64> [#uses=1]
   br label %bb2
 

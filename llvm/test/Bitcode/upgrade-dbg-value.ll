@@ -1,4 +1,4 @@
-; Test upgrade of dbg.dvalue intrinsics with offsets.
+; Test upgrade of dbg.value intrinsics with offsets.
 ;
 ; RUN: llvm-dis < %s.bc | FileCheck %s
 ; RUN: verify-uselistorder < %s.bc

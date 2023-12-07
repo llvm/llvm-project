@@ -1,7 +1,9 @@
 ; RUN: opt -passes='loop-mssa(licm<allowspeculation>)' -S %s | FileCheck --check-prefixes=COMMON,SPEC_ON %s
 ; RUN: opt -passes='loop-mssa(licm<no-allowspeculation>)' -S %s | FileCheck --check-prefixes=COMMON,SPEC_OFF %s
+; RUN: opt -passes='licm<no-allowspeculation>' -S %s | FileCheck --check-prefixes=COMMON,SPEC_OFF %s
 ; RUN: opt -passes='loop-mssa(lnicm<allowspeculation>)' -S %s | FileCheck --check-prefixes=COMMON,SPEC_ON %s
 ; RUN: opt -passes='loop-mssa(lnicm<no-allowspeculation>)' -S %s | FileCheck --check-prefixes=COMMON,SPEC_OFF %s
+; RUN: opt -passes='lnicm<no-allowspeculation>' -S %s | FileCheck --check-prefixes=COMMON,SPEC_OFF %s
 
 define void @test(ptr %ptr, i32 %N) {
 ; COMMON-LABEL: @test(

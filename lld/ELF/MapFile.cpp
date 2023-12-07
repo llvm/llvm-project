@@ -157,7 +157,7 @@ static void writeMapFile(raw_fd_ostream &os) {
   os << right_justify("VMA", w) << ' ' << right_justify("LMA", w)
      << "     Size Align Out     In      Symbol\n";
 
-  OutputSection* osec = nullptr;
+  OutputSection *osec = nullptr;
   for (SectionCommand *cmd : script->sectionCommands) {
     if (auto *assign = dyn_cast<SymbolAssignment>(cmd)) {
       if (assign->provide && !assign->sym)
@@ -263,7 +263,7 @@ void elf::writeMapAndCref() {
   // Open a map file for writing.
   std::error_code ec;
   StringRef mapFile = config->mapFile.empty() ? "-" : config->mapFile;
-  raw_fd_ostream os(mapFile, ec, sys::fs::OF_None);
+  raw_fd_ostream os = ctx.openAuxiliaryFile(mapFile, ec);
   if (ec) {
     error("cannot open " + mapFile + ": " + ec.message());
     return;

@@ -25,6 +25,7 @@ class Module;
 class GlobalVariable;
 
 namespace dxil {
+class CBufferDataLayout;
 
 class ResourceBase {
 protected:
@@ -107,14 +108,34 @@ public:
   void print(raw_ostream &O) const;
 };
 
+class ConstantBuffer : public ResourceBase {
+  uint32_t CBufferSizeInBytes = 0; // Cbuffer used size in bytes.
+public:
+  ConstantBuffer(uint32_t I, hlsl::FrontendResource R);
+  void setSize(CBufferDataLayout &DL);
+  MDNode *write() const;
+  void print(raw_ostream &O) const;
+};
+
+template <typename T> class ResourceTable {
+  StringRef MDName;
+
+  llvm::SmallVector<T> Data;
+
+public:
+  ResourceTable(StringRef Name) : MDName(Name) {}
+  void collect(Module &M);
+  MDNode *write(Module &M) const;
+  void print(raw_ostream &O) const;
+};
+
 // FIXME: Fully computing the resource structures requires analyzing the IR
 // because some flags are set based on what operations are performed on the
 // resource. This partial patch handles some of the leg work, but not all of it.
 // See issue https://github.com/llvm/llvm-project/issues/57936.
 class Resources {
-  llvm::SmallVector<UAVResource> UAVs;
-
-  void collectUAVs(Module &M);
+  ResourceTable<UAVResource> UAVs = {"hlsl.uavs"};
+  ResourceTable<ConstantBuffer> CBuffers = {"hlsl.cbufs"};
 
 public:
   void collect(Module &M);

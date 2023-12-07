@@ -52,8 +52,13 @@ __iostream_category::message(int ev) const
 const error_category&
 iostream_category() noexcept
 {
-    static __iostream_category s;
-    return s;
+    union AvoidDestroyingIostreamCategory {
+        __iostream_category iostream_error_category;
+        constexpr explicit AvoidDestroyingIostreamCategory() : iostream_error_category() {}
+        ~AvoidDestroyingIostreamCategory() {}
+    };
+    constinit static AvoidDestroyingIostreamCategory helper;
+    return helper.iostream_error_category;
 }
 
 // ios_base::failure
@@ -413,20 +418,20 @@ void
 ios_base::__set_badbit_and_consider_rethrow()
 {
     __rdstate_ |= badbit;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     if (__exceptions_ & badbit)
         throw;
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
 }
 
 void
 ios_base::__set_failbit_and_consider_rethrow()
 {
     __rdstate_ |= failbit;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     if (__exceptions_ & failbit)
         throw;
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
 }
 
 bool

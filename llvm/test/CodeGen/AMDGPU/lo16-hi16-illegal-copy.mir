@@ -7,7 +7,7 @@
 
 # GCN-LABEL: {{^}}lo_to_lo_illegal_vgpr_to_sgpr:
 # GCN: ; illegal copy v0.l to s1.l
-# ERR: error: <unknown>:0:0: in function lo_to_lo_illegal_vgpr_to_sgpr void (): illegal SGPR to VGPR copy
+# ERR: error: <unknown>:0:0: in function lo_to_lo_illegal_vgpr_to_sgpr void (): illegal VGPR to SGPR copy
 name: lo_to_lo_illegal_vgpr_to_sgpr
 tracksRegLiveness: true
 body:             |
@@ -32,7 +32,7 @@ body:             |
 
 # GCN-LABEL: {{^}}lo_to_lo_illegal_agpr_to_sgpr:
 # GCN: ; illegal copy a0.l to s1.l
-# ERR: error: <unknown>:0:0: in function lo_to_lo_illegal_agpr_to_sgpr void (): illegal SGPR to VGPR copy
+# ERR: error: <unknown>:0:0: in function lo_to_lo_illegal_agpr_to_sgpr void (): illegal VGPR to SGPR copy
 name: lo_to_lo_illegal_agpr_to_sgpr
 tracksRegLiveness: true
 body:             |

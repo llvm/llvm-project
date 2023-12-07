@@ -11,15 +11,13 @@ from lldbsuite.test import lldbutil
 
 
 class SessionSaveTestCase(TestBase):
-
     def raw_transcript_builder(self, cmd, res):
         raw = "(lldb) " + cmd + "\n"
         if res.GetOutputSize():
-          raw += res.GetOutput()
+            raw += res.GetOutput()
         if res.GetErrorSize():
-          raw += res.GetError()
+            raw += res.GetError()
         return raw
-
 
     @skipIfWindows
     @no_debug_info_test
@@ -28,30 +26,31 @@ class SessionSaveTestCase(TestBase):
         interpreter = self.dbg.GetCommandInterpreter()
 
         settings = [
-          'settings set interpreter.echo-commands true',
-          'settings set interpreter.echo-comment-commands true',
-          'settings set interpreter.stop-command-source-on-error false'
+            "settings set interpreter.echo-commands true",
+            "settings set interpreter.echo-comment-commands true",
+            "settings set interpreter.stop-command-source-on-error false",
+            "settings set interpreter.open-transcript-in-editor false",
         ]
 
         for setting in settings:
-          interpreter.HandleCommand(setting, lldb.SBCommandReturnObject())
+            interpreter.HandleCommand(setting, lldb.SBCommandReturnObject())
 
         inputs = [
-          '# This is a comment',  # Comment
-          'help session',         # Valid command
-          'Lorem ipsum'           # Invalid command
+            "# This is a comment",  # Comment
+            "help session",  # Valid command
+            "Lorem ipsum",  # Invalid command
         ]
 
         for cmd in inputs:
-          res = lldb.SBCommandReturnObject()
-          interpreter.HandleCommand(cmd, res)
-          raw += self.raw_transcript_builder(cmd, res)
+            res = lldb.SBCommandReturnObject()
+            interpreter.HandleCommand(cmd, res)
+            raw += self.raw_transcript_builder(cmd, res)
 
         self.assertTrue(interpreter.HasCommands())
         self.assertTrue(len(raw) != 0)
 
         # Check for error
-        cmd = 'session save /root/file'
+        cmd = "session save /root/file"
         interpreter.HandleCommand(cmd, res)
         self.assertFalse(res.Succeeded())
         raw += self.raw_transcript_builder(cmd, res)
@@ -60,33 +59,35 @@ class SessionSaveTestCase(TestBase):
         output_file = tf.name
 
         res = lldb.SBCommandReturnObject()
-        interpreter.HandleCommand('session save ' + output_file, res)
+        interpreter.HandleCommand("session save " + output_file, res)
         self.assertTrue(res.Succeeded())
         raw += self.raw_transcript_builder(cmd, res)
 
         with open(output_file, "r") as file:
-          content = file.read()
-          # Exclude last line, since session won't record it's own output
-          lines = raw.splitlines()[:-1]
-          for line in lines:
-            self.assertIn(line, content)
+            content = file.read()
+            # Exclude last line, since session won't record it's own output
+            lines = raw.splitlines()[:-1]
+            for line in lines:
+                self.assertIn(line, content)
 
         td = tempfile.TemporaryDirectory()
         res = lldb.SBCommandReturnObject()
-        interpreter.HandleCommand('settings set interpreter.save-session-directory ' + td.name, res)
+        interpreter.HandleCommand(
+            "settings set interpreter.save-session-directory " + td.name, res
+        )
         self.assertTrue(res.Succeeded())
 
         res = lldb.SBCommandReturnObject()
-        interpreter.HandleCommand('session save', res)
+        interpreter.HandleCommand("session save", res)
         self.assertTrue(res.Succeeded())
         raw += self.raw_transcript_builder(cmd, res)
 
         with open(os.path.join(td.name, os.listdir(td.name)[0]), "r") as file:
-          content = file.read()
-          # Exclude last line, since session won't record it's own output
-          lines = raw.splitlines()[:-1]
-          for line in lines:
-            self.assertIn(line, content)
+            content = file.read()
+            # Exclude last line, since session won't record it's own output
+            lines = raw.splitlines()[:-1]
+            for line in lines:
+                self.assertIn(line, content)
 
     @skipIfWindows
     @no_debug_info_test
@@ -97,26 +98,24 @@ class SessionSaveTestCase(TestBase):
         td = tempfile.TemporaryDirectory()
 
         settings = [
-          'settings set interpreter.echo-commands true',
-          'settings set interpreter.echo-comment-commands true',
-          'settings set interpreter.stop-command-source-on-error false',
-          'settings set interpreter.save-session-on-quit true',
-          'settings set interpreter.save-session-directory ' + td.name,
+            "settings set interpreter.echo-commands true",
+            "settings set interpreter.echo-comment-commands true",
+            "settings set interpreter.stop-command-source-on-error false",
+            "settings set interpreter.save-session-on-quit true",
+            "settings set interpreter.save-session-directory " + td.name,
+            "settings set interpreter.open-transcript-in-editor false",
         ]
 
         for setting in settings:
-          res = lldb.SBCommandReturnObject()
-          interpreter.HandleCommand(setting, res)
-          raw += self.raw_transcript_builder(setting, res)
+            res = lldb.SBCommandReturnObject()
+            interpreter.HandleCommand(setting, res)
+            raw += self.raw_transcript_builder(setting, res)
 
         self.dbg.Destroy(self.dbg)
 
         with open(os.path.join(td.name, os.listdir(td.name)[0]), "r") as file:
-          content = file.read()
-          # Exclude last line, since session won't record it's own output
-          lines = raw.splitlines()[:-1]
-          for line in lines:
-            self.assertIn(line, content)
-
-
-
+            content = file.read()
+            # Exclude last line, since session won't record it's own output
+            lines = raw.splitlines()[:-1]
+            for line in lines:
+                self.assertIn(line, content)

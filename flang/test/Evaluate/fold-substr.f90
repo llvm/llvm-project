@@ -14,4 +14,9 @@ module m
   logical, parameter :: test_05b = len(ca(:)(2:4)) == 3
   logical, parameter :: test_06a = ca(1)(1:2)//ca(2)(2:3)//ca(3)(3:4) == "abfgkl"
   logical, parameter :: test_06b = len(ca(1)(1:2)//ca(2)(2:3)//ca(3)(3:4)) == 6
+  logical, parameter :: test_07a = ca(1)(:2) == "ab"
+  logical, parameter :: test_07b = ca(1)(3:) == "cd"
+  logical, parameter :: test_07c = ca(1)(:-1) == ""
+  logical, parameter :: test_07d = ca(1)(5:) == ""
+  logical, parameter :: test_07e = ca(1)(:) == "abcd"
 end module

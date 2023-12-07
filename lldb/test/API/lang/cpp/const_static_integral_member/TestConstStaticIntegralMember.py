@@ -7,12 +7,13 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestCase(TestBase):
 
+class TestCase(TestBase):
     def test(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here",
-                                          lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
 
         # Test using a simple const static integer member.
         self.expect_expr("A::int_val", result_value="1")
@@ -63,10 +64,14 @@ class TestCase(TestBase):
         # Test a scoped enum.
         self.expect_expr("A::scoped_enum_val", result_value="scoped_enum_case2")
         # Test an scoped enum with a value that isn't an enumerator.
-        self.expect_expr("A::not_enumerator_scoped_enum_val", result_value="scoped_enum_case1 | 0x4")
+        self.expect_expr(
+            "A::not_enumerator_scoped_enum_val", result_value="scoped_enum_case1 | 0x4"
+        )
         # This time with more than one enum value plus the extra.
-        self.expect_expr("A::not_enumerator_scoped_enum_val_2",
-                         result_value="scoped_enum_case1 | scoped_enum_case2 | 0x4")
+        self.expect_expr(
+            "A::not_enumerator_scoped_enum_val_2",
+            result_value="scoped_enum_case1 | scoped_enum_case2 | 0x4",
+        )
 
         # Test an enum with fixed underlying type.
         self.expect_expr("A::scoped_char_enum_val", result_value="case2")
@@ -82,12 +87,16 @@ class TestCase(TestBase):
             # On other platforms (Linux, macos) data members without the out-of-class
             # definitions don't have valid addresses and the following code produces
             # a linker error.
-            self.expect("expr const int *i = &A::int_val; *i", error=True,
-                        substrs=["Couldn't lookup symbols:"])
+            self.expect(
+                "expr const int *i = &A::int_val; *i",
+                error=True,
+                substrs=["Couldn't look up symbols:"],
+            )
 
         # This should work on all platforms.
-        self.expect_expr("const int *i = &A::int_val_with_address; *i",
-                         result_value="2")
+        self.expect_expr(
+            "const int *i = &A::int_val_with_address; *i", result_value="2"
+        )
 
         # Printing the whole type takes a slightly different code path. Check that
         # it does not crash.
@@ -98,24 +107,34 @@ class TestCase(TestBase):
     @expectedFailureAll(debug_info=["dsym"])
     def test_class_with_only_const_static(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
 
         self.expect_expr("ClassWithOnlyConstStatic::member", result_value="3")
 
     # With older versions of Clang, LLDB fails to evaluate classes with only
     # constexpr members when dsymutil is enabled
-    @expectedFailureAll(debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "14.0"])
+    @expectedFailureAll(
+        debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "14.0"]
+    )
     def test_class_with_only_constexpr_static(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
 
         # Test `constexpr static`.
         self.expect_expr("ClassWithConstexprs::member", result_value="2")
         self.expect_expr("ClassWithConstexprs::enum_val", result_value="enum_case2")
-        self.expect_expr("ClassWithConstexprs::scoped_enum_val", result_value="scoped_enum_case2")
+        self.expect_expr(
+            "ClassWithConstexprs::scoped_enum_val", result_value="scoped_enum_case2"
+        )
 
         # Test an aliased enum with fixed underlying type.
-        self.expect_expr("ClassWithEnumAlias::enum_alias",
-                         result_value="scoped_enum_case2")
-        self.expect_expr("ClassWithEnumAlias::enum_alias_alias",
-                         result_value="scoped_enum_case1")
+        self.expect_expr(
+            "ClassWithEnumAlias::enum_alias", result_value="scoped_enum_case2"
+        )
+        self.expect_expr(
+            "ClassWithEnumAlias::enum_alias_alias", result_value="scoped_enum_case1"
+        )

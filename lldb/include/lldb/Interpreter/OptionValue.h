@@ -10,14 +10,20 @@
 #define LLDB_INTERPRETER_OPTIONVALUE_H
 
 #include "lldb/Core/FormatEntity.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Cloneable.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StringList.h"
+#include "lldb/Utility/UUID.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-interfaces.h"
 #include "llvm/Support/JSON.h"
+#include <mutex>
 
 namespace lldb_private {
 
@@ -65,6 +71,10 @@ public:
 
   virtual ~OptionValue() = default;
 
+  OptionValue(const OptionValue &other);
+  
+  OptionValue& operator=(const OptionValue &other);
+
   // Subclasses should override these functions
   virtual Type GetType() const = 0;
 
@@ -108,9 +118,8 @@ public:
   // Subclasses can override these functions
   virtual lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
                                           llvm::StringRef name,
-                                          bool will_modify,
                                           Status &error) const {
-    error.SetErrorStringWithFormat("'%s' is not a value subvalue", name.str().c_str());
+    error.SetErrorStringWithFormatv("'{0}' is not a valid subvalue", name);
     return lldb::OptionValueSP();
   }
 
@@ -120,7 +129,7 @@ public:
 
   virtual bool IsAggregateValue() const { return false; }
 
-  virtual ConstString GetName() const { return ConstString(); }
+  virtual llvm::StringRef GetName() const { return llvm::StringRef(); }
 
   virtual bool DumpQualifiedName(Stream &strm) const;
 
@@ -182,134 +191,64 @@ public:
   CreateValueFromCStringForTypeMask(const char *value_cstr, uint32_t type_mask,
                                     Status &error);
 
-  // Get this value as a uint64_t value if it is encoded as a boolean, uint64_t
-  // or int64_t. Other types will cause "fail_value" to be returned
-  uint64_t GetUInt64Value(uint64_t fail_value, bool *success_ptr);
-
   OptionValueArch *GetAsArch();
-
   const OptionValueArch *GetAsArch() const;
 
   OptionValueArray *GetAsArray();
-
   const OptionValueArray *GetAsArray() const;
 
   OptionValueArgs *GetAsArgs();
-
   const OptionValueArgs *GetAsArgs() const;
 
   OptionValueBoolean *GetAsBoolean();
-
-  OptionValueChar *GetAsChar();
-
   const OptionValueBoolean *GetAsBoolean() const;
 
+  OptionValueChar *GetAsChar();
   const OptionValueChar *GetAsChar() const;
 
   OptionValueDictionary *GetAsDictionary();
-
   const OptionValueDictionary *GetAsDictionary() const;
 
   OptionValueEnumeration *GetAsEnumeration();
-
   const OptionValueEnumeration *GetAsEnumeration() const;
 
   OptionValueFileSpec *GetAsFileSpec();
-
   const OptionValueFileSpec *GetAsFileSpec() const;
 
   OptionValueFileSpecList *GetAsFileSpecList();
-
   const OptionValueFileSpecList *GetAsFileSpecList() const;
 
   OptionValueFormat *GetAsFormat();
-
   const OptionValueFormat *GetAsFormat() const;
 
   OptionValueLanguage *GetAsLanguage();
-
   const OptionValueLanguage *GetAsLanguage() const;
 
   OptionValuePathMappings *GetAsPathMappings();
-
   const OptionValuePathMappings *GetAsPathMappings() const;
 
   OptionValueProperties *GetAsProperties();
-
   const OptionValueProperties *GetAsProperties() const;
 
   OptionValueRegex *GetAsRegex();
-
   const OptionValueRegex *GetAsRegex() const;
 
   OptionValueSInt64 *GetAsSInt64();
-
   const OptionValueSInt64 *GetAsSInt64() const;
 
   OptionValueString *GetAsString();
-
   const OptionValueString *GetAsString() const;
 
   OptionValueUInt64 *GetAsUInt64();
-
   const OptionValueUInt64 *GetAsUInt64() const;
 
   OptionValueUUID *GetAsUUID();
-
   const OptionValueUUID *GetAsUUID() const;
 
   OptionValueFormatEntity *GetAsFormatEntity();
-
   const OptionValueFormatEntity *GetAsFormatEntity() const;
 
-  bool GetBooleanValue(bool fail_value = false) const;
-
-  bool SetBooleanValue(bool new_value);
-
-  char GetCharValue(char fail_value) const;
-
-  char SetCharValue(char new_value);
-
-  int64_t GetEnumerationValue(int64_t fail_value = -1) const;
-
-  bool SetEnumerationValue(int64_t value);
-
-  FileSpec GetFileSpecValue() const;
-
-  bool SetFileSpecValue(const FileSpec &file_spec);
-
-  FileSpecList GetFileSpecListValue() const;
-
-  lldb::Format
-  GetFormatValue(lldb::Format fail_value = lldb::eFormatDefault) const;
-
-  bool SetFormatValue(lldb::Format new_value);
-
-  lldb::LanguageType GetLanguageValue(
-      lldb::LanguageType fail_value = lldb::eLanguageTypeUnknown) const;
-
-  bool SetLanguageValue(lldb::LanguageType new_language);
-
-  const FormatEntity::Entry *GetFormatEntity() const;
-
-  const RegularExpression *GetRegexValue() const;
-
-  int64_t GetSInt64Value(int64_t fail_value = 0) const;
-
-  bool SetSInt64Value(int64_t new_value);
-
-  llvm::StringRef GetStringValue(llvm::StringRef fail_value) const;
-  llvm::StringRef GetStringValue() const { return GetStringValue(llvm::StringRef()); }
-
-  bool SetStringValue(llvm::StringRef new_value);
-
-  uint64_t GetUInt64Value(uint64_t fail_value = 0) const;
-
-  bool SetUInt64Value(uint64_t new_value);
-
-  UUID GetUUIDValue() const;
-
-  bool SetUUIDValue(const UUID &uuid);
+  bool AppendFileSpecValue(FileSpec file_spec);
 
   bool OptionWasSet() const { return m_value_was_set; }
 
@@ -330,6 +269,71 @@ public:
       m_callback();
   }
 
+  template <typename T, std::enable_if_t<!std::is_pointer_v<T>, bool> = true>
+  std::optional<T> GetValueAs() const {
+    if constexpr (std::is_same_v<T, uint64_t>)
+      return GetUInt64Value();
+    if constexpr (std::is_same_v<T, int64_t>)
+      return GetSInt64Value();
+    if constexpr (std::is_same_v<T, bool>)
+      return GetBooleanValue();
+    if constexpr (std::is_same_v<T, char>)
+      return GetCharValue();
+    if constexpr (std::is_same_v<T, lldb::Format>)
+      return GetFormatValue();
+    if constexpr (std::is_same_v<T, FileSpec>)
+      return GetFileSpecValue();
+    if constexpr (std::is_same_v<T, FileSpecList>)
+      return GetFileSpecListValue();
+    if constexpr (std::is_same_v<T, lldb::LanguageType>)
+      return GetLanguageValue();
+    if constexpr (std::is_same_v<T, llvm::StringRef>)
+      return GetStringValue();
+    if constexpr (std::is_same_v<T, ArchSpec>)
+      return GetArchSpecValue();
+    if constexpr (std::is_enum_v<T>)
+      if (std::optional<int64_t> value = GetEnumerationValue())
+        return static_cast<T>(*value);
+    return {};
+  }
+
+  template <typename T,
+            typename U = typename std::remove_const<
+                typename std::remove_pointer<T>::type>::type,
+            std::enable_if_t<std::is_pointer_v<T>, bool> = true>
+  T GetValueAs() const {
+    if constexpr (std::is_same_v<U, FormatEntity::Entry>)
+      return GetFormatEntity();
+    if constexpr (std::is_same_v<U, RegularExpression>)
+      return GetRegexValue();
+    return {};
+  }
+
+  bool SetValueAs(bool v) { return SetBooleanValue(v); }
+
+  bool SetValueAs(char v) { return SetCharValue(v); }
+
+  bool SetValueAs(uint64_t v) { return SetUInt64Value(v); }
+
+  bool SetValueAs(int64_t v) { return SetSInt64Value(v); }
+
+  bool SetValueAs(UUID v) { return SetUUIDValue(v); }
+
+  bool SetValueAs(llvm::StringRef v) { return SetStringValue(v); }
+
+  bool SetValueAs(lldb::LanguageType v) { return SetLanguageValue(v); }
+
+  bool SetValueAs(lldb::Format v) { return SetFormatValue(v); }
+
+  bool SetValueAs(FileSpec v) { return SetFileSpecValue(v); }
+
+  bool SetValueAs(ArchSpec v) { return SetArchSpecValue(v); }
+
+  template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
+  bool SetValueAs(T t) {
+    return SetEnumerationValue(t);
+  }
+
 protected:
   using TopmostBase = OptionValue;
 
@@ -345,6 +349,46 @@ protected:
                                 // set from the command line or as a setting,
                                 // versus if we just have the default value that
                                 // was already populated in the option value.
+private:
+  std::optional<ArchSpec> GetArchSpecValue() const;
+  bool SetArchSpecValue(ArchSpec arch_spec);
+
+  std::optional<bool> GetBooleanValue() const;
+  bool SetBooleanValue(bool new_value);
+
+  std::optional<char> GetCharValue() const;
+  bool SetCharValue(char new_value);
+
+  std::optional<int64_t> GetEnumerationValue() const;
+  bool SetEnumerationValue(int64_t value);
+
+  std::optional<FileSpec> GetFileSpecValue() const;
+  bool SetFileSpecValue(FileSpec file_spec);
+
+  std::optional<FileSpecList> GetFileSpecListValue() const;
+
+  std::optional<int64_t> GetSInt64Value() const;
+  bool SetSInt64Value(int64_t new_value);
+
+  std::optional<uint64_t> GetUInt64Value() const;
+  bool SetUInt64Value(uint64_t new_value);
+
+  std::optional<lldb::Format> GetFormatValue() const;
+  bool SetFormatValue(lldb::Format new_value);
+
+  std::optional<lldb::LanguageType> GetLanguageValue() const;
+  bool SetLanguageValue(lldb::LanguageType new_language);
+
+  std::optional<llvm::StringRef> GetStringValue() const;
+  bool SetStringValue(llvm::StringRef new_value);
+
+  std::optional<UUID> GetUUIDValue() const;
+  bool SetUUIDValue(const UUID &uuid);
+
+  const FormatEntity::Entry *GetFormatEntity() const;
+  const RegularExpression *GetRegexValue() const;
+  
+  mutable std::mutex m_mutex;
 };
 
 } // namespace lldb_private

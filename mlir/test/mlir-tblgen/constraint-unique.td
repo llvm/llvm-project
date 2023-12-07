@@ -4,6 +4,7 @@ include "mlir/IR/OpBase.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
+  let usePropertiesForAttributes = 0;
 }
 
 class NS_Op<string mnemonic, list<Trait> traits = []> :
@@ -69,8 +70,8 @@ def OpC : NS_Op<"op_c"> {
 
 /// Test that an attribute contraint was generated.
 // CHECK:    static ::mlir::LogicalResult [[$A_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
-// CHECK:      if (attr && !((attrPred(attr, *op)))) {
-// CHECK-NEXT:   return op->emitOpError("attribute '") << attrName
+// CHECK:      if (attr && !((attrPred(attr, *op))))
+// CHECK-NEXT:   return getDiag() << "attribute '" << attrName
 // CHECK-NEXT:       << "' failed to satisfy constraint: an attribute";
 
 /// Test that duplicate attribute constraint was not generated.
@@ -78,8 +79,9 @@ def OpC : NS_Op<"op_c"> {
 
 /// Test that a attribute constraint with a different description was generated.
 // CHECK:    static ::mlir::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
-// CHECK:      if (attr && !((attrPred(attr, *op)))) {
-// CHECK-NEXT:   return op->emitOpError("attribute '") << attrName
+// CHECK:    static ::mlir::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
+// CHECK:      if (attr && !((attrPred(attr, *op))))
+// CHECK-NEXT:   return getDiag() << "attribute '" << attrName
 // CHECK-NEXT:       << "' failed to satisfy constraint: another attribute";
 
 /// Test that a successor contraint was generated.
@@ -127,10 +129,10 @@ def OpC : NS_Op<"op_c"> {
 // CHECK:         for (auto [[$RET_VALUE:.*]] : [[$RET_VALUE_GROUP]])
 // CHECK-NEXT:      if (::mlir::failed([[$A_TYPE_CONSTRAINT]](*this, [[$RET_VALUE]].getType(), "result", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
-// CHECK:         for (auto &region : ::llvm::makeMutableArrayRef((*this)->getRegion(0)))
+// CHECK:         for (auto &region : ::llvm::MutableArrayRef((*this)->getRegion(0)))
 // CHECK-NEXT:      if (::mlir::failed([[$A_REGION_CONSTRAINT]](*this, region, "d", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
-// CHECK:         for (auto *successor : ::llvm::makeMutableArrayRef(c()))
+// CHECK:         for (auto *successor : ::llvm::MutableArrayRef(c()))
 // CHECK-NEXT:      if (::mlir::failed([[$A_SUCCESSOR_CONSTRAINT]](*this, successor, "c", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
 
@@ -148,9 +150,9 @@ def OpC : NS_Op<"op_c"> {
 // CHECK:         for (auto [[$RET_VALUE:.*]] : [[$RET_VALUE_GROUP]])
 // CHECK-NEXT:      if (::mlir::failed([[$O_TYPE_CONSTRAINT]](*this, [[$RET_VALUE]].getType(), "result", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
-// CHECK:         for (auto &region : ::llvm::makeMutableArrayRef((*this)->getRegion(0)))
+// CHECK:         for (auto &region : ::llvm::MutableArrayRef((*this)->getRegion(0)))
 // CHECK-NEXT:      if (::mlir::failed([[$O_REGION_CONSTRAINT]](*this, region, "d", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
-// CHECK:         for (auto *successor : ::llvm::makeMutableArrayRef(c()))
+// CHECK:         for (auto *successor : ::llvm::MutableArrayRef(c()))
 // CHECK-NEXT:      if (::mlir::failed([[$O_SUCCESSOR_CONSTRAINT]](*this, successor, "c", index++)))
 // CHECK-NEXT:        return ::mlir::failure();

@@ -6,11 +6,11 @@
 --- |
   target triple = "thumbv7-unknown-linux-gnueabi"
 
-  define dso_local i8* @fn1() {
+  define dso_local ptr @fn1() {
   entry:
     br label %l_yes
   l_yes:
-    ret i8* blockaddress(@fn1, %l_yes)
+    ret ptr blockaddress(@fn1, %l_yes)
   }
 
   declare dso_local i32 @fn2(...)

@@ -18,7 +18,7 @@
 ;; ) {
 ;; }
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV-DAG: OpCapability Sampled1D
 ; CHECK-SPIRV-DAG: OpCapability SampledBuffer

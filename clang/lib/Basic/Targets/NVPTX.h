@@ -16,8 +16,8 @@
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 namespace clang {
@@ -45,6 +45,9 @@ static const unsigned NVPTXAddrSpaceMap[] = {
     0, // ptr32_uptr
     0, // ptr64
     0, // hlsl_groupshared
+    // Wasm address space values for this target are dummy values,
+    // as it is only enabled for Wasm targets.
+    20, // wasm_funcref
 };
 
 /// The DWARF address class. Taken from
@@ -59,7 +62,6 @@ static const int NVPTXDWARFAddrSpaceMap[] = {
 
 class LLVM_LIBRARY_VISIBILITY NVPTXTargetInfo : public TargetInfo {
   static const char *const GCCRegNames[];
-  static const Builtin::Info BuiltinInfo[];
   CudaArch GPU;
   uint32_t PTXVersion;
   std::unique_ptr<TargetInfo> HostTarget;
@@ -107,7 +109,7 @@ public:
     }
   }
 
-  const char *getClobbers() const override {
+  std::string_view getClobbers() const override {
     // FIXME: Is this really right?
     return "";
   }
@@ -179,7 +181,6 @@ public:
 
   bool hasBitIntType() const override { return true; }
   bool hasBFloat16Type() const override { return true; }
-  const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 };
 } // namespace targets
 } // namespace clang

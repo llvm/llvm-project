@@ -26,6 +26,9 @@ void e(void) __attribute__((deprecated)) __attribute__((availability(macos, intr
 void f(void) __attribute__((unavailable)) __attribute__((availability(macos, introduced=11.0)));
 
 void d(void) __attribute__((availability(tvos, introduced=15.0)));
+
+void e(void) __attribute__((availability(tvos, unavailable)));
+
 ///expected-no-diagnostics
 
 //--- reference.output.json.in
@@ -73,7 +76,7 @@ void d(void) __attribute__((availability(tvos, introduced=15.0)));
         },
         {
           "kind": "text",
-          "spelling": "()"
+          "spelling": "();"
         }
       ],
       "functionSignature": {
@@ -147,7 +150,7 @@ void d(void) __attribute__((availability(tvos, introduced=15.0)));
         },
         {
           "kind": "text",
-          "spelling": "()"
+          "spelling": "();"
         }
       ],
       "functionSignature": {
@@ -231,7 +234,7 @@ void d(void) __attribute__((availability(tvos, introduced=15.0)));
         },
         {
           "kind": "text",
-          "spelling": "()"
+          "spelling": "();"
         }
       ],
       "functionSignature": {
@@ -331,7 +334,7 @@ void d(void) __attribute__((availability(tvos, introduced=15.0)));
         },
         {
           "kind": "text",
-          "spelling": "()"
+          "spelling": "();"
         }
       ],
       "functionSignature": {
@@ -391,6 +394,10 @@ void d(void) __attribute__((availability(tvos, introduced=15.0)));
             "minor": 0,
             "patch": 0
           }
+        },
+        {
+          "domain": "tvos",
+          "isUnconditionallyUnavailable": true
         }
       ],
       "declarationFragments": [
@@ -409,7 +416,7 @@ void d(void) __attribute__((availability(tvos, introduced=15.0)));
         },
         {
           "kind": "text",
-          "spelling": "()"
+          "spelling": "();"
         }
       ],
       "functionSignature": {

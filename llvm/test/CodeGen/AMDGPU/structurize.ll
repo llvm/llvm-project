@@ -45,7 +45,7 @@
 ; CHECK: CF_END
 
 
-define amdgpu_kernel void @branch_into_diamond(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
+define amdgpu_kernel void @branch_into_diamond(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c) {
 entry:
 %0 = icmp ne i32 %a, 0
   br i1 %0, label %diamond_head, label %branch_from
@@ -78,6 +78,6 @@ diamond_true:
 
 done:
   %5 = phi i32 [%3, %diamond_false], [%div7, %diamond_true]
-  store i32 %5, i32 addrspace(1)* %out
+  store i32 %5, ptr addrspace(1) %out
   ret void
 }

@@ -86,7 +86,8 @@ void foo(void) {
 
 int Postgresql(void) {
   char x;
-  return ((((&x) != ((void *) 0)) ? (*(&x) = ((char) 1)) : (void) ((void *) 0)), (unsigned long) ((void *) 0)); // expected-warning {{C99 forbids conditional expressions with only one void side}}
+  return ((((&x) != ((void *) 0)) ? (*(&x) = ((char) 1)) : (void) ((void *) 0)), (unsigned long) ((void *) 0)); /* expected-warning {{C99 forbids conditional expressions with only one void side}}
+                                                                                                                 expected-warning {{comparison of address of 'x' not equal to a null pointer is always true}} */
 }
 
 #define nil ((void*) 0)

@@ -5,6 +5,7 @@ static_library("DWARF") {
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "DWARFAbbreviationDeclaration.cpp",

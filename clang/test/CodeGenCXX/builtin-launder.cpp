@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-linux-gnu -emit-llvm -fstrict-vtable-pointers -o - %s \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -fstrict-vtable-pointers -o - %s \
 // RUN: | FileCheck --check-prefixes=CHECK,CHECK-STRICT %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-linux-gnu -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -o - %s \
 // RUN: | FileCheck --check-prefixes=CHECK,CHECK-NONSTRICT %s
 
 //===----------------------------------------------------------------------===//
@@ -13,15 +13,13 @@ struct TestVirtualFn {
 
 // CHECK-LABEL: define{{.*}} void @test_builtin_launder_virtual_fn
 extern "C" void test_builtin_launder_virtual_fn(TestVirtualFn *p) {
-  // CHECK: store [[TYPE:%[^ ]+]] %p, [[TYPE]]* %p.addr
-  // CHECK-NEXT: [[TMP0:%.*]] = load [[TYPE]], [[TYPE]]* %p.addr
+  // CHECK: store ptr %p, ptr %p.addr
+  // CHECK-NEXT: [[TMP0:%.*]] = load ptr, ptr %p.addr
 
-  // CHECK-NONSTRICT-NEXT: store [[TYPE]] [[TMP0]], [[TYPE]]* %d
+  // CHECK-NONSTRICT-NEXT: store ptr [[TMP0]], ptr %d
 
-  // CHECK-STRICT-NEXT: [[TMP1:%.*]] = bitcast [[TYPE]] [[TMP0]] to i8*
-  // CHECK-STRICT-NEXT: [[TMP2:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* [[TMP1]])
-  // CHECK-STRICT-NEXT: [[TMP3:%.*]] = bitcast i8* [[TMP2]] to [[TYPE]]
-  // CHECK-STRICT-NEXT: store [[TYPE]] [[TMP3]], [[TYPE]]* %d
+  // CHECK-STRICT-NEXT: [[TMP2:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[TMP0]])
+  // CHECK-STRICT-NEXT: store ptr [[TMP2]], ptr %d
 
   // CHECK-NEXT: ret void
   TestVirtualFn *d = __builtin_launder(p);
@@ -62,11 +60,11 @@ extern "C" void test_builtin_launder_virtual_base(TestVirtualBase *p) {
 // CHECK-LABEL: define{{.*}} void @test_builtin_launder_ommitted_one
 extern "C" void test_builtin_launder_ommitted_one(int *p) {
   // CHECK: entry
-  // CHECK-NEXT: %p.addr = alloca i32*
-  // CHECK-NEXT: %d = alloca i32*
-  // CHECK-NEXT: store i32* %p, i32** %p.addr, align 8
-  // CHECK-NEXT: [[TMP:%.*]] = load i32*, i32** %p.addr
-  // CHECK-NEXT: store i32* [[TMP]], i32** %d
+  // CHECK-NEXT: %p.addr = alloca ptr
+  // CHECK-NEXT: %d = alloca ptr
+  // CHECK-NEXT: store ptr %p, ptr %p.addr, align 8
+  // CHECK-NEXT: [[TMP:%.*]] = load ptr, ptr %p.addr
+  // CHECK-NEXT: store ptr [[TMP]], ptr %d
   // CHECK-NEXT: ret void
   int *d = __builtin_launder(p);
 }
@@ -79,11 +77,11 @@ struct TestNoInvariant {
 extern "C" void test_builtin_launder_ommitted_two(TestNoInvariant *p) {
   // CHECK: entry
   // CHECK-NOT: llvm.launder.invariant.group
-  // CHECK-NEXT: %p.addr = alloca [[TYPE:%.*]], align 8
-  // CHECK-NEXT: %d = alloca [[TYPE]]
-  // CHECK-NEXT: store [[TYPE]] %p, [[TYPE]]* %p.addr
-  // CHECK-NEXT: [[TMP:%.*]] = load [[TYPE]], [[TYPE]]* %p.addr
-  // CHECK-NEXT: store [[TYPE]] [[TMP]], [[TYPE]]* %d
+  // CHECK-NEXT: %p.addr = alloca ptr, align 8
+  // CHECK-NEXT: %d = alloca ptr
+  // CHECK-NEXT: store ptr %p, ptr %p.addr
+  // CHECK-NEXT: [[TMP:%.*]] = load ptr, ptr %p.addr
+  // CHECK-NEXT: store ptr [[TMP]], ptr %d
   // CHECK-NEXT: ret void
   TestNoInvariant *d = __builtin_launder(p);
 }

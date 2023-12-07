@@ -219,8 +219,7 @@ constexpr llvm::StringLiteral POSIXConformingFunctions[] = {
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 template <>
 struct OptionEnumMapping<
@@ -236,7 +235,7 @@ struct OptionEnumMapping<
             {bugprone::SignalHandlerCheck::AsyncSafeFunctionSetKind::POSIX,
              "POSIX"},
         };
-    return makeArrayRef(Mapping);
+    return {Mapping};
   }
 };
 
@@ -481,7 +480,7 @@ bool SignalHandlerCheck::checkFunctionCPP14(
     return true;
   }
 
-  const FunctionDecl *FBody;
+  const FunctionDecl *FBody = nullptr;
   const Stmt *BodyS = FD->getBody(FBody);
   if (!BodyS)
     return false;
@@ -560,5 +559,4 @@ void SignalHandlerCheck::reportHandlerChain(
 }
 
 } // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

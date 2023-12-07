@@ -44,7 +44,7 @@ struct InfoSectionUnitHeader {
 
   // dwo_id field. This resides in the header only if Version >= 5.
   // In earlier versions, it is read from DW_AT_GNU_dwo_id.
-  Optional<uint64_t> Signature = std::nullopt;
+  std::optional<uint64_t> Signature;
 
   // Derived from the length of Length field.
   dwarf::DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
@@ -60,7 +60,8 @@ struct CompileUnitIdentifiers {
   const char *DWOName = "";
 };
 
-Error write(MCStreamer &Out, ArrayRef<std::string> Inputs);
+Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
+            bool ContinueOnCuIndexOverflow);
 
 unsigned getContributionIndex(DWARFSectionKind Kind, uint32_t IndexVersion);
 

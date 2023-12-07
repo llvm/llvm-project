@@ -30,6 +30,7 @@
 #include "support/Trace.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
@@ -49,6 +50,7 @@
 #include <memory>
 #include <mutex>
 #include <numeric>
+#include <optional>
 #include <queue>
 #include <random>
 #include <string>
@@ -107,6 +109,7 @@ BackgroundIndex::BackgroundIndex(
   for (unsigned I = 0; I < Opts.ThreadPoolSize; ++I) {
     ThreadPool.runAsync("background-worker-" + llvm::Twine(I + 1),
                         [this, Ctx(Context::current().clone())]() mutable {
+                          clang::noteBottomOfStack();
                           WithContext BGContext(std::move(Ctx));
                           Queue.work([&] { Rebuilder.idle(); });
                         });
@@ -123,7 +126,7 @@ BackgroundQueue::Task BackgroundIndex::changedFilesTask(
   BackgroundQueue::Task T([this, ChangedFiles] {
     trace::Span Tracer("BackgroundIndexEnqueue");
 
-    llvm::Optional<WithContext> WithProvidedContext;
+    std::optional<WithContext> WithProvidedContext;
     if (ContextProvider)
       WithProvidedContext.emplace(ContextProvider(/*Path=*/""));
 
@@ -154,9 +157,9 @@ static llvm::StringRef filenameWithoutExtension(llvm::StringRef Path) {
 
 BackgroundQueue::Task BackgroundIndex::indexFileTask(std::string Path) {
   std::string Tag = filenameWithoutExtension(Path).str();
-  uint64_t Key = llvm::xxHash64(Path);
+  uint64_t Key = llvm::xxh3_64bits(Path);
   BackgroundQueue::Task T([this, Path(std::move(Path))] {
-    llvm::Optional<WithContext> WithProvidedContext;
+    std::optional<WithContext> WithProvidedContext;
     if (ContextProvider)
       WithProvidedContext.emplace(ContextProvider(Path));
     auto Cmd = CDB.getCompileCommand(Path);
@@ -287,10 +290,10 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   // digests.
   IndexOpts.FileFilter = [&ShardVersionsSnapshot](const SourceManager &SM,
                                                   FileID FID) {
-    const auto *F = SM.getFileEntryForID(FID);
+    const auto F = SM.getFileEntryRefForID(FID);
     if (!F)
       return false; // Skip invalid files.
-    auto AbsPath = getCanonicalPath(F, SM);
+    auto AbsPath = getCanonicalPath(*F, SM.getFileManager());
     if (!AbsPath)
       return false; // Skip files without absolute path.
     auto Digest = digestFile(SM, FID);

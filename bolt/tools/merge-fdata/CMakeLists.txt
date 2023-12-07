@@ -8,7 +8,8 @@ add_bolt_tool(merge-fdata
   DEPENDS
   intrinsics_gen
 )
-set_target_properties(merge-fdata PROPERTIES FOLDER "BOLT")
+
+add_dependencies(bolt merge-fdata)
 
 # Emit relocations for BOLT meta test (bolt/test/runtime/meta-merge-fdata.test)
 if (BOLT_INCLUDE_TESTS AND UNIX AND NOT APPLE)

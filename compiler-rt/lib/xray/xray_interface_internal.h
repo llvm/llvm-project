@@ -30,14 +30,10 @@ struct XRaySledEntry {
   unsigned char Version;
   unsigned char Padding[13]; // Need 32 bytes
   uint64_t function() const {
-    if (Version < 2)
-      return Function;
     // The target address is relative to the location of the Function variable.
     return reinterpret_cast<uint64_t>(&Function) + Function;
   }
   uint64_t address() const {
-    if (Version < 2)
-      return Address;
     // The target address is relative to the location of the Address variable.
     return reinterpret_cast<uint64_t>(&Address) + Address;
   }
@@ -49,14 +45,10 @@ struct XRaySledEntry {
   unsigned char Version;
   unsigned char Padding[5]; // Need 16 bytes
   uint32_t function() const {
-    if (Version < 2)
-      return Function;
     // The target address is relative to the location of the Function variable.
     return reinterpret_cast<uint32_t>(&Function) + Function;
   }
   uint32_t address() const {
-    if (Version < 2)
-      return Address;
     // The target address is relative to the location of the Address variable.
     return reinterpret_cast<uint32_t>(&Address) + Address;
   }
@@ -67,7 +59,13 @@ struct XRaySledEntry {
 
 struct XRayFunctionSledIndex {
   const XRaySledEntry *Begin;
-  const XRaySledEntry *End;
+  size_t Size;
+  // For an entry in the xray_fn_idx section, the address is relative to the
+  // location of the Begin variable.
+  const XRaySledEntry *fromPCRelative() const {
+    return reinterpret_cast<const XRaySledEntry *>(uintptr_t(&Begin) +
+                                                   uintptr_t(Begin));
+  }
 };
 }
 

@@ -24,13 +24,12 @@ target triple = "bpf"
 %struct.v1 = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(%struct.v3* %arg) local_unnamed_addr #0 !dbg !15 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !15 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.v3* %arg, metadata !33, metadata !DIExpression()), !dbg !34
-  %0 = tail call %struct.v2* @llvm.preserve.struct.access.index.p0s_struct.v2s.p0s_struct.v3s(%struct.v3* elementtype(%struct.v3) %arg, i32 1, i32 1), !dbg !35, !llvm.preserve.access.index !20
-  %1 = bitcast %struct.v2* %0 to %struct.v1*, !dbg !35
-  %2 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v1s(%struct.v1* elementtype(%struct.v1) %1, i32 1, i32 1), !dbg !35, !llvm.preserve.access.index !6
-  %call = tail call i32 @get_value(i32* %2) #4, !dbg !36
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !33, metadata !DIExpression()), !dbg !34
+  %0 = tail call ptr @llvm.preserve.struct.access.index.p0.v2s.p0.v3s(ptr elementtype(%struct.v3) %arg, i32 1, i32 1), !dbg !35, !llvm.preserve.access.index !20
+  %1 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.v1s(ptr elementtype(%struct.v1) %0, i32 1, i32 1), !dbg !35, !llvm.preserve.access.index !6
+  %call = tail call i32 @get_value(ptr %1) #4, !dbg !36
   ret i32 %call, !dbg !37
 }
 
@@ -61,13 +60,13 @@ entry:
 ; CHECK-NEXT:        .long   45
 ; CHECK-NEXT:        .long   0
 
-declare dso_local i32 @get_value(i32*) local_unnamed_addr #1
+declare dso_local i32 @get_value(ptr) local_unnamed_addr #1
 
 ; Function Attrs: nounwind readnone
-declare %struct.v2* @llvm.preserve.struct.access.index.p0s_struct.v2s.p0s_struct.v3s(%struct.v3*, i32, i32) #2
+declare ptr @llvm.preserve.struct.access.index.p0.v2s.p0.v3s(ptr, i32, i32) #2
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v1s(%struct.v1*, i32, i32) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0.v1s(ptr, i32, i32) #2
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3

@@ -12,7 +12,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(double, difftime, (time_t end, time_t beginning)) {
-  return end - beginning;
+  return static_cast<double>(end - beginning);
 }
 
 } // namespace __llvm_libc

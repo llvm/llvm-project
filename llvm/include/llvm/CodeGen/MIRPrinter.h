@@ -34,7 +34,7 @@ void printMIR(raw_ostream &OS, const MachineFunction &MF);
 /// you the correct list of successor blocks in most cases except for things
 /// like jump tables where the basic block references can't easily be found.
 /// The MIRPRinter will skip printing successors if they match the result of
-/// this funciton and the parser will use this function to construct a list if
+/// this function and the parser will use this function to construct a list if
 /// it is missing.
 void guessSuccessors(const MachineBasicBlock &MBB,
                      SmallVectorImpl<MachineBasicBlock*> &Result,

@@ -1,6 +1,6 @@
 ; REQUIRES: x86-registered-target
 ; RUN: llc -start-before=codegenprepare -stop-after=codegenprepare \
-; RUN:   -mtriple=x86_64-unknown-unknown -experimental-assignment-tracking %s -o - \
+; RUN:   -mtriple=x86_64-unknown-unknown %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg."
 
 ;; Check that when CodeGenPrepare moves an address computation to a block it's
@@ -39,7 +39,7 @@ ret:
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5}
+!llvm.module.flags = !{!3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
@@ -58,3 +58,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !14 = !DILocation(line: 4, column: 15, scope: !7)
 !20 = distinct !DILexicalBlock(scope: !7, file: !1, line: 8, column: 7)
 !21 = distinct !DIAssignID()
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

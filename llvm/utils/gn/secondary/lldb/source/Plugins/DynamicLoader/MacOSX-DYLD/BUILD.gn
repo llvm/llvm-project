@@ -14,6 +14,7 @@ static_library("MacOSX-DYLD") {
     "//lldb/source/Target",
     "//lldb/source/Utility",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   # Reaches into Plugins/LanguageRuntime/ObjC.

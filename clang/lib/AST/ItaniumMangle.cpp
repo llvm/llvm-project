@@ -35,6 +35,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
+#include <optional>
 
 using namespace clang;
 
@@ -108,8 +110,10 @@ public:
   void mangleCXXCtorVTable(const CXXRecordDecl *RD, int64_t Offset,
                            const CXXRecordDecl *Type, raw_ostream &) override;
   void mangleCXXRTTI(QualType T, raw_ostream &) override;
-  void mangleCXXRTTIName(QualType T, raw_ostream &) override;
-  void mangleTypeName(QualType T, raw_ostream &) override;
+  void mangleCXXRTTIName(QualType T, raw_ostream &,
+                         bool NormalizeIntegers) override;
+  void mangleTypeName(QualType T, raw_ostream &,
+                      bool NormalizeIntegers) override;
 
   void mangleCXXCtorComdat(const CXXConstructorDecl *D, raw_ostream &) override;
   void mangleCXXDtorComdat(const CXXDestructorDecl *D, raw_ostream &) override;
@@ -205,7 +209,6 @@ public:
   }
 
   bool isInternalLinkageDecl(const NamedDecl *ND);
-  const DeclContext *IgnoreLinkageSpecDecls(const DeclContext *DC);
 
   /// @}
 };
@@ -214,6 +217,10 @@ public:
 class CXXNameMangler {
   ItaniumMangleContextImpl &Context;
   raw_ostream &Out;
+  /// Normalize integer types for cross-language CFI support with other
+  /// languages that can't represent and encode C/C++ integer types.
+  bool NormalizeIntegers = false;
+
   bool NullOut = false;
   /// In the "DisableDerivedAbiTags" mode derived ABI tags are not calculated.
   /// This mode is used when mangler creates another mangler recursively to
@@ -231,12 +238,12 @@ class CXXNameMangler {
   unsigned SeqID = 0;
 
   class FunctionTypeDepthState {
-    unsigned Bits;
+    unsigned Bits = 0;
 
     enum { InResultTypeMask = 1 };
 
   public:
-    FunctionTypeDepthState() : Bits(0) {}
+    FunctionTypeDepthState() = default;
 
     /// The number of function types we're inside.
     unsigned getDepth() const {
@@ -389,7 +396,6 @@ class CXXNameMangler {
   bool isStdNamespace(const DeclContext *DC);
 
   const RecordDecl *GetLocalClassDecl(const Decl *D);
-  const DeclContext *IgnoreLinkageSpecDecls(const DeclContext *DC);
   bool isSpecializedAs(QualType S, llvm::StringRef Name, QualType A);
   bool isStdCharSpecialization(const ClassTemplateSpecializationDecl *SD,
                                llvm::StringRef Name, bool HasAllocator);
@@ -412,6 +418,10 @@ public:
       : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
         AbiTagsRoot(AbiTags) {}
 
+  CXXNameMangler(ItaniumMangleContextImpl &C, raw_ostream &Out_,
+                 bool NormalizeIntegers_)
+      : Context(C), Out(Out_), NormalizeIntegers(NormalizeIntegers_),
+        NullOut(false), Structor(nullptr), AbiTagsRoot(AbiTags) {}
   CXXNameMangler(CXXNameMangler &Outer, raw_ostream &Out_)
       : Context(Outer.Context), Out(Out_), Structor(Outer.Structor),
         StructorType(Outer.StructorType), SeqID(Outer.SeqID),
@@ -552,6 +562,8 @@ private:
   void mangleAArch64NeonVectorType(const DependentVectorType *T);
   void mangleAArch64FixedSveVectorType(const VectorType *T);
   void mangleAArch64FixedSveVectorType(const DependentVectorType *T);
+  void mangleRISCVFixedRVVVectorType(const VectorType *T);
+  void mangleRISCVFixedRVVVectorType(const DependentVectorType *T);
 
   void mangleIntegerLiteral(QualType T, const llvm::APSInt &Value);
   void mangleFloatLiteral(QualType T, const llvm::APFloat &V);
@@ -1553,7 +1565,7 @@ void CXXNameMangler::mangleUnqualifiedName(
     // <lambda-sig> ::= <template-param-decl>* <parameter-type>+
     //     # Parameter types or 'v' for 'void'.
     if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(TD)) {
-      llvm::Optional<unsigned> DeviceNumber =
+      std::optional<unsigned> DeviceNumber =
           Context.getDiscriminatorOverride()(Context.getASTContext(), Record);
 
       // If we have a device-number via the discriminator, use that to mangle
@@ -1644,6 +1656,7 @@ void CXXNameMangler::mangleUnqualifiedName(
       // Otherwise, use the complete destructor name. This is relevant if a
       // class with a destructor is declared within a destructor.
       mangleCXXDtorType(Dtor_Complete);
+    assert(ND);
     writeAbiTags(ND, AdditionalAbiTags);
     break;
 
@@ -1675,8 +1688,12 @@ void CXXNameMangler::mangleRegCallName(const IdentifierInfo *II) {
   // <source-name> ::= <positive length number> __regcall3__ <identifier>
   // <number> ::= [n] <non-negative decimal integer>
   // <identifier> ::= <unqualified source code identifier>
-  Out << II->getLength() + sizeof("__regcall3__") - 1 << "__regcall3__"
-      << II->getName();
+  if (getASTContext().getLangOpts().RegCall4)
+    Out << II->getLength() + sizeof("__regcall4__") - 1 << "__regcall4__"
+        << II->getName();
+  else
+    Out << II->getLength() + sizeof("__regcall3__") - 1 << "__regcall3__"
+        << II->getName();
 }
 
 void CXXNameMangler::mangleDeviceStubName(const IdentifierInfo *II) {
@@ -2002,7 +2019,7 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // if the host-side CXX ABI has different numbering for lambda. In such case,
   // if the mangle context is that device-side one, use the device-side lambda
   // mangling number for this lambda.
-  llvm::Optional<unsigned> DeviceNumber =
+  std::optional<unsigned> DeviceNumber =
       Context.getDiscriminatorOverride()(Context.getASTContext(), Lambda);
   unsigned Number =
       DeviceNumber ? *DeviceNumber : Lambda->getLambdaManglingNumber();
@@ -2936,6 +2953,85 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   //                 ::= Dn # std::nullptr_t (i.e., decltype(nullptr))
   //                 ::= u <source-name>    # vendor extended type
   std::string type_name;
+  // Normalize integer types as vendor extended types:
+  // u<length>i<type size>
+  // u<length>u<type size>
+  if (NormalizeIntegers && T->isInteger()) {
+    if (T->isSignedInteger()) {
+      switch (getASTContext().getTypeSize(T)) {
+      case 8:
+        // Pick a representative for each integer size in the substitution
+        // dictionary. (Its actual defined size is not relevant.)
+        if (mangleSubstitution(BuiltinType::SChar))
+          break;
+        Out << "u2i8";
+        addSubstitution(BuiltinType::SChar);
+        break;
+      case 16:
+        if (mangleSubstitution(BuiltinType::Short))
+          break;
+        Out << "u3i16";
+        addSubstitution(BuiltinType::Short);
+        break;
+      case 32:
+        if (mangleSubstitution(BuiltinType::Int))
+          break;
+        Out << "u3i32";
+        addSubstitution(BuiltinType::Int);
+        break;
+      case 64:
+        if (mangleSubstitution(BuiltinType::Long))
+          break;
+        Out << "u3i64";
+        addSubstitution(BuiltinType::Long);
+        break;
+      case 128:
+        if (mangleSubstitution(BuiltinType::Int128))
+          break;
+        Out << "u4i128";
+        addSubstitution(BuiltinType::Int128);
+        break;
+      default:
+        llvm_unreachable("Unknown integer size for normalization");
+      }
+    } else {
+      switch (getASTContext().getTypeSize(T)) {
+      case 8:
+        if (mangleSubstitution(BuiltinType::UChar))
+          break;
+        Out << "u2u8";
+        addSubstitution(BuiltinType::UChar);
+        break;
+      case 16:
+        if (mangleSubstitution(BuiltinType::UShort))
+          break;
+        Out << "u3u16";
+        addSubstitution(BuiltinType::UShort);
+        break;
+      case 32:
+        if (mangleSubstitution(BuiltinType::UInt))
+          break;
+        Out << "u3u32";
+        addSubstitution(BuiltinType::UInt);
+        break;
+      case 64:
+        if (mangleSubstitution(BuiltinType::ULong))
+          break;
+        Out << "u3u64";
+        addSubstitution(BuiltinType::ULong);
+        break;
+      case 128:
+        if (mangleSubstitution(BuiltinType::UInt128))
+          break;
+        Out << "u4u128";
+        addSubstitution(BuiltinType::UInt128);
+        break;
+      default:
+        llvm_unreachable("Unknown integer size for normalization");
+      }
+    }
+    return;
+  }
   switch (T->getKind()) {
   case BuiltinType::Void:
     Out << 'v';
@@ -3034,23 +3130,30 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << 'd';
     break;
   case BuiltinType::LongDouble: {
-    const TargetInfo *TI = getASTContext().getLangOpts().OpenMP &&
-                                   getASTContext().getLangOpts().OpenMPIsDevice
-                               ? getASTContext().getAuxTargetInfo()
-                               : &getASTContext().getTargetInfo();
+    const TargetInfo *TI =
+        getASTContext().getLangOpts().OpenMP &&
+                getASTContext().getLangOpts().OpenMPIsTargetDevice
+            ? getASTContext().getAuxTargetInfo()
+            : &getASTContext().getTargetInfo();
     Out << TI->getLongDoubleMangling();
     break;
   }
   case BuiltinType::Float128: {
-    const TargetInfo *TI = getASTContext().getLangOpts().OpenMP &&
-                                   getASTContext().getLangOpts().OpenMPIsDevice
-                               ? getASTContext().getAuxTargetInfo()
-                               : &getASTContext().getTargetInfo();
+    const TargetInfo *TI =
+        getASTContext().getLangOpts().OpenMP &&
+                getASTContext().getLangOpts().OpenMPIsTargetDevice
+            ? getASTContext().getAuxTargetInfo()
+            : &getASTContext().getTargetInfo();
     Out << TI->getFloat128Mangling();
     break;
   }
   case BuiltinType::BFloat16: {
-    const TargetInfo *TI = &getASTContext().getTargetInfo();
+    const TargetInfo *TI =
+        ((getASTContext().getLangOpts().OpenMP &&
+          getASTContext().getLangOpts().OpenMPIsTargetDevice) ||
+         getASTContext().getLangOpts().SYCLIsDevice)
+            ? getASTContext().getAuxTargetInfo()
+            : &getASTContext().getTargetInfo();
     Out << TI->getBFloat16Mangling();
     break;
   }
@@ -3123,6 +3226,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << (type_name == InternalName ? "u" : "") << type_name.size()          \
         << type_name;                                                          \
     break;
+#define SVE_OPAQUE_TYPE(InternalName, MangledName, Id, SingletonId)            \
+  case BuiltinType::Id:                                                        \
+    type_name = MangledName;                                                   \
+    Out << (type_name == InternalName ? "u" : "") << type_name.size()          \
+        << type_name;                                                          \
+    break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case BuiltinType::Id: \
@@ -3137,6 +3246,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << 'u' << type_name.size() << type_name;                               \
     break;
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_REF_TYPE(InternalName, MangledName, Id, SingletonId, AS)          \
+  case BuiltinType::Id:                                                        \
+    type_name = MangledName;                                                   \
+    Out << 'u' << type_name.size() << type_name;                               \
+    break;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 }
 
@@ -3706,6 +3821,82 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(
   Diags.Report(T->getAttributeLoc(), DiagID);
 }
 
+void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
+  assert(T->getVectorKind() == VectorType::RVVFixedLengthDataVector &&
+         "expected fixed-length RVV vector!");
+
+  QualType EltType = T->getElementType();
+  assert(EltType->isBuiltinType() &&
+         "expected builtin type for fixed-length RVV vector!");
+
+  SmallString<20> TypeNameStr;
+  llvm::raw_svector_ostream TypeNameOS(TypeNameStr);
+  TypeNameOS << "__rvv_";
+  switch (cast<BuiltinType>(EltType)->getKind()) {
+  case BuiltinType::SChar:
+    TypeNameOS << "int8";
+    break;
+  case BuiltinType::UChar:
+    TypeNameOS << "uint8";
+    break;
+  case BuiltinType::Short:
+    TypeNameOS << "int16";
+    break;
+  case BuiltinType::UShort:
+    TypeNameOS << "uint16";
+    break;
+  case BuiltinType::Int:
+    TypeNameOS << "int32";
+    break;
+  case BuiltinType::UInt:
+    TypeNameOS << "uint32";
+    break;
+  case BuiltinType::Long:
+    TypeNameOS << "int64";
+    break;
+  case BuiltinType::ULong:
+    TypeNameOS << "uint64";
+    break;
+  case BuiltinType::Half:
+    TypeNameOS << "float16";
+    break;
+  case BuiltinType::Float:
+    TypeNameOS << "float32";
+    break;
+  case BuiltinType::Double:
+    TypeNameOS << "float64";
+    break;
+  default:
+    llvm_unreachable("unexpected element type for fixed-length RVV vector!");
+  }
+
+  unsigned VecSizeInBits = getASTContext().getTypeInfo(T).Width;
+
+  // Apend the LMUL suffix.
+  auto VScale = getASTContext().getTargetInfo().getVScaleRange(
+      getASTContext().getLangOpts());
+  unsigned VLen = VScale->first * llvm::RISCV::RVVBitsPerBlock;
+  TypeNameOS << 'm';
+  if (VecSizeInBits >= VLen)
+    TypeNameOS << (VecSizeInBits / VLen);
+  else
+    TypeNameOS << 'f' << (VLen / VecSizeInBits);
+
+  TypeNameOS << "_t";
+
+  Out << "9__RVV_VLSI" << 'u' << TypeNameStr.size() << TypeNameStr << "Lj"
+      << VecSizeInBits << "EE";
+}
+
+void CXXNameMangler::mangleRISCVFixedRVVVectorType(
+    const DependentVectorType *T) {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(
+      DiagnosticsEngine::Error,
+      "cannot mangle this dependent fixed-length RVV vector type yet");
+  Diags.Report(T->getAttributeLoc(), DiagID);
+}
+
 // GNU extension: vector types
 // <type>                  ::= <vector-type>
 // <vector-type>           ::= Dv <positive dimension number> _
@@ -3729,6 +3920,9 @@ void CXXNameMangler::mangleType(const VectorType *T) {
   } else if (T->getVectorKind() == VectorType::SveFixedLengthDataVector ||
              T->getVectorKind() == VectorType::SveFixedLengthPredicateVector) {
     mangleAArch64FixedSveVectorType(T);
+    return;
+  } else if (T->getVectorKind() == VectorType::RVVFixedLengthDataVector) {
+    mangleRISCVFixedRVVVectorType(T);
     return;
   }
   Out << "Dv" << T->getNumElements() << '_';
@@ -3755,6 +3949,9 @@ void CXXNameMangler::mangleType(const DependentVectorType *T) {
   } else if (T->getVectorKind() == VectorType::SveFixedLengthDataVector ||
              T->getVectorKind() == VectorType::SveFixedLengthPredicateVector) {
     mangleAArch64FixedSveVectorType(T);
+    return;
+  } else if (T->getVectorKind() == VectorType::RVVFixedLengthDataVector) {
+    mangleRISCVFixedRVVVectorType(T);
     return;
   }
 
@@ -6518,16 +6715,17 @@ void ItaniumMangleContextImpl::mangleCXXRTTI(QualType Ty, raw_ostream &Out) {
   Mangler.mangleType(Ty);
 }
 
-void ItaniumMangleContextImpl::mangleCXXRTTIName(QualType Ty,
-                                                 raw_ostream &Out) {
+void ItaniumMangleContextImpl::mangleCXXRTTIName(
+    QualType Ty, raw_ostream &Out, bool NormalizeIntegers = false) {
   // <special-name> ::= TS <type>  # typeinfo name (null terminated byte string)
-  CXXNameMangler Mangler(*this, Out);
+  CXXNameMangler Mangler(*this, Out, NormalizeIntegers);
   Mangler.getStream() << "_ZTS";
   Mangler.mangleType(Ty);
 }
 
-void ItaniumMangleContextImpl::mangleTypeName(QualType Ty, raw_ostream &Out) {
-  mangleCXXRTTIName(Ty, Out);
+void ItaniumMangleContextImpl::mangleTypeName(QualType Ty, raw_ostream &Out,
+                                              bool NormalizeIntegers = false) {
+  mangleCXXRTTIName(Ty, Out, NormalizeIntegers);
 }
 
 void ItaniumMangleContextImpl::mangleStringLiteral(const StringLiteral *, raw_ostream &) {
@@ -6560,7 +6758,7 @@ ItaniumMangleContext *ItaniumMangleContext::create(ASTContext &Context,
                                                    bool IsAux) {
   return new ItaniumMangleContextImpl(
       Context, Diags,
-      [](ASTContext &, const NamedDecl *) -> llvm::Optional<unsigned> {
+      [](ASTContext &, const NamedDecl *) -> std::optional<unsigned> {
         return std::nullopt;
       },
       IsAux);

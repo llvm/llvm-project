@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -hexagon-initial-cfg-cleanup=0 -stats -o /dev/null < %s 2>&1 -pipeliner-experimental-cg=true | FileCheck %s --check-prefix=STATS
+; RUN: llc -march=hexagon -enable-pipeliner -hexagon-initial-cfg-cleanup=0 -stats -o /dev/null < %s 2>&1 -pipeliner-experimental-cg=true -disable-cgp-delete-phis | FileCheck %s --check-prefix=STATS
 ; REQUIRES: asserts
 
 ; Check that we handle the case when a value is first defined in the loop.
@@ -14,8 +14,8 @@ b1:                                               ; preds = %b0
   br i1 undef, label %b2, label %b4
 
 b2:                                               ; preds = %b1
-  %v0 = load i16, i16* undef, align 2
-  %v1 = load i16, i16* undef, align 2
+  %v0 = load i16, ptr undef, align 2
+  %v1 = load i16, ptr undef, align 2
   br i1 undef, label %b5, label %b3
 
 b3:                                               ; preds = %b5, %b2

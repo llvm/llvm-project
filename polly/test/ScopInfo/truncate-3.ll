@@ -10,15 +10,15 @@
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
-define void @wobble(i16* %A, i32 %p) {
+define void @wobble(ptr %A, i32 %p) {
 bb:
   %tmp1 = and i32 %p, 255
   br label %bb4
 
 bb4:                                              ; preds = %bb4, %bb
-  %indvar = phi i16* [ %A, %bb ], [ %indvar.next, %bb4 ]
-  %val = load i16, i16* %indvar
-  %indvar.next = getelementptr inbounds i16, i16* %indvar, i32 %tmp1
+  %indvar = phi ptr [ %A, %bb ], [ %indvar.next, %bb4 ]
+  %val = load i16, ptr %indvar
+  %indvar.next = getelementptr inbounds i16, ptr %indvar, i32 %tmp1
   br i1 false, label %bb4, label %bb9
 
 bb9:                                              ; preds = %bb4

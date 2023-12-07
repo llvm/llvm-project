@@ -7,11 +7,11 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/not-terminated.s -o %t/not-terminated.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/relocs.s -o %t/relocs.o
 
-# RUN: not %lld -dylib --deduplicate-literals %t/not-terminated.o 2>&1 | FileCheck %s --check-prefix=TERM
-# RUN: not %lld -dylib --deduplicate-literals %t/relocs.o 2>&1 | FileCheck %s --check-prefix=RELOCS
+# RUN: not %lld -dylib %t/not-terminated.o 2>&1 | FileCheck %s --check-prefix=TERM
+# RUN: not %lld -dylib %t/relocs.o 2>&1 | FileCheck %s --check-prefix=RELOCS
 
 # TERM:   not-terminated.o:(__cstring+0x4): string is not null terminated
-# RELOCS: relocs.o contains relocations in __TEXT,__cstring, so LLD cannot deduplicate literals. Try re-running without --deduplicate-literals.
+# RELOCS: error: {{.*}}relocs.o: __TEXT,__cstring contains relocations, which is unsupported
 
 #--- not-terminated.s
 .cstring

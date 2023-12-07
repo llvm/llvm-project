@@ -15,11 +15,11 @@ bb6.lr.ph:                                        ; preds = %bb5.preheader
 
 bb6:                                              ; preds = %bb6.lr.ph, %bb6
   %_tmp1423 = phi i64 [ undef, %bb6.lr.ph ], [ %_tmp142, %bb6 ]
-  %_tmp123 = getelementptr [2 x [3 x [5 x i16]]], [2 x [3 x [5 x i16]]]* @x, i16 0, i64 undef
-  %_tmp126 = getelementptr [3 x [5 x i16]], [3 x [5 x i16]]* %_tmp123, i16 0, i64 %_tmp1423
-  %_tmp129 = getelementptr [5 x i16], [5 x i16]* %_tmp126, i16 0, i64 undef
-  %_tmp130 = load i16, i16* %_tmp129
-  store i16 undef, i16* getelementptr ([2 x [3 x [5 x i16]]], [2 x [3 x [5 x i16]]]* @x, i64 0, i64 undef, i64 undef, i64 undef)
+  %_tmp123 = getelementptr [2 x [3 x [5 x i16]]], ptr @x, i16 0, i64 undef
+  %_tmp126 = getelementptr [3 x [5 x i16]], ptr %_tmp123, i16 0, i64 %_tmp1423
+  %_tmp129 = getelementptr [5 x i16], ptr %_tmp126, i16 0, i64 undef
+  %_tmp130 = load i16, ptr %_tmp129
+  store i16 undef, ptr getelementptr ([2 x [3 x [5 x i16]]], ptr @x, i64 0, i64 undef, i64 undef, i64 undef)
   %_tmp142 = add i64 %_tmp1423, 1
   br i1 false, label %bb6, label %loop.exit
 
@@ -43,11 +43,11 @@ bb6.lr.ph:                                        ; preds = %bb5.preheader
 
 bb6:                                              ; preds = %bb6.lr.ph, %bb6
   %_tmp1423 = phi i64 [ undef, %bb6.lr.ph ], [ %_tmp142, %bb6 ]
-  %_tmp123 = getelementptr [2 x [3 x [5 x i16]]], [2 x [3 x [5 x i16]]]* @x, i16 0, i64 undef
-  %_tmp126 = getelementptr [3 x [5 x i16]], [3 x [5 x i16]]* %_tmp123, i16 0, i64 %_tmp1423
-  %_tmp129 = getelementptr [5 x i16], [5 x i16]* %_tmp126, i16 0, i64 undef
-  %_tmp130 = load i16, i16* %_tmp129
-  store i16 undef, i16* getelementptr ([2 x [3 x [5 x i16]]], [2 x [3 x [5 x i16]]]* @x, i64 0, i64 undef, i64 undef, i64 undef)
+  %_tmp123 = getelementptr [2 x [3 x [5 x i16]]], ptr @x, i16 0, i64 undef
+  %_tmp126 = getelementptr [3 x [5 x i16]], ptr %_tmp123, i16 0, i64 %_tmp1423
+  %_tmp129 = getelementptr [5 x i16], ptr %_tmp126, i16 0, i64 undef
+  %_tmp130 = load i16, ptr %_tmp129
+  store i16 undef, ptr getelementptr ([2 x [3 x [5 x i16]]], ptr @x, i64 0, i64 undef, i64 undef, i64 undef)
   %_tmp142 = add i64 %_tmp1423, 1
   br i1 false, label %bb6, label %loop.exit
 

@@ -10,19 +10,21 @@
 #include "AMDGPU.h"
 #include "AMDGPUAsmUtils.h"
 #include "AMDKernelCodeT.h"
-#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 
 #define GET_INSTRINFO_NAMED_OPS
@@ -92,6 +94,24 @@ unsigned getVmcntBitWidthHi(unsigned VersionMajor) {
   return (VersionMajor == 9 || VersionMajor == 10) ? 2 : 0;
 }
 
+/// \returns VmVsrc bit width
+inline unsigned getVmVsrcBitWidth() { return 3; }
+
+/// \returns VmVsrc bit shift
+inline unsigned getVmVsrcBitShift() { return 2; }
+
+/// \returns VaVdst bit width
+inline unsigned getVaVdstBitWidth() { return 4; }
+
+/// \returns VaVdst bit shift
+inline unsigned getVaVdstBitShift() { return 12; }
+
+/// \returns SaSdst bit width
+inline unsigned getSaSdstBitWidth() { return 1; }
+
+/// \returns SaSdst bit shift
+inline unsigned getSaSdstBitShift() { return 0; }
+
 } // end namespace anonymous
 
 namespace llvm {
@@ -150,34 +170,64 @@ unsigned getAmdhsaCodeObjectVersion() {
   return AmdhsaCodeObjectVersion;
 }
 
-unsigned getMultigridSyncArgImplicitArgPosition() {
-  switch (AmdhsaCodeObjectVersion) {
-  case 2:
-  case 3:
-  case 4:
+unsigned getCodeObjectVersion(const Module &M) {
+  if (auto Ver = mdconst::extract_or_null<ConstantInt>(
+      M.getModuleFlag("amdgpu_code_object_version"))) {
+    return (unsigned)Ver->getZExtValue() / 100;
+  }
+
+  // Default code object version.
+  return AMDHSA_COV4;
+}
+
+unsigned getMultigridSyncArgImplicitArgPosition(unsigned CodeObjectVersion) {
+  switch (CodeObjectVersion) {
+  case AMDHSA_COV2:
+  case AMDHSA_COV3:
+  case AMDHSA_COV4:
     return 48;
-  case 5:
-    return AMDGPU::ImplicitArg::MULTIGRID_SYNC_ARG_OFFSET;
+  case AMDHSA_COV5:
   default:
-    llvm_unreachable("Unexpected code object version");
-    return 0;
+    return AMDGPU::ImplicitArg::MULTIGRID_SYNC_ARG_OFFSET;
   }
 }
 
 
 // FIXME: All such magic numbers about the ABI should be in a
 // central TD file.
-unsigned getHostcallImplicitArgPosition() {
-  switch (AmdhsaCodeObjectVersion) {
-  case 2:
-  case 3:
-  case 4:
+unsigned getHostcallImplicitArgPosition(unsigned CodeObjectVersion) {
+  switch (CodeObjectVersion) {
+  case AMDHSA_COV2:
+  case AMDHSA_COV3:
+  case AMDHSA_COV4:
     return 24;
-  case 5:
-    return AMDGPU::ImplicitArg::HOSTCALL_PTR_OFFSET;
+  case AMDHSA_COV5:
   default:
-    llvm_unreachable("Unexpected code object version");
-    return 0;
+    return AMDGPU::ImplicitArg::HOSTCALL_PTR_OFFSET;
+  }
+}
+
+unsigned getDefaultQueueImplicitArgPosition(unsigned CodeObjectVersion) {
+  switch (CodeObjectVersion) {
+  case AMDHSA_COV2:
+  case AMDHSA_COV3:
+  case AMDHSA_COV4:
+    return 32;
+  case AMDHSA_COV5:
+  default:
+    return AMDGPU::ImplicitArg::DEFAULT_QUEUE_OFFSET;
+  }
+}
+
+unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
+  switch (CodeObjectVersion) {
+  case AMDHSA_COV2:
+  case AMDHSA_COV3:
+  case AMDHSA_COV4:
+    return 40;
+  case AMDHSA_COV5:
+  default:
+    return AMDGPU::ImplicitArg::COMPLETION_ACTION_OFFSET;
   }
 }
 
@@ -462,6 +512,28 @@ bool isPermlane16(unsigned Opc) {
          Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx11;
 }
 
+bool isGenericAtomic(unsigned Opc) {
+  return Opc == AMDGPU::G_AMDGPU_ATOMIC_FMIN ||
+         Opc == AMDGPU::G_AMDGPU_ATOMIC_FMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMIN ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_AND ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_OR ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_XOR ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP ||
+         Opc == AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG;
+}
+
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
   return Info ? Info->IsTrue16 : false;
@@ -515,7 +587,7 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   auto OperandsNum = OpDesc.getNumOperands();
   unsigned CompOprIdx;
   for (CompOprIdx = Component::SRC1; CompOprIdx < OperandsNum; ++CompOprIdx) {
-    if (OpDesc.OpInfo[CompOprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
+    if (OpDesc.operands()[CompOprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
       MandatoryLiteralIdx = CompOprIdx;
       break;
     }
@@ -544,9 +616,10 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
 
   unsigned CompOprIdx;
   for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
-    unsigned BanksNum = BANKS_NUM[CompOprIdx];
+    unsigned BanksMasks = VOPD_VGPR_BANK_MASKS[CompOprIdx];
     if (OpXRegs[CompOprIdx] && OpYRegs[CompOprIdx] &&
-        (OpXRegs[CompOprIdx] % BanksNum == OpYRegs[CompOprIdx] % BanksNum))
+        ((OpXRegs[CompOprIdx] & BanksMasks) ==
+         (OpYRegs[CompOprIdx] & BanksMasks)))
       return CompOprIdx;
   }
 
@@ -600,7 +673,7 @@ namespace IsaInfo {
 
 AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI)
     : STI(STI), XnackSetting(TargetIDSetting::Any),
-      SramEccSetting(TargetIDSetting::Any) {
+      SramEccSetting(TargetIDSetting::Any), CodeObjectVersion(0) {
   if (!STI.getFeatureBits().test(FeatureSupportsXNACK))
     XnackSetting = TargetIDSetting::Unsupported;
   if (!STI.getFeatureBits().test(FeatureSupportsSRAMECC))
@@ -711,9 +784,9 @@ std::string AMDGPUTargetID::toString() const {
                     .str();
 
   std::string Features;
-  if (std::optional<uint8_t> HsaAbiVersion = getHsaAbiVersion(&STI)) {
-    switch (*HsaAbiVersion) {
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
+  if (STI.getTargetTriple().getOS() == Triple::AMDHSA) {
+    switch (CodeObjectVersion) {
+    case AMDGPU::AMDHSA_COV2:
       // Code object V2 only supported specific processors and had fixed
       // settings for the XNACK.
       if (Processor == "gfx600") {
@@ -761,7 +834,7 @@ std::string AMDGPUTargetID::toString() const {
             Twine(Processor));
       }
       break;
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
+    case AMDGPU::AMDHSA_COV3:
       // xnack.
       if (isXnackOnOrAny())
         Features += "+xnack";
@@ -770,8 +843,8 @@ std::string AMDGPUTargetID::toString() const {
       if (isSramEccOnOrAny())
         Features += "+sram-ecc";
       break;
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
+    case AMDGPU::AMDHSA_COV4:
+    case AMDGPU::AMDHSA_COV5:
       // sramecc.
       if (getSramEccSetting() == TargetIDSetting::Off)
         Features += ":sramecc-";
@@ -804,11 +877,26 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
+  unsigned BytesPerCU = 0;
+  if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
+    BytesPerCU = 32768;
+  if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
+    BytesPerCU = 65536;
+
+  // "Per CU" really means "per whatever functional block the waves of a
+  // workgroup must share". So the effective local memory size is doubled in
+  // WGP mode on gfx10.
+  if (isGFX10Plus(*STI) && !STI->getFeatureBits().test(FeatureCuMode))
+    BytesPerCU *= 2;
+
+  return BytesPerCU;
+}
+
+unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
     return 32768;
   if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
     return 65536;
-
   return 0;
 }
 
@@ -828,11 +916,18 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
   assert(FlatWorkGroupSize != 0);
   if (STI->getTargetTriple().getArch() != Triple::amdgcn)
     return 8;
+  unsigned MaxWaves = getMaxWavesPerEU(STI) * getEUsPerCU(STI);
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
-  if (N == 1)
-    return 40;
-  N = 40 / N;
-  return std::min(N, 16u);
+  if (N == 1) {
+    // Single-wave workgroups don't consume barrier resources.
+    return MaxWaves;
+  }
+
+  unsigned MaxBarriers = 16;
+  if (isGFX10Plus(*STI) && !STI->getFeatureBits().test(FeatureCuMode))
+    MaxBarriers = 32;
+
+  return std::min(MaxWaves / N, MaxBarriers);
 }
 
 unsigned getMinWavesPerEU(const MCSubtargetInfo *STI) {
@@ -1159,16 +1254,16 @@ bool shouldEmitConstantsToTextSection(const Triple &TT) {
   return TT.getArch() == Triple::r600;
 }
 
-std::pair<int, int> getIntegerPairAttribute(const Function &F,
-                                            StringRef Name,
-                                            std::pair<int, int> Default,
-                                            bool OnlyFirstRequired) {
+std::pair<unsigned, unsigned>
+getIntegerPairAttribute(const Function &F, StringRef Name,
+                        std::pair<unsigned, unsigned> Default,
+                        bool OnlyFirstRequired) {
   Attribute A = F.getFnAttribute(Name);
   if (!A.isStringAttribute())
     return Default;
 
   LLVMContext &Ctx = F.getContext();
-  std::pair<int, int> Ints = Default;
+  std::pair<unsigned, unsigned> Ints = Default;
   std::pair<StringRef, StringRef> Strs = A.getValueAsString().split(',');
   if (Strs.first.trim().getAsInteger(0, Ints.first)) {
     Ctx.emitError("can't parse first integer attribute " + Name);
@@ -1443,6 +1538,42 @@ int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
                  const MCSubtargetInfo &STI) {
   return encodeCustomOperand(DepCtrInfo, DEP_CTR_SIZE, Name, Val, UsedOprMask,
                              STI);
+}
+
+unsigned decodeFieldVmVsrc(unsigned Encoded) {
+  return unpackBits(Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
+}
+
+unsigned decodeFieldVaVdst(unsigned Encoded) {
+  return unpackBits(Encoded, getVaVdstBitShift(), getVaVdstBitWidth());
+}
+
+unsigned decodeFieldSaSdst(unsigned Encoded) {
+  return unpackBits(Encoded, getSaSdstBitShift(), getSaSdstBitWidth());
+}
+
+unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
+  return packBits(VmVsrc, Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
+}
+
+unsigned encodeFieldVmVsrc(unsigned VmVsrc) {
+  return encodeFieldVmVsrc(0xffff, VmVsrc);
+}
+
+unsigned encodeFieldVaVdst(unsigned Encoded, unsigned VaVdst) {
+  return packBits(VaVdst, Encoded, getVaVdstBitShift(), getVaVdstBitWidth());
+}
+
+unsigned encodeFieldVaVdst(unsigned VaVdst) {
+  return encodeFieldVaVdst(0xffff, VaVdst);
+}
+
+unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst) {
+  return packBits(SaSdst, Encoded, getSaSdstBitShift(), getSaSdstBitWidth());
+}
+
+unsigned encodeFieldSaSdst(unsigned SaSdst) {
+  return encodeFieldSaSdst(0xffff, SaSdst);
 }
 
 } // namespace DepCtr
@@ -1821,6 +1952,8 @@ bool isShader(CallingConv::ID cc) {
     case CallingConv::AMDGPU_ES:
     case CallingConv::AMDGPU_GS:
     case CallingConv::AMDGPU_PS:
+    case CallingConv::AMDGPU_CS_Chain:
+    case CallingConv::AMDGPU_CS_ChainPreserve:
     case CallingConv::AMDGPU_CS:
       return true;
     default:
@@ -1862,49 +1995,72 @@ bool isModuleEntryFunctionCC(CallingConv::ID CC) {
   }
 }
 
+bool isChainCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_CS_Chain:
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool isKernelCC(const Function *Func) {
   return AMDGPU::isModuleEntryFunctionCC(Func->getCallingConv());
 }
 
 bool hasXNACK(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureXNACK];
+  return STI.hasFeature(AMDGPU::FeatureXNACK);
 }
 
 bool hasSRAMECC(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureSRAMECC];
+  return STI.hasFeature(AMDGPU::FeatureSRAMECC);
 }
 
 bool hasMIMG_R128(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureMIMG_R128] && !STI.getFeatureBits()[AMDGPU::FeatureR128A16];
+  return STI.hasFeature(AMDGPU::FeatureMIMG_R128) && !STI.hasFeature(AMDGPU::FeatureR128A16);
 }
 
-bool hasGFX10A16(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10A16];
+bool hasA16(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureA16);
 }
 
 bool hasG16(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureG16];
+  return STI.hasFeature(AMDGPU::FeatureG16);
 }
 
 bool hasPackedD16(const MCSubtargetInfo &STI) {
-  return !STI.getFeatureBits()[AMDGPU::FeatureUnpackedD16VMem] && !isCI(STI) &&
+  return !STI.hasFeature(AMDGPU::FeatureUnpackedD16VMem) && !isCI(STI) &&
          !isSI(STI);
 }
 
+bool hasGDS(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureGDS);
+}
+
+unsigned getNSAMaxSize(const MCSubtargetInfo &STI) {
+  auto Version = getIsaVersion(STI.getCPU());
+  if (Version.Major == 10)
+    return Version.Minor >= 3 ? 13 : 5;
+  if (Version.Major == 11)
+    return 5;
+  return 0;
+}
+
 bool isSI(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureSouthernIslands];
+  return STI.hasFeature(AMDGPU::FeatureSouthernIslands);
 }
 
 bool isCI(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureSeaIslands];
+  return STI.hasFeature(AMDGPU::FeatureSeaIslands);
 }
 
 bool isVI(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureVolcanicIslands];
+  return STI.hasFeature(AMDGPU::FeatureVolcanicIslands);
 }
 
 bool isGFX9(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX9];
+  return STI.hasFeature(AMDGPU::FeatureGFX9);
 }
 
 bool isGFX9_GFX10(const MCSubtargetInfo &STI) {
@@ -1924,7 +2080,7 @@ bool isGFX9Plus(const MCSubtargetInfo &STI) {
 }
 
 bool isGFX10(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10];
+  return STI.hasFeature(AMDGPU::FeatureGFX10);
 }
 
 bool isGFX10Plus(const MCSubtargetInfo &STI) {
@@ -1932,7 +2088,7 @@ bool isGFX10Plus(const MCSubtargetInfo &STI) {
 }
 
 bool isGFX11(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX11];
+  return STI.hasFeature(AMDGPU::FeatureGFX11);
 }
 
 bool isGFX11Plus(const MCSubtargetInfo &STI) {
@@ -1952,39 +2108,39 @@ bool isGFX10Before1030(const MCSubtargetInfo &STI) {
 }
 
 bool isGCN3Encoding(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding];
+  return STI.hasFeature(AMDGPU::FeatureGCN3Encoding);
 }
 
 bool isGFX10_AEncoding(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10_AEncoding];
+  return STI.hasFeature(AMDGPU::FeatureGFX10_AEncoding);
 }
 
 bool isGFX10_BEncoding(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10_BEncoding];
+  return STI.hasFeature(AMDGPU::FeatureGFX10_BEncoding);
 }
 
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10_3Insts];
+  return STI.hasFeature(AMDGPU::FeatureGFX10_3Insts);
 }
 
 bool isGFX90A(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts];
+  return STI.hasFeature(AMDGPU::FeatureGFX90AInsts);
 }
 
 bool isGFX940(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX940Insts];
+  return STI.hasFeature(AMDGPU::FeatureGFX940Insts);
 }
 
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
+  return STI.hasFeature(AMDGPU::FeatureArchitectedFlatScratch);
 }
 
 bool hasMAIInsts(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureMAIInsts];
+  return STI.hasFeature(AMDGPU::FeatureMAIInsts);
 }
 
 bool hasVOPD(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureVOPD];
+  return STI.hasFeature(AMDGPU::FeatureVOPD);
 }
 
 int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
@@ -2109,21 +2265,21 @@ bool isInlineValue(unsigned Reg) {
 
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_SRC_FIRST &&
          OpType <= AMDGPU::OPERAND_SRC_LAST;
 }
 
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_KIMM_FIRST &&
          OpType <= AMDGPU::OPERAND_KIMM_LAST;
 }
 
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
   case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
@@ -2152,7 +2308,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
          OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST;
 }
@@ -2307,8 +2463,8 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned RCID = Desc.OpInfo[OpNo].RegClass;
-  return getRegBitWidth(MRI->getRegClass(RCID)) / 8;
+  unsigned RCID = Desc.operands()[OpNo].RegClass;
+  return getRegBitWidth(RCID) / 8;
 }
 
 bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi) {
@@ -2316,15 +2472,15 @@ bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi) {
     return true;
 
   uint64_t Val = static_cast<uint64_t>(Literal);
-  return (Val == DoubleToBits(0.0)) ||
-         (Val == DoubleToBits(1.0)) ||
-         (Val == DoubleToBits(-1.0)) ||
-         (Val == DoubleToBits(0.5)) ||
-         (Val == DoubleToBits(-0.5)) ||
-         (Val == DoubleToBits(2.0)) ||
-         (Val == DoubleToBits(-2.0)) ||
-         (Val == DoubleToBits(4.0)) ||
-         (Val == DoubleToBits(-4.0)) ||
+  return (Val == llvm::bit_cast<uint64_t>(0.0)) ||
+         (Val == llvm::bit_cast<uint64_t>(1.0)) ||
+         (Val == llvm::bit_cast<uint64_t>(-1.0)) ||
+         (Val == llvm::bit_cast<uint64_t>(0.5)) ||
+         (Val == llvm::bit_cast<uint64_t>(-0.5)) ||
+         (Val == llvm::bit_cast<uint64_t>(2.0)) ||
+         (Val == llvm::bit_cast<uint64_t>(-2.0)) ||
+         (Val == llvm::bit_cast<uint64_t>(4.0)) ||
+         (Val == llvm::bit_cast<uint64_t>(-4.0)) ||
          (Val == 0x3fc45f306dc9c882 && HasInv2Pi);
 }
 
@@ -2342,15 +2498,15 @@ bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi) {
   // floating-point, so it is a legal inline immediate.
 
   uint32_t Val = static_cast<uint32_t>(Literal);
-  return (Val == FloatToBits(0.0f)) ||
-         (Val == FloatToBits(1.0f)) ||
-         (Val == FloatToBits(-1.0f)) ||
-         (Val == FloatToBits(0.5f)) ||
-         (Val == FloatToBits(-0.5f)) ||
-         (Val == FloatToBits(2.0f)) ||
-         (Val == FloatToBits(-2.0f)) ||
-         (Val == FloatToBits(4.0f)) ||
-         (Val == FloatToBits(-4.0f)) ||
+  return (Val == llvm::bit_cast<uint32_t>(0.0f)) ||
+         (Val == llvm::bit_cast<uint32_t>(1.0f)) ||
+         (Val == llvm::bit_cast<uint32_t>(-1.0f)) ||
+         (Val == llvm::bit_cast<uint32_t>(0.5f)) ||
+         (Val == llvm::bit_cast<uint32_t>(-0.5f)) ||
+         (Val == llvm::bit_cast<uint32_t>(2.0f)) ||
+         (Val == llvm::bit_cast<uint32_t>(-2.0f)) ||
+         (Val == llvm::bit_cast<uint32_t>(4.0f)) ||
+         (Val == llvm::bit_cast<uint32_t>(-4.0f)) ||
          (Val == 0x3e22f983 && HasInv2Pi);
 }
 
@@ -2429,10 +2585,35 @@ bool isArgPassedInSGPR(const Argument *A) {
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_CS:
   case CallingConv::AMDGPU_Gfx:
-    // For non-compute shaders, SGPR inputs are marked with either inreg or byval.
-    // Everything else is in VGPRs.
-    return F->getAttributes().hasParamAttr(A->getArgNo(), Attribute::InReg) ||
-           F->getAttributes().hasParamAttr(A->getArgNo(), Attribute::ByVal);
+    // For non-compute shaders, SGPR inputs are marked with either inreg or
+    // byval. Everything else is in VGPRs.
+    return A->hasAttribute(Attribute::InReg) ||
+           A->hasAttribute(Attribute::ByVal);
+  default:
+    // TODO: Should calls support inreg for SGPR inputs?
+    return false;
+  }
+}
+
+bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
+  // Arguments to compute shaders are never a source of divergence.
+  CallingConv::ID CC = CB->getCallingConv();
+  switch (CC) {
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
+    return true;
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_LS:
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_Gfx:
+    // For non-compute shaders, SGPR inputs are marked with either inreg or
+    // byval. Everything else is in VGPRs.
+    return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
+           CB->paramHasAttr(ArgNo, Attribute::ByVal);
   default:
     // TODO: Should calls support inreg for SGPR inputs?
     return false;
@@ -2502,91 +2683,12 @@ std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
                                    : std::nullopt;
 }
 
-unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST, bool Signed) {
+unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
   // Address offset is 12-bit signed for GFX10, 13-bit for GFX9 and GFX11+.
   if (AMDGPU::isGFX10(ST))
-    return Signed ? 12 : 11;
+    return 12;
 
-  return Signed ? 13 : 12;
-}
-
-// Given Imm, split it into the values to put into the SOffset and ImmOffset
-// fields in an MUBUF instruction. Return false if it is not possible (due to a
-// hardware bug needing a workaround).
-//
-// The required alignment ensures that individual address components remain
-// aligned if they are aligned to begin with. It also ensures that additional
-// offsets within the given alignment can be added to the resulting ImmOffset.
-bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
-                      const GCNSubtarget *Subtarget, Align Alignment) {
-  const uint32_t MaxImm = alignDown(4095, Alignment.value());
-  uint32_t Overflow = 0;
-
-  if (Imm > MaxImm) {
-    if (Imm <= MaxImm + 64) {
-      // Use an SOffset inline constant for 4..64
-      Overflow = Imm - MaxImm;
-      Imm = MaxImm;
-    } else {
-      // Try to keep the same value in SOffset for adjacent loads, so that
-      // the corresponding register contents can be re-used.
-      //
-      // Load values with all low-bits (except for alignment bits) set into
-      // SOffset, so that a larger range of values can be covered using
-      // s_movk_i32.
-      //
-      // Atomic operations fail to work correctly when individual address
-      // components are unaligned, even if their sum is aligned.
-      uint32_t High = (Imm + Alignment.value()) & ~4095;
-      uint32_t Low = (Imm + Alignment.value()) & 4095;
-      Imm = Low;
-      Overflow = High - Alignment.value();
-    }
-  }
-
-  // There is a hardware bug in SI and CI which prevents address clamping in
-  // MUBUF instructions from working correctly with SOffsets. The immediate
-  // offset is unaffected.
-  if (Overflow > 0 &&
-      Subtarget->getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
-    return false;
-
-  ImmOffset = Imm;
-  SOffset = Overflow;
-  return true;
-}
-
-SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F) {
-  *this = getDefaultForCallingConv(F.getCallingConv());
-
-  StringRef IEEEAttr = F.getFnAttribute("amdgpu-ieee").getValueAsString();
-  if (!IEEEAttr.empty())
-    IEEE = IEEEAttr == "true";
-
-  StringRef DX10ClampAttr
-    = F.getFnAttribute("amdgpu-dx10-clamp").getValueAsString();
-  if (!DX10ClampAttr.empty())
-    DX10Clamp = DX10ClampAttr == "true";
-
-  StringRef DenormF32Attr = F.getFnAttribute("denormal-fp-math-f32").getValueAsString();
-  if (!DenormF32Attr.empty()) {
-    DenormalMode DenormMode = parseDenormalFPAttribute(DenormF32Attr);
-    FP32InputDenormals = DenormMode.Input == DenormalMode::IEEE;
-    FP32OutputDenormals = DenormMode.Output == DenormalMode::IEEE;
-  }
-
-  StringRef DenormAttr = F.getFnAttribute("denormal-fp-math").getValueAsString();
-  if (!DenormAttr.empty()) {
-    DenormalMode DenormMode = parseDenormalFPAttribute(DenormAttr);
-
-    if (DenormF32Attr.empty()) {
-      FP32InputDenormals = DenormMode.Input == DenormalMode::IEEE;
-      FP32OutputDenormals = DenormMode.Output == DenormalMode::IEEE;
-    }
-
-    FP64FP16InputDenormals = DenormMode.Input == DenormalMode::IEEE;
-    FP64FP16OutputDenormals = DenormMode.Output == DenormalMode::IEEE;
-  }
+  return 13;
 }
 
 namespace {
@@ -2596,7 +2698,13 @@ struct SourceOfDivergence {
 };
 const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
+struct AlwaysUniform {
+  unsigned Intr;
+};
+const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
+
 #define GET_SourcesOfDivergence_IMPL
+#define GET_UniformIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -2606,6 +2714,10 @@ const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
 bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
   return lookupSourceOfDivergence(IntrID);
+}
+
+bool isIntrinsicAlwaysUniform(unsigned IntrID) {
+  return lookupAlwaysUniform(IntrID);
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
@@ -2626,6 +2738,25 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
   return isGFX11Plus(STI) ? getGfx11PlusBufferFormatInfo(Format)
                           : isGFX10(STI) ? getGfx10BufferFormatInfo(Format)
                                          : getGfx9BufferFormatInfo(Format);
+}
+
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
+  for (auto OpName : { OpName::vdst, OpName::src0, OpName::src1,
+                       OpName::src2 }) {
+    int Idx = getNamedOperandIdx(OpDesc.getOpcode(), OpName);
+    if (Idx == -1)
+      continue;
+
+    if (OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64RegClassID ||
+        OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64_Align2RegClassID)
+      return true;
+  }
+
+  return false;
+}
+
+bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
+  return hasAny64BitVGPROperands(OpDesc);
 }
 
 } // namespace AMDGPU

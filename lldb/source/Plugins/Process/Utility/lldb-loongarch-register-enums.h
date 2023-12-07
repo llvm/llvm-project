@@ -85,7 +85,6 @@ enum {
   gpr_t7_loongarch = gpr_r19_loongarch,
   gpr_t8_loongarch = gpr_r20_loongarch,
   gpr_fp_loongarch = gpr_r22_loongarch,
-  gpr_s9_loongarch = gpr_r22_loongarch,
   gpr_s0_loongarch = gpr_r23_loongarch,
   gpr_s1_loongarch = gpr_r24_loongarch,
   gpr_s2_loongarch = gpr_r25_loongarch,

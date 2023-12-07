@@ -5,7 +5,7 @@
 target triple = "hexagon"
 
 ; Function Attrs: nounwind
-define i32 @f0(i32 %a0, i8* (i32, i8*)* %a1) local_unnamed_addr #0 !dbg !5 {
+define i32 @f0(i32 %a0, ptr %a1) local_unnamed_addr #0 !dbg !5 {
 b0:
   br label %b1
 
@@ -15,7 +15,7 @@ b1:                                               ; preds = %b0
 
 b2:                                               ; preds = %b3, %b1
   %v0 = phi i32 [ 0, %b1 ], [ %v2, %b3 ]
-  %v1 = tail call i8* %a1(i32 12, i8* null) #0
+  %v1 = tail call ptr %a1(i32 12, ptr null) #0
   br label %b3
 
 b3:                                               ; preds = %b2

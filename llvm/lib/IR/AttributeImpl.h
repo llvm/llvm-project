@@ -266,6 +266,7 @@ public:
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
   MemoryEffects getMemoryEffects() const;
+  FPClassTest getNoFPClass() const;
   std::string getAsString(bool InAttrGrp) const;
   Type *getAttributeType(Attribute::AttrKind Kind) const;
 
@@ -275,7 +276,7 @@ public:
   iterator end() const { return begin() + NumAttrs; }
 
   void Profile(FoldingSetNodeID &ID) const {
-    Profile(ID, makeArrayRef(begin(), end()));
+    Profile(ID, ArrayRef(begin(), end()));
   }
 
   static void Profile(FoldingSetNodeID &ID, ArrayRef<Attribute> AttrList) {

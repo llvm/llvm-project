@@ -8,12 +8,8 @@
 // X32:   @_NSConcreteGlobalBlock, i32 1879048192, i32 0,
 // X32:   store i32 1610612736, ptr %want
 
-// rdar://7677537
-
 // ARM64: @_NSConcreteGlobalBlock, i32 1342177280, i32 0,
 // ARM64: store i32 1610612736, ptr %want
-
-// rdar://9757126
 
 int printf(const char *, ...);
 void *malloc(__SIZE_TYPE__ size);

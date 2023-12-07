@@ -254,8 +254,8 @@ protected:
   Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
          uint8_t stOther, uint8_t type)
       : file(file), nameData(name.data()), nameSize(name.size()), type(type),
-        binding(binding), stOther(stOther), symbolKind(k),
-        exportDynamic(false) {}
+        binding(binding), stOther(stOther), symbolKind(k), exportDynamic(false),
+        archSpecificBit(false) {}
 
   void overwrite(Symbol &sym, Kind k) const {
     if (sym.traced)
@@ -279,9 +279,18 @@ public:
   // True if defined relative to a section discarded by ICF.
   uint8_t folded : 1;
 
-  // True if a call to this symbol needs to be followed by a restore of the
-  // PPC64 toc pointer.
-  uint8_t needsTocRestore : 1;
+  // Allow reuse of a bit between architecture-exclusive symbol flags.
+  // - needsTocRestore(): On PPC64, true if a call to this symbol needs to be
+  //   followed by a restore of the toc pointer.
+  // - isTagged(): On AArch64, true if the symbol needs special relocation and
+  //   metadata semantics because it's tagged, under the AArch64 MemtagABI.
+  uint8_t archSpecificBit : 1;
+  bool needsTocRestore() const { return archSpecificBit; }
+  bool isTagged() const { return archSpecificBit; }
+  void setNeedsTocRestore(bool v) { archSpecificBit = v; }
+  void setIsTagged(bool v) {
+    archSpecificBit = v;
+  }
 
   // True if this symbol is defined by a symbol assignment or wrapped by --wrap.
   //
@@ -291,6 +300,9 @@ public:
 
   // True if defined in a DSO as protected visibility.
   uint8_t dsoProtected : 1;
+
+  // True if targeted by a range extension thunk.
+  uint8_t thunkAccessed : 1;
 
   // Temporary flags used to communicate which symbol entries need PLT and GOT
   // entries during postScanRelocations();
@@ -511,6 +523,9 @@ struct ElfSym {
   static Defined *mipsGp;
   static Defined *mipsGpDisp;
   static Defined *mipsLocalGp;
+
+  // __global_pointer$ for RISC-V.
+  static Defined *riscvGlobalPointer;
 
   // __rel{,a}_iplt_{start,end} symbols.
   static Defined *relaIpltStart;

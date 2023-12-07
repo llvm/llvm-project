@@ -11,10 +11,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/Triple.h"
 #include <map>
 #include <memory>
 #include <vector>
@@ -599,6 +599,8 @@ public:
     return PersonalityEnc;
   }
 
+  StringRef getAugmentationData() const { return AugmentationData; }
+
   uint32_t getFDEPointerEncoding() const { return FDEPointerEncoding; }
 
   uint32_t getLSDAPointerEncoding() const { return LSDAPointerEncoding; }
@@ -638,6 +640,7 @@ public:
   ~FDE() override = default;
 
   const CIE *getLinkedCIE() const { return LinkedCIE; }
+  uint64_t getCIEPointer() const { return CIEPointer; }
   uint64_t getInitialLocation() const { return InitialLocation; }
   uint64_t getAddressRange() const { return AddressRange; }
   std::optional<uint64_t> getLSDAAddress() const { return LSDAAddress; }

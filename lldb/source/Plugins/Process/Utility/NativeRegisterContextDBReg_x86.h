@@ -46,7 +46,7 @@ public:
 
   uint32_t NumSupportedHardwareWatchpoints() override;
 
-  const RegisterInfo *GetDR(int num) const;
+  virtual const RegisterInfo *GetDR(int num) const;
 };
 
 } // namespace lldb_private

@@ -14,11 +14,11 @@
 // This flag disables all functionality relating to floating point numbers. This
 // can be useful for embedded systems or other situations where binary size is
 // important.
-// #define LLVM_LIBC_SCANF_DISABLE_FLOAT
+// #define LIBC_COPT_SCANF_DISABLE_FLOAT
 
 // This flag disables index mode, a posix extension often used for
 // internationalization of format strings. Supporting it takes up additional
 // memory and parsing time, so it can be disabled if it's not used.
-// #define LLVM_LIBC_SCANF_DISABLE_INDEX_MODE
+// #define LIBC_COPT_SCANF_DISABLE_INDEX_MODE
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_SCANF_CONFIG_H

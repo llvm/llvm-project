@@ -33,7 +33,7 @@ public:
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
 
 private:
-  static const char *getRegisterName(unsigned RegNo,
+  static const char *getRegisterName(MCRegister Reg,
                                      unsigned AltIdx = AVR::NoRegAltName);
 
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);

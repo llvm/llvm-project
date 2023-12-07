@@ -46,41 +46,14 @@ void AMDGPUAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
 }
 
-static AliasResult getAliasResult(unsigned AS1, unsigned AS2) {
-  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 7, "Addr space out of range");
-
-  if (AS1 > AMDGPUAS::MAX_AMDGPU_ADDRESS || AS2 > AMDGPUAS::MAX_AMDGPU_ADDRESS)
-    return AliasResult::MayAlias;
-
-#define ASMay AliasResult::MayAlias
-#define ASNo AliasResult::NoAlias
-  // This array is indexed by address space value enum elements 0 ... to 7
-  static const AliasResult ASAliasRules[8][8] = {
-    /*                    Flat    Global Region Group  Constant Private Const32 Buf Fat Ptr */
-    /* Flat     */        {ASMay, ASMay, ASNo,  ASMay, ASMay,   ASMay,  ASMay,  ASMay},
-    /* Global   */        {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay},
-    /* Region   */        {ASNo,  ASNo,  ASMay, ASNo,  ASNo,    ASNo,   ASNo,   ASNo},
-    /* Group    */        {ASMay, ASNo,  ASNo,  ASMay, ASNo,    ASNo,   ASNo,   ASNo},
-    /* Constant */        {ASMay, ASMay, ASNo,  ASNo,  ASNo,    ASNo,   ASMay,  ASMay},
-    /* Private  */        {ASMay, ASNo,  ASNo,  ASNo,  ASNo,    ASMay,  ASNo,   ASNo},
-    /* Constant 32-bit */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASNo,   ASMay},
-    /* Buffer Fat Ptr  */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay}
-  };
-#undef ASMay
-#undef ASNo
-
-  return ASAliasRules[AS1][AS2];
-}
-
 AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
                                   const MemoryLocation &LocB, AAQueryInfo &AAQI,
                                   const Instruction *) {
   unsigned asA = LocA.Ptr->getType()->getPointerAddressSpace();
   unsigned asB = LocB.Ptr->getType()->getPointerAddressSpace();
 
-  AliasResult Result = getAliasResult(asA, asB);
-  if (Result == AliasResult::NoAlias)
-    return Result;
+  if (!AMDGPU::addrspacesMayAlias(asA, asB))
+    return AliasResult::NoAlias;
 
   // In general, FLAT (generic) pointers could be aliased to LOCAL or PRIVATE
   // pointers. However, as LOCAL or PRIVATE pointers point to local objects, in
@@ -120,8 +93,7 @@ AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
     }
   }
 
-  // Forward the query to the next alias analysis.
-  return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
+  return AliasResult::MayAlias;
 }
 
 ModRefInfo AMDGPUAAResult::getModRefInfoMask(const MemoryLocation &Loc,
@@ -138,5 +110,5 @@ ModRefInfo AMDGPUAAResult::getModRefInfoMask(const MemoryLocation &Loc,
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
     return ModRefInfo::NoModRef;
 
-  return AAResultBase::getModRefInfoMask(Loc, AAQI, IgnoreLocals);
+  return ModRefInfo::ModRef;
 }

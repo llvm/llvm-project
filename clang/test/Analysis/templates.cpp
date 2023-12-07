@@ -31,8 +31,6 @@ int main(){
   m.I();
 }
 
-
-// <rdar://problem/11949235>
 template<class T, unsigned N>
 inline unsigned array_lengthof(T (&)[N]) {
   return N;

@@ -14,6 +14,7 @@
 #include "RetainCountChecker.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -154,10 +155,8 @@ void RetainCountChecker::checkPostStmt(const BlockExpr *BE,
   ProgramStateRef state = C.getState();
   auto *R = cast<BlockDataRegion>(C.getSVal(BE).getAsRegion());
 
-  BlockDataRegion::referenced_vars_iterator I = R->referenced_vars_begin(),
-                                            E = R->referenced_vars_end();
-
-  if (I == E)
+  auto ReferencedVars = R->referenced_vars();
+  if (ReferencedVars.empty())
     return;
 
   // FIXME: For now we invalidate the tracking of all symbols passed to blocks
@@ -167,8 +166,8 @@ void RetainCountChecker::checkPostStmt(const BlockExpr *BE,
   const LocationContext *LC = C.getLocationContext();
   MemRegionManager &MemMgr = C.getSValBuilder().getRegionManager();
 
-  for ( ; I != E; ++I) {
-    const VarRegion *VR = I.getCapturedRegion();
+  for (auto Var : ReferencedVars) {
+    const VarRegion *VR = Var.getCapturedRegion();
     if (VR->getSuperRegion() == R) {
       VR = MemMgr.getVarRegion(VR->getDecl(), LC);
     }
@@ -284,7 +283,7 @@ void RetainCountChecker::checkPostStmt(const ObjCBoxedExpr *Ex,
 
 void RetainCountChecker::checkPostStmt(const ObjCIvarRefExpr *IRE,
                                        CheckerContext &C) const {
-  Optional<Loc> IVarLoc = C.getSVal(IRE).getAs<Loc>();
+  std::optional<Loc> IVarLoc = C.getSVal(IRE).getAs<Loc>();
   if (!IVarLoc)
     return;
 
@@ -412,8 +411,8 @@ static QualType GetReturnType(const Expr *RetE, ASTContext &Ctx) {
   return RetTy;
 }
 
-static Optional<RefVal> refValFromRetEffect(RetEffect RE,
-                                            QualType ResultTy) {
+static std::optional<RefVal> refValFromRetEffect(RetEffect RE,
+                                                 QualType ResultTy) {
   if (RE.isOwned()) {
     return RefVal::makeOwned(RE.getObjKind(), ResultTy);
   } else if (RE.notOwned()) {
@@ -692,7 +691,7 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
       assert(Ex);
       ResultTy = GetReturnType(Ex, C.getASTContext());
     }
-    if (Optional<RefVal> updatedRefVal = refValFromRetEffect(RE, ResultTy))
+    if (std::optional<RefVal> updatedRefVal = refValFromRetEffect(RE, ResultTy))
       state = setRefBinding(state, Sym, *updatedRefVal);
   }
 
@@ -907,7 +906,7 @@ bool RetainCountChecker::evalCall(const CallEvent &Call,
   const LocationContext *LCtx = C.getLocationContext();
 
   using BehaviorSummary = RetainSummaryManager::BehaviorSummary;
-  Optional<BehaviorSummary> BSmr =
+  std::optional<BehaviorSummary> BSmr =
       SmrMgr.canEval(CE, FD, hasTrustedImplementationAnnotation);
 
   // See if it's one of the specific functions we know how to eval.
@@ -1336,7 +1335,7 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
   RetainSummaryManager &SmrMgr = getSummaryManager(Ctx);
   const LocationContext *LCtx = Ctx.getLocationContext();
   const Decl *D = LCtx->getDecl();
-  Optional<AnyCall> C = AnyCall::forDecl(D);
+  std::optional<AnyCall> C = AnyCall::forDecl(D);
 
   if (!C || SmrMgr.isTrustedReferenceCountImplementation(D))
     return;

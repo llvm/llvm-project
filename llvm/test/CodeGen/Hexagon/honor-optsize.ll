@@ -5,13 +5,13 @@ target triple = "hexagon"
 ; CHECK: f0:
 ; CHECK:   call __save_r16_through_r21
 ; CHECK:   .size	f0
-define i32 @f0(i8* nocapture %a0) #0 {
+define i32 @f0(ptr nocapture %a0) #0 {
 b0:
-  %v0 = tail call i32 bitcast (i32 (...)* @f1 to i32 ()*)() #0
-  %v1 = tail call i32 bitcast (i32 (...)* @f1 to i32 ()*)() #0
-  %v2 = tail call i32 bitcast (i32 (...)* @f1 to i32 ()*)() #0
-  %v3 = tail call i32 bitcast (i32 (...)* @f1 to i32 ()*)() #0
-  %v4 = load i8, i8* %a0, align 1
+  %v0 = tail call i32 @f1() #0
+  %v1 = tail call i32 @f1() #0
+  %v2 = tail call i32 @f1() #0
+  %v3 = tail call i32 @f1() #0
+  %v4 = load i8, ptr %a0, align 1
   %v5 = icmp eq i8 %v4, 0
   br i1 %v5, label %b4, label %b1
 
@@ -22,10 +22,10 @@ b2:                                               ; preds = %b2, %b1
   %v6 = phi i32 [ %v10, %b2 ], [ 0, %b1 ]
   %v7 = phi i32 [ %v2, %b2 ], [ %v1, %b1 ]
   %v8 = phi i32 [ %v7, %b2 ], [ %v0, %b1 ]
-  %v9 = tail call i32 bitcast (i32 (...)* @f1 to i32 ()*)() #0
+  %v9 = tail call i32 @f1() #0
   %v10 = add nsw i32 %v6, %v8
-  %v11 = tail call i32 bitcast (i32 (...)* @f1 to i32 ()*)() #0
-  %v12 = load i8, i8* %a0, align 1
+  %v11 = tail call i32 @f1() #0
+  %v12 = load i8, ptr %a0, align 1
   %v13 = icmp eq i8 %v12, 0
   br i1 %v13, label %b3, label %b2
 

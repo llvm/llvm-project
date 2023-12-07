@@ -3,12 +3,11 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
 
+class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
     def vCont_supports_mode(self, mode, inferior_args=None):
         # Setup the stub and set the gdb remote command stream.
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=inferior_args)
+        procs = self.prep_debug_monitor_and_inferior(inferior_args=inferior_args)
         self.add_vCont_query_packets()
 
         # Run the gdb remote command stream.
@@ -21,7 +20,6 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         # Verify we support the given mode.
         self.assertIn(mode, supported_vCont_modes)
-
 
     def test_vCont_supports_c(self):
         self.build()
@@ -44,18 +42,20 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.build()
         self.vCont_supports_mode("t")
 
-    @skipIfWindows # No pty support to test O* & I* notification packets.
-    @skipIf(triple='^mips')
+    @skipIfWindows  # No pty support to test O* & I* notification packets.
+    @skipIf(triple="^mips")
     def test_single_step_only_steps_one_instruction_with_Hc_vCont_s(self):
         self.build()
         self.set_inferior_startup_launch()
         self.single_step_only_steps_one_instruction(
-            use_Hc_packet=True, step_instruction="vCont;s")
+            use_Hc_packet=True, step_instruction="vCont;s"
+        )
 
-    @skipIfWindows # No pty support to test O* & I* notification packets.
-    @skipIf(triple='^mips')
+    @skipIfWindows  # No pty support to test O* & I* notification packets.
+    @skipIf(triple="^mips")
     def test_single_step_only_steps_one_instruction_with_vCont_s_thread(self):
         self.build()
         self.set_inferior_startup_launch()
         self.single_step_only_steps_one_instruction(
-            use_Hc_packet=False, step_instruction="vCont;s:{thread}")
+            use_Hc_packet=False, step_instruction="vCont;s:{thread}"
+        )

@@ -22,6 +22,8 @@
 
 namespace llvm {
 
+class ARMSubtarget;
+
 /// ARMFunctionInfo - This class is derived from MachineFunctionInfo and
 /// contains private ARM-specific information for each MachineFunction.
 class ARMFunctionInfo : public MachineFunctionInfo {
@@ -35,13 +37,6 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// to determine if function is compiled under Thumb mode, for that use
   /// 'isThumb'.
   bool hasThumb2 = false;
-
-  /// StByValParamsPadding - For parameter that is split between
-  /// GPRs and memory; while recovering GPRs part, when
-  /// StackAlignment > 4, and GPRs-part-size mod StackAlignment != 0,
-  /// we need to insert gap before parameter start address. It allows to
-  /// "attach" GPR-part to the part that was passed via stack.
-  unsigned StByValParamsPadding = 0;
 
   /// ArgsRegSaveSize - Size of the register save area for vararg functions or
   /// those making guaranteed tail calls that need more stack argument space
@@ -157,7 +152,7 @@ class ARMFunctionInfo : public MachineFunctionInfo {
 public:
   ARMFunctionInfo() = default;
 
-  explicit ARMFunctionInfo(MachineFunction &MF);
+  explicit ARMFunctionInfo(const Function &F, const ARMSubtarget *STI);
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -170,9 +165,6 @@ public:
 
   bool isCmseNSEntryFunction() const { return IsCmseNSEntry; }
   bool isCmseNSCallFunction() const { return IsCmseNSCall; }
-
-  unsigned getStoredByValParamsPadding() const { return StByValParamsPadding; }
-  void setStoredByValParamsPadding(unsigned p) { StByValParamsPadding = p; }
 
   unsigned getArgRegsSaveSize() const { return ArgRegsSaveSize; }
   void setArgRegsSaveSize(unsigned s) { ArgRegsSaveSize = s; }

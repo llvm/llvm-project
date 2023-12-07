@@ -17,11 +17,11 @@ target triple = "aarch64-unknown"
 @var_double2 = dso_local global <2 x double> <double 0.0, double 0.0>
 
 define dso_local void @ldst_8bit() {
-  %val8 = load volatile i8, i8* @var_8bit
+  %val8 = load volatile i8, ptr @var_8bit
   %ext = zext i8 %val8 to i64
   %add = add i64 %ext, 1
   %val16 = trunc i64 %add to i16
-  store volatile i16 %val16, i16* @var_16bit
+  store volatile i16 %val16, ptr @var_16bit
   ret void
 
 ; CHECK-LABEL: ldst_8bit:
@@ -32,11 +32,11 @@ define dso_local void @ldst_8bit() {
 }
 
 define dso_local void @ldst_16bit() {
-  %val16 = load volatile i16, i16* @var_16bit
+  %val16 = load volatile i16, ptr @var_16bit
   %ext = zext i16 %val16 to i64
   %add = add i64 %ext, 1
   %val32 = trunc i64 %add to i32
-  store volatile i32 %val32, i32* @var_32bit
+  store volatile i32 %val32, ptr @var_32bit
   ret void
 
 ; CHECK-LABEL: ldst_16bit:
@@ -47,10 +47,10 @@ define dso_local void @ldst_16bit() {
 }
 
 define dso_local void @ldst_32bit() {
-  %val32 = load volatile i32, i32* @var_32bit
+  %val32 = load volatile i32, ptr @var_32bit
   %ext = zext i32 %val32 to i64
   %val64 = add i64 %ext, 1
-  store volatile i64 %val64, i64* @var_64bit
+  store volatile i64 %val64, ptr @var_64bit
   ret void
 
 ; CHECK-LABEL: ldst_32bit:
@@ -61,10 +61,10 @@ define dso_local void @ldst_32bit() {
 }
 
 define dso_local void @ldst_64bit() {
-  %val64 = load volatile i64, i64* @var_64bit
+  %val64 = load volatile i64, ptr @var_64bit
   %ext = zext i64 %val64 to i128
   %val128 = add i128 %ext, 1
-  store volatile i128 %val128, i128* @var_128bit
+  store volatile i128 %val128, ptr @var_128bit
   ret void
 
 ; CHECK-LABEL: ldst_64bit:
@@ -75,9 +75,9 @@ define dso_local void @ldst_64bit() {
 }
 
 define dso_local void @ldst_half() {
-  %valh = load volatile half, half* @var_half
+  %valh = load volatile half, ptr @var_half
   %valf = fpext half %valh to float
-  store volatile float %valf, float* @var_float
+  store volatile float %valf, ptr @var_float
   ret void
 
 ; CHECK-LABEL: ldst_half:
@@ -88,9 +88,9 @@ define dso_local void @ldst_half() {
 }
 
 define dso_local void @ldst_float() {
-  %valf = load volatile float, float* @var_float
+  %valf = load volatile float, ptr @var_float
   %vald = fpext float %valf to double
-  store volatile double %vald, double* @var_double
+  store volatile double %vald, ptr @var_double
   ret void
 
 ; CHECK-LABEL: ldst_float:
@@ -101,12 +101,12 @@ define dso_local void @ldst_float() {
 }
 
 define dso_local void @ldst_double() {
-  %valf = load volatile float, float* @var_float
+  %valf = load volatile float, ptr @var_float
   %vale = fpext float %valf to double
-  %vald = load volatile double, double* @var_double
+  %vald = load volatile double, ptr @var_double
   %vald1 = insertelement <2 x double> undef, double %vald, i32 0
   %vald2 = insertelement <2 x double> %vald1, double %vale, i32 1
-  store volatile <2 x double> %vald2, <2 x double>* @var_double2
+  store volatile <2 x double> %vald2, ptr @var_double2
   ret void
 
 ; CHECK-LABEL: ldst_double:

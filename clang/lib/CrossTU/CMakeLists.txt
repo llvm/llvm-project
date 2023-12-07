@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Support
+  TargetParser
   )
 
 add_clang_library(clangCrossTU

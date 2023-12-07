@@ -118,10 +118,8 @@ struct BadMembers {
   };
 };
 
-// <rdar://problem/6481130>
 typedef union { }; // expected-warning{{typedef requires a name}}
 
-// <rdar://problem/7562438>
 typedef struct objc_module *Foo ;
 
 typedef struct _s {
@@ -131,7 +129,6 @@ typedef struct _s {
     };
 } s, *ps;
 
-// <rdar://problem/7987650>
 namespace test4 {
   class A {
     struct { // expected-warning{{anonymous structs are a GNU extension}}
@@ -214,4 +211,9 @@ namespace PR16630 {
     b.x = 10;
     b.y = 0; // expected-error {{'y' is a private member of 'PR16630::A'}}
   }
+}
+
+namespace GH48512 {
+  // This would previously cause an assertion in C++ mode.
+  static __attribute__((a)) union { int a; }; // expected-warning {{unknown attribute 'a' ignored}}
 }

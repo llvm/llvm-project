@@ -95,7 +95,9 @@ attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; CHECK:       FunctionType: main (0x1002)
 ; CHECK:       CodeOffset: main+0x0
 ; CHECK:       Segment: 0x0
-; CHECK:       Flags [ (0x0)
+; CHECK:       Flags [ (0xC0)
+; CHECK:         HasOptimizedDebugInfo (0x80)
+; CHECK:         IsNoInline (0x40)
 ; CHECK:       ]
 ; CHECK:       DisplayName: main
 ; CHECK:       LinkageName: main

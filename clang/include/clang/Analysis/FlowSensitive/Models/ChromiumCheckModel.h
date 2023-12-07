@@ -13,7 +13,6 @@
 #define CLANG_ANALYSIS_FLOWSENSITIVE_MODELS_CHROMIUMCHECKMODEL_H
 
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/Stmt.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "llvm/ADT/DenseSet.h"
@@ -26,7 +25,7 @@ namespace dataflow {
 class ChromiumCheckModel : public DataflowModel {
 public:
   ChromiumCheckModel() = default;
-  bool transfer(const CFGElement *Element, Environment &Env) override;
+  bool transfer(const CFGElement &Element, Environment &Env) override;
 
 private:
   /// Declarations for `::logging::CheckError::.*Check`, lazily initialized.

@@ -56,7 +56,7 @@ TEST_F(ArchiveTestsFixture, ArchiveChildGetSizeRegularArchive) {
   // This test relies on a StringRef being able to hold the appropriate amount
   // of data.
   if (std::numeric_limits<StringRef::size_type>::max() < MemberSize)
-    return;
+    GTEST_SKIP();
 
   auto Child = createChild(ArchiveWithMember);
   ASSERT_THAT_EXPECTED(Child, Succeeded());
@@ -79,7 +79,7 @@ TEST_F(ArchiveTestsFixture, ArchiveChildGetBuffer) {
   // This test relies on a StringRef being able to hold the appropriate amount
   // of data.
   if (std::numeric_limits<StringRef::size_type>::max() < MemberSize)
-    return;
+    GTEST_SKIP();
 
   auto Child = createChild(ArchiveWithMember);
   ASSERT_THAT_EXPECTED(Child, Succeeded());

@@ -220,7 +220,7 @@ struct ThreadState {
 #endif
 
   atomic_uintptr_t in_signal_handler;
-  ThreadSignalContext *signal_ctx;
+  atomic_uintptr_t signal_ctx;
 
 #if !SANITIZER_GO
   StackID last_sleep_stack_id;
@@ -680,8 +680,9 @@ ALWAYS_INLINE
 void LazyInitialize(ThreadState *thr) {
   // If we can use .preinit_array, assume that __tsan_init
   // called from .preinit_array initializes runtime before
-  // any instrumented code except ANDROID.
-#if (!SANITIZER_CAN_USE_PREINIT_ARRAY || defined(__ANDROID__))
+  // any instrumented code except when tsan is used as a 
+  // shared library.
+#if (!SANITIZER_CAN_USE_PREINIT_ARRAY || defined(SANITIZER_SHARED))
   if (UNLIKELY(!is_initialized))
     Initialize(thr);
 #endif

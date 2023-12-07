@@ -12,7 +12,6 @@ import os
 
 
 class TestVSCode_coreFile(lldbvscode_testcase.VSCodeTestCaseBase):
-
     @skipIfWindows
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
@@ -25,9 +24,27 @@ class TestVSCode_coreFile(lldbvscode_testcase.VSCodeTestCaseBase):
         self.attach(exe_file, coreFile=core_file)
 
         expected_frames = [
-            {'column': 0, 'id': 524288, 'line': 4, 'name': 'bar', 'source': {'name': 'main.c', 'path': '/home/labath/test/main.c'}},
-            {'column': 0, 'id': 524289, 'line': 10, 'name': 'foo', 'source': {'name': 'main.c', 'path': '/home/labath/test/main.c'}},
-            {'column': 0, 'id': 524290, 'line': 16, 'name': '_start', 'source': {'name': 'main.c', 'path': '/home/labath/test/main.c'}},
+            {
+                "id": 524288,
+                "line": 4,
+                "name": "bar",
+                "source": {"name": "main.c", "path": "/home/labath/test/main.c"},
+                "instructionPointerReference": "0x40011C",
+            },
+            {
+                "id": 524289,
+                "line": 10,
+                "name": "foo",
+                "source": {"name": "main.c", "path": "/home/labath/test/main.c"},
+                "instructionPointerReference": "0x400142",
+            },
+            {
+                "id": 524290,
+                "line": 16,
+                "name": "_start",
+                "source": {"name": "main.c", "path": "/home/labath/test/main.c"},
+                "instructionPointerReference": "0x40015F",
+            },
         ]
 
         self.assertEquals(self.get_stackFrames(), expected_frames)
@@ -43,7 +60,7 @@ class TestVSCode_coreFile(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_core_file_source_mapping(self):
-        ''' Test that sourceMap property is correctly applied when loading a core '''
+        """Test that sourceMap property is correctly applied when loading a core"""
         current_dir = os.path.dirname(__file__)
         exe_file = os.path.join(current_dir, "linux-x86_64.out")
         core_file = os.path.join(current_dir, "linux-x86_64.core")
@@ -53,4 +70,4 @@ class TestVSCode_coreFile(lldbvscode_testcase.VSCodeTestCaseBase):
         source_map = [["/home/labath/test", current_dir]]
         self.attach(exe_file, coreFile=core_file, sourceMap=source_map)
 
-        self.assertTrue(current_dir in self.get_stackFrames()[0]['source']['path'])
+        self.assertTrue(current_dir in self.get_stackFrames()[0]["source"]["path"])

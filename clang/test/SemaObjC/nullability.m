@@ -218,7 +218,6 @@ void test_null_resettable(NSResettable *r, int *ip) {
 }
 @end
 
-// rdar://problem/19814852
 @interface MultiProp
 @property (nullable, copy) id a, b, c;
 @property (nullable, copy) MultiProp *d, *(^e)(int);

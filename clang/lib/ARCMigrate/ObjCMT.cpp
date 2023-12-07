@@ -153,10 +153,9 @@ protected:
   bool canModifyFile(StringRef Path) {
     if (AllowListFilenames.empty())
       return true;
-    return AllowListFilenames.find(llvm::sys::path::filename(Path)) !=
-           AllowListFilenames.end();
+    return AllowListFilenames.contains(llvm::sys::path::filename(Path));
   }
-  bool canModifyFile(Optional<FileEntryRef> FE) {
+  bool canModifyFile(OptionalFileEntryRef FE) {
     if (!FE)
       return false;
     return canModifyFile(FE->getName());
@@ -1958,7 +1957,8 @@ void ObjCMigrateASTConsumer::HandleTranslationUnit(ASTContext &Ctx) {
         I = rewriter.buffer_begin(), E = rewriter.buffer_end(); I != E; ++I) {
     FileID FID = I->first;
     RewriteBuffer &buf = I->second;
-    Optional<FileEntryRef> file = Ctx.getSourceManager().getFileEntryRefForID(FID);
+    OptionalFileEntryRef file =
+        Ctx.getSourceManager().getFileEntryRefForID(FID);
     assert(file);
     SmallString<512> newText;
     llvm::raw_svector_ostream vecOS(newText);
@@ -2028,7 +2028,7 @@ MigrateSourceAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
 namespace {
 struct EditEntry {
-  Optional<FileEntryRef> File;
+  OptionalFileEntryRef File;
   unsigned Offset = 0;
   unsigned RemoveLen = 0;
   std::string Text;

@@ -13,12 +13,12 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_JITTARGETMACHINEBUILDER_H
 #define LLVM_EXECUTIONENGINE_ORC_JITTARGETMACHINEBUILDER_H
 
-#include "llvm/ADT/Triple.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
+#include "llvm/TargetParser/Triple.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -38,18 +38,16 @@ class JITTargetMachineBuilder {
 public:
   /// Create a JITTargetMachineBuilder based on the given triple.
   ///
-  /// Note: TargetOptions is default-constructed, then EmulatedTLS and
-  /// ExplicitEmulatedTLS are set to true. If EmulatedTLS is not
-  /// required, these values should be reset before calling
-  /// createTargetMachine.
+  /// Note: TargetOptions is default-constructed, then EmulatedTLS is set to
+  /// true. If EmulatedTLS is not required, these values should be reset before
+  /// calling createTargetMachine.
   JITTargetMachineBuilder(Triple TT);
 
   /// Create a JITTargetMachineBuilder for the host system.
   ///
-  /// Note: TargetOptions is default-constructed, then EmulatedTLS and
-  /// ExplicitEmulatedTLS are set to true. If EmulatedTLS is not
-  /// required, these values should be reset before calling
-  /// createTargetMachine.
+  /// Note: TargetOptions is default-constructed, then EmulatedTLS is set to
+  /// true. If EmulatedTLS is not required, these values should be reset before
+  /// calling createTargetMachine.
   static Expected<JITTargetMachineBuilder> detectHost();
 
   /// Create a TargetMachine.
@@ -125,9 +123,9 @@ public:
   /// Set TargetOptions.
   ///
   /// Note: This operation will overwrite any previously configured options,
-  /// including EmulatedTLS, ExplicitEmulatedTLS, and UseInitArray which
-  /// the JITTargetMachineBuilder sets by default. Clients are responsible
-  /// for re-enabling these overwritten options.
+  /// including EmulatedTLS and UseInitArray which the JITTargetMachineBuilder
+  /// sets by default. Clients are responsible for re-enabling these overwritten
+  /// options.
   JITTargetMachineBuilder &setOptions(TargetOptions Options) {
     this->Options = std::move(Options);
     return *this;

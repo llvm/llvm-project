@@ -4,9 +4,9 @@
 define i32 @invert_bcc(float %x, float %y) #0 {
 ; CHECK-LABEL: invert_bcc:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    mov w8, #42 ; =0x2a
 ; CHECK-NEXT:    b.pl LBB0_3
 ; CHECK-NEXT:    b LBB0_2
 ; CHECK-NEXT:  LBB0_3:
@@ -15,8 +15,8 @@ define i32 @invert_bcc(float %x, float %y) #0 {
 ; CHECK-NEXT:    str w8, [x8]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_2: ; %bb2
-; CHECK-NEXT:    mov w0, #1
-; CHECK-NEXT:    mov w8, #9
+; CHECK-NEXT:    mov w0, #1 ; =0x1
+; CHECK-NEXT:    mov w8, #9 ; =0x9
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop
@@ -31,11 +31,11 @@ bb2:
     "nop
      nop",
     ""() #0
-  store volatile i32 9, i32* undef
+  store volatile i32 9, ptr undef
   ret i32 1
 
 bb1:
-  store volatile i32 42, i32* undef
+  store volatile i32 42, ptr undef
   ret i32 0
 }
 
@@ -59,7 +59,7 @@ define i32 @block_split(i32 %a, i32 %b) #0 {
 ; CHECK-NEXT:    bl _foo
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB1_3: ; %if.end
-; CHECK-NEXT:    mov w0, #7
+; CHECK-NEXT:    mov w0, #7 ; =0x7
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 5

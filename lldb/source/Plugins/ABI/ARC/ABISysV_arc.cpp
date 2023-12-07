@@ -15,9 +15,9 @@
 #include <type_traits>
 
 // Other libraries and framework includes
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -46,7 +46,7 @@
     DEFINE_REG_NAME(dwarf_num), DEFINE_REG_NAME_STR(str_name),                \
     0, 0, eEncodingInvalid, eFormatDefault,                                   \
     { dwarf_num, dwarf_num, generic_num, LLDB_INVALID_REGNUM, dwarf_num },    \
-    nullptr, nullptr                                                          \
+    nullptr, nullptr, nullptr,                                                \
   }
 
 #define DEFINE_REGISTER_STUB(dwarf_num, str_name) \
@@ -271,7 +271,7 @@ bool ABISysV_arc::PrepareTrivialCall(Thread &thread, addr_t sp, addr_t pc,
         reg_value[byte_index++] = 0;
       }
 
-      RegisterValue reg_val_obj(llvm::makeArrayRef(reg_value, reg_size),
+      RegisterValue reg_val_obj(llvm::ArrayRef(reg_value, reg_size),
                                 eByteOrderLittle);
       if (!reg_ctx->WriteRegister(
             reg_ctx->GetRegisterInfo(eRegisterKindGeneric, reg_index),

@@ -12,9 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 using namespace ast_matchers;
 
 const FunctionDecl *getSurroundingFunction(ASTContext &Context,
@@ -90,6 +88,29 @@ bool rangeCanBeFixed(SourceRange Range, const SourceManager *SM) {
          !utils::rangeContainsMacroExpansion(Range, SM);
 }
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
+                            const ASTContext &Context, bool Canonical) {
+  if (!FirstStmt || !SecondStmt)
+    return false;
+
+  if (FirstStmt == SecondStmt)
+    return true;
+
+  if (FirstStmt->getStmtClass() != FirstStmt->getStmtClass())
+    return false;
+
+  if (isa<Expr>(FirstStmt) && isa<Expr>(SecondStmt)) {
+    // If we have errors in expressions, we will be unable
+    // to accurately profile and compute hashes for each statements.
+    if (llvm::cast<Expr>(FirstStmt)->containsErrors() ||
+        llvm::cast<Expr>(SecondStmt)->containsErrors())
+      return false;
+  }
+
+  llvm::FoldingSetNodeID DataFirst, DataSecond;
+  FirstStmt->Profile(DataFirst, Context, Canonical);
+  SecondStmt->Profile(DataSecond, Context, Canonical);
+  return DataFirst == DataSecond;
+}
+
+} // namespace clang::tidy::utils

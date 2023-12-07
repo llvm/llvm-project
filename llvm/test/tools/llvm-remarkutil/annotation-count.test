@@ -1,0 +1,7 @@
+RUN: llvm-remarkutil annotation-count --parser=yaml --annotation-type=remark %p/Inputs/annotation-count.yaml | FileCheck %s
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/annotation-count.yaml | llvm-remarkutil annotation-count --parser=bitstream --annotation-type=remark | FileCheck %s
+
+; CHECK-LABEL: Function,Count
+; CHECK: func1,1
+; CHECK: func2,2
+; CHECK: func3,3

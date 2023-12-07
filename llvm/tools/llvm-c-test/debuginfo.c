@@ -12,8 +12,9 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "llvm-c-test.h"
-#include "llvm-c/Core.h"
 #include "llvm-c/DebugInfo.h"
+
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -197,6 +198,60 @@ int llvm_test_dibuilder(void) {
   LLVMDisposeMessage(MStr);
 
   LLVMDisposeDIBuilder(DIB);
+  LLVMDisposeModule(M);
+
+  return 0;
+}
+
+int llvm_get_di_tag(void) {
+  LLVMModuleRef M = LLVMModuleCreateWithName("Mod");
+  LLVMContextRef Context = LLVMGetModuleContext(M);
+
+  const char String[] = "foo";
+  LLVMMetadataRef StringMD =
+      LLVMMDStringInContext2(Context, String, strlen(String));
+  LLVMMetadataRef NodeMD = LLVMMDNodeInContext2(Context, &StringMD, 1);
+  assert(LLVMGetDINodeTag(NodeMD) == 0);
+  (void)NodeMD;
+
+  LLVMDIBuilderRef Builder = LLVMCreateDIBuilder(M);
+  const char Filename[] = "metadata.c";
+  const char Directory[] = ".";
+  LLVMMetadataRef File = LLVMDIBuilderCreateFile(
+      Builder, Filename, strlen(Filename), Directory, strlen(Directory));
+  const char Name[] = "TestClass";
+  LLVMMetadataRef Struct = LLVMDIBuilderCreateStructType(
+      Builder, File, Name, strlen(Name), File, 42, 64, 0,
+      LLVMDIFlagObjcClassComplete, NULL, NULL, 0, 0, NULL, NULL, 0);
+  assert(LLVMGetDINodeTag(Struct) == 0x13);
+  (void)Struct;
+
+  LLVMDisposeDIBuilder(Builder);
+  LLVMDisposeModule(M);
+
+  return 0;
+}
+
+int llvm_di_type_get_name(void) {
+  LLVMModuleRef M = LLVMModuleCreateWithName("Mod");
+
+  LLVMDIBuilderRef Builder = LLVMCreateDIBuilder(M);
+  const char Filename[] = "metadata.c";
+  const char Directory[] = ".";
+  LLVMMetadataRef File = LLVMDIBuilderCreateFile(
+      Builder, Filename, strlen(Filename), Directory, strlen(Directory));
+  const char Name[] = "TestClass";
+  LLVMMetadataRef Struct = LLVMDIBuilderCreateStructType(
+      Builder, File, Name, strlen(Name), File, 42, 64, 0,
+      LLVMDIFlagObjcClassComplete, NULL, NULL, 0, 0, NULL, NULL, 0);
+
+  size_t Len;
+  const char *TypeName = LLVMDITypeGetName(Struct, &Len);
+  assert(Len == strlen(Name));
+  assert(strncmp(TypeName, Name, Len) == 0);
+  (void)TypeName;
+
+  LLVMDisposeDIBuilder(Builder);
   LLVMDisposeModule(M);
 
   return 0;

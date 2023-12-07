@@ -1,4 +1,4 @@
-; RUN: opt -passes=redundant-dbg-inst-elim -S %s -o - -experimental-assignment-tracking \
+; RUN: opt -passes=redundant-dbg-inst-elim -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Hand-written. Test how RemoveRedundantDbgInstrs interacts with dbg.assign
@@ -92,7 +92,7 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!2, !3, !4, !5}
+!llvm.module.flags = !{!2, !3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 14.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
@@ -117,3 +117,4 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !19 = !DILocalVariable(name: "Local2", scope: !7, file: !1, line: 2, type: !12)
 !20 = distinct !DIAssignID()
 !21 = distinct !DIAssignID()
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

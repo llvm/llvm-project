@@ -38,7 +38,6 @@ public:
   constexpr T value() { return exp; }
   constexpr E error() { return unexp; }
 
-  constexpr operator T() { return exp; }
   constexpr operator bool() { return is_expected; }
 
   constexpr T &operator*() { return exp; }

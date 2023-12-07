@@ -5,11 +5,16 @@
 ; RUN: %python %S/../../../../lib/Analysis/models/gen-inline-oz-test-model.py %t_savedmodel
 ; RUN: %python %S/../../../../lib/Analysis/models/saved-model-to-tflite.py %t_savedmodel %t
 ;
-; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -tfutils-text-log -ml-inliner-model-under-training=%t -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -S < %s | FileCheck %s 
-; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -tfutils-text-log -ml-inliner-model-under-training=%t -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-output-spec-override=%S/Inputs/test_output_spec.json -S < %s | FileCheck %s --check-prefixes=EXTRA-OUTPUTS,CHECK
-; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -tfutils-text-log -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -S < %s | FileCheck %s
-; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -tfutils-text-log -ml-inliner-model-under-training=%t -S < %s | FileCheck %s --check-prefix=NOREWARD
-; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -tfutils-text-log -S < %s | FileCheck %s --check-prefix=NOREWARD
+; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=%t1 -ml-inliner-model-under-training=%t -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -S < %s
+; RUN: %python %S/../../../../lib/Analysis/models/log_reader.py %t1 | FileCheck %s
+; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=%t2 -ml-inliner-model-under-training=%t -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-output-spec-override=%S/Inputs/test_output_spec.json -S < %s
+; RUN: %python %S/../../../../lib/Analysis/models/log_reader.py %t2 | FileCheck %s --check-prefixes=EXTRA-OUTPUTS,CHECK
+; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=%t3 -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -S < %s
+; RUN: %python %S/../../../../lib/Analysis/models/log_reader.py %t3 | FileCheck %s
+; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=%t4 -ml-inliner-model-under-training=%t -S < %s
+; RUN: %python %S/../../../../lib/Analysis/models/log_reader.py %t4 | FileCheck %s --check-prefix=NOREWARD
+; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=%t5 -S < %s
+; RUN: %python %S/../../../../lib/Analysis/models/log_reader.py %t5| FileCheck %s --check-prefix=NOREWARD
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 declare i32 @f1(i32)
@@ -35,23 +40,9 @@ define dso_local i32 @top() {
 !llvm.ident = !{!1}
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{!"clang version 7.0.0-6 (tags/RELEASE_700/final)"}
-; Check we produce a protobuf that has inlining decisions and rewards.
-; CHECK:                  key: "delta_size"
-; CHECK-NEXT:               value {
-; CHECK-NEXT:                 feature {
-; CHECK-NEXT:                   int64_list {
-; CHECK-NEXT:                     value: 0
-; CHECK-NEXT:                   }
-; CHECK-NEXT:                 }
-; CHECK-NOT: fake_extra_output
-; EXTRA-OUTPUTS:          key: "fake_extra_output"
-; EXTRA-OUTPUTS-NEXT:       value {
-; EXTRA-OUTPUTS-NEXT:         feature {
-; EXTRA-OUTPUTS-NEXT:           int64_list {
-; EXTRA-OUTPUTS-NEXT:             value: {{[0-9]+}}
-; CHECK:                  key: "inlining_decision"
-; CHECK-NEXT:               value {
-; CHECK-NEXT:                 feature {
-; CHECK-NEXT:                   int64_list {
-; CHECK-NEXT:                     value: 1
-; NOREWARD-NOT: key: "delta_size"
+; Check we produce a log that has inlining decisions and rewards.
+; CHECK-NOT:        fake_extra_output:
+; EXTRA-OUTPUTS:    fake_extra_output: {{[0-9]+}}
+; CHECK:            inlining_decision: 1
+; CHECK:            delta_size: 0
+; NOREWARD-NOT:     delta_size:

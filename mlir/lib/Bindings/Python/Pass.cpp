@@ -93,7 +93,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
                 mlirStringRefCreate(pipeline.data(), pipeline.size()),
                 errorMsg.getCallback(), errorMsg.getUserData());
             if (mlirLogicalResultIsFailure(status))
-              throw SetPyError(PyExc_ValueError, std::string(errorMsg.join()));
+              throw py::value_error(std::string(errorMsg.join()));
             return new PyPassManager(passManager);
           },
           py::arg("pipeline"), py::arg("context") = py::none(),
@@ -109,31 +109,31 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
                 mlirStringRefCreate(pipeline.data(), pipeline.size()),
                 errorMsg.getCallback(), errorMsg.getUserData());
             if (mlirLogicalResultIsFailure(status))
-              throw SetPyError(PyExc_ValueError, std::string(errorMsg.join()));
+              throw py::value_error(std::string(errorMsg.join()));
           },
           py::arg("pipeline"),
           "Add textual pipeline elements to the pass manager. Throws a "
           "ValueError if the pipeline can't be parsed.")
       .def(
           "run",
-          [](PyPassManager &passManager, PyModule &module) {
-            MlirLogicalResult status =
-                mlirPassManagerRun(passManager.get(), module.get());
+          [](PyPassManager &passManager, PyOperationBase &op) {
+            PyMlirContext::ErrorCapture errors(op.getOperation().getContext());
+            MlirLogicalResult status = mlirPassManagerRunOnOp(
+                passManager.get(), op.getOperation().get());
             if (mlirLogicalResultIsFailure(status))
-              throw SetPyError(PyExc_RuntimeError,
-                               "Failure while executing pass pipeline.");
+              throw MLIRError("Failure while executing pass pipeline",
+                              errors.take());
           },
-          py::arg("module"),
-          "Run the pass manager on the provided module, throw a RuntimeError "
-          "on failure.")
+          py::arg("operation"),
+          "Run the pass manager on the provided operation, raising an "
+          "MLIRError on failure.")
       .def(
           "emit_kokkos",
           [](PyPassManager &passManager, PyModule &module, const char* cxxSourceFile, const char* pySourceFile) {
             MlirLogicalResult status =
                 mlirPassManagerEmitKokkos(passManager.get(), module.get(), cxxSourceFile, pySourceFile);
             if (mlirLogicalResultIsFailure(status))
-              throw SetPyError(PyExc_RuntimeError,
-                               "Failure while raising MLIR to Kokkos C++ source code.");
+              throw MLIRError("Failure while raising MLIR to Kokkos C++ source code.");
           },
           py::arg("module"), py::arg("cxx_source_file"), py::arg("py_source_file"),
           "Emit Kokkos C++ and Python wrappers for the given module, and throw a RuntimeError on failure.")
@@ -143,8 +143,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
             MlirLogicalResult status =
                 mlirPassManagerEmitKokkosSparse(passManager.get(), module.get(), cxxSourceFile, pySourceFile, useHierarchical, isLastKernel);
             if (mlirLogicalResultIsFailure(status))
-              throw SetPyError(PyExc_RuntimeError,
-                               "Failure while raising MLIR to Kokkos C++ source code.");
+              throw MLIRError("Failure while raising MLIR to Kokkos C++ source code.");
           },
           py::arg("module"), py::arg("cxx_source_file"), py::arg("py_source_file"), py::arg("use_hierarchical"), py::arg("is_final_kernel"),
           "Emit Kokkos C++ and Python wrappers for the given sparse module, and throw a RuntimeError on failure.")

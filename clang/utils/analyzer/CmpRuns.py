@@ -35,8 +35,20 @@ from math import log
 from collections import defaultdict
 from copy import copy
 from enum import Enum
-from typing import (Any, DefaultDict, Dict, List, NamedTuple, Optional,
-                    Sequence, Set, TextIO, TypeVar, Tuple, Union)
+from typing import (
+    Any,
+    DefaultDict,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Set,
+    TextIO,
+    TypeVar,
+    Tuple,
+    Union,
+)
 
 
 Number = Union[int, float]
@@ -46,7 +58,7 @@ JSON = Dict[str, Any]
 # Diff in a form: field -> (before, after)
 JSONDiff = Dict[str, Tuple[str, str]]
 # Type for generics
-T = TypeVar('T')
+T = TypeVar("T")
 
 STATS_REGEXP = re.compile(r"Statistics: (\{.+\})", re.MULTILINE | re.DOTALL)
 
@@ -55,9 +67,10 @@ class Colors:
     """
     Color for terminal highlight.
     """
-    RED = '\x1b[2;30;41m'
-    GREEN = '\x1b[6;30;42m'
-    CLEAR = '\x1b[0m'
+
+    RED = "\x1b[2;30;41m"
+    GREEN = "\x1b[6;30;42m"
+    CLEAR = "\x1b[0m"
 
 
 class HistogramType(str, Enum):
@@ -78,65 +91,66 @@ class SingleRunInfo:
     root - the name of the root directory, which will be disregarded when
     determining the source file name
     """
-    def __init__(self, results: ResultsDirectory,
-                 verbose_log: Optional[str] = None):
+
+    def __init__(self, results: ResultsDirectory, verbose_log: Optional[str] = None):
         self.path = results.path
         self.root = results.root.rstrip("/\\")
         self.verbose_log = verbose_log
 
 
 class AnalysisDiagnostic:
-    def __init__(self, data: Plist, report: "AnalysisReport",
-                 html_report: Optional[str]):
+    def __init__(
+        self, data: Plist, report: "AnalysisReport", html_report: Optional[str]
+    ):
         self._data = data
-        self._loc = self._data['location']
+        self._loc = self._data["location"]
         self._report = report
         self._html_report = html_report
-        self._report_size = len(self._data['path'])
+        self._report_size = len(self._data["path"])
 
     def get_file_name(self) -> str:
         root = self._report.run.root
-        file_name = self._report.files[self._loc['file']]
+        file_name = self._report.files[self._loc["file"]]
 
         if file_name.startswith(root) and len(root) > 0:
-            return file_name[len(root) + 1:]
+            return file_name[len(root) + 1 :]
 
         return file_name
 
     def get_root_file_name(self) -> str:
-        path = self._data['path']
+        path = self._data["path"]
 
         if not path:
             return self.get_file_name()
 
         p = path[0]
-        if 'location' in p:
-            file_index = p['location']['file']
+        if "location" in p:
+            file_index = p["location"]["file"]
         else:  # control edge
-            file_index = path[0]['edges'][0]['start'][0]['file']
+            file_index = path[0]["edges"][0]["start"][0]["file"]
 
         out = self._report.files[file_index]
         root = self._report.run.root
 
         if out.startswith(root):
-            return out[len(root):]
+            return out[len(root) :]
 
         return out
 
     def get_line(self) -> int:
-        return self._loc['line']
+        return self._loc["line"]
 
     def get_column(self) -> int:
-        return self._loc['col']
+        return self._loc["col"]
 
     def get_path_length(self) -> int:
         return self._report_size
 
     def get_category(self) -> str:
-        return self._data['category']
+        return self._data["category"]
 
     def get_description(self) -> str:
-        return self._data['description']
+        return self._data["description"]
 
     def get_location(self) -> str:
         return f"{self.get_file_name()}:{self.get_line()}:{self.get_column()}"
@@ -174,8 +188,10 @@ class AnalysisDiagnostic:
 
         line = self.get_line()
         col = self.get_column()
-        return f"{file_prefix}{funcname_postfix}:{line}:{col}" \
+        return (
+            f"{file_prefix}{funcname_postfix}:{line}:{col}"
             f", {self.get_category()}: {self.get_description()}"
+        )
 
     KEY_FIELDS = ["check_name", "category", "description"]
 
@@ -185,9 +201,11 @@ class AnalysisDiagnostic:
         return len(self.get_diffs(other)) != len(self.KEY_FIELDS)
 
     def get_diffs(self, other: "AnalysisDiagnostic") -> JSONDiff:
-        return {field: (self._data[field], other._data[field])
-                for field in self.KEY_FIELDS
-                if self._data[field] != other._data[field]}
+        return {
+            field: (self._data[field], other._data[field])
+            for field in self.KEY_FIELDS
+            if self._data[field] != other._data[field]
+        }
 
     # Note, the data format is not an API and may change from one analyzer
     # version to another.
@@ -222,42 +240,44 @@ class AnalysisRun:
         with open(path, "rb") as plist_file:
             data = plistlib.load(plist_file)
 
-        if 'statistics' in data:
-            self.raw_stats.append(json.loads(data['statistics']))
-            data.pop('statistics')
+        if "statistics" in data:
+            self.raw_stats.append(json.loads(data["statistics"]))
+            data.pop("statistics")
 
         # We want to retrieve the clang version even if there are no
         # reports. Assume that all reports were created using the same
         # clang version (this is always true and is more efficient).
-        if 'clang_version' in data:
+        if "clang_version" in data:
             if self.clang_version is None:
-                self.clang_version = data.pop('clang_version')
+                self.clang_version = data.pop("clang_version")
             else:
-                data.pop('clang_version')
+                data.pop("clang_version")
 
         # Ignore/delete empty reports.
-        if not data['files']:
+        if not data["files"]:
             if delete_empty:
                 os.remove(path)
             return
 
         # Extract the HTML reports, if they exists.
         htmlFiles = []
-        for d in data['diagnostics']:
-            if 'HTMLDiagnostics_files' in d:
+        for d in data["diagnostics"]:
+            if "HTMLDiagnostics_files" in d:
                 # FIXME: Why is this named files, when does it have multiple
                 # files?
-                assert len(d['HTMLDiagnostics_files']) == 1
-                htmlFiles.append(d.pop('HTMLDiagnostics_files')[0])
+                assert len(d["HTMLDiagnostics_files"]) == 1
+                htmlFiles.append(d.pop("HTMLDiagnostics_files")[0])
             else:
                 htmlFiles.append(None)
 
-        report = AnalysisReport(self, data.pop('files'))
+        report = AnalysisReport(self, data.pop("files"))
         # Python 3.10 offers zip(..., strict=True). The following assertion
         # mimics it.
-        assert len(data['diagnostics']) == len(htmlFiles)
-        diagnostics = [AnalysisDiagnostic(d, report, h)
-                       for d, h in zip(data.pop('diagnostics'), htmlFiles)]
+        assert len(data["diagnostics"]) == len(htmlFiles)
+        diagnostics = [
+            AnalysisDiagnostic(d, report, h)
+            for d, h in zip(data.pop("diagnostics"), htmlFiles)
+        ]
 
         assert not data
 
@@ -273,18 +293,22 @@ class AnalysisReport:
         self.diagnostics: List[AnalysisDiagnostic] = []
 
 
-def load_results(results: ResultsDirectory, delete_empty: bool = True,
-                 verbose_log: Optional[str] = None) -> AnalysisRun:
+def load_results(
+    results: ResultsDirectory,
+    delete_empty: bool = True,
+    verbose_log: Optional[str] = None,
+) -> AnalysisRun:
     """
     Backwards compatibility API.
     """
-    return load_results_from_single_run(SingleRunInfo(results,
-                                                      verbose_log),
-                                        delete_empty)
+    return load_results_from_single_run(
+        SingleRunInfo(results, verbose_log), delete_empty
+    )
 
 
-def load_results_from_single_run(info: SingleRunInfo,
-                                 delete_empty: bool = True) -> AnalysisRun:
+def load_results_from_single_run(
+    info: SingleRunInfo, delete_empty: bool = True
+) -> AnalysisRun:
     """
     # Load results of the analyzes from a given output folder.
     # - info is the SingleRunInfo object
@@ -299,7 +323,7 @@ def load_results_from_single_run(info: SingleRunInfo,
     else:
         for dirpath, dirnames, filenames in os.walk(path):
             for f in filenames:
-                if not f.endswith('plist'):
+                if not f.endswith("plist"):
                     continue
 
                 p = os.path.join(dirpath, f)
@@ -331,25 +355,27 @@ class ComparisonResult:
     def add_added(self, issue: AnalysisDiagnostic):
         self.present_only_in_new.append(issue)
 
-    def add_changed(self, old_issue: AnalysisDiagnostic,
-                    new_issue: AnalysisDiagnostic):
+    def add_changed(self, old_issue: AnalysisDiagnostic, new_issue: AnalysisDiagnostic):
         self.changed_between_new_and_old.append((old_issue, new_issue))
 
 
 GroupedDiagnostics = DefaultDict[str, List[AnalysisDiagnostic]]
 
 
-def get_grouped_diagnostics(diagnostics: List[AnalysisDiagnostic]
-                            ) -> GroupedDiagnostics:
+def get_grouped_diagnostics(
+    diagnostics: List[AnalysisDiagnostic],
+) -> GroupedDiagnostics:
     result: GroupedDiagnostics = defaultdict(list)
     for diagnostic in diagnostics:
         result[diagnostic.get_location()].append(diagnostic)
     return result
 
 
-def compare_results(results_old: AnalysisRun, results_new: AnalysisRun,
-                    histogram: Optional[HistogramType] = None
-                    ) -> ComparisonResult:
+def compare_results(
+    results_old: AnalysisRun,
+    results_new: AnalysisRun,
+    histogram: Optional[HistogramType] = None,
+) -> ComparisonResult:
     """
     compare_results - Generate a relation from diagnostics in run A to
     diagnostics in run B.
@@ -387,16 +413,15 @@ def compare_results(results_old: AnalysisRun, results_new: AnalysisRun,
                     if a_path_len != b_path_len:
 
                         if histogram == HistogramType.RELATIVE:
-                            path_difference_data.append(
-                                float(a_path_len) / b_path_len)
+                            path_difference_data.append(float(a_path_len) / b_path_len)
 
                         elif histogram == HistogramType.LOG_RELATIVE:
                             path_difference_data.append(
-                                log(float(a_path_len) / b_path_len))
+                                log(float(a_path_len) / b_path_len)
+                            )
 
                         elif histogram == HistogramType.ABSOLUTE:
-                            path_difference_data.append(
-                                a_path_len - b_path_len)
+                            path_difference_data.append(a_path_len - b_path_len)
 
                     res.add_common(b)
                     common.add(a)
@@ -447,15 +472,16 @@ def compare_results(results_old: AnalysisRun, results_new: AnalysisRun,
 
     if histogram:
         from matplotlib import pyplot
+
         pyplot.hist(path_difference_data, bins=100)
         pyplot.show()
 
     return res
 
 
-def filter_issues(origin: List[AnalysisDiagnostic],
-                  to_remove: Set[AnalysisDiagnostic]) \
-                  -> List[AnalysisDiagnostic]:
+def filter_issues(
+    origin: List[AnalysisDiagnostic], to_remove: Set[AnalysisDiagnostic]
+) -> List[AnalysisDiagnostic]:
     return [diag for diag in origin if diag not in to_remove]
 
 
@@ -473,7 +499,7 @@ def derive_stats(results: AnalysisRun) -> Stats:
     # Collect data on paths length.
     for report in results.reports:
         for diagnostic in report.diagnostics:
-            combined_data['PathsLength'].append(diagnostic.get_path_length())
+            combined_data["PathsLength"].append(diagnostic.get_path_length())
 
     for stat in results.raw_stats:
         for key, value in stat.items():
@@ -489,7 +515,7 @@ def derive_stats(results: AnalysisRun) -> Stats:
             "90th %tile": compute_percentile(values, 0.9),
             "95th %tile": compute_percentile(values, 0.95),
             "median": sorted(values)[len(values) // 2],
-            "total": sum(values)
+            "total": sum(values),
         }
 
     return combined_stats
@@ -497,8 +523,9 @@ def derive_stats(results: AnalysisRun) -> Stats:
 
 # TODO: compare_results decouples comparison from the output, we should
 #       do it here as well
-def compare_stats(results_old: AnalysisRun, results_new: AnalysisRun,
-                  out: TextIO = sys.stdout):
+def compare_stats(
+    results_old: AnalysisRun, results_new: AnalysisRun, out: TextIO = sys.stdout
+):
     stats_old = derive_stats(results_old)
     stats_new = derive_stats(results_new)
 
@@ -518,7 +545,7 @@ def compare_stats(results_old: AnalysisRun, results_new: AnalysisRun,
             report = f"{val_old:.3f} -> {val_new:.3f}"
 
             # Only apply highlighting when writing to TTY and it's not Windows
-            if out.isatty() and os.name != 'nt':
+            if out.isatty() and os.name != "nt":
                 if val_new != 0:
                     ratio = (val_new - val_old) / val_new
                     if ratio < -0.2:
@@ -539,14 +566,16 @@ def compare_stats(results_old: AnalysisRun, results_new: AnalysisRun,
     out.write("\n")
 
 
-def dump_scan_build_results_diff(dir_old: ResultsDirectory,
-                                 dir_new: ResultsDirectory,
-                                 delete_empty: bool = True,
-                                 out: TextIO = sys.stdout,
-                                 show_stats: bool = False,
-                                 stats_only: bool = False,
-                                 histogram: Optional[HistogramType] = None,
-                                 verbose_log: Optional[str] = None):
+def dump_scan_build_results_diff(
+    dir_old: ResultsDirectory,
+    dir_new: ResultsDirectory,
+    delete_empty: bool = True,
+    out: TextIO = sys.stdout,
+    show_stats: bool = False,
+    stats_only: bool = False,
+    histogram: Optional[HistogramType] = None,
+    verbose_log: Optional[str] = None,
+):
     """
     Compare directories with analysis results and dump results.
 
@@ -582,29 +611,34 @@ def dump_scan_build_results_diff(dir_old: ResultsDirectory,
         found_diffs += 1
         total_added += 1
         if aux_log:
-            aux_log.write(f"('ADDED', {new.get_readable_name()}, "
-                          f"{new.get_html_report()})\n")
+            aux_log.write(
+                f"('ADDED', {new.get_readable_name()}, " f"{new.get_html_report()})\n"
+            )
 
     for old in diff.present_only_in_old:
         out.write(f"REMOVED: {old.get_readable_name()}\n\n")
         found_diffs += 1
         total_removed += 1
         if aux_log:
-            aux_log.write(f"('REMOVED', {old.get_readable_name()}, "
-                          f"{old.get_html_report()})\n")
+            aux_log.write(
+                f"('REMOVED', {old.get_readable_name()}, " f"{old.get_html_report()})\n"
+            )
 
     for old, new in diff.changed_between_new_and_old:
         out.write(f"MODIFIED: {old.get_readable_name()}\n")
         found_diffs += 1
         total_modified += 1
         diffs = old.get_diffs(new)
-        str_diffs = [f"          '{key}' changed: "
-                     f"'{old_value}' -> '{new_value}'"
-                     for key, (old_value, new_value) in diffs.items()]
+        str_diffs = [
+            f"          '{key}' changed: " f"'{old_value}' -> '{new_value}'"
+            for key, (old_value, new_value) in diffs.items()
+        ]
         out.write(",\n".join(str_diffs) + "\n\n")
         if aux_log:
-            aux_log.write(f"('MODIFIED', {old.get_readable_name()}, "
-                          f"{old.get_html_report()})\n")
+            aux_log.write(
+                f"('MODIFIED', {old.get_readable_name()}, "
+                f"{old.get_html_report()})\n"
+            )
 
     total_reports = len(results_new.diagnostics)
     out.write(f"TOTAL REPORTS: {total_reports}\n")
@@ -618,8 +652,7 @@ def dump_scan_build_results_diff(dir_old: ResultsDirectory,
         aux_log.close()
 
     # TODO: change to NamedTuple
-    return found_diffs, len(results_old.diagnostics), \
-        len(results_new.diagnostics)
+    return found_diffs, len(results_old.diagnostics), len(results_new.diagnostics)
 
 
 if __name__ == "__main__":

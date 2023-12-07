@@ -105,32 +105,32 @@ define weak_odr dllexport void @weak1() {
 
 ; CHECK: .globl alias
 ; CHECK: .set alias, notExported
-@alias = dllexport alias void(), void()* @notExported
+@alias = dllexport alias void(), ptr @notExported
 
 ; CHECK: .globl aliasNotExported
 ; CHECK: .set aliasNotExported, f1
-@aliasNotExported = alias void(), void()* @f1
+@aliasNotExported = alias void(), ptr @f1
 
 ; CHECK: .globl alias2
 ; CHECK: .set alias2, f1
-@alias2 = dllexport alias void(), void()* @f1
+@alias2 = dllexport alias void(), ptr @f1
 
 ; CHECK: .globl alias3
 ; CHECK: .set alias3, notExported
-@alias3 = dllexport alias void(), void()* @notExported
+@alias3 = dllexport alias void(), ptr @notExported
 
 ; CHECK: .weak weak_alias
 ; CHECK: .set weak_alias, f1
-@weak_alias = weak_odr dllexport alias void(), void()* @f1
+@weak_alias = weak_odr dllexport alias void(), ptr @f1
 
 @blob = global [6 x i8] c"\B8*\00\00\00\C3", section ".text", align 16
-@blob_alias = dllexport alias i32 (), bitcast ([6 x i8]* @blob to i32 ()*)
+@blob_alias = dllexport alias i32 (), ptr @blob
 
 @exportedButNotDefinedVariable = external dllexport global i32
 declare dllexport void @exportedButNotDefinedFunction()
 define void @foo() {
 entry:
-  store i32 4, i32* @exportedButNotDefinedVariable, align 4
+  store i32 4, ptr @exportedButNotDefinedVariable, align 4
   call void @exportedButNotDefinedFunction()
   ret void
 }

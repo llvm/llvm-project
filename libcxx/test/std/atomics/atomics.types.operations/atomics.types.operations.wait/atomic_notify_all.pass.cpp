@@ -10,18 +10,17 @@
 // XFAIL: c++03
 // XFAIL: !non-lockfree-atomics
 
-// This test requires the dylib support introduced in D68480, which shipped in macOS 11.0.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// XFAIL: availability-synchronization_library-missing
 
 // <atomic>
 
 // template<class T>
 //     void
-//     atomic_notify_all(volatile atomic<T>*);
+//     atomic_notify_all(volatile atomic<T>*) noexcept;
 //
 // template<class T>
 //     void
-//     atomic_notify_all(atomic<T>*);
+//     atomic_notify_all(atomic<T>*) noexcept;
 
 #include <atomic>
 #include <type_traits>
@@ -39,6 +38,7 @@ struct TestFn {
 
     {
       A a(T(1));
+      static_assert(noexcept(std::atomic_notify_all(&a)), "");
       auto f = [&]() {
         assert(std::atomic_load(&a) == T(1));
         std::atomic_wait(&a, T(1));
@@ -55,6 +55,7 @@ struct TestFn {
     }
     {
       volatile A a(T(2));
+      static_assert(noexcept(std::atomic_notify_all(&a)), "");
       auto f = [&]() {
         assert(std::atomic_load(&a) == T(2));
         std::atomic_wait(&a, T(2));

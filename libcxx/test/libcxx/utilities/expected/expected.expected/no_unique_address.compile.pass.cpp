@@ -16,4 +16,20 @@
 
 struct Empty {};
 
+struct A {
+  int x_;
+  int y_;
+};
+
+struct B : public A {
+  int z_;
+  virtual ~B() = default;
+};
+
 static_assert(sizeof(std::expected<Empty, Empty>) == sizeof(bool));
+static_assert(sizeof(std::expected<Empty, A>) == 2 * sizeof(int) + alignof(std::expected<Empty, A>));
+static_assert(sizeof(std::expected<Empty, B>) == sizeof(B) + alignof(std::expected<Empty, B>));
+static_assert(sizeof(std::expected<A, Empty>) == 2 * sizeof(int) + alignof(std::expected<A, Empty>));
+static_assert(sizeof(std::expected<A, A>) == 2 * sizeof(int) + alignof(std::expected<A, A>));
+static_assert(sizeof(std::expected<B, Empty>) == sizeof(B) + alignof(std::expected<B, Empty>));
+static_assert(sizeof(std::expected<B, B>) == sizeof(B) + alignof(std::expected<B, B>));

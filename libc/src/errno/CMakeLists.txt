@@ -1,17 +1,10 @@
-if (LLVM_LIBC_FULL_BUILD)
-add_object_library(
+add_entrypoint_object(
   errno
   SRCS
-    errno.cpp
+    libc_errno.cpp
   HDRS
-    llvmlibc_errno.h
+    libc_errno.h     # Include this
+  DEPENDS
+    libc.include.errno
+    libc.src.__support.common
 )
-else()
-add_object_library(
-  errno
-  SRCS
-    dummy_errno.cpp
-  HDRS
-    dummy_errno.h
-)
-endif()

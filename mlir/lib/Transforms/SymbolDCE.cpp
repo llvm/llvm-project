@@ -120,7 +120,7 @@ LogicalResult SymbolDCE::computeLiveness(Operation *symbolTableOp,
     }
 
     // Collect the uses held by this operation.
-    Optional<SymbolTable::UseRange> uses = SymbolTable::getSymbolUses(op);
+    std::optional<SymbolTable::UseRange> uses = SymbolTable::getSymbolUses(op);
     if (!uses) {
       return op->emitError()
              << "operation contains potentially unknown symbol table, "

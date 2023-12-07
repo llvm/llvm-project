@@ -75,6 +75,11 @@ WebAssembly-specific options:
   flag which corresponds to ``--unresolve-symbols=ignore`` +
   ``--import-undefined``.
 
+.. option:: --allow-undefined-file=<filename>
+
+  Like ``--allow-undefined``, but the filename specified a flat list of
+  symbols, one per line, which are allowed to be undefined.
+
 .. option:: --unresolved-symbols=<method>
 
   This is a more full featured version of ``--allow-undefined``.
@@ -182,10 +187,38 @@ Imports
 By default no undefined symbols are allowed in the final binary.  The flag
 ``--allow-undefined`` results in a WebAssembly import being defined for each
 undefined symbol.  It is then up to the runtime to provide such symbols.
+``--allow-undefined-file`` is the same but allows a list of symbols to be
+specified.
 
 Alternatively symbols can be marked in the source code as with the
 ``import_name`` and/or ``import_module`` clang attributes which signals that
 they are expected to be undefined at static link time.
+
+Stub Libraries
+~~~~~~~~~~~~~~
+
+Another way to specify imports and exports is via a "stub library".  This
+feature is inspired by the ELF stub objects which are supported by the Solaris
+linker.  Stub libraries are text files that can be passed as normal linker
+inputs, similar to how linker scripts can be passed to the ELF linker.  The stub
+library is a stand-in for a set of symbols that will be available at runtime,
+but doesn't contain any actual code or data.  Instead it contains just a list of
+symbols, one per line.  Each symbol can specify zero or more dependencies.
+These dependencies are symbols that must be defined, and exported, by the output
+module if the symbol is question is imported/required by the output module.
+
+For example, imagine the runtime provides an external symbol ``foo`` that
+depends on the ``malloc`` and ``free``.  This can be expressed simply as::
+
+  #STUB
+  foo: malloc,free
+
+Here we are saying that ``foo`` is allowed to be imported (undefined) but that
+if it is imported, then the output module must also export ``malloc`` and
+``free`` to the runtime.  If ``foo`` is imported (undefined), but the output
+module does not define ``malloc`` and ``free`` then the link will fail.
+
+Stub libraries must begin with ``#STUB`` on a line by itself.
 
 Garbage Collection
 ~~~~~~~~~~~~~~~~~~

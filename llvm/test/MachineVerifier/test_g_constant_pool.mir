@@ -1,0 +1,40 @@
+# RUN: not --crash llc -o - -march=arm64 -global-isel -run-pass=none \
+# RUN:   -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            test_constant_pool
+constants:
+  - id:          0
+    value:       'double 3.250000e+00'
+stack:
+  - { id: 0, size: 64, alignment: 8 }
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    ; CHECK: Bad machine code: Too few operands
+    %0:_(p0) = G_CONSTANT_POOL
+
+    ; CHECK: Bad machine code: Src operand 1 must be a constant pool index
+    %1:_(p0) = G_CONSTANT_POOL 1
+
+    ; CHECK: Bad machine code: Src operand 1 must be a constant pool index
+    %2:_(p0) = G_CONSTANT_POOL i32 1
+
+    ; CHECK: Bad machine code: Src operand 1 must be a constant pool index
+    %3:_(p0) = G_CONSTANT_POOL %stack.0
+
+    ; CHECK: Dst operand 0 must be a pointer
+    %4:_(s32) = G_CONSTANT_POOL %const.0
+
+    ; CHECK: Dst operand 0 must be a pointer
+    %5:_(s64) = G_CONSTANT_POOL %const.0
+
+    ; CHECK-NOT: %6
+    %6:_(p0) = G_CONSTANT_POOL %const.0
+...

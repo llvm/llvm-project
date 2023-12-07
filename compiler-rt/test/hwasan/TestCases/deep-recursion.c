@@ -14,10 +14,8 @@
 // RUN: %env_hwasan_opts=stack_history_size=5 not %run %t 2>&1 | FileCheck %s --check-prefix=D5
 // RUN:                                       not %run %t 2>&1 | FileCheck %s --check-prefix=DEFAULT
 
-// REQUIRES: stable-runtime
-
 // Stack histories are currently not recorded on x86.
-// XFAIL: x86_64
+// XFAIL: target=x86_64{{.*}}
 
 #include <stdlib.h>
 // At least -O1 is needed for this function to not have a stack frame on

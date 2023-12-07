@@ -8,7 +8,7 @@
 // RUN: %clang -target x86_64-apple-macos10.15 -darwin-target-variant x86_64-apple-ios13.1-macabi \
 // RUN:   -darwin-target-variant x86_64-apple-ios13.1-macabi -c %s -### 2>&1 | FileCheck --check-prefix=REDUNDANT-TV %s
 
-// RUN: %clang -target x86_64-apple-macos10.15 -darwin-target-variant x86_64-apple-ios13.1 \
+// RUN: not %clang -target x86_64-apple-macos10.15 -darwin-target-variant x86_64-apple-ios13.1 \
 // RUN:   -c %s -### 2>&1 | FileCheck --check-prefix=INCORRECT-TV %s
 
 // RUN: %clang -target unknown-apple-ios13.1-macabi -arch x86_64 -arch x86_64h \

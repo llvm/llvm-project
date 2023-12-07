@@ -5,16 +5,15 @@
 @A = common global %struct.a zeroinitializer, align 4
 
 ; Function Attrs: norecurse nounwind
-define void @fun(%struct.a* noalias nocapture sret(%struct.a) %a, i32 %p1, i32 %p2) {
+define void @fun(ptr noalias nocapture sret(%struct.a) %a, i32 %p1, i32 %p2) {
 ; CHECK-LABEL: fun:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stl %s1, (, %s0)
 ; CHECK-NEXT:    stl %s2, 4(, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %a.zero = getelementptr inbounds %struct.a, %struct.a* %a, i64 0, i32 0
-  store i32 %p1, i32* %a.zero, align 4
-  %a.one = getelementptr inbounds %struct.a, %struct.a* %a, i64 0, i32 1
-  store i32 %p2, i32* %a.one, align 4
+  store i32 %p1, ptr %a, align 4
+  %a.one = getelementptr inbounds %struct.a, ptr %a, i64 0, i32 1
+  store i32 %p2, ptr %a.one, align 4
   ret void
 }
 
@@ -36,11 +35,10 @@ define void @caller() {
 ; CHECK-NEXT:    st %s0, (, %s1)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %a = alloca i64, align 8
-  %a.bc = bitcast i64* %a to %struct.a*
-  call void @callee(%struct.a* nonnull sret(%struct.a) %a.bc, i32 3, i32 4)
-  %a.val = load i64, i64* %a, align 8
-  store i64 %a.val, i64* bitcast (%struct.a* @A to i64*), align 4
+  call void @callee(ptr nonnull sret(%struct.a) %a, i32 3, i32 4)
+  %a.val = load i64, ptr %a, align 8
+  store i64 %a.val, ptr @A, align 4
   ret void
 }
 
-declare void @callee(%struct.a* sret(%struct.a), i32, i32)
+declare void @callee(ptr sret(%struct.a), i32, i32)

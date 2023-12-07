@@ -66,8 +66,8 @@ define i64 @test_nuw(ptr %base, i64 %idx) {
 define i32 @test_inbounds_nuw_trunc(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @test_inbounds_nuw_trunc(
 ; CHECK-NEXT:    [[IDX_TR:%.*]] = trunc i64 [[IDX:%.*]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[IDX_TR]], 2
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[D:%.*]] = shl i32 [[IDX_TR]], 2
+; CHECK-NEXT:    ret i32 [[D]]
 ;
   %p2 = getelementptr inbounds [0 x i32], ptr %base, i64 0, i64 %idx
   %i1 = ptrtoint ptr %base to i64
@@ -173,8 +173,8 @@ define i64 @test_inbounds_nuw_multi_index(ptr %base, i64 %idx, i64 %idx2) {
 ; rdar://7362831
 define i32 @test23(ptr %P, i64 %A){
 ; CHECK-LABEL: @test23(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[A:%.*]] to i32
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[G:%.*]] = trunc i64 [[A:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[G]]
 ;
   %B = getelementptr inbounds i8, ptr %P, i64 %A
   %C = ptrtoint ptr %B to i64
@@ -187,8 +187,8 @@ define i32 @test23(ptr %P, i64 %A){
 
 define i8 @test23_as1(ptr addrspace(1) %P, i16 %A) {
 ; CHECK-LABEL: @test23_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[A:%.*]] to i8
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    [[G:%.*]] = trunc i16 [[A:%.*]] to i8
+; CHECK-NEXT:    ret i8 [[G]]
 ;
   %B = getelementptr inbounds i8, ptr addrspace(1) %P, i16 %A
   %C = ptrtoint ptr addrspace(1) %B to i16
@@ -368,4 +368,109 @@ define i64 @gep_diff_with_bitcast(ptr %p, i64 %idx) {
   %i5 = sub nuw i64 %i3, %i4
   %i6 = lshr i64 %i5, 5
   ret i64 %i6
+}
+
+define i1 @_gep_phi1(ptr noundef %str1) {
+; CHECK-LABEL: @_gep_phi1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[STR1:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[_Z3FOOPKC_EXIT:%.*]], label [[LOR_LHS_FALSE_I:%.*]]
+; CHECK:       lor.lhs.false.i:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[STR1]], align 1
+; CHECK-NEXT:    [[CMP1_I:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[CMP1_I]], label [[_Z3FOOPKC_EXIT]], label [[WHILE_COND_I:%.*]]
+; CHECK:       while.cond.i:
+; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[STR1]], [[LOR_LHS_FALSE_I]] ]
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TEST_0_I]], align 1
+; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
+; CHECK:       while.end.i:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne ptr [[TEST_0_I]], [[STR1]]
+; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT]]
+; CHECK:       _Z3fooPKc.exit:
+; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i1 [ [[TMP2]], [[WHILE_END_I]] ], [ false, [[LOR_LHS_FALSE_I]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i1 [[RETVAL_0_I]]
+;
+entry:
+  %cmp.i = icmp eq ptr %str1, null
+  br i1 %cmp.i, label %_Z3fooPKc.exit, label %lor.lhs.false.i
+
+lor.lhs.false.i:
+  %0 = load i8, ptr %str1, align 1
+  %cmp1.i = icmp eq i8 %0, 0
+  br i1 %cmp1.i, label %_Z3fooPKc.exit, label %while.cond.i
+
+while.cond.i:
+  %a.pn.i = phi ptr [ %test.0.i, %while.cond.i ], [ %str1, %lor.lhs.false.i ]
+  %test.0.i = getelementptr inbounds i8, ptr %a.pn.i, i64 1
+  %1 = load i8, ptr %test.0.i, align 1
+  %cmp3.not.i = icmp eq i8 %1, 0
+  br i1 %cmp3.not.i, label %while.end.i, label %while.cond.i
+
+while.end.i:
+  %sub.ptr.lhs.cast.i = ptrtoint ptr %test.0.i to i64
+  %sub.ptr.rhs.cast.i = ptrtoint ptr %str1 to i64
+  %sub.ptr.sub.i = sub i64 %sub.ptr.lhs.cast.i, %sub.ptr.rhs.cast.i
+  br label %_Z3fooPKc.exit
+
+_Z3fooPKc.exit:
+  %retval.0.i = phi i64 [ %sub.ptr.sub.i, %while.end.i ], [ 0, %lor.lhs.false.i ], [ 0, %entry ]
+  %tobool = icmp ne i64 %retval.0.i, 0
+  ret i1 %tobool
+}
+
+define i1 @_gep_phi2(ptr noundef %str1, i64 %val2) {
+; CHECK-LABEL: @_gep_phi2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[STR1:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[_Z3FOOPKC_EXIT:%.*]], label [[LOR_LHS_FALSE_I:%.*]]
+; CHECK:       lor.lhs.false.i:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[STR1]], align 1
+; CHECK-NEXT:    [[CMP1_I:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[CMP1_I]], label [[_Z3FOOPKC_EXIT]], label [[WHILE_COND_I:%.*]]
+; CHECK:       while.cond.i:
+; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[STR1]], [[LOR_LHS_FALSE_I]] ]
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TEST_0_I]], align 1
+; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
+; CHECK:       while.end.i:
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I:%.*]] = ptrtoint ptr [[TEST_0_I]] to i64
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I:%.*]] = ptrtoint ptr [[STR1]] to i64
+; CHECK-NEXT:    [[SUB_PTR_SUB_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I]], [[SUB_PTR_RHS_CAST_I]]
+; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT]]
+; CHECK:       _Z3fooPKc.exit:
+; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ [[SUB_PTR_SUB_I]], [[WHILE_END_I]] ], [ 0, [[LOR_LHS_FALSE_I]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[RETVAL_0_I]], [[VAL2:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+entry:
+  %cmp.i = icmp eq ptr %str1, null
+  br i1 %cmp.i, label %_Z3fooPKc.exit, label %lor.lhs.false.i
+
+lor.lhs.false.i:
+  %0 = load i8, ptr %str1, align 1
+  %cmp1.i = icmp eq i8 %0, 0
+  br i1 %cmp1.i, label %_Z3fooPKc.exit, label %while.cond.i
+
+while.cond.i:
+  %a.pn.i = phi ptr [ %test.0.i, %while.cond.i ], [ %str1, %lor.lhs.false.i ]
+  %test.0.i = getelementptr inbounds i8, ptr %a.pn.i, i64 1
+  %1 = load i8, ptr %test.0.i, align 1
+  %cmp3.not.i = icmp eq i8 %1, 0
+  br i1 %cmp3.not.i, label %while.end.i, label %while.cond.i
+
+while.end.i:
+  %sub.ptr.lhs.cast.i = ptrtoint ptr %test.0.i to i64
+  %sub.ptr.rhs.cast.i = ptrtoint ptr %str1 to i64
+  %sub.ptr.sub.i = sub i64 %sub.ptr.lhs.cast.i, %sub.ptr.rhs.cast.i
+  br label %_Z3fooPKc.exit
+
+_Z3fooPKc.exit:
+  %retval.0.i = phi i64 [ %sub.ptr.sub.i, %while.end.i ], [ 0, %lor.lhs.false.i ], [ 0, %entry ]
+  %2 = or i64 %retval.0.i, %val2
+  %tobool = icmp eq i64 %2, 0
+  ret i1 %tobool
 }

@@ -13,6 +13,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -40,6 +41,10 @@ DebugVariable::DebugVariable(const DbgVariableIntrinsic *DII)
     : Variable(DII->getVariable()),
       Fragment(DII->getExpression()->getFragmentInfo()),
       InlinedAt(DII->getDebugLoc().getInlinedAt()) {}
+
+DebugVariableAggregate::DebugVariableAggregate(const DbgVariableIntrinsic *DVI)
+    : DebugVariable(DVI->getVariable(), std::nullopt,
+                    DVI->getDebugLoc()->getInlinedAt()) {}
 
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, ArrayRef<Metadata *> MDs,
@@ -90,14 +95,13 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                    Storage, Context.pImpl->DILocations);
 }
 
-const DILocation *
-DILocation::getMergedLocations(ArrayRef<const DILocation *> Locs) {
+DILocation *DILocation::getMergedLocations(ArrayRef<DILocation *> Locs) {
   if (Locs.empty())
     return nullptr;
   if (Locs.size() == 1)
     return Locs[0];
   auto *Merged = Locs[0];
-  for (const DILocation *L : llvm::drop_begin(Locs)) {
+  for (DILocation *L : llvm::drop_begin(Locs)) {
     Merged = getMergedLocation(Merged, L);
     if (Merged == nullptr)
       break;
@@ -105,8 +109,7 @@ DILocation::getMergedLocations(ArrayRef<const DILocation *> Locs) {
   return Merged;
 }
 
-const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
-                                                const DILocation *LocB) {
+DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
   if (!LocA || !LocB)
     return nullptr;
 
@@ -114,63 +117,122 @@ const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
     return LocA;
 
   LLVMContext &C = LocA->getContext();
-  SmallDenseMap<std::pair<DILocalScope *, DILocation *>,
-                std::pair<unsigned, unsigned>, 4>
-      Locations;
 
-  DIScope *S = LocA->getScope();
-  DILocation *L = LocA->getInlinedAt();
-  unsigned Line = LocA->getLine();
-  unsigned Col = LocA->getColumn();
+  using LocVec = SmallVector<const DILocation *>;
+  LocVec ALocs;
+  LocVec BLocs;
+  SmallDenseMap<std::pair<const DISubprogram *, const DILocation *>, unsigned,
+                4>
+      ALookup;
 
-  // Walk from the current source locaiton until the file scope;
-  // then, do the same for the inlined-at locations.
-  auto AdvanceToParentLoc = [&S, &L, &Line, &Col]() {
-    S = S->getScope();
-    if (!S && L) {
-      Line = L->getLine();
-      Col = L->getColumn();
-      S = L->getScope();
-      L = L->getInlinedAt();
-    }
+  // Walk through LocA and its inlined-at locations, populate them in ALocs and
+  // save the index for the subprogram and inlined-at pair, which we use to find
+  // a matching starting location in LocB's chain.
+  for (auto [L, I] = std::make_pair(LocA, 0U); L; L = L->getInlinedAt(), I++) {
+    ALocs.push_back(L);
+    auto Res = ALookup.try_emplace(
+        {L->getScope()->getSubprogram(), L->getInlinedAt()}, I);
+    assert(Res.second && "Multiple <SP, InlinedAt> pairs in a location chain?");
+    (void)Res;
+  }
+
+  LocVec::reverse_iterator ARIt = ALocs.rend();
+  LocVec::reverse_iterator BRIt = BLocs.rend();
+
+  // Populate BLocs and look for a matching starting location, the first
+  // location with the same subprogram and inlined-at location as in LocA's
+  // chain. Since the two locations have the same inlined-at location we do
+  // not need to look at those parts of the chains.
+  for (auto [L, I] = std::make_pair(LocB, 0U); L; L = L->getInlinedAt(), I++) {
+    BLocs.push_back(L);
+
+    if (ARIt != ALocs.rend())
+      // We have already found a matching starting location.
+      continue;
+
+    auto IT = ALookup.find({L->getScope()->getSubprogram(), L->getInlinedAt()});
+    if (IT == ALookup.end())
+      continue;
+
+    // The + 1 is to account for the &*rev_it = &(it - 1) relationship.
+    ARIt = LocVec::reverse_iterator(ALocs.begin() + IT->second + 1);
+    BRIt = LocVec::reverse_iterator(BLocs.begin() + I + 1);
+
+    // If we have found a matching starting location we do not need to add more
+    // locations to BLocs, since we will only look at location pairs preceding
+    // the matching starting location, and adding more elements to BLocs could
+    // invalidate the iterator that we initialized here.
+    break;
+  }
+
+  // Merge the two locations if possible, using the supplied
+  // inlined-at location for the created location.
+  auto MergeLocPair = [&C](const DILocation *L1, const DILocation *L2,
+                           DILocation *InlinedAt) -> DILocation * {
+    if (L1 == L2)
+      return DILocation::get(C, L1->getLine(), L1->getColumn(), L1->getScope(),
+                             InlinedAt);
+
+    // If the locations originate from different subprograms we can't produce
+    // a common location.
+    if (L1->getScope()->getSubprogram() != L2->getScope()->getSubprogram())
+      return nullptr;
+
+    // Return the nearest common scope inside a subprogram.
+    auto GetNearestCommonScope = [](DIScope *S1, DIScope *S2) -> DIScope * {
+      SmallPtrSet<DIScope *, 8> Scopes;
+      for (; S1; S1 = S1->getScope()) {
+        Scopes.insert(S1);
+        if (isa<DISubprogram>(S1))
+          break;
+      }
+
+      for (; S2; S2 = S2->getScope()) {
+        if (Scopes.count(S2))
+          return S2;
+        if (isa<DISubprogram>(S2))
+          break;
+      }
+
+      return nullptr;
+    };
+
+    auto Scope = GetNearestCommonScope(L1->getScope(), L2->getScope());
+    assert(Scope && "No common scope in the same subprogram?");
+
+    bool SameLine = L1->getLine() == L2->getLine();
+    bool SameCol = L1->getColumn() == L2->getColumn();
+    unsigned Line = SameLine ? L1->getLine() : 0;
+    unsigned Col = SameLine && SameCol ? L1->getColumn() : 0;
+
+    return DILocation::get(C, Line, Col, Scope, InlinedAt);
   };
 
-  while (S) {
-    if (auto *LS = dyn_cast<DILocalScope>(S))
-      Locations.try_emplace(std::make_pair(LS, L), std::make_pair(Line, Col));
-    AdvanceToParentLoc();
+  DILocation *Result = ARIt != ALocs.rend() ? (*ARIt)->getInlinedAt() : nullptr;
+
+  // If we have found a common starting location, walk up the inlined-at chains
+  // and try to produce common locations.
+  for (; ARIt != ALocs.rend() && BRIt != BLocs.rend(); ++ARIt, ++BRIt) {
+    DILocation *Tmp = MergeLocPair(*ARIt, *BRIt, Result);
+
+    if (!Tmp)
+      // We have walked up to a point in the chains where the two locations
+      // are irreconsilable. At this point Result contains the nearest common
+      // location in the inlined-at chains of LocA and LocB, so we break here.
+      break;
+
+    Result = Tmp;
   }
 
-  // Walk the source locations of LocB until a match with LocA is found.
-  S = LocB->getScope();
-  L = LocB->getInlinedAt();
-  Line = LocB->getLine();
-  Col = LocB->getColumn();
-  while (S) {
-    if (auto *LS = dyn_cast<DILocalScope>(S)) {
-      auto MatchLoc = Locations.find(std::make_pair(LS, L));
-      if (MatchLoc != Locations.end()) {
-        // If the lines match, keep the line, but set the column to '0'
-        // If the lines don't match, pick a "line 0" location but keep
-        // the current scope and inlined-at.
-        bool SameLine = Line == MatchLoc->second.first;
-        bool SameCol = Col == MatchLoc->second.second;
-        Line = SameLine ? Line : 0;
-        Col = SameLine && SameCol ? Col : 0;
-        break;
-      }
-    }
-    AdvanceToParentLoc();
-  }
+  if (Result)
+    return Result;
 
-  if (!S) {
-    // If the two locations are irreconsilable, pick any scope,
-    // and return a "line 0" location.
-    Line = Col = 0;
-    S = LocA->getScope();
-  }
-
-  return DILocation::get(C, Line, Col, S, L);
+  // We ended up with LocA and LocB as irreconsilable locations. Produce a
+  // location at 0:0 with one of the locations' scope. The function has
+  // historically picked A's scope, and a nullptr inlined-at location, so that
+  // behavior is mimicked here but I am not sure if this is always the correct
+  // way to handle this.
+  return DILocation::get(C, 0, 0, LocA->getScope(), nullptr);
 }
 
 std::optional<unsigned>
@@ -908,6 +970,7 @@ DICompileUnit::getNameTableKind(StringRef Str) {
   return StringSwitch<std::optional<DebugNameTableKind>>(Str)
       .Case("Default", DebugNameTableKind::Default)
       .Case("GNU", DebugNameTableKind::GNU)
+      .Case("Apple", DebugNameTableKind::Apple)
       .Case("None", DebugNameTableKind::None)
       .Default(std::nullopt);
 }
@@ -932,6 +995,8 @@ const char *DICompileUnit::nameTableKindString(DebugNameTableKind NTK) {
     return nullptr;
   case DebugNameTableKind::GNU:
     return "GNU";
+  case DebugNameTableKind::Apple:
+    return "Apple";
   case DebugNameTableKind::None:
     return "None";
   }
@@ -1285,6 +1350,9 @@ bool DIExpression::isEntryValue() const {
 bool DIExpression::startsWithDeref() const {
   return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_deref;
 }
+bool DIExpression::isDeref() const {
+  return getNumElements() == 1 && startsWithDeref();
+}
 
 DIAssignID *DIAssignID::getImpl(LLVMContext &Context, StorageType Storage,
                                 bool ShouldCreate) {
@@ -1358,12 +1426,15 @@ bool DIExpression::isValid() const {
       break;
     }
     case dwarf::DW_OP_LLVM_entry_value: {
-      // An entry value operator must appear at the beginning and the number of
-      // operations it cover can currently only be 1, because we support only
-      // entry values of a simple register location. One reason for this is that
-      // we currently can't calculate the size of the resulting DWARF block for
-      // other expressions.
-      return I->get() == expr_op_begin()->get() && I->getArg(0) == 1;
+      // An entry value operator must appear at the beginning or immediately
+      // following `DW_OP_LLVM_arg 0`, and the number of operations it cover can
+      // currently only be 1, because we support only entry values of a simple
+      // register location. One reason for this is that we currently can't
+      // calculate the size of the resulting DWARF block for other expressions.
+      auto FirstOp = expr_op_begin();
+      if (FirstOp->getOp() == dwarf::DW_OP_LLVM_arg && FirstOp->getArg(0) == 0)
+        ++FirstOp;
+      return I->get() == FirstOp->get() && I->getArg(0) == 1;
     }
     case dwarf::DW_OP_LLVM_implicit_pointer:
     case dwarf::DW_OP_LLVM_convert:
@@ -1393,6 +1464,12 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_push_object_address:
     case dwarf::DW_OP_over:
     case dwarf::DW_OP_consts:
+    case dwarf::DW_OP_eq:
+    case dwarf::DW_OP_ne:
+    case dwarf::DW_OP_gt:
+    case dwarf::DW_OP_ge:
+    case dwarf::DW_OP_lt:
+    case dwarf::DW_OP_le:
       break;
     }
   }
@@ -1432,6 +1509,7 @@ bool DIExpression::isComplex() const {
     switch (It.getOp()) {
     case dwarf::DW_OP_LLVM_tag_offset:
     case dwarf::DW_OP_LLVM_fragment:
+    case dwarf::DW_OP_LLVM_arg:
       continue;
     default:
       return true;
@@ -1439,6 +1517,109 @@ bool DIExpression::isComplex() const {
   }
 
   return false;
+}
+
+bool DIExpression::isSingleLocationExpression() const {
+  if (!isValid())
+    return false;
+
+  if (getNumElements() == 0)
+    return true;
+
+  auto ExprOpBegin = expr_ops().begin();
+  auto ExprOpEnd = expr_ops().end();
+  if (ExprOpBegin->getOp() == dwarf::DW_OP_LLVM_arg)
+    ++ExprOpBegin;
+
+  return !std::any_of(ExprOpBegin, ExprOpEnd, [](auto Op) {
+    return Op.getOp() == dwarf::DW_OP_LLVM_arg;
+  });
+}
+
+const DIExpression *
+DIExpression::convertToUndefExpression(const DIExpression *Expr) {
+  SmallVector<uint64_t, 3> UndefOps;
+  if (auto FragmentInfo = Expr->getFragmentInfo()) {
+    UndefOps.append({dwarf::DW_OP_LLVM_fragment, FragmentInfo->OffsetInBits,
+                     FragmentInfo->SizeInBits});
+  }
+  return DIExpression::get(Expr->getContext(), UndefOps);
+}
+
+const DIExpression *
+DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
+  if (any_of(Expr->expr_ops(), [](auto ExprOp) {
+        return ExprOp.getOp() == dwarf::DW_OP_LLVM_arg;
+      }))
+    return Expr;
+  SmallVector<uint64_t> NewOps;
+  NewOps.reserve(Expr->getNumElements() + 2);
+  NewOps.append({dwarf::DW_OP_LLVM_arg, 0});
+  NewOps.append(Expr->elements_begin(), Expr->elements_end());
+  return DIExpression::get(Expr->getContext(), NewOps);
+}
+
+std::optional<const DIExpression *>
+DIExpression::convertToNonVariadicExpression(const DIExpression *Expr) {
+  // Check for `isValid` covered by `isSingleLocationExpression`.
+  if (!Expr->isSingleLocationExpression())
+    return std::nullopt;
+
+  // An empty expression is already non-variadic.
+  if (!Expr->getNumElements())
+    return Expr;
+
+  auto ElementsBegin = Expr->elements_begin();
+  // If Expr does not have a leading DW_OP_LLVM_arg then we don't need to do
+  // anything.
+  if (*ElementsBegin != dwarf::DW_OP_LLVM_arg)
+    return Expr;
+
+  SmallVector<uint64_t> NonVariadicOps(
+      make_range(ElementsBegin + 2, Expr->elements_end()));
+  return DIExpression::get(Expr->getContext(), NonVariadicOps);
+}
+
+void DIExpression::canonicalizeExpressionOps(SmallVectorImpl<uint64_t> &Ops,
+                                             const DIExpression *Expr,
+                                             bool IsIndirect) {
+  // If Expr is not already variadic, insert the implied `DW_OP_LLVM_arg 0`
+  // to the existing expression ops.
+  if (none_of(Expr->expr_ops(), [](auto ExprOp) {
+        return ExprOp.getOp() == dwarf::DW_OP_LLVM_arg;
+      }))
+    Ops.append({dwarf::DW_OP_LLVM_arg, 0});
+  // If Expr is not indirect, we only need to insert the expression elements and
+  // we're done.
+  if (!IsIndirect) {
+    Ops.append(Expr->elements_begin(), Expr->elements_end());
+    return;
+  }
+  // If Expr is indirect, insert the implied DW_OP_deref at the end of the
+  // expression but before DW_OP_{stack_value, LLVM_fragment} if they are
+  // present.
+  for (auto Op : Expr->expr_ops()) {
+    if (Op.getOp() == dwarf::DW_OP_stack_value ||
+        Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+      Ops.push_back(dwarf::DW_OP_deref);
+      IsIndirect = false;
+    }
+    Op.appendToVector(Ops);
+  }
+  if (IsIndirect)
+    Ops.push_back(dwarf::DW_OP_deref);
+}
+
+bool DIExpression::isEqualExpression(const DIExpression *FirstExpr,
+                                     bool FirstIndirect,
+                                     const DIExpression *SecondExpr,
+                                     bool SecondIndirect) {
+  SmallVector<uint64_t> FirstOps;
+  DIExpression::canonicalizeExpressionOps(FirstOps, FirstExpr, FirstIndirect);
+  SmallVector<uint64_t> SecondOps;
+  DIExpression::canonicalizeExpressionOps(SecondOps, SecondExpr,
+                                          SecondIndirect);
+  return FirstOps == SecondOps;
 }
 
 std::optional<DIExpression::FragmentInfo>
@@ -1497,7 +1678,7 @@ bool DIExpression::hasAllLocationOps(unsigned N) const {
     if (ExprOp.getOp() == dwarf::DW_OP_LLVM_arg)
       SeenOps.insert(ExprOp.getArg(0));
   for (uint64_t Idx = 0; Idx < N; ++Idx)
-    if (!is_contained(SeenOps, Idx))
+    if (!SeenOps.contains(Idx))
       return false;
   return true;
 }
@@ -1516,8 +1697,8 @@ const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
     if (Expr->Elements.size() == PatternSize)
       return nullptr;
     return DIExpression::get(Expr->getContext(),
-                             makeArrayRef(&*Expr->Elements.begin(),
-                                          Expr->Elements.size() - PatternSize));
+                             ArrayRef(&*Expr->Elements.begin(),
+                                      Expr->Elements.size() - PatternSize));
   }
   return Expr;
 }
@@ -1554,10 +1735,21 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
 
   SmallVector<uint64_t, 8> NewOps;
   for (auto Op : Expr->expr_ops()) {
+    // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.
+    if (StackValue) {
+      if (Op.getOp() == dwarf::DW_OP_stack_value)
+        StackValue = false;
+      else if (Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+        NewOps.push_back(dwarf::DW_OP_stack_value);
+        StackValue = false;
+      }
+    }
     Op.appendToVector(NewOps);
     if (Op.getOp() == dwarf::DW_OP_LLVM_arg && Op.getArg(0) == ArgNo)
       NewOps.insert(NewOps.end(), Ops.begin(), Ops.end());
   }
+  if (StackValue)
+    NewOps.push_back(dwarf::DW_OP_stack_value);
 
   return DIExpression::get(Expr->getContext(), NewOps);
 }
@@ -1908,7 +2100,7 @@ void DIArgList::handleChangedOperand(void *Ref, Metadata *New) {
       if (NewVM)
         VM = NewVM;
       else
-        VM = ValueAsMetadata::get(UndefValue::get(VM->getValue()->getType()));
+        VM = ValueAsMetadata::get(PoisonValue::get(VM->getValue()->getType()));
     }
   }
   if (Uniq) {

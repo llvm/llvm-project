@@ -20,9 +20,8 @@ struct Foo {
   // CHECK:      TemplateTypeParmDecl {{.*}} referenced Concept {{.*}} 'binary_concept'
   // CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} <col:13, col:31> 'bool' Concept {{.*}} 'binary_concept'
   // CHECK-NEXT:   |-ImplicitConceptSpecializationDecl {{.*}} <line:13:9> col:9
-  // CHECK-NEXT:   | |-TemplateArgument type 'R'
-  // CHECK-NEXT:   | | `-TemplateTypeParmType {{.*}} 'R' dependent {{.*}}depth 1 index 0
-  // CHECK-NEXT:   | |   `-TemplateTypeParm {{.*}} 'R'
+  // CHECK-NEXT:   | |-TemplateArgument type 'type-parameter-1-0'  
+  // CHECK-NEXT:   | | `-TemplateTypeParmType {{.*}} 'type-parameter-1-0' dependent {{.*}}depth 1 index 0
   // CHECK-NEXT:   | `-TemplateArgument type 'int'
   // CHECK-NEXT:   |   `-BuiltinType {{.*}} 'int'
   // CHECK-NEXT:   |-TemplateArgument {{.*}} type 'R'
@@ -36,9 +35,8 @@ struct Foo {
   // CHECK:      TemplateTypeParmDecl {{.*}} referenced Concept {{.*}} 'unary_concept'
   // CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} <col:13> 'bool'
   // CHECK-NEXT:   |-ImplicitConceptSpecializationDecl {{.*}} <line:10:9> col:9
-  // CHECK-NEXT:   | `-TemplateArgument type 'R'
-  // CHECK-NEXT:   |   `-TemplateTypeParmType {{.*}} 'R' dependent {{.*}}depth 1 index 0
-  // CHECK-NEXT:   |     `-TemplateTypeParm {{.*}} 'R'
+  // CHECK-NEXT:   | `-TemplateArgument type 'type-parameter-1-0'
+  // CHECK-NEXT:   |   `-TemplateTypeParmType {{.*}} 'type-parameter-1-0' dependent {{.*}}depth 1 index 0
   template <unary_concept R>
   Foo(R);
 

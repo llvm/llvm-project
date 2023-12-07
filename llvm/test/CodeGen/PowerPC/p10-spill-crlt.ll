@@ -30,25 +30,23 @@ define dso_local void @P10_Spill_CR_LT() local_unnamed_addr {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stw r12, 8(r1)
-; CHECK-NEXT:    stdu r1, -80(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    .cfi_offset cr2, 8
 ; CHECK-NEXT:    .cfi_offset cr3, 8
 ; CHECK-NEXT:    .cfi_offset cr4, 8
-; CHECK-NEXT:    std r30, 64(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r30, 32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    bl call_2@notoc
 ; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB0_13
 ; CHECK-NEXT:  # %bb.1: # %bb
 ; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_14
 ; CHECK-NEXT:  # %bb.2: # %bb4
 ; CHECK-NEXT:    cmpdi cr3, r3, 0
-; CHECK-NEXT:    # implicit-def: $r30
-; CHECK-NEXT:    crnot 4*cr5+lt, 4*cr3+eq
-; CHECK-NEXT:    setnbc r3, 4*cr5+lt
-; CHECK-NEXT:    stw r3, 60(r1)
 ; CHECK-NEXT:    lwz r3, 0(r3)
+; CHECK-NEXT:    # implicit-def: $r30
+; CHECK-NEXT:    crnot 4*cr3+lt, 4*cr3+eq
 ; CHECK-NEXT:    cmpwi cr4, r3, 0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # %bb12
@@ -76,12 +74,7 @@ define dso_local void @P10_Spill_CR_LT() local_unnamed_addr {
 ; CHECK-NEXT:  .LBB0_8: # %bb22
 ; CHECK-NEXT:  .LBB0_9: # %bb35
 ; CHECK-NEXT:  .LBB0_10: # %bb27
-; CHECK-NEXT:    lwz r4, 60(r1)
-; CHECK-NEXT:    # implicit-def: $cr5lt
-; CHECK-NEXT:    mfocrf r3, 4
-; CHECK-NEXT:    rlwimi r3, r4, 12, 20, 20
-; CHECK-NEXT:    mtocrf 4, r3
-; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_12
+; CHECK-NEXT:    bc 4, 4*cr3+lt, .LBB0_12
 ; CHECK-NEXT:  # %bb.11: # %bb28
 ; CHECK-NEXT:  .LBB0_12: # %bb29
 ; CHECK-NEXT:  .LBB0_13: # %bb3
@@ -93,16 +86,16 @@ define dso_local void @P10_Spill_CR_LT() local_unnamed_addr {
 ; CHECK-BE-NEXT:    mflr r0
 ; CHECK-BE-NEXT:    std r0, 16(r1)
 ; CHECK-BE-NEXT:    stw r12, 8(r1)
-; CHECK-BE-NEXT:    stdu r1, -160(r1)
-; CHECK-BE-NEXT:    .cfi_def_cfa_offset 160
+; CHECK-BE-NEXT:    stdu r1, -144(r1)
+; CHECK-BE-NEXT:    .cfi_def_cfa_offset 144
 ; CHECK-BE-NEXT:    .cfi_offset lr, 16
 ; CHECK-BE-NEXT:    .cfi_offset r29, -24
 ; CHECK-BE-NEXT:    .cfi_offset r30, -16
 ; CHECK-BE-NEXT:    .cfi_offset cr2, 8
 ; CHECK-BE-NEXT:    .cfi_offset cr2, 8
 ; CHECK-BE-NEXT:    .cfi_offset cr2, 8
-; CHECK-BE-NEXT:    std r29, 136(r1) # 8-byte Folded Spill
-; CHECK-BE-NEXT:    std r30, 144(r1) # 8-byte Folded Spill
+; CHECK-BE-NEXT:    std r29, 120(r1) # 8-byte Folded Spill
+; CHECK-BE-NEXT:    std r30, 128(r1) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    bl call_2
 ; CHECK-BE-NEXT:    nop
 ; CHECK-BE-NEXT:    bc 12, 4*cr5+lt, .LBB0_13
@@ -110,12 +103,10 @@ define dso_local void @P10_Spill_CR_LT() local_unnamed_addr {
 ; CHECK-BE-NEXT:    bc 4, 4*cr5+lt, .LBB0_14
 ; CHECK-BE-NEXT:  # %bb.2: # %bb4
 ; CHECK-BE-NEXT:    cmpdi cr3, r3, 0
+; CHECK-BE-NEXT:    lwz r3, 0(r3)
 ; CHECK-BE-NEXT:    addis r30, r2, call_1@toc@ha
 ; CHECK-BE-NEXT:    # implicit-def: $r29
-; CHECK-BE-NEXT:    crnot 4*cr5+lt, 4*cr3+eq
-; CHECK-BE-NEXT:    setnbc r3, 4*cr5+lt
-; CHECK-BE-NEXT:    stw r3, 132(r1)
-; CHECK-BE-NEXT:    lwz r3, 0(r3)
+; CHECK-BE-NEXT:    crnot 4*cr3+lt, 4*cr3+eq
 ; CHECK-BE-NEXT:    cmpwi cr4, r3, 0
 ; CHECK-BE-NEXT:    .p2align 4
 ; CHECK-BE-NEXT:  .LBB0_3: # %bb12
@@ -145,12 +136,7 @@ define dso_local void @P10_Spill_CR_LT() local_unnamed_addr {
 ; CHECK-BE-NEXT:  .LBB0_8: # %bb22
 ; CHECK-BE-NEXT:  .LBB0_9: # %bb35
 ; CHECK-BE-NEXT:  .LBB0_10: # %bb27
-; CHECK-BE-NEXT:    lwz r4, 132(r1)
-; CHECK-BE-NEXT:    # implicit-def: $cr5lt
-; CHECK-BE-NEXT:    mfocrf r3, 4
-; CHECK-BE-NEXT:    rlwimi r3, r4, 12, 20, 20
-; CHECK-BE-NEXT:    mtocrf 4, r3
-; CHECK-BE-NEXT:    bc 4, 4*cr5+lt, .LBB0_12
+; CHECK-BE-NEXT:    bc 4, 4*cr3+lt, .LBB0_12
 ; CHECK-BE-NEXT:  # %bb.11: # %bb28
 ; CHECK-BE-NEXT:  .LBB0_12: # %bb29
 ; CHECK-BE-NEXT:  .LBB0_13: # %bb3

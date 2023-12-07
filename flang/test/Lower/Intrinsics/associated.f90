@@ -48,18 +48,18 @@ subroutine associated_test(scalar, array)
     print *, associated(p, optionales_ziel)
   ! CHECK:  %[[VAL_2:.*]] = arith.constant 10 : index
   ! CHECK:  %[[VAL_3:.*]] = fir.is_present %[[VAL_1]] : (!fir.ref<!fir.array<10xf32>>) -> i1
-  ! CHECK:  %[[VAL_4:.*]] = fir.if %[[VAL_3]] -> (!fir.box<none>) {
+  ! CHECK:  %[[VAL_4:.*]] = fir.if %[[VAL_3]] -> (!fir.box<!fir.array<10xf32>>) {
   ! CHECK:    %[[VAL_5:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
   ! CHECK:    %[[VAL_6:.*]] = fir.embox %[[VAL_1]](%[[VAL_5]]) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>
-  ! CHECK:    %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.array<10xf32>>) -> !fir.box<none>
-  ! CHECK:    fir.result %[[VAL_7]] : !fir.box<none>
+  ! CHECK:    fir.result %[[VAL_6]] : !fir.box<!fir.array<10xf32>>
   ! CHECK:  } else {
-  ! CHECK:    %[[VAL_8:.*]] = fir.absent !fir.box<none>
-  ! CHECK:    fir.result %[[VAL_8]] : !fir.box<none>
+  ! CHECK:    %[[VAL_8:.*]] = fir.absent !fir.box<!fir.array<10xf32>>
+  ! CHECK:    fir.result %[[VAL_8]] : !fir.box<!fir.array<10xf32>>
   ! CHECK:  }
   ! CHECK:  %[[VAL_13:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK:  %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.box<none>
-  ! CHECK:  fir.call @_FortranAPointerIsAssociatedWith(%[[VAL_14]], %[[VAL_4]]) {{.*}}: (!fir.box<none>, !fir.box<none>) -> i1
+  ! CHECK:  %[[VAL_15:.*]] = fir.convert %[[VAL_4]] : (!fir.box<!fir.array<10xf32>>) -> !fir.box<none>
+  ! CHECK:  fir.call @_FortranAPointerIsAssociatedWith(%[[VAL_14]], %[[VAL_15]]) {{.*}}: (!fir.box<none>, !fir.box<none>) -> i1
   end subroutine
   
   ! CHECK-LABEL: func @_QPtest_optional_target_2(
@@ -70,16 +70,16 @@ subroutine associated_test(scalar, array)
     real, optional, target :: optionales_ziel(:)
     print *, associated(p, optionales_ziel)
   ! CHECK:  %[[VAL_7:.*]] = fir.is_present %[[VAL_1]] : (!fir.box<!fir.array<?xf32>>) -> i1
-  ! CHECK:  %[[VAL_8:.*]] = fir.if %[[VAL_7]] -> (!fir.box<none>) {
-  ! CHECK:    %[[VAL_9:.*]] = fir.convert %[[VAL_1]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
-  ! CHECK:    fir.result %[[VAL_9]] : !fir.box<none>
+  ! CHECK:  %[[VAL_8:.*]] = fir.if %[[VAL_7]] -> (!fir.box<!fir.array<?xf32>>) {
+  ! CHECK:    fir.result %[[VAL_1]] : !fir.box<!fir.array<?xf32>>
   ! CHECK:  } else {
-  ! CHECK:    %[[VAL_10:.*]] = fir.absent !fir.box<none>
-  ! CHECK:    fir.result %[[VAL_10]] : !fir.box<none>
+  ! CHECK:    %[[VAL_10:.*]] = fir.absent !fir.box<!fir.array<?xf32>>
+  ! CHECK:    fir.result %[[VAL_10]] : !fir.box<!fir.array<?xf32>>
   ! CHECK:  }
   ! CHECK:  %[[VAL_10:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK:  %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.box<none>
-  ! CHECK:  fir.call @_FortranAPointerIsAssociatedWith(%[[VAL_11]], %[[VAL_8]]) {{.*}}: (!fir.box<none>, !fir.box<none>) -> i1
+  ! CHECK:  %[[VAL_12:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+  ! CHECK:  fir.call @_FortranAPointerIsAssociatedWith(%[[VAL_11]], %[[VAL_12]]) {{.*}}: (!fir.box<none>, !fir.box<none>) -> i1
   end subroutine
   
   ! CHECK-LABEL: func @_QPtest_optional_target_3(
@@ -90,17 +90,17 @@ subroutine associated_test(scalar, array)
     real, optional, pointer :: optionales_ziel(:)
     print *, associated(p, optionales_ziel)
   ! CHECK:  %[[VAL_8:.*]] = fir.is_present %[[VAL_1]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> i1
-  ! CHECK:  %[[VAL_9:.*]] = fir.if %[[VAL_8]] -> (!fir.box<none>) {
+  ! CHECK:  %[[VAL_9:.*]] = fir.if %[[VAL_8]] -> (!fir.box<!fir.ptr<!fir.array<?xf32>>>) {
   ! CHECK:    %[[VAL_10:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-  ! CHECK:    %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.box<none>
-  ! CHECK:    fir.result %[[VAL_11]] : !fir.box<none>
+  ! CHECK:    fir.result %[[VAL_10]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>
   ! CHECK:  } else {
-  ! CHECK:    %[[VAL_12:.*]] = fir.absent !fir.box<none>
-  ! CHECK:    fir.result %[[VAL_12]] : !fir.box<none>
+  ! CHECK:    %[[VAL_12:.*]] = fir.absent !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  ! CHECK:    fir.result %[[VAL_12]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>
   ! CHECK:  }
   ! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK:  %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.box<none>
-  ! CHECK:  fir.call @_FortranAPointerIsAssociatedWith(%[[VAL_12]], %[[VAL_9]]) {{.*}}: (!fir.box<none>, !fir.box<none>) -> i1
+  ! CHECK:  %[[VAL_13:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.box<none>
+  ! CHECK:  fir.call @_FortranAPointerIsAssociatedWith(%[[VAL_12]], %[[VAL_13]]) {{.*}}: (!fir.box<none>, !fir.box<none>) -> i1
   end subroutine
   
   ! CHECK-LABEL: func @_QPtest_optional_target_4(
@@ -111,17 +111,17 @@ subroutine associated_test(scalar, array)
     real, optional, allocatable, target :: optionales_ziel(:)
     print *, associated(p, optionales_ziel)
   ! CHECK:  %[[VAL_8:.*]] = fir.is_present %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> i1
-  ! CHECK:  %[[VAL_9:.*]] = fir.if %[[VAL_8]] -> (!fir.box<none>) {
+  ! CHECK:  %[[VAL_9:.*]] = fir.if %[[VAL_8]] -> (!fir.box<!fir.heap<!fir.array<?xf32>>>) {
   ! CHECK:    %[[VAL_10:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  ! CHECK:    %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.box<none>
-  ! CHECK:    fir.result %[[VAL_11]] : !fir.box<none>
+  ! CHECK:    fir.result %[[VAL_10]] : !fir.box<!fir.heap<!fir.array<?xf32>>>
   ! CHECK:  } else {
-  ! CHECK:    %[[VAL_12:.*]] = fir.absent !fir.box<none>
-  ! CHECK:    fir.result %[[VAL_12]] : !fir.box<none>
+  ! CHECK:    %[[VAL_12:.*]] = fir.absent !fir.box<!fir.heap<!fir.array<?xf32>>>
+  ! CHECK:    fir.result %[[VAL_12]] : !fir.box<!fir.heap<!fir.array<?xf32>>>
   ! CHECK:  }
   ! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK:  %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.box<none>
-  ! CHECK:  fir.call @_FortranAPointerIsAssociatedWith(%[[VAL_12]], %[[VAL_9]]) {{.*}}: (!fir.box<none>, !fir.box<none>) -> i1
+  ! CHECK:  %[[VAL_13:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.box<none>
+  ! CHECK:  fir.call @_FortranAPointerIsAssociatedWith(%[[VAL_12]], %[[VAL_13]]) {{.*}}: (!fir.box<none>, !fir.box<none>) -> i1
   end subroutine
   
   ! CHECK-LABEL: func @_QPtest_pointer_target(

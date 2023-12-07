@@ -18,8 +18,8 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/TargetParser/Host.h"
 
 #include "ASTSrcLocProcessor.h"
 
@@ -116,7 +116,7 @@ int main(int argc, const char **argv) {
       "ast-api-dump-tool", OFS);
 
   std::unique_ptr<clang::driver::Compilation> Comp(
-      Driver->BuildCompilation(llvm::makeArrayRef(Argv)));
+      Driver->BuildCompilation(llvm::ArrayRef(Argv)));
   if (!Comp)
     return 1;
 

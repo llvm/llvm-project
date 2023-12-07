@@ -1,4 +1,5 @@
 # REQUIRES: curl, httplib, thread_support
+# UNSUPPORTED: system-windows
 
 #int main () {
 #  int x = 1;

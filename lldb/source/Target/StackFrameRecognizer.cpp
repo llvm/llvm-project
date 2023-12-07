@@ -77,7 +77,7 @@ void StackFrameRecognizerManager::ForEach(
         symbol_name = entry.symbol_regexp->GetText().str();
 
       callback(entry.recognizer_id, entry.recognizer->GetName(), module_name,
-               llvm::makeArrayRef(ConstString(symbol_name)), true);
+               llvm::ArrayRef(ConstString(symbol_name)), true);
 
     } else {
       callback(entry.recognizer_id, entry.recognizer->GetName(),

@@ -95,7 +95,7 @@ public:
   }
   bool VisitStmt(const Stmt *S) {
     for (const Stmt *Child : S->children())
-      if (Visit(Child))
+      if (Child && Visit(Child))
         return true;
     return false;
   }
@@ -103,9 +103,7 @@ public:
 
 } // namespace
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 void SuspiciousReallocUsageCheck::registerMatchers(MatchFinder *Finder) {
   // void *realloc(void *ptr, size_t size);
@@ -158,6 +156,4 @@ void SuspiciousReallocUsageCheck::check(
       << PtrResultExpr->getSourceRange();
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

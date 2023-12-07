@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-version=51 -DOMP51 -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -DOMP51 -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-version=51 -DOMP51 -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -DOMP51 -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
 
 void foo();
 

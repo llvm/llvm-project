@@ -22,7 +22,7 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ;
 ; RV64I-LABEL: func32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    mulw a1, a1, a2
+; RV64I-NEXT:    mul a1, a1, a2
 ; RV64I-NEXT:    addw a1, a0, a1
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    sltu a0, a1, a0
@@ -144,7 +144,7 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ; RV64IZbb-LABEL: func16:
 ; RV64IZbb:       # %bb.0:
 ; RV64IZbb-NEXT:    zext.h a0, a0
-; RV64IZbb-NEXT:    mulw a1, a1, a2
+; RV64IZbb-NEXT:    mul a1, a1, a2
 ; RV64IZbb-NEXT:    zext.h a1, a1
 ; RV64IZbb-NEXT:    add a0, a0, a1
 ; RV64IZbb-NEXT:    lui a1, 16
@@ -173,7 +173,7 @@ define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 ; RV64I-LABEL: func8:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a0, a0, 255
-; RV64I-NEXT:    mulw a1, a1, a2
+; RV64I-NEXT:    mul a1, a1, a2
 ; RV64I-NEXT:    andi a1, a1, 255
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    li a1, 255
@@ -196,7 +196,7 @@ define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 ; RV64IZbb-LABEL: func8:
 ; RV64IZbb:       # %bb.0:
 ; RV64IZbb-NEXT:    andi a0, a0, 255
-; RV64IZbb-NEXT:    mulw a1, a1, a2
+; RV64IZbb-NEXT:    mul a1, a1, a2
 ; RV64IZbb-NEXT:    andi a1, a1, 255
 ; RV64IZbb-NEXT:    add a0, a0, a1
 ; RV64IZbb-NEXT:    li a1, 255
@@ -224,7 +224,7 @@ define i4 @func4(i4 %x, i4 %y, i4 %z) nounwind {
 ; RV64I-LABEL: func4:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a0, a0, 15
-; RV64I-NEXT:    mulw a1, a1, a2
+; RV64I-NEXT:    mul a1, a1, a2
 ; RV64I-NEXT:    andi a1, a1, 15
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    li a1, 15
@@ -247,7 +247,7 @@ define i4 @func4(i4 %x, i4 %y, i4 %z) nounwind {
 ; RV64IZbb-LABEL: func4:
 ; RV64IZbb:       # %bb.0:
 ; RV64IZbb-NEXT:    andi a0, a0, 15
-; RV64IZbb-NEXT:    mulw a1, a1, a2
+; RV64IZbb-NEXT:    mul a1, a1, a2
 ; RV64IZbb-NEXT:    andi a1, a1, 15
 ; RV64IZbb-NEXT:    add a0, a0, a1
 ; RV64IZbb-NEXT:    li a1, 15

@@ -16,9 +16,11 @@
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Errc.h"
 
 #include <cstdint>
 
+#include <optional>
 #include <string>
 
 namespace lldb_private {
@@ -29,6 +31,23 @@ struct SharedCacheImageInfo {
   UUID uuid;
   lldb::DataBufferSP data_sp;
 };
+
+namespace {
+struct HostInfoError : public llvm::ErrorInfo<HostInfoError> {
+  static char ID;
+  const std::string message_;
+
+  HostInfoError(const std::string message) : message_(std::move(message)) {}
+
+  void log(llvm::raw_ostream &OS) const override { OS << "HostInfoError"; }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+char HostInfoError::ID = 0;
+} // namespace
 
 class HostInfoBase {
 private:
@@ -64,7 +83,8 @@ public:
   static const ArchSpec &
   GetArchitecture(ArchitectureKind arch_kind = eArchKindDefault);
 
-  static llvm::Optional<ArchitectureKind> ParseArchitectureKind(llvm::StringRef kind);
+  static std::optional<ArchitectureKind>
+  ParseArchitectureKind(llvm::StringRef kind);
 
   /// Returns the directory containing the lldb shared library. Only the
   /// directory member of the FileSpec is filled in.
@@ -106,10 +126,20 @@ public:
 
   static FileSpec GetXcodeContentsDirectory() { return {}; }
   static FileSpec GetXcodeDeveloperDirectory() { return {}; }
-  
-  /// Return the directory containing a specific Xcode SDK.
-  static llvm::Expected<llvm::StringRef> GetXcodeSDKPath(XcodeSDK sdk) {
-    return "";
+
+  struct SDKOptions {
+    std::optional<XcodeSDK> XcodeSDKSelection;
+  };
+
+  /// Return the directory containing something like a SDK (reused for Swift).
+  static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options) {
+    return llvm::make_error<HostInfoError>("cannot determine SDK root");
+  }
+
+  /// Return the path to a specific tool in the specified Xcode SDK.
+  static llvm::Expected<llvm::StringRef> FindSDKTool(XcodeSDK sdk,
+                                                     llvm::StringRef tool) {
+    return llvm::errorCodeToError(llvm::errc::no_such_file_or_directory);
   }
 
   /// Return information about module \p image_name if it is loaded in
@@ -118,6 +148,14 @@ public:
   GetSharedCacheImageInfo(llvm::StringRef image_name) {
     return {};
   }
+
+  /// Returns the distribution id of the host
+  ///
+  /// This will be something like "ubuntu", "fedora", etc. on Linux.
+  ///
+  /// \return Returns either std::nullopt or a reference to a const std::string
+  /// containing the distribution id
+  static llvm::StringRef GetDistributionId() { return llvm::StringRef(); }
 
 protected:
   static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);

@@ -138,7 +138,7 @@ INSTANTIATE_TEST_SUITE_P(
         StackStorePackTest::ParamType(StackStore::Compression::Delta,
                                       FIRST_32_SECOND_64(2, 6)),
         StackStorePackTest::ParamType(StackStore::Compression::LZW,
-                                      FIRST_32_SECOND_64(60, 130)),
+                                      FIRST_32_SECOND_64(60, 125)),
     }));
 
 TEST_P(StackStorePackTest, PackUnpack) {

@@ -29,9 +29,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 
@@ -366,9 +364,7 @@ static void addFunctionCallArgs(ArrayRef<BindArgument> Args,
                                 llvm::raw_ostream &Stream) {
   StringRef Delimiter = "";
 
-  for (int I = 0, Size = Args.size(); I < Size; ++I) {
-    const BindArgument &B = Args[I];
-
+  for (const BindArgument &B : Args) {
     Stream << Delimiter;
 
     if (B.Kind == BK_Placeholder) {
@@ -627,7 +623,7 @@ static void emitCaptureList(const LambdaProperties &LP,
 
 static ArrayRef<BindArgument>
 getForwardedArgumentList(const LambdaProperties &P) {
-  ArrayRef<BindArgument> Args = makeArrayRef(P.BindArguments);
+  ArrayRef<BindArgument> Args = ArrayRef(P.BindArguments);
   if (P.Callable.Type != CT_MemberFunction)
     return Args;
 
@@ -672,7 +668,7 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
   emitCaptureList(LP, Result, Stream);
   Stream << "]";
 
-  ArrayRef<BindArgument> FunctionCallArgs = makeArrayRef(LP.BindArguments);
+  ArrayRef<BindArgument> FunctionCallArgs = ArrayRef(LP.BindArguments);
 
   addPlaceholderArgs(LP, Stream, PermissiveParameterList);
 
@@ -717,6 +713,4 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
                                        Stream.str());
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

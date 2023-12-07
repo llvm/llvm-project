@@ -107,7 +107,8 @@ void __llvm_profile_get_padding_sizes_for_counters(
     uint64_t *PaddingBytesAfterNames) {
   if (!needsCounterPadding()) {
     *PaddingBytesBeforeCounters = 0;
-    *PaddingBytesAfterCounters = 0;
+    *PaddingBytesAfterCounters =
+        __llvm_profile_get_num_padding_bytes(CountersSize);
     *PaddingBytesAfterNames = __llvm_profile_get_num_padding_bytes(NamesSize);
     return;
   }

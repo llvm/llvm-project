@@ -287,13 +287,13 @@ define dso_local void @invalid_shift(i16 %x, ptr %p) {
 }
 
 define dso_local void @missing_store(i32 %x, ptr %p) {
+; The missing store of shift 16 means we can't merge to 32 bit store,
+; but we can still partially merge to a 16 bit one.
 ; CHECK-LABEL: missing_store:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    lsr w8, w0, #8
-; CHECK-NEXT:    lsr w9, w0, #24
-; CHECK-NEXT:    strb w0, [x1]
-; CHECK-NEXT:    strb w8, [x1, #1]
-; CHECK-NEXT:    strb w9, [x1, #3]
+; CHECK-NEXT:    lsr w8, w0, #24
+; CHECK-NEXT:    strh w0, [x1]
+; CHECK-NEXT:    strb w8, [x1, #3]
 ; CHECK-NEXT:    ret
   %t1 = trunc i32 %x to i8
   %sh1 = lshr i32 %x, 8
@@ -337,5 +337,42 @@ define dso_local void @second_store_is_volatile(i16 %x, ptr %p) {
   store volatile i8 %t1, ptr %p, align 1
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
   store i8 %t2, ptr %p1, align 1
+  ret void
+}
+
+declare void @use_ptr(ptr)
+
+define dso_local void @trunc_from_larger_src_val(i64 %hold.4.lcssa, ptr %check1792) {
+  ; Here we can merge these i8 stores into a single i32 store, but first we need
+  ; to truncate the i64 value to i32.
+; CHECK-LABEL: trunc_from_larger_src_val:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    str w0, [sp, #12]
+; CHECK-NEXT:    add x0, sp, #12
+; CHECK-NEXT:    bl _use_ptr
+; CHECK-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %hbuf = alloca [4 x i8], align 1
+  %arrayidx177 = getelementptr inbounds [4 x i8], ptr %hbuf, i64 0, i64 1
+  %arrayidx234 = getelementptr inbounds [4 x i8], ptr %hbuf, i64 0, i64 2
+  %arrayidx237 = getelementptr inbounds [4 x i8], ptr %hbuf, i64 0, i64 3
+  %conv227 = trunc i64 %hold.4.lcssa to i8
+  store i8 %conv227, ptr %hbuf, align 1
+  %shr229 = lshr i64 %hold.4.lcssa, 8
+  %conv230 = trunc i64 %shr229 to i8
+  store i8 %conv230, ptr %arrayidx177, align 1
+  %shr232 = lshr i64 %hold.4.lcssa, 16
+  %conv233 = trunc i64 %shr232 to i8
+  store i8 %conv233, ptr %arrayidx234, align 1
+  %shr235 = lshr i64 %hold.4.lcssa, 24
+  %conv236 = trunc i64 %shr235 to i8
+  store i8 %conv236, ptr %arrayidx237, align 1
+  call void @use_ptr(ptr noundef nonnull %hbuf)
   ret void
 }

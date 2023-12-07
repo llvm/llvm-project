@@ -34,71 +34,75 @@ attributes #0 = { nounwind readnone willreturn }
 
 define void @T() {
 ; CHECK-LABEL: @T(
-; CHECK-NEXT:    [[SLOT:%.*]] = alloca double
-; CHECK-NEXT:    [[SLOTF:%.*]] = alloca float
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[SLOT]]
-; CHECK-NEXT:    store double 0x3FF921FB54442D18, ptr [[SLOT]]
-; CHECK-NEXT:    store double 0x3FE4978FA3269EE1, ptr [[SLOT]]
-; CHECK-NEXT:    store double 0x402422A497D6185E, ptr [[SLOT]]
-; CHECK-NEXT:    store double 0x403415E5BF6FB106, ptr [[SLOT]]
-; CHECK-NEXT:    store double 8.000000e+00, ptr [[SLOT]]
-; CHECK-NEXT:    store double 0x3FF193EA7AAD030{{[AB]}}, ptr [[SLOT]]
-; CHECK-NEXT:    store double 0x3FDE8927964FD5FD, ptr [[SLOT]]
-; CHECK-NEXT:    store double 1.000000e+00, ptr [[SLOT]]
-; CHECK-NEXT:    store double 0x40240926E70949AE, ptr [[SLOT]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[SLOTF]]
-; CHECK-NEXT:    store float 0x3FF921FB60000000, ptr [[SLOTF]]
-; CHECK-NEXT:    store float 0x3FE4978FA0000000, ptr [[SLOTF]]
-; CHECK-NEXT:    store float 0x402422A4A0000000, ptr [[SLOTF]]
-; CHECK-NEXT:    store float 0x403415E5C0000000, ptr [[SLOTF]]
-; CHECK-NEXT:    store float 8.000000e+00, ptr [[SLOTF]]
-; CHECK-NEXT:    store float 0x3FF193EA80000000, ptr [[SLOTF]]
-; CHECK-NEXT:    store float 0x3FDE8927A0000000, ptr [[SLOTF]]
-; CHECK-NEXT:    store float 8.100000e+01, ptr [[SLOTF]]
-; CHECK-NEXT:    store float 0x40240926E0000000, ptr [[SLOTF]]
+; CHECK-NEXT:    [[SLOT:%.*]] = alloca double, align 8
+; CHECK-NEXT:    [[SLOTF:%.*]] = alloca float, align 4
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double 0x3FF921FB54442D18, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double 0x3FE4978FA3269EE1, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double 0x402422A497D6185E, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double 0x403415E5BF6FB106, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double 8.000000e+00, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double 0x3FF193EA7AAD030{{[AB]}}, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double 0x3FDE8927964FD5FD, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double 1.000000e+00, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store double 0x40240926E70949AE, ptr [[SLOT]], align 8
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float 0x3FF921FB60000000, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float 0x3FE4978FA0000000, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float 0x402422A4A0000000, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float 0x403415E5C0000000, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float 8.000000e+00, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float 0x3FF193EA80000000, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float 0x3FDE8927A0000000, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float 8.100000e+01, ptr [[SLOTF]], align 4
+; CHECK-NEXT:    store float 0x40240926E0000000, ptr [[SLOTF]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; MUSL-LABEL: @T(
-; MUSL-NEXT:    [[SLOT:%.*]] = alloca double
-; MUSL-NEXT:    [[SLOTF:%.*]] = alloca float
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
-; MUSL-NEXT:    call
-; MUSL-NEXT:    store
+; MUSL-NEXT:    [[SLOT:%.*]] = alloca double, align 8
+; MUSL-NEXT:    [[SLOTF:%.*]] = alloca float, align 4
+; MUSL-NEXT:    [[ACOS:%.*]] = call fast double @__acos_finite(double 1.000000e+00)
+; MUSL-NEXT:    store double [[ACOS]], ptr [[SLOT]], align 8
+; MUSL-NEXT:    [[ASIN:%.*]] = call fast double @__asin_finite(double 1.000000e+00)
+; MUSL-NEXT:    store double [[ASIN]], ptr [[SLOT]], align 8
+; MUSL-NEXT:    [[ATAN2:%.*]] = call fast double @__atan2_finite(double 3.000000e+00, double 4.000000e+00)
+; MUSL-NEXT:    store double [[ATAN2]], ptr [[SLOT]], align 8
+; MUSL-NEXT:    [[COSH:%.*]] = call fast double @__cosh_finite(double 3.000000e+00)
+; MUSL-NEXT:    store double [[COSH]], ptr [[SLOT]], align 8
+; MUSL-NEXT:    [[EXP:%.*]] = call fast double @__exp_finite(double 3.000000e+00)
+; MUSL-NEXT:    store double [[EXP]], ptr [[SLOT]], align 8
+; MUSL-NEXT:    [[EXP2:%.*]] = call fast double @__exp2_finite(double 3.000000e+00)
+; MUSL-NEXT:    store double [[EXP2]], ptr [[SLOT]], align 8
+; MUSL-NEXT:    [[LOG:%.*]] = call fast double @__log_finite(double 3.000000e+00)
+; MUSL-NEXT:    store double [[LOG]], ptr [[SLOT]], align 8
+; MUSL-NEXT:    [[LOG10:%.*]] = call fast double @__log10_finite(double 3.000000e+00)
+; MUSL-NEXT:    store double [[LOG10]], ptr [[SLOT]], align 8
+; MUSL-NEXT:    [[POW:%.*]] = call fast double @__pow_finite(double 1.000000e+00, double 4.000000e+00)
+; MUSL-NEXT:    store double [[POW]], ptr [[SLOT]], align 8
+; MUSL-NEXT:    [[SINH:%.*]] = call fast double @__sinh_finite(double 3.000000e+00)
+; MUSL-NEXT:    store double [[SINH]], ptr [[SLOT]], align 8
+; MUSL-NEXT:    [[ACOSF:%.*]] = call fast float @__acosf_finite(float 1.000000e+00)
+; MUSL-NEXT:    store float [[ACOSF]], ptr [[SLOTF]], align 4
+; MUSL-NEXT:    [[ASINF:%.*]] = call fast float @__asinf_finite(float 1.000000e+00)
+; MUSL-NEXT:    store float [[ASINF]], ptr [[SLOTF]], align 4
+; MUSL-NEXT:    [[ATAN2F:%.*]] = call fast float @__atan2f_finite(float 3.000000e+00, float 4.000000e+00)
+; MUSL-NEXT:    store float [[ATAN2F]], ptr [[SLOTF]], align 4
+; MUSL-NEXT:    [[COSHF:%.*]] = call fast float @__coshf_finite(float 3.000000e+00)
+; MUSL-NEXT:    store float [[COSHF]], ptr [[SLOTF]], align 4
+; MUSL-NEXT:    [[EXPF:%.*]] = call fast float @__expf_finite(float 3.000000e+00)
+; MUSL-NEXT:    store float [[EXPF]], ptr [[SLOTF]], align 4
+; MUSL-NEXT:    [[EXP2F:%.*]] = call fast float @__exp2f_finite(float 3.000000e+00)
+; MUSL-NEXT:    store float [[EXP2F]], ptr [[SLOTF]], align 4
+; MUSL-NEXT:    [[LOGF:%.*]] = call fast float @__logf_finite(float 3.000000e+00)
+; MUSL-NEXT:    store float [[LOGF]], ptr [[SLOTF]], align 4
+; MUSL-NEXT:    [[LOG10F:%.*]] = call fast float @__log10f_finite(float 3.000000e+00)
+; MUSL-NEXT:    store float [[LOG10F]], ptr [[SLOTF]], align 4
+; MUSL-NEXT:    [[POWF:%.*]] = call fast float @__powf_finite(float 3.000000e+00, float 4.000000e+00)
+; MUSL-NEXT:    store float [[POWF]], ptr [[SLOTF]], align 4
+; MUSL-NEXT:    [[SINHF:%.*]] = call fast float @__sinhf_finite(float 3.000000e+00)
+; MUSL-NEXT:    store float [[SINHF]], ptr [[SLOTF]], align 4
+; MUSL-NEXT:    ret void
+;
 
   %slot = alloca double
   %slotf = alloca float

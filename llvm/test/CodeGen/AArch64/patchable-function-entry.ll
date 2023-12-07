@@ -71,10 +71,10 @@ define void @f5() "patchable-function-entry"="5" comdat {
 ;; "patchable-function-prefix" emits data before the function entry label.
 define void @f3_2() "patchable-function-entry"="1" "patchable-function-prefix"="2" {
 ; CHECK-LABEL: .type f3_2,@function
-; CHECK-NEXT: .Ltmp1: // @f3_2
+; CHECK-NEXT: .Ltmp1:
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  nop
-; CHECK-NEXT: f3_2:
+; CHECK-NEXT: f3_2:  // @f3_2
 ; CHECK:      // %bb.0:
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  ret
@@ -90,10 +90,10 @@ define void @f3_2() "patchable-function-entry"="1" "patchable-function-prefix"="
 ;; When prefix data is used, arbitrarily place NOPs after prefix data.
 define void @prefix() "patchable-function-entry"="0" "patchable-function-prefix"="1" prefix i32 1 {
 ; CHECK-LABEL: .type prefix,@function
-; CHECK-NEXT: .word 1 // @prefix
+; CHECK-NEXT: .word 1  // 0x1
 ; CHECK:      .Ltmp2:
 ; CHECK:       nop
-; CHECK-NEXT: prefix:
+; CHECK-NEXT: prefix:  // @prefix
 ;; Emit a __patchable_function_entries entry even if "patchable-function-entry" is 0.
 ; CHECK:      .section __patchable_function_entries,"awo",@progbits,prefix{{$}}
 ; CHECK:      .p2align 3

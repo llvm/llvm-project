@@ -12,8 +12,8 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/LLDBAssert.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -83,8 +83,7 @@ uint64_t VariantNposValue(uint64_t index_byte_size) {
 
 LibcxxVariantIndexValidity
 LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
-  ValueObjectSP index_sp(
-      impl_sp->GetChildMemberWithName(ConstString("__index"), true));
+  ValueObjectSP index_sp(impl_sp->GetChildMemberWithName("__index"));
 
   if (!index_sp)
     return LibcxxVariantIndexValidity::Invalid;
@@ -98,7 +97,7 @@ LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
   // the byte size.
   CompilerType index_type = index_sp->GetCompilerType();
 
-  llvm::Optional<uint64_t> index_type_bytes = index_type.GetByteSize(nullptr);
+  std::optional<uint64_t> index_type_bytes = index_type.GetByteSize(nullptr);
   if (!index_type_bytes)
     return LibcxxVariantIndexValidity::Invalid;
 
@@ -111,9 +110,8 @@ LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
   return LibcxxVariantIndexValidity::Valid;
 }
 
-llvm::Optional<uint64_t> LibcxxVariantIndexValue(ValueObjectSP &impl_sp) {
-  ValueObjectSP index_sp(
-      impl_sp->GetChildMemberWithName(ConstString("__index"), true));
+std::optional<uint64_t> LibcxxVariantIndexValue(ValueObjectSP &impl_sp) {
+  ValueObjectSP index_sp(impl_sp->GetChildMemberWithName("__index"));
 
   if (!index_sp)
     return {};
@@ -122,16 +120,14 @@ llvm::Optional<uint64_t> LibcxxVariantIndexValue(ValueObjectSP &impl_sp) {
 }
 
 ValueObjectSP LibcxxVariantGetNthHead(ValueObjectSP &impl_sp, uint64_t index) {
-  ValueObjectSP data_sp(
-      impl_sp->GetChildMemberWithName(ConstString("__data"), true));
+  ValueObjectSP data_sp(impl_sp->GetChildMemberWithName("__data"));
 
   if (!data_sp)
     return ValueObjectSP{};
 
   ValueObjectSP current_level = data_sp;
   for (uint64_t n = index; n != 0; --n) {
-    ValueObjectSP tail_sp(
-        current_level->GetChildMemberWithName(ConstString("__tail"), true));
+    ValueObjectSP tail_sp(current_level->GetChildMemberWithName("__tail"));
 
     if (!tail_sp)
       return ValueObjectSP{};
@@ -139,7 +135,7 @@ ValueObjectSP LibcxxVariantGetNthHead(ValueObjectSP &impl_sp, uint64_t index) {
     current_level = tail_sp;
   }
 
-  return current_level->GetChildMemberWithName(ConstString("__head"), true);
+  return current_level->GetChildMemberWithName("__head");
 }
 } // namespace
 
@@ -268,8 +264,7 @@ ValueObjectSP VariantFrontEnd::GetChildAtIndex(size_t idx) {
   if (!template_type)
     return {};
 
-  ValueObjectSP head_value(
-      nth_head->GetChildMemberWithName(ConstString("__value"), true));
+  ValueObjectSP head_value(nth_head->GetChildMemberWithName("__value"));
 
   if (!head_value)
     return {};

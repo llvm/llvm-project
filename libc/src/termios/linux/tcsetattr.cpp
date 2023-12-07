@@ -11,9 +11,9 @@
 
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
+#include "src/errno/libc_errno.h"
 
 #include <asm/ioctls.h> // Safe to include without the risk of name pollution.
-#include <errno.h>
 #include <sys/syscall.h> // For syscall numbers
 #include <termios.h>
 
@@ -35,7 +35,7 @@ LLVM_LIBC_FUNCTION(int, tcsetattr,
     cmd = TCSETSF;
     break;
   default:
-    errno = EINVAL;
+    libc_errno = EINVAL;
     return -1;
   }
 
@@ -51,9 +51,9 @@ LLVM_LIBC_FUNCTION(int, tcsetattr,
       kt.c_cc[i] = 0;
   }
 
-  long ret = __llvm_libc::syscall_impl(SYS_ioctl, fd, cmd, &kt);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_ioctl, fd, cmd, &kt);
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   return 0;

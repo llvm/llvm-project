@@ -4,7 +4,7 @@
 ; SCEV caches. Second SCEV verification checks if the caches are in valid state.
 
 ; Check that the second SCEV verification doesn't fail.
-define void @test(i32* %arg, i32* %arg1, i1 %arg2, i1 %arg3) {
+define void @test(ptr %arg, ptr %arg1, i1 %arg2, i1 %arg3) {
 bb:
   br label %bb6
 
@@ -15,8 +15,8 @@ bb6:
   br label %bb7
 
 bb7:
-  %tmp = load i32, i32* %arg
-  %tmp8 = load i32, i32* %arg1
+  %tmp = load i32, ptr %arg
+  %tmp8 = load i32, ptr %arg1
   %tmp9 = add i32 %tmp8, %tmp
   %tmp10 = icmp sgt i32 %tmp9, %tmp
   br i1 %tmp10, label %bb11, label %bb17

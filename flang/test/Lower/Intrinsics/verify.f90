@@ -25,8 +25,8 @@ integer function verify_test(s1, s2)
 ! CHECK: %[[VAL_20:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: %[[VAL_21:.*]] = fir.box_addr %[[VAL_20]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK: %[[VAL_22:.*]] = fir.load %[[VAL_21]] : !fir.heap<i32>
-! CHECK: fir.store %[[VAL_22]] to %[[VAL_5]] : !fir.ref<i32>
 ! CHECK: fir.freemem %[[VAL_21]]
+! CHECK: fir.store %[[VAL_22]] to %[[VAL_5]] : !fir.ref<i32>
 ! CHECK: %[[VAL_23:.*]] = fir.load %[[VAL_5]] : !fir.ref<i32>
 ! CHECK: return %[[VAL_23]] : i32
   character(*) :: s1, s2

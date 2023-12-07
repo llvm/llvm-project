@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++11, c++14
 // UNSUPPORTED: no-threads
 
-// UNSUPPORTED: !libcpp-has-debug-mode, c++03
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
 
 // test multithreaded container debugging
 
@@ -32,14 +32,14 @@ Container makeContainer(int size) {
 
 template <typename Container>
 void ThreadUseIter() {
-  const size_t maxRounds = 7;
+  const std::size_t maxRounds = 7;
   struct TestRunner{
     void operator()() {
-      for (size_t count = 0; count < maxRounds; count++) {
-        const size_t containerCount = 11;
+      for (std::size_t count = 0; count < maxRounds; count++) {
+        const std::size_t containerCount = 11;
         std::vector<Container> containers;
         std::vector<typename Container::iterator> iterators;
-        for (size_t containerIndex = 0; containerIndex < containerCount; containerIndex++) {
+        for (std::size_t containerIndex = 0; containerIndex < containerCount; containerIndex++) {
           containers.push_back(makeContainer<Container>(3));
           Container& c = containers.back();
           iterators.push_back(c.begin());
@@ -50,12 +50,12 @@ void ThreadUseIter() {
   };
 
   TestRunner r;
-  const size_t threadCount = 4;
+  const std::size_t threadCount = 4;
   std::vector<std::thread> threads;
-  for (size_t count = 0; count < threadCount; count++)
+  for (std::size_t count = 0; count < threadCount; count++)
     threads.emplace_back(r);
   r();
-  for (size_t count = 0; count < threadCount; count++)
+  for (std::size_t count = 0; count < threadCount; count++)
     threads[count].join();
 }
 

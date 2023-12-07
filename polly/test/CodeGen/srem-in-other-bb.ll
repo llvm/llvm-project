@@ -8,13 +8,13 @@
 ;
 ; CHECK:      polly.stmt.bb2:
 ; CHECK-NEXT:   %p_tmp = srem i64 %n, 42
-; CHECK-NEXT:   store i64 %p_tmp, i64* %tmp.s2a
+; CHECK-NEXT:   store i64 %p_tmp, ptr %tmp.s2a
 ;
 ; CHECK:      polly.stmt.bb3:
-; CHECK:        %tmp.s2a.reload = load i64, i64* %tmp.s2a
-; CHECK:        %p_tmp3 = getelementptr inbounds float, float* %A, i64 %tmp.s2a.reload
+; CHECK:        %tmp.s2a.reload = load i64, ptr %tmp.s2a
+; CHECK:        %p_tmp3 = getelementptr inbounds float, ptr %A, i64 %tmp.s2a.reload
 
-define void @pos(float* %A, i64 %n) {
+define void @pos(ptr %A, i64 %n) {
 bb:
   br label %bb1
 
@@ -28,10 +28,10 @@ bb2:                                              ; preds = %bb1
   br label %bb3
 
 bb3:
-  %tmp3 = getelementptr inbounds float, float* %A, i64 %tmp
-  %tmp4 = load float, float* %tmp3, align 4
+  %tmp3 = getelementptr inbounds float, ptr %A, i64 %tmp
+  %tmp4 = load float, ptr %tmp3, align 4
   %tmp5 = fadd float %tmp4, 1.000000e+00
-  store float %tmp5, float* %tmp3, align 4
+  store float %tmp5, ptr %tmp3, align 4
   br label %bb6
 
 bb6:                                              ; preds = %bb2

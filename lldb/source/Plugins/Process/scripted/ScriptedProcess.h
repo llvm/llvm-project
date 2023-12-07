@@ -11,6 +11,8 @@
 
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/ScriptedMetadata.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Status.h"
 
 #include "ScriptedThread.h"
@@ -18,24 +20,7 @@
 #include <mutex>
 
 namespace lldb_private {
-
 class ScriptedProcess : public Process {
-protected:
-  class ScriptedProcessInfo {
-  public:
-    ScriptedProcessInfo(const ProcessLaunchInfo &launch_info) {
-      m_class_name = launch_info.GetScriptedProcessClassName();
-      m_args_sp = launch_info.GetScriptedProcessDictionarySP();
-    }
-
-    std::string GetClassName() const { return m_class_name; }
-    StructuredData::DictionarySP GetArgsSP() const { return m_args_sp; }
-
-  private:
-    std::string m_class_name;
-    StructuredData::DictionarySP m_args_sp;
-  };
-
 public:
   static lldb::ProcessSP CreateInstance(lldb::TargetSP target_sp,
                                         lldb::ListenerSP listener_sp,
@@ -65,7 +50,18 @@ public:
 
   void DidLaunch() override;
 
+  void DidResume() override;
+
   Status DoResume() override;
+
+  Status DoAttachToProcessWithID(lldb::pid_t pid,
+                                 const ProcessAttachInfo &attach_info) override;
+
+  Status
+  DoAttachToProcessWithName(const char *process_name,
+                            const ProcessAttachInfo &attach_info) override;
+
+  void DidAttach(ArchSpec &process_arch) override;
 
   Status DoDestroy() override;
 
@@ -75,6 +71,11 @@ public:
 
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       Status &error) override;
+
+  size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
+                       Status &error) override;
+
+  Status EnableBreakpointSite(BreakpointSite *bp_site) override;
 
   ArchSpec GetArchitecture();
 
@@ -88,12 +89,22 @@ public:
 
   lldb_private::StructuredData::DictionarySP GetMetadata() override;
 
+  void UpdateQueueListIfNeeded() override;
+
+  void *GetImplementation() override;
+
+  void ForceScriptedState(lldb::StateType state) override {
+    // If we're about to stop, we should fetch the loaded dynamic libraries
+    // dictionary before emitting the private stop event to avoid having the
+    // module loading happen while the process state is changing.
+    if (StateIsStoppedState(state, true))
+      GetLoadedDynamicLibrariesInfos();
+    SetPrivateState(state);
+  }
+
 protected:
   ScriptedProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-                  const ScriptedProcess::ScriptedProcessInfo &launch_info,
-                  Status &error);
-
-  Status DoStop();
+                  const ScriptedMetadata &scripted_metadata, Status &error);
 
   void Clear();
 
@@ -103,18 +114,21 @@ protected:
   Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                MemoryRegionInfo &range_info) override;
 
+  Status DoAttach(const ProcessAttachInfo &attach_info);
+
 private:
   friend class ScriptedThread;
 
-  void CheckInterpreterAndScriptObject() const;
+  inline void CheckScriptedInterface() const {
+    lldbassert(m_interface_up && "Invalid scripted process interface.");
+  }
+
   ScriptedProcessInterface &GetInterface() const;
   static bool IsScriptLanguageSupported(lldb::ScriptLanguage language);
 
   // Member variables.
-  const ScriptedProcessInfo m_scripted_process_info;
-  lldb_private::ScriptInterpreter *m_interpreter = nullptr;
-  lldb_private::StructuredData::ObjectSP m_script_object_sp = nullptr;
-  //@}
+  const ScriptedMetadata m_scripted_metadata;
+  lldb::ScriptedProcessInterfaceUP m_interface_up;
 };
 
 } // namespace lldb_private

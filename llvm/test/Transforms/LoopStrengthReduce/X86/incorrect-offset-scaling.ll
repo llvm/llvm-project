@@ -3,7 +3,7 @@
 target triple = "x86_64-unknown-unknown"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @incorrect_offset_scaling(i64, i64*) {
+define void @incorrect_offset_scaling(i64, ptr) {
 top:
   br label %L
 
@@ -24,7 +24,7 @@ L2:                                               ; preds = %idxend.8
 
 if6:                                              ; preds = %idxend.8
   %r2 = add i64 %0, -1
-  %r3 = load i64, i64* %1, align 8
+  %r3 = load i64, ptr %1, align 8
 ; CHECK:  %r2 = add i64 %0, -1
 ; CHECK:  %r3 = load i64
   br label %ib
@@ -39,8 +39,8 @@ ib:                                               ; preds = %if6
 ; CHECK:  %r4 = mul i64 %r3, %lsr.iv
 ; CHECK:  %r5 = add i64 %r2, %r4
 ; CHECK:  %r6 = icmp ult i64 %r5, undef
-; CHECK:  %r7 = getelementptr i64, i64* undef, i64 %r5
-  %r7 = getelementptr i64, i64* undef, i64 %r5
-  store i64 1, i64* %r7, align 8
+; CHECK:  %r7 = getelementptr i64, ptr undef, i64 %r5
+  %r7 = getelementptr i64, ptr undef, i64 %r5
+  store i64 1, ptr %r7, align 8
   br label %L
 }

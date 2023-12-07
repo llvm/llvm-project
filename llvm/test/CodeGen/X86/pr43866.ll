@@ -15,12 +15,9 @@ define dso_local void @test()  {
 ; CHECK-NEXT:    subq $64, %rsp
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[1,0],xmm0[1,0]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm2[2,0],xmm0[0,0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
-; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; CHECK-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[1,0],ymm0[1,0],ymm1[5,4],ymm0[5,4]
-; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm1[2,0],ymm0[0,0],ymm1[6,4],ymm0[4,4]
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp

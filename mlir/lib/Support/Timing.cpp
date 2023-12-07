@@ -26,6 +26,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <atomic>
+#include <optional>
 #include <chrono>
 
 using namespace mlir;
@@ -508,7 +509,7 @@ void DefaultTimingManager::dumpAsTree(raw_ostream &os) {
   impl->rootTimer->print(os, DisplayMode::Tree);
 }
 
-Optional<void *> DefaultTimingManager::rootTimer() {
+std::optional<void *> DefaultTimingManager::rootTimer() {
   if (impl->enabled)
     return impl->rootTimer.get();
   return std::nullopt;

@@ -22,12 +22,14 @@ define iXLen2 @test_urem_3(iXLen2 %x) nounwind {
 ;
 ; RV64-LABEL: test_urem_3:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a2, %hi(.LCPI0_0)
-; RV64-NEXT:    ld a2, %lo(.LCPI0_0)(a2)
 ; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    sltu a0, a1, a0
 ; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    mulhu a1, a0, a2
+; RV64-NEXT:    lui a1, 699051
+; RV64-NEXT:    addiw a1, a1, -1365
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    mulhu a1, a0, a1
 ; RV64-NEXT:    srli a2, a1, 1
 ; RV64-NEXT:    andi a1, a1, -2
 ; RV64-NEXT:    add a1, a1, a2
@@ -56,12 +58,14 @@ define iXLen2 @test_urem_5(iXLen2 %x) nounwind {
 ;
 ; RV64-LABEL: test_urem_5:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a2, %hi(.LCPI1_0)
-; RV64-NEXT:    ld a2, %lo(.LCPI1_0)(a2)
 ; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    sltu a0, a1, a0
 ; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    mulhu a1, a0, a2
+; RV64-NEXT:    lui a1, 838861
+; RV64-NEXT:    addiw a1, a1, -819
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    mulhu a1, a0, a1
 ; RV64-NEXT:    srli a2, a1, 2
 ; RV64-NEXT:    andi a1, a1, -4
 ; RV64-NEXT:    add a1, a1, a2
@@ -142,12 +146,14 @@ define iXLen2 @test_urem_15(iXLen2 %x) nounwind {
 ;
 ; RV64-LABEL: test_urem_15:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a2, %hi(.LCPI4_0)
-; RV64-NEXT:    ld a2, %lo(.LCPI4_0)(a2)
 ; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    sltu a0, a1, a0
 ; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    mulhu a1, a0, a2
+; RV64-NEXT:    lui a1, 559241
+; RV64-NEXT:    addiw a1, a1, -1911
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    mulhu a1, a0, a1
 ; RV64-NEXT:    srli a1, a1, 3
 ; RV64-NEXT:    slli a2, a1, 4
 ; RV64-NEXT:    sub a1, a1, a2
@@ -176,12 +182,14 @@ define iXLen2 @test_urem_17(iXLen2 %x) nounwind {
 ;
 ; RV64-LABEL: test_urem_17:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a2, %hi(.LCPI5_0)
-; RV64-NEXT:    ld a2, %lo(.LCPI5_0)(a2)
 ; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    sltu a0, a1, a0
 ; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    mulhu a1, a0, a2
+; RV64-NEXT:    lui a1, 986895
+; RV64-NEXT:    addiw a1, a1, 241
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    mulhu a1, a0, a1
 ; RV64-NEXT:    srli a2, a1, 4
 ; RV64-NEXT:    andi a1, a1, -16
 ; RV64-NEXT:    add a1, a1, a2
@@ -210,12 +218,14 @@ define iXLen2 @test_urem_255(iXLen2 %x) nounwind {
 ;
 ; RV64-LABEL: test_urem_255:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a2, %hi(.LCPI6_0)
-; RV64-NEXT:    ld a2, %lo(.LCPI6_0)(a2)
 ; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    sltu a0, a1, a0
 ; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    mulhu a1, a0, a2
+; RV64-NEXT:    lui a1, 526344
+; RV64-NEXT:    addiw a1, a1, 129
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    mulhu a1, a0, a1
 ; RV64-NEXT:    srli a1, a1, 7
 ; RV64-NEXT:    slli a2, a1, 8
 ; RV64-NEXT:    sub a1, a1, a2
@@ -244,12 +254,14 @@ define iXLen2 @test_urem_257(iXLen2 %x) nounwind {
 ;
 ; RV64-LABEL: test_urem_257:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a2, %hi(.LCPI7_0)
-; RV64-NEXT:    ld a2, %lo(.LCPI7_0)(a2)
 ; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    sltu a0, a1, a0
 ; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    mulhu a1, a0, a2
+; RV64-NEXT:    lui a1, 1044496
+; RV64-NEXT:    addiw a1, a1, -255
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    mulhu a1, a0, a1
 ; RV64-NEXT:    srli a2, a1, 8
 ; RV64-NEXT:    andi a1, a1, -256
 ; RV64-NEXT:    add a1, a1, a2
@@ -278,12 +290,14 @@ define iXLen2 @test_urem_65535(iXLen2 %x) nounwind {
 ;
 ; RV64-LABEL: test_urem_65535:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a2, %hi(.LCPI8_0)
-; RV64-NEXT:    ld a2, %lo(.LCPI8_0)(a2)
 ; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    sltu a0, a1, a0
 ; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    mulhu a1, a0, a2
+; RV64-NEXT:    lui a1, 524296
+; RV64-NEXT:    addiw a1, a1, 1
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    mulhu a1, a0, a1
 ; RV64-NEXT:    srli a1, a1, 15
 ; RV64-NEXT:    slli a2, a1, 16
 ; RV64-NEXT:    sub a1, a1, a2
@@ -315,16 +329,14 @@ define iXLen2 @test_urem_65537(iXLen2 %x) nounwind {
 ; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    sltu a0, a1, a0
 ; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    lui a1, 983041
-; RV64-NEXT:    slli a1, a1, 4
-; RV64-NEXT:    addi a1, a1, -1
-; RV64-NEXT:    slli a1, a1, 16
-; RV64-NEXT:    addi a1, a1, 1
-; RV64-NEXT:    mulhu a1, a0, a1
-; RV64-NEXT:    lui a2, 1048560
-; RV64-NEXT:    and a2, a1, a2
-; RV64-NEXT:    srli a1, a1, 16
-; RV64-NEXT:    add a1, a2, a1
+; RV64-NEXT:    lui a1, 1048560
+; RV64-NEXT:    addiw a2, a1, 1
+; RV64-NEXT:    slli a3, a2, 32
+; RV64-NEXT:    add a2, a2, a3
+; RV64-NEXT:    mulhu a2, a0, a2
+; RV64-NEXT:    and a1, a2, a1
+; RV64-NEXT:    srli a2, a2, 16
+; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    sub a0, a0, a1
 ; RV64-NEXT:    li a1, 0
 ; RV64-NEXT:    ret
@@ -361,12 +373,14 @@ define iXLen2 @test_urem_12(iXLen2 %x) nounwind {
 ; RV64-NEXT:    srli a3, a0, 2
 ; RV64-NEXT:    or a2, a3, a2
 ; RV64-NEXT:    srli a1, a1, 2
-; RV64-NEXT:    lui a3, %hi(.LCPI10_0)
-; RV64-NEXT:    ld a3, %lo(.LCPI10_0)(a3)
 ; RV64-NEXT:    add a1, a2, a1
 ; RV64-NEXT:    sltu a2, a1, a2
 ; RV64-NEXT:    add a1, a1, a2
-; RV64-NEXT:    mulhu a2, a1, a3
+; RV64-NEXT:    lui a2, 699051
+; RV64-NEXT:    addiw a2, a2, -1365
+; RV64-NEXT:    slli a3, a2, 32
+; RV64-NEXT:    add a2, a2, a3
+; RV64-NEXT:    mulhu a2, a1, a2
 ; RV64-NEXT:    srli a3, a2, 1
 ; RV64-NEXT:    andi a2, a2, -2
 ; RV64-NEXT:    add a2, a2, a3

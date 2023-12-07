@@ -3,7 +3,6 @@ Test calling a function that hits a signal set to auto-restart, make sure the ca
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -32,34 +31,34 @@ class ExprCommandThatRestartsTestCase(TestBase):
     def check_after_call(self, num_sigchld):
         after_call = self.sigchld_no.GetValueAsSigned(-1)
         self.assertEqual(
-            after_call - self.start_sigchld_no, num_sigchld,
-            "Really got %d SIGCHLD signals through the call." %
-            (num_sigchld))
+            after_call - self.start_sigchld_no,
+            num_sigchld,
+            "Really got %d SIGCHLD signals through the call." % (num_sigchld),
+        )
         self.start_sigchld_no = after_call
 
         # Check that we are back where we were before:
         frame = self.thread.GetFrameAtIndex(0)
         self.assertEqual(
-            self.orig_frame_pc, frame.GetPC(),
-            "Restored the zeroth frame correctly")
+            self.orig_frame_pc, frame.GetPC(), "Restored the zeroth frame correctly"
+        )
 
     def call_function(self):
-        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                      'Stop here in main.', self.main_source_spec)
+        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Stop here in main.", self.main_source_spec
+        )
 
         # Make sure the SIGCHLD behavior is pass/no-stop/no-notify:
         self.runCmd("process handle SIGCHLD -s 0 -p 1 -n 0")
 
         # The sigchld_no variable should be 0 at this point.
         self.sigchld_no = target.FindFirstGlobalVariable("sigchld_no")
-        self.assertTrue(
-            self.sigchld_no.IsValid(),
-            "Got a value for sigchld_no")
+        self.assertTrue(self.sigchld_no.IsValid(), "Got a value for sigchld_no")
 
         self.start_sigchld_no = self.sigchld_no.GetValueAsSigned(-1)
         self.assertNotEqual(
-            self.start_sigchld_no, -1,
-            "Got an actual value for sigchld_no")
+            self.start_sigchld_no, -1, "Got an actual value for sigchld_no"
+        )
 
         options = lldb.SBExpressionOptions()
         # processing 30 signals takes a while, increase the expression timeout
@@ -73,9 +72,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
         self.orig_frame_pc = frame.GetPC()
 
         num_sigchld = 30
-        value = frame.EvaluateExpression(
-            "call_me (%d)" %
-            (num_sigchld), options)
+        value = frame.EvaluateExpression("call_me (%d)" % (num_sigchld), options)
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
         self.assertEquals(value.GetValueAsSigned(-1), num_sigchld)
@@ -85,14 +82,13 @@ class ExprCommandThatRestartsTestCase(TestBase):
         # Okay, now try with a breakpoint in the called code in the case where
         # we are ignoring breakpoint hits.
         handler_bkpt = target.BreakpointCreateBySourceRegex(
-            "Got sigchld %d.", self.main_source_spec)
+            "Got sigchld %d.", self.main_source_spec
+        )
         self.assertTrue(handler_bkpt.GetNumLocations() > 0)
         options.SetIgnoreBreakpoints(True)
         options.SetUnwindOnError(True)
 
-        value = frame.EvaluateExpression(
-            "call_me (%d)" %
-            (num_sigchld), options)
+        value = frame.EvaluateExpression("call_me (%d)" % (num_sigchld), options)
 
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
@@ -103,9 +99,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
         # still works:
         self.runCmd("process handle SIGCHLD -s 0 -p 1 -n 1")
 
-        value = frame.EvaluateExpression(
-            "call_me (%d)" %
-            (num_sigchld), options)
+        value = frame.EvaluateExpression("call_me (%d)" % (num_sigchld), options)
 
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
@@ -115,9 +109,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
         # Now set this unwind on error to false, and make sure that we still
         # complete the call:
         options.SetUnwindOnError(False)
-        value = frame.EvaluateExpression(
-            "call_me (%d)" %
-            (num_sigchld), options)
+        value = frame.EvaluateExpression("call_me (%d)" % (num_sigchld), options)
 
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
@@ -129,9 +121,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
 
         self.runCmd("process handle SIGCHLD -s 1 -p 1 -n 1")
 
-        value = frame.EvaluateExpression(
-            "call_me (%d)" %
-            (num_sigchld), options)
+        value = frame.EvaluateExpression("call_me (%d)" % (num_sigchld), options)
         self.assertTrue(value.IsValid())
         self.assertFalse(value.GetError().Success())
 
@@ -140,10 +130,11 @@ class ExprCommandThatRestartsTestCase(TestBase):
         self.runCmd("process handle SIGCHLD -s 0 -p 1 -n 1")
 
         error = process.Continue()
-        self.assertSuccess(error,
-            "Continuing after stopping for signal succeeds.")
+        self.assertSuccess(error, "Continuing after stopping for signal succeeds.")
 
         frame = self.thread.GetFrameAtIndex(0)
         self.assertEqual(
-            frame.GetPC(), self.orig_frame_pc,
-            "Continuing returned to the place we started.")
+            frame.GetPC(),
+            self.orig_frame_pc,
+            "Continuing returned to the place we started.",
+        )

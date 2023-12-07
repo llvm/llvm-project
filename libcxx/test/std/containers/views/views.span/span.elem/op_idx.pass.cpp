@@ -21,7 +21,7 @@
 
 
 template <typename Span>
-constexpr bool testConstexprSpan(Span sp, size_t idx)
+constexpr bool testConstexprSpan(Span sp, std::size_t idx)
 {
     LIBCPP_ASSERT(noexcept(sp[idx]));
 
@@ -32,7 +32,7 @@ constexpr bool testConstexprSpan(Span sp, size_t idx)
 
 
 template <typename Span>
-void testRuntimeSpan(Span sp, size_t idx)
+void testRuntimeSpan(Span sp, std::size_t idx)
 {
     LIBCPP_ASSERT(noexcept(sp[idx]));
 

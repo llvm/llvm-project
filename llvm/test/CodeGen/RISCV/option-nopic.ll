@@ -13,6 +13,6 @@ define i32 @get_symbol() nounwind {
 ; CHECK: lw	a0, 0(a0)
 ; CHECK: lw	a0, 0(a0)
   tail call void asm sideeffect ".option nopic", ""()
-  %v = load i32, i32* @symbol
+  %v = load i32, ptr @symbol
   ret i32 %v
 }

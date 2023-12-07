@@ -252,7 +252,7 @@ static unsigned getRegOperandNumElts(const MCInst *MI, unsigned ScalarSize,
   return getVectorRegSize(OpReg) / ScalarSize;
 }
 
-static const char *getRegName(unsigned Reg) {
+static const char *getRegName(MCRegister Reg) {
   return X86ATTInstPrinter::getRegisterName(Reg);
 }
 

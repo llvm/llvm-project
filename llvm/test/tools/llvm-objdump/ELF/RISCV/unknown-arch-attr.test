@@ -3,7 +3,7 @@
 ## The expected behavior is to ignore the unrecognized arch feature and
 ## continue to process the following arch features.
 ##
-## The object file has the "rv32i2p0_x1p0_m2p0" arch feature. "x1p0" is an
+## The object file has the "rv32i2p0_m2p0_x1p0" arch feature. "x1p0" is an
 ## unrecognized architecture extension. llvm-objdump will ignore it and decode
 ## "mul" instruction correctly according to "m2p0" in the arch feature.
 ##
@@ -34,5 +34,5 @@ Sections:
     Content: 3385C502
   - Name:    .riscv.attributes
     Type:    SHT_RISCV_ATTRIBUTES
-## The content is the encoding of the arch feature "rv32i2p0_x1p0_m2p0"
-    Content: 412300000072697363760001190000000572763332693270305F783170305F6D32703000
+## The content is the encoding of the arch feature "rv32i2p0_m2p0_x1p0"
+    Content: 412300000072697363760001190000000572763332693270305F6D3270305F7831703000

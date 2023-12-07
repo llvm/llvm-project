@@ -80,6 +80,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/InitializePasses.h"
@@ -209,6 +210,12 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
   if (CatchPads.empty() && CleanupPads.empty())
     return false;
 
+  if (!F.hasPersonalityFn() ||
+      !isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn()))) {
+    report_fatal_error("Function '" + F.getName() +
+                       "' does not have a correct Wasm personality function "
+                       "'__gxx_wasm_personality_v0'");
+  }
   assert(F.hasPersonalityFn() && "Personality function not found");
 
   // __wasm_lpad_context global variable.

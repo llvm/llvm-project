@@ -64,7 +64,7 @@ entry:
 ; CHECK: cmp.eq{{.*}}#-12
 define i32 @foo8() nounwind readonly {
 entry:
-  %0 = load i16, i16* @g, align 2
+  %0 = load i16, ptr @g, align 2
   %cmp = icmp eq i16 %0, -12
   %res.0 = select i1 %cmp, i32 0, i32 8
   ret i32 %res.0

@@ -11,7 +11,7 @@
 // LWG 2056 changed the values of future_errc, so if we're using new headers
 // with an old library we'll get incorrect messages.
 //
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11}}
 
 // <future>
 

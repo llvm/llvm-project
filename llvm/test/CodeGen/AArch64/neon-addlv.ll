@@ -19,66 +19,66 @@ declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>) nounwind readnone
 declare i64 @llvm.vector.reduce.add.v2i64(<2 x i64>) nounwind readnone
 declare i32 @llvm.vector.reduce.add.v2i32(<2 x i32>) nounwind readnone
 
-define i16 @uaddlv4h_from_v8i8(<8 x i8>* %A) nounwind {
+define i16 @uaddlv4h_from_v8i8(ptr %A) nounwind {
 ; CHECK-LABEL: uaddlv4h_from_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    uaddlv h0, v0.8b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %tmp1 = load <8 x i8>, <8 x i8>* %A
+  %tmp1 = load <8 x i8>, ptr %A
   %tmp3 = call <4 x i16> @llvm.aarch64.neon.uaddlp.v4i16.v8i8(<8 x i8> %tmp1)
   %tmp5 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %tmp3)
   ret i16 %tmp5
 }
 
-define i16 @uaddlv16b_from_v16i8(<16 x i8>* %A) nounwind {
+define i16 @uaddlv16b_from_v16i8(ptr %A) nounwind {
 ; CHECK-LABEL: uaddlv16b_from_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    uaddlv h0, v0.16b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %tmp1 = load <16 x i8>, <16 x i8>* %A
+  %tmp1 = load <16 x i8>, ptr %A
   %tmp3 = call <8 x i16> @llvm.aarch64.neon.uaddlp.v8i16.v16i8(<16 x i8> %tmp1)
   %tmp5 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %tmp3)
   ret i16 %tmp5
 }
 
-define i32 @uaddlv8h_from_v8i16(<8 x i16>* %A) nounwind {
+define i32 @uaddlv8h_from_v8i16(ptr %A) nounwind {
 ; CHECK-LABEL: uaddlv8h_from_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    uaddlv s0, v0.8h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %tmp1 = load <8 x i16>, <8 x i16>* %A
+  %tmp1 = load <8 x i16>, ptr %A
   %tmp3 = call <4 x i32> @llvm.aarch64.neon.uaddlp.v4i32.v8i16(<8 x i16> %tmp1)
   %tmp5 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %tmp3)
   ret i32 %tmp5
 }
 
-define i64 @uaddlv4s_from_v4i32(<4 x i32>* %A) nounwind {
+define i64 @uaddlv4s_from_v4i32(ptr %A) nounwind {
 ; CHECK-LABEL: uaddlv4s_from_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    uaddlv d0, v0.4s
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i32>, <4 x i32>* %A
+  %tmp1 = load <4 x i32>, ptr %A
   %tmp3 = call <2 x i64> @llvm.aarch64.neon.uaddlp.v2i64.v4i32(<4 x i32> %tmp1)
   %tmp5 = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %tmp3)
   ret i64 %tmp5
 }
 
-define i32 @uaddlv4h_from_v4i16(<4 x i16>* %A) nounwind {
+define i32 @uaddlv4h_from_v4i16(ptr %A) nounwind {
 ; CHECK-LABEL: uaddlv4h_from_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    uaddlv s0, v0.4h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, <4 x i16>* %A
+  %tmp1 = load <4 x i16>, ptr %A
   %tmp3 = call <2 x i32> @llvm.aarch64.neon.uaddlp.v2i32.v4i16(<4 x i16> %tmp1)
   %tmp5 = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %tmp3)
   ret i32 %tmp5
@@ -86,67 +86,112 @@ define i32 @uaddlv4h_from_v4i16(<4 x i16>* %A) nounwind {
 
 
 
-define i16 @saddlv4h_from_v8i8(<8 x i8>* %A) nounwind {
+define i16 @saddlv4h_from_v8i8(ptr %A) nounwind {
 ; CHECK-LABEL: saddlv4h_from_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    saddlv h0, v0.8b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %tmp1 = load <8 x i8>, <8 x i8>* %A
+  %tmp1 = load <8 x i8>, ptr %A
   %tmp3 = call <4 x i16> @llvm.aarch64.neon.saddlp.v4i16.v8i8(<8 x i8> %tmp1)
   %tmp5 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %tmp3)
   ret i16 %tmp5
 }
 
-define i16 @saddlv16b_from_v16i8(<16 x i8>* %A) nounwind {
+define i16 @saddlv16b_from_v16i8(ptr %A) nounwind {
 ; CHECK-LABEL: saddlv16b_from_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    saddlv h0, v0.16b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %tmp1 = load <16 x i8>, <16 x i8>* %A
+  %tmp1 = load <16 x i8>, ptr %A
   %tmp3 = call <8 x i16> @llvm.aarch64.neon.saddlp.v8i16.v16i8(<16 x i8> %tmp1)
   %tmp5 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %tmp3)
   ret i16 %tmp5
 }
 
-define i32 @saddlv8h_from_v8i16(<8 x i16>* %A) nounwind {
+define i32 @saddlv8h_from_v8i16(ptr %A) nounwind {
 ; CHECK-LABEL: saddlv8h_from_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    saddlv s0, v0.8h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %tmp1 = load <8 x i16>, <8 x i16>* %A
+  %tmp1 = load <8 x i16>, ptr %A
   %tmp3 = call <4 x i32> @llvm.aarch64.neon.saddlp.v4i32.v8i16(<8 x i16> %tmp1)
   %tmp5 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %tmp3)
   ret i32 %tmp5
 }
 
-define i64 @saddlv4s_from_v4i32(<4 x i32>* %A) nounwind {
+define i64 @saddlv4s_from_v4i32(ptr %A) nounwind {
 ; CHECK-LABEL: saddlv4s_from_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    saddlv d0, v0.4s
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i32>, <4 x i32>* %A
+  %tmp1 = load <4 x i32>, ptr %A
   %tmp3 = call <2 x i64> @llvm.aarch64.neon.saddlp.v2i64.v4i32(<4 x i32> %tmp1)
   %tmp5 = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %tmp3)
   ret i64 %tmp5
 }
 
-define i32 @saddlv4h_from_v4i16(<4 x i16>* %A) nounwind {
+define i32 @saddlv4h_from_v4i16(ptr %A) nounwind {
 ; CHECK-LABEL: saddlv4h_from_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    saddlv s0, v0.4h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, <4 x i16>* %A
+  %tmp1 = load <4 x i16>, ptr %A
   %tmp3 = call <2 x i32> @llvm.aarch64.neon.saddlp.v2i32.v4i16(<4 x i16> %tmp1)
   %tmp5 = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %tmp3)
   ret i32 %tmp5
 }
+
+declare i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8>) nounwind readnone
+
+define i32 @uaddlv_known_bits_v8i8(<8 x i8> %a) {
+; CHECK-LABEL: uaddlv_known_bits_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uaddlv h0, v0.8b
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+  %tmp1 = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8> %a)
+  %tmp2 = and i32 %tmp1, 65535
+  ret i32 %tmp2
+}
+
+declare i32 @llvm.aarch64.neon.uaddlv.i32.v16i8(<16 x i8>) nounwind readnone
+
+define i32 @uaddlv_known_bits_v16i8(<16 x i8> %a) {
+; CHECK-LABEL: uaddlv_known_bits_v16i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddlv h0, v0.16b
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %vaddlv.i = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v16i8(<16 x i8> %a)
+  %0 = and i32 %vaddlv.i, 65535
+  ret i32 %0
+}
+
+define dso_local <8 x i8> @bar(<8 x i8> noundef %a) local_unnamed_addr #0 {
+; CHECK-LABEL: bar:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddlv h0, v0.8b
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    rshrn v0.8b, v0.8h, #3
+; CHECK-NEXT:    ret
+entry:
+  %vaddlv.i = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8> %a)
+  %0 = trunc i32 %vaddlv.i to i16
+  %vecinit.i = insertelement <8 x i16> undef, i16 %0, i64 0
+  %vecinit7.i = shufflevector <8 x i16> %vecinit.i, <8 x i16> poison, <8 x i32> zeroinitializer
+  %vrshrn_n2 = tail call <8 x i8> @llvm.aarch64.neon.rshrn.v8i8(<8 x i16> %vecinit7.i, i32 3)
+  ret <8 x i8> %vrshrn_n2
+}
+
+declare <8 x i8> @llvm.aarch64.neon.rshrn.v8i8(<8 x i16>, i32)

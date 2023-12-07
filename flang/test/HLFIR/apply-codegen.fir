@@ -25,3 +25,7 @@ func.func @character_apply(%arg0 : !fir.ref<!fir.array<?x!fir.char<2,?>>>, %l: i
 // CHECK:    %[[VAL_7:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) typeparams %[[VAL_1:.*]] {uniq_name = ".tmp"}
 // CHECK:    %[[VAL_11:.*]] = arith.constant 42 : index
 // CHECK:    %[[VAL_12:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_11]])  typeparams %[[VAL_1]] : (!fir.box<!fir.array<?x!fir.char<2,?>>>, index, index) -> !fir.boxchar<2>
+// CHECK:    %[[VAL_13:.*]] = arith.constant false
+// CHECK:    %[[VAL_14:.*]] = fir.undefined tuple<!fir.boxchar<2>, i1>
+// CHECK:    %[[VAL_15:.*]] = fir.insert_value %[[VAL_14]], %[[VAL_13]], [1 : index] : (tuple<!fir.boxchar<2>, i1>, i1) -> tuple<!fir.boxchar<2>, i1>
+// CHECK:    %[[VAL_16:.*]] = fir.insert_value %[[VAL_15]], %[[VAL_12]], [0 : index] : (tuple<!fir.boxchar<2>, i1>, !fir.boxchar<2>) -> tuple<!fir.boxchar<2>, i1>

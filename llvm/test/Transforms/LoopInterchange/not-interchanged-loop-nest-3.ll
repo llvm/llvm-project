@@ -32,10 +32,10 @@ for.cond4.preheader:                              ; preds = %for.inc12, %for.con
 
 for.body6:                                        ; preds = %for.body6, %for.cond4.preheader
   %k.026 = phi i64 [ 0, %for.cond4.preheader ], [ %inc, %for.body6 ]
-  %arrayidx8 = getelementptr inbounds [100 x [100 x [100 x i32]]], [100 x [100 x [100 x i32]]]* @D, i32 0, i64 %i.028, i64 %k.026, i64 %j.027
-  %0 = load i32, i32* %arrayidx8
+  %arrayidx8 = getelementptr inbounds [100 x [100 x [100 x i32]]], ptr @D, i32 0, i64 %i.028, i64 %k.026, i64 %j.027
+  %0 = load i32, ptr %arrayidx8
   %add = add nsw i32 %0, %t
-  store i32 %add, i32* %arrayidx8
+  store i32 %add, ptr %arrayidx8
   %inc = add nuw nsw i64 %k.026, 1
   %exitcond = icmp eq i64 %inc, 100
   br i1 %exitcond, label %for.inc12, label %for.body6

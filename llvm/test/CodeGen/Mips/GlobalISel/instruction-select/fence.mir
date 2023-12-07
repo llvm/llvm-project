@@ -2,7 +2,7 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define void @atomic_load_i32(i32* %ptr) { ret void }
+  define void @atomic_load_i32(ptr %ptr) { ret void }
 
 ...
 ---

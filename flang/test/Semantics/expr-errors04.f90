@@ -92,6 +92,8 @@ program m
   !ERROR: Reference to whole rank-2 component 't1' of rank-1 array of derived type is not allowed
   call sub0(t%t3%t2%t1%info1(i))
   !ERROR: Reference to whole rank-2 component 't1' of rank-1 array of derived type is not allowed
+  call sub0(t%t3%t2%t1%info1)
+  !ERROR: Reference to whole rank-2 component 't1' of rank-1 array of derived type is not allowed
   call t%t3%t2%t1%info2
   !ERROR: Reference to whole rank-2 component 't1' of rank-1 array of derived type is not allowed
   call t%t3%t2%t1%g1
@@ -99,12 +101,16 @@ program m
   !ERROR: Reference to rank-2 object 't1' has 1 subscripts
   call sub0(t%t3%t2%t1(1)%info1(i))
   !ERROR: Reference to rank-2 object 't1' has 1 subscripts
+  call sub0(t%t3%t2%t1(1)%info1)
+  !ERROR: Reference to rank-2 object 't1' has 1 subscripts
   call t%t3%t2%t1(1)%info2
   !ERROR: Reference to rank-2 object 't1' has 1 subscripts
   call t%t3%t2%t1(1)%g1
 
   !ERROR: Reference to rank-2 object 't1' has 1 subscripts
   call sub0(t%t3%t2%t1(1:)%info1(i))
+  !ERROR: Reference to rank-2 object 't1' has 1 subscripts
+  call sub0(t%t3%t2%t1(1:)%info1)
   !ERROR: Reference to rank-2 object 't1' has 1 subscripts
   call t%t3%t2%t1(1:)%info2
   !ERROR: Reference to rank-2 object 't1' has 1 subscripts

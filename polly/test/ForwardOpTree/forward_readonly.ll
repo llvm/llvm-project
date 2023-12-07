@@ -11,7 +11,7 @@
 ;   A[0] = val;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A, double %arg) {
+define void @func(i32 %n, ptr noalias nonnull %A, double %arg) {
 entry:
   br label %for
 
@@ -25,7 +25,7 @@ for:
       br label %bodyB
 
     bodyB:
-      store double %val, double* %A
+      store double %val, ptr %A
       br label %inc
 
 inc:
@@ -64,7 +64,7 @@ return:
 ; MODEL-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_arg[] };
 ; MODEL-NEXT:             Instructions {
 ; MODEL-NEXT:                   %val = fadd double %arg, 2.100000e+01
-; MODEL-NEXT:                   store double %val, double* %A, align 8
+; MODEL-NEXT:                   store double %val, ptr %A, align 8
 ; MODEL-NEXT:                 }
 ; MODEL-NEXT: }
 
@@ -80,6 +80,6 @@ return:
 ; NOMODEL-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_A[0] };
 ; NOMODEL-NEXT:             Instructions {
 ; NOMODEL-NEXT:                   %val = fadd double %arg, 2.100000e+01
-; NOMODEL-NEXT:                   store double %val, double* %A, align 8
+; NOMODEL-NEXT:                   store double %val, ptr %A, align 8
 ; NOMODEL-NEXT:                 }
 ; NOMODEL-NEXT: }

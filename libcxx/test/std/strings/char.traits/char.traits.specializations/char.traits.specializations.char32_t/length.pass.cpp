@@ -19,26 +19,23 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER > 14
-constexpr bool test_constexpr()
-{
-    return std::char_traits<char32_t>::length(U"") == 0
-        && std::char_traits<char32_t>::length(U"abcd") == 4;
+constexpr bool test_constexpr() {
+  return std::char_traits<char32_t>::length(U"") == 0 && std::char_traits<char32_t>::length(U"abcd") == 4;
 }
 #endif
 
-int main(int, char**)
-{
+int main(int, char**) {
 #if TEST_STD_VER >= 11
-    assert(std::char_traits<char32_t>::length(U"") == 0);
-    assert(std::char_traits<char32_t>::length(U"a") == 1);
-    assert(std::char_traits<char32_t>::length(U"aa") == 2);
-    assert(std::char_traits<char32_t>::length(U"aaa") == 3);
-    assert(std::char_traits<char32_t>::length(U"aaaa") == 4);
+  assert(std::char_traits<char32_t>::length(U"") == 0);
+  assert(std::char_traits<char32_t>::length(U"a") == 1);
+  assert(std::char_traits<char32_t>::length(U"aa") == 2);
+  assert(std::char_traits<char32_t>::length(U"aaa") == 3);
+  assert(std::char_traits<char32_t>::length(U"aaaa") == 4);
 #endif
 
 #if TEST_STD_VER > 14
-    static_assert(test_constexpr(), "" );
+  static_assert(test_constexpr(), "");
 #endif
 
-    return 0;
+  return 0;
 }

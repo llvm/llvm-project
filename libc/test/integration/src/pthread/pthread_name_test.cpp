@@ -17,10 +17,11 @@
 #include "src/pthread/pthread_self.h"
 #include "src/pthread/pthread_setname_np.h"
 
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <errno.h>
 #include <pthread.h>
+#include <stdint.h> // uintptr_t
 
 using string_view = __llvm_libc::cpp::string_view;
 

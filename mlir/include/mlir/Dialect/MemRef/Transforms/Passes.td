@@ -24,7 +24,7 @@ def FoldMemRefAliasOps : Pass<"fold-memref-alias-ops"> {
   }];
   let constructor = "mlir::memref::createFoldMemRefAliasOpsPass()";
   let dependentDialects = [
-      "AffineDialect", "memref::MemRefDialect", "vector::VectorDialect"
+      "affine::AffineDialect", "memref::MemRefDialect", "vector::VectorDialect"
   ];
 }
 
@@ -48,18 +48,17 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
   let summary = "Normalize memrefs";
    let description = [{
     This pass transforms memref types with a non-trivial
-    [layout map](https://mlir.llvm.org/docs/LangRef/#layout-map) into
-    memref types with an identity layout map, e.g. (i, j) -> (i, j). This
+    [layout map](https://mlir.llvm.org/docs/Dialects/Builtin/#affine-map-layout)
+    into memref types with an identity layout map, e.g. (i, j) -> (i, j). This
     pass is inter-procedural, in the sense that it can modify function
     interfaces and call sites that pass memref types. In order to modify
     memref types while preserving the original behavior, users of those
     memref types are also modified to incorporate the resulting layout map.
-    For instance, an [AffineLoadOp]
-    (https://mlir.llvm.org/docs/Dialects/Affine/#affineload-affineloadop)
+    For instance, an [AffineLoadOp](https://mlir.llvm.org/docs/Dialects/Affine/#affineload-mliraffineloadop)
     will be updated to compose the layout map with with the affine expression
-    contained in the op. Operations marked with the [MemRefsNormalizable]
-    (https://mlir.llvm.org/docs/Traits/#memrefsnormalizable) trait are
-    expected to be normalizable. Supported operations include affine
+    contained in the op. Operations marked with the
+    [MemRefsNormalizable](https://mlir.llvm.org/docs/Traits/#memrefsnormalizable)
+    trait are expected to be normalizable. Supported operations include affine
     operations, memref.alloc, memref.dealloc, and func.return.
 
     Given an appropriate layout map specified in the code, this transformation
@@ -157,7 +156,7 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
   ```
   }];
   let constructor = "mlir::memref::createNormalizeMemRefsPass()";
-  let dependentDialects = ["AffineDialect"];
+  let dependentDialects = ["affine::AffineDialect"];
 }
 
 def ResolveRankedShapeTypeResultDims :
@@ -185,7 +184,7 @@ def ResolveShapedTypeResultDims : Pass<"resolve-shaped-type-result-dims"> {
   }];
   let constructor = "mlir::memref::createResolveShapedTypeResultDimsPass()";
   let dependentDialects = [
-    "AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
+    "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
   ];
 }
 
@@ -200,8 +199,51 @@ def ExpandStridedMetadata : Pass<"expand-strided-metadata"> {
   }];
   let constructor = "mlir::memref::createExpandStridedMetadataPass()";
   let dependentDialects = [
-      "AffineDialect", "memref::MemRefDialect"
+      "affine::AffineDialect", "memref::MemRefDialect"
   ];
 }
+
+def ExpandRealloc : Pass<"expand-realloc"> {
+  let summary = "Expand memref.realloc operations into its components";
+  let description = [{
+    The `memref.realloc` operation performs a conditional allocation and copy to
+    increase the size of a buffer if necessary. This pass converts a `realloc`
+    operation into this sequence of simpler operations such that other passes
+    at a later stage in the compilation pipeline do not have to consider the
+    `realloc` operation anymore (e.g., the buffer deallocation pass and the
+    conversion pass to LLVM).
+
+    Example of an expansion:
+    ```mlir
+    %realloc = memref.realloc %alloc (%size) : memref<?xf32> to memref<?xf32>
+    ```
+    is expanded to
+    ```mlir
+    %c0 = arith.constant 0 : index
+    %dim = memref.dim %alloc, %c0 : memref<?xf32>
+    %is_old_smaller = arith.cmpi ult, %dim, %arg1
+    %realloc = scf.if %is_old_smaller -> (memref<?xf32>) {
+      %new_alloc = memref.alloc(%size) : memref<?xf32>
+      %subview = memref.subview %new_alloc[0] [%dim] [1]
+      memref.copy %alloc, %subview
+      memref.dealloc %alloc
+      scf.yield %alloc_0 : memref<?xf32>
+    } else {
+      %reinterpret_cast = memref.reinterpret_cast %alloc to
+        offset: [0], sizes: [%size], strides: [1]
+      scf.yield %reinterpret_cast : memref<?xf32>
+    }
+    ```
+  }];
+  let options = [
+    Option<"emitDeallocs", "emit-deallocs", "bool", /*default=*/"true",
+           "Emit deallocation operations for the original MemRef">,
+  ];
+  let constructor = "mlir::memref::createExpandReallocPass()";
+  let dependentDialects = [
+      "arith::ArithDialect", "scf::SCFDialect", "memref::MemRefDialect"
+  ];
+}
+
 #endif // MLIR_DIALECT_MEMREF_TRANSFORMS_PASSES
 

@@ -54,15 +54,6 @@ def ImmI#SIZE : ImmLeaf<i32,
 foreach SIZE = [2, 4, 8, 16, 32] in
 def LaneIdx#SIZE : ImmLeaf<i32, "return 0 <= Imm && Imm < "#SIZE#";">;
 
-// Create vector with identical lanes: splat
-def splat2 : PatFrag<(ops node:$x), (build_vector $x, $x)>;
-def splat4 : PatFrag<(ops node:$x), (build_vector $x, $x, $x, $x)>;
-def splat8 : PatFrag<(ops node:$x), (build_vector $x, $x, $x, $x,
-                                                  $x, $x, $x, $x)>;
-def splat16 : PatFrag<(ops node:$x),
-                      (build_vector $x, $x, $x, $x, $x, $x, $x, $x,
-                                    $x, $x, $x, $x, $x, $x, $x, $x)>;
-
 class Vec {
   ValueType vt;
   ValueType int_vt;
@@ -70,6 +61,7 @@ class Vec {
   WebAssemblyRegClass lane_rc;
   int lane_bits;
   ImmLeaf lane_idx;
+  SDPatternOperator lane_load;
   PatFrag splat;
   string prefix;
   Vec split;
@@ -82,7 +74,8 @@ def I8x16 : Vec {
   let lane_rc = I32;
   let lane_bits = 8;
   let lane_idx = LaneIdx16;
-  let splat = splat16;
+  let lane_load = extloadi8;
+  let splat = PatFrag<(ops node:$x), (v16i8 (splat_vector (i8 $x)))>;
   let prefix = "i8x16";
 }
 
@@ -93,7 +86,8 @@ def I16x8 : Vec {
   let lane_rc = I32;
   let lane_bits = 16;
   let lane_idx = LaneIdx8;
-  let splat = splat8;
+  let lane_load = extloadi16;
+  let splat = PatFrag<(ops node:$x), (v8i16 (splat_vector (i16 $x)))>;
   let prefix = "i16x8";
   let split = I8x16;
 }
@@ -105,7 +99,8 @@ def I32x4 : Vec {
   let lane_rc = I32;
   let lane_bits = 32;
   let lane_idx = LaneIdx4;
-  let splat = splat4;
+  let lane_load = load;
+  let splat = PatFrag<(ops node:$x), (v4i32 (splat_vector (i32 $x)))>;
   let prefix = "i32x4";
   let split = I16x8;
 }
@@ -117,7 +112,8 @@ def I64x2 : Vec {
   let lane_rc = I64;
   let lane_bits = 64;
   let lane_idx = LaneIdx2;
-  let splat = splat2;
+  let lane_load = load;
+  let splat = PatFrag<(ops node:$x), (v2i64 (splat_vector (i64 $x)))>;
   let prefix = "i64x2";
   let split = I32x4;
 }
@@ -129,7 +125,8 @@ def F32x4 : Vec {
   let lane_rc = F32;
   let lane_bits = 32;
   let lane_idx = LaneIdx4;
-  let splat = splat4;
+  let lane_load = load;
+  let splat = PatFrag<(ops node:$x), (v4f32 (splat_vector (f32 $x)))>;
   let prefix = "f32x4";
 }
 
@@ -140,7 +137,8 @@ def F64x2 : Vec {
   let lane_rc = F64;
   let lane_bits = 64;
   let lane_idx = LaneIdx2;
-  let splat = splat2;
+  let lane_load = load;
+  let splat = PatFrag<(ops node:$x), (v2f64 (splat_vector (f64 $x)))>;
   let prefix = "f64x2";
 }
 
@@ -195,14 +193,11 @@ defm "" : SIMDLoadSplat<16, 8>;
 defm "" : SIMDLoadSplat<32, 9>;
 defm "" : SIMDLoadSplat<64, 10>;
 
-def wasm_load_splat_t : SDTypeProfile<1, 1, [SDTCisPtrTy<1>]>;
-def wasm_load_splat : SDNode<"WebAssemblyISD::LOAD_SPLAT", wasm_load_splat_t,
-                             [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def load_splat : PatFrag<(ops node:$addr), (wasm_load_splat node:$addr)>;
-
 foreach vec = AllVecs in {
-defvar inst = "LOAD"#vec.lane_bits#"_SPLAT";
-defm : LoadPat<vec.vt, load_splat, inst>;
+  defvar inst = "LOAD"#vec.lane_bits#"_SPLAT";
+  defm : LoadPat<vec.vt,
+                 PatFrag<(ops node:$addr), (splat_vector (vec.lane_vt (vec.lane_load node:$addr)))>,
+                 inst>;
 }
 
 // Load and extend
@@ -381,7 +376,7 @@ multiclass SIMDStoreLane<Vec vec, bits<32> simdop> {
            [], name#"\t${off}(${addr})$p2align, $vec, $idx",
            name#"\t$off$p2align, $idx", simdop>;
   defm STORE_LANE_#vec#_A64 :
-    SIMD_I<(outs V128:$dst),
+    SIMD_I<(outs),
            (ins P2Align:$p2align, offset64_op:$off, vec_i8imm_op:$idx,
                 I64:$addr, V128:$vec),
            (outs), (ins P2Align:$p2align, offset64_op:$off, vec_i8imm_op:$idx),
@@ -488,6 +483,17 @@ defm "" : ConstVec<F64x2,
                   (build_vector (f64 fpimm:$i0), (f64 fpimm:$i1)),
                   "$i0, $i1">;
 
+// Match splat(x) -> const.v128(x, ..., x)
+foreach vec = AllVecs in {
+  defvar numEls = !div(vec.vt.Size, vec.lane_bits);
+  defvar isFloat = !or(!eq(vec.lane_vt, f32), !eq(vec.lane_vt, f64));
+  defvar immKind = !if(isFloat, fpimm, imm);
+  def : Pat<(vec.splat (vec.lane_vt immKind:$x)),
+            !dag(!cast<NI>("CONST_V128_"#vec),
+                 !listsplat((vec.lane_vt immKind:$x), numEls),
+                 ?)>;
+}
+
 // Shuffle lanes: shuffle
 defm SHUFFLE :
   SIMD_I<(outs V128:$dst),
@@ -523,6 +529,22 @@ defm SHUFFLE :
 def wasm_shuffle_t : SDTypeProfile<1, 18, []>;
 def wasm_shuffle : SDNode<"WebAssemblyISD::SHUFFLE", wasm_shuffle_t>;
 foreach vec = AllVecs in {
+// The @llvm.wasm.shuffle intrinsic has immediate arguments that become TargetConstants.
+def : Pat<(vec.vt (wasm_shuffle (vec.vt V128:$x), (vec.vt V128:$y),
+            (i32 timm:$m0), (i32 timm:$m1),
+            (i32 timm:$m2), (i32 timm:$m3),
+            (i32 timm:$m4), (i32 timm:$m5),
+            (i32 timm:$m6), (i32 timm:$m7),
+            (i32 timm:$m8), (i32 timm:$m9),
+            (i32 timm:$mA), (i32 timm:$mB),
+            (i32 timm:$mC), (i32 timm:$mD),
+            (i32 timm:$mE), (i32 timm:$mF))),
+          (SHUFFLE $x, $y,
+            imm:$m0, imm:$m1, imm:$m2, imm:$m3,
+            imm:$m4, imm:$m5, imm:$m6, imm:$m7,
+            imm:$m8, imm:$m9, imm:$mA, imm:$mB,
+            imm:$mC, imm:$mD, imm:$mE, imm:$mF)>;
+// Normal shufflevector instructions may have normal constant arguemnts.
 def : Pat<(vec.vt (wasm_shuffle (vec.vt V128:$x), (vec.vt V128:$y),
             (i32 LaneIdx32:$m0), (i32 LaneIdx32:$m1),
             (i32 LaneIdx32:$m2), (i32 LaneIdx32:$m3),
@@ -965,6 +987,12 @@ def : Pat<(wasm_shr_s (v4i32 V128:$lhs), (and I32:$rhs, 31)),
 def : Pat<(wasm_shr_u (v4i32 V128:$lhs), (and I32:$rhs, 31)),
           (SHR_U_I32x4 V128:$lhs, I32:$rhs)>;
 
+def : Pat<(wasm_shl (v2i64 V128:$lhs), (and I32:$rhs, 63)),
+          (SHL_I64x2 V128:$lhs, I32:$rhs)>;
+def : Pat<(wasm_shr_s (v2i64 V128:$lhs), (and I32:$rhs, 63)),
+          (SHR_S_I64x2 V128:$lhs, I32:$rhs)>;
+def : Pat<(wasm_shr_u (v2i64 V128:$lhs), (and I32:$rhs, 63)),
+          (SHR_U_I64x2 V128:$lhs, I32:$rhs)>;
 def : Pat<(wasm_shl (v2i64 V128:$lhs), (trunc (and I64:$rhs, 63))),
           (SHL_I64x2 V128:$lhs, (I32_WRAP_I64 I64:$rhs))>;
 def : Pat<(wasm_shr_s (v2i64 V128:$lhs), (trunc (and I64:$rhs, 63))),
@@ -1130,6 +1158,14 @@ defm FLOOR : SIMDUnary<F64x2, ffloor, "floor", 0x75>;
 defm TRUNC: SIMDUnary<F64x2, ftrunc, "trunc", 0x7a>;
 defm NEAREST: SIMDUnary<F64x2, fnearbyint, "nearest", 0x94>;
 
+// WebAssembly doesn't expose inexact exceptions, so map frint to fnearbyint.
+def : Pat<(v4f32 (frint (v4f32 V128:$src))), (NEAREST_F32x4 V128:$src)>;
+def : Pat<(v2f64 (frint (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
+
+// WebAssembly always rounds ties-to-even, so map froundeven to fnearbyint.
+def : Pat<(v4f32 (froundeven (v4f32 V128:$src))), (NEAREST_F32x4 V128:$src)>;
+def : Pat<(v2f64 (froundeven (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
+
 //===----------------------------------------------------------------------===//
 // Floating-point binary arithmetic
 //===----------------------------------------------------------------------===//
@@ -1160,13 +1196,21 @@ defm MIN : SIMDBinaryFP<fminimum, "min", 232>;
 defm MAX : SIMDBinaryFP<fmaximum, "max", 233>;
 
 // Pseudo-minimum: pmin
-def pmin : PatFrag<(ops node:$lhs, node:$rhs),
-                   (vselect (setolt $rhs, $lhs), $rhs, $lhs)>;
+def pmin : PatFrags<(ops node:$lhs, node:$rhs), [
+                    (vselect (setolt $rhs, $lhs), $rhs, $lhs),
+                    (vselect (setole $rhs, $lhs), $rhs, $lhs),
+                    (vselect (setogt $lhs, $rhs), $rhs, $lhs),
+                    (vselect (setoge $lhs, $rhs), $rhs, $lhs)
+]>;
 defm PMIN : SIMDBinaryFP<pmin, "pmin", 234>;
 
 // Pseudo-maximum: pmax
-def pmax : PatFrag<(ops node:$lhs, node:$rhs),
-                   (vselect (setolt $lhs, $rhs), $rhs, $lhs)>;
+def pmax : PatFrags<(ops node:$lhs, node:$rhs), [
+                    (vselect (setogt $rhs, $lhs), $rhs, $lhs),
+                    (vselect (setoge $rhs, $lhs), $rhs, $lhs),
+                    (vselect (setolt $lhs, $rhs), $rhs, $lhs),
+                    (vselect (setole $lhs, $rhs), $rhs, $lhs)
+]>;
 defm PMAX : SIMDBinaryFP<pmax, "pmax", 235>;
 
 // Also match the pmin/pmax cases where the operands are int vectors (but the

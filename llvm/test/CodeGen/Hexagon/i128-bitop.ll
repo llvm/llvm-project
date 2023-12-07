@@ -7,12 +7,11 @@ target triple = "hexagon"
 %s.1 = type { [4 x i32] }
 %s.2 = type { i128 }
 
-@g0 = external global %s.0*
+@g0 = external global ptr
 
 ; Function Attrs: nounwind ssp
-define void @f0(%s.2* nocapture %a0, i32 %a1) #0 {
+define void @f0(ptr nocapture %a0, i32 %a1) #0 {
 b0:
-  %v0 = getelementptr inbounds %s.2, %s.2* %a0, i32 0, i32 0
   br label %b1
 
 b1:                                               ; preds = %b4, %b3, %b0
@@ -29,15 +28,15 @@ b3:                                               ; preds = %b2, %b1
   %v2 = phi i32 [ 1, %b2 ], [ 0, %b1 ]
   %v3 = phi i128 [ 64, %b2 ], [ 32, %b1 ]
   %v4 = phi i128 [ -79228162495817593519834398721, %b2 ], [ -18446744069414584321, %b1 ]
-  %v5 = load %s.0*, %s.0** @g0, align 4
-  %v6 = getelementptr inbounds %s.0, %s.0* %v5, i32 0, i32 2, i32 %a1, i32 0, i32 %v2
-  %v7 = load i32, i32* %v6, align 4
+  %v5 = load ptr, ptr @g0, align 4
+  %v6 = getelementptr inbounds %s.0, ptr %v5, i32 0, i32 2, i32 %a1, i32 0, i32 %v2
+  %v7 = load i32, ptr %v6, align 4
   %v8 = zext i32 %v7 to i128
-  %v9 = load i128, i128* %v0, align 4
+  %v9 = load i128, ptr %a0, align 4
   %v10 = shl nuw nsw i128 %v8, %v3
   %v11 = and i128 %v9, %v4
   %v12 = or i128 %v11, %v10
-  store i128 %v12, i128* %v0, align 4
+  store i128 %v12, ptr %a0, align 4
   %v13 = add i32 %v1, 1
   br label %b1
 
@@ -51,9 +50,8 @@ b5:                                               ; preds = %b4
 }
 
 ; Function Attrs: nounwind ssp
-define void @f1(%s.2* nocapture %a0, i32 %a1) #0 {
+define void @f1(ptr nocapture %a0, i32 %a1) #0 {
 b0:
-  %v0 = getelementptr inbounds %s.2, %s.2* %a0, i32 0, i32 0
   br label %b1
 
 b1:                                               ; preds = %b5, %b4, %b0
@@ -64,22 +62,22 @@ b1:                                               ; preds = %b5, %b4, %b0
   ]
 
 b2:                                               ; preds = %b1
-  %v2 = load %s.0*, %s.0** @g0, align 4
-  %v3 = getelementptr inbounds %s.0, %s.0* %v2, i32 0, i32 2, i32 %a1, i32 0, i32 0
-  %v4 = load i32, i32* %v3, align 4
+  %v2 = load ptr, ptr @g0, align 4
+  %v3 = getelementptr inbounds %s.0, ptr %v2, i32 0, i32 2, i32 %a1, i32 0, i32 0
+  %v4 = load i32, ptr %v3, align 4
   %v5 = zext i32 %v4 to i128
-  %v6 = load i128, i128* %v0, align 4
+  %v6 = load i128, ptr %a0, align 4
   %v7 = shl nuw nsw i128 %v5, 32
   %v8 = and i128 %v6, -18446744069414584321
   %v9 = or i128 %v8, %v7
   br label %b4
 
 b3:                                               ; preds = %b1
-  %v10 = load %s.0*, %s.0** @g0, align 4
-  %v11 = getelementptr inbounds %s.0, %s.0* %v10, i32 0, i32 2, i32 %a1, i32 0, i32 1
-  %v12 = load i32, i32* %v11, align 4
+  %v10 = load ptr, ptr @g0, align 4
+  %v11 = getelementptr inbounds %s.0, ptr %v10, i32 0, i32 2, i32 %a1, i32 0, i32 1
+  %v12 = load i32, ptr %v11, align 4
   %v13 = zext i32 %v12 to i128
-  %v14 = load i128, i128* %v0, align 4
+  %v14 = load i128, ptr %a0, align 4
   %v15 = shl nuw nsw i128 %v13, 64
   %v16 = and i128 %v14, -79228162495817593519834398721
   %v17 = or i128 %v16, %v15
@@ -87,7 +85,7 @@ b3:                                               ; preds = %b1
 
 b4:                                               ; preds = %b3, %b2
   %v18 = phi i128 [ %v17, %b3 ], [ %v9, %b2 ]
-  store i128 %v18, i128* %v0, align 4
+  store i128 %v18, ptr %a0, align 4
   %v19 = add i32 %v1, 1
   br label %b1
 

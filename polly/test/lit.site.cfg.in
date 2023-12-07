@@ -7,7 +7,6 @@ config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
 config.polly_obj_root = "@POLLY_BINARY_DIR@"
 config.polly_lib_dir = "@POLLY_LIB_DIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
-config.enable_gpgpu_codegen = "@GPU_CODEGEN@"
 config.llvm_polly_link_into_tools = "@LLVM_POLLY_LINK_INTO_TOOLS@"
 config.targets_to_build = "@TARGETS_TO_BUILD@"
 config.extra_paths = "@POLLY_TEST_EXTRA_PATHS@".split(";")
@@ -49,9 +48,6 @@ else:
     config.substitutions.append(('%loadPolly', commonOpts ))
     config.substitutions.append(('%loadNPMPolly', commonOpts ))
 
-
-if config.enable_gpgpu_codegen == 'TRUE' :
-    config.available_features.add('pollyacc')
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace boost {
+namespace clang::tidy::boost {
 
 /// Finds calls to ``boost::lexical_cast<std::string>`` and
 /// ``boost::lexical_cast<std::wstring>`` and replaces them with
@@ -32,8 +30,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace boost
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::boost
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BOOST_USE_TO_STRING_H

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/Format.h"
 #include <cassert>
@@ -18,13 +19,11 @@ using namespace dwarf;
 
 namespace llvm {
 
-typedef std::vector<DWARFExpression::Operation::Description> DescVector;
+typedef DWARFExpression::Operation Op;
+typedef Op::Description Desc;
 
-static DescVector getDescriptions() {
-  DescVector Descriptions;
-  typedef DWARFExpression::Operation Op;
-  typedef Op::Description Desc;
-
+static std::vector<Desc> getOpDescriptions() {
+  std::vector<Desc> Descriptions;
   Descriptions.resize(0xff);
   Descriptions[DW_OP_addr] = Desc(Op::Dwarf2, Op::SizeAddr);
   Descriptions[DW_OP_deref] = Desc(Op::Dwarf2);
@@ -94,26 +93,49 @@ static DescVector getDescriptions() {
   Descriptions[DW_OP_WASM_location] =
       Desc(Op::Dwarf4, Op::SizeLEB, Op::WasmLocationArg);
   Descriptions[DW_OP_GNU_push_tls_address] = Desc(Op::Dwarf3);
-  Descriptions[DW_OP_addrx] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_addr_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_const_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_entry_value] = Desc(Op::Dwarf4, Op::SizeLEB);
-
+  Descriptions[DW_OP_addrx] = Desc(Op::Dwarf5, Op::SizeLEB);
+  Descriptions[DW_OP_constx] = Desc(Op::Dwarf5, Op::SizeLEB);
   Descriptions[DW_OP_convert] = Desc(Op::Dwarf5, Op::BaseTypeRef);
   Descriptions[DW_OP_entry_value] = Desc(Op::Dwarf5, Op::SizeLEB);
   Descriptions[DW_OP_regval_type] =
       Desc(Op::Dwarf5, Op::SizeLEB, Op::BaseTypeRef);
-
+  // This Description acts as a marker that getSubOpDesc must be called
+  // to fetch the final Description for the operation. Each such final
+  // Description must share the same first SizeSubOpLEB operand.
+  Descriptions[DW_OP_LLVM_user] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
   return Descriptions;
 }
 
-static DWARFExpression::Operation::Description getOpDesc(unsigned OpCode) {
-  // FIXME: Make this constexpr once all compilers are smart enough to do it.
-  static DescVector Descriptions = getDescriptions();
+static Desc getDescImpl(ArrayRef<Desc> Descriptions, unsigned Opcode) {
   // Handle possible corrupted or unsupported operation.
-  if (OpCode >= Descriptions.size())
+  if (Opcode >= Descriptions.size())
     return {};
-  return Descriptions[OpCode];
+  return Descriptions[Opcode];
+}
+
+static Desc getOpDesc(unsigned Opcode) {
+  static std::vector<Desc> Descriptions = getOpDescriptions();
+  return getDescImpl(Descriptions, Opcode);
+}
+
+static std::vector<Desc> getSubOpDescriptions() {
+  static constexpr unsigned LlvmUserDescriptionsSize = 1
+#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME) +1
+#include "llvm/BinaryFormat/Dwarf.def"
+      ;
+  std::vector<Desc> Descriptions;
+  Descriptions.resize(LlvmUserDescriptionsSize);
+  Descriptions[DW_OP_LLVM_nop] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  return Descriptions;
+}
+
+static Desc getSubOpDesc(unsigned Opcode, unsigned SubOpcode) {
+  assert(Opcode == DW_OP_LLVM_user);
+  static std::vector<Desc> Descriptions = getSubOpDescriptions();
+  return getDescImpl(Descriptions, SubOpcode);
 }
 
 bool DWARFExpression::Operation::extract(DataExtractor Data,
@@ -126,14 +148,22 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
   if (Desc.Version == Operation::DwarfNA)
     return false;
 
-  for (unsigned Operand = 0; Operand < 2; ++Operand) {
+  Operands.resize(Desc.Op.size());
+  OperandEndOffsets.resize(Desc.Op.size());
+  for (unsigned Operand = 0; Operand < Desc.Op.size(); ++Operand) {
     unsigned Size = Desc.Op[Operand];
     unsigned Signed = Size & Operation::SignBit;
 
-    if (Size == Operation::SizeNA)
-      break;
-
     switch (Size & ~Operation::SignBit) {
+    case Operation::SizeSubOpLEB:
+      assert(Operand == 0 && "SubOp operand must be the first operand");
+      Operands[Operand] = Data.getULEB128(&Offset);
+      Desc = getSubOpDesc(Opcode, Operands[Operand]);
+      if (Desc.Version == Operation::DwarfNA)
+        return false;
+      assert(Desc.Op[Operand] == Operation::SizeSubOpLEB &&
+             "SizeSubOpLEB Description must begin with SizeSubOpLEB operand");
+      break;
     case Operation::Size1:
       Operands[Operand] = Data.getU8(&Offset);
       if (Signed)
@@ -207,9 +237,9 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
 
 static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
                                    DIDumpOptions DumpOpts,
-                                   const uint64_t Operands[2],
+                                   ArrayRef<uint64_t> Operands,
                                    unsigned Operand) {
-  assert(Operand < 2 && "operand out of bounds");
+  assert(Operand < Operands.size() && "operand out of bounds");
   auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
   if (Die && Die.getTag() == dwarf::DW_TAG_base_type) {
     OS << " (";
@@ -227,7 +257,7 @@ static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
 bool DWARFExpression::prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
                                             DIDumpOptions DumpOpts,
                                             uint8_t Opcode,
-                                            const uint64_t Operands[2]) {
+                                            ArrayRef<uint64_t> Operands) {
   if (!DumpOpts.GetNameForDWARFReg)
     return false;
 
@@ -258,6 +288,12 @@ bool DWARFExpression::prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
   return false;
 }
 
+std::optional<unsigned> DWARFExpression::Operation::getSubCode() const {
+  if (!Desc.Op.size() || Desc.Op[0] != Operation::SizeSubOpLEB)
+    return std::nullopt;
+  return Operands[0];
+}
+
 bool DWARFExpression::Operation::print(raw_ostream &OS, DIDumpOptions DumpOpts,
                                        const DWARFExpression *Expr,
                                        DWARFUnit *U) const {
@@ -277,14 +313,15 @@ bool DWARFExpression::Operation::print(raw_ostream &OS, DIDumpOptions DumpOpts,
     if (prettyPrintRegisterOp(U, OS, DumpOpts, Opcode, Operands))
       return true;
 
-  for (unsigned Operand = 0; Operand < 2; ++Operand) {
+  for (unsigned Operand = 0; Operand < Desc.Op.size(); ++Operand) {
     unsigned Size = Desc.Op[Operand];
     unsigned Signed = Size & Operation::SignBit;
 
-    if (Size == Operation::SizeNA)
-      break;
-
-    if (Size == Operation::BaseTypeRef && U) {
+    if (Size == Operation::SizeSubOpLEB) {
+      StringRef SubName = SubOperationEncodingString(Opcode, Operands[Operand]);
+      assert(!SubName.empty() && "DW_OP SubOp has no name!");
+      OS << " " << SubName;
+    } else if (Size == Operation::BaseTypeRef && U) {
       // For DW_OP_convert the operand may be 0 to indicate that conversion to
       // the generic type should be done. The same holds for DW_OP_reinterpret,
       // which is currently not supported.
@@ -355,11 +392,8 @@ void DWARFExpression::print(raw_ostream &OS, DIDumpOptions DumpOpts,
 }
 
 bool DWARFExpression::Operation::verify(const Operation &Op, DWARFUnit *U) {
-  for (unsigned Operand = 0; Operand < 2; ++Operand) {
+  for (unsigned Operand = 0; Operand < Op.Desc.Op.size(); ++Operand) {
     unsigned Size = Op.Desc.Op[Operand];
-
-    if (Size == Operation::SizeNA)
-      break;
 
     if (Size == Operation::BaseTypeRef) {
       // For DW_OP_convert the operand may be 0 to indicate that conversion to
@@ -454,6 +488,13 @@ static bool printCompactDWARFExpr(
       Stack.back().Kind = PrintedExpr::Value;
       break;
     }
+    case dwarf::DW_OP_nop: {
+      break;
+    }
+    case dwarf::DW_OP_LLVM_user: {
+      assert(Op.getSubCode() && *Op.getSubCode() == dwarf::DW_OP_LLVM_nop);
+      break;
+    }
     default:
       if (Opcode >= dwarf::DW_OP_reg0 && Opcode <= dwarf::DW_OP_reg31) {
         // DW_OP_reg<N>: A register, with the register num implied by the
@@ -487,7 +528,10 @@ static bool printCompactDWARFExpr(
     ++I;
   }
 
-  assert(Stack.size() == 1 && "expected one value on stack");
+  if (Stack.size() != 1) {
+    OS << "<stack of size " << Stack.size() << ", expected 1>";
+    return false;
+  }
 
   if (Stack.front().Kind == PrintedExpr::Address)
     OS << "[" << Stack.front().String << "]";

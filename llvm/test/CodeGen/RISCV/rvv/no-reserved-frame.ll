@@ -61,24 +61,24 @@ entry:
   %i = alloca i32, align 4
   %j = alloca i32, align 4
   %local_v = alloca <vscale x 2 x i32>, align 4
-  store i32 %aa, i32* %aa.addr, align 4
-  %0 = load i32, i32* %aa.addr, align 4
-  store i32 %0, i32* %local, align 4
-  %1 = load i32, i32* %a, align 4
-  %2 = load i32, i32* %b, align 4
-  %3 = load i32, i32* %c, align 4
-  %4 = load i32, i32* %d, align 4
-  %5 = load i32, i32* %e, align 4
-  %6 = load i32, i32* %f, align 4
-  %7 = load i32, i32* %g, align 4
-  %8 = load i32, i32* %h, align 4
-  %9 = load i32, i32* %i, align 4
-  %10 = load i32, i32* %j, align 4
-  call void @gfunc(i32 signext %1, i32* %local, i32 signext %2, i32 signext %3, i32 signext %4, i32 signext %5, i32 signext %6, i32 signext %7, i32 %8, i32 %9, i32 %10)
+  store i32 %aa, ptr %aa.addr, align 4
+  %0 = load i32, ptr %aa.addr, align 4
+  store i32 %0, ptr %local, align 4
+  %1 = load i32, ptr %a, align 4
+  %2 = load i32, ptr %b, align 4
+  %3 = load i32, ptr %c, align 4
+  %4 = load i32, ptr %d, align 4
+  %5 = load i32, ptr %e, align 4
+  %6 = load i32, ptr %f, align 4
+  %7 = load i32, ptr %g, align 4
+  %8 = load i32, ptr %h, align 4
+  %9 = load i32, ptr %i, align 4
+  %10 = load i32, ptr %j, align 4
+  call void @gfunc(i32 signext %1, ptr %local, i32 signext %2, i32 signext %3, i32 signext %4, i32 signext %5, i32 signext %6, i32 signext %7, i32 %8, i32 %9, i32 %10)
   ret i32 0
 }
 
-declare void @gfunc(i32 signext, i32*, i32 signext, i32 signext, i32 signext, i32 signext, i32 signext, i32 signext, i32, i32, i32) #1
+declare void @gfunc(i32 signext, ptr, i32 signext, i32 signext, i32 signext, i32 signext, i32 signext, i32 signext, i32, i32, i32) #1
 
 attributes #0 = { "stackrealign" }
 attributes #1 = { "stackrealign" }

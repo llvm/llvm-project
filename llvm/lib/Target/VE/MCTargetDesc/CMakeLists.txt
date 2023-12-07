@@ -9,9 +9,11 @@ add_llvm_component_library(LLVMVEDesc
   VETargetStreamer.cpp
 
   LINK_COMPONENTS
+  CodeGenTypes
   MC
-  VEInfo
   Support
+  TargetParser
+  VEInfo
 
   ADD_TO_COMPONENT
   VE

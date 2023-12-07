@@ -3,52 +3,52 @@
 --- |
 
   declare <16 x i8> @llvm.mips.div.s.b(<16 x i8>, <16 x i8>)
-  define void @sdiv_v16i8_builtin(<16 x i8>* %a, <16 x i8>* %b, <16 x i8>* %c) { entry: ret void }
+  define void @sdiv_v16i8_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <8 x i16> @llvm.mips.div.s.h(<8 x i16>, <8 x i16>)
-  define void @sdiv_v8i16_builtin(<8 x i16>* %a, <8 x i16>* %b, <8 x i16>* %c) { entry: ret void }
+  define void @sdiv_v8i16_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <4 x i32> @llvm.mips.div.s.w(<4 x i32>, <4 x i32>)
-  define void @sdiv_v4i32_builtin(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c) { entry: ret void }
+  define void @sdiv_v4i32_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <2 x i64> @llvm.mips.div.s.d(<2 x i64>, <2 x i64>)
-  define void @sdiv_v2i64_builtin(<2 x i64>* %a, <2 x i64>* %b, <2 x i64>* %c) { entry: ret void }
+  define void @sdiv_v2i64_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <16 x i8> @llvm.mips.mod.s.b(<16 x i8>, <16 x i8>)
-  define void @smod_v16i8_builtin(<16 x i8>* %a, <16 x i8>* %b, <16 x i8>* %c) { entry: ret void }
+  define void @smod_v16i8_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <8 x i16> @llvm.mips.mod.s.h(<8 x i16>, <8 x i16>)
-  define void @smod_v8i16_builtin(<8 x i16>* %a, <8 x i16>* %b, <8 x i16>* %c) { entry: ret void }
+  define void @smod_v8i16_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <4 x i32> @llvm.mips.mod.s.w(<4 x i32>, <4 x i32>)
-  define void @smod_v4i32_builtin(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c) { entry: ret void }
+  define void @smod_v4i32_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <2 x i64> @llvm.mips.mod.s.d(<2 x i64>, <2 x i64>)
-  define void @smod_v2i64_builtin(<2 x i64>* %a, <2 x i64>* %b, <2 x i64>* %c) { entry: ret void }
+  define void @smod_v2i64_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <16 x i8> @llvm.mips.div.u.b(<16 x i8>, <16 x i8>)
-  define void @udiv_v16i8_builtin(<16 x i8>* %a, <16 x i8>* %b, <16 x i8>* %c) { entry: ret void }
+  define void @udiv_v16i8_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <8 x i16> @llvm.mips.div.u.h(<8 x i16>, <8 x i16>)
-  define void @udiv_v8i16_builtin(<8 x i16>* %a, <8 x i16>* %b, <8 x i16>* %c) { entry: ret void }
+  define void @udiv_v8i16_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <4 x i32> @llvm.mips.div.u.w(<4 x i32>, <4 x i32>)
-  define void @udiv_v4i32_builtin(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c) { entry: ret void }
+  define void @udiv_v4i32_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <2 x i64> @llvm.mips.div.u.d(<2 x i64>, <2 x i64>)
-  define void @udiv_v2i64_builtin(<2 x i64>* %a, <2 x i64>* %b, <2 x i64>* %c) { entry: ret void }
+  define void @udiv_v2i64_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <16 x i8> @llvm.mips.mod.u.b(<16 x i8>, <16 x i8>)
-  define void @umod_v16i8_builtin(<16 x i8>* %a, <16 x i8>* %b, <16 x i8>* %c) { entry: ret void }
+  define void @umod_v16i8_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <8 x i16> @llvm.mips.mod.u.h(<8 x i16>, <8 x i16>)
-  define void @umod_v8i16_builtin(<8 x i16>* %a, <8 x i16>* %b, <8 x i16>* %c) { entry: ret void }
+  define void @umod_v8i16_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <4 x i32> @llvm.mips.mod.u.w(<4 x i32>, <4 x i32>)
-  define void @umod_v4i32_builtin(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c) { entry: ret void }
+  define void @umod_v4i32_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <2 x i64> @llvm.mips.mod.u.d(<2 x i64>, <2 x i64>)
-  define void @umod_v2i64_builtin(<2 x i64>* %a, <2 x i64>* %b, <2 x i64>* %c) { entry: ret void }
+  define void @umod_v2i64_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
 ...
 ---

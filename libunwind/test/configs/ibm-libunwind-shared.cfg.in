@@ -16,8 +16,8 @@ config.substitutions.append(('%{exec}',
 
 import os, site
 site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
-import libcxx.test.params, libcxx.test.newconfig, libcxx.test.newconfig
-libcxx.test.newconfig.configure(
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
     libcxx.test.params.DEFAULT_PARAMETERS,
     libcxx.test.features.DEFAULT_FEATURES,
     config,

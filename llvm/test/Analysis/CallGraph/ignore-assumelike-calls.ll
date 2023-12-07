@@ -10,19 +10,23 @@
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   Call graph node for function: 'bitcast_only'<<{{.*}}>>  #uses=0
 ; CHECK-EMPTY:
-; CHECK-NEXT:   Call graph node for function: 'llvm.lifetime.start.p0'<<{{.*}}>>  #uses=1
+; CHECK-NEXT:   Call graph node for function: 'llvm.lifetime.start.p0'<<{{.*}}>>  #uses=3
 ; CHECK-EMPTY:
-; CHECK-NEXT:   Call graph node for function: 'llvm.memset.p0.i64'<<{{.*}}>>  #uses=1
+; CHECK-NEXT:   Call graph node for function: 'llvm.memset.p0.i64'<<{{.*}}>>  #uses=2
 ; CHECK-EMPTY:
-; CHECK-NEXT:   Call graph node for function: 'llvm.memset.p1.i64'<<{{.*}}>>  #uses=1
+; CHECK-NEXT:   Call graph node for function: 'llvm.memset.p1.i64'<<{{.*}}>>  #uses=2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   Call graph node for function: 'other_cast_intrinsic_use'<<{{.*}}>>  #uses=1
+; CHECK-NEXT:   CS<{{.*}}> calls function 'llvm.memset.p1.i64'
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   Call graph node for function: 'other_intrinsic_use'<<{{.*}}>>  #uses=1
+; CHECK-NEXT:   CS<{{.*}}> calls function 'llvm.memset.p0.i64'
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   Call graph node for function: 'used_by_lifetime'<<{{.*}}>>  #uses=0
+; CHECK-NEXT:   CS<{{.*}}> calls function 'llvm.lifetime.start.p0'
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   Call graph node for function: 'used_by_lifetime_cast'<<{{.*}}>>  #uses=0
+; CHECK-NEXT:   CS<{{.*}}> calls function 'llvm.lifetime.start.p0'
 ; CHECK-EMPTY:
 
 define internal void @used_by_lifetime() {

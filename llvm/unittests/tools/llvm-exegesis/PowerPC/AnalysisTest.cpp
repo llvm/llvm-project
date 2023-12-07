@@ -71,19 +71,19 @@ protected:
 
 TEST_F(PPCAnalysisTest, ComputeIdealizedProcResPressure_2ALU) {
   const auto Pressure =
-      computeIdealizedProcResPressure(STI->getSchedModel(), {{ALUIdx, 2}});
+      computeIdealizedProcResPressure(STI->getSchedModel(), {{ALUIdx, 2, 0}});
   EXPECT_THAT(Pressure, UnorderedElementsAre(Pair(ALUIdx, 2.0)));
 }
 
 TEST_F(PPCAnalysisTest, ComputeIdealizedProcResPressure_1ALUE) {
   const auto Pressure =
-      computeIdealizedProcResPressure(STI->getSchedModel(), {{ALUEIdx, 2}});
+      computeIdealizedProcResPressure(STI->getSchedModel(), {{ALUEIdx, 2, 0}});
   EXPECT_THAT(Pressure, UnorderedElementsAre(Pair(ALUEIdx, 2.0)));
 }
 
 TEST_F(PPCAnalysisTest, ComputeIdealizedProcResPressure_1ALU1IPAGEN) {
-  const auto Pressure =
-      computeIdealizedProcResPressure(STI->getSchedModel(), {{ALUIdx, 1}, {IPAGENIdx, 1}});
+  const auto Pressure = computeIdealizedProcResPressure(
+      STI->getSchedModel(), {{ALUIdx, 1, 0}, {IPAGENIdx, 1, 0}});
   EXPECT_THAT(Pressure, UnorderedElementsAre(Pair(ALUIdx, 1.0),Pair(IPAGENIdx, 1)));
 }
 } // namespace

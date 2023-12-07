@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -aarch64-enable-atomic-cfg-tidy=0 < %s -mtriple=aarch64-none-eabihf -fast-isel=false | FileCheck %s
+; RUN: llc -verify-machineinstrs -aarch64-enable-atomic-cfg-tidy=0 < %s -mtriple=aarch64 -fast-isel=false | FileCheck %s
 
 
 define i32 @ule_64_max(i64 %p) {

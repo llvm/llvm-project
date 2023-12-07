@@ -1,4 +1,4 @@
-# RUN: llc -O1 -start-after simple-register-coalescing -o - %s -experimental-debug-variable-locations=true | FileCheck %s
+# RUN: llc -O1 -start-after register-coalescer -o - %s -experimental-debug-variable-locations=true | FileCheck %s
 
 --- |
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -32,6 +32,7 @@
 ---
 name:            foo
 tracksRegLiveness: true
+debugInstrRef: true
 debugValueSubstitutions:
   - { srcinst: 2, srcop: 0, dstinst: 1, dstop: 0, subreg: 2 }
 body:             |
@@ -39,7 +40,7 @@ body:             |
     %0:gr16_abcd = MOV16ri 1, debug-instr-number 1, debug-location !9
 
   bb.1:
-    DBG_INSTR_REF 2, 0, !7, !DIExpression(), debug-location !9
+    DBG_INSTR_REF !7, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0), debug-location !9
     %1:gr16 = COPY %0, debug-location !9
     %2:gr16 = COPY %0
 

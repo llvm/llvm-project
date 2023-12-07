@@ -83,11 +83,13 @@ cc_library(
         "//llvm:DWP",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
-        "//llvm:ExecutionEngine",
+        "//llvm:DWARFLinker",
+        "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:MCDisassembler",
         "//llvm:MCParser",
         "//llvm:Object",
+        "//llvm:OrcShared",
         "//llvm:Support",
         "//llvm:ir_headers",
     ],
@@ -122,7 +124,6 @@ cc_library(
         "//llvm:DWP",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
-        "//llvm:ExecutionEngine",
         "//llvm:MC",
         "//llvm:MCDisassembler",
         "//llvm:MCParser",
@@ -155,6 +156,7 @@ cc_library(
         "//llvm:MCParser",
         "//llvm:Object",
         "//llvm:Support",
+        "//llvm:TransformUtils",
     ],
 )
 
@@ -182,6 +184,7 @@ cc_library(
         "//llvm:Object",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:TransformUtils",
     ],
 )
 
@@ -265,7 +268,9 @@ cc_library(
         "//llvm:MCDisassembler",
         "//llvm:MCParser",
         "//llvm:Object",
+        "//llvm:ObjectYAML",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:ir_headers",
     ],
 )

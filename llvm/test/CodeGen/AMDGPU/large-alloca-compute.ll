@@ -1,10 +1,10 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck --check-prefixes=GCN,CI,ALL %s
 ; RUN: llc -march=amdgcn -mcpu=carrizo --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,VI,ALL %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,GFX9,ALL %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
-; RUN: llc -march=amdgcn -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global,-architected-flat-scratch,-user-sgpr-init16-bug < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -march=amdgcn -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global,-architected-flat-scratch,-user-sgpr-init16-bug < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
 
 ; FIXME: align on alloca seems to be ignored for private_segment_alignment
 
@@ -68,3 +68,6 @@ define amdgpu_kernel void @large_alloca_compute_shader(i32 %x, i32 %y) #0 {
 }
 
 attributes #0 = { nounwind  }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

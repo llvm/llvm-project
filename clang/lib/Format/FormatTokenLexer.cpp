@@ -71,6 +71,9 @@ FormatTokenLexer::FormatTokenLexer(
     auto Identifier = &IdentTable.get(StatementAttributeLikeMacro);
     Macros.insert({Identifier, TT_StatementAttributeLikeMacro});
   }
+
+  for (const auto &TypeName : Style.TypeNames)
+    TypeNames.insert(&IdentTable.get(TypeName));
 }
 
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
@@ -102,6 +105,8 @@ void FormatTokenLexer::tryMergePreviousTokens() {
   if (tryMergeConflictMarkers())
     return;
   if (tryMergeLessLess())
+    return;
+  if (tryMergeGreaterGreater())
     return;
   if (tryMergeForEach())
     return;
@@ -272,7 +277,7 @@ bool FormatTokenLexer::tryMergeNSStringLiteral() {
     return false;
   auto &At = *(Tokens.end() - 2);
   auto &String = *(Tokens.end() - 1);
-  if (!At->is(tok::at) || !String->is(tok::string_literal))
+  if (At->isNot(tok::at) || String->isNot(tok::string_literal))
     return false;
   At->Tok.setKind(tok::string_literal);
   At->TokenText = StringRef(At->TokenText.begin(),
@@ -290,7 +295,7 @@ bool FormatTokenLexer::tryMergeJSPrivateIdentifier() {
     return false;
   auto &Hash = *(Tokens.end() - 2);
   auto &Identifier = *(Tokens.end() - 1);
-  if (!Hash->is(tok::hash) || !Identifier->is(tok::identifier))
+  if (Hash->isNot(tok::hash) || Identifier->isNot(tok::identifier))
     return false;
   Hash->Tok.setKind(tok::identifier);
   Hash->TokenText =
@@ -355,7 +360,7 @@ bool FormatTokenLexer::tryMergeNullishCoalescingEqual() {
   auto &NullishCoalescing = *(Tokens.end() - 2);
   auto &Equal = *(Tokens.end() - 1);
   if (NullishCoalescing->getType() != TT_NullCoalescingOperator ||
-      !Equal->is(tok::equal)) {
+      Equal->isNot(tok::equal)) {
     return false;
   }
   NullishCoalescing->Tok.setKind(tok::equal); // no '??=' in clang tokens.
@@ -394,7 +399,7 @@ bool FormatTokenLexer::tryTransformCSharpForEach() {
   if (Tokens.size() < 1)
     return false;
   auto &Identifier = *(Tokens.end() - 1);
-  if (!Identifier->is(tok::identifier))
+  if (Identifier->isNot(tok::identifier))
     return false;
   if (Identifier->TokenText != "foreach")
     return false;
@@ -409,9 +414,9 @@ bool FormatTokenLexer::tryMergeForEach() {
     return false;
   auto &For = *(Tokens.end() - 2);
   auto &Each = *(Tokens.end() - 1);
-  if (!For->is(tok::kw_for))
+  if (For->isNot(tok::kw_for))
     return false;
-  if (!Each->is(tok::identifier))
+  if (Each->isNot(tok::identifier))
     return false;
   if (Each->TokenText != "each")
     return false;
@@ -430,7 +435,7 @@ bool FormatTokenLexer::tryTransformTryUsageForC() {
   if (Tokens.size() < 2)
     return false;
   auto &Try = *(Tokens.end() - 2);
-  if (!Try->is(tok::kw_try))
+  if (Try->isNot(tok::kw_try))
     return false;
   auto &Next = *(Tokens.end() - 1);
   if (Next->isOneOf(tok::l_brace, tok::colon, tok::hash, tok::comment))
@@ -460,18 +465,41 @@ bool FormatTokenLexer::tryMergeLessLess() {
     return false;
 
   auto X = Tokens.size() > 3 ? First[-1] : nullptr;
-  auto Y = First[2];
-  if ((X && X->is(tok::less)) || Y->is(tok::less))
+  if (X && X->is(tok::less))
     return false;
 
-  // Do not remove a whitespace between the two "<" e.g. "operator< <>".
-  if (X && X->is(tok::kw_operator) && Y->is(tok::greater))
+  auto Y = First[2];
+  if ((!X || X->isNot(tok::kw_operator)) && Y->is(tok::less))
     return false;
 
   First[0]->Tok.setKind(tok::lessless);
   First[0]->TokenText = "<<";
   First[0]->ColumnWidth += 1;
   Tokens.erase(Tokens.end() - 2);
+  return true;
+}
+
+bool FormatTokenLexer::tryMergeGreaterGreater() {
+  // Merge kw_operator,greater,greater into kw_operator,greatergreater.
+  if (Tokens.size() < 2)
+    return false;
+
+  auto First = Tokens.end() - 2;
+  if (First[0]->isNot(tok::greater) || First[1]->isNot(tok::greater))
+    return false;
+
+  // Only merge if there currently is no whitespace between the first two ">".
+  if (First[1]->hasWhitespaceBefore())
+    return false;
+
+  auto Tok = Tokens.size() > 2 ? First[-1] : nullptr;
+  if (Tok && Tok->isNot(tok::kw_operator))
+    return false;
+
+  First[0]->Tok.setKind(tok::greatergreater);
+  First[0]->TokenText = ">>";
+  First[0]->ColumnWidth += 1;
+  Tokens.erase(Tokens.end() - 1);
   return true;
 }
 
@@ -483,7 +511,7 @@ bool FormatTokenLexer::tryMergeTokens(ArrayRef<tok::TokenKind> Kinds,
   SmallVectorImpl<FormatToken *>::const_iterator First =
       Tokens.end() - Kinds.size();
   for (unsigned i = 0; i < Kinds.size(); ++i)
-    if (!First[i]->is(Kinds[i]))
+    if (First[i]->isNot(Kinds[i]))
       return false;
 
   return tryMergeTokens(Kinds.size(), NewType);
@@ -824,14 +852,14 @@ bool FormatTokenLexer::tryMerge_TMacro() {
   if (Tokens.size() < 4)
     return false;
   FormatToken *Last = Tokens.back();
-  if (!Last->is(tok::r_paren))
+  if (Last->isNot(tok::r_paren))
     return false;
 
   FormatToken *String = Tokens[Tokens.size() - 2];
-  if (!String->is(tok::string_literal) || String->IsMultiline)
+  if (String->isNot(tok::string_literal) || String->IsMultiline)
     return false;
 
-  if (!Tokens[Tokens.size() - 3]->is(tok::l_paren))
+  if (Tokens[Tokens.size() - 3]->isNot(tok::l_paren))
     return false;
 
   FormatToken *Macro = Tokens[Tokens.size() - 4];
@@ -1197,7 +1225,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
   }
 
   if (Style.isCpp()) {
-    auto it = Macros.find(FormatTok->Tok.getIdentifierInfo());
+    auto *Identifier = FormatTok->Tok.getIdentifierInfo();
+    auto it = Macros.find(Identifier);
     if (!(Tokens.size() > 0 && Tokens.back()->Tok.getIdentifierInfo() &&
           Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() ==
               tok::pp_define) &&
@@ -1215,6 +1244,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
         FormatTok->setType(TT_MacroBlockBegin);
       else if (MacroBlockEndRegex.match(Text))
         FormatTok->setType(TT_MacroBlockEnd);
+      else if (TypeNames.contains(Identifier))
+        FormatTok->setFinalizedType(TT_TypeName);
     }
   }
 
@@ -1286,17 +1317,13 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
     Tok.Tok.setKind(tok::string_literal);
   }
 
-  if (Tok.is(tok::comment) && (Tok.TokenText == "// clang-format on" ||
-                               Tok.TokenText == "/* clang-format on */")) {
+  if (Tok.is(tok::comment) && isClangFormatOn(Tok.TokenText))
     FormattingDisabled = false;
-  }
 
   Tok.Finalized = FormattingDisabled;
 
-  if (Tok.is(tok::comment) && (Tok.TokenText == "// clang-format off" ||
-                               Tok.TokenText == "/* clang-format off */")) {
+  if (Tok.is(tok::comment) && isClangFormatOff(Tok.TokenText))
     FormattingDisabled = true;
-  }
 }
 
 void FormatTokenLexer::resetLexer(unsigned Offset) {

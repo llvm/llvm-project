@@ -4,19 +4,18 @@
 ;
 ; See vldm-liveness.mir for the bug this file originally testing.
 
-define arm_aapcs_vfpcc <4 x float> @foo(float* %ptr) {
+define arm_aapcs_vfpcc <4 x float> @foo(ptr %ptr) {
 ; CHECK-LABEL: foo:
 ; CHECK: vldmia r0, {s0, s1}
 ; CHECK: vldr s3, [r0, #8]
 ; CHECK: vldr s2, [r0, #16]
-   %off0 = getelementptr float, float* %ptr, i32 0
-   %val0 = load float, float* %off0
-   %off1 = getelementptr float, float* %ptr, i32 1
-   %val1 = load float, float* %off1
-   %off4 = getelementptr float, float* %ptr, i32 4
-   %val4 = load float, float* %off4
-   %off2 = getelementptr float, float* %ptr, i32 2
-   %val2 = load float, float* %off2
+   %val0 = load float, ptr %ptr
+   %off1 = getelementptr float, ptr %ptr, i32 1
+   %val1 = load float, ptr %off1
+   %off4 = getelementptr float, ptr %ptr, i32 4
+   %val4 = load float, ptr %off4
+   %off2 = getelementptr float, ptr %ptr, i32 2
+   %val2 = load float, ptr %off2
 
    %vec1 = insertelement <4 x float> undef, float %val0, i32 0
    %vec2 = insertelement <4 x float> %vec1, float %val1, i32 1

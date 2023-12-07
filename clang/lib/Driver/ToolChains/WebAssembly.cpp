@@ -77,36 +77,51 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_u);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  const char *Crt1 = "crt1.o";
+  bool IsCommand = true;
+  const char *Crt1;
   const char *Entry = nullptr;
 
-  // If crt1-command.o exists, it supports new-style commands, so use it.
-  // Otherwise, use the old crt1.o. This is a temporary transition measure.
-  // Once WASI libc no longer needs to support LLVM versions which lack
-  // support for new-style command, it can make crt1.o the same as
-  // crt1-command.o. And once LLVM no longer needs to support WASI libc
-  // versions before that, it can switch to using crt1-command.o.
-  if (ToolChain.GetFilePath("crt1-command.o") != "crt1-command.o")
-    Crt1 = "crt1-command.o";
+  // When -shared is specified, use the reactor exec model unless
+  // specified otherwise.
+  if (Args.hasArg(options::OPT_shared))
+    IsCommand = false;
 
   if (const Arg *A = Args.getLastArg(options::OPT_mexec_model_EQ)) {
     StringRef CM = A->getValue();
     if (CM == "command") {
-      // Use default values.
+      IsCommand = true;
     } else if (CM == "reactor") {
-      Crt1 = "crt1-reactor.o";
-      Entry = "_initialize";
+      IsCommand = false;
     } else {
       ToolChain.getDriver().Diag(diag::err_drv_invalid_argument_to_option)
           << CM << A->getOption().getName();
     }
   }
+
+  if (IsCommand) {
+    // If crt1-command.o exists, it supports new-style commands, so use it.
+    // Otherwise, use the old crt1.o. This is a temporary transition measure.
+    // Once WASI libc no longer needs to support LLVM versions which lack
+    // support for new-style command, it can make crt1.o the same as
+    // crt1-command.o. And once LLVM no longer needs to support WASI libc
+    // versions before that, it can switch to using crt1-command.o.
+    Crt1 = "crt1.o";
+    if (ToolChain.GetFilePath("crt1-command.o") != "crt1-command.o")
+      Crt1 = "crt1-command.o";
+  } else {
+    Crt1 = "crt1-reactor.o";
+    Entry = "_initialize";
+  }
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles))
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(Crt1)));
   if (Entry) {
     CmdArgs.push_back(Args.MakeArgString("--entry"));
     CmdArgs.push_back(Args.MakeArgString(Entry));
   }
+
+  if (Args.hasArg(options::OPT_shared))
+    CmdArgs.push_back(Args.MakeArgString("-shared"));
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
@@ -208,8 +223,6 @@ bool WebAssembly::isPIEDefault(const llvm::opt::ArgList &Args) const {
 }
 
 bool WebAssembly::isPICDefaultForced() const { return false; }
-
-bool WebAssembly::IsIntegratedAssemblerDefault() const { return true; }
 
 bool WebAssembly::hasBlocksRuntime() const { return false; }
 
@@ -459,6 +472,9 @@ SanitizerMask WebAssembly::getSupportedSanitizers() const {
   if (getTriple().isOSEmscripten()) {
     Res |= SanitizerKind::Vptr | SanitizerKind::Leak | SanitizerKind::Address;
   }
+  // -fsanitize=function places two words before the function label, which are
+  // -unsupported.
+  Res &= ~SanitizerKind::Function;
   return Res;
 }
 

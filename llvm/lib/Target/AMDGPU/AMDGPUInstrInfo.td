@@ -18,10 +18,6 @@ def AMDGPUDTIntTernaryOp : SDTypeProfile<1, 3, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>
 ]>;
 
-def AMDGPULdExpOp : SDTypeProfile<1, 2,
-  [SDTCisSameAs<0, 1>, SDTCisFP<0>, SDTCisInt<2>]
->;
-
 def AMDGPUFPClassOp : SDTypeProfile<1, 2,
   [SDTCisInt<0>, SDTCisFP<1>, SDTCisInt<2>]
 >;
@@ -43,6 +39,7 @@ def AMDGPUFmasOp : SDTypeProfile<1, 4,
   [SDTCisFP<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisInt<4>]
 >;
 
+def ImmOp : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 def AMDGPUKillSDT : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 
 def AMDGPUIfOp : SDTypeProfile<1, 2,
@@ -85,9 +82,16 @@ def AMDGPUcall : SDNode<"AMDGPUISD::CALL",
   SDNPVariadic]
 >;
 
-def AMDGPUtc_return: SDNode<"AMDGPUISD::TC_RETURN",
-  SDTypeProfile<0, 3, [SDTCisPtrTy<0>]>,
-  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+def AMDGPUTCReturnTP : SDTypeProfile<0, 3, [
+  SDTCisPtrTy<0>
+]>;
+
+def AMDGPUtc_return: SDNode<"AMDGPUISD::TC_RETURN", AMDGPUTCReturnTP,
+[SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
+def AMDGPUtc_return_gfx: SDNode<"AMDGPUISD::TC_RETURN_GFX", AMDGPUTCReturnTP,
+[SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 
 def AMDGPUtrap : SDNode<"AMDGPUISD::TRAP",
@@ -111,6 +115,12 @@ def AMDGPUfract_impl : SDNode<"AMDGPUISD::FRACT", SDTFPUnaryOp>;
 // out = 1.0 / a
 def AMDGPUrcp_impl : SDNode<"AMDGPUISD::RCP", SDTFPUnaryOp>;
 
+// v_log_f32, which is log2
+def AMDGPUlog_impl : SDNode<"AMDGPUISD::LOG", SDTFPUnaryOp>;
+
+// v_exp_f32, which is exp2
+def AMDGPUexp_impl : SDNode<"AMDGPUISD::EXP", SDTFPUnaryOp>;
+
 // out = 1.0 / sqrt(a)
 def AMDGPUrsq_impl : SDNode<"AMDGPUISD::RSQ", SDTFPUnaryOp>;
 
@@ -120,8 +130,6 @@ def AMDGPUrcp_iflag : SDNode<"AMDGPUISD::RCP_IFLAG", SDTFPUnaryOp>;
 
 // out = 1.0 / sqrt(a) result clamped to +/- max_float.
 def AMDGPUrsq_clamp_impl : SDNode<"AMDGPUISD::RSQ_CLAMP", SDTFPUnaryOp>;
-
-def AMDGPUldexp_impl : SDNode<"AMDGPUISD::LDEXP", AMDGPULdExpOp>;
 
 def AMDGPUpkrtz_f16_f32_impl : SDNode<"AMDGPUISD::CVT_PKRTZ_F16_F32", AMDGPUFPPackOp>;
 def AMDGPUpknorm_i16_f32_impl : SDNode<"AMDGPUISD::CVT_PKNORM_I16_F32", AMDGPUFPPackOp>;
@@ -351,11 +359,13 @@ def IL_brcond      : SDNode<"AMDGPUISD::BRANCH_COND", SDTIL_BRCond, [SDNPHasChai
 //===----------------------------------------------------------------------===//
 def AMDGPUendpgm : SDNode<"AMDGPUISD::ENDPGM", SDTNone,
     [SDNPHasChain, SDNPOptInGlue]>;
+def AMDGPUendpgm_trap : SDNode<"AMDGPUISD::ENDPGM_TRAP", SDTNone,
+    [SDNPHasChain]>;
 
 def AMDGPUreturn_to_epilog : SDNode<"AMDGPUISD::RETURN_TO_EPILOG", SDTNone,
     [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
-def AMDGPUret_flag : SDNode<"AMDGPUISD::RET_FLAG", SDTNone,
+def AMDGPUret_glue : SDNode<"AMDGPUISD::RET_GLUE", SDTNone,
   [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 
@@ -381,10 +391,15 @@ def AMDGPUcos : PatFrags<(ops node:$src), [(int_amdgcn_cos node:$src),
                                            (AMDGPUcos_impl node:$src)]>;
 def AMDGPUfract : PatFrags<(ops node:$src), [(int_amdgcn_fract node:$src),
                                              (AMDGPUfract_impl node:$src)]>;
+def AMDGPUlog : PatFrags<(ops node:$src), [(int_amdgcn_log node:$src),
+                                           (AMDGPUlog_impl node:$src)]>;
+def AMDGPUlogf16 : PatFrags<(ops node:$src), [(int_amdgcn_log node:$src),
+                                              (flog2 node:$src)]>;
 
-def AMDGPUldexp : PatFrags<(ops node:$src0, node:$src1),
-  [(int_amdgcn_ldexp node:$src0, node:$src1),
-   (AMDGPUldexp_impl node:$src0, node:$src1)]>;
+def AMDGPUexp : PatFrags<(ops node:$src), [(int_amdgcn_exp2 node:$src),
+                                           (AMDGPUexp_impl node:$src)]>;
+def AMDGPUexpf16 : PatFrags<(ops node:$src), [(int_amdgcn_exp2 node:$src),
+                                              (fexp2 node:$src)]>;
 
 def AMDGPUfp_class : PatFrags<(ops node:$src0, node:$src1),
   [(int_amdgcn_class node:$src0, node:$src1),

@@ -3,8 +3,6 @@
 
 // CHECK:  !DISubprogram(name: "-[InstanceVariablesEverywhereButTheInterface someString]"
 
-//rdar: //8498026
-
 @class NSString;
 
 @interface InstanceVariablesEverywhereButTheInterface 

@@ -7,6 +7,7 @@
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mcpu=neoverse-n1 < %s 2>&1 | FileCheck %s
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mcpu=neoverse-n2 < %s 2>&1 | FileCheck %s
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mcpu=ampere1 < %s 2>&1 | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mcpu=ampere1a < %s 2>&1 | FileCheck %s
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.2a -mattr=+rcpc < %s 2>&1 | FileCheck %s
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-REQ %s < %t

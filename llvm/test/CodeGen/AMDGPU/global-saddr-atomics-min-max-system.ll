@@ -9,7 +9,7 @@
 ; atomicrmw max
 ; --------------------------------------------------------------------------------
 
-define amdgpu_ps float @global_max_saddr_i32_rtn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps float @global_max_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_max_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v0
@@ -91,14 +91,13 @@ define amdgpu_ps float @global_max_saddr_i32_rtn(i8 addrspace(1)* inreg %sbase, 
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i32 addrspace(1)*
-  %rtn = atomicrmw max i32 addrspace(1)* %cast.gep0, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %rtn = atomicrmw max ptr addrspace(1) %gep0, i32 %data seq_cst
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
 
-define amdgpu_ps float @global_max_saddr_i32_rtn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps float @global_max_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_max_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v0
@@ -180,15 +179,14 @@ define amdgpu_ps float @global_max_saddr_i32_rtn_neg128(i8 addrspace(1)* inreg %
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i32 addrspace(1)*
-  %rtn = atomicrmw max i32 addrspace(1)* %cast.gep1, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %rtn = atomicrmw max ptr addrspace(1) %gep1, i32 %data seq_cst
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
 
-define amdgpu_ps void @global_max_saddr_i32_nortn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps void @global_max_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_max_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dword v5, v0, s[2:3]
@@ -263,13 +261,12 @@ define amdgpu_ps void @global_max_saddr_i32_nortn(i8 addrspace(1)* inreg %sbase,
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i32 addrspace(1)*
-  %unused = atomicrmw max i32 addrspace(1)* %cast.gep0, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %unused = atomicrmw max ptr addrspace(1) %gep0, i32 %data seq_cst
   ret void
 }
 
-define amdgpu_ps void @global_max_saddr_i32_nortn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps void @global_max_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_max_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dword v5, v0, s[2:3] offset:-128
@@ -344,14 +341,13 @@ define amdgpu_ps void @global_max_saddr_i32_nortn_neg128(i8 addrspace(1)* inreg 
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i32 addrspace(1)*
-  %unused = atomicrmw max i32 addrspace(1)* %cast.gep1, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %unused = atomicrmw max ptr addrspace(1) %gep1, i32 %data seq_cst
   ret void
 }
 
-define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_max_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[3:4], v0, s[2:3]
@@ -445,14 +441,13 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn(i8 addrspace(1)* inreg %s
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i64 addrspace(1)*
-  %rtn = atomicrmw max i64 addrspace(1)* %cast.gep0, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %rtn = atomicrmw max ptr addrspace(1) %gep0, i64 %data seq_cst
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
 
-define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_max_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[3:4], v0, s[2:3] offset:-128
@@ -546,15 +541,14 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn_neg128(i8 addrspace(1)* i
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i64 addrspace(1)*
-  %rtn = atomicrmw max i64 addrspace(1)* %cast.gep1, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %rtn = atomicrmw max ptr addrspace(1) %gep1, i64 %data seq_cst
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
 
-define amdgpu_ps void @global_max_saddr_i64_nortn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps void @global_max_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_max_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[5:6], v0, s[2:3]
@@ -638,13 +632,12 @@ define amdgpu_ps void @global_max_saddr_i64_nortn(i8 addrspace(1)* inreg %sbase,
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i64 addrspace(1)*
-  %unused = atomicrmw max i64 addrspace(1)* %cast.gep0, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %unused = atomicrmw max ptr addrspace(1) %gep0, i64 %data seq_cst
   ret void
 }
 
-define amdgpu_ps void @global_max_saddr_i64_nortn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps void @global_max_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_max_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[5:6], v0, s[2:3] offset:-128
@@ -728,10 +721,9 @@ define amdgpu_ps void @global_max_saddr_i64_nortn_neg128(i8 addrspace(1)* inreg 
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i64 addrspace(1)*
-  %unused = atomicrmw max i64 addrspace(1)* %cast.gep1, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %unused = atomicrmw max ptr addrspace(1) %gep1, i64 %data seq_cst
   ret void
 }
 
@@ -739,7 +731,7 @@ define amdgpu_ps void @global_max_saddr_i64_nortn_neg128(i8 addrspace(1)* inreg 
 ; atomicrmw min
 ; --------------------------------------------------------------------------------
 
-define amdgpu_ps float @global_min_saddr_i32_rtn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps float @global_min_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_min_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v0
@@ -821,14 +813,13 @@ define amdgpu_ps float @global_min_saddr_i32_rtn(i8 addrspace(1)* inreg %sbase, 
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i32 addrspace(1)*
-  %rtn = atomicrmw min i32 addrspace(1)* %cast.gep0, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %rtn = atomicrmw min ptr addrspace(1) %gep0, i32 %data seq_cst
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
 
-define amdgpu_ps float @global_min_saddr_i32_rtn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps float @global_min_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_min_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v0
@@ -910,15 +901,14 @@ define amdgpu_ps float @global_min_saddr_i32_rtn_neg128(i8 addrspace(1)* inreg %
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i32 addrspace(1)*
-  %rtn = atomicrmw min i32 addrspace(1)* %cast.gep1, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %rtn = atomicrmw min ptr addrspace(1) %gep1, i32 %data seq_cst
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
 
-define amdgpu_ps void @global_min_saddr_i32_nortn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps void @global_min_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_min_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dword v5, v0, s[2:3]
@@ -993,13 +983,12 @@ define amdgpu_ps void @global_min_saddr_i32_nortn(i8 addrspace(1)* inreg %sbase,
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i32 addrspace(1)*
-  %unused = atomicrmw min i32 addrspace(1)* %cast.gep0, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %unused = atomicrmw min ptr addrspace(1) %gep0, i32 %data seq_cst
   ret void
 }
 
-define amdgpu_ps void @global_min_saddr_i32_nortn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps void @global_min_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_min_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dword v5, v0, s[2:3] offset:-128
@@ -1074,14 +1063,13 @@ define amdgpu_ps void @global_min_saddr_i32_nortn_neg128(i8 addrspace(1)* inreg 
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i32 addrspace(1)*
-  %unused = atomicrmw min i32 addrspace(1)* %cast.gep1, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %unused = atomicrmw min ptr addrspace(1) %gep1, i32 %data seq_cst
   ret void
 }
 
-define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_min_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[3:4], v0, s[2:3]
@@ -1175,14 +1163,13 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn(i8 addrspace(1)* inreg %s
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i64 addrspace(1)*
-  %rtn = atomicrmw min i64 addrspace(1)* %cast.gep0, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %rtn = atomicrmw min ptr addrspace(1) %gep0, i64 %data seq_cst
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
 
-define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_min_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[3:4], v0, s[2:3] offset:-128
@@ -1276,15 +1263,14 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn_neg128(i8 addrspace(1)* i
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i64 addrspace(1)*
-  %rtn = atomicrmw min i64 addrspace(1)* %cast.gep1, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %rtn = atomicrmw min ptr addrspace(1) %gep1, i64 %data seq_cst
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
 
-define amdgpu_ps void @global_min_saddr_i64_nortn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps void @global_min_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_min_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[5:6], v0, s[2:3]
@@ -1368,13 +1354,12 @@ define amdgpu_ps void @global_min_saddr_i64_nortn(i8 addrspace(1)* inreg %sbase,
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i64 addrspace(1)*
-  %unused = atomicrmw min i64 addrspace(1)* %cast.gep0, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %unused = atomicrmw min ptr addrspace(1) %gep0, i64 %data seq_cst
   ret void
 }
 
-define amdgpu_ps void @global_min_saddr_i64_nortn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps void @global_min_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_min_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[5:6], v0, s[2:3] offset:-128
@@ -1458,10 +1443,9 @@ define amdgpu_ps void @global_min_saddr_i64_nortn_neg128(i8 addrspace(1)* inreg 
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i64 addrspace(1)*
-  %unused = atomicrmw min i64 addrspace(1)* %cast.gep1, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %unused = atomicrmw min ptr addrspace(1) %gep1, i64 %data seq_cst
   ret void
 }
 
@@ -1469,7 +1453,7 @@ define amdgpu_ps void @global_min_saddr_i64_nortn_neg128(i8 addrspace(1)* inreg 
 ; atomicrmw umax
 ; --------------------------------------------------------------------------------
 
-define amdgpu_ps float @global_umax_saddr_i32_rtn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps float @global_umax_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umax_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v0
@@ -1551,14 +1535,13 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn(i8 addrspace(1)* inreg %sbase,
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i32 addrspace(1)*
-  %rtn = atomicrmw umax i32 addrspace(1)* %cast.gep0, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %rtn = atomicrmw umax ptr addrspace(1) %gep0, i32 %data seq_cst
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
 
-define amdgpu_ps float @global_umax_saddr_i32_rtn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps float @global_umax_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umax_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v0
@@ -1640,15 +1623,14 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn_neg128(i8 addrspace(1)* inreg 
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i32 addrspace(1)*
-  %rtn = atomicrmw umax i32 addrspace(1)* %cast.gep1, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %rtn = atomicrmw umax ptr addrspace(1) %gep1, i32 %data seq_cst
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
 
-define amdgpu_ps void @global_umax_saddr_i32_nortn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps void @global_umax_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umax_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dword v5, v0, s[2:3]
@@ -1723,13 +1705,12 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn(i8 addrspace(1)* inreg %sbase
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i32 addrspace(1)*
-  %unused = atomicrmw umax i32 addrspace(1)* %cast.gep0, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %unused = atomicrmw umax ptr addrspace(1) %gep0, i32 %data seq_cst
   ret void
 }
 
-define amdgpu_ps void @global_umax_saddr_i32_nortn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps void @global_umax_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umax_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dword v5, v0, s[2:3] offset:-128
@@ -1804,14 +1785,13 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn_neg128(i8 addrspace(1)* inreg
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i32 addrspace(1)*
-  %unused = atomicrmw umax i32 addrspace(1)* %cast.gep1, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %unused = atomicrmw umax ptr addrspace(1) %gep1, i32 %data seq_cst
   ret void
 }
 
-define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umax_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[3:4], v0, s[2:3]
@@ -1905,14 +1885,13 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn(i8 addrspace(1)* inreg %
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i64 addrspace(1)*
-  %rtn = atomicrmw umax i64 addrspace(1)* %cast.gep0, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %rtn = atomicrmw umax ptr addrspace(1) %gep0, i64 %data seq_cst
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
 
-define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umax_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[3:4], v0, s[2:3] offset:-128
@@ -2006,15 +1985,14 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn_neg128(i8 addrspace(1)* 
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i64 addrspace(1)*
-  %rtn = atomicrmw umax i64 addrspace(1)* %cast.gep1, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %rtn = atomicrmw umax ptr addrspace(1) %gep1, i64 %data seq_cst
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
 
-define amdgpu_ps void @global_umax_saddr_i64_nortn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps void @global_umax_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umax_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[5:6], v0, s[2:3]
@@ -2098,13 +2076,12 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn(i8 addrspace(1)* inreg %sbase
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i64 addrspace(1)*
-  %unused = atomicrmw umax i64 addrspace(1)* %cast.gep0, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %unused = atomicrmw umax ptr addrspace(1) %gep0, i64 %data seq_cst
   ret void
 }
 
-define amdgpu_ps void @global_umax_saddr_i64_nortn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps void @global_umax_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umax_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[5:6], v0, s[2:3] offset:-128
@@ -2188,10 +2165,9 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn_neg128(i8 addrspace(1)* inreg
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i64 addrspace(1)*
-  %unused = atomicrmw umax i64 addrspace(1)* %cast.gep1, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %unused = atomicrmw umax ptr addrspace(1) %gep1, i64 %data seq_cst
   ret void
 }
 
@@ -2199,7 +2175,7 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn_neg128(i8 addrspace(1)* inreg
 ; atomicrmw umin
 ; --------------------------------------------------------------------------------
 
-define amdgpu_ps float @global_umin_saddr_i32_rtn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps float @global_umin_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umin_saddr_i32_rtn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v0
@@ -2281,14 +2257,13 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn(i8 addrspace(1)* inreg %sbase,
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i32 addrspace(1)*
-  %rtn = atomicrmw umin i32 addrspace(1)* %cast.gep0, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %rtn = atomicrmw umin ptr addrspace(1) %gep0, i32 %data seq_cst
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
 
-define amdgpu_ps float @global_umin_saddr_i32_rtn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps float @global_umin_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umin_saddr_i32_rtn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v0
@@ -2370,15 +2345,14 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn_neg128(i8 addrspace(1)* inreg 
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i32 addrspace(1)*
-  %rtn = atomicrmw umin i32 addrspace(1)* %cast.gep1, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %rtn = atomicrmw umin ptr addrspace(1) %gep1, i32 %data seq_cst
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
 
-define amdgpu_ps void @global_umin_saddr_i32_nortn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps void @global_umin_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umin_saddr_i32_nortn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dword v5, v0, s[2:3]
@@ -2453,13 +2427,12 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn(i8 addrspace(1)* inreg %sbase
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i32 addrspace(1)*
-  %unused = atomicrmw umin i32 addrspace(1)* %cast.gep0, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %unused = atomicrmw umin ptr addrspace(1) %gep0, i32 %data seq_cst
   ret void
 }
 
-define amdgpu_ps void @global_umin_saddr_i32_nortn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
+define amdgpu_ps void @global_umin_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX9-LABEL: global_umin_saddr_i32_nortn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dword v5, v0, s[2:3] offset:-128
@@ -2534,14 +2507,13 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn_neg128(i8 addrspace(1)* inreg
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i32 addrspace(1)*
-  %unused = atomicrmw umin i32 addrspace(1)* %cast.gep1, i32 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %unused = atomicrmw umin ptr addrspace(1) %gep1, i32 %data seq_cst
   ret void
 }
 
-define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umin_saddr_i64_rtn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[3:4], v0, s[2:3]
@@ -2635,14 +2607,13 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn(i8 addrspace(1)* inreg %
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i64 addrspace(1)*
-  %rtn = atomicrmw umin i64 addrspace(1)* %cast.gep0, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %rtn = atomicrmw umin ptr addrspace(1) %gep0, i64 %data seq_cst
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
 
-define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umin_saddr_i64_rtn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[3:4], v0, s[2:3] offset:-128
@@ -2736,15 +2707,14 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn_neg128(i8 addrspace(1)* 
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX11-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i64 addrspace(1)*
-  %rtn = atomicrmw umin i64 addrspace(1)* %cast.gep1, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %rtn = atomicrmw umin ptr addrspace(1) %gep1, i64 %data seq_cst
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
 
-define amdgpu_ps void @global_umin_saddr_i64_nortn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps void @global_umin_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umin_saddr_i64_nortn:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[5:6], v0, s[2:3]
@@ -2828,13 +2798,12 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn(i8 addrspace(1)* inreg %sbase
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %cast.gep0 = bitcast i8 addrspace(1)* %gep0 to i64 addrspace(1)*
-  %unused = atomicrmw umin i64 addrspace(1)* %cast.gep0, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %unused = atomicrmw umin ptr addrspace(1) %gep0, i64 %data seq_cst
   ret void
 }
 
-define amdgpu_ps void @global_umin_saddr_i64_nortn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i64 %data) {
+define amdgpu_ps void @global_umin_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %sbase, i32 %voffset, i64 %data) {
 ; GFX9-LABEL: global_umin_saddr_i64_nortn_neg128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[5:6], v0, s[2:3] offset:-128
@@ -2918,10 +2887,9 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn_neg128(i8 addrspace(1)* inreg
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
-  %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
-  %gep1 = getelementptr inbounds i8, i8 addrspace(1)* %gep0, i64 -128
-  %cast.gep1 = bitcast i8 addrspace(1)* %gep1 to i64 addrspace(1)*
-  %unused = atomicrmw umin i64 addrspace(1)* %cast.gep1, i64 %data seq_cst
+  %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
+  %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
+  %unused = atomicrmw umin ptr addrspace(1) %gep1, i64 %data seq_cst
   ret void
 }
 

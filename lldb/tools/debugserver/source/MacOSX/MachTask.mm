@@ -670,7 +670,7 @@ kern_return_t MachTask::ShutDownExcecptionThread() {
 
   err = RestoreExceptionPortInfo();
 
-  // NULL our our exception port and let our exception thread exit
+  // NULL our exception port and let our exception thread exit
   mach_port_t exception_port = m_exception_port;
   m_exception_port = 0;
 
@@ -997,6 +997,13 @@ nub_bool_t MachTask::DeallocateMemory(nub_addr_t addr) {
     }
   }
   return false;
+}
+
+//----------------------------------------------------------------------
+// MachTask::ClearAllocations
+//----------------------------------------------------------------------
+void MachTask::ClearAllocations() {
+  m_allocations.clear();
 }
 
 void MachTask::TaskPortChanged(task_t task)

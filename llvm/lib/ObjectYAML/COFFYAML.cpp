@@ -66,6 +66,7 @@ void ScalarEnumerationTraits<COFF::MachineTypes>::enumeration(
   ECase(IMAGE_FILE_MACHINE_ARMNT);
   ECase(IMAGE_FILE_MACHINE_ARM64);
   ECase(IMAGE_FILE_MACHINE_ARM64EC);
+  ECase(IMAGE_FILE_MACHINE_ARM64X);
   ECase(IMAGE_FILE_MACHINE_EBC);
   ECase(IMAGE_FILE_MACHINE_I386);
   ECase(IMAGE_FILE_MACHINE_IA64);
@@ -430,8 +431,7 @@ void MappingTraits<COFFYAML::Relocation>::mapping(IO &IO,
     MappingNormalization<NType<COFF::RelocationTypesARM>, uint16_t> NT(
         IO, Rel.Type);
     IO.mapRequired("Type", NT->Type);
-  } else if (H.Machine == COFF::IMAGE_FILE_MACHINE_ARM64 ||
-             H.Machine == COFF::IMAGE_FILE_MACHINE_ARM64EC) {
+  } else if (COFF::isAnyArm64(H.Machine)) {
     MappingNormalization<NType<COFF::RelocationTypesARM64>, uint16_t> NT(
         IO, Rel.Type);
     IO.mapRequired("Type", NT->Type);
@@ -547,6 +547,102 @@ void MappingTraits<COFF::AuxiliaryCLRToken>::mapping(
   IO.mapRequired("SymbolTableIndex", ACT.SymbolTableIndex);
 }
 
+void MappingTraits<object::coff_load_config_code_integrity>::mapping(
+    IO &IO, object::coff_load_config_code_integrity &S) {
+  IO.mapOptional("Flags", S.Flags);
+  IO.mapOptional("Catalog", S.Catalog);
+  IO.mapOptional("CatalogOffset", S.CatalogOffset);
+}
+
+template <typename T, typename M>
+void mapLoadConfigMember(IO &IO, T &LoadConfig, const char *Name, M &Member) {
+  // Map only members that match a specified size.
+  if (reinterpret_cast<char *>(&Member) -
+          reinterpret_cast<char *>(&LoadConfig) <
+      LoadConfig.Size)
+    IO.mapOptional(Name, Member);
+}
+
+template <typename T> void mapLoadConfig(IO &IO, T &LoadConfig) {
+  IO.mapOptional("Size", LoadConfig.Size,
+                 support::ulittle32_t(sizeof(LoadConfig)));
+  // The size must be large enough to fit at least the size member itself.
+  if (LoadConfig.Size < sizeof(LoadConfig.Size)) {
+    IO.setError("Size must be at least " + Twine(sizeof(LoadConfig.Size)));
+    return;
+  }
+
+#define MCase(X) mapLoadConfigMember(IO, LoadConfig, #X, LoadConfig.X)
+  MCase(TimeDateStamp);
+  MCase(MajorVersion);
+  MCase(MinorVersion);
+  MCase(GlobalFlagsClear);
+  MCase(GlobalFlagsSet);
+  MCase(CriticalSectionDefaultTimeout);
+  MCase(DeCommitFreeBlockThreshold);
+  MCase(DeCommitTotalFreeThreshold);
+  MCase(LockPrefixTable);
+  MCase(MaximumAllocationSize);
+  MCase(VirtualMemoryThreshold);
+  MCase(ProcessAffinityMask);
+  MCase(ProcessHeapFlags);
+  MCase(CSDVersion);
+  MCase(DependentLoadFlags);
+  MCase(EditList);
+  MCase(SecurityCookie);
+  MCase(SEHandlerTable);
+  MCase(SEHandlerCount);
+  MCase(GuardCFCheckFunction);
+  MCase(GuardCFCheckDispatch);
+  MCase(GuardCFFunctionTable);
+  MCase(GuardCFFunctionCount);
+  MCase(GuardFlags);
+  MCase(CodeIntegrity);
+  MCase(GuardAddressTakenIatEntryTable);
+  MCase(GuardAddressTakenIatEntryCount);
+  MCase(GuardLongJumpTargetTable);
+  MCase(GuardLongJumpTargetCount);
+  MCase(DynamicValueRelocTable);
+  MCase(CHPEMetadataPointer);
+  MCase(GuardRFFailureRoutine);
+  MCase(GuardRFFailureRoutineFunctionPointer);
+  MCase(DynamicValueRelocTableOffset);
+  MCase(DynamicValueRelocTableSection);
+  MCase(GuardRFVerifyStackPointerFunctionPointer);
+  MCase(HotPatchTableOffset);
+  MCase(EnclaveConfigurationPointer);
+  MCase(VolatileMetadataPointer);
+  MCase(GuardEHContinuationTable);
+  MCase(GuardEHContinuationCount);
+  MCase(GuardXFGCheckFunctionPointer);
+  MCase(GuardXFGDispatchFunctionPointer);
+  MCase(GuardXFGTableDispatchFunctionPointer);
+  MCase(CastGuardOsDeterminedFailureMode);
+#undef MCase
+}
+
+void MappingTraits<object::coff_load_configuration32>::mapping(
+    IO &IO, object::coff_load_configuration32 &S) {
+  mapLoadConfig(IO, S);
+}
+
+void MappingTraits<object::coff_load_configuration64>::mapping(
+    IO &IO, object::coff_load_configuration64 &S) {
+  mapLoadConfig(IO, S);
+}
+
+void MappingTraits<COFFYAML::SectionDataEntry>::mapping(
+    IO &IO, COFFYAML::SectionDataEntry &E) {
+  IO.mapOptional("UInt32", E.UInt32);
+  IO.mapOptional("Binary", E.Binary);
+
+  COFF::header &H = *static_cast<COFF::header *>(IO.getContext());
+  if (COFF::is64Bit(H.Machine))
+    IO.mapOptional("LoadConfig", E.LoadConfig64);
+  else
+    IO.mapOptional("LoadConfig", E.LoadConfig32);
+}
+
 void MappingTraits<COFFYAML::Symbol>::mapping(IO &IO, COFFYAML::Symbol &S) {
   MappingNormalization<NStorageClass, uint8_t> NS(IO, S.Header.StorageClass);
 
@@ -586,11 +682,19 @@ void MappingTraits<COFFYAML::Section>::mapping(IO &IO, COFFYAML::Section &Sec) {
   else if (Sec.Name == ".debug$H")
     IO.mapOptional("GlobalHashes", Sec.DebugH);
 
-  // Uninitialized sections, such as .bss, typically have no data, but the size
-  // is carried in SizeOfRawData, even though PointerToRawData is zero.
-  if (Sec.SectionData.binary_size() == 0 &&
-      NC->Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
-    IO.mapOptional("SizeOfRawData", Sec.Header.SizeOfRawData);
+  IO.mapOptional("StructuredData", Sec.StructuredData);
+
+  if (!Sec.StructuredData.empty() && Sec.SectionData.binary_size()) {
+    IO.setError("StructuredData and SectionData can't be used together");
+    return;
+  }
+
+  IO.mapOptional("SizeOfRawData", Sec.Header.SizeOfRawData, 0U);
+
+  if (!Sec.StructuredData.empty() && Sec.Header.SizeOfRawData) {
+    IO.setError("StructuredData and SizeOfRawData can't be used together");
+    return;
+  }
 
   IO.mapOptional("Relocations", Sec.Relocations);
 }

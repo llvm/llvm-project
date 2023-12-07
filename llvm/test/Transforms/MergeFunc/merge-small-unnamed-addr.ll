@@ -2,8 +2,8 @@
 
 ; CHECK-NOT: @b
 
-@x = constant { void ()*, void ()* } { void ()* @a, void ()* @b }
-; CHECK: { void ()* @a, void ()* @a }
+@x = constant { ptr, ptr } { ptr @a, ptr @b }
+; CHECK: { ptr @a, ptr @a }
 
 define internal void @a() unnamed_addr {
   ret void

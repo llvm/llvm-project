@@ -46,7 +46,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -65,6 +64,7 @@
 #include <cstddef>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <queue>
 #include <string>
 #include <tuple>
@@ -296,26 +296,24 @@ std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
     return {};
 
   // Check if one of the parameters are set to the interesting symbol.
-  unsigned ArgIndex = 0;
-  for (CallExpr::const_arg_iterator I = CE->arg_begin(),
-                                    E = CE->arg_end(); I != E; ++I, ++ArgIndex){
-    SVal SV = N->getSVal(*I);
+  for (auto [Idx, ArgExpr] : llvm::enumerate(CE->arguments())) {
+    SVal SV = N->getSVal(ArgExpr);
 
     // Check if the variable corresponding to the symbol is passed by value.
     SymbolRef AS = SV.getAsLocSymbol();
     if (AS == Sym) {
-      return getMessageForArg(*I, ArgIndex);
+      return getMessageForArg(ArgExpr, Idx);
     }
 
     // Check if the parameter is a pointer to the symbol.
-    if (Optional<loc::MemRegionVal> Reg = SV.getAs<loc::MemRegionVal>()) {
+    if (std::optional<loc::MemRegionVal> Reg = SV.getAs<loc::MemRegionVal>()) {
       // Do not attempt to dereference void*.
-      if ((*I)->getType()->isVoidPointerType())
+      if (ArgExpr->getType()->isVoidPointerType())
         continue;
       SVal PSV = N->getState()->getSVal(Reg->getRegion());
       SymbolRef AS = PSV.getAsLocSymbol();
       if (AS == Sym) {
-        return getMessageForArg(*I, ArgIndex);
+        return getMessageForArg(ArgExpr, Idx);
       }
     }
   }
@@ -766,7 +764,7 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForSwitchOP(
     case Stmt::CaseStmtClass: {
       os << "Control jumps to 'case ";
       const auto *Case = cast<CaseStmt>(S);
-      const Expr *LHS = Case->getLHS()->IgnoreParenCasts();
+      const Expr *LHS = Case->getLHS()->IgnoreParenImpCasts();
 
       // Determine if it is an enum.
       bool GetRawInt = true;
@@ -1032,7 +1030,7 @@ static bool isContainedByStmt(const ParentMap &PM, const Stmt *S,
 static const Stmt *getStmtBeforeCond(const ParentMap &PM, const Stmt *Term,
                                      const ExplodedNode *N) {
   while (N) {
-    Optional<StmtPoint> SP = N->getLocation().getAs<StmtPoint>();
+    std::optional<StmtPoint> SP = N->getLocation().getAs<StmtPoint>();
     if (SP) {
       const Stmt *S = SP->getStmt();
       if (!isContainedByStmt(PM, Term, S))
@@ -1193,7 +1191,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
          "location context associated with the active path!");
 
   // Have we encountered an exit from a function call?
-  if (Optional<CallExitEnd> CE = P.getAs<CallExitEnd>()) {
+  if (std::optional<CallExitEnd> CE = P.getAs<CallExitEnd>()) {
 
     // We are descending into a call (backwards).  Construct
     // a new call piece to contain the path pieces for that call.
@@ -1578,7 +1576,7 @@ static std::optional<size_t> getLengthOnSingleLine(const SourceManager &SM,
   if (FID != SM.getFileID(ExpansionRange.getEnd()))
     return std::nullopt;
 
-  Optional<MemoryBufferRef> Buffer = SM.getBufferOrNone(FID);
+  std::optional<MemoryBufferRef> Buffer = SM.getBufferOrNone(FID);
   if (!Buffer)
     return std::nullopt;
 
@@ -2101,8 +2099,6 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
 
 void BugType::anchor() {}
 
-void BuiltinBug::anchor() {}
-
 //===----------------------------------------------------------------------===//
 // Methods for BugReport and subclasses.
 //===----------------------------------------------------------------------===//
@@ -2310,7 +2306,7 @@ void PathSensitiveBugReport::markInteresting(const LocationContext *LC) {
   InterestingLocationContexts.insert(LC);
 }
 
-Optional<bugreporter::TrackingKind>
+std::optional<bugreporter::TrackingKind>
 PathSensitiveBugReport::getInterestingnessKind(SVal V) const {
   auto RKind = getInterestingnessKind(V.getAsRegion());
   auto SKind = getInterestingnessKind(V.getAsSymbol());
@@ -2335,7 +2331,7 @@ PathSensitiveBugReport::getInterestingnessKind(SVal V) const {
   return std::nullopt;
 }
 
-Optional<bugreporter::TrackingKind>
+std::optional<bugreporter::TrackingKind>
 PathSensitiveBugReport::getInterestingnessKind(SymbolRef sym) const {
   if (!sym)
     return std::nullopt;
@@ -2347,7 +2343,7 @@ PathSensitiveBugReport::getInterestingnessKind(SymbolRef sym) const {
   return It->getSecond();
 }
 
-Optional<bugreporter::TrackingKind>
+std::optional<bugreporter::TrackingKind>
 PathSensitiveBugReport::getInterestingnessKind(const MemRegion *R) const {
   if (!R)
     return std::nullopt;
@@ -2387,7 +2383,7 @@ const Stmt *PathSensitiveBugReport::getStmt() const {
   ProgramPoint ProgP = ErrorNode->getLocation();
   const Stmt *S = nullptr;
 
-  if (Optional<BlockEntrance> BE = ProgP.getAs<BlockEntrance>()) {
+  if (std::optional<BlockEntrance> BE = ProgP.getAs<BlockEntrance>()) {
     CFGBlock &Exit = ProgP.getLocationContext()->getCFG()->getExit();
     if (BE->getBlock() == &Exit)
       S = ErrorNode->getPreviousStmtForDiagnostics();
@@ -2419,7 +2415,7 @@ PathSensitiveBugReport::getLocation() const {
 
   if (!S) {
     // If this is an implicit call, return the implicit call point location.
-    if (Optional<PreImplicitCall> PIE = P.getAs<PreImplicitCall>())
+      if (std::optional<PreImplicitCall> PIE = P.getAs<PreImplicitCall>())
       return PathDiagnosticLocation(PIE->getLocation(), SM);
     if (auto FE = P.getAs<FunctionExitPoint>()) {
       if (const ReturnStmt *RS = FE->getStmt())
@@ -2627,8 +2623,7 @@ BugPathInfo *BugPathGetter::getNextBugPath() {
 
   const ExplodedNode *OrigN;
   std::tie(CurrentBugPath.Report, OrigN) = ReportNodes.pop_back_val();
-  assert(PriorityMap.find(OrigN) != PriorityMap.end() &&
-         "error node not accessible from root");
+  assert(PriorityMap.contains(OrigN) && "error node not accessible from root");
 
   // Create a new graph with a single path. This is the graph that will be
   // returned to the caller.

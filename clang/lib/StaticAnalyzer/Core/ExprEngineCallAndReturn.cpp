@@ -25,6 +25,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -85,10 +86,10 @@ static std::pair<const Stmt*,
     const ProgramPoint &PP = Node->getLocation();
 
     if (PP.getStackFrame() == SF) {
-      if (Optional<StmtPoint> SP = PP.getAs<StmtPoint>()) {
+      if (std::optional<StmtPoint> SP = PP.getAs<StmtPoint>()) {
         S = SP->getStmt();
         break;
-      } else if (Optional<CallExitEnd> CEE = PP.getAs<CallExitEnd>()) {
+      } else if (std::optional<CallExitEnd> CEE = PP.getAs<CallExitEnd>()) {
         S = CEE->getCalleeContext()->getCallSite();
         if (S)
           break;
@@ -96,17 +97,17 @@ static std::pair<const Stmt*,
         // If there is no statement, this is an implicitly-generated call.
         // We'll walk backwards over it and then continue the loop to find
         // an actual statement.
-        Optional<CallEnter> CE;
+        std::optional<CallEnter> CE;
         do {
           Node = Node->getFirstPred();
           CE = Node->getLocationAs<CallEnter>();
         } while (!CE || CE->getCalleeContext() != CEE->getCalleeContext());
 
         // Continue searching the graph.
-      } else if (Optional<BlockEdge> BE = PP.getAs<BlockEdge>()) {
+      } else if (std::optional<BlockEdge> BE = PP.getAs<BlockEdge>()) {
         Blk = BE->getSrc();
       }
-    } else if (Optional<CallEnter> CE = PP.getAs<CallEnter>()) {
+    } else if (std::optional<CallEnter> CE = PP.getAs<CallEnter>()) {
       // If we reached the CallEnter for this function, it has no statements.
       if (CE->getCalleeContext() == SF)
         break;
@@ -373,17 +374,15 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     CleanedNodes.Add(CEBNode);
   }
 
-  for (ExplodedNodeSet::iterator I = CleanedNodes.begin(),
-                                 E = CleanedNodes.end(); I != E; ++I) {
-
+  for (ExplodedNode *N : CleanedNodes) {
     // Step 4: Generate the CallExit and leave the callee's context.
     // CleanedNodes -> CEENode
     CallExitEnd Loc(calleeCtx, callerCtx);
     bool isNew;
-    ProgramStateRef CEEState = (*I == CEBNode) ? state : (*I)->getState();
+    ProgramStateRef CEEState = (N == CEBNode) ? state : N->getState();
 
     ExplodedNode *CEENode = G.getNode(Loc, CEEState, false, &isNew);
-    CEENode->addPredecessor(*I, G);
+    CEENode->addPredecessor(N, G);
     if (!isNew)
       return;
 
@@ -609,15 +608,14 @@ void ExprEngine::VisitCallExpr(const CallExpr *CE, ExplodedNode *Pred,
   // Get the call in its initial state. We use this as a template to perform
   // all the checks.
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
-  CallEventRef<> CallTemplate
-    = CEMgr.getSimpleCall(CE, Pred->getState(), Pred->getLocationContext());
+  CallEventRef<> CallTemplate = CEMgr.getSimpleCall(
+      CE, Pred->getState(), Pred->getLocationContext(), getCFGElementRef());
 
   // Evaluate the function call.  We try each of the checkers
   // to see if the can evaluate the function call.
   ExplodedNodeSet dstCallEvaluated;
-  for (ExplodedNodeSet::iterator I = dstPreVisit.begin(), E = dstPreVisit.end();
-       I != E; ++I) {
-    evalCall(dstCallEvaluated, *I, *CallTemplate);
+  for (ExplodedNode *N : dstPreVisit) {
+    evalCall(dstCallEvaluated, N, *CallTemplate);
   }
 
   // Finally, perform the post-condition check of the CallExpr and store
@@ -639,8 +637,7 @@ ProgramStateRef ExprEngine::finishArgumentConstruction(ProgramStateRef State,
   const LocationContext *LC = Call.getLocationContext();
   for (unsigned CallI = 0, CallN = Call.getNumArgs(); CallI != CallN; ++CallI) {
     unsigned I = Call.getASTArgumentIndex(CallI);
-    if (Optional<SVal> V =
-            getObjectUnderConstruction(State, {E, I}, LC)) {
+    if (std::optional<SVal> V = getObjectUnderConstruction(State, {E, I}, LC)) {
       SVal VV = *V;
       (void)VV;
       assert(cast<VarRegion>(VV.castAs<loc::MemRegionVal>().getRegion())
@@ -837,7 +834,8 @@ void ExprEngine::conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
   State = bindReturnValue(Call, Pred->getLocationContext(), State);
 
   // And make the result node.
-  Bldr.generateNode(Call.getProgramPoint(), State, Pred);
+  static SimpleProgramPointTag PT("ExprEngine", "Conservative eval call");
+  Bldr.generateNode(Call.getProgramPoint(false, &PT), State, Pred);
 }
 
 ExprEngine::CallInlinePolicy
@@ -1090,7 +1088,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
     return false;
 
   // Check if this function has been marked as non-inlinable.
-  Optional<bool> MayInline = Engine.FunctionSummaries->mayInline(D);
+  std::optional<bool> MayInline = Engine.FunctionSummaries->mayInline(D);
   if (MayInline) {
     if (!*MayInline)
       return false;

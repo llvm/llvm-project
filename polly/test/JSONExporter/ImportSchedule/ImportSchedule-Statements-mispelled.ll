@@ -13,7 +13,7 @@
 ;
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 
-define void @is(i32* %A, i32 %n) {
+define void @is(ptr %A, i32 %n) {
 entry:
   br label %for.cond
 
@@ -27,9 +27,9 @@ for.body:                                         ; preds = %for.cond
   br label %S0
 
 S0:                                               ; preds = %for.body
-  %tmp = load i32, i32* %A, align 4
+  %tmp = load i32, ptr %A, align 4
   %add = add nsw i32 %tmp, %i.0
-  store i32 %add, i32* %A, align 4
+  store i32 %add, ptr %A, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %S0
@@ -50,8 +50,8 @@ for.body5:                                        ; preds = %for.cond2
 
 S1:                                               ; preds = %for.body5
   %add6 = add nsw i32 %i1.0, 1
-  %arrayidx7 = getelementptr inbounds i32, i32* %A, i32 %add6
-  store i32 1, i32* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds i32, ptr %A, i32 %add6
+  store i32 1, ptr %arrayidx7, align 4
   br label %for.inc8
 
 for.inc8:                                         ; preds = %S1

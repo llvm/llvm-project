@@ -1,4 +1,4 @@
-# RUN: llc < %s -x=mir -mtriple=x86_64-- -run-pass=simple-register-coalescing | FileCheck %s
+# RUN: llc < %s -x=mir -mtriple=x86_64-- -run-pass=register-coalescer | FileCheck %s
 ---
 name: f
 body: |

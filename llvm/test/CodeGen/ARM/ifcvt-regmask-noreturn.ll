@@ -3,7 +3,7 @@
 target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
 target triple = "thumbv7s-apple-ios8.0.0"
 
-@debw = external global i8*, align 4
+@debw = external global ptr, align 4
 
 ; This test ensures that the stack_chk call correctly puts implicit uses/defs for the registers
 ; live across it when if converting.  This will be R0 which is passed to the call to free at the end
@@ -15,25 +15,25 @@ target triple = "thumbv7s-apple-ios8.0.0"
 ; CHECK: stack_chk_fail
 
 ; Function Attrs: ssp
-define void @test(i32 %argc, i8** nocapture readonly %argv, i32* %ptr, i32 %val) #0 {
+define void @test(i32 %argc, ptr nocapture readonly %argv, ptr %ptr, i32 %val) #0 {
 entry:
   %count.i = alloca [256 x i32], align 4
   %cmp284.i = icmp eq i32 %val, 0
   br i1 %cmp284.i, label %for.end31.i, label %for.body21.i
 
 for.body21.i:                                     ; preds = %entry
-  %arrayidx23.i = getelementptr inbounds [256 x i32], [256 x i32]* %count.i, i32 0, i32 1
-  %tmp20 = load i32, i32* %arrayidx23.i, align 4, !tbaa !0
-  store i32 %tmp20, i32* %ptr, align 4, !tbaa !0
+  %arrayidx23.i = getelementptr inbounds [256 x i32], ptr %count.i, i32 0, i32 1
+  %tmp20 = load i32, ptr %arrayidx23.i, align 4, !tbaa !0
+  store i32 %tmp20, ptr %ptr, align 4, !tbaa !0
   br label %for.end31.i
 
 for.end31.i:                                      ; preds = %for.body21.i, %entry
-  %tmp21 = load i8*, i8** @debw, align 4, !tbaa !4
-  tail call void @free(i8* %tmp21)
+  %tmp21 = load ptr, ptr @debw, align 4, !tbaa !4
+  tail call void @free(ptr %tmp21)
   ret void
 }
 
-declare void @free(i8* nocapture)
+declare void @free(ptr nocapture)
 
 attributes #0 = { ssp "stack-protector-buffer-size"="8" }
 

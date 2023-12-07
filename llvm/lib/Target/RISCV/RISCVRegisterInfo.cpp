@@ -1,4 +1,4 @@
-//===-- RISCVRegisterInfo.cpp - RISCV Register Information ------*- C++ -*-===//
+//===-- RISCVRegisterInfo.cpp - RISC-V Register Information -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the RISCV implementation of the TargetRegisterInfo class.
+// This file contains the RISC-V implementation of the TargetRegisterInfo class.
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,6 +14,7 @@
 #include "RISCV.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -103,6 +104,10 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (TFI->hasBP(MF))
     markSuperRegs(Reserved, RISCVABI::getBPReg()); // bp
 
+  // Additionally reserve dummy register used to form the register pair
+  // beginning with 'x0' for instructions that take register pairs.
+  markSuperRegs(Reserved, RISCV::DUMMY_REG_PAIR_WITH_X0);
+
   // V registers for code generation. We handle them manually.
   markSuperRegs(Reserved, RISCV::VL);
   markSuperRegs(Reserved, RISCV::VTYPE);
@@ -128,7 +133,7 @@ const uint32_t *RISCVRegisterInfo::getNoPreservedMask() const {
 }
 
 // Frame indexes representing locations of CSRs which are given a fixed location
-// by save/restore libcalls.
+// by save/restore libcalls or Zcmp Push/Pop.
 static const std::pair<unsigned, int> FixedCSRFIMap[] = {
   {/*ra*/  RISCV::X1,   -1},
   {/*s0*/  RISCV::X8,   -2},
@@ -149,7 +154,7 @@ bool RISCVRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
                                              Register Reg,
                                              int &FrameIdx) const {
   const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
-  if (!RVFI->useSaveRestoreLibCalls(MF))
+  if (!RVFI->useSaveRestoreLibCalls(MF) && !RVFI->isPushable(MF))
     return false;
 
   const auto *FII =
@@ -498,6 +503,127 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   return false;
 }
 
+bool RISCVRegisterInfo::requiresVirtualBaseRegisters(
+    const MachineFunction &MF) const {
+  return true;
+}
+
+// Returns true if the instruction's frame index reference would be better
+// served by a base register other than FP or SP.
+// Used by LocalStackSlotAllocation pass to determine which frame index
+// references it should create new base registers for.
+bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
+                                          int64_t Offset) const {
+  unsigned FIOperandNum = 0;
+  for (; !MI->getOperand(FIOperandNum).isFI(); FIOperandNum++)
+    assert(FIOperandNum < MI->getNumOperands() &&
+           "Instr doesn't have FrameIndex operand");
+
+  // For RISC-V, The machine instructions that include a FrameIndex operand
+  // are load/store, ADDI instructions.
+  unsigned MIFrm = RISCVII::getFormat(MI->getDesc().TSFlags);
+  if (MIFrm != RISCVII::InstFormatI && MIFrm != RISCVII::InstFormatS)
+    return false;
+  // We only generate virtual base registers for loads and stores, so
+  // return false for everything else.
+  if (!MI->mayLoad() && !MI->mayStore())
+    return false;
+
+  const MachineFunction &MF = *MI->getMF();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const RISCVFrameLowering *TFI = getFrameLowering(MF);
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  unsigned CalleeSavedSize = 0;
+  Offset += getFrameIndexInstrOffset(MI, FIOperandNum);
+
+  // Estimate the stack size used to store callee saved registers(
+  // excludes reserved registers).
+  BitVector ReservedRegs = getReservedRegs(MF);
+  for (const MCPhysReg *R = MRI.getCalleeSavedRegs(); MCPhysReg Reg = *R; ++R) {
+    if (!ReservedRegs.test(Reg))
+      CalleeSavedSize += getSpillSize(*getMinimalPhysRegClass(Reg));
+  }
+
+  int64_t MaxFPOffset = Offset - CalleeSavedSize;
+  if (TFI->hasFP(MF) && !shouldRealignStack(MF))
+    return !isFrameOffsetLegal(MI, RISCV::X8, MaxFPOffset);
+
+  // Assume 128 bytes spill slots size to estimate the maximum possible
+  // offset relative to the stack pointer.
+  // FIXME: The 128 is copied from ARM. We should run some statistics and pick a
+  // real one for RISC-V.
+  int64_t MaxSPOffset = Offset + 128;
+  MaxSPOffset += MFI.getLocalFrameSize();
+  return !isFrameOffsetLegal(MI, RISCV::X2, MaxSPOffset);
+}
+
+// Determine whether a given base register plus offset immediate is
+// encodable to resolve a frame index.
+bool RISCVRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
+                                           Register BaseReg,
+                                           int64_t Offset) const {
+  unsigned FIOperandNum = 0;
+  while (!MI->getOperand(FIOperandNum).isFI()) {
+    FIOperandNum++;
+    assert(FIOperandNum < MI->getNumOperands() &&
+           "Instr does not have a FrameIndex operand!");
+  }
+
+  Offset += getFrameIndexInstrOffset(MI, FIOperandNum);
+  return isInt<12>(Offset);
+}
+
+// Insert defining instruction(s) for a pointer to FrameIdx before
+// insertion point I.
+// Return materialized frame pointer.
+Register RISCVRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
+                                                         int FrameIdx,
+                                                         int64_t Offset) const {
+  MachineBasicBlock::iterator MBBI = MBB->begin();
+  DebugLoc DL;
+  if (MBBI != MBB->end())
+    DL = MBBI->getDebugLoc();
+  MachineFunction *MF = MBB->getParent();
+  MachineRegisterInfo &MFI = MF->getRegInfo();
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+
+  Register BaseReg = MFI.createVirtualRegister(&RISCV::GPRRegClass);
+  BuildMI(*MBB, MBBI, DL, TII->get(RISCV::ADDI), BaseReg)
+      .addFrameIndex(FrameIdx)
+      .addImm(Offset);
+  return BaseReg;
+}
+
+// Resolve a frame index operand of an instruction to reference the
+// indicated base register plus offset instead.
+void RISCVRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
+                                          int64_t Offset) const {
+  unsigned FIOperandNum = 0;
+  while (!MI.getOperand(FIOperandNum).isFI()) {
+    FIOperandNum++;
+    assert(FIOperandNum < MI.getNumOperands() &&
+           "Instr does not have a FrameIndex operand!");
+  }
+
+  Offset += getFrameIndexInstrOffset(&MI, FIOperandNum);
+  // FrameIndex Operands are always represented as a
+  // register followed by an immediate.
+  MI.getOperand(FIOperandNum).ChangeToRegister(BaseReg, false);
+  MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+}
+
+// Get the offset from the referenced frame index in the instruction,
+// if there is one.
+int64_t RISCVRegisterInfo::getFrameIndexInstrOffset(const MachineInstr *MI,
+                                                    int Idx) const {
+  assert((RISCVII::getFormat(MI->getDesc().TSFlags) == RISCVII::InstFormatI ||
+          RISCVII::getFormat(MI->getDesc().TSFlags) == RISCVII::InstFormatS) &&
+         "The MI must be I or S format.");
+  assert(MI->getOperand(Idx).isFI() && "The Idx'th operand of MI is not a "
+                                       "FrameIndex operand");
+  return MI->getOperand(Idx + 1).getImm();
+}
+
 Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = getFrameLowering(MF);
   return TFI->hasFP(MF) ? RISCV::X8 : RISCV::X2;
@@ -585,8 +711,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   auto tryAddHint = [&](const MachineOperand &VRRegMO, const MachineOperand &MO,
                         bool NeedGPRC) -> void {
     Register Reg = MO.getReg();
-    Register PhysReg =
-        Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
+    Register PhysReg = Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
     if (PhysReg && (!NeedGPRC || RISCV::GPRCRegClass.contains(PhysReg))) {
       assert(!MO.getSubReg() && !VRRegMO.getSubReg() && "Unexpected subreg!");
       if (!MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
@@ -633,14 +758,13 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     if (!MO.isReg())
       return true;
     Register Reg = MO.getReg();
-    Register PhysReg =
-        Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
+    Register PhysReg = Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
     return PhysReg && RISCV::GPRCRegClass.contains(PhysReg);
   };
 
   for (auto &MO : MRI->reg_nodbg_operands(VirtReg)) {
     const MachineInstr &MI = *MO.getParent();
-    unsigned OpIdx = MI.getOperandNo(&MO);
+    unsigned OpIdx = MO.getOperandNo();
     bool NeedGPRC;
     if (isCompressible(MI, NeedGPRC)) {
       if (OpIdx == 0 && MI.getOperand(1).isReg()) {

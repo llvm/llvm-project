@@ -429,7 +429,7 @@ public:
   /// in the buffer and should be handled separately by the caller.
   template <typename BufferTy, typename... Data>
   static void readRecord(BufferTy &buffer, Data &&...data) {
-    return readRecord(llvm::makeArrayRef(buffer), std::forward<Data>(data)...);
+    return readRecord(llvm::ArrayRef(buffer), std::forward<Data>(data)...);
   }
 };
 

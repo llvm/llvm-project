@@ -13,6 +13,7 @@
 #include "src/stdio/printf_core/vfprintf_internal.h"
 
 #include <stdarg.h>
+#include <stdio.h>
 
 namespace __llvm_libc {
 

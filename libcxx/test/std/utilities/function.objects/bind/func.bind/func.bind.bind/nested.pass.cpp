@@ -11,45 +11,45 @@
 // <functional>
 
 // template<CopyConstructible Fn, CopyConstructible... Types>
-//   unspecified bind(Fn, Types...);
+//   unspecified bind(Fn, Types...);    // constexpr since C++20
 // template<Returnable R, CopyConstructible Fn, CopyConstructible... Types>
-//   unspecified bind(Fn, Types...);
+//   unspecified bind(Fn, Types...);    // constexpr since C++20
 
 // https://llvm.org/PR16343
 
-#include <cmath>
 #include <functional>
 #include <cassert>
 
 #include "test_macros.h"
 
-struct power
-{
+struct multiply {
   template <typename T>
-  T
-  operator()(T a, T b)
-  {
-    return static_cast<T>(std::pow(a, b));
+  TEST_CONSTEXPR_CXX20 T operator()(T a, T b) {
+    return a * b;
   }
 };
 
-struct plus_one
-{
+struct plus_one {
   template <typename T>
-  T
-  operator()(T a)
-  {
+  TEST_CONSTEXPR_CXX20 T operator()(T a) {
     return a + 1;
   }
 };
 
-int main(int, char**)
-{
-    using std::placeholders::_1;
+TEST_CONSTEXPR_CXX20 bool test() {
+  using std::placeholders::_1;
+  auto g = std::bind(multiply(), 2, _1);
+  assert(g(5) == 10);
+  assert(std::bind(plus_one(), g)(5) == 11);
 
-    auto g = std::bind(power(), 2, _1);
-    assert(g(5) == 32);
-    assert(std::bind(plus_one(), g)(5) == 33);
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 20
+  static_assert(test());
+#endif
 
   return 0;
 }

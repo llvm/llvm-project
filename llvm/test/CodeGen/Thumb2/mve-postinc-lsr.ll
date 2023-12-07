@@ -725,7 +725,7 @@ define i8* @signext(i8* %input_row, i8* %input_col, i16 zeroext %output_ch, i16 
 ; CHECK-NEXT:    cmp r1, r1
 ; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
 ; CHECK-NEXT:    ldr.w r12, [r0, r11, lsl #2]
-; CHECK-NEXT:    bge .LBB5_3
+; CHECK-NEXT:    ble .LBB5_3
 ; CHECK-NEXT:  @ %bb.6: @ %for.body24.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB5_5 Depth=1
 ; CHECK-NEXT:    ldr.w lr, [sp, #92]
@@ -897,7 +897,7 @@ define i8* @signext_optsize(i8* %input_row, i8* %input_col, i16 zeroext %output_
 ; CHECK-NEXT:    cmp r1, r1
 ; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
 ; CHECK-NEXT:    ldr.w r12, [r0, r11, lsl #2]
-; CHECK-NEXT:    bge .LBB6_6
+; CHECK-NEXT:    ble .LBB6_6
 ; CHECK-NEXT:  @ %bb.4: @ %for.body24.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB6_3 Depth=1
 ; CHECK-NEXT:    ldr.w lr, [sp, #92]

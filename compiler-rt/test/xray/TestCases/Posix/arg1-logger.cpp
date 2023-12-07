@@ -9,11 +9,8 @@
 // After all that, clean up the XRay log file.
 //
 // RUN: rm -f arg1-logger-*
-//
-// At the time of writing, the ARM trampolines weren't written yet.
-// XFAIL: arm || aarch64 || mips
-// See the mailing list discussion of r296998.
-// UNSUPPORTED: powerpc64le
+
+// REQUIRES: target={{(aarch64|x86_64)-.*}}
 
 #include "xray/xray_interface.h"
 

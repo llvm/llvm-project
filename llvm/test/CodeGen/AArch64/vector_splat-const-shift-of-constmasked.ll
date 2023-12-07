@@ -214,7 +214,7 @@ define <16 x i8> @test_128_i8_x_16_7_mask_shl_1(<16 x i8> %a0) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.16b, #7
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.16b, v0.16b, #1
+; CHECK-NEXT:    add v0.16b, v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %t0 = and <16 x i8> %a0, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
   %t1 = shl <16 x i8> %t0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -255,7 +255,7 @@ define <16 x i8> @test_128_i8_x_16_28_mask_shl_1(<16 x i8> %a0) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.16b, #28
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.16b, v0.16b, #1
+; CHECK-NEXT:    add v0.16b, v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
   %t1 = shl <16 x i8> %t0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -300,7 +300,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_shl_1(<16 x i8> %a0) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.16b, #224
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.16b, v0.16b, #1
+; CHECK-NEXT:    add v0.16b, v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %t0 = and <16 x i8> %a0, <i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224>
   %t1 = shl <16 x i8> %t0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -526,7 +526,7 @@ define <8 x i16> @test_128_i16_x_8_127_mask_shl_1(<8 x i16> %a0) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.8h, #127
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.8h, v0.8h, #1
+; CHECK-NEXT:    add v0.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    ret
   %t0 = and <8 x i16> %a0, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
   %t1 = shl <8 x i16> %t0, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
@@ -616,7 +616,7 @@ define <8 x i16> @test_128_i16_x_8_65024_mask_shl_1(<8 x i16> %a0) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.8h, #254, lsl #8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.8h, v0.8h, #1
+; CHECK-NEXT:    add v0.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    ret
   %t0 = and <8 x i16> %a0, <i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024>
   %t1 = shl <8 x i16> %t0, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
@@ -842,7 +842,7 @@ define <4 x i32> @test_128_i32_x_4_32767_mask_shl_1(<4 x i32> %a0) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #127, msl #8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.4s, v0.4s, #1
+; CHECK-NEXT:    add v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %t0 = and <4 x i32> %a0, <i32 32767, i32 32767, i32 32767, i32 32767>
   %t1 = shl <4 x i32> %t0, <i32 1, i32 1, i32 1, i32 1>
@@ -932,7 +932,7 @@ define <4 x i32> @test_128_i32_x_4_4294836224_mask_shl_1(<4 x i32> %a0) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvni v1.4s, #1, msl #16
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.4s, v0.4s, #1
+; CHECK-NEXT:    add v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %t0 = and <4 x i32> %a0, <i32 4294836224, i32 4294836224, i32 4294836224, i32 4294836224>
   %t1 = shl <4 x i32> %t0, <i32 1, i32 1, i32 1, i32 1>
@@ -1165,7 +1165,7 @@ define <2 x i64> @test_128_i64_x_2_2147483647_mask_shl_1(<2 x i64> %a0) {
 ; CHECK-NEXT:    mov w8, #2147483647
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.2d, v0.2d, #1
+; CHECK-NEXT:    add v0.2d, v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %t0 = and <2 x i64> %a0, <i64 2147483647, i64 2147483647>
   %t1 = shl <2 x i64> %t0, <i64 1, i64 1>
@@ -1257,7 +1257,7 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_shl_1(<2 x i64> %a0
 ; CHECK-NEXT:    mov x8, #-8589934592
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.2d, v0.2d, #1
+; CHECK-NEXT:    add v0.2d, v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %t0 = and <2 x i64> %a0, <i64 18446744065119617024, i64 18446744065119617024>
   %t1 = shl <2 x i64> %t0, <i64 1, i64 1>

@@ -33,6 +33,8 @@ class HexagonDAGToDAGISel : public SelectionDAGISel {
 public:
   static char ID;
 
+  HexagonDAGToDAGISel() = delete;
+
   explicit HexagonDAGToDAGISel(HexagonTargetMachine &tm,
                                CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(ID, tm, OptLevel), HST(nullptr), HII(nullptr),
@@ -70,10 +72,6 @@ public:
   inline bool SelectAnyImm1(SDValue &N, SDValue &R);
   inline bool SelectAnyImm2(SDValue &N, SDValue &R);
   inline bool SelectAnyImm3(SDValue &N, SDValue &R);
-
-  StringRef getPassName() const override {
-    return "Hexagon DAG->DAG Pattern Instruction Selection";
-  }
 
   // Generate a machine instruction node corresponding to the circ/brev
   // load intrinsic.

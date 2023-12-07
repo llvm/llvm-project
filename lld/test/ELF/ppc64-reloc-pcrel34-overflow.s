@@ -10,7 +10,7 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t.o
 # RUN: not ld.lld -T %t.script %t.o -o /dev/null 2>&1 | FileCheck %s
 
-# CHECK: relocation R_PPC64_PCREL34 out of range: 8589934592 is not in [-8589934592, 8589934591]
+# CHECK: relocation R_PPC64_PCREL34 out of range: 8589934592 is not in [-8589934592, 8589934591]; references section '.data'
 	plwa 3, glob_overflow@PCREL(0), 1
 
 # CHECK-NOT: relocation

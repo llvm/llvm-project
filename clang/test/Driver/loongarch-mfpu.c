@@ -16,24 +16,18 @@
 // RUN: %clang --target=loongarch64 -mfpu=none -S -emit-llvm %s -o - | \
 // RUN:   FileCheck %s --check-prefix=IR-FPU0
 
-// CC1-FPU64-NOT: "-target-feature"
-// CC1-FPU64: "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "+d"
-// CC1-FPU64-NOT: "-target-feature"
+// CC1-FPU64: "-target-feature" "+f"{{.*}} "-target-feature" "+d"
 // CC1-FPU64: "-target-abi" "lp64d"
 
-// CC1-FPU32-NOT: "-target-feature"
-// CC1-FPU32: "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "-d"
-// CC1-FPU32-NOT: "-target-feature"
+// CC1-FPU32: "-target-feature" "+f"{{.*}} "-target-feature" "-d"
 // CC1-FPU32: "-target-abi" "lp64f"
 
-// CC1-FPU0-NOT: "-target-feature"
-// CC1-FPU0: "-target-feature" "+64bit" "-target-feature" "-f" "-target-feature" "-d"
-// CC1-FPU0-NOT: "-target-feature"
+// CC1-FPU0: "-target-feature" "-f"{{.*}} "-target-feature" "-d"
 // CC1-FPU0: "-target-abi" "lp64s"
 
-// IR-FPU64: attributes #[[#]] ={{.*}}"target-features"="+64bit,+d,+f"
-// IR-FPU32: attributes #[[#]] ={{.*}}"target-features"="+64bit,+f,-d"
-// IR-FPU0: attributes #[[#]] ={{.*}}"target-features"="+64bit,-d,-f"
+// IR-FPU64: attributes #[[#]] ={{.*}}"target-features"="{{(.*,)?}}+d,{{(.*,)?}}+f{{(,.*)?}}"
+// IR-FPU32: attributes #[[#]] ={{.*}}"target-features"="{{(.*,)?}}+f,{{(.*,)?}}-d{{(,.*)?}}"
+// IR-FPU0: attributes #[[#]] ={{.*}}"target-features"="{{(.*,)?}}-d,{{(.*,)?}}-f{{(,.*)?}}"
 
 int foo(void) {
   return 3;

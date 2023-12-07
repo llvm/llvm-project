@@ -301,7 +301,7 @@ void dr489(void) {
   switch (i) {
   case (int)0.0f: break;    /* okay, a valid ICE */
 
-  /* FIXME: this should be accepted in C2x and up without a diagnostic, as C23
+  /* FIXME: this should be accepted in C23 and up without a diagnostic, as C23
    * added compound literals to the allowed list of things in an ICE. The
    * diagnostic is correct for C17 and earlier though.
    */
@@ -331,12 +331,7 @@ void dr496(void) {
   struct B { struct A a; };
   struct C { struct A a[1]; };
 
-  /* The standard does not require either of these examples to work, but we
-   * support them just the same. The first one is invalid because it's
-   * referencing a member of a different struct, and the second one is invalid
-   * because it references an array of another struct. Clang calculates the
-   * correct offset to each of those fields.
-   */
+  /* Array access & member access expressions are now valid. */
   _Static_assert(__builtin_offsetof(struct B, a.n) == 0, "");
   /* First int below is for 'n' and the second int is for 'a[0]'; this presumes
    * there is no padding involved.
@@ -352,11 +347,10 @@ void dr496(void) {
                                              */
 
   /* The DR asked a question about whether defining a new type within offsetof
-   * is allowed. C2x N2350 made this explicitly undefined behavior, but Clang
-   * has always supported defining a type in this location, and GCC also
-   * supports it.
+   * is allowed. C2x N2350 made this explicitly undefined behavior, but GCC and
+   * Clang both support it as an extension.
    */
-   (void)__builtin_offsetof(struct S { int a; }, a);
+   (void)__builtin_offsetof(struct S { int a; }, a); /* expected-warning{{defining a type within '__builtin_offsetof' is a Clang extension}} */
 }
 
 /* WG14 DR499: yes

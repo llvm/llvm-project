@@ -794,7 +794,7 @@ enum OpenFlags : unsigned {
 /// is false the current directory will be used instead.
 ///
 /// This function does not check if the file exists. If you want to be sure
-/// that the file does not yet exist, you should use use enough '%' characters
+/// that the file does not yet exist, you should use enough '%' characters
 /// in your model to ensure this. Each '%' gives 4-bits of entropy so you can
 /// use 32 of them to get 128 bits of entropy.
 ///

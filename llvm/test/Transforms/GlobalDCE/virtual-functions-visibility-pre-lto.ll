@@ -2,7 +2,7 @@
 
 ; structs A, B and C have vcall_visibility of public, linkage-unit and
 ; translation-unit respectively. This test is run before LTO linking occurs
-; (the LTOPostLink metadata is not present), so only C can be VFE'd.
+; so only C can be VFE'd.
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 

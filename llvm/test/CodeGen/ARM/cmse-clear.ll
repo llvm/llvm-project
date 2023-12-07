@@ -24,7 +24,7 @@
 ; RUN: llc %s -o - -mtriple=thumbebv8.1m.main -mattr=mve | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-81M-SOFTFP
 
-define i32 @ns_entry(i32 (i32)* nocapture %fptr) #0 {
+define i32 @ns_entry(ptr nocapture %fptr) #0 {
 ; CHECK-8B-LABEL: ns_entry:
 ; CHECK-8B:       @ %bb.0: @ %entry
 ; CHECK-8B-NEXT:    push {r7, lr}
@@ -124,7 +124,7 @@ attributes #0 = { "cmse_nonsecure_entry" nounwind }
 attributes #1 = { nounwind }
 
 
-define i32 @ns_call(i32 (i32)* nocapture %fptr) #2 {
+define i32 @ns_call(ptr nocapture %fptr) #2 {
 ; CHECK-8B-LABEL: ns_call:
 ; CHECK-8B:       @ %bb.0: @ %entry
 ; CHECK-8B-NEXT:    push {r7, lr}
@@ -253,7 +253,7 @@ attributes #2 = { nounwind }
 attributes #3 = { "cmse_nonsecure_call" nounwind }
 
 
-define i32 @ns_tail_call(i32 (i32)* nocapture %fptr) #4 {
+define i32 @ns_tail_call(ptr nocapture %fptr) #4 {
 ; CHECK-8B-LABEL: ns_tail_call:
 ; CHECK-8B:       @ %bb.0: @ %entry
 ; CHECK-8B-NEXT:    push {r7, lr}
@@ -382,7 +382,7 @@ attributes #4 = { nounwind }
 attributes #5 = { "cmse_nonsecure_call" nounwind }
 
 
-define void (i32, i32, i32, i32)* @ns_tail_call_many_args(void (i32, i32, i32, i32)* %f, i32 %a, i32 %b, i32 %c, i32 %d) #6 {
+define ptr @ns_tail_call_many_args(ptr %f, i32 %a, i32 %b, i32 %c, i32 %d) #6 {
 ; CHECK-8B-LABEL: ns_tail_call_many_args:
 ; CHECK-8B:       @ %bb.0:
 ; CHECK-8B-NEXT:    push {r4, r5, r7, lr}
@@ -520,14 +520,14 @@ define void (i32, i32, i32, i32)* @ns_tail_call_many_args(void (i32, i32, i32, i
 ; CHECK-81M-SOFTFP-NEXT:    mov r0, r4
 ; CHECK-81M-SOFTFP-NEXT:    pop {r4, pc}
   tail call void %f(i32 %a, i32 %b, i32 %c, i32 %d) #7
-  ret void (i32, i32, i32, i32)* %f
+  ret ptr %f
 }
 
 attributes #6 = { nounwind }
 attributes #7 = { "cmse_nonsecure_call" nounwind }
 
 
-define i32 @ns_call_void(i32 %reg0, i32 ()* nocapture %fptr) #8 {
+define i32 @ns_call_void(i32 %reg0, ptr nocapture %fptr) #8 {
 ; CHECK-8B-LABEL: ns_call_void:
 ; CHECK-8B:       @ %bb.0: @ %entry
 ; CHECK-8B-NEXT:    push {r7, lr}

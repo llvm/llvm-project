@@ -9,13 +9,13 @@ func.func @bar() {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   transform.structured.replace %0 {
     func.func @foo() {
       "dummy_op"() : () -> ()
     }
-  }
+  } : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -25,12 +25,12 @@ func.func @bar(%arg0: i1) {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["another_op"]} in %arg1
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["another_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-error @+1 {{expected target without operands}}
   transform.structured.replace %0 {
     "dummy_op"() : () -> ()
-  }
+  } : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -40,11 +40,11 @@ func.func @bar() {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["another_op"]} in %arg1
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["another_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   transform.structured.replace %0 {
   ^bb0(%a: i1):
     // expected-error @+1 {{expected replacement without operands}}
     "dummy_op"(%a) : (i1) -> ()
-  }
+  } : (!transform.any_op) -> !transform.any_op
 }

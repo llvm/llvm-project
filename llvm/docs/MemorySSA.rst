@@ -124,7 +124,7 @@ the value is the new version of the memory after the operation.
     %p2 = alloca i8
     %p3 = alloca i8
     ; 1 = MemoryDef(liveOnEntry)
-    store i8 0, i8* %p3
+    store i8 0, ptr %p3
     br label %while.cond
 
   while.cond:
@@ -133,30 +133,30 @@ the value is the new version of the memory after the operation.
 
   if.then:
     ; 2 = MemoryDef(6)
-    store i8 0, i8* %p1
+    store i8 0, ptr %p1
     br label %if.end
 
   if.else:
     ; 3 = MemoryDef(6)
-    store i8 1, i8* %p2
+    store i8 1, ptr %p2
     br label %if.end
 
   if.end:
     ; 5 = MemoryPhi({if.then,2},{if.else,3})
     ; MemoryUse(5)
-    %1 = load i8, i8* %p1
+    %1 = load i8, ptr %p1
     ; 4 = MemoryDef(5)
-    store i8 2, i8* %p2
+    store i8 2, ptr %p2
     ; MemoryUse(1)
-    %2 = load i8, i8* %p3
+    %2 = load i8, ptr %p3
     br label %while.cond
   }
 
 The ``MemorySSA`` IR is shown in comments that precede the instructions they map
 to (if such an instruction exists). For example, ``1 = MemoryDef(liveOnEntry)``
 is a ``MemoryAccess`` (specifically, a ``MemoryDef``), and it describes the LLVM
-instruction ``store i8 0, i8* %p3``. Other places in ``MemorySSA`` refer to this
-particular ``MemoryDef`` as ``1`` (much like how one can refer to ``load i8, i8*
+instruction ``store i8 0, ptr %p3``. Other places in ``MemorySSA`` refer to this
+particular ``MemoryDef`` as ``1`` (much like how one can refer to ``load i8, ptr
 %p1`` in LLVM with ``%1``). Again, ``MemoryPhi``\ s don't correspond to any LLVM
 Instruction, so the line directly below a ``MemoryPhi`` isn't special.
 
@@ -165,20 +165,20 @@ Going from the top down:
 - ``6 = MemoryPhi({entry,1},{if.end,4})`` notes that, when entering
   ``while.cond``, the reaching definition for it is either ``1`` or ``4``. This
   ``MemoryPhi`` is referred to in the textual IR by the number ``6``.
-- ``2 = MemoryDef(6)`` notes that ``store i8 0, i8* %p1`` is a definition,
+- ``2 = MemoryDef(6)`` notes that ``store i8 0, ptr %p1`` is a definition,
   and its reaching definition before it is ``6``, or the ``MemoryPhi`` after
   ``while.cond``. (See the `Use and Def optimization`_ and `Precision`_
   sections below for why this ``MemoryDef`` isn't linked to a separate,
   disambiguated ``MemoryPhi``.)
-- ``3 = MemoryDef(6)`` notes that ``store i8 0, i8* %p2`` is a definition; its
+- ``3 = MemoryDef(6)`` notes that ``store i8 0, ptr %p2`` is a definition; its
   reaching definition is also ``6``.
 - ``5 = MemoryPhi({if.then,2},{if.else,3})`` notes that the clobber before
   this block could either be ``2`` or ``3``.
-- ``MemoryUse(5)`` notes that ``load i8, i8* %p1`` is a use of memory, and that
+- ``MemoryUse(5)`` notes that ``load i8, ptr %p1`` is a use of memory, and that
   it's clobbered by ``5``.
-- ``4 = MemoryDef(5)`` notes that ``store i8 2, i8* %p2`` is a definition; its
+- ``4 = MemoryDef(5)`` notes that ``store i8 2, ptr %p2`` is a definition; its
   reaching definition is ``5``.
-- ``MemoryUse(1)`` notes that ``load i8, i8* %p3`` is just a user of memory,
+- ``MemoryUse(1)`` notes that ``load i8, ptr %p3`` is just a user of memory,
   and the last thing that could clobber this use is above ``while.cond`` (e.g.
   the store to ``%p3``). In memory versioning parlance, it really only depends on
   the memory version 1, and is unaffected by the new memory versions generated since
@@ -215,9 +215,9 @@ given:
     %b = alloca i8
 
     ; 1 = MemoryDef(liveOnEntry)
-    store i8 0, i8* %a
+    store i8 0, ptr %a
     ; 2 = MemoryDef(1)
-    store i8 0, i8* %b
+    store i8 0, ptr %b
   }
 
 The store to ``%a`` is clearly not a clobber for the store to ``%b``. It would
@@ -359,7 +359,7 @@ example, consider:
     %p2 = alloca i8
     %p3 = alloca i8
     ; 1 = MemoryDef(liveOnEntry)
-    store i8 0, i8* %p3
+    store i8 0, ptr %p3
     br label %while.cond
 
   while.cond:
@@ -374,11 +374,11 @@ example, consider:
 
   if.end:
     ; MemoryUse(1)
-    %1 = load i8, i8* %p1
+    %1 = load i8, ptr %p1
     ; 2 = MemoryDef(3)
-    store i8 2, i8* %p2
+    store i8 2, ptr %p2
     ; MemoryUse(1)
-    %2 = load i8, i8* %p3
+    %2 = load i8, ptr %p3
     br label %while.cond
   }
 
@@ -403,13 +403,13 @@ to reason about atomic or volatile operations, as in:
 
 .. code-block:: llvm
 
-  define i8 @foo(i8* %a) {
+  define i8 @foo(ptr %a) {
   entry:
     br i1 undef, label %if.then, label %if.end
 
   if.then:
     ; 1 = MemoryDef(liveOnEntry)
-    %0 = load volatile i8, i8* %a
+    %0 = load volatile i8, ptr %a
     br label %if.end
 
   if.end:
@@ -470,10 +470,10 @@ In practice, there are implementation details in LLVM that also affect the
 results' precision provided by ``MemorySSA``. For example, AliasAnalysis has various
 caps, or restrictions on looking through phis which can affect what ``MemorySSA``
 can infer. Changes made by different passes may make MemorySSA either "overly
-optimized" (it can provide a more acccurate result than if it were recomputed
+optimized" (it can provide a more accurate result than if it were recomputed
 from scratch), or "under optimized" (it could infer more if it were recomputed).
 This can lead to challenges to reproduced results in isolation with a single pass
-when the result relies on the state aquired by ``MemorySSA`` due to being updated by
+when the result relies on the state acquired by ``MemorySSA`` due to being updated by
 multiple subsequent passes.
 Passes that use and update ``MemorySSA`` should do so through the APIs provided by the
 ``MemorySSAUpdater``, or through calls on the Walker.

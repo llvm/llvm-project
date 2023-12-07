@@ -119,7 +119,7 @@ define i32 @test8(ptr %p) {
 ; ordering imposed.
 define i32 @test9() {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    store i32 poison, ptr null, align 4294967296
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret i32 poison
 ;
   %x = load atomic i32, ptr null unordered, align 4

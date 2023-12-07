@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -march=amdgcn --amdhsa-code-object-version=2 -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=VMEM -check-prefix=GCN %s
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -march=amdgcn --amdhsa-code-object-version=2 -amdgpu-spill-sgpr-to-vgpr=1 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=VGPR -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -march=amdgcn -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=VMEM -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -march=amdgcn -amdgpu-spill-sgpr-to-vgpr=1 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=VGPR -check-prefix=GCN %s
 
 ; Verify registers used for tracking exec mask changes when all
 ; registers are spilled at the end of the block. The SGPR spill
@@ -43,7 +43,7 @@
 
 
 ; Spill val register
-; GCN: v_add_i32_e32 [[VAL:v[0-9]+]], vcc, [[LOAD1]], [[RELOAD_LOAD0]]
+; GCN: v_add_i32_e32 [[VAL:v[0-9]+]], vcc, [[RELOAD_LOAD0]], [[LOAD1]]
 ; GCN: buffer_store_dword [[VAL]], off, s[0:3], 0 offset:[[VAL_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 
 ; VMEM: [[ENDIF]]:
@@ -63,21 +63,21 @@
 ; GCN: s_or_b64 exec, exec, s[[[S_RELOAD_SAVEEXEC_LO]]:[[S_RELOAD_SAVEEXEC_HI]]]
 
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RELOAD_VAL]]
-define amdgpu_kernel void @divergent_if_endif(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @divergent_if_endif(ptr addrspace(1) %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %load0 = load volatile i32, i32 addrspace(3)* undef
+  %load0 = load volatile i32, ptr addrspace(3) undef
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %if, label %endif
 
 if:
-  %load1 = load volatile i32, i32 addrspace(3)* undef
+  %load1 = load volatile i32, ptr addrspace(3) undef
   %val = add i32 %load0, %load1
   br label %endif
 
 endif:
   %tmp4 = phi i32 [ %val, %if ], [ 0, %entry ]
-  store i32 %tmp4, i32 addrspace(1)* %out
+  store i32 %tmp4, ptr addrspace(1) %out
   ret void
 }
 
@@ -110,15 +110,15 @@ endif:
 
 ; GCN: [[LOOP:.LBB[0-9]+_[0-9]+]]:
 ; GCN: buffer_load_dword v[[VAL_LOOP_RELOAD:[0-9]+]], off, s[0:3], 0 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload
-; GCN: v_subrev_i32_e32 [[VAL_LOOP:v[0-9]+]], vcc, v{{[0-9]+}}, v[[VAL_LOOP_RELOAD]]
+; GCN: v_sub_i32_e32 v[[VAL_LOOP_RELOAD]], vcc, v[[VAL_LOOP_RELOAD]], v{{[0-9]+}}
 ; GCN: s_cmp_lg_u32
 ; VMEM: buffer_store_dword
 ; VMEM: buffer_store_dword
 ; VMEM: buffer_store_dword
-; GCN: buffer_store_dword [[VAL_LOOP]], off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; GCN: buffer_store_dword v[[VAL_LOOP_RELOAD]], off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
 ; GCN-NEXT: s_cbranch_scc1 [[LOOP]]
 
-; GCN: buffer_store_dword [[VAL_LOOP]], off, s[0:3], 0 offset:[[VAL_SUB_OFFSET:[0-9]+]] ; 4-byte Folded Spill
+; GCN: buffer_store_dword v[[VAL_LOOP_RELOAD]], off, s[0:3], 0 offset:[[VAL_SUB_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 
 ; GCN: [[END]]:
 ; GCN: buffer_load_dword v[[VAL_END:[0-9]+]], off, s[0:3], 0 offset:[[VAL_SUB_OFFSET]] ; 4-byte Folded Reload
@@ -133,17 +133,17 @@ endif:
 ; GCN: s_or_b64 exec, exec, s[[[S_RELOAD_SAVEEXEC_LO]]:[[S_RELOAD_SAVEEXEC_HI]]]
 
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v[[VAL_END]]
-define amdgpu_kernel void @divergent_loop(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @divergent_loop(ptr addrspace(1) %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %load0 = load volatile i32, i32 addrspace(3)* null
+  %load0 = load volatile i32, ptr addrspace(3) null
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %loop, label %end
 
 loop:
   %i = phi i32 [ %i.inc, %loop ], [ 0, %entry ]
   %val = phi i32 [ %val.sub, %loop ], [ %load0, %entry ]
-  %load1 = load volatile i32, i32 addrspace(3)* undef
+  %load1 = load volatile i32, ptr addrspace(3) undef
   %i.inc = add i32 %i, 1
   %val.sub = sub i32 %val, %load1
   %cmp1 = icmp ne i32 %i, 256
@@ -151,7 +151,7 @@ loop:
 
 end:
   %tmp4 = phi i32 [ %val.sub, %loop ], [ 0, %entry ]
-  store i32 %tmp4, i32 addrspace(1)* %out
+  store i32 %tmp4, ptr addrspace(1) %out
   ret void
 }
 
@@ -175,6 +175,7 @@ end:
 ; Spill saved exec
 ; VGPR: v_writelane_b32 [[SPILL_VGPR:v[0-9]+]], s[[SAVEEXEC_LO]], [[SAVEEXEC_LO_LANE:[0-9]+]]
 ; VGPR: v_writelane_b32 [[SPILL_VGPR]], s[[SAVEEXEC_HI]], [[SAVEEXEC_HI_LANE:[0-9]+]]
+; VGPR: buffer_store_dword [[SPILL_VGPR]], off, s[0:3], 0 offset:[[VREG_SAVE_RESTORE_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 
 ; VMEM: v_writelane_b32 v[[V_SAVEEXEC:[0-9]+]], s[[SAVEEXEC_LO]], 0
 ; VMEM: v_writelane_b32 v[[V_SAVEEXEC]], s[[SAVEEXEC_HI]], 1
@@ -187,7 +188,7 @@ end:
 ; GCN-NEXT: s_branch [[ELSE:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: [[FLOW]]: ; %Flow
-; VGPR: buffer_load_dword
+; VGPR: buffer_load_dword [[SPILL_VGPR:v[0-9]+]], off, s[0:3], 0 offset:[[VREG_SAVE_RESTORE_OFFSET]] ; 4-byte Folded Reload
 ; GCN: buffer_load_dword [[FLOW_VAL:v[0-9]+]], off, s[0:3], 0 offset:[[FLOW_VAL_OFFSET:[0-9]+]] ; 4-byte Folded Reload
 ; VGPR: v_readlane_b32 s[[FLOW_S_RELOAD_SAVEEXEC_LO:[0-9]+]], [[SPILL_VGPR]], [[SAVEEXEC_LO_LANE]]
 ; VGPR: v_readlane_b32 s[[FLOW_S_RELOAD_SAVEEXEC_HI:[0-9]+]], [[SPILL_VGPR]], [[SAVEEXEC_HI_LANE]]
@@ -220,14 +221,14 @@ end:
 ; GCN: ; %bb.{{[0-9]+}}: ; %if
 ; GCN: buffer_load_dword v[[LOAD0_RELOAD:[0-9]+]], off, s[0:3], 0 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload
 ; GCN: ds_read_b32
-; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, v{{[0-9]+}}, v[[LOAD0_RELOAD]]
-; GCN: buffer_store_dword [[ADD]], off, s[0:3], 0 offset:[[RESULT_OFFSET]] ; 4-byte Folded Spill
+; GCN: v_add_i32_e32 v[[LOAD0_RELOAD]], vcc, v[[LOAD0_RELOAD]], [[ADD:v[0-9]+]]
+; GCN: buffer_store_dword v[[LOAD0_RELOAD]], off, s[0:3], 0 offset:[[RESULT_OFFSET]] ; 4-byte Folded Spill
 ; GCN-NEXT: s_branch [[ENDIF:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: [[ELSE]]: ; %else
 ; GCN: buffer_load_dword v[[LOAD0_RELOAD:[0-9]+]], off, s[0:3], 0 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload
-; GCN: v_subrev_i32_e32 [[SUB:v[0-9]+]], vcc, v{{[0-9]+}}, v[[LOAD0_RELOAD]]
-; GCN: buffer_store_dword [[ADD]], off, s[0:3], 0 offset:[[FLOW_RESULT_OFFSET:[0-9]+]] ; 4-byte Folded Spill
+; GCN: v_sub_i32_e32 v[[LOAD0_RELOAD]], vcc, v[[LOAD0_RELOAD]], v{{[0-9]+}}
+; GCN: buffer_store_dword v[[LOAD0_RELOAD]], off, s[0:3], 0 offset:[[FLOW_RESULT_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 ; GCN-NEXT: s_branch [[FLOW]]
 
 ; GCN: [[ENDIF]]:
@@ -244,26 +245,26 @@ end:
 ; GCN: s_or_b64 exec, exec, s[[[S_RELOAD_SAVEEXEC_LO]]:[[S_RELOAD_SAVEEXEC_HI]]]
 
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v[[RESULT]]
-define amdgpu_kernel void @divergent_if_else_endif(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @divergent_if_else_endif(ptr addrspace(1) %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %load0 = load volatile i32, i32 addrspace(3)* null
+  %load0 = load volatile i32, ptr addrspace(3) null
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %if, label %else
 
 if:
-  %load1 = load volatile i32, i32 addrspace(3)* undef
+  %load1 = load volatile i32, ptr addrspace(3) undef
   %val0 = add i32 %load0, %load1
   br label %endif
 
 else:
-  %load2 = load volatile i32, i32 addrspace(3)* undef
+  %load2 = load volatile i32, ptr addrspace(3) undef
   %val1 = sub i32 %load0, %load2
   br label %endif
 
 endif:
   %result = phi i32 [ %val0, %if ], [ %val1, %else ]
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -271,3 +272,6 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}

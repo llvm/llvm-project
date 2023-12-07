@@ -12,6 +12,7 @@
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "moduleutils"
@@ -31,11 +33,9 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
   // Get the current set of static global constructors and add the new ctor
   // to the list.
   SmallVector<Constant *, 16> CurrentCtors;
-  StructType *EltTy = StructType::get(
-      IRB.getInt32Ty(), PointerType::get(FnTy, F->getAddressSpace()),
-      IRB.getInt8PtrTy());
-
+  StructType *EltTy;
   if (GlobalVariable *GVCtor = M.getNamedGlobal(ArrayName)) {
+    EltTy = cast<StructType>(GVCtor->getValueType()->getArrayElementType());
     if (Constant *Init = GVCtor->getInitializer()) {
       unsigned n = Init->getNumOperands();
       CurrentCtors.reserve(n + 1);
@@ -43,6 +43,10 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
         CurrentCtors.push_back(cast<Constant>(Init->getOperand(i)));
     }
     GVCtor->eraseFromParent();
+  } else {
+    EltTy = StructType::get(
+        IRB.getInt32Ty(), PointerType::get(FnTy, F->getAddressSpace()),
+        IRB.getInt8PtrTy());
   }
 
   // Build a 3 field global_ctor entry.  We don't take a comdat key.
@@ -52,7 +56,7 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
   CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, IRB.getInt8PtrTy())
                    : Constant::getNullValue(IRB.getInt8PtrTy());
   Constant *RuntimeCtorInit =
-      ConstantStruct::get(EltTy, makeArrayRef(CSVals, EltTy->getNumElements()));
+      ConstantStruct::get(EltTy, ArrayRef(CSVals, EltTy->getNumElements()));
 
   CurrentCtors.push_back(RuntimeCtorInit);
 
@@ -150,7 +154,7 @@ void llvm::removeFromUsedLists(Module &M,
   removeFromUsedList(M, "llvm.compiler.used", ShouldRemove);
 }
 
-static void setKCFIType(Module &M, Function &F, StringRef MangledType) {
+void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   if (!M.getModuleFlag("kcfi"))
     return;
   // Matches CodeGenModule::CreateKCFITypeId in Clang.
@@ -161,16 +165,26 @@ static void setKCFIType(Module &M, Function &F, StringRef MangledType) {
       MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
                            Type::getInt32Ty(Ctx),
                            static_cast<uint32_t>(xxHash64(MangledType))))));
+  // If the module was compiled with -fpatchable-function-entry, ensure
+  // we use the same patchable-function-prefix.
+  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("kcfi-offset"))) {
+    if (unsigned Offset = MD->getZExtValue())
+      F.addFnAttr("patchable-function-prefix", std::to_string(Offset));
+  }
 }
 
-FunctionCallee
-llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
-                                   ArrayRef<Type *> InitArgTypes) {
+FunctionCallee llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
+                                                  ArrayRef<Type *> InitArgTypes,
+                                                  bool Weak) {
   assert(!InitName.empty() && "Expected init function name");
-  return M.getOrInsertFunction(
-      InitName,
-      FunctionType::get(Type::getVoidTy(M.getContext()), InitArgTypes, false),
-      AttributeList());
+  auto *VoidTy = Type::getVoidTy(M.getContext());
+  auto *FnTy = FunctionType::get(VoidTy, InitArgTypes, false);
+  auto FnCallee = M.getOrInsertFunction(InitName, FnTy);
+  auto *Fn = cast<Function>(FnCallee.getCallee());
+  if (Weak && Fn->isDeclaration())
+    Fn->setLinkage(Function::ExternalWeakLinkage);
+  return FnCallee;
 }
 
 Function *llvm::createSanitizerCtor(Module &M, StringRef CtorName) {
@@ -190,14 +204,33 @@ Function *llvm::createSanitizerCtor(Module &M, StringRef CtorName) {
 std::pair<Function *, FunctionCallee> llvm::createSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
-    StringRef VersionCheckName) {
+    StringRef VersionCheckName, bool Weak) {
   assert(!InitName.empty() && "Expected init function name");
   assert(InitArgs.size() == InitArgTypes.size() &&
          "Sanitizer's init function expects different number of arguments");
   FunctionCallee InitFunction =
-      declareSanitizerInitFunction(M, InitName, InitArgTypes);
+      declareSanitizerInitFunction(M, InitName, InitArgTypes, Weak);
   Function *Ctor = createSanitizerCtor(M, CtorName);
-  IRBuilder<> IRB(Ctor->getEntryBlock().getTerminator());
+  IRBuilder<> IRB(M.getContext());
+
+  BasicBlock *RetBB = &Ctor->getEntryBlock();
+  if (Weak) {
+    RetBB->setName("ret");
+    auto *EntryBB = BasicBlock::Create(M.getContext(), "entry", Ctor, RetBB);
+    auto *CallInitBB =
+        BasicBlock::Create(M.getContext(), "callfunc", Ctor, RetBB);
+    auto *InitFn = cast<Function>(InitFunction.getCallee());
+    auto *InitFnPtr =
+        PointerType::get(InitFn->getType(), InitFn->getAddressSpace());
+    IRB.SetInsertPoint(EntryBB);
+    Value *InitNotNull =
+        IRB.CreateICmpNE(InitFn, ConstantPointerNull::get(InitFnPtr));
+    IRB.CreateCondBr(InitNotNull, CallInitBB, RetBB);
+    IRB.SetInsertPoint(CallInitBB);
+  } else {
+    IRB.SetInsertPoint(RetBB->getTerminator());
+  }
+
   IRB.CreateCall(InitFunction, InitArgs);
   if (!VersionCheckName.empty()) {
     FunctionCallee VersionCheckFunction = M.getOrInsertFunction(
@@ -205,6 +238,10 @@ std::pair<Function *, FunctionCallee> llvm::createSanitizerCtorAndInitFunctions(
         AttributeList());
     IRB.CreateCall(VersionCheckFunction, {});
   }
+
+  if (Weak)
+    IRB.CreateBr(RetBB);
+
   return std::make_pair(Ctor, InitFunction);
 }
 
@@ -213,7 +250,7 @@ llvm::getOrCreateSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
     function_ref<void(Function *, FunctionCallee)> FunctionsCreatedCallback,
-    StringRef VersionCheckName) {
+    StringRef VersionCheckName, bool Weak) {
   assert(!CtorName.empty() && "Expected ctor function name");
 
   if (Function *Ctor = M.getFunction(CtorName))
@@ -221,12 +258,13 @@ llvm::getOrCreateSanitizerCtorAndInitFunctions(
     // globals. This will make moving to a concurrent model much easier.
     if (Ctor->arg_empty() ||
         Ctor->getReturnType() == Type::getVoidTy(M.getContext()))
-      return {Ctor, declareSanitizerInitFunction(M, InitName, InitArgTypes)};
+      return {Ctor,
+              declareSanitizerInitFunction(M, InitName, InitArgTypes, Weak)};
 
   Function *Ctor;
   FunctionCallee InitFunction;
   std::tie(Ctor, InitFunction) = llvm::createSanitizerCtorAndInitFunctions(
-      M, CtorName, InitName, InitArgTypes, InitArgs, VersionCheckName);
+      M, CtorName, InitName, InitArgTypes, InitArgs, VersionCheckName, Weak);
   FunctionsCreatedCallback(Ctor, InitFunction);
   return std::make_pair(Ctor, InitFunction);
 }
@@ -323,7 +361,7 @@ void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
                                StringRef SectionName, Align Alignment) {
   // Embed the memory buffer into the module.
   Constant *ModuleConstant = ConstantDataArray::get(
-      M.getContext(), makeArrayRef(Buf.getBufferStart(), Buf.getBufferSize()));
+      M.getContext(), ArrayRef(Buf.getBufferStart(), Buf.getBufferSize()));
   GlobalVariable *GV = new GlobalVariable(
       M, ModuleConstant->getType(), true, GlobalValue::PrivateLinkage,
       ModuleConstant, "llvm.embedded.object");
@@ -339,4 +377,99 @@ void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
   GV->setMetadata(LLVMContext::MD_exclude, llvm::MDNode::get(Ctx, {}));
 
   appendToCompilerUsed(M, GV);
+}
+
+bool llvm::lowerGlobalIFuncUsersAsGlobalCtor(
+    Module &M, ArrayRef<GlobalIFunc *> FilteredIFuncsToLower) {
+  SmallVector<GlobalIFunc *, 32> AllIFuncs;
+  ArrayRef<GlobalIFunc *> IFuncsToLower = FilteredIFuncsToLower;
+  if (FilteredIFuncsToLower.empty()) { // Default to lowering all ifuncs
+    for (GlobalIFunc &GI : M.ifuncs())
+      AllIFuncs.push_back(&GI);
+    IFuncsToLower = AllIFuncs;
+  }
+
+  bool UnhandledUsers = false;
+  LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
+
+  PointerType *TableEntryTy =
+      PointerType::get(Ctx, DL.getProgramAddressSpace());
+
+  ArrayType *FuncPtrTableTy =
+      ArrayType::get(TableEntryTy, IFuncsToLower.size());
+
+  Align PtrAlign = DL.getABITypeAlign(TableEntryTy);
+
+  // Create a global table of function pointers we'll initialize in a global
+  // constructor.
+  auto *FuncPtrTable = new GlobalVariable(
+      M, FuncPtrTableTy, false, GlobalValue::InternalLinkage,
+      PoisonValue::get(FuncPtrTableTy), "", nullptr,
+      GlobalVariable::NotThreadLocal, DL.getDefaultGlobalsAddressSpace());
+  FuncPtrTable->setAlignment(PtrAlign);
+
+  // Create a function to initialize the function pointer table.
+  Function *NewCtor = Function::Create(
+      FunctionType::get(Type::getVoidTy(Ctx), false), Function::InternalLinkage,
+      DL.getProgramAddressSpace(), "", &M);
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "", NewCtor);
+  IRBuilder<> InitBuilder(BB);
+
+  size_t TableIndex = 0;
+  for (GlobalIFunc *GI : IFuncsToLower) {
+    Function *ResolvedFunction = GI->getResolverFunction();
+
+    // We don't know what to pass to a resolver function taking arguments
+    //
+    // FIXME: Is this even valid? clang and gcc don't complain but this
+    // probably should be invalid IR. We could just pass through undef.
+    if (!std::empty(ResolvedFunction->getFunctionType()->params())) {
+      LLVM_DEBUG(dbgs() << "Not lowering ifunc resolver function "
+                        << ResolvedFunction->getName() << " with parameters\n");
+      UnhandledUsers = true;
+      continue;
+    }
+
+    // Initialize the function pointer table.
+    CallInst *ResolvedFunc = InitBuilder.CreateCall(ResolvedFunction);
+    Value *Casted = InitBuilder.CreatePointerCast(ResolvedFunc, TableEntryTy);
+    Constant *GEP = cast<Constant>(InitBuilder.CreateConstInBoundsGEP2_32(
+        FuncPtrTableTy, FuncPtrTable, 0, TableIndex++));
+    InitBuilder.CreateAlignedStore(Casted, GEP, PtrAlign);
+
+    // Update all users to load a pointer from the global table.
+    for (User *User : make_early_inc_range(GI->users())) {
+      Instruction *UserInst = dyn_cast<Instruction>(User);
+      if (!UserInst) {
+        // TODO: Should handle constantexpr casts in user instructions. Probably
+        // can't do much about constant initializers.
+        UnhandledUsers = true;
+        continue;
+      }
+
+      IRBuilder<> UseBuilder(UserInst);
+      LoadInst *ResolvedTarget =
+          UseBuilder.CreateAlignedLoad(TableEntryTy, GEP, PtrAlign);
+      Value *ResolvedCast =
+          UseBuilder.CreatePointerCast(ResolvedTarget, GI->getType());
+      UserInst->replaceUsesOfWith(GI, ResolvedCast);
+    }
+
+    // If we handled all users, erase the ifunc.
+    if (GI->use_empty())
+      GI->eraseFromParent();
+  }
+
+  InitBuilder.CreateRetVoid();
+
+  PointerType *ConstantDataTy = PointerType::get(Ctx, 0);
+
+  // TODO: Is this the right priority? Probably should be before any other
+  // constructors?
+  const int Priority = 10;
+  appendToGlobalCtors(M, NewCtor, Priority,
+                      ConstantPointerNull::get(ConstantDataTy));
+  return UnhandledUsers;
 }

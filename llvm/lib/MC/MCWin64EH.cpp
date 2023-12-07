@@ -1089,7 +1089,7 @@ static void ARM64ProcessEpilogs(WinEH::FrameInfo *info,
       FindMatchingEpilog(EpilogInstrs, AddedEpilogs, info);
     int PrologOffset;
     if (MatchingEpilog) {
-      assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
+      assert(EpilogInfo.contains(MatchingEpilog) &&
              "Duplicate epilog not found");
       EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
       // Clear the unwind codes in the EpilogMap, so that they don't get output
@@ -1282,9 +1282,9 @@ static void ARM64EmitUnwindInfoForSegment(MCStreamer &streamer,
     // FIXME: We should be able to split unwind info into multiple sections.
     if (CodeWords > 0xFF || EpilogCount > 0xFFFF)
       report_fatal_error(
-          "SEH unwind data splitting is only implemnted for large functions, "
-          "cases of too many code words or too many epilogs will be done later"
-      );
+          "SEH unwind data splitting is only implemented for large functions, "
+          "cases of too many code words or too many epilogs will be done "
+          "later");
     uint32_t row2 = 0x0;
     row2 |= (CodeWords & 0xFF) << 16;
     row2 |= (EpilogCount & 0xFFFF);
@@ -2369,7 +2369,7 @@ static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
         FindMatchingEpilog(EpilogInstrs, AddedEpilogs, info);
     int PrologOffset;
     if (MatchingEpilog) {
-      assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
+      assert(EpilogInfo.contains(MatchingEpilog) &&
              "Duplicate epilog not found");
       EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
       // Clear the unwind codes in the EpilogMap, so that they don't get output
@@ -2449,7 +2449,7 @@ static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
       else
         OffsetExpr = GetSubDivExpr(streamer, EpilogStart, info->Begin, 2);
 
-      assert(info->EpilogMap.find(EpilogStart) != info->EpilogMap.end());
+      assert(info->EpilogMap.contains(EpilogStart));
       unsigned Condition = info->EpilogMap[EpilogStart].Condition;
       assert(Condition <= 0xf);
 

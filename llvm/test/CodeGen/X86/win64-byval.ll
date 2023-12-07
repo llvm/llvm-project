@@ -87,3 +87,13 @@ define void @test() {
   call void @foo2(ptr byval({ float, double }) @G, ptr byval({ float, double }) @G, ptr byval({ float, double }) @G, ptr byval({ float, double }) @G, ptr byval({ float, double }) @G, i64 10)
   ret void
 }
+
+define i64 @receive_byval_arg_via_stack_arg(i64* byval(i64), i64* byval(i64), i64* byval(i64), i64* byval(i64), i64* byval(i64) %x) {
+; CHECK-LABEL: receive_byval_arg_via_stack_arg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    movq (%rax), %rax
+; CHECK-NEXT:    retq
+  %r = load i64, i64* %x
+  ret i64 %r
+}

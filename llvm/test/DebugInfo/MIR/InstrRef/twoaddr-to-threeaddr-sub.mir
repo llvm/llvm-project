@@ -13,11 +13,12 @@
 # CHECK:      LEA64_32r
 # CHECK-SAME: debug-instr-number 2
 #
-# CHECK:      DBG_INSTR_REF 1, 0
+# CHECK:      DBG_INSTR_REF dbg-instr-ref(1, 0)
 ---
 name:            test1
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 registers:
   - { id: 0, class: gr32 }
   - { id: 1, class: gr32 }
@@ -33,8 +34,8 @@ body:             |
 
     %0:gr32 = COPY killed $edi
     %1:gr32 = SHL32ri killed %0, 5, implicit-def dead $eflags
-    %2:gr32 = ADD32ri8_DB killed %1, 3, implicit-def dead $eflags, debug-instr-number 1
-    DBG_INSTR_REF 1, 0
+    %2:gr32 = ADD32ri_DB killed %1, 3, implicit-def dead $eflags, debug-instr-number 1
+    DBG_INSTR_REF dbg-instr-ref(1, 0)
     $eax = COPY killed %2
     RET 0, killed $eax
 

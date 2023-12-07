@@ -19,29 +19,34 @@ S_FALSE = 1
 # This doesn't fit into any convenient category
 DEBUG_ANY_ID = 0xFFFFFFFF
 
+
 class WinError(Exception):
-  def __init__(self, msg, hstatus):
-    self.hstatus = hstatus
-    super(WinError, self).__init__(msg)
+    def __init__(self, msg, hstatus):
+        self.hstatus = hstatus
+        super(WinError, self).__init__(msg)
+
 
 def aborter(res, msg, ignore=[]):
-  if res != 0 and res not in ignore:
-    # Convert a negative error code to a positive unsigned one, which is
-    # now NTSTATUSes appear in documentation.
-    if res < 0:
-      res += 0x100000000
-    msg = '{:08X} : {}'.format(res, msg)
-    raise WinError(msg, res)
+    if res != 0 and res not in ignore:
+        # Convert a negative error code to a positive unsigned one, which is
+        # now NTSTATUSes appear in documentation.
+        if res < 0:
+            res += 0x100000000
+        msg = "{:08X} : {}".format(res, msg)
+        raise WinError(msg, res)
+
 
 IID_Data4_Type = c_ubyte * 8
 
+
 class IID(Structure):
-  _fields_ = [
-      ("Data1", c_uint),
-      ("Data2", c_ushort),
-      ("Data3", c_ushort),
-      ("Data4", IID_Data4_Type)
-  ]
+    _fields_ = [
+        ("Data1", c_uint),
+        ("Data2", c_ushort),
+        ("Data3", c_ushort),
+        ("Data4", IID_Data4_Type),
+    ]
+
 
 c_ulong_p = POINTER(c_ulong)
 c_ulong64_p = POINTER(c_ulonglong)

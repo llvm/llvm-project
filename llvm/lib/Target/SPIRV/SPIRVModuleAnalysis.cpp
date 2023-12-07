@@ -92,7 +92,7 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     MAI.MS[i].clear();
   MAI.RegisterAliasTable.clear();
   MAI.InstrsToDelete.clear();
-  MAI.FuncNameMap.clear();
+  MAI.FuncMap.clear();
   MAI.GlobalVarList.clear();
   MAI.ExtInstSetMap.clear();
   MAI.Reqs.clear();
@@ -279,12 +279,12 @@ static bool findSameInstrInMS(const MachineInstr &A,
   return false;
 }
 
-// Look for IDs declared with Import linkage, and map the imported name string
+// Look for IDs declared with Import linkage, and map the corresponding function
 // to the register defining that variable (which will usually be the result of
 // an OpFunction). This lets us call externally imported functions using
 // the correct ID registers.
 void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
-                                           const Function &F) {
+                                           const Function *F) {
   if (MI.getOpcode() == SPIRV::OpDecorate) {
     // If it's got Import linkage.
     auto Dec = MI.getOperand(1).getImm();
@@ -292,10 +292,10 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
       auto Lnk = MI.getOperand(MI.getNumOperands() - 1).getImm();
       if (Lnk == static_cast<unsigned>(SPIRV::LinkageType::Import)) {
         // Map imported function name to function ID register.
-        std::string Name = getStringImm(MI, 2);
+        const Function *ImportedFunc =
+            F->getParent()->getFunction(getStringImm(MI, 2));
         Register Target = MI.getOperand(0).getReg();
-        // TODO: check defs from different MFs.
-        MAI.FuncNameMap[Name] = MAI.getRegisterAlias(MI.getMF(), Target);
+        MAI.FuncMap[ImportedFunc] = MAI.getRegisterAlias(MI.getMF(), Target);
       }
     }
   } else if (MI.getOpcode() == SPIRV::OpFunction) {
@@ -303,8 +303,7 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
     Register Reg = MI.defs().begin()->getReg();
     Register GlobalReg = MAI.getRegisterAlias(MI.getMF(), Reg);
     assert(GlobalReg.isValid());
-    // TODO: check that it does not conflict with existing entries.
-    MAI.FuncNameMap[getFunctionGlobalIdentifier(&F)] = GlobalReg;
+    MAI.FuncMap[F] = GlobalReg;
   }
 }
 
@@ -343,13 +342,13 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints);
         } else if (TII->isDecorationInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_Annotations);
-          collectFuncNames(MI, *F);
+          collectFuncNames(MI, &*F);
         } else if (TII->isConstantInstr(MI)) {
           // Now OpSpecConstant*s are not in DT,
           // but they need to be collected anyway.
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars);
         } else if (OpCode == SPIRV::OpFunction) {
-          collectFuncNames(MI, *F);
+          collectFuncNames(MI, &*F);
         } else if (OpCode == SPIRV::OpTypeForwardPointer) {
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, false);
         }
@@ -384,47 +383,6 @@ void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
           MAI.ExtInstSetMap[Set] = Register::index2VirtReg(MAI.getNextID());
       }
     }
-  }
-}
-
-// Find OpIEqual and OpBranchConditional instructions originating from
-// OpSwitches, mark them skipped for emission. Also mark MBB skipped if it
-// contains only these instructions.
-static void processSwitches(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
-                            MachineModuleInfo *MMI) {
-  DenseSet<Register> SwitchRegs;
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    MachineFunction *MF = MMI->getMachineFunction(*F);
-    if (!MF)
-      continue;
-    for (MachineBasicBlock &MBB : *MF)
-      for (MachineInstr &MI : MBB) {
-        if (MAI.getSkipEmission(&MI))
-          continue;
-        if (MI.getOpcode() == SPIRV::OpSwitch) {
-          assert(MI.getOperand(0).isReg());
-          SwitchRegs.insert(MI.getOperand(0).getReg());
-        }
-        if (MI.getOpcode() == SPIRV::OpISubS &&
-            SwitchRegs.contains(MI.getOperand(2).getReg())) {
-          SwitchRegs.insert(MI.getOperand(0).getReg());
-          MAI.setSkipEmission(&MI);
-        }
-        if ((MI.getOpcode() != SPIRV::OpIEqual &&
-             MI.getOpcode() != SPIRV::OpULessThanEqual) ||
-            !MI.getOperand(2).isReg() ||
-            !SwitchRegs.contains(MI.getOperand(2).getReg()))
-          continue;
-        Register CmpReg = MI.getOperand(0).getReg();
-        MachineInstr *CBr = MI.getNextNode();
-        assert(CBr && CBr->getOpcode() == SPIRV::OpBranchConditional &&
-               CBr->getOperand(0).isReg() &&
-               CBr->getOperand(0).getReg() == CmpReg);
-        MAI.setSkipEmission(&MI);
-        MAI.setSkipEmission(CBr);
-        if (&MBB.front() == &MI && &MBB.back() == CBr)
-          MAI.MBBsToSkip.insert(&MBB);
-      }
   }
 }
 
@@ -593,6 +551,10 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
                       Capability::RoundingModeRTZ});
   // TODO: verify if this needs some checks.
   addAvailableCaps({Capability::Float16, Capability::Float64});
+
+  // Add cap for SPV_INTEL_optnone.
+  // FIXME: this should be added only if the target has the extension.
+  addAvailableCaps({Capability::OptNoneINTEL});
 
   // TODO: add OpenCL extensions.
 }
@@ -940,6 +902,13 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::VecTypeHint, ST);
+
+    if (F.hasOptNone() &&
+        ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
+      // Output OpCapability OptNoneINTEL.
+      MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_optnone);
+      MAI.Reqs.addCapability(SPIRV::Capability::OptNoneINTEL);
+    }
   }
 }
 
@@ -1020,8 +989,6 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
   addDecorations(M, *TII, MMI, *ST, MAI);
 
   collectReqs(M, MAI, MMI, *ST);
-
-  processSwitches(M, MAI, MMI);
 
   // Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.

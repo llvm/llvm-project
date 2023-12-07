@@ -1,5 +1,5 @@
 ! Test lowering of pointer disassociation
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir --polymorphic-type %s -o - | FileCheck %s
 
 
 ! -----------------------------------------------------------------------------
@@ -104,3 +104,30 @@ subroutine test_array_mold(p, x)
   ! CHECK: fir.store %[[VAL_9]] to %[[p]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   p => NULL(x)
 end subroutine
+
+subroutine test_polymorphic_null(p)
+  type t
+  end type
+  class(t), pointer :: p(:)
+  p => null()
+end subroutine
+! CHECK-LABEL:   func.func @_QPtest_polymorphic_null(
+! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFtest_polymorphic_nullTt>>>>>
+! CHECK:  %[[VAL_1:.*]] = fir.type_desc !fir.type<_QFtest_polymorphic_nullTt> 
+! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFtest_polymorphic_nullTt>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_1]] : (!fir.tdesc<!fir.type<_QFtest_polymorphic_nullTt>>) -> !fir.ref<none> 
+! CHECK:  %[[VAL_4:.*]] = arith.constant 1 : i32
+! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : i32
+! CHECK:  %[[VAL_6:.*]] = fir.call @_FortranAPointerNullifyDerived(%[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %[[VAL_5]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
+
+subroutine test_unlimited_polymorphic_null(p)
+  class(*), pointer :: p(:)
+  p => null()
+end subroutine
+! CHECK-LABEL:   func.func @_QPtest_unlimited_polymorphic_null(
+! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>
+! CHECK:  %[[VAL_1:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xnone>>
+! CHECK:  %[[VAL_2:.*]] = arith.constant 0 : index
+! CHECK:  %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+! CHECK:  %[[VAL_4:.*]] = fir.embox %[[VAL_1]](%[[VAL_3]]) : (!fir.ptr<!fir.array<?xnone>>, !fir.shape<1>) -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
+! CHECK:  fir.store %[[VAL_4]] to %[[VAL_0]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>

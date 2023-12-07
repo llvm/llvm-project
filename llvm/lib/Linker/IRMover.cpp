@@ -11,7 +11,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -19,6 +18,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GVMaterializer.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PseudoProbe.h"
@@ -26,6 +27,7 @@
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
 #include <utility>
@@ -314,7 +316,7 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
                                      cast<PointerType>(Ty)->getAddressSpace());
   case Type::FunctionTyID:
     return *Entry = FunctionType::get(ElementTypes[0],
-                                      makeArrayRef(ElementTypes).slice(1),
+                                      ArrayRef(ElementTypes).slice(1),
                                       cast<FunctionType>(Ty)->isVarArg());
   case Type::StructTyID: {
     auto *STy = cast<StructType>(Ty);
@@ -406,6 +408,10 @@ class IRLinker {
   DenseSet<GlobalValue *> ValuesToLink;
   std::vector<GlobalValue *> Worklist;
   std::vector<std::pair<GlobalValue *, Value*>> RAUWWorklist;
+
+  /// Set of globals with eagerly copied metadata that may require remapping.
+  /// This remapping is performed after metadata linking.
+  DenseSet<GlobalObject *> UnmappedMetadata;
 
   void maybeAdd(GlobalValue *GV) {
     if (ValuesToLink.insert(GV).second)
@@ -526,6 +532,9 @@ class IRLinker {
   void prepareCompileUnitsForImport();
   void linkNamedMDNodes();
 
+  ///  Update attributes while linking.
+  void updateAttributes(GlobalValue &GV);
+
 public:
   IRLinker(Module &DstM, MDMapT &SharedMDs,
            IRMover::IdentifiedStructTypeSet &Set, std::unique_ptr<Module> SrcM,
@@ -636,6 +645,7 @@ Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
   if (ForIndirectSymbol || shouldLink(New, *SGV))
     setError(linkGlobalValueBody(*New, *SGV));
 
+  updateAttributes(*New);
   return New;
 }
 
@@ -744,8 +754,11 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
 
   if (auto *NewGO = dyn_cast<GlobalObject>(NewGV)) {
     // Metadata for global variables and function declarations is copied eagerly.
-    if (isa<GlobalVariable>(SGV) || SGV->isDeclaration())
+    if (isa<GlobalVariable>(SGV) || SGV->isDeclaration()) {
       NewGO->copyMetadata(cast<GlobalObject>(SGV), 0);
+      if (SGV->isDeclaration() && NewGO->hasMetadata())
+        UnmappedMetadata.insert(NewGO);
+    }
   }
 
   // Remove these copied constants in case this stays a declaration, since
@@ -897,6 +910,10 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
     if (DstGV->getSection() != SrcGV->getSection())
       return stringErr(
           "Appending variables with different section name need to be linked!");
+
+    if (DstGV->getAddressSpace() != SrcGV->getAddressSpace())
+      return stringErr("Appending variables with different address spaces need "
+                       "to be linked!");
   }
 
   // Do not need to do anything if source is a declaration.
@@ -920,7 +937,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
       IsOldStructor = true;
   }
 
-  PointerType *VoidPtrTy = Type::getInt8Ty(SrcGV->getContext())->getPointerTo();
+  PointerType *VoidPtrTy = PointerType::get(SrcGV->getContext(), 0);
   if (IsOldStructor) {
     auto &ST = *cast<StructType>(EltTy);
     Type *Tys[3] = {ST.getElementType(0), ST.getElementType(1), VoidPtrTy};
@@ -1046,6 +1063,10 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
   // as well.
   if (Function *F = dyn_cast<Function>(NewGV))
     if (auto Remangled = Intrinsic::remangleIntrinsicFunction(F)) {
+      // Note: remangleIntrinsicFunction does not copy metadata and as such
+      // F should not occur in the set of objects with unmapped metadata.
+      // If this assertion fails then remangleIntrinsicFunction needs updating.
+      assert(!UnmappedMetadata.count(F) && "intrinsic has unmapped metadata");
       NewGV->eraseFromParent();
       NewGV = *Remangled;
       NeedsRenaming = false;
@@ -1190,39 +1211,7 @@ void IRLinker::prepareCompileUnitsForImport() {
     // size inefficient.
     CU->replaceGlobalVariables(nullptr);
 
-    // Imported entities only need to be mapped in if they have local
-    // scope, as those might correspond to an imported entity inside a
-    // function being imported (any locally scoped imported entities that
-    // don't end up referenced by an imported function will not be emitted
-    // into the object). Imported entities not in a local scope
-    // (e.g. on the namespace) only need to be emitted by the originating
-    // module. Create a list of the locally scoped imported entities, and
-    // replace the source CUs imported entity list with the new list, so
-    // only those are mapped in.
-    // FIXME: Locally-scoped imported entities could be moved to the
-    // functions they are local to instead of listing them on the CU, and
-    // we would naturally only link in those needed by function importing.
-    SmallVector<TrackingMDNodeRef, 4> AllImportedModules;
-    bool ReplaceImportedEntities = false;
-    for (auto *IE : CU->getImportedEntities()) {
-      DIScope *Scope = IE->getScope();
-      assert(Scope && "Invalid Scope encoding!");
-      if (isa<DILocalScope>(Scope))
-        AllImportedModules.emplace_back(IE);
-      else
-        ReplaceImportedEntities = true;
-    }
-    if (ReplaceImportedEntities) {
-      if (!AllImportedModules.empty())
-        CU->replaceImportedEntities(MDTuple::get(
-            CU->getContext(),
-            SmallVector<Metadata *, 16>(AllImportedModules.begin(),
-                                        AllImportedModules.end())));
-      else
-        // If there were no local scope imported entities, we can map
-        // the whole list to nullptr.
-        CU->replaceImportedEntities(nullptr);
-    }
+    CU->replaceImportedEntities(nullptr);
   }
 }
 
@@ -1523,6 +1512,33 @@ static std::string adjustInlineAsm(const std::string &InlineAsm,
   return InlineAsm;
 }
 
+void IRLinker::updateAttributes(GlobalValue &GV) {
+  /// Remove nocallback attribute while linking, because nocallback attribute
+  /// indicates that the function is only allowed to jump back into caller's
+  /// module only by a return or an exception. When modules are linked, this
+  /// property cannot be guaranteed anymore. For example, the nocallback
+  /// function may contain a call to another module. But if we merge its caller
+  /// and callee module here, and not the module containing the nocallback
+  /// function definition itself, the nocallback property will be violated
+  /// (since the nocallback function will call back into the newly merged module
+  /// containing both its caller and callee). This could happen if the module
+  /// containing the nocallback function definition is native code, so it does
+  /// not participate in the LTO link. Note if the nocallback function does
+  /// participate in the LTO link, and thus ends up in the merged module
+  /// containing its caller and callee, removing the attribute doesn't hurt as
+  /// it has no effect on definitions in the same module.
+  if (auto *F = dyn_cast<Function>(&GV)) {
+    if (!F->isIntrinsic())
+      F->removeFnAttr(llvm::Attribute::NoCallback);
+
+    // Remove nocallback attribute when it is on a call-site.
+    for (BasicBlock &BB : *F)
+      for (Instruction &I : BB)
+        if (CallBase *CI = dyn_cast<CallBase>(&I))
+          CI->removeFnAttr(Attribute::NoCallback);
+  }
+}
+
 Error IRLinker::run() {
   // Ensure metadata materialized before value mapping.
   if (SrcM->getMaterializer())
@@ -1614,6 +1630,13 @@ Error IRLinker::run() {
   // are properly remapped.
   linkNamedMDNodes();
 
+  // Clean up any global objects with potentially unmapped metadata.
+  // Specifically declarations which did not become definitions.
+  for (GlobalObject *NGO : UnmappedMetadata) {
+    if (NGO->isDeclaration())
+      Mapper.remapGlobalObjectMetadata(*NGO);
+  }
+
   if (!IsPerformingImport && !SrcM->getModuleInlineAsm().empty()) {
     // Append the module inline asm string.
     DstM.appendModuleInlineAsm(adjustInlineAsm(SrcM->getModuleInlineAsm(),
@@ -1634,15 +1657,16 @@ Error IRLinker::run() {
 
   // Reorder the globals just added to the destination module to match their
   // original order in the source module.
-  Module::GlobalListType &Globals = DstM.getGlobalList();
   for (GlobalVariable &GV : SrcM->globals()) {
     if (GV.hasAppendingLinkage())
       continue;
     Value *NewValue = Mapper.mapValue(GV);
     if (NewValue) {
       auto *NewGV = dyn_cast<GlobalVariable>(NewValue->stripPointerCasts());
-      if (NewGV)
-        Globals.splice(Globals.end(), Globals, NewGV->getIterator());
+      if (NewGV) {
+        NewGV->removeFromParent();
+        DstM.insertGlobalVariable(NewGV);
+      }
     }
   }
 

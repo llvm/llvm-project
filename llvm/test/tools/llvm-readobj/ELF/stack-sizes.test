@@ -870,8 +870,8 @@ Sections:
 # RUN: llvm-readobj --stack-sizes %t18 2>&1 | \
 # RUN:   FileCheck %s --implicit-check-not="warning:" -DFILE=%t18 --check-prefix=INVALID-TARGET
 
-# INVALID-TARGET: warning: '[[FILE]]': SHT_RELA section with index 1: failed to get a relocated section: invalid section index: 255
-# INVALID-TARGET: warning: '[[FILE]]': SHT_RELA section with index 2: failed to get a relocated section: invalid section index: 255
+# INVALID-TARGET: warning: '[[FILE]]': unable to get stack size map section(s): SHT_RELA section with index 1: failed to get a relocated section: invalid section index: 255
+# INVALID-TARGET: SHT_RELA section with index 2: failed to get a relocated section: invalid section index: 255
 
 --- !ELF
 FileHeader:

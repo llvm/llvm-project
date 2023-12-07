@@ -46,6 +46,12 @@
 #elif defined(_AIX)
 // The traceback table at the end of each function is used for unwinding.
 #define _LIBUNWIND_SUPPORT_TBTAB_UNWIND 1
+#elif defined(__HAIKU__)
+  #if defined(_LIBUNWIND_USE_HAIKU_BSD_LIB)
+    #define _LIBUNWIND_USE_DL_ITERATE_PHDR 1
+  #endif
+  #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
+  #define _LIBUNWIND_SUPPORT_DWARF_INDEX 1
 #else
   // Assume an ELF system with a dl_iterate_phdr function.
   #define _LIBUNWIND_USE_DL_ITERATE_PHDR 1
@@ -108,10 +114,6 @@
 #define _LIBUNWIND_BUILD_SJLJ_APIS
 #endif
 
-#if defined(__i386__) || defined(__x86_64__) || defined(__powerpc__)
-#define _LIBUNWIND_SUPPORT_FRAME_APIS
-#endif
-
 #if defined(__i386__) || defined(__x86_64__) || defined(__powerpc__) ||        \
     (!defined(__APPLE__) && defined(__arm__)) || defined(__aarch64__) ||       \
     defined(__mips__) || defined(__riscv) || defined(__hexagon__) ||           \
@@ -162,10 +164,14 @@
 #define _LIBUNWIND_LOG0(msg)
 #define _LIBUNWIND_LOG(msg, ...)
 #else
-#define _LIBUNWIND_LOG0(msg)                                               \
-  fprintf(stderr, "libunwind: " msg "\n")
-#define _LIBUNWIND_LOG(msg, ...)                                               \
-  fprintf(stderr, "libunwind: " msg "\n", __VA_ARGS__)
+#define _LIBUNWIND_LOG0(msg) do {                                              \
+    fprintf(stderr, "libunwind: " msg "\n");                                   \
+    fflush(stderr);                                                            \
+  } while (0)
+#define _LIBUNWIND_LOG(msg, ...) do {                                          \
+    fprintf(stderr, "libunwind: " msg "\n", __VA_ARGS__);                      \
+    fflush(stderr);                                                            \
+  } while (0)
 #endif
 
 #if defined(NDEBUG)

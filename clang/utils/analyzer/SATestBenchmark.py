@@ -36,15 +36,14 @@ class Benchmark:
     multiple times for the given set of projects and stores results in the
     specified file.
     """
-    def __init__(self, projects: List[ProjectInfo], iterations: int,
-                 output_path: str):
+
+    def __init__(self, projects: List[ProjectInfo], iterations: int, output_path: str):
         self.projects = projects
         self.iterations = iterations
         self.out = output_path
 
     def run(self):
-        results = [self._benchmark_project(project)
-                   for project in self.projects]
+        results = [self._benchmark_project(project) for project in self.projects]
 
         data = pd.concat(results, ignore_index=True)
         _save(data, self.out)
@@ -66,10 +65,13 @@ class Benchmark:
         for i in range(self.iterations):
             stdout(f"Iteration #{i + 1}")
             time, mem = tester.build(project_dir, output_dir)
-            raw_data.append({"time": time, "memory": mem,
-                             "iteration": i, "project": project.name})
-            stdout(f"time: {utils.time_to_str(time)}, "
-                   f"peak memory: {utils.memory_to_str(mem)}")
+            raw_data.append(
+                {"time": time, "memory": mem, "iteration": i, "project": project.name}
+            )
+            stdout(
+                f"time: {utils.time_to_str(time)}, "
+                f"peak memory: {utils.memory_to_str(mem)}"
+            )
 
         return pd.DataFrame(raw_data)
 
@@ -102,8 +104,9 @@ def compare(old_path: str, new_path: str, plot_file: str):
     _plot(data, plot_file)
 
 
-def _normalize(old: pd.DataFrame,
-               new: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def _normalize(
+    old: pd.DataFrame, new: pd.DataFrame
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     # This creates a dataframe with all numerical data averaged.
     means = old.groupby("project").mean()
     return _normalize_impl(old, means), _normalize_impl(new, means)
@@ -144,8 +147,14 @@ def _plot(data: pd.DataFrame, plot_file: str):
     figure, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 6))
 
     def _subplot(key: str, ax: matplotlib.axes.Axes):
-        sns.boxplot(x="project", y=_normalized_name(key), hue="kind",
-                    data=data, palette=sns.color_palette("BrBG", 2), ax=ax)
+        sns.boxplot(
+            x="project",
+            y=_normalized_name(key),
+            hue="kind",
+            data=data,
+            palette=sns.color_palette("BrBG", 2),
+            ax=ax,
+        )
 
     _subplot("time", ax1)
     # No need to have xlabels on both top and bottom charts.

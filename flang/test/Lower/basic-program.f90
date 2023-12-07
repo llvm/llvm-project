@@ -8,6 +8,6 @@ end program
 ! CHECK:   1 EndProgramStmt: end program
 ! CHECK: End Program basic
 
-! FIR-LABEL: func @_QQmain() {
+! FIR-LABEL: func @_QQmain() attributes {fir.bindc_name = "basic"} {
 ! FIR:         return
 ! FIR:       }

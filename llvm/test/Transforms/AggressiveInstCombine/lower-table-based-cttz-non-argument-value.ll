@@ -23,7 +23,7 @@
 define i32 @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @x, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @x, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0]], i1 true)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
@@ -32,14 +32,14 @@ define i32 @test() {
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
 entry:
-  %0 = load i32, i32* @x, align 4
+  %0 = load i32, ptr @x, align 4
   %sub = sub i32 0, %0
   %and = and i32 %0, %sub
   %mul = mul i32 %and, 125613361
   %shr = lshr i32 %mul, 27
   %idxprom = zext i32 %shr to i64
-  %arrayidx = getelementptr inbounds [32 x i8], [32 x i8]* @test.table, i64 0, i64 %idxprom
-  %1 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [32 x i8], ptr @test.table, i64 0, i64 %idxprom
+  %1 = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %1 to i32
   ret i32 %conv
 }

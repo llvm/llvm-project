@@ -1,9 +1,0 @@
-# RUN: llvm-jitlink -noexec %S/Inputs/MachO_x86-64_was_private_extern.o
-#
-# Perform a no-exec link of MachO_x86-64_was_private_extern.o and verify that
-# it does not generate any errors despite the presence of a 'was private
-# extern' symbol (N_PEXT set, N_EXT unset).
-#
-# The test case for this is a relocatable object file rather than assembly as
-# objects must be run through ld64's 'ld -r' mode to produce them and we can't
-# assume that that is available everywhere.

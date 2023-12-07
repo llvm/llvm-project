@@ -21,7 +21,7 @@ static_assert(sizeof(thrd_t) == sizeof(__llvm_libc::Thread),
 LLVM_LIBC_FUNCTION(int, thrd_create,
                    (thrd_t * th, thrd_start_t func, void *arg)) {
   auto *thread = reinterpret_cast<__llvm_libc::Thread *>(th);
-  int result = thread->run(func, arg, nullptr, 0);
+  int result = thread->run(func, arg);
   if (result == 0)
     return thrd_success;
   else if (result == ENOMEM)

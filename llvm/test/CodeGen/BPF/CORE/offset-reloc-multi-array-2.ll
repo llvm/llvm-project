@@ -17,15 +17,15 @@ target triple = "bpf"
 %struct.v3 = type { i32, [4 x [4 x [4 x i32]]] }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(%struct.v3* %arg) local_unnamed_addr #0 !dbg !23 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !23 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.v3* %arg, metadata !27, metadata !DIExpression()), !dbg !28
-  %0 = tail call %struct.v3* @llvm.preserve.array.access.index.p0s_struct.v3s.p0s_struct.v3s(%struct.v3* elementtype(%struct.v3) %arg, i32 0, i32 1), !dbg !29, !llvm.preserve.access.index !4
-  %1 = tail call [4 x [4 x [4 x i32]]]* @llvm.preserve.struct.access.index.p0a4a4a4i32.p0s_struct.v3s(%struct.v3* elementtype(%struct.v3) %0, i32 1, i32 1), !dbg !29, !llvm.preserve.access.index !6
-  %2 = tail call [4 x [4 x i32]]* @llvm.preserve.array.access.index.p0a4a4i32.p0a4a4a4i32([4 x [4 x [4 x i32]]]* elementtype([4 x [4 x [4 x i32]]]) %1, i32 1, i32 2), !dbg !29, !llvm.preserve.access.index !11
-  %3 = tail call [4 x i32]* @llvm.preserve.array.access.index.p0a4i32.p0a4a4i32([4 x [4 x i32]]* elementtype([4 x [4 x i32]]) %2, i32 1, i32 3), !dbg !29, !llvm.preserve.access.index !15
-  %4 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a4i32([4 x i32]* elementtype([4 x i32]) %3, i32 1, i32 2), !dbg !29, !llvm.preserve.access.index !17
-  %call = tail call i32 @get_value(i32* %4) #4, !dbg !30
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !27, metadata !DIExpression()), !dbg !28
+  %0 = tail call ptr @llvm.preserve.array.access.index.p0.v3s.p0.v3s(ptr elementtype(%struct.v3) %arg, i32 0, i32 1), !dbg !29, !llvm.preserve.access.index !4
+  %1 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.v3s(ptr elementtype(%struct.v3) %0, i32 1, i32 1), !dbg !29, !llvm.preserve.access.index !6
+  %2 = tail call ptr @llvm.preserve.array.access.index.p0.p0(ptr elementtype([4 x [4 x [4 x i32]]]) %1, i32 1, i32 2), !dbg !29, !llvm.preserve.access.index !11
+  %3 = tail call ptr @llvm.preserve.array.access.index.p0.p0(ptr elementtype([4 x [4 x i32]]) %2, i32 1, i32 3), !dbg !29, !llvm.preserve.access.index !15
+  %4 = tail call ptr @llvm.preserve.array.access.index.p0.p0(ptr elementtype([4 x i32]) %3, i32 1, i32 2), !dbg !29, !llvm.preserve.access.index !17
+  %call = tail call i32 @get_value(ptr %4) #4, !dbg !30
   ret i32 %call, !dbg !31
 }
 
@@ -47,22 +47,20 @@ entry:
 ; CHECK-NEXT:        .long   58
 ; CHECK-NEXT:        .long   0
 
-declare dso_local i32 @get_value(i32*) local_unnamed_addr #1
+declare dso_local i32 @get_value(ptr) local_unnamed_addr #1
 
 ; Function Attrs: nounwind readnone
-declare %struct.v3* @llvm.preserve.array.access.index.p0s_struct.v3s.p0s_struct.v3s(%struct.v3*, i32, i32) #2
+declare ptr @llvm.preserve.array.access.index.p0.v3s.p0.v3s(ptr, i32, i32) #2
 
 ; Function Attrs: nounwind readnone
-declare [4 x [4 x [4 x i32]]]* @llvm.preserve.struct.access.index.p0a4a4a4i32.p0s_struct.v3s(%struct.v3*, i32, i32) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0.v3s(ptr, i32, i32) #2
 
 ; Function Attrs: nounwind readnone
-declare [4 x [4 x i32]]* @llvm.preserve.array.access.index.p0a4a4i32.p0a4a4a4i32([4 x [4 x [4 x i32]]]*, i32, i32) #2
+declare ptr @llvm.preserve.array.access.index.p0.p0(ptr, i32, i32) #2
 
 ; Function Attrs: nounwind readnone
-declare [4 x i32]* @llvm.preserve.array.access.index.p0a4i32.p0a4a4i32([4 x [4 x i32]]*, i32, i32) #2
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.array.access.index.p0i32.p0a4i32([4 x i32]*, i32, i32) #2
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3

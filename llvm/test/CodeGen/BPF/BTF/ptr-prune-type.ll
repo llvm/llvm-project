@@ -12,7 +12,7 @@
 ; Compilation flag:
 ;   clang -target bpf -O2 -g -S -emit-llvm t.c
 
-%struct.t2 = type { %struct.t* }
+%struct.t2 = type { ptr }
 %struct.t = type { i32 }
 
 @g = dso_local local_unnamed_addr global %struct.t2 zeroinitializer, section "prune_types", align 8, !dbg !0

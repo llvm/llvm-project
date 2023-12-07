@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <optional>
 #include <utility>
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
@@ -19,6 +20,8 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 
@@ -28,13 +31,13 @@ using namespace mlir;
 
 /// Returns the boolean value under the hood if the given `boolAttr` is a scalar
 /// or splat vector bool constant.
-static Optional<bool> getScalarOrSplatBoolAttr(Attribute attr) {
+static std::optional<bool> getScalarOrSplatBoolAttr(Attribute attr) {
   if (!attr)
     return std::nullopt;
 
-  if (auto boolAttr = attr.dyn_cast<BoolAttr>())
+  if (auto boolAttr = llvm::dyn_cast<BoolAttr>(attr))
     return boolAttr.getValue();
-  if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>())
+  if (auto splatAttr = llvm::dyn_cast<SplatElementsAttr>(attr))
     if (splatAttr.getElementType().isInteger(1))
       return splatAttr.getSplatValue<bool>();
   return std::nullopt;
@@ -51,12 +54,12 @@ static Attribute extractCompositeElement(Attribute composite,
   if (indices.empty())
     return composite;
 
-  if (auto vector = composite.dyn_cast<ElementsAttr>()) {
+  if (auto vector = llvm::dyn_cast<ElementsAttr>(composite)) {
     assert(indices.size() == 1 && "must have exactly one index for a vector");
     return vector.getValues<Attribute>()[indices[0]];
   }
 
-  if (auto array = composite.dyn_cast<ArrayAttr>()) {
+  if (auto array = llvm::dyn_cast<ArrayAttr>(composite)) {
     assert(!indices.empty() && "must have at least one index for an array");
     return extractCompositeElement(array.getValue()[indices[0]],
                                    indices.drop_front());
@@ -81,14 +84,14 @@ namespace {
 
 /// Combines chained `spirv::AccessChainOp` operations into one
 /// `spirv::AccessChainOp` operation.
-struct CombineChainedAccessChain
-    : public OpRewritePattern<spirv::AccessChainOp> {
-  using OpRewritePattern<spirv::AccessChainOp>::OpRewritePattern;
+struct CombineChainedAccessChain final
+    : OpRewritePattern<spirv::AccessChainOp> {
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(spirv::AccessChainOp accessChainOp,
                                 PatternRewriter &rewriter) const override {
-    auto parentAccessChainOp = dyn_cast_or_null<spirv::AccessChainOp>(
-        accessChainOp.getBasePtr().getDefiningOp());
+    auto parentAccessChainOp =
+        accessChainOp.getBasePtr().getDefiningOp<spirv::AccessChainOp>();
 
     if (!parentAccessChainOp) {
       return failure();
@@ -96,8 +99,7 @@ struct CombineChainedAccessChain
 
     // Combine indices.
     SmallVector<Value, 4> indices(parentAccessChainOp.getIndices());
-    indices.append(accessChainOp.getIndices().begin(),
-                   accessChainOp.getIndices().end());
+    llvm::append_range(indices, accessChainOp.getIndices());
 
     rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
         accessChainOp, parentAccessChainOp.getBasePtr(), indices);
@@ -113,10 +115,62 @@ void spirv::AccessChainOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.UMod
+//===----------------------------------------------------------------------===//
+
+// Input:
+//    %0 = spirv.UMod %arg0, %const32 : i32
+//    %1 = spirv.UMod %0, %const4 : i32
+// Output:
+//    %0 = spirv.UMod %arg0, %const32 : i32
+//    %1 = spirv.UMod %arg0, %const4 : i32
+
+// The transformation is only applied if one divisor is a multiple of the other.
+
+// TODO(https://github.com/llvm/llvm-project/issues/63174): Add support for vector constants
+struct UModSimplification final : OpRewritePattern<spirv::UModOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(spirv::UModOp umodOp,
+                                PatternRewriter &rewriter) const override {
+    auto prevUMod = umodOp.getOperand(0).getDefiningOp<spirv::UModOp>();
+    if (!prevUMod)
+      return failure();
+
+    IntegerAttr prevValue;
+    IntegerAttr currValue;
+    if (!matchPattern(prevUMod.getOperand(1), m_Constant(&prevValue)) ||
+        !matchPattern(umodOp.getOperand(1), m_Constant(&currValue)))
+      return failure();
+
+    APInt prevConstValue = prevValue.getValue();
+    APInt currConstValue = currValue.getValue();
+
+    // Ensure that one divisor is a multiple of the other. If not, fail the
+    // transformation.
+    if (prevConstValue.urem(currConstValue) != 0 &&
+        currConstValue.urem(prevConstValue) != 0)
+      return failure();
+
+    // The transformation is safe. Replace the existing UMod operation with a
+    // new UMod operation, using the original dividend and the current divisor.
+    rewriter.replaceOpWithNewOp<spirv::UModOp>(
+        umodOp, umodOp.getType(), prevUMod.getOperand(0), umodOp.getOperand(1));
+
+    return success();
+  }
+};
+
+void spirv::UModOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.insert<UModSimplification>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.BitcastOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult spirv::BitcastOp::fold(ArrayRef<Attribute> /*operands*/) {
+OpFoldResult spirv::BitcastOp::fold(FoldAdaptor /*adaptor*/) {
   Value curInput = getOperand();
   if (getType() == curInput.getType())
     return curInput;
@@ -139,36 +193,39 @@ OpFoldResult spirv::BitcastOp::fold(ArrayRef<Attribute> /*operands*/) {
 // spirv.CompositeExtractOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult spirv::CompositeExtractOp::fold(ArrayRef<Attribute> operands) {
-  if (auto insertOp =
-          getComposite().getDefiningOp<spirv::CompositeInsertOp>()) {
+OpFoldResult spirv::CompositeExtractOp::fold(FoldAdaptor adaptor) {
+  Value compositeOp = getComposite();
+
+  while (auto insertOp =
+             compositeOp.getDefiningOp<spirv::CompositeInsertOp>()) {
     if (getIndices() == insertOp.getIndices())
       return insertOp.getObject();
+    compositeOp = insertOp.getComposite();
   }
 
   if (auto constructOp =
-          getComposite().getDefiningOp<spirv::CompositeConstructOp>()) {
-    auto type = constructOp.getType().cast<spirv::CompositeType>();
+          compositeOp.getDefiningOp<spirv::CompositeConstructOp>()) {
+    auto type = llvm::cast<spirv::CompositeType>(constructOp.getType());
     if (getIndices().size() == 1 &&
         constructOp.getConstituents().size() == type.getNumElements()) {
-      auto i = getIndices().begin()->cast<IntegerAttr>();
-      return constructOp.getConstituents()[i.getValue().getSExtValue()];
+      auto i = llvm::cast<IntegerAttr>(*getIndices().begin());
+      if (i.getValue().getSExtValue() <
+          static_cast<int64_t>(constructOp.getConstituents().size()))
+        return constructOp.getConstituents()[i.getValue().getSExtValue()];
     }
   }
 
-  auto indexVector =
-      llvm::to_vector<8>(llvm::map_range(getIndices(), [](Attribute attr) {
-        return static_cast<unsigned>(attr.cast<IntegerAttr>().getInt());
-      }));
-  return extractCompositeElement(operands[0], indexVector);
+  auto indexVector = llvm::map_to_vector(getIndices(), [](Attribute attr) {
+    return static_cast<unsigned>(llvm::cast<IntegerAttr>(attr).getInt());
+  });
+  return extractCompositeElement(adaptor.getComposite(), indexVector);
 }
 
 //===----------------------------------------------------------------------===//
 // spirv.Constant
 //===----------------------------------------------------------------------===//
 
-OpFoldResult spirv::ConstantOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.empty() && "spirv.Constant has no operands");
+OpFoldResult spirv::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
   return getValue();
 }
 
@@ -176,8 +233,7 @@ OpFoldResult spirv::ConstantOp::fold(ArrayRef<Attribute> operands) {
 // spirv.IAdd
 //===----------------------------------------------------------------------===//
 
-OpFoldResult spirv::IAddOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 2 && "spirv.IAdd expects two operands");
+OpFoldResult spirv::IAddOp::fold(FoldAdaptor adaptor) {
   // x + 0 = x
   if (matchPattern(getOperand2(), m_Zero()))
     return getOperand1();
@@ -188,15 +244,15 @@ OpFoldResult spirv::IAddOp::fold(ArrayRef<Attribute> operands) {
   // R, where N is the component width and R is computed with enough precision
   // to avoid overflow and underflow.
   return constFoldBinaryOp<IntegerAttr>(
-      operands, [](APInt a, const APInt &b) { return std::move(a) + b; });
+      adaptor.getOperands(),
+      [](APInt a, const APInt &b) { return std::move(a) + b; });
 }
 
 //===----------------------------------------------------------------------===//
 // spirv.IMul
 //===----------------------------------------------------------------------===//
 
-OpFoldResult spirv::IMulOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 2 && "spirv.IMul expects two operands");
+OpFoldResult spirv::IMulOp::fold(FoldAdaptor adaptor) {
   // x * 0 == 0
   if (matchPattern(getOperand2(), m_Zero()))
     return getOperand2();
@@ -210,14 +266,15 @@ OpFoldResult spirv::IMulOp::fold(ArrayRef<Attribute> operands) {
   // R, where N is the component width and R is computed with enough precision
   // to avoid overflow and underflow.
   return constFoldBinaryOp<IntegerAttr>(
-      operands, [](const APInt &a, const APInt &b) { return a * b; });
+      adaptor.getOperands(),
+      [](const APInt &a, const APInt &b) { return a * b; });
 }
 
 //===----------------------------------------------------------------------===//
 // spirv.ISub
 //===----------------------------------------------------------------------===//
 
-OpFoldResult spirv::ISubOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult spirv::ISubOp::fold(FoldAdaptor adaptor) {
   // x - x = 0
   if (getOperand1() == getOperand2())
     return Builder(getContext()).getIntegerAttr(getType(), 0);
@@ -228,24 +285,39 @@ OpFoldResult spirv::ISubOp::fold(ArrayRef<Attribute> operands) {
   // R, where N is the component width and R is computed with enough precision
   // to avoid overflow and underflow.
   return constFoldBinaryOp<IntegerAttr>(
-      operands, [](APInt a, const APInt &b) { return std::move(a) - b; });
+      adaptor.getOperands(),
+      [](APInt a, const APInt &b) { return std::move(a) - b; });
 }
 
 //===----------------------------------------------------------------------===//
 // spirv.LogicalAnd
 //===----------------------------------------------------------------------===//
 
-OpFoldResult spirv::LogicalAndOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 2 && "spirv.LogicalAnd should take two operands");
-
-  if (Optional<bool> rhs = getScalarOrSplatBoolAttr(operands.back())) {
+OpFoldResult spirv::LogicalAndOp::fold(FoldAdaptor adaptor) {
+  if (std::optional<bool> rhs =
+          getScalarOrSplatBoolAttr(adaptor.getOperand2())) {
     // x && true = x
     if (*rhs)
       return getOperand1();
 
     // x && false = false
     if (!*rhs)
-      return operands.back();
+      return adaptor.getOperand2();
+  }
+
+  return Attribute();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.LogicalNotEqualOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::LogicalNotEqualOp::fold(FoldAdaptor adaptor) {
+  if (std::optional<bool> rhs =
+          getScalarOrSplatBoolAttr(adaptor.getOperand2())) {
+    // x && false = x
+    if (!rhs.value())
+      return getOperand1();
   }
 
   return Attribute();
@@ -267,17 +339,17 @@ void spirv::LogicalNotOp::getCanonicalizationPatterns(
 // spirv.LogicalOr
 //===----------------------------------------------------------------------===//
 
-OpFoldResult spirv::LogicalOrOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 2 && "spirv.LogicalOr should take two operands");
-
-  if (auto rhs = getScalarOrSplatBoolAttr(operands.back())) {
-    if (*rhs)
+OpFoldResult spirv::LogicalOrOp::fold(FoldAdaptor adaptor) {
+  if (auto rhs = getScalarOrSplatBoolAttr(adaptor.getOperand2())) {
+    if (*rhs) {
       // x || true = true
-      return operands.back();
+      return adaptor.getOperand2();
+    }
 
-    // x || false = x
-    if (!*rhs)
+    if (!*rhs) {
+      // x || false = x
       return getOperand1();
+    }
   }
 
   return Attribute();
@@ -313,14 +385,13 @@ namespace {
 //                       | merge block |
 //                       +-------------+
 //
-struct ConvertSelectionOpToSelect
-    : public OpRewritePattern<spirv::SelectionOp> {
-  using OpRewritePattern<spirv::SelectionOp>::OpRewritePattern;
+struct ConvertSelectionOpToSelect final : OpRewritePattern<spirv::SelectionOp> {
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(spirv::SelectionOp selectionOp,
                                 PatternRewriter &rewriter) const override {
-    auto *op = selectionOp.getOperation();
-    auto &body = op->getRegion(0);
+    Operation *op = selectionOp.getOperation();
+    Region &body = op->getRegion(0);
     // Verifier allows an empty region for `spirv.mlir.selection`.
     if (body.empty()) {
       return failure();
@@ -328,11 +399,11 @@ struct ConvertSelectionOpToSelect
 
     // Check that region consists of 4 blocks:
     // header block, `true` block, `false` block and merge block.
-    if (std::distance(body.begin(), body.end()) != 4) {
+    if (llvm::range_size(body) != 4) {
       return failure();
     }
 
-    auto *headerBlock = selectionOp.getHeaderBlock();
+    Block *headerBlock = selectionOp.getHeaderBlock();
     if (!onlyContainsBranchConditionalOp(headerBlock)) {
       return failure();
     }
@@ -340,16 +411,16 @@ struct ConvertSelectionOpToSelect
     auto brConditionalOp =
         cast<spirv::BranchConditionalOp>(headerBlock->front());
 
-    auto *trueBlock = brConditionalOp.getSuccessor(0);
-    auto *falseBlock = brConditionalOp.getSuccessor(1);
-    auto *mergeBlock = selectionOp.getMergeBlock();
+    Block *trueBlock = brConditionalOp.getSuccessor(0);
+    Block *falseBlock = brConditionalOp.getSuccessor(1);
+    Block *mergeBlock = selectionOp.getMergeBlock();
 
     if (failed(canCanonicalizeSelection(trueBlock, falseBlock, mergeBlock)))
       return failure();
 
-    auto trueValue = getSrcValue(trueBlock);
-    auto falseValue = getSrcValue(falseBlock);
-    auto ptrValue = getDstPtr(trueBlock);
+    Value trueValue = getSrcValue(trueBlock);
+    Value falseValue = getSrcValue(falseBlock);
+    Value ptrValue = getDstPtr(trueBlock);
     auto storeOpAttributes =
         cast<spirv::StoreOp>(trueBlock->front())->getAttrs();
 
@@ -375,12 +446,14 @@ private:
                                          Block *mergeBlock) const;
 
   bool onlyContainsBranchConditionalOp(Block *block) const {
-    return std::next(block->begin()) == block->end() &&
+    return llvm::hasSingleElement(*block) &&
            isa<spirv::BranchConditionalOp>(block->front());
   }
 
   bool isSameAttrList(spirv::StoreOp lhs, spirv::StoreOp rhs) const {
-    return lhs->getAttrDictionary() == rhs->getAttrDictionary();
+    return lhs->getDiscardableAttrDictionary() ==
+               rhs->getDiscardableAttrDictionary() &&
+           lhs.getProperties() == rhs.getProperties();
   }
 
   // Returns a source value for the given block.
@@ -399,8 +472,7 @@ private:
 LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
     Block *trueBlock, Block *falseBlock, Block *mergeBlock) const {
   // Each block must consists of 2 operations.
-  if ((std::distance(trueBlock->begin(), trueBlock->end()) != 2) ||
-      (std::distance(falseBlock->begin(), falseBlock->end()) != 2)) {
+  if (llvm::range_size(*trueBlock) != 2 || llvm::range_size(*falseBlock) != 2) {
     return failure();
   }
 
@@ -421,10 +493,9 @@ LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
   // "Before version 1.4, Result Type must be a pointer, scalar, or vector.
   // Starting with version 1.4, Result Type can additionally be a composite type
   // other than a vector."
-  bool isScalarOrVector = trueBrStoreOp.getValue()
-                              .getType()
-                              .cast<spirv::SPIRVType>()
-                              .isScalarOrVector();
+  bool isScalarOrVector =
+      llvm::cast<spirv::SPIRVType>(trueBrStoreOp.getValue().getType())
+          .isScalarOrVector();
 
   // Check that each `spirv.Store` uses the same pointer, memory access
   // attributes and a valid type of the value.

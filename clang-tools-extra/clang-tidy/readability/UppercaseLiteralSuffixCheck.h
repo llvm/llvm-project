@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "../utils/OptionsUtils.h"
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 /// Detects when the integral literal or floating point literal has
 /// non-uppercase suffix, and suggests to make the suffix uppercase.
@@ -40,8 +38,6 @@ private:
   const bool IgnoreMacros;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_UPPERCASELITERALSUFFIXCHECK_H

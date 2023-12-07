@@ -3,7 +3,6 @@ Test handling of cases when a single instruction triggers multiple watchpoints
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,7 +12,11 @@ from lldbsuite.test import lldbutil
 class MultipleHitsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIf(bugnumber="llvm.org/pr30758", oslist=["linux"], archs=["arm", "aarch64", "powerpc64le"])
+    @skipIf(
+        bugnumber="llvm.org/pr30758",
+        oslist=["linux"],
+        archs=["arm", "aarch64", "powerpc64le"],
+    )
     @skipIfwatchOS
     def test(self):
         self.build()
@@ -22,8 +25,7 @@ class MultipleHitsTestCase(TestBase):
         bp = target.BreakpointCreateByName("main")
         self.assertTrue(bp and bp.IsValid(), "Breakpoint is valid")
 
-        process = target.LaunchSimple(None, None,
-                self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertState(process.GetState(), lldb.eStateStopped)
 
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
@@ -43,7 +45,6 @@ class MultipleHitsTestCase(TestBase):
             watch = member.Watch(True, True, True, error)
             self.assertSuccess(error)
 
-        process.Continue();
+        process.Continue()
         self.assertState(process.GetState(), lldb.eStateStopped)
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonWatchpoint)
-

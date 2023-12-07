@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios7 -target-feature +neon -target-abi darwinpcs -ffreestanding -emit-llvm -w -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-LE
-// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64_be-none-linux-gnu -target-feature +neon -target-abi darwinpcs -ffreestanding -emit-llvm -w -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -target-abi darwinpcs -ffreestanding -emit-llvm -w -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-LE
+// RUN: %clang_cc1 -triple aarch64_be-none-linux-gnu -target-feature +neon -target-abi darwinpcs -ffreestanding -emit-llvm -w -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
@@ -163,13 +163,13 @@ void f32(struct s32 s) { }
 // A composite type larger than 16 bytes should be passed indirectly.
 struct s33 { char buf[32*32]; };
 void f33(struct s33 s) { }
-// CHECK: define{{.*}} void @f33(%struct.s33* noundef %s)
+// CHECK: define{{.*}} void @f33(ptr noundef %s)
 
 struct s34 { char c; };
 void f34(struct s34 s);
 void g34(struct s34 *s) { f34(*s); }
-// CHECK: @g34(%struct.s34* noundef %s)
-// CHECK: %[[a:.*]] = load i8, i8* %{{.*}}
+// CHECK: @g34(ptr noundef %s)
+// CHECK: %[[a:.*]] = load i8, ptr %{{.*}}
 // CHECK: zext i8 %[[a]] to i64
 // CHECK: call void @f34(i64 %{{.*}})
 
@@ -200,8 +200,8 @@ _Bool t3(int i, ...) {
   // CHECK: t3
   __builtin_va_list ap;
   __builtin_va_start(ap, i);
-  // CHECK:      %0 = va_arg {{.*}}* %ap, i8
-  // CHECK-NEXT: store i8 %0, i8* %varet, align 1
+  // CHECK:      %0 = va_arg ptr %ap, i8
+  // CHECK-NEXT: store i8 %0, ptr %varet, align 1
   _Bool b = __builtin_va_arg(ap, _Bool);
   __builtin_va_end(ap);
   return b;
@@ -226,9 +226,9 @@ T_float32x2 f1_0(T_float32x2 a0) { return a0; }
 // CHECK: define{{.*}} <4 x float> @f1_1(<4 x float> noundef %{{.*}})
 T_float32x4 f1_1(T_float32x4 a0) { return a0; }
 // Vector with length bigger than 16-byte is illegal and is passed indirectly.
-// CHECK: define{{.*}} void @f1_2(<8 x float>* noalias sret(<8 x float>) align 16 %{{.*}}, <8 x float>* noundef %0)
+// CHECK: define{{.*}} void @f1_2(ptr noalias sret(<8 x float>) align 16 %{{.*}}, ptr noundef %0)
 T_float32x8 f1_2(T_float32x8 a0) { return a0; }
-// CHECK: define{{.*}} void @f1_3(<16 x float>* noalias sret(<16 x float>) align 16 %{{.*}}, <16 x float>* noundef %0)
+// CHECK: define{{.*}} void @f1_3(ptr noalias sret(<16 x float>) align 16 %{{.*}}, ptr noundef %0)
 T_float32x16 f1_3(T_float32x16 a0) { return a0; }
 
 // Testing alignment with aggregates: HFA, aggregates with size <= 16 bytes and
@@ -244,10 +244,8 @@ float32x4_t f35(int i, s35_with_align s1, s35_with_align s2) {
 // CHECK: define{{.*}} <4 x float> @f35(i32 noundef %i, [4 x float] %s1.coerce, [4 x float] %s2.coerce)
 // CHECK: %s1 = alloca %struct.s35, align 16
 // CHECK: %s2 = alloca %struct.s35, align 16
-// CHECK: %[[a:.*]] = bitcast %struct.s35* %s1 to <4 x float>*
-// CHECK: load <4 x float>, <4 x float>* %[[a]], align 16
-// CHECK: %[[b:.*]] = bitcast %struct.s35* %s2 to <4 x float>*
-// CHECK: load <4 x float>, <4 x float>* %[[b]], align 16
+// CHECK: load <4 x float>, ptr %s1, align 16
+// CHECK: load <4 x float>, ptr %s2, align 16
   float32x4_t v = vaddq_f32(*(float32x4_t *)&s1,
                             *(float32x4_t *)&s2);
   return v;
@@ -264,12 +262,10 @@ int32x4_t f36(int i, s36_with_align s1, s36_with_align s2) {
 // CHECK: define{{.*}} <4 x i32> @f36(i32 noundef %i, i128 %s1.coerce, i128 %s2.coerce)
 // CHECK: %s1 = alloca %struct.s36, align 16
 // CHECK: %s2 = alloca %struct.s36, align 16
-// CHECK: store i128 %s1.coerce, i128* %{{.*}}, align 16
-// CHECK: store i128 %s2.coerce, i128* %{{.*}}, align 16
-// CHECK: %[[a:.*]] = bitcast %struct.s36* %s1 to <4 x i32>*
-// CHECK: load <4 x i32>, <4 x i32>* %[[a]], align 16
-// CHECK: %[[b:.*]] = bitcast %struct.s36* %s2 to <4 x i32>*
-// CHECK: load <4 x i32>, <4 x i32>* %[[b]], align 16
+// CHECK: store i128 %s1.coerce, ptr %{{.*}}, align 16
+// CHECK: store i128 %s2.coerce, ptr %{{.*}}, align 16
+// CHECK: load <4 x i32>, ptr %s1, align 16
+// CHECK: load <4 x i32>, ptr %s2, align 16
   int32x4_t v = vaddq_s32(*(int32x4_t *)&s1,
                           *(int32x4_t *)&s2);
   return v;
@@ -282,11 +278,9 @@ struct s37
 typedef struct s37 s37_with_align;
 
 int32x4_t f37(int i, s37_with_align s1, s37_with_align s2) {
-// CHECK: define{{.*}} <4 x i32> @f37(i32 noundef %i, %struct.s37* noundef %s1, %struct.s37* noundef %s2)
-// CHECK: %[[a:.*]] = bitcast %struct.s37* %s1 to <4 x i32>*
-// CHECK: load <4 x i32>, <4 x i32>* %[[a]], align 16
-// CHECK: %[[b:.*]] = bitcast %struct.s37* %s2 to <4 x i32>*
-// CHECK: load <4 x i32>, <4 x i32>* %[[b]], align 16
+// CHECK: define{{.*}} <4 x i32> @f37(i32 noundef %i, ptr noundef %s1, ptr noundef %s2)
+// CHECK: load <4 x i32>, ptr %s1, align 16
+// CHECK: load <4 x i32>, ptr %s2, align 16
   int32x4_t v = vaddq_s32(*(int32x4_t *)&s1,
                           *(int32x4_t *)&s2);
   return v;
@@ -298,11 +292,10 @@ int32x4_t caller37() {
 // CHECK: %[[b:.*]] = alloca %struct.s37, align 16
 // CHECK: call void @llvm.memcpy
 // CHECK: call void @llvm.memcpy
-// CHECK: call <4 x i32> @f37(i32 noundef 3, %struct.s37* noundef %[[a]], %struct.s37* noundef %[[b]])
+// CHECK: call <4 x i32> @f37(i32 noundef 3, ptr noundef %[[a]], ptr noundef %[[b]])
   return f37(3, g37, g37);
 }
 
-// rdar://problem/12648441
 // Test passing structs with size < 8, < 16 and > 16
 // with alignment of 16 and without
 
@@ -320,20 +313,20 @@ int f38(int i, s38_no_align s1, s38_no_align s2) {
 // CHECK: define{{.*}} i32 @f38(i32 noundef %i, i64 %s1.coerce, i64 %s2.coerce)
 // CHECK: %s1 = alloca %struct.s38, align 4
 // CHECK: %s2 = alloca %struct.s38, align 4
-// CHECK: store i64 %s1.coerce, i64* %{{.*}}, align 4
-// CHECK: store i64 %s2.coerce, i64* %{{.*}}, align 4
-// CHECK: getelementptr inbounds %struct.s38, %struct.s38* %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s38, %struct.s38* %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s38, %struct.s38* %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s38, %struct.s38* %s2, i32 0, i32 1
+// CHECK: store i64 %s1.coerce, ptr %{{.*}}, align 4
+// CHECK: store i64 %s2.coerce, ptr %{{.*}}, align 4
+// CHECK: getelementptr inbounds %struct.s38, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s38, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s38, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds %struct.s38, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + s1.s + s2.s;
 }
 s38_no_align g38;
 s38_no_align g38_2;
 int caller38() {
 // CHECK: define{{.*}} i32 @caller38()
-// CHECK: %[[a:.*]] = load i64, i64* bitcast (%struct.s38* @g38 to i64*), align 4
-// CHECK: %[[b:.*]] = load i64, i64* bitcast (%struct.s38* @g38_2 to i64*), align 4
+// CHECK: %[[a:.*]] = load i64, ptr @g38, align 4
+// CHECK: %[[b:.*]] = load i64, ptr @g38_2, align 4
 // CHECK: call i32 @f38(i32 noundef 3, i64 %[[a]], i64 %[[b]])
   return f38(3, g38, g38_2);
 }
@@ -344,18 +337,18 @@ int f38_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
 // CHECK: define{{.*}} i32 @f38_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, i64 %s1.coerce, i64 %s2.coerce)
 // CHECK: %s1 = alloca %struct.s38, align 4
 // CHECK: %s2 = alloca %struct.s38, align 4
-// CHECK: store i64 %s1.coerce, i64* %{{.*}}, align 4
-// CHECK: store i64 %s2.coerce, i64* %{{.*}}, align 4
-// CHECK: getelementptr inbounds %struct.s38, %struct.s38* %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s38, %struct.s38* %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s38, %struct.s38* %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s38, %struct.s38* %s2, i32 0, i32 1
+// CHECK: store i64 %s1.coerce, ptr %{{.*}}, align 4
+// CHECK: store i64 %s2.coerce, ptr %{{.*}}, align 4
+// CHECK: getelementptr inbounds %struct.s38, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s38, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s38, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds %struct.s38, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9 + s1.s + s2.s;
 }
 int caller38_stack() {
 // CHECK: define{{.*}} i32 @caller38_stack()
-// CHECK: %[[a:.*]] = load i64, i64* bitcast (%struct.s38* @g38 to i64*), align 4
-// CHECK: %[[b:.*]] = load i64, i64* bitcast (%struct.s38* @g38_2 to i64*), align 4
+// CHECK: %[[a:.*]] = load i64, ptr @g38, align 4
+// CHECK: %[[b:.*]] = load i64, ptr @g38_2, align 4
 // CHECK: call i32 @f38_stack(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, i32 noundef 6, i32 noundef 7, i32 noundef 8, i32 noundef 9, i64 %[[a]], i64 %[[b]])
   return f38_stack(1, 2, 3, 4, 5, 6, 7, 8, 9, g38, g38_2);
 }
@@ -373,20 +366,20 @@ int f39(int i, s39_with_align s1, s39_with_align s2) {
 // CHECK: define{{.*}} i32 @f39(i32 noundef %i, i128 %s1.coerce, i128 %s2.coerce)
 // CHECK: %s1 = alloca %struct.s39, align 16
 // CHECK: %s2 = alloca %struct.s39, align 16
-// CHECK: store i128 %s1.coerce, i128* %{{.*}}, align 16
-// CHECK: store i128 %s2.coerce, i128* %{{.*}}, align 16
-// CHECK: getelementptr inbounds %struct.s39, %struct.s39* %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s39, %struct.s39* %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s39, %struct.s39* %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s39, %struct.s39* %s2, i32 0, i32 1
+// CHECK: store i128 %s1.coerce, ptr %{{.*}}, align 16
+// CHECK: store i128 %s2.coerce, ptr %{{.*}}, align 16
+// CHECK: getelementptr inbounds %struct.s39, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s39, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s39, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds %struct.s39, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + s1.s + s2.s;
 }
 s39_with_align g39;
 s39_with_align g39_2;
 int caller39() {
 // CHECK: define{{.*}} i32 @caller39()
-// CHECK: %[[a:.*]] = load i128, i128* bitcast (%struct.s39* @g39 to i128*), align 16
-// CHECK: %[[b:.*]] = load i128, i128* bitcast (%struct.s39* @g39_2 to i128*), align 16
+// CHECK: %[[a:.*]] = load i128, ptr @g39, align 16
+// CHECK: %[[b:.*]] = load i128, ptr @g39_2, align 16
 // CHECK: call i32 @f39(i32 noundef 3, i128 %[[a]], i128 %[[b]])
   return f39(3, g39, g39_2);
 }
@@ -397,18 +390,18 @@ int f39_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
 // CHECK: define{{.*}} i32 @f39_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, i128 %s1.coerce, i128 %s2.coerce)
 // CHECK: %s1 = alloca %struct.s39, align 16
 // CHECK: %s2 = alloca %struct.s39, align 16
-// CHECK: store i128 %s1.coerce, i128* %{{.*}}, align 16
-// CHECK: store i128 %s2.coerce, i128* %{{.*}}, align 16
-// CHECK: getelementptr inbounds %struct.s39, %struct.s39* %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s39, %struct.s39* %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s39, %struct.s39* %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s39, %struct.s39* %s2, i32 0, i32 1
+// CHECK: store i128 %s1.coerce, ptr %{{.*}}, align 16
+// CHECK: store i128 %s2.coerce, ptr %{{.*}}, align 16
+// CHECK: getelementptr inbounds %struct.s39, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s39, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s39, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds %struct.s39, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9 + s1.s + s2.s;
 }
 int caller39_stack() {
 // CHECK: define{{.*}} i32 @caller39_stack()
-// CHECK: %[[a:.*]] = load i128, i128* bitcast (%struct.s39* @g39 to i128*), align 16
-// CHECK: %[[b:.*]] = load i128, i128* bitcast (%struct.s39* @g39_2 to i128*), align 16
+// CHECK: %[[a:.*]] = load i128, ptr @g39, align 16
+// CHECK: %[[b:.*]] = load i128, ptr @g39_2, align 16
 // CHECK: call i32 @f39_stack(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, i32 noundef 6, i32 noundef 7, i32 noundef 8, i32 noundef 9, i128 %[[a]], i128 %[[b]])
   return f39_stack(1, 2, 3, 4, 5, 6, 7, 8, 9, g39, g39_2);
 }
@@ -428,20 +421,20 @@ int f40(int i, s40_no_align s1, s40_no_align s2) {
 // CHECK: define{{.*}} i32 @f40(i32 noundef %i, [2 x i64] %s1.coerce, [2 x i64] %s2.coerce)
 // CHECK: %s1 = alloca %struct.s40, align 4
 // CHECK: %s2 = alloca %struct.s40, align 4
-// CHECK: store [2 x i64] %s1.coerce, [2 x i64]* %{{.*}}, align 4
-// CHECK: store [2 x i64] %s2.coerce, [2 x i64]* %{{.*}}, align 4
-// CHECK: getelementptr inbounds %struct.s40, %struct.s40* %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s40, %struct.s40* %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s40, %struct.s40* %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s40, %struct.s40* %s2, i32 0, i32 1
+// CHECK: store [2 x i64] %s1.coerce, ptr %{{.*}}, align 4
+// CHECK: store [2 x i64] %s2.coerce, ptr %{{.*}}, align 4
+// CHECK: getelementptr inbounds %struct.s40, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s40, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s40, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds %struct.s40, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + s1.s + s2.s;
 }
 s40_no_align g40;
 s40_no_align g40_2;
 int caller40() {
 // CHECK: define{{.*}} i32 @caller40()
-// CHECK: %[[a:.*]] = load [2 x i64], [2 x i64]* bitcast (%struct.s40* @g40 to [2 x i64]*), align 4
-// CHECK: %[[b:.*]] = load [2 x i64], [2 x i64]* bitcast (%struct.s40* @g40_2 to [2 x i64]*), align 4
+// CHECK: %[[a:.*]] = load [2 x i64], ptr @g40, align 4
+// CHECK: %[[b:.*]] = load [2 x i64], ptr @g40_2, align 4
 // CHECK: call i32 @f40(i32 noundef 3, [2 x i64] %[[a]], [2 x i64] %[[b]])
   return f40(3, g40, g40_2);
 }
@@ -452,18 +445,18 @@ int f40_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
 // CHECK: define{{.*}} i32 @f40_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, [2 x i64] %s1.coerce, [2 x i64] %s2.coerce)
 // CHECK: %s1 = alloca %struct.s40, align 4
 // CHECK: %s2 = alloca %struct.s40, align 4
-// CHECK: store [2 x i64] %s1.coerce, [2 x i64]* %{{.*}}, align 4
-// CHECK: store [2 x i64] %s2.coerce, [2 x i64]* %{{.*}}, align 4
-// CHECK: getelementptr inbounds %struct.s40, %struct.s40* %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s40, %struct.s40* %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s40, %struct.s40* %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s40, %struct.s40* %s2, i32 0, i32 1
+// CHECK: store [2 x i64] %s1.coerce, ptr %{{.*}}, align 4
+// CHECK: store [2 x i64] %s2.coerce, ptr %{{.*}}, align 4
+// CHECK: getelementptr inbounds %struct.s40, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s40, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s40, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds %struct.s40, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9 + s1.s + s2.s;
 }
 int caller40_stack() {
 // CHECK: define{{.*}} i32 @caller40_stack()
-// CHECK: %[[a:.*]] = load [2 x i64], [2 x i64]* bitcast (%struct.s40* @g40 to [2 x i64]*), align 4
-// CHECK: %[[b:.*]] = load [2 x i64], [2 x i64]* bitcast (%struct.s40* @g40_2 to [2 x i64]*), align 4
+// CHECK: %[[a:.*]] = load [2 x i64], ptr @g40, align 4
+// CHECK: %[[b:.*]] = load [2 x i64], ptr @g40_2, align 4
 // CHECK: call i32 @f40_stack(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, i32 noundef 6, i32 noundef 7, i32 noundef 8, i32 noundef 9, [2 x i64] %[[a]], [2 x i64] %[[b]])
   return f40_stack(1, 2, 3, 4, 5, 6, 7, 8, 9, g40, g40_2);
 }
@@ -483,20 +476,20 @@ int f41(int i, s41_with_align s1, s41_with_align s2) {
 // CHECK: define{{.*}} i32 @f41(i32 noundef %i, i128 %s1.coerce, i128 %s2.coerce)
 // CHECK: %s1 = alloca %struct.s41, align 16
 // CHECK: %s2 = alloca %struct.s41, align 16
-// CHECK: store i128 %s1.coerce, i128* %{{.*}}, align 16
-// CHECK: store i128 %s2.coerce, i128* %{{.*}}, align 16
-// CHECK: getelementptr inbounds %struct.s41, %struct.s41* %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s41, %struct.s41* %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s41, %struct.s41* %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s41, %struct.s41* %s2, i32 0, i32 1
+// CHECK: store i128 %s1.coerce, ptr %{{.*}}, align 16
+// CHECK: store i128 %s2.coerce, ptr %{{.*}}, align 16
+// CHECK: getelementptr inbounds %struct.s41, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s41, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s41, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds %struct.s41, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + s1.s + s2.s;
 }
 s41_with_align g41;
 s41_with_align g41_2;
 int caller41() {
 // CHECK: define{{.*}} i32 @caller41()
-// CHECK: %[[a:.*]] = load i128, i128* bitcast (%struct.s41* @g41 to i128*), align 16
-// CHECK: %[[b:.*]] = load i128, i128* bitcast (%struct.s41* @g41_2 to i128*), align 16
+// CHECK: %[[a:.*]] = load i128, ptr @g41, align 16
+// CHECK: %[[b:.*]] = load i128, ptr @g41_2, align 16
 // CHECK: call i32 @f41(i32 noundef 3, i128 %[[a]], i128 %[[b]])
   return f41(3, g41, g41_2);
 }
@@ -507,18 +500,18 @@ int f41_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
 // CHECK: define{{.*}} i32 @f41_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, i128 %s1.coerce, i128 %s2.coerce)
 // CHECK: %s1 = alloca %struct.s41, align 16
 // CHECK: %s2 = alloca %struct.s41, align 16
-// CHECK: store i128 %s1.coerce, i128* %{{.*}}, align 16
-// CHECK: store i128 %s2.coerce, i128* %{{.*}}, align 16
-// CHECK: getelementptr inbounds %struct.s41, %struct.s41* %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s41, %struct.s41* %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s41, %struct.s41* %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s41, %struct.s41* %s2, i32 0, i32 1
+// CHECK: store i128 %s1.coerce, ptr %{{.*}}, align 16
+// CHECK: store i128 %s2.coerce, ptr %{{.*}}, align 16
+// CHECK: getelementptr inbounds %struct.s41, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s41, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s41, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds %struct.s41, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9 + s1.s + s2.s;
 }
 int caller41_stack() {
 // CHECK: define{{.*}} i32 @caller41_stack()
-// CHECK: %[[a:.*]] = load i128, i128* bitcast (%struct.s41* @g41 to i128*), align 16
-// CHECK: %[[b:.*]] = load i128, i128* bitcast (%struct.s41* @g41_2 to i128*), align 16
+// CHECK: %[[a:.*]] = load i128, ptr @g41, align 16
+// CHECK: %[[b:.*]] = load i128, ptr @g41_2, align 16
 // CHECK: call i32 @f41_stack(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, i32 noundef 6, i32 noundef 7, i32 noundef 8, i32 noundef 9, i128 %[[a]], i128 %[[b]])
   return f41_stack(1, 2, 3, 4, 5, 6, 7, 8, 9, g41, g41_2);
 }
@@ -537,11 +530,11 @@ typedef struct s42 s42_no_align;
 // passing structs in registers
 __attribute__ ((noinline))
 int f42(int i, s42_no_align s1, s42_no_align s2) {
-// CHECK: define{{.*}} i32 @f42(i32 noundef %i, %struct.s42* noundef %s1, %struct.s42* noundef %s2)
-// CHECK: getelementptr inbounds %struct.s42, %struct.s42* %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s42, %struct.s42* %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s42, %struct.s42* %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s42, %struct.s42* %s2, i32 0, i32 1
+// CHECK: define{{.*}} i32 @f42(i32 noundef %i, ptr noundef %s1, ptr noundef %s2)
+// CHECK: getelementptr inbounds %struct.s42, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s42, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s42, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds %struct.s42, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + s1.s + s2.s;
 }
 s42_no_align g42;
@@ -550,33 +543,29 @@ int caller42() {
 // CHECK: define{{.*}} i32 @caller42()
 // CHECK: %[[a:.*]] = alloca %struct.s42, align 4
 // CHECK: %[[b:.*]] = alloca %struct.s42, align 4
-// CHECK: %[[c:.*]] = bitcast %struct.s42* %[[a]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64
-// CHECK: %[[d:.*]] = bitcast %struct.s42* %[[b]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64
-// CHECK: call i32 @f42(i32 noundef 3, %struct.s42* noundef %[[a]], %struct.s42* noundef %[[b]])
+// CHECK: call void @llvm.memcpy.p0.p0.i64
+// CHECK: call void @llvm.memcpy.p0.p0.i64
+// CHECK: call i32 @f42(i32 noundef 3, ptr noundef %[[a]], ptr noundef %[[b]])
   return f42(3, g42, g42_2);
 }
 // passing structs on stack
 __attribute__ ((noinline))
 int f42_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
               int i9, s42_no_align s1, s42_no_align s2) {
-// CHECK: define{{.*}} i32 @f42_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, %struct.s42* noundef %s1, %struct.s42* noundef %s2)
-// CHECK: getelementptr inbounds %struct.s42, %struct.s42* %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s42, %struct.s42* %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s42, %struct.s42* %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s42, %struct.s42* %s2, i32 0, i32 1
+// CHECK: define{{.*}} i32 @f42_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, ptr noundef %s1, ptr noundef %s2)
+// CHECK: getelementptr inbounds %struct.s42, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s42, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s42, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds %struct.s42, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9 + s1.s + s2.s;
 }
 int caller42_stack() {
 // CHECK: define{{.*}} i32 @caller42_stack()
 // CHECK: %[[a:.*]] = alloca %struct.s42, align 4
 // CHECK: %[[b:.*]] = alloca %struct.s42, align 4
-// CHECK: %[[c:.*]] = bitcast %struct.s42* %[[a]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64
-// CHECK: %[[d:.*]] = bitcast %struct.s42* %[[b]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64
-// CHECK: call i32 @f42_stack(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, i32 noundef 6, i32 noundef 7, i32 noundef 8, i32 noundef 9, %struct.s42* noundef %[[a]], %struct.s42* noundef %[[b]])
+// CHECK: call void @llvm.memcpy.p0.p0.i64
+// CHECK: call void @llvm.memcpy.p0.p0.i64
+// CHECK: call i32 @f42_stack(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, i32 noundef 6, i32 noundef 7, i32 noundef 8, i32 noundef 9, ptr noundef %[[a]], ptr noundef %[[b]])
   return f42_stack(1, 2, 3, 4, 5, 6, 7, 8, 9, g42, g42_2);
 }
 
@@ -594,11 +583,11 @@ typedef struct s43 s43_with_align;
 // passing aligned structs in registers
 __attribute__ ((noinline))
 int f43(int i, s43_with_align s1, s43_with_align s2) {
-// CHECK: define{{.*}} i32 @f43(i32 noundef %i, %struct.s43* noundef %s1, %struct.s43* noundef %s2)
-// CHECK: getelementptr inbounds %struct.s43, %struct.s43* %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s43, %struct.s43* %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s43, %struct.s43* %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s43, %struct.s43* %s2, i32 0, i32 1
+// CHECK: define{{.*}} i32 @f43(i32 noundef %i, ptr noundef %s1, ptr noundef %s2)
+// CHECK: getelementptr inbounds %struct.s43, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s43, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s43, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds %struct.s43, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + s1.s + s2.s;
 }
 s43_with_align g43;
@@ -607,37 +596,32 @@ int caller43() {
 // CHECK: define{{.*}} i32 @caller43()
 // CHECK: %[[a:.*]] = alloca %struct.s43, align 16
 // CHECK: %[[b:.*]] = alloca %struct.s43, align 16
-// CHECK: %[[c:.*]] = bitcast %struct.s43* %[[a]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64
-// CHECK: %[[d:.*]] = bitcast %struct.s43* %[[b]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64
-// CHECK: call i32 @f43(i32 noundef 3, %struct.s43* noundef %[[a]], %struct.s43* noundef %[[b]])
+// CHECK: call void @llvm.memcpy.p0.p0.i64
+// CHECK: call void @llvm.memcpy.p0.p0.i64
+// CHECK: call i32 @f43(i32 noundef 3, ptr noundef %[[a]], ptr noundef %[[b]])
   return f43(3, g43, g43_2);
 }
 // passing aligned structs on stack
 __attribute__ ((noinline))
 int f43_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
               int i9, s43_with_align s1, s43_with_align s2) {
-// CHECK: define{{.*}} i32 @f43_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, %struct.s43* noundef %s1, %struct.s43* noundef %s2)
-// CHECK: getelementptr inbounds %struct.s43, %struct.s43* %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s43, %struct.s43* %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s43, %struct.s43* %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s43, %struct.s43* %s2, i32 0, i32 1
+// CHECK: define{{.*}} i32 @f43_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, ptr noundef %s1, ptr noundef %s2)
+// CHECK: getelementptr inbounds %struct.s43, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s43, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds %struct.s43, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds %struct.s43, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9 + s1.s + s2.s;
 }
 int caller43_stack() {
 // CHECK: define{{.*}} i32 @caller43_stack()
 // CHECK: %[[a:.*]] = alloca %struct.s43, align 16
 // CHECK: %[[b:.*]] = alloca %struct.s43, align 16
-// CHECK: %[[c:.*]] = bitcast %struct.s43* %[[a]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64
-// CHECK: %[[d:.*]] = bitcast %struct.s43* %[[b]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64
-// CHECK: call i32 @f43_stack(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, i32 noundef 6, i32 noundef 7, i32 noundef 8, i32 noundef 9, %struct.s43* noundef %[[a]], %struct.s43* noundef %[[b]])
+// CHECK: call void @llvm.memcpy.p0.p0.i64
+// CHECK: call void @llvm.memcpy.p0.p0.i64
+// CHECK: call i32 @f43_stack(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, i32 noundef 6, i32 noundef 7, i32 noundef 8, i32 noundef 9, ptr noundef %[[a]], ptr noundef %[[b]])
   return f43_stack(1, 2, 3, 4, 5, 6, 7, 8, 9, g43, g43_2);
 }
 
-// rdar://13668927
 // We should not split argument s1 between registers and stack.
 __attribute__ ((noinline))
 int f40_split(int i, int i2, int i3, int i4, int i5, int i6, int i7,
@@ -670,14 +654,13 @@ struct HFA {
 
 float test_hfa(int n, ...) {
 // CHECK-LE-LABEL: define{{.*}} float @test_hfa(i32 noundef %n, ...)
-// CHECK-LE: [[THELIST:%.*]] = alloca i8*
-// CHECK-LE: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
+// CHECK-LE: [[THELIST:%.*]] = alloca ptr
+// CHECK-LE: [[CURLIST:%.*]] = load ptr, ptr [[THELIST]]
 
   // HFA is not indirect, so occupies its full 16 bytes on the stack.
-// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[CURLIST]], i64 16
-// CHECK-LE: store i8* [[NEXTLIST]], i8** [[THELIST]]
+// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, ptr [[CURLIST]], i64 16
+// CHECK-LE: store ptr [[NEXTLIST]], ptr [[THELIST]]
 
-// CHECK-LE: bitcast i8* [[CURLIST]] to %struct.HFA*
   __builtin_va_list thelist;
   __builtin_va_start(thelist, n);
   struct HFA h = __builtin_va_arg(thelist, struct HFA);
@@ -685,7 +668,7 @@ float test_hfa(int n, ...) {
 }
 
 float test_hfa_call(struct HFA *a) {
-// CHECK-LABEL: define{{.*}} float @test_hfa_call(%struct.HFA* noundef %a)
+// CHECK-LABEL: define{{.*}} float @test_hfa_call(ptr noundef %a)
 // CHECK: call float (i32, ...) @test_hfa(i32 noundef 1, [4 x float] {{.*}})
   test_hfa(1, *a);
 }
@@ -696,16 +679,15 @@ struct TooBigHFA {
 
 float test_toobig_hfa(int n, ...) {
 // CHECK-LE-LABEL: define{{.*}} float @test_toobig_hfa(i32 noundef %n, ...)
-// CHECK-LE: [[THELIST:%.*]] = alloca i8*
-// CHECK-LE: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
+// CHECK-LE: [[THELIST:%.*]] = alloca ptr
+// CHECK-LE: [[CURLIST:%.*]] = load ptr, ptr [[THELIST]]
 
   // TooBigHFA is not actually an HFA, so gets passed indirectly. Only 8 bytes
   // of stack consumed.
-// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[CURLIST]], i64 8
-// CHECK-LE: store i8* [[NEXTLIST]], i8** [[THELIST]]
+// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, ptr [[CURLIST]], i64 8
+// CHECK-LE: store ptr [[NEXTLIST]], ptr [[THELIST]]
 
-// CHECK-LE: [[HFAPTRPTR:%.*]] = bitcast i8* [[CURLIST]] to %struct.TooBigHFA**
-// CHECK-LE: [[HFAPTR:%.*]] = load %struct.TooBigHFA*, %struct.TooBigHFA** [[HFAPTRPTR]]
+// CHECK-LE: [[HFAPTR:%.*]] = load ptr, ptr [[CURLIST]]
   __builtin_va_list thelist;
   __builtin_va_start(thelist, n);
   struct TooBigHFA h = __builtin_va_arg(thelist, struct TooBigHFA);
@@ -718,20 +700,17 @@ struct HVA {
 
 int32x4_t test_hva(int n, ...) {
 // CHECK-LE-LABEL: define{{.*}} <4 x i32> @test_hva(i32 noundef %n, ...)
-// CHECK-LE: [[THELIST:%.*]] = alloca i8*
-// CHECK-LE: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
+// CHECK-LE: [[THELIST:%.*]] = alloca ptr
+// CHECK-LE: [[CURLIST:%.*]] = load ptr, ptr [[THELIST]]
 
   // HVA is not indirect, so occupies its full 16 bytes on the stack. but it
   // must be properly aligned.
-// CHECK-LE: [[ALIGN0:%.*]] = ptrtoint i8* [[CURLIST]] to i64
-// CHECK-LE: [[ALIGN1:%.*]] = add i64 [[ALIGN0]], 15
-// CHECK-LE: [[ALIGN2:%.*]] = and i64 [[ALIGN1]], -16
-// CHECK-LE: [[ALIGNED_LIST:%.*]] = inttoptr i64 [[ALIGN2]] to i8*
+// CHECK-LE: [[GEP:%.*]] = getelementptr inbounds i8, ptr [[CURLIST]], i32 15
+// CHECK-LE: [[ALIGNED_LIST:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[GEP]], i64 -16)
 
-// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[ALIGNED_LIST]], i64 32
-// CHECK-LE: store i8* [[NEXTLIST]], i8** [[THELIST]]
+// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, ptr [[ALIGNED_LIST]], i64 32
+// CHECK-LE: store ptr [[NEXTLIST]], ptr [[THELIST]]
 
-// CHECK-LE: bitcast i8* [[ALIGNED_LIST]] to %struct.HVA*
   __builtin_va_list thelist;
   __builtin_va_start(thelist, n);
   struct HVA h = __builtin_va_arg(thelist, struct HVA);
@@ -744,16 +723,15 @@ struct TooBigHVA {
 
 int32x4_t test_toobig_hva(int n, ...) {
 // CHECK-LE-LABEL: define{{.*}} <4 x i32> @test_toobig_hva(i32 noundef %n, ...)
-// CHECK-LE: [[THELIST:%.*]] = alloca i8*
-// CHECK-LE: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
+// CHECK-LE: [[THELIST:%.*]] = alloca ptr
+// CHECK-LE: [[CURLIST:%.*]] = load ptr, ptr [[THELIST]]
 
   // TooBigHVA is not actually an HVA, so gets passed indirectly. Only 8 bytes
   // of stack consumed.
-// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[CURLIST]], i64 8
-// CHECK-LE: store i8* [[NEXTLIST]], i8** [[THELIST]]
+// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, ptr [[CURLIST]], i64 8
+// CHECK-LE: store ptr [[NEXTLIST]], ptr [[THELIST]]
 
-// CHECK-LE: [[HVAPTRPTR:%.*]] = bitcast i8* [[CURLIST]] to %struct.TooBigHVA**
-// CHECK-LE: [[HVAPTR:%.*]] = load %struct.TooBigHVA*, %struct.TooBigHVA** [[HVAPTRPTR]]
+// CHECK-LE: [[HVAPTR:%.*]] = load ptr, ptr [[CURLIST]]
   __builtin_va_list thelist;
   __builtin_va_start(thelist, n);
   struct TooBigHVA h = __builtin_va_arg(thelist, struct TooBigHVA);
@@ -765,20 +743,17 @@ typedef struct { float32x3_t arr[4]; } HFAv3;
 
 float32x3_t test_hva_v3(int n, ...) {
 // CHECK-LE-LABEL: define{{.*}} <3 x float> @test_hva_v3(i32 noundef %n, ...)
-// CHECK-LE: [[THELIST:%.*]] = alloca i8*
-// CHECK-LE: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
+// CHECK-LE: [[THELIST:%.*]] = alloca ptr
+// CHECK-LE: [[CURLIST:%.*]] = load ptr, ptr [[THELIST]]
 
   // HVA is not indirect, so occupies its full 16 bytes on the stack. but it
   // must be properly aligned.
-// CHECK-LE: [[ALIGN0:%.*]] = ptrtoint i8* [[CURLIST]] to i64
-// CHECK-LE: [[ALIGN1:%.*]] = add i64 [[ALIGN0]], 15
-// CHECK-LE: [[ALIGN2:%.*]] = and i64 [[ALIGN1]], -16
-// CHECK-LE: [[ALIGNED_LIST:%.*]] = inttoptr i64 [[ALIGN2]] to i8*
 
-// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[ALIGNED_LIST]], i64 64
-// CHECK-LE: store i8* [[NEXTLIST]], i8** [[THELIST]]
+// CHECK-LE: [[GEP:%.*]] = getelementptr inbounds i8, ptr [[CURLIST]], i32 15
+// CHECK-LE: [[ALIGNED_LIST:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[GEP]], i64 -16)
+// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, ptr [[ALIGNED_LIST]], i64 64
+// CHECK-LE: store ptr [[NEXTLIST]], ptr [[THELIST]]
 
-// CHECK-LE: bitcast i8* [[ALIGNED_LIST]] to %struct.HFAv3*
   __builtin_va_list l;
   __builtin_va_start(l, n);
   HFAv3 r = __builtin_va_arg(l, HFAv3);
@@ -786,7 +761,7 @@ float32x3_t test_hva_v3(int n, ...) {
 }
 
 float32x3_t test_hva_v3_call(HFAv3 *a) {
-// CHECK-LABEL: define{{.*}} <3 x float> @test_hva_v3_call(%struct.HFAv3* noundef %a)
+// CHECK-LABEL: define{{.*}} <3 x float> @test_hva_v3_call(ptr noundef %a)
 // CHECK: call <3 x float> (i32, ...) @test_hva_v3(i32 noundef 1, [4 x <4 x float>] {{.*}})
   return test_hva_v3(1, *a);
 }

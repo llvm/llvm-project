@@ -51,6 +51,7 @@ the following sections.
 
   GMIR
   GenericOpcode
+  MIRPatterns
   Pipeline
   Porting
   Resources

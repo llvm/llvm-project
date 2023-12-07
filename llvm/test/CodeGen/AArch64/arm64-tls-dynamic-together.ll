@@ -13,7 +13,7 @@
 define i32 @test_generaldynamic() {
 ; CHECK-LABEL: test_generaldynamic:
 
-  %val = load i32, i32* @general_dynamic_var
+  %val = load i32, ptr @general_dynamic_var
   ret i32 %val
 
 ; NOEMU: .tlsdesccall general_dynamic_var
@@ -32,7 +32,7 @@ define i32 @test_generaldynamic() {
 define i32 @test_emulated_init() {
 ; COMMON-LABEL: test_emulated_init:
 
-  %val = load i32, i32* @emulated_init_var
+  %val = load i32, ptr @emulated_init_var
   ret i32 %val
 
 ; EMU: adrp{{.+}}__emutls_v.emulated_init_var

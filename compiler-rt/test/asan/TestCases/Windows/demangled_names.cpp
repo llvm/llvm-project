@@ -1,5 +1,5 @@
-// RUN: %clang_cl_asan -Od %s -Fe%t
-// RUN: not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_cl_asan %Od %s %Fe%t
+// RUN: not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,%if target={{.*-windows-msvc.*}} %{MSVC%} %else %{MINGW%}
 //
 // This test makes sure ASan symbolizes stack traces the way they are typically
 // symbolized on Windows.
@@ -42,9 +42,11 @@ int main() {
   char *buffer = (char*)malloc(42);
   free(buffer);
   A<char*> a(buffer);
-// CHECK: AddressSanitizer: heap-use-after-free on address [[ADDR:0x[0-9a-f]+]]
-// CHECK: foo::bar<42>{{.*}}demangled_names.cpp
-// CHECK: foo::spam{{.*}}demangled_names.cpp
-// CHECK: baz<char *,{{ *}}1>{{.*}}demangled_names.cpp
-// CHECK: A<char *>::~A<char *>{{.*}}demangled_names.cpp
+  // CHECK: AddressSanitizer: heap-use-after-free on address [[ADDR:0x[0-9a-f]+]]
+  // CHECK: foo::bar<42>{{.*}}demangled_names.cpp
+  // CHECK: foo::spam{{.*}}demangled_names.cpp
+  // MSVC:  baz<char *,{{ *}}1>{{.*}}demangled_names.cpp
+  // MINGW: baz<char*, true>{{.*}}demangled_names.cpp
+  // MSVC:  A<char *>::~A<char *>{{.*}}demangled_names.cpp
+  // MINGW: A<char*>::~A(){{.*}}demangled_names.cpp
 }

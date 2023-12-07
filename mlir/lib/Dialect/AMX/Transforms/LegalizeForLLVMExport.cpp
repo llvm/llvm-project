@@ -24,7 +24,7 @@ namespace {
 /// dimension directly translates into the number of rows of the tiles.
 /// The second dimensions needs to be scaled by the number of bytes.
 std::pair<Value, Value> getTileSizes(ConversionPatternRewriter &rewriter,
-                                     LLVMTypeConverter &typeConverter,
+                                     const LLVMTypeConverter &typeConverter,
                                      VectorType vType, Location loc) {
   Type llvmInt16Type = IntegerType::get(&typeConverter.getContext(), 16);
   unsigned width = vType.getElementType().getIntOrFloatBitWidth();
@@ -52,8 +52,8 @@ LogicalResult verifyStride(MemRefType mType) {
 /// Maps the 2-dim memref shape to the 64-bit stride. Note that the buffer
 /// shape may "envelop" the actual tile shape, and may be dynamically sized.
 Value getStride(ConversionPatternRewriter &rewriter,
-                LLVMTypeConverter &typeConverter, MemRefType mType, Value base,
-                Location loc) {
+                const LLVMTypeConverter &typeConverter, MemRefType mType,
+                Value base, Location loc) {
   assert(mType.getRank() >= 2);
   int64_t last = mType.getRank() - 1;
   Type llvmInt64Type = IntegerType::get(&typeConverter.getContext(), 64);

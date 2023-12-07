@@ -19,11 +19,8 @@ using namespace lld;
 
 // TODO(sbc): Remove this once CGOptLevel can be set completely based on bitcode
 // function metadata.
-CodeGenOpt::Level lld::args::getCGOptLevel(int optLevelLTO) {
-  if (optLevelLTO == 3)
-    return CodeGenOpt::Aggressive;
-  assert(optLevelLTO < 3);
-  return CodeGenOpt::Default;
+int lld::args::getCGOptLevel(int optLevelLTO) {
+  return std::clamp(optLevelLTO, 2, 3);
 }
 
 static int64_t getInteger(opt::InputArgList &args, unsigned key,
@@ -34,7 +31,7 @@ static int64_t getInteger(opt::InputArgList &args, unsigned key,
 
   int64_t v;
   StringRef s = a->getValue();
-  if (base == 16 && (s.startswith("0x") || s.startswith("0X")))
+  if (base == 16 && (s.starts_with("0x") || s.starts_with("0X")))
     s = s.drop_front(2);
   if (to_integer(s, v, base))
     return v;
@@ -90,7 +87,7 @@ std::vector<StringRef> lld::args::getLines(MemoryBufferRef mb) {
 }
 
 StringRef lld::args::getFilenameWithoutExe(StringRef path) {
-  if (path.endswith_insensitive(".exe"))
+  if (path.ends_with_insensitive(".exe"))
     return sys::path::stem(path);
   return sys::path::filename(path);
 }

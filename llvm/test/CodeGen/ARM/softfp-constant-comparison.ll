@@ -17,7 +17,7 @@ define hidden void @fn1() nounwind #0 {
 ; CHECK-NEXT:  .LBB0_2: @ %land.end
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   %conv = sitofp i32 %0 to double
   %mul = fmul nnan ninf nsz double 0.000000e+00, %conv
   %tobool = fcmp nnan ninf nsz une double %mul, 0.000000e+00

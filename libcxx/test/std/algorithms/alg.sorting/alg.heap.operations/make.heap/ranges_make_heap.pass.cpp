@@ -58,14 +58,14 @@ static_assert(!HasMakeHeapR<UncheckedRange<int*, SentinelForNotWeaklyEqualityCom
 static_assert(!HasMakeHeapR<UncheckedRange<int*>, BadComparator>);
 static_assert(!HasMakeHeapR<UncheckedRange<const int*>>); // Doesn't satisfy `sortable`.
 
-template <size_t N, class T, class Iter>
+template <std::size_t N, class T, class Iter>
 constexpr void verify_heap(const std::array<T, N>& heapified, Iter last, std::array<T, N> expected) {
   assert(heapified == expected);
   assert(base(last) == heapified.data() + heapified.size());
   assert(std::is_heap(heapified.begin(), heapified.end()));
 }
 
-template <class Iter, class Sent, size_t N>
+template <class Iter, class Sent, std::size_t N>
 constexpr void test_one(const std::array<int, N> input, std::array<int, N> expected) {
   { // (iterator, sentinel) overload.
     auto heapified = input;

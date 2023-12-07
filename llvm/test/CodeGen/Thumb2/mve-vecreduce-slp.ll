@@ -4,34 +4,33 @@
 ; Various reductions generated fro SLP vectorizing unrolled loops. Generated
 ; from https://godbolt.org/z/ebxdPh1Kz with some less interesting cases removed.
 
-define i32 @addv2i32i32(i32* %x) {
+define i32 @addv2i32i32(ptr %x) {
 ; CHECK-LABEL: addv2i32i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrd r1, r0, [r0]
+; CHECK-NEXT:    ldrd r0, r1, [r0]
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %x, align 4
-  %arrayidx.1 = getelementptr inbounds i32, i32* %x, i32 1
-  %1 = load i32, i32* %arrayidx.1, align 4
+  %0 = load i32, ptr %x, align 4
+  %arrayidx.1 = getelementptr inbounds i32, ptr %x, i32 1
+  %1 = load i32, ptr %arrayidx.1, align 4
   %add.1 = add nsw i32 %1, %0
   ret i32 %add.1
 }
 
-define i32 @addv4i32i32(i32* %x) {
+define i32 @addv4i32i32(ptr %x) {
 ; CHECK-LABEL: addv4i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vaddv.u32 r0, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <4 x i32>*
-  %1 = load <4 x i32>, <4 x i32>* %0, align 4
-  %2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %1)
-  ret i32 %2
+  %0 = load <4 x i32>, ptr %x, align 4
+  %1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %0)
+  ret i32 %1
 }
 
-define i32 @addv8i32i32(i32* %x) {
+define i32 @addv8i32i32(ptr %x) {
 ; CHECK-LABEL: addv8i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
@@ -40,13 +39,12 @@ define i32 @addv8i32i32(i32* %x) {
 ; CHECK-NEXT:    vaddva.u32 r0, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <8 x i32>*
-  %1 = load <8 x i32>, <8 x i32>* %0, align 4
-  %2 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %1)
-  ret i32 %2
+  %0 = load <8 x i32>, ptr %x, align 4
+  %1 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %0)
+  ret i32 %1
 }
 
-define i32 @addv16i32i32(i32* %x) {
+define i32 @addv16i32i32(ptr %x) {
 ; CHECK-LABEL: addv16i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
@@ -60,13 +58,12 @@ define i32 @addv16i32i32(i32* %x) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <16 x i32>*
-  %1 = load <16 x i32>, <16 x i32>* %0, align 4
-  %2 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %1)
-  ret i32 %2
+  %0 = load <16 x i32>, ptr %x, align 4
+  %1 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %0)
+  ret i32 %1
 }
 
-define i32 @addv24i32i32(i32* %x) {
+define i32 @addv24i32i32(ptr %x) {
 ; CHECK-LABEL: addv24i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
@@ -84,18 +81,16 @@ define i32 @addv24i32i32(i32* %x) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <8 x i32>*
-  %1 = load <8 x i32>, <8 x i32>* %0, align 4
-  %arrayidx.8 = getelementptr inbounds i32, i32* %x, i32 8
-  %2 = bitcast i32* %arrayidx.8 to <16 x i32>*
-  %3 = load <16 x i32>, <16 x i32>* %2, align 4
-  %4 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %3)
-  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %1)
-  %op.rdx = add nsw i32 %4, %5
+  %0 = load <8 x i32>, ptr %x, align 4
+  %arrayidx.8 = getelementptr inbounds i32, ptr %x, i32 8
+  %1 = load <16 x i32>, ptr %arrayidx.8, align 4
+  %2 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %1)
+  %3 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %0)
+  %op.rdx = add nsw i32 %2, %3
   ret i32 %op.rdx
 }
 
-define i32 @addv32i32i32(i32* %x) {
+define i32 @addv32i32i32(ptr %x) {
 ; CHECK-LABEL: addv32i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
@@ -117,13 +112,12 @@ define i32 @addv32i32i32(i32* %x) {
 ; CHECK-NEXT:    vaddva.u32 r0, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <32 x i32>*
-  %1 = load <32 x i32>, <32 x i32>* %0, align 4
-  %2 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %1)
-  ret i32 %2
+  %0 = load <32 x i32>, ptr %x, align 4
+  %1 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %0)
+  ret i32 %1
 }
 
-define i32 @addv64i32i32(i32* %x) {
+define i32 @addv64i32i32(ptr %x) {
 ; CHECK-LABEL: addv64i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
@@ -161,13 +155,12 @@ define i32 @addv64i32i32(i32* %x) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <64 x i32>*
-  %1 = load <64 x i32>, <64 x i32>* %0, align 4
-  %2 = call i32 @llvm.vector.reduce.add.v64i32(<64 x i32> %1)
-  ret i32 %2
+  %0 = load <64 x i32>, ptr %x, align 4
+  %1 = call i32 @llvm.vector.reduce.add.v64i32(<64 x i32> %0)
+  ret i32 %1
 }
 
-define i32 @addv128i32i32(i32* %x) {
+define i32 @addv128i32i32(ptr %x) {
 ; CHECK-LABEL: addv128i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
@@ -237,168 +230,136 @@ define i32 @addv128i32i32(i32* %x) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %0, align 4
-  %1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load)
-  %2 = getelementptr inbounds i32, i32* %x, i32 4
-  %3 = bitcast i32* %2 to <4 x i32>*
-  %wide.load.1 = load <4 x i32>, <4 x i32>* %3, align 4
-  %4 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.1)
-  %5 = add i32 %4, %1
-  %6 = getelementptr inbounds i32, i32* %x, i32 8
-  %7 = bitcast i32* %6 to <4 x i32>*
-  %wide.load.2 = load <4 x i32>, <4 x i32>* %7, align 4
-  %8 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.2)
-  %9 = add i32 %8, %5
-  %10 = getelementptr inbounds i32, i32* %x, i32 12
-  %11 = bitcast i32* %10 to <4 x i32>*
-  %wide.load.3 = load <4 x i32>, <4 x i32>* %11, align 4
-  %12 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.3)
-  %13 = add i32 %12, %9
-  %14 = getelementptr inbounds i32, i32* %x, i32 16
-  %15 = bitcast i32* %14 to <4 x i32>*
-  %wide.load.4 = load <4 x i32>, <4 x i32>* %15, align 4
-  %16 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.4)
-  %17 = add i32 %16, %13
-  %18 = getelementptr inbounds i32, i32* %x, i32 20
-  %19 = bitcast i32* %18 to <4 x i32>*
-  %wide.load.5 = load <4 x i32>, <4 x i32>* %19, align 4
-  %20 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.5)
-  %21 = add i32 %20, %17
-  %22 = getelementptr inbounds i32, i32* %x, i32 24
-  %23 = bitcast i32* %22 to <4 x i32>*
-  %wide.load.6 = load <4 x i32>, <4 x i32>* %23, align 4
-  %24 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.6)
-  %25 = add i32 %24, %21
-  %26 = getelementptr inbounds i32, i32* %x, i32 28
-  %27 = bitcast i32* %26 to <4 x i32>*
-  %wide.load.7 = load <4 x i32>, <4 x i32>* %27, align 4
-  %28 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.7)
-  %29 = add i32 %28, %25
-  %30 = getelementptr inbounds i32, i32* %x, i32 32
-  %31 = bitcast i32* %30 to <4 x i32>*
-  %wide.load.8 = load <4 x i32>, <4 x i32>* %31, align 4
-  %32 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.8)
-  %33 = add i32 %32, %29
-  %34 = getelementptr inbounds i32, i32* %x, i32 36
-  %35 = bitcast i32* %34 to <4 x i32>*
-  %wide.load.9 = load <4 x i32>, <4 x i32>* %35, align 4
-  %36 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.9)
-  %37 = add i32 %36, %33
-  %38 = getelementptr inbounds i32, i32* %x, i32 40
-  %39 = bitcast i32* %38 to <4 x i32>*
-  %wide.load.10 = load <4 x i32>, <4 x i32>* %39, align 4
-  %40 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.10)
-  %41 = add i32 %40, %37
-  %42 = getelementptr inbounds i32, i32* %x, i32 44
-  %43 = bitcast i32* %42 to <4 x i32>*
-  %wide.load.11 = load <4 x i32>, <4 x i32>* %43, align 4
-  %44 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.11)
-  %45 = add i32 %44, %41
-  %46 = getelementptr inbounds i32, i32* %x, i32 48
-  %47 = bitcast i32* %46 to <4 x i32>*
-  %wide.load.12 = load <4 x i32>, <4 x i32>* %47, align 4
-  %48 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.12)
-  %49 = add i32 %48, %45
-  %50 = getelementptr inbounds i32, i32* %x, i32 52
-  %51 = bitcast i32* %50 to <4 x i32>*
-  %wide.load.13 = load <4 x i32>, <4 x i32>* %51, align 4
-  %52 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.13)
-  %53 = add i32 %52, %49
-  %54 = getelementptr inbounds i32, i32* %x, i32 56
-  %55 = bitcast i32* %54 to <4 x i32>*
-  %wide.load.14 = load <4 x i32>, <4 x i32>* %55, align 4
-  %56 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.14)
-  %57 = add i32 %56, %53
-  %58 = getelementptr inbounds i32, i32* %x, i32 60
-  %59 = bitcast i32* %58 to <4 x i32>*
-  %wide.load.15 = load <4 x i32>, <4 x i32>* %59, align 4
-  %60 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.15)
-  %61 = add i32 %60, %57
-  %62 = getelementptr inbounds i32, i32* %x, i32 64
-  %63 = bitcast i32* %62 to <4 x i32>*
-  %wide.load.16 = load <4 x i32>, <4 x i32>* %63, align 4
-  %64 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.16)
-  %65 = add i32 %64, %61
-  %66 = getelementptr inbounds i32, i32* %x, i32 68
-  %67 = bitcast i32* %66 to <4 x i32>*
-  %wide.load.17 = load <4 x i32>, <4 x i32>* %67, align 4
-  %68 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.17)
-  %69 = add i32 %68, %65
-  %70 = getelementptr inbounds i32, i32* %x, i32 72
-  %71 = bitcast i32* %70 to <4 x i32>*
-  %wide.load.18 = load <4 x i32>, <4 x i32>* %71, align 4
-  %72 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.18)
-  %73 = add i32 %72, %69
-  %74 = getelementptr inbounds i32, i32* %x, i32 76
-  %75 = bitcast i32* %74 to <4 x i32>*
-  %wide.load.19 = load <4 x i32>, <4 x i32>* %75, align 4
-  %76 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.19)
-  %77 = add i32 %76, %73
-  %78 = getelementptr inbounds i32, i32* %x, i32 80
-  %79 = bitcast i32* %78 to <4 x i32>*
-  %wide.load.20 = load <4 x i32>, <4 x i32>* %79, align 4
-  %80 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.20)
-  %81 = add i32 %80, %77
-  %82 = getelementptr inbounds i32, i32* %x, i32 84
-  %83 = bitcast i32* %82 to <4 x i32>*
-  %wide.load.21 = load <4 x i32>, <4 x i32>* %83, align 4
-  %84 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.21)
-  %85 = add i32 %84, %81
-  %86 = getelementptr inbounds i32, i32* %x, i32 88
-  %87 = bitcast i32* %86 to <4 x i32>*
-  %wide.load.22 = load <4 x i32>, <4 x i32>* %87, align 4
-  %88 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.22)
-  %89 = add i32 %88, %85
-  %90 = getelementptr inbounds i32, i32* %x, i32 92
-  %91 = bitcast i32* %90 to <4 x i32>*
-  %wide.load.23 = load <4 x i32>, <4 x i32>* %91, align 4
-  %92 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.23)
-  %93 = add i32 %92, %89
-  %94 = getelementptr inbounds i32, i32* %x, i32 96
-  %95 = bitcast i32* %94 to <4 x i32>*
-  %wide.load.24 = load <4 x i32>, <4 x i32>* %95, align 4
-  %96 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.24)
-  %97 = add i32 %96, %93
-  %98 = getelementptr inbounds i32, i32* %x, i32 100
-  %99 = bitcast i32* %98 to <4 x i32>*
-  %wide.load.25 = load <4 x i32>, <4 x i32>* %99, align 4
-  %100 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.25)
-  %101 = add i32 %100, %97
-  %102 = getelementptr inbounds i32, i32* %x, i32 104
-  %103 = bitcast i32* %102 to <4 x i32>*
-  %wide.load.26 = load <4 x i32>, <4 x i32>* %103, align 4
-  %104 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.26)
-  %105 = add i32 %104, %101
-  %106 = getelementptr inbounds i32, i32* %x, i32 108
-  %107 = bitcast i32* %106 to <4 x i32>*
-  %wide.load.27 = load <4 x i32>, <4 x i32>* %107, align 4
-  %108 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.27)
-  %109 = add i32 %108, %105
-  %110 = getelementptr inbounds i32, i32* %x, i32 112
-  %111 = bitcast i32* %110 to <4 x i32>*
-  %wide.load.28 = load <4 x i32>, <4 x i32>* %111, align 4
-  %112 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.28)
-  %113 = add i32 %112, %109
-  %114 = getelementptr inbounds i32, i32* %x, i32 116
-  %115 = bitcast i32* %114 to <4 x i32>*
-  %wide.load.29 = load <4 x i32>, <4 x i32>* %115, align 4
-  %116 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.29)
-  %117 = add i32 %116, %113
-  %118 = getelementptr inbounds i32, i32* %x, i32 120
-  %119 = bitcast i32* %118 to <4 x i32>*
-  %wide.load.30 = load <4 x i32>, <4 x i32>* %119, align 4
-  %120 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.30)
-  %121 = add i32 %120, %117
-  %122 = getelementptr inbounds i32, i32* %x, i32 124
-  %123 = bitcast i32* %122 to <4 x i32>*
-  %wide.load.31 = load <4 x i32>, <4 x i32>* %123, align 4
-  %124 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.31)
-  %125 = add i32 %124, %121
-  ret i32 %125
+  %wide.load = load <4 x i32>, ptr %x, align 4
+  %0 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load)
+  %1 = getelementptr inbounds i32, ptr %x, i32 4
+  %wide.load.1 = load <4 x i32>, ptr %1, align 4
+  %2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.1)
+  %3 = add i32 %2, %0
+  %4 = getelementptr inbounds i32, ptr %x, i32 8
+  %wide.load.2 = load <4 x i32>, ptr %4, align 4
+  %5 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.2)
+  %6 = add i32 %5, %3
+  %7 = getelementptr inbounds i32, ptr %x, i32 12
+  %wide.load.3 = load <4 x i32>, ptr %7, align 4
+  %8 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.3)
+  %9 = add i32 %8, %6
+  %10 = getelementptr inbounds i32, ptr %x, i32 16
+  %wide.load.4 = load <4 x i32>, ptr %10, align 4
+  %11 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.4)
+  %12 = add i32 %11, %9
+  %13 = getelementptr inbounds i32, ptr %x, i32 20
+  %wide.load.5 = load <4 x i32>, ptr %13, align 4
+  %14 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.5)
+  %15 = add i32 %14, %12
+  %16 = getelementptr inbounds i32, ptr %x, i32 24
+  %wide.load.6 = load <4 x i32>, ptr %16, align 4
+  %17 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.6)
+  %18 = add i32 %17, %15
+  %19 = getelementptr inbounds i32, ptr %x, i32 28
+  %wide.load.7 = load <4 x i32>, ptr %19, align 4
+  %20 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.7)
+  %21 = add i32 %20, %18
+  %22 = getelementptr inbounds i32, ptr %x, i32 32
+  %wide.load.8 = load <4 x i32>, ptr %22, align 4
+  %23 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.8)
+  %24 = add i32 %23, %21
+  %25 = getelementptr inbounds i32, ptr %x, i32 36
+  %wide.load.9 = load <4 x i32>, ptr %25, align 4
+  %26 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.9)
+  %27 = add i32 %26, %24
+  %28 = getelementptr inbounds i32, ptr %x, i32 40
+  %wide.load.10 = load <4 x i32>, ptr %28, align 4
+  %29 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.10)
+  %30 = add i32 %29, %27
+  %31 = getelementptr inbounds i32, ptr %x, i32 44
+  %wide.load.11 = load <4 x i32>, ptr %31, align 4
+  %32 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.11)
+  %33 = add i32 %32, %30
+  %34 = getelementptr inbounds i32, ptr %x, i32 48
+  %wide.load.12 = load <4 x i32>, ptr %34, align 4
+  %35 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.12)
+  %36 = add i32 %35, %33
+  %37 = getelementptr inbounds i32, ptr %x, i32 52
+  %wide.load.13 = load <4 x i32>, ptr %37, align 4
+  %38 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.13)
+  %39 = add i32 %38, %36
+  %40 = getelementptr inbounds i32, ptr %x, i32 56
+  %wide.load.14 = load <4 x i32>, ptr %40, align 4
+  %41 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.14)
+  %42 = add i32 %41, %39
+  %43 = getelementptr inbounds i32, ptr %x, i32 60
+  %wide.load.15 = load <4 x i32>, ptr %43, align 4
+  %44 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.15)
+  %45 = add i32 %44, %42
+  %46 = getelementptr inbounds i32, ptr %x, i32 64
+  %wide.load.16 = load <4 x i32>, ptr %46, align 4
+  %47 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.16)
+  %48 = add i32 %47, %45
+  %49 = getelementptr inbounds i32, ptr %x, i32 68
+  %wide.load.17 = load <4 x i32>, ptr %49, align 4
+  %50 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.17)
+  %51 = add i32 %50, %48
+  %52 = getelementptr inbounds i32, ptr %x, i32 72
+  %wide.load.18 = load <4 x i32>, ptr %52, align 4
+  %53 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.18)
+  %54 = add i32 %53, %51
+  %55 = getelementptr inbounds i32, ptr %x, i32 76
+  %wide.load.19 = load <4 x i32>, ptr %55, align 4
+  %56 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.19)
+  %57 = add i32 %56, %54
+  %58 = getelementptr inbounds i32, ptr %x, i32 80
+  %wide.load.20 = load <4 x i32>, ptr %58, align 4
+  %59 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.20)
+  %60 = add i32 %59, %57
+  %61 = getelementptr inbounds i32, ptr %x, i32 84
+  %wide.load.21 = load <4 x i32>, ptr %61, align 4
+  %62 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.21)
+  %63 = add i32 %62, %60
+  %64 = getelementptr inbounds i32, ptr %x, i32 88
+  %wide.load.22 = load <4 x i32>, ptr %64, align 4
+  %65 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.22)
+  %66 = add i32 %65, %63
+  %67 = getelementptr inbounds i32, ptr %x, i32 92
+  %wide.load.23 = load <4 x i32>, ptr %67, align 4
+  %68 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.23)
+  %69 = add i32 %68, %66
+  %70 = getelementptr inbounds i32, ptr %x, i32 96
+  %wide.load.24 = load <4 x i32>, ptr %70, align 4
+  %71 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.24)
+  %72 = add i32 %71, %69
+  %73 = getelementptr inbounds i32, ptr %x, i32 100
+  %wide.load.25 = load <4 x i32>, ptr %73, align 4
+  %74 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.25)
+  %75 = add i32 %74, %72
+  %76 = getelementptr inbounds i32, ptr %x, i32 104
+  %wide.load.26 = load <4 x i32>, ptr %76, align 4
+  %77 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.26)
+  %78 = add i32 %77, %75
+  %79 = getelementptr inbounds i32, ptr %x, i32 108
+  %wide.load.27 = load <4 x i32>, ptr %79, align 4
+  %80 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.27)
+  %81 = add i32 %80, %78
+  %82 = getelementptr inbounds i32, ptr %x, i32 112
+  %wide.load.28 = load <4 x i32>, ptr %82, align 4
+  %83 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.28)
+  %84 = add i32 %83, %81
+  %85 = getelementptr inbounds i32, ptr %x, i32 116
+  %wide.load.29 = load <4 x i32>, ptr %85, align 4
+  %86 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.29)
+  %87 = add i32 %86, %84
+  %88 = getelementptr inbounds i32, ptr %x, i32 120
+  %wide.load.30 = load <4 x i32>, ptr %88, align 4
+  %89 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.30)
+  %90 = add i32 %89, %87
+  %91 = getelementptr inbounds i32, ptr %x, i32 124
+  %wide.load.31 = load <4 x i32>, ptr %91, align 4
+  %92 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load.31)
+  %93 = add i32 %92, %90
+  ret i32 %93
 }
 
-define i32 @addv2i32i16(i16* %x) {
+define i32 @addv2i32i16(ptr %x) {
 ; CHECK-LABEL: addv2i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrsh.w r1, [r0]
@@ -406,44 +367,42 @@ define i32 @addv2i32i16(i16* %x) {
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %x, align 2
+  %0 = load i16, ptr %x, align 2
   %conv = sext i16 %0 to i32
-  %arrayidx.1 = getelementptr inbounds i16, i16* %x, i32 1
-  %1 = load i16, i16* %arrayidx.1, align 2
+  %arrayidx.1 = getelementptr inbounds i16, ptr %x, i32 1
+  %1 = load i16, ptr %arrayidx.1, align 2
   %conv.1 = sext i16 %1 to i32
   %add.1 = add nsw i32 %conv, %conv.1
   ret i32 %add.1
 }
 
-define i32 @addv4i32i16(i16* %x) {
+define i32 @addv4i32i16(ptr %x) {
 ; CHECK-LABEL: addv4i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r0]
 ; CHECK-NEXT:    vaddv.u32 r0, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <4 x i16>*
-  %1 = load <4 x i16>, <4 x i16>* %0, align 2
-  %2 = sext <4 x i16> %1 to <4 x i32>
-  %3 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %2)
-  ret i32 %3
+  %0 = load <4 x i16>, ptr %x, align 2
+  %1 = sext <4 x i16> %0 to <4 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %1)
+  ret i32 %2
 }
 
-define i32 @addv8i32i16(i16* %x) {
+define i32 @addv8i32i16(ptr %x) {
 ; CHECK-LABEL: addv8i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
 ; CHECK-NEXT:    vaddv.s16 r0, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <8 x i16>*
-  %1 = load <8 x i16>, <8 x i16>* %0, align 2
-  %2 = sext <8 x i16> %1 to <8 x i32>
-  %3 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %2)
-  ret i32 %3
+  %0 = load <8 x i16>, ptr %x, align 2
+  %1 = sext <8 x i16> %0 to <8 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %1)
+  ret i32 %2
 }
 
-define i32 @addv16i32i16(i16* %x) {
+define i32 @addv16i32i16(ptr %x) {
 ; CHECK-LABEL: addv16i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q1, [r0]
@@ -457,14 +416,13 @@ define i32 @addv16i32i16(i16* %x) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <16 x i16>*
-  %1 = load <16 x i16>, <16 x i16>* %0, align 2
-  %2 = sext <16 x i16> %1 to <16 x i32>
-  %3 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %2)
-  ret i32 %3
+  %0 = load <16 x i16>, ptr %x, align 2
+  %1 = sext <16 x i16> %0 to <16 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %1)
+  ret i32 %2
 }
 
-define i32 @addv24i32i16(i16* %x) {
+define i32 @addv24i32i16(ptr %x) {
 ; CHECK-LABEL: addv24i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q1, [r0]
@@ -480,20 +438,18 @@ define i32 @addv24i32i16(i16* %x) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <16 x i16>*
-  %1 = load <16 x i16>, <16 x i16>* %0, align 2
-  %2 = sext <16 x i16> %1 to <16 x i32>
-  %arrayidx.16 = getelementptr inbounds i16, i16* %x, i32 16
-  %3 = bitcast i16* %arrayidx.16 to <8 x i16>*
-  %4 = load <8 x i16>, <8 x i16>* %3, align 2
-  %5 = sext <8 x i16> %4 to <8 x i32>
-  %6 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %2)
-  %7 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %5)
-  %op.rdx = add nsw i32 %6, %7
+  %0 = load <16 x i16>, ptr %x, align 2
+  %1 = sext <16 x i16> %0 to <16 x i32>
+  %arrayidx.16 = getelementptr inbounds i16, ptr %x, i32 16
+  %2 = load <8 x i16>, ptr %arrayidx.16, align 2
+  %3 = sext <8 x i16> %2 to <8 x i32>
+  %4 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %1)
+  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %3)
+  %op.rdx = add nsw i32 %4, %5
   ret i32 %op.rdx
 }
 
-define i32 @addv32i32i16(i16* %x) {
+define i32 @addv32i32i16(ptr %x) {
 ; CHECK-LABEL: addv32i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q1, [r0]
@@ -515,14 +471,13 @@ define i32 @addv32i32i16(i16* %x) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <32 x i16>*
-  %1 = load <32 x i16>, <32 x i16>* %0, align 2
-  %2 = sext <32 x i16> %1 to <32 x i32>
-  %3 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %2)
-  ret i32 %3
+  %0 = load <32 x i16>, ptr %x, align 2
+  %1 = sext <32 x i16> %0 to <32 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %1)
+  ret i32 %2
 }
 
-define i32 @addv64i32i16(i16* %x) {
+define i32 @addv64i32i16(ptr %x) {
 ; CHECK-LABEL: addv64i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q1, [r0]
@@ -563,48 +518,44 @@ define i32 @addv64i32i16(i16* %x) {
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <32 x i16>*
-  %1 = load <32 x i16>, <32 x i16>* %0, align 2
-  %2 = sext <32 x i16> %1 to <32 x i32>
-  %arrayidx.32 = getelementptr inbounds i16, i16* %x, i32 32
-  %3 = bitcast i16* %arrayidx.32 to <16 x i16>*
-  %4 = load <16 x i16>, <16 x i16>* %3, align 2
-  %5 = sext <16 x i16> %4 to <16 x i32>
-  %arrayidx.48 = getelementptr inbounds i16, i16* %x, i32 48
-  %6 = bitcast i16* %arrayidx.48 to <8 x i16>*
-  %7 = load <8 x i16>, <8 x i16>* %6, align 2
-  %8 = sext <8 x i16> %7 to <8 x i32>
-  %arrayidx.56 = getelementptr inbounds i16, i16* %x, i32 56
-  %9 = bitcast i16* %arrayidx.56 to <4 x i16>*
-  %10 = load <4 x i16>, <4 x i16>* %9, align 2
-  %11 = sext <4 x i16> %10 to <4 x i32>
-  %arrayidx.60 = getelementptr inbounds i16, i16* %x, i32 60
-  %12 = load i16, i16* %arrayidx.60, align 2
-  %conv.60 = sext i16 %12 to i32
-  %arrayidx.61 = getelementptr inbounds i16, i16* %x, i32 61
-  %13 = load i16, i16* %arrayidx.61, align 2
-  %conv.61 = sext i16 %13 to i32
-  %arrayidx.62 = getelementptr inbounds i16, i16* %x, i32 62
-  %14 = load i16, i16* %arrayidx.62, align 2
-  %conv.62 = sext i16 %14 to i32
-  %15 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %2)
-  %16 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %5)
-  %op.rdx = add nsw i32 %15, %16
-  %17 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %8)
-  %op.rdx8 = add nsw i32 %op.rdx, %17
-  %18 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %11)
-  %op.rdx9 = add nsw i32 %op.rdx8, %18
-  %19 = add nsw i32 %op.rdx9, %conv.60
-  %20 = add nsw i32 %19, %conv.61
-  %21 = add nsw i32 %20, %conv.62
-  %arrayidx.63 = getelementptr inbounds i16, i16* %x, i32 63
-  %22 = load i16, i16* %arrayidx.63, align 2
-  %conv.63 = sext i16 %22 to i32
-  %add.63 = add nsw i32 %21, %conv.63
+  %0 = load <32 x i16>, ptr %x, align 2
+  %1 = sext <32 x i16> %0 to <32 x i32>
+  %arrayidx.32 = getelementptr inbounds i16, ptr %x, i32 32
+  %2 = load <16 x i16>, ptr %arrayidx.32, align 2
+  %3 = sext <16 x i16> %2 to <16 x i32>
+  %arrayidx.48 = getelementptr inbounds i16, ptr %x, i32 48
+  %4 = load <8 x i16>, ptr %arrayidx.48, align 2
+  %5 = sext <8 x i16> %4 to <8 x i32>
+  %arrayidx.56 = getelementptr inbounds i16, ptr %x, i32 56
+  %6 = load <4 x i16>, ptr %arrayidx.56, align 2
+  %7 = sext <4 x i16> %6 to <4 x i32>
+  %arrayidx.60 = getelementptr inbounds i16, ptr %x, i32 60
+  %8 = load i16, ptr %arrayidx.60, align 2
+  %conv.60 = sext i16 %8 to i32
+  %arrayidx.61 = getelementptr inbounds i16, ptr %x, i32 61
+  %9 = load i16, ptr %arrayidx.61, align 2
+  %conv.61 = sext i16 %9 to i32
+  %arrayidx.62 = getelementptr inbounds i16, ptr %x, i32 62
+  %10 = load i16, ptr %arrayidx.62, align 2
+  %conv.62 = sext i16 %10 to i32
+  %11 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %1)
+  %12 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %3)
+  %op.rdx = add nsw i32 %11, %12
+  %13 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %5)
+  %op.rdx8 = add nsw i32 %op.rdx, %13
+  %14 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %7)
+  %op.rdx9 = add nsw i32 %op.rdx8, %14
+  %15 = add nsw i32 %op.rdx9, %conv.60
+  %16 = add nsw i32 %15, %conv.61
+  %17 = add nsw i32 %16, %conv.62
+  %arrayidx.63 = getelementptr inbounds i16, ptr %x, i32 63
+  %18 = load i16, ptr %arrayidx.63, align 2
+  %conv.63 = sext i16 %18 to i32
+  %add.63 = add nsw i32 %17, %conv.63
   ret i32 %add.63
 }
 
-define i32 @addv128i32i16(i16* %x) {
+define i32 @addv128i32i16(ptr %x) {
 ; CHECK-LABEL: addv128i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q1, [r0]
@@ -642,104 +593,88 @@ define i32 @addv128i32i16(i16* %x) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %0, align 2
-  %1 = sext <8 x i16> %wide.load to <8 x i32>
-  %2 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %1)
-  %3 = getelementptr inbounds i16, i16* %x, i32 8
-  %4 = bitcast i16* %3 to <8 x i16>*
-  %wide.load.1 = load <8 x i16>, <8 x i16>* %4, align 2
-  %5 = sext <8 x i16> %wide.load.1 to <8 x i32>
-  %6 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %5)
-  %7 = add i32 %6, %2
-  %8 = getelementptr inbounds i16, i16* %x, i32 16
-  %9 = bitcast i16* %8 to <8 x i16>*
-  %wide.load.2 = load <8 x i16>, <8 x i16>* %9, align 2
-  %10 = sext <8 x i16> %wide.load.2 to <8 x i32>
-  %11 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %10)
-  %12 = add i32 %11, %7
-  %13 = getelementptr inbounds i16, i16* %x, i32 24
-  %14 = bitcast i16* %13 to <8 x i16>*
-  %wide.load.3 = load <8 x i16>, <8 x i16>* %14, align 2
-  %15 = sext <8 x i16> %wide.load.3 to <8 x i32>
+  %wide.load = load <8 x i16>, ptr %x, align 2
+  %0 = sext <8 x i16> %wide.load to <8 x i32>
+  %1 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %0)
+  %2 = getelementptr inbounds i16, ptr %x, i32 8
+  %wide.load.1 = load <8 x i16>, ptr %2, align 2
+  %3 = sext <8 x i16> %wide.load.1 to <8 x i32>
+  %4 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %3)
+  %5 = add i32 %4, %1
+  %6 = getelementptr inbounds i16, ptr %x, i32 16
+  %wide.load.2 = load <8 x i16>, ptr %6, align 2
+  %7 = sext <8 x i16> %wide.load.2 to <8 x i32>
+  %8 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %7)
+  %9 = add i32 %8, %5
+  %10 = getelementptr inbounds i16, ptr %x, i32 24
+  %wide.load.3 = load <8 x i16>, ptr %10, align 2
+  %11 = sext <8 x i16> %wide.load.3 to <8 x i32>
+  %12 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %11)
+  %13 = add i32 %12, %9
+  %14 = getelementptr inbounds i16, ptr %x, i32 32
+  %wide.load.4 = load <8 x i16>, ptr %14, align 2
+  %15 = sext <8 x i16> %wide.load.4 to <8 x i32>
   %16 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %15)
-  %17 = add i32 %16, %12
-  %18 = getelementptr inbounds i16, i16* %x, i32 32
-  %19 = bitcast i16* %18 to <8 x i16>*
-  %wide.load.4 = load <8 x i16>, <8 x i16>* %19, align 2
-  %20 = sext <8 x i16> %wide.load.4 to <8 x i32>
-  %21 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %20)
-  %22 = add i32 %21, %17
-  %23 = getelementptr inbounds i16, i16* %x, i32 40
-  %24 = bitcast i16* %23 to <8 x i16>*
-  %wide.load.5 = load <8 x i16>, <8 x i16>* %24, align 2
-  %25 = sext <8 x i16> %wide.load.5 to <8 x i32>
-  %26 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %25)
-  %27 = add i32 %26, %22
-  %28 = getelementptr inbounds i16, i16* %x, i32 48
-  %29 = bitcast i16* %28 to <8 x i16>*
-  %wide.load.6 = load <8 x i16>, <8 x i16>* %29, align 2
-  %30 = sext <8 x i16> %wide.load.6 to <8 x i32>
-  %31 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %30)
-  %32 = add i32 %31, %27
-  %33 = getelementptr inbounds i16, i16* %x, i32 56
-  %34 = bitcast i16* %33 to <8 x i16>*
-  %wide.load.7 = load <8 x i16>, <8 x i16>* %34, align 2
-  %35 = sext <8 x i16> %wide.load.7 to <8 x i32>
+  %17 = add i32 %16, %13
+  %18 = getelementptr inbounds i16, ptr %x, i32 40
+  %wide.load.5 = load <8 x i16>, ptr %18, align 2
+  %19 = sext <8 x i16> %wide.load.5 to <8 x i32>
+  %20 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %19)
+  %21 = add i32 %20, %17
+  %22 = getelementptr inbounds i16, ptr %x, i32 48
+  %wide.load.6 = load <8 x i16>, ptr %22, align 2
+  %23 = sext <8 x i16> %wide.load.6 to <8 x i32>
+  %24 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %23)
+  %25 = add i32 %24, %21
+  %26 = getelementptr inbounds i16, ptr %x, i32 56
+  %wide.load.7 = load <8 x i16>, ptr %26, align 2
+  %27 = sext <8 x i16> %wide.load.7 to <8 x i32>
+  %28 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %27)
+  %29 = add i32 %28, %25
+  %30 = getelementptr inbounds i16, ptr %x, i32 64
+  %wide.load.8 = load <8 x i16>, ptr %30, align 2
+  %31 = sext <8 x i16> %wide.load.8 to <8 x i32>
+  %32 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %31)
+  %33 = add i32 %32, %29
+  %34 = getelementptr inbounds i16, ptr %x, i32 72
+  %wide.load.9 = load <8 x i16>, ptr %34, align 2
+  %35 = sext <8 x i16> %wide.load.9 to <8 x i32>
   %36 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %35)
-  %37 = add i32 %36, %32
-  %38 = getelementptr inbounds i16, i16* %x, i32 64
-  %39 = bitcast i16* %38 to <8 x i16>*
-  %wide.load.8 = load <8 x i16>, <8 x i16>* %39, align 2
-  %40 = sext <8 x i16> %wide.load.8 to <8 x i32>
-  %41 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %40)
-  %42 = add i32 %41, %37
-  %43 = getelementptr inbounds i16, i16* %x, i32 72
-  %44 = bitcast i16* %43 to <8 x i16>*
-  %wide.load.9 = load <8 x i16>, <8 x i16>* %44, align 2
-  %45 = sext <8 x i16> %wide.load.9 to <8 x i32>
-  %46 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %45)
-  %47 = add i32 %46, %42
-  %48 = getelementptr inbounds i16, i16* %x, i32 80
-  %49 = bitcast i16* %48 to <8 x i16>*
-  %wide.load.10 = load <8 x i16>, <8 x i16>* %49, align 2
-  %50 = sext <8 x i16> %wide.load.10 to <8 x i32>
-  %51 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %50)
-  %52 = add i32 %51, %47
-  %53 = getelementptr inbounds i16, i16* %x, i32 88
-  %54 = bitcast i16* %53 to <8 x i16>*
-  %wide.load.11 = load <8 x i16>, <8 x i16>* %54, align 2
-  %55 = sext <8 x i16> %wide.load.11 to <8 x i32>
+  %37 = add i32 %36, %33
+  %38 = getelementptr inbounds i16, ptr %x, i32 80
+  %wide.load.10 = load <8 x i16>, ptr %38, align 2
+  %39 = sext <8 x i16> %wide.load.10 to <8 x i32>
+  %40 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %39)
+  %41 = add i32 %40, %37
+  %42 = getelementptr inbounds i16, ptr %x, i32 88
+  %wide.load.11 = load <8 x i16>, ptr %42, align 2
+  %43 = sext <8 x i16> %wide.load.11 to <8 x i32>
+  %44 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %43)
+  %45 = add i32 %44, %41
+  %46 = getelementptr inbounds i16, ptr %x, i32 96
+  %wide.load.12 = load <8 x i16>, ptr %46, align 2
+  %47 = sext <8 x i16> %wide.load.12 to <8 x i32>
+  %48 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %47)
+  %49 = add i32 %48, %45
+  %50 = getelementptr inbounds i16, ptr %x, i32 104
+  %wide.load.13 = load <8 x i16>, ptr %50, align 2
+  %51 = sext <8 x i16> %wide.load.13 to <8 x i32>
+  %52 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %51)
+  %53 = add i32 %52, %49
+  %54 = getelementptr inbounds i16, ptr %x, i32 112
+  %wide.load.14 = load <8 x i16>, ptr %54, align 2
+  %55 = sext <8 x i16> %wide.load.14 to <8 x i32>
   %56 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %55)
-  %57 = add i32 %56, %52
-  %58 = getelementptr inbounds i16, i16* %x, i32 96
-  %59 = bitcast i16* %58 to <8 x i16>*
-  %wide.load.12 = load <8 x i16>, <8 x i16>* %59, align 2
-  %60 = sext <8 x i16> %wide.load.12 to <8 x i32>
-  %61 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %60)
-  %62 = add i32 %61, %57
-  %63 = getelementptr inbounds i16, i16* %x, i32 104
-  %64 = bitcast i16* %63 to <8 x i16>*
-  %wide.load.13 = load <8 x i16>, <8 x i16>* %64, align 2
-  %65 = sext <8 x i16> %wide.load.13 to <8 x i32>
-  %66 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %65)
-  %67 = add i32 %66, %62
-  %68 = getelementptr inbounds i16, i16* %x, i32 112
-  %69 = bitcast i16* %68 to <8 x i16>*
-  %wide.load.14 = load <8 x i16>, <8 x i16>* %69, align 2
-  %70 = sext <8 x i16> %wide.load.14 to <8 x i32>
-  %71 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %70)
-  %72 = add i32 %71, %67
-  %73 = getelementptr inbounds i16, i16* %x, i32 120
-  %74 = bitcast i16* %73 to <8 x i16>*
-  %wide.load.15 = load <8 x i16>, <8 x i16>* %74, align 2
-  %75 = sext <8 x i16> %wide.load.15 to <8 x i32>
-  %76 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %75)
-  %77 = add i32 %76, %72
-  ret i32 %77
+  %57 = add i32 %56, %53
+  %58 = getelementptr inbounds i16, ptr %x, i32 120
+  %wide.load.15 = load <8 x i16>, ptr %58, align 2
+  %59 = sext <8 x i16> %wide.load.15 to <8 x i32>
+  %60 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %59)
+  %61 = add i32 %60, %57
+  ret i32 %61
 }
 
-define i32 @addv2i32i8(i8* %x) {
+define i32 @addv2i32i8(ptr %x) {
 ; CHECK-LABEL: addv2i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrb r1, [r0]
@@ -747,58 +682,55 @@ define i32 @addv2i32i8(i8* %x) {
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i8, i8* %x, align 1
+  %0 = load i8, ptr %x, align 1
   %conv = zext i8 %0 to i32
-  %arrayidx.1 = getelementptr inbounds i8, i8* %x, i32 1
-  %1 = load i8, i8* %arrayidx.1, align 1
+  %arrayidx.1 = getelementptr inbounds i8, ptr %x, i32 1
+  %1 = load i8, ptr %arrayidx.1, align 1
   %conv.1 = zext i8 %1 to i32
   %add.1 = add nuw nsw i32 %conv, %conv.1
   ret i32 %add.1
 }
 
-define i32 @addv4i32i8(i8* %x) {
+define i32 @addv4i32i8(ptr %x) {
 ; CHECK-LABEL: addv4i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u32 q0, [r0]
 ; CHECK-NEXT:    vaddv.u32 r0, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <4 x i8>*
-  %1 = load <4 x i8>, <4 x i8>* %0, align 1
-  %2 = zext <4 x i8> %1 to <4 x i32>
-  %3 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %2)
-  ret i32 %3
+  %0 = load <4 x i8>, ptr %x, align 1
+  %1 = zext <4 x i8> %0 to <4 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %1)
+  ret i32 %2
 }
 
-define i32 @addv8i32i8(i8* %x) {
+define i32 @addv8i32i8(ptr %x) {
 ; CHECK-LABEL: addv8i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u16 q0, [r0]
 ; CHECK-NEXT:    vaddv.u16 r0, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <8 x i8>*
-  %1 = load <8 x i8>, <8 x i8>* %0, align 1
-  %2 = zext <8 x i8> %1 to <8 x i32>
-  %3 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %2)
-  ret i32 %3
+  %0 = load <8 x i8>, ptr %x, align 1
+  %1 = zext <8 x i8> %0 to <8 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %1)
+  ret i32 %2
 }
 
-define i32 @addv16i32i8(i8* %x) {
+define i32 @addv16i32i8(ptr %x) {
 ; CHECK-LABEL: addv16i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q0, [r0]
 ; CHECK-NEXT:    vaddv.u8 r0, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0, align 1
-  %2 = zext <16 x i8> %1 to <16 x i32>
-  %3 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %2)
-  ret i32 %3
+  %0 = load <16 x i8>, ptr %x, align 1
+  %1 = zext <16 x i8> %0 to <16 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %1)
+  ret i32 %2
 }
 
-define i32 @addv24i32i8(i8* %x) {
+define i32 @addv24i32i8(ptr %x) {
 ; CHECK-LABEL: addv24i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q1, [r0]
@@ -807,20 +739,18 @@ define i32 @addv24i32i8(i8* %x) {
 ; CHECK-NEXT:    vaddva.u16 r0, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0, align 1
-  %2 = zext <16 x i8> %1 to <16 x i32>
-  %arrayidx.16 = getelementptr inbounds i8, i8* %x, i32 16
-  %3 = bitcast i8* %arrayidx.16 to <8 x i8>*
-  %4 = load <8 x i8>, <8 x i8>* %3, align 1
-  %5 = zext <8 x i8> %4 to <8 x i32>
-  %6 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %2)
-  %7 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %5)
-  %op.rdx = add nuw nsw i32 %6, %7
+  %0 = load <16 x i8>, ptr %x, align 1
+  %1 = zext <16 x i8> %0 to <16 x i32>
+  %arrayidx.16 = getelementptr inbounds i8, ptr %x, i32 16
+  %2 = load <8 x i8>, ptr %arrayidx.16, align 1
+  %3 = zext <8 x i8> %2 to <8 x i32>
+  %4 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %1)
+  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %3)
+  %op.rdx = add nuw nsw i32 %4, %5
   ret i32 %op.rdx
 }
 
-define i32 @addv32i32i8(i8* %x) {
+define i32 @addv32i32i8(ptr %x) {
 ; CHECK-LABEL: addv32i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u32 q1, [r0]
@@ -842,14 +772,13 @@ define i32 @addv32i32i8(i8* %x) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <32 x i8>*
-  %1 = load <32 x i8>, <32 x i8>* %0, align 1
-  %2 = zext <32 x i8> %1 to <32 x i32>
-  %3 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %2)
-  ret i32 %3
+  %0 = load <32 x i8>, ptr %x, align 1
+  %1 = zext <32 x i8> %0 to <32 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %1)
+  ret i32 %2
 }
 
-define i32 @addv64i32i8(i8* %x) {
+define i32 @addv64i32i8(ptr %x) {
 ; CHECK-LABEL: addv64i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u32 q1, [r0]
@@ -884,48 +813,44 @@ define i32 @addv64i32i8(i8* %x) {
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <32 x i8>*
-  %1 = load <32 x i8>, <32 x i8>* %0, align 1
-  %2 = zext <32 x i8> %1 to <32 x i32>
-  %arrayidx.32 = getelementptr inbounds i8, i8* %x, i32 32
-  %3 = bitcast i8* %arrayidx.32 to <16 x i8>*
-  %4 = load <16 x i8>, <16 x i8>* %3, align 1
-  %5 = zext <16 x i8> %4 to <16 x i32>
-  %arrayidx.48 = getelementptr inbounds i8, i8* %x, i32 48
-  %6 = bitcast i8* %arrayidx.48 to <8 x i8>*
-  %7 = load <8 x i8>, <8 x i8>* %6, align 1
-  %8 = zext <8 x i8> %7 to <8 x i32>
-  %arrayidx.56 = getelementptr inbounds i8, i8* %x, i32 56
-  %9 = bitcast i8* %arrayidx.56 to <4 x i8>*
-  %10 = load <4 x i8>, <4 x i8>* %9, align 1
-  %11 = zext <4 x i8> %10 to <4 x i32>
-  %arrayidx.60 = getelementptr inbounds i8, i8* %x, i32 60
-  %12 = load i8, i8* %arrayidx.60, align 1
-  %conv.60 = zext i8 %12 to i32
-  %arrayidx.61 = getelementptr inbounds i8, i8* %x, i32 61
-  %13 = load i8, i8* %arrayidx.61, align 1
-  %conv.61 = zext i8 %13 to i32
-  %arrayidx.62 = getelementptr inbounds i8, i8* %x, i32 62
-  %14 = load i8, i8* %arrayidx.62, align 1
-  %conv.62 = zext i8 %14 to i32
-  %15 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %2)
-  %16 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %5)
-  %op.rdx = add nuw nsw i32 %15, %16
-  %17 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %8)
-  %op.rdx8 = add nuw nsw i32 %op.rdx, %17
-  %18 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %11)
-  %op.rdx9 = add nuw nsw i32 %op.rdx8, %18
-  %19 = add nuw nsw i32 %op.rdx9, %conv.60
-  %20 = add nuw nsw i32 %19, %conv.61
-  %21 = add nuw nsw i32 %20, %conv.62
-  %arrayidx.63 = getelementptr inbounds i8, i8* %x, i32 63
-  %22 = load i8, i8* %arrayidx.63, align 1
-  %conv.63 = zext i8 %22 to i32
-  %add.63 = add nuw nsw i32 %21, %conv.63
+  %0 = load <32 x i8>, ptr %x, align 1
+  %1 = zext <32 x i8> %0 to <32 x i32>
+  %arrayidx.32 = getelementptr inbounds i8, ptr %x, i32 32
+  %2 = load <16 x i8>, ptr %arrayidx.32, align 1
+  %3 = zext <16 x i8> %2 to <16 x i32>
+  %arrayidx.48 = getelementptr inbounds i8, ptr %x, i32 48
+  %4 = load <8 x i8>, ptr %arrayidx.48, align 1
+  %5 = zext <8 x i8> %4 to <8 x i32>
+  %arrayidx.56 = getelementptr inbounds i8, ptr %x, i32 56
+  %6 = load <4 x i8>, ptr %arrayidx.56, align 1
+  %7 = zext <4 x i8> %6 to <4 x i32>
+  %arrayidx.60 = getelementptr inbounds i8, ptr %x, i32 60
+  %8 = load i8, ptr %arrayidx.60, align 1
+  %conv.60 = zext i8 %8 to i32
+  %arrayidx.61 = getelementptr inbounds i8, ptr %x, i32 61
+  %9 = load i8, ptr %arrayidx.61, align 1
+  %conv.61 = zext i8 %9 to i32
+  %arrayidx.62 = getelementptr inbounds i8, ptr %x, i32 62
+  %10 = load i8, ptr %arrayidx.62, align 1
+  %conv.62 = zext i8 %10 to i32
+  %11 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %1)
+  %12 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %3)
+  %op.rdx = add nuw nsw i32 %11, %12
+  %13 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %5)
+  %op.rdx8 = add nuw nsw i32 %op.rdx, %13
+  %14 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %7)
+  %op.rdx9 = add nuw nsw i32 %op.rdx8, %14
+  %15 = add nuw nsw i32 %op.rdx9, %conv.60
+  %16 = add nuw nsw i32 %15, %conv.61
+  %17 = add nuw nsw i32 %16, %conv.62
+  %arrayidx.63 = getelementptr inbounds i8, ptr %x, i32 63
+  %18 = load i8, ptr %arrayidx.63, align 1
+  %conv.63 = zext i8 %18 to i32
+  %add.63 = add nuw nsw i32 %17, %conv.63
   ret i32 %add.63
 }
 
-define i32 @addv128i32i8(i8* %x) {
+define i32 @addv128i32i8(ptr %x) {
 ; CHECK-LABEL: addv128i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q1, [r0]
@@ -947,56 +872,48 @@ define i32 @addv128i32i8(i8* %x) {
 ; CHECK-NEXT:    vaddva.u8 r0, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %0, align 1
-  %1 = zext <16 x i8> %wide.load to <16 x i32>
-  %2 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %1)
-  %3 = getelementptr inbounds i8, i8* %x, i32 16
-  %4 = bitcast i8* %3 to <16 x i8>*
-  %wide.load.1 = load <16 x i8>, <16 x i8>* %4, align 1
-  %5 = zext <16 x i8> %wide.load.1 to <16 x i32>
-  %6 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %5)
-  %7 = add i32 %6, %2
-  %8 = getelementptr inbounds i8, i8* %x, i32 32
-  %9 = bitcast i8* %8 to <16 x i8>*
-  %wide.load.2 = load <16 x i8>, <16 x i8>* %9, align 1
-  %10 = zext <16 x i8> %wide.load.2 to <16 x i32>
-  %11 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %10)
-  %12 = add i32 %11, %7
-  %13 = getelementptr inbounds i8, i8* %x, i32 48
-  %14 = bitcast i8* %13 to <16 x i8>*
-  %wide.load.3 = load <16 x i8>, <16 x i8>* %14, align 1
-  %15 = zext <16 x i8> %wide.load.3 to <16 x i32>
+  %wide.load = load <16 x i8>, ptr %x, align 1
+  %0 = zext <16 x i8> %wide.load to <16 x i32>
+  %1 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %0)
+  %2 = getelementptr inbounds i8, ptr %x, i32 16
+  %wide.load.1 = load <16 x i8>, ptr %2, align 1
+  %3 = zext <16 x i8> %wide.load.1 to <16 x i32>
+  %4 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %3)
+  %5 = add i32 %4, %1
+  %6 = getelementptr inbounds i8, ptr %x, i32 32
+  %wide.load.2 = load <16 x i8>, ptr %6, align 1
+  %7 = zext <16 x i8> %wide.load.2 to <16 x i32>
+  %8 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %7)
+  %9 = add i32 %8, %5
+  %10 = getelementptr inbounds i8, ptr %x, i32 48
+  %wide.load.3 = load <16 x i8>, ptr %10, align 1
+  %11 = zext <16 x i8> %wide.load.3 to <16 x i32>
+  %12 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %11)
+  %13 = add i32 %12, %9
+  %14 = getelementptr inbounds i8, ptr %x, i32 64
+  %wide.load.4 = load <16 x i8>, ptr %14, align 1
+  %15 = zext <16 x i8> %wide.load.4 to <16 x i32>
   %16 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %15)
-  %17 = add i32 %16, %12
-  %18 = getelementptr inbounds i8, i8* %x, i32 64
-  %19 = bitcast i8* %18 to <16 x i8>*
-  %wide.load.4 = load <16 x i8>, <16 x i8>* %19, align 1
-  %20 = zext <16 x i8> %wide.load.4 to <16 x i32>
-  %21 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %20)
-  %22 = add i32 %21, %17
-  %23 = getelementptr inbounds i8, i8* %x, i32 80
-  %24 = bitcast i8* %23 to <16 x i8>*
-  %wide.load.5 = load <16 x i8>, <16 x i8>* %24, align 1
-  %25 = zext <16 x i8> %wide.load.5 to <16 x i32>
-  %26 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %25)
-  %27 = add i32 %26, %22
-  %28 = getelementptr inbounds i8, i8* %x, i32 96
-  %29 = bitcast i8* %28 to <16 x i8>*
-  %wide.load.6 = load <16 x i8>, <16 x i8>* %29, align 1
-  %30 = zext <16 x i8> %wide.load.6 to <16 x i32>
-  %31 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %30)
-  %32 = add i32 %31, %27
-  %33 = getelementptr inbounds i8, i8* %x, i32 112
-  %34 = bitcast i8* %33 to <16 x i8>*
-  %wide.load.7 = load <16 x i8>, <16 x i8>* %34, align 1
-  %35 = zext <16 x i8> %wide.load.7 to <16 x i32>
-  %36 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %35)
-  %37 = add i32 %36, %32
-  ret i32 %37
+  %17 = add i32 %16, %13
+  %18 = getelementptr inbounds i8, ptr %x, i32 80
+  %wide.load.5 = load <16 x i8>, ptr %18, align 1
+  %19 = zext <16 x i8> %wide.load.5 to <16 x i32>
+  %20 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %19)
+  %21 = add i32 %20, %17
+  %22 = getelementptr inbounds i8, ptr %x, i32 96
+  %wide.load.6 = load <16 x i8>, ptr %22, align 1
+  %23 = zext <16 x i8> %wide.load.6 to <16 x i32>
+  %24 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %23)
+  %25 = add i32 %24, %21
+  %26 = getelementptr inbounds i8, ptr %x, i32 112
+  %wide.load.7 = load <16 x i8>, ptr %26, align 1
+  %27 = zext <16 x i8> %wide.load.7 to <16 x i32>
+  %28 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %27)
+  %29 = add i32 %28, %25
+  ret i32 %29
 }
 
-define signext i16 @addv2i16i16(i16* %x) {
+define signext i16 @addv2i16i16(ptr %x) {
 ; CHECK-LABEL: addv2i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrh r1, [r0]
@@ -1005,14 +922,14 @@ define signext i16 @addv2i16i16(i16* %x) {
 ; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %x, align 2
-  %arrayidx.1 = getelementptr inbounds i16, i16* %x, i32 1
-  %1 = load i16, i16* %arrayidx.1, align 2
+  %0 = load i16, ptr %x, align 2
+  %arrayidx.1 = getelementptr inbounds i16, ptr %x, i32 1
+  %1 = load i16, ptr %arrayidx.1, align 2
   %add.1 = add i16 %1, %0
   ret i16 %add.1
 }
 
-define signext i16 @addv4i16i16(i16* %x) {
+define signext i16 @addv4i16i16(ptr %x) {
 ; CHECK-LABEL: addv4i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u32 q0, [r0]
@@ -1020,13 +937,12 @@ define signext i16 @addv4i16i16(i16* %x) {
 ; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <4 x i16>*
-  %1 = load <4 x i16>, <4 x i16>* %0, align 2
-  %2 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %1)
-  ret i16 %2
+  %0 = load <4 x i16>, ptr %x, align 2
+  %1 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %0)
+  ret i16 %1
 }
 
-define signext i16 @addv8i16i16(i16* %x) {
+define signext i16 @addv8i16i16(ptr %x) {
 ; CHECK-LABEL: addv8i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
@@ -1034,13 +950,12 @@ define signext i16 @addv8i16i16(i16* %x) {
 ; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <8 x i16>*
-  %1 = load <8 x i16>, <8 x i16>* %0, align 2
-  %2 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %1)
-  ret i16 %2
+  %0 = load <8 x i16>, ptr %x, align 2
+  %1 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %0)
+  ret i16 %1
 }
 
-define signext i16 @addv16i16i16(i16* %x) {
+define signext i16 @addv16i16i16(ptr %x) {
 ; CHECK-LABEL: addv16i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q1, [r0]
@@ -1050,13 +965,12 @@ define signext i16 @addv16i16i16(i16* %x) {
 ; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <16 x i16>*
-  %1 = load <16 x i16>, <16 x i16>* %0, align 2
-  %2 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %1)
-  ret i16 %2
+  %0 = load <16 x i16>, ptr %x, align 2
+  %1 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %0)
+  ret i16 %1
 }
 
-define signext i16 @addv24i16i16(i16* %x) {
+define signext i16 @addv24i16i16(ptr %x) {
 ; CHECK-LABEL: addv24i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q1, [r0]
@@ -1068,18 +982,16 @@ define signext i16 @addv24i16i16(i16* %x) {
 ; CHECK-NEXT:    sxth r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <8 x i16>*
-  %1 = load <8 x i16>, <8 x i16>* %0, align 2
-  %arrayidx.8 = getelementptr inbounds i16, i16* %x, i32 8
-  %2 = bitcast i16* %arrayidx.8 to <16 x i16>*
-  %3 = load <16 x i16>, <16 x i16>* %2, align 2
-  %4 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %3)
-  %5 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %1)
-  %op.rdx = add i16 %4, %5
+  %0 = load <8 x i16>, ptr %x, align 2
+  %arrayidx.8 = getelementptr inbounds i16, ptr %x, i32 8
+  %1 = load <16 x i16>, ptr %arrayidx.8, align 2
+  %2 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %1)
+  %3 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %0)
+  %op.rdx = add i16 %2, %3
   ret i16 %op.rdx
 }
 
-define signext i16 @addv32i16i16(i16* %x) {
+define signext i16 @addv32i16i16(ptr %x) {
 ; CHECK-LABEL: addv32i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q1, [r0]
@@ -1093,13 +1005,12 @@ define signext i16 @addv32i16i16(i16* %x) {
 ; CHECK-NEXT:    sxth r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <32 x i16>*
-  %1 = load <32 x i16>, <32 x i16>* %0, align 2
-  %2 = call i16 @llvm.vector.reduce.add.v32i16(<32 x i16> %1)
-  ret i16 %2
+  %0 = load <32 x i16>, ptr %x, align 2
+  %1 = call i16 @llvm.vector.reduce.add.v32i16(<32 x i16> %0)
+  ret i16 %1
 }
 
-define signext i16 @addv64i16i16(i16* %x) {
+define signext i16 @addv64i16i16(ptr %x) {
 ; CHECK-LABEL: addv64i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q1, [r0]
@@ -1121,13 +1032,12 @@ define signext i16 @addv64i16i16(i16* %x) {
 ; CHECK-NEXT:    sxth r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <64 x i16>*
-  %1 = load <64 x i16>, <64 x i16>* %0, align 2
-  %2 = call i16 @llvm.vector.reduce.add.v64i16(<64 x i16> %1)
-  ret i16 %2
+  %0 = load <64 x i16>, ptr %x, align 2
+  %1 = call i16 @llvm.vector.reduce.add.v64i16(<64 x i16> %0)
+  ret i16 %1
 }
 
-define signext i16 @addv128i16i16(i16* %x) {
+define signext i16 @addv128i16i16(ptr %x) {
 ; CHECK-LABEL: addv128i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q1, [r0]
@@ -1165,88 +1075,72 @@ define signext i16 @addv128i16i16(i16* %x) {
 ; CHECK-NEXT:    sxth r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %0, align 2
-  %1 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load)
-  %2 = getelementptr inbounds i16, i16* %x, i32 8
-  %3 = bitcast i16* %2 to <8 x i16>*
-  %wide.load.1 = load <8 x i16>, <8 x i16>* %3, align 2
-  %4 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.1)
-  %5 = add i16 %4, %1
-  %6 = getelementptr inbounds i16, i16* %x, i32 16
-  %7 = bitcast i16* %6 to <8 x i16>*
-  %wide.load.2 = load <8 x i16>, <8 x i16>* %7, align 2
-  %8 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.2)
-  %9 = add i16 %8, %5
-  %10 = getelementptr inbounds i16, i16* %x, i32 24
-  %11 = bitcast i16* %10 to <8 x i16>*
-  %wide.load.3 = load <8 x i16>, <8 x i16>* %11, align 2
-  %12 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.3)
-  %13 = add i16 %12, %9
-  %14 = getelementptr inbounds i16, i16* %x, i32 32
-  %15 = bitcast i16* %14 to <8 x i16>*
-  %wide.load.4 = load <8 x i16>, <8 x i16>* %15, align 2
-  %16 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.4)
-  %17 = add i16 %16, %13
-  %18 = getelementptr inbounds i16, i16* %x, i32 40
-  %19 = bitcast i16* %18 to <8 x i16>*
-  %wide.load.5 = load <8 x i16>, <8 x i16>* %19, align 2
-  %20 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.5)
-  %21 = add i16 %20, %17
-  %22 = getelementptr inbounds i16, i16* %x, i32 48
-  %23 = bitcast i16* %22 to <8 x i16>*
-  %wide.load.6 = load <8 x i16>, <8 x i16>* %23, align 2
-  %24 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.6)
-  %25 = add i16 %24, %21
-  %26 = getelementptr inbounds i16, i16* %x, i32 56
-  %27 = bitcast i16* %26 to <8 x i16>*
-  %wide.load.7 = load <8 x i16>, <8 x i16>* %27, align 2
-  %28 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.7)
-  %29 = add i16 %28, %25
-  %30 = getelementptr inbounds i16, i16* %x, i32 64
-  %31 = bitcast i16* %30 to <8 x i16>*
-  %wide.load.8 = load <8 x i16>, <8 x i16>* %31, align 2
-  %32 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.8)
-  %33 = add i16 %32, %29
-  %34 = getelementptr inbounds i16, i16* %x, i32 72
-  %35 = bitcast i16* %34 to <8 x i16>*
-  %wide.load.9 = load <8 x i16>, <8 x i16>* %35, align 2
-  %36 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.9)
-  %37 = add i16 %36, %33
-  %38 = getelementptr inbounds i16, i16* %x, i32 80
-  %39 = bitcast i16* %38 to <8 x i16>*
-  %wide.load.10 = load <8 x i16>, <8 x i16>* %39, align 2
-  %40 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.10)
-  %41 = add i16 %40, %37
-  %42 = getelementptr inbounds i16, i16* %x, i32 88
-  %43 = bitcast i16* %42 to <8 x i16>*
-  %wide.load.11 = load <8 x i16>, <8 x i16>* %43, align 2
-  %44 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.11)
-  %45 = add i16 %44, %41
-  %46 = getelementptr inbounds i16, i16* %x, i32 96
-  %47 = bitcast i16* %46 to <8 x i16>*
-  %wide.load.12 = load <8 x i16>, <8 x i16>* %47, align 2
-  %48 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.12)
-  %49 = add i16 %48, %45
-  %50 = getelementptr inbounds i16, i16* %x, i32 104
-  %51 = bitcast i16* %50 to <8 x i16>*
-  %wide.load.13 = load <8 x i16>, <8 x i16>* %51, align 2
-  %52 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.13)
-  %53 = add i16 %52, %49
-  %54 = getelementptr inbounds i16, i16* %x, i32 112
-  %55 = bitcast i16* %54 to <8 x i16>*
-  %wide.load.14 = load <8 x i16>, <8 x i16>* %55, align 2
-  %56 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.14)
-  %57 = add i16 %56, %53
-  %58 = getelementptr inbounds i16, i16* %x, i32 120
-  %59 = bitcast i16* %58 to <8 x i16>*
-  %wide.load.15 = load <8 x i16>, <8 x i16>* %59, align 2
-  %60 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.15)
-  %61 = add i16 %60, %57
-  ret i16 %61
+  %wide.load = load <8 x i16>, ptr %x, align 2
+  %0 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load)
+  %1 = getelementptr inbounds i16, ptr %x, i32 8
+  %wide.load.1 = load <8 x i16>, ptr %1, align 2
+  %2 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.1)
+  %3 = add i16 %2, %0
+  %4 = getelementptr inbounds i16, ptr %x, i32 16
+  %wide.load.2 = load <8 x i16>, ptr %4, align 2
+  %5 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.2)
+  %6 = add i16 %5, %3
+  %7 = getelementptr inbounds i16, ptr %x, i32 24
+  %wide.load.3 = load <8 x i16>, ptr %7, align 2
+  %8 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.3)
+  %9 = add i16 %8, %6
+  %10 = getelementptr inbounds i16, ptr %x, i32 32
+  %wide.load.4 = load <8 x i16>, ptr %10, align 2
+  %11 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.4)
+  %12 = add i16 %11, %9
+  %13 = getelementptr inbounds i16, ptr %x, i32 40
+  %wide.load.5 = load <8 x i16>, ptr %13, align 2
+  %14 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.5)
+  %15 = add i16 %14, %12
+  %16 = getelementptr inbounds i16, ptr %x, i32 48
+  %wide.load.6 = load <8 x i16>, ptr %16, align 2
+  %17 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.6)
+  %18 = add i16 %17, %15
+  %19 = getelementptr inbounds i16, ptr %x, i32 56
+  %wide.load.7 = load <8 x i16>, ptr %19, align 2
+  %20 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.7)
+  %21 = add i16 %20, %18
+  %22 = getelementptr inbounds i16, ptr %x, i32 64
+  %wide.load.8 = load <8 x i16>, ptr %22, align 2
+  %23 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.8)
+  %24 = add i16 %23, %21
+  %25 = getelementptr inbounds i16, ptr %x, i32 72
+  %wide.load.9 = load <8 x i16>, ptr %25, align 2
+  %26 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.9)
+  %27 = add i16 %26, %24
+  %28 = getelementptr inbounds i16, ptr %x, i32 80
+  %wide.load.10 = load <8 x i16>, ptr %28, align 2
+  %29 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.10)
+  %30 = add i16 %29, %27
+  %31 = getelementptr inbounds i16, ptr %x, i32 88
+  %wide.load.11 = load <8 x i16>, ptr %31, align 2
+  %32 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.11)
+  %33 = add i16 %32, %30
+  %34 = getelementptr inbounds i16, ptr %x, i32 96
+  %wide.load.12 = load <8 x i16>, ptr %34, align 2
+  %35 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.12)
+  %36 = add i16 %35, %33
+  %37 = getelementptr inbounds i16, ptr %x, i32 104
+  %wide.load.13 = load <8 x i16>, ptr %37, align 2
+  %38 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.13)
+  %39 = add i16 %38, %36
+  %40 = getelementptr inbounds i16, ptr %x, i32 112
+  %wide.load.14 = load <8 x i16>, ptr %40, align 2
+  %41 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.14)
+  %42 = add i16 %41, %39
+  %43 = getelementptr inbounds i16, ptr %x, i32 120
+  %wide.load.15 = load <8 x i16>, ptr %43, align 2
+  %44 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %wide.load.15)
+  %45 = add i16 %44, %42
+  ret i16 %45
 }
 
-define zeroext i8 @addv2i8i8(i8* %x) {
+define zeroext i8 @addv2i8i8(ptr %x) {
 ; CHECK-LABEL: addv2i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrb r1, [r0]
@@ -1255,14 +1149,14 @@ define zeroext i8 @addv2i8i8(i8* %x) {
 ; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i8, i8* %x, align 1
-  %arrayidx.1 = getelementptr inbounds i8, i8* %x, i32 1
-  %1 = load i8, i8* %arrayidx.1, align 1
+  %0 = load i8, ptr %x, align 1
+  %arrayidx.1 = getelementptr inbounds i8, ptr %x, i32 1
+  %1 = load i8, ptr %arrayidx.1, align 1
   %add.1 = add i8 %1, %0
   ret i8 %add.1
 }
 
-define zeroext i8 @addv4i8i8(i8* %x) {
+define zeroext i8 @addv4i8i8(ptr %x) {
 ; CHECK-LABEL: addv4i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u32 q0, [r0]
@@ -1270,13 +1164,12 @@ define zeroext i8 @addv4i8i8(i8* %x) {
 ; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <4 x i8>*
-  %1 = load <4 x i8>, <4 x i8>* %0, align 1
-  %2 = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> %1)
-  ret i8 %2
+  %0 = load <4 x i8>, ptr %x, align 1
+  %1 = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> %0)
+  ret i8 %1
 }
 
-define zeroext i8 @addv8i8i8(i8* %x) {
+define zeroext i8 @addv8i8i8(ptr %x) {
 ; CHECK-LABEL: addv8i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u16 q0, [r0]
@@ -1284,13 +1177,12 @@ define zeroext i8 @addv8i8i8(i8* %x) {
 ; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <8 x i8>*
-  %1 = load <8 x i8>, <8 x i8>* %0, align 1
-  %2 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %1)
-  ret i8 %2
+  %0 = load <8 x i8>, ptr %x, align 1
+  %1 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %0)
+  ret i8 %1
 }
 
-define zeroext i8 @addv16i8i8(i8* %x) {
+define zeroext i8 @addv16i8i8(ptr %x) {
 ; CHECK-LABEL: addv16i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q0, [r0]
@@ -1298,13 +1190,12 @@ define zeroext i8 @addv16i8i8(i8* %x) {
 ; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0, align 1
-  %2 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %1)
-  ret i8 %2
+  %0 = load <16 x i8>, ptr %x, align 1
+  %1 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %0)
+  ret i8 %1
 }
 
-define zeroext i8 @addv24i8i8(i8* %x) {
+define zeroext i8 @addv24i8i8(ptr %x) {
 ; CHECK-LABEL: addv24i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u16 q1, [r0]
@@ -1314,18 +1205,16 @@ define zeroext i8 @addv24i8i8(i8* %x) {
 ; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <8 x i8>*
-  %1 = load <8 x i8>, <8 x i8>* %0, align 1
-  %arrayidx.8 = getelementptr inbounds i8, i8* %x, i32 8
-  %2 = bitcast i8* %arrayidx.8 to <16 x i8>*
-  %3 = load <16 x i8>, <16 x i8>* %2, align 1
-  %4 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %3)
-  %5 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %1)
-  %op.rdx = add i8 %4, %5
+  %0 = load <8 x i8>, ptr %x, align 1
+  %arrayidx.8 = getelementptr inbounds i8, ptr %x, i32 8
+  %1 = load <16 x i8>, ptr %arrayidx.8, align 1
+  %2 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %1)
+  %3 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %0)
+  %op.rdx = add i8 %2, %3
   ret i8 %op.rdx
 }
 
-define zeroext i8 @addv32i8i8(i8* %x) {
+define zeroext i8 @addv32i8i8(ptr %x) {
 ; CHECK-LABEL: addv32i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q1, [r0]
@@ -1335,13 +1224,12 @@ define zeroext i8 @addv32i8i8(i8* %x) {
 ; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <32 x i8>*
-  %1 = load <32 x i8>, <32 x i8>* %0, align 1
-  %2 = call i8 @llvm.vector.reduce.add.v32i8(<32 x i8> %1)
-  ret i8 %2
+  %0 = load <32 x i8>, ptr %x, align 1
+  %1 = call i8 @llvm.vector.reduce.add.v32i8(<32 x i8> %0)
+  ret i8 %1
 }
 
-define zeroext i8 @addv64i8i8(i8* %x) {
+define zeroext i8 @addv64i8i8(ptr %x) {
 ; CHECK-LABEL: addv64i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q1, [r0]
@@ -1355,13 +1243,12 @@ define zeroext i8 @addv64i8i8(i8* %x) {
 ; CHECK-NEXT:    uxtb r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <64 x i8>*
-  %1 = load <64 x i8>, <64 x i8>* %0, align 1
-  %2 = call i8 @llvm.vector.reduce.add.v64i8(<64 x i8> %1)
-  ret i8 %2
+  %0 = load <64 x i8>, ptr %x, align 1
+  %1 = call i8 @llvm.vector.reduce.add.v64i8(<64 x i8> %0)
+  ret i8 %1
 }
 
-define zeroext i8 @addv128i8i8(i8* %x) {
+define zeroext i8 @addv128i8i8(ptr %x) {
 ; CHECK-LABEL: addv128i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q1, [r0]
@@ -1383,71 +1270,63 @@ define zeroext i8 @addv128i8i8(i8* %x) {
 ; CHECK-NEXT:    uxtb r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %0, align 1
-  %1 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load)
-  %2 = getelementptr inbounds i8, i8* %x, i32 16
-  %3 = bitcast i8* %2 to <16 x i8>*
-  %wide.load.1 = load <16 x i8>, <16 x i8>* %3, align 1
-  %4 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.1)
-  %5 = add i8 %4, %1
-  %6 = getelementptr inbounds i8, i8* %x, i32 32
-  %7 = bitcast i8* %6 to <16 x i8>*
-  %wide.load.2 = load <16 x i8>, <16 x i8>* %7, align 1
-  %8 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.2)
-  %9 = add i8 %8, %5
-  %10 = getelementptr inbounds i8, i8* %x, i32 48
-  %11 = bitcast i8* %10 to <16 x i8>*
-  %wide.load.3 = load <16 x i8>, <16 x i8>* %11, align 1
-  %12 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.3)
-  %13 = add i8 %12, %9
-  %14 = getelementptr inbounds i8, i8* %x, i32 64
-  %15 = bitcast i8* %14 to <16 x i8>*
-  %wide.load.4 = load <16 x i8>, <16 x i8>* %15, align 1
-  %16 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.4)
-  %17 = add i8 %16, %13
-  %18 = getelementptr inbounds i8, i8* %x, i32 80
-  %19 = bitcast i8* %18 to <16 x i8>*
-  %wide.load.5 = load <16 x i8>, <16 x i8>* %19, align 1
-  %20 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.5)
-  %21 = add i8 %20, %17
-  %22 = getelementptr inbounds i8, i8* %x, i32 96
-  %23 = bitcast i8* %22 to <16 x i8>*
-  %wide.load.6 = load <16 x i8>, <16 x i8>* %23, align 1
-  %24 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.6)
-  %25 = add i8 %24, %21
-  %26 = getelementptr inbounds i8, i8* %x, i32 112
-  %27 = bitcast i8* %26 to <16 x i8>*
-  %wide.load.7 = load <16 x i8>, <16 x i8>* %27, align 1
-  %28 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.7)
-  %29 = add i8 %28, %25
-  ret i8 %29
+  %wide.load = load <16 x i8>, ptr %x, align 1
+  %0 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load)
+  %1 = getelementptr inbounds i8, ptr %x, i32 16
+  %wide.load.1 = load <16 x i8>, ptr %1, align 1
+  %2 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.1)
+  %3 = add i8 %2, %0
+  %4 = getelementptr inbounds i8, ptr %x, i32 32
+  %wide.load.2 = load <16 x i8>, ptr %4, align 1
+  %5 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.2)
+  %6 = add i8 %5, %3
+  %7 = getelementptr inbounds i8, ptr %x, i32 48
+  %wide.load.3 = load <16 x i8>, ptr %7, align 1
+  %8 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.3)
+  %9 = add i8 %8, %6
+  %10 = getelementptr inbounds i8, ptr %x, i32 64
+  %wide.load.4 = load <16 x i8>, ptr %10, align 1
+  %11 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.4)
+  %12 = add i8 %11, %9
+  %13 = getelementptr inbounds i8, ptr %x, i32 80
+  %wide.load.5 = load <16 x i8>, ptr %13, align 1
+  %14 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.5)
+  %15 = add i8 %14, %12
+  %16 = getelementptr inbounds i8, ptr %x, i32 96
+  %wide.load.6 = load <16 x i8>, ptr %16, align 1
+  %17 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.6)
+  %18 = add i8 %17, %15
+  %19 = getelementptr inbounds i8, ptr %x, i32 112
+  %wide.load.7 = load <16 x i8>, ptr %19, align 1
+  %20 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %wide.load.7)
+  %21 = add i8 %20, %18
+  ret i8 %21
 }
 
 
 
-define i32 @mlav2i32i32(i32* %x, i32* %y) {
+define i32 @mlav2i32i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav2i32i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrd r2, r0, [r0]
-; CHECK-NEXT:    ldrd r3, r1, [r1]
-; CHECK-NEXT:    muls r2, r3, r2
-; CHECK-NEXT:    mla r0, r1, r0, r2
+; CHECK-NEXT:    ldrd r0, r2, [r0]
+; CHECK-NEXT:    ldrd r1, r3, [r1]
+; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    mla r0, r3, r2, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %x, align 4
-  %1 = load i32, i32* %y, align 4
+  %0 = load i32, ptr %x, align 4
+  %1 = load i32, ptr %y, align 4
   %mul = mul nsw i32 %1, %0
-  %arrayidx.1 = getelementptr inbounds i32, i32* %x, i32 1
-  %2 = load i32, i32* %arrayidx.1, align 4
-  %arrayidx1.1 = getelementptr inbounds i32, i32* %y, i32 1
-  %3 = load i32, i32* %arrayidx1.1, align 4
+  %arrayidx.1 = getelementptr inbounds i32, ptr %x, i32 1
+  %2 = load i32, ptr %arrayidx.1, align 4
+  %arrayidx1.1 = getelementptr inbounds i32, ptr %y, i32 1
+  %3 = load i32, ptr %arrayidx1.1, align 4
   %mul.1 = mul nsw i32 %3, %2
   %add.1 = add nsw i32 %mul.1, %mul
   ret i32 %add.1
 }
 
-define i32 @mlav4i32i32(i32* %x, i32* %y) {
+define i32 @mlav4i32i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav4i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -1455,16 +1334,14 @@ define i32 @mlav4i32i32(i32* %x, i32* %y) {
 ; CHECK-NEXT:    vmlav.u32 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <4 x i32>*
-  %1 = load <4 x i32>, <4 x i32>* %0, align 4
-  %2 = bitcast i32* %y to <4 x i32>*
-  %3 = load <4 x i32>, <4 x i32>* %2, align 4
-  %4 = mul nsw <4 x i32> %3, %1
-  %5 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %4)
-  ret i32 %5
+  %0 = load <4 x i32>, ptr %x, align 4
+  %1 = load <4 x i32>, ptr %y, align 4
+  %2 = mul nsw <4 x i32> %1, %0
+  %3 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %2)
+  ret i32 %3
 }
 
-define i32 @mlav8i32i32(i32* %x, i32* %y) {
+define i32 @mlav8i32i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav8i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -1476,16 +1353,14 @@ define i32 @mlav8i32i32(i32* %x, i32* %y) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <8 x i32>*
-  %1 = load <8 x i32>, <8 x i32>* %0, align 4
-  %2 = bitcast i32* %y to <8 x i32>*
-  %3 = load <8 x i32>, <8 x i32>* %2, align 4
-  %4 = mul nsw <8 x i32> %3, %1
-  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
-  ret i32 %5
+  %0 = load <8 x i32>, ptr %x, align 4
+  %1 = load <8 x i32>, ptr %y, align 4
+  %2 = mul nsw <8 x i32> %1, %0
+  %3 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %2)
+  ret i32 %3
 }
 
-define i32 @mlav16i32i32(i32* %x, i32* %y) {
+define i32 @mlav16i32i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav16i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -1503,16 +1378,14 @@ define i32 @mlav16i32i32(i32* %x, i32* %y) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <16 x i32>*
-  %1 = load <16 x i32>, <16 x i32>* %0, align 4
-  %2 = bitcast i32* %y to <16 x i32>*
-  %3 = load <16 x i32>, <16 x i32>* %2, align 4
-  %4 = mul nsw <16 x i32> %3, %1
-  %5 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %4)
-  ret i32 %5
+  %0 = load <16 x i32>, ptr %x, align 4
+  %1 = load <16 x i32>, ptr %y, align 4
+  %2 = mul nsw <16 x i32> %1, %0
+  %3 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %2)
+  ret i32 %3
 }
 
-define i32 @mlav24i32i32(i32* %x, i32* %y) {
+define i32 @mlav24i32i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav24i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -1536,25 +1409,21 @@ define i32 @mlav24i32i32(i32* %x, i32* %y) {
 ; CHECK-NEXT:    vmlava.u32 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <8 x i32>*
-  %1 = load <8 x i32>, <8 x i32>* %0, align 4
-  %2 = bitcast i32* %y to <8 x i32>*
-  %3 = load <8 x i32>, <8 x i32>* %2, align 4
-  %4 = mul nsw <8 x i32> %3, %1
-  %arrayidx.8 = getelementptr inbounds i32, i32* %x, i32 8
-  %arrayidx1.8 = getelementptr inbounds i32, i32* %y, i32 8
-  %5 = bitcast i32* %arrayidx.8 to <16 x i32>*
-  %6 = load <16 x i32>, <16 x i32>* %5, align 4
-  %7 = bitcast i32* %arrayidx1.8 to <16 x i32>*
-  %8 = load <16 x i32>, <16 x i32>* %7, align 4
-  %9 = mul nsw <16 x i32> %8, %6
-  %10 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %9)
-  %11 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
-  %op.rdx = add nsw i32 %10, %11
+  %0 = load <8 x i32>, ptr %x, align 4
+  %1 = load <8 x i32>, ptr %y, align 4
+  %2 = mul nsw <8 x i32> %1, %0
+  %arrayidx.8 = getelementptr inbounds i32, ptr %x, i32 8
+  %arrayidx1.8 = getelementptr inbounds i32, ptr %y, i32 8
+  %3 = load <16 x i32>, ptr %arrayidx.8, align 4
+  %4 = load <16 x i32>, ptr %arrayidx1.8, align 4
+  %5 = mul nsw <16 x i32> %4, %3
+  %6 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %5)
+  %7 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %2)
+  %op.rdx = add nsw i32 %6, %7
   ret i32 %op.rdx
 }
 
-define i32 @mlav32i32i32(i32* %x, i32* %y) {
+define i32 @mlav32i32i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav32i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -1584,16 +1453,14 @@ define i32 @mlav32i32i32(i32* %x, i32* %y) {
 ; CHECK-NEXT:    vmlava.u32 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <32 x i32>*
-  %1 = load <32 x i32>, <32 x i32>* %0, align 4
-  %2 = bitcast i32* %y to <32 x i32>*
-  %3 = load <32 x i32>, <32 x i32>* %2, align 4
-  %4 = mul nsw <32 x i32> %3, %1
-  %5 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %4)
-  ret i32 %5
+  %0 = load <32 x i32>, ptr %x, align 4
+  %1 = load <32 x i32>, ptr %y, align 4
+  %2 = mul nsw <32 x i32> %1, %0
+  %3 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %2)
+  ret i32 %3
 }
 
-define i32 @mlav64i32i32(i32* %x, i32* %y) {
+define i32 @mlav64i32i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav64i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -1647,151 +1514,119 @@ define i32 @mlav64i32i32(i32* %x, i32* %y) {
 ; CHECK-NEXT:    vmlava.u32 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %0, align 4
-  %1 = bitcast i32* %y to <4 x i32>*
-  %wide.load10 = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = mul nsw <4 x i32> %wide.load10, %wide.load
-  %3 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %2)
-  %4 = getelementptr inbounds i32, i32* %x, i32 4
-  %5 = bitcast i32* %4 to <4 x i32>*
-  %wide.load.1 = load <4 x i32>, <4 x i32>* %5, align 4
-  %6 = getelementptr inbounds i32, i32* %y, i32 4
-  %7 = bitcast i32* %6 to <4 x i32>*
-  %wide.load10.1 = load <4 x i32>, <4 x i32>* %7, align 4
-  %8 = mul nsw <4 x i32> %wide.load10.1, %wide.load.1
-  %9 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %8)
-  %10 = add i32 %9, %3
-  %11 = getelementptr inbounds i32, i32* %x, i32 8
-  %12 = bitcast i32* %11 to <4 x i32>*
-  %wide.load.2 = load <4 x i32>, <4 x i32>* %12, align 4
-  %13 = getelementptr inbounds i32, i32* %y, i32 8
-  %14 = bitcast i32* %13 to <4 x i32>*
-  %wide.load10.2 = load <4 x i32>, <4 x i32>* %14, align 4
-  %15 = mul nsw <4 x i32> %wide.load10.2, %wide.load.2
-  %16 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %15)
-  %17 = add i32 %16, %10
-  %18 = getelementptr inbounds i32, i32* %x, i32 12
-  %19 = bitcast i32* %18 to <4 x i32>*
-  %wide.load.3 = load <4 x i32>, <4 x i32>* %19, align 4
-  %20 = getelementptr inbounds i32, i32* %y, i32 12
-  %21 = bitcast i32* %20 to <4 x i32>*
-  %wide.load10.3 = load <4 x i32>, <4 x i32>* %21, align 4
-  %22 = mul nsw <4 x i32> %wide.load10.3, %wide.load.3
-  %23 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %22)
-  %24 = add i32 %23, %17
-  %25 = getelementptr inbounds i32, i32* %x, i32 16
-  %26 = bitcast i32* %25 to <4 x i32>*
-  %wide.load.4 = load <4 x i32>, <4 x i32>* %26, align 4
-  %27 = getelementptr inbounds i32, i32* %y, i32 16
-  %28 = bitcast i32* %27 to <4 x i32>*
-  %wide.load10.4 = load <4 x i32>, <4 x i32>* %28, align 4
-  %29 = mul nsw <4 x i32> %wide.load10.4, %wide.load.4
+  %wide.load = load <4 x i32>, ptr %x, align 4
+  %wide.load10 = load <4 x i32>, ptr %y, align 4
+  %0 = mul nsw <4 x i32> %wide.load10, %wide.load
+  %1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %0)
+  %2 = getelementptr inbounds i32, ptr %x, i32 4
+  %wide.load.1 = load <4 x i32>, ptr %2, align 4
+  %3 = getelementptr inbounds i32, ptr %y, i32 4
+  %wide.load10.1 = load <4 x i32>, ptr %3, align 4
+  %4 = mul nsw <4 x i32> %wide.load10.1, %wide.load.1
+  %5 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %4)
+  %6 = add i32 %5, %1
+  %7 = getelementptr inbounds i32, ptr %x, i32 8
+  %wide.load.2 = load <4 x i32>, ptr %7, align 4
+  %8 = getelementptr inbounds i32, ptr %y, i32 8
+  %wide.load10.2 = load <4 x i32>, ptr %8, align 4
+  %9 = mul nsw <4 x i32> %wide.load10.2, %wide.load.2
+  %10 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %9)
+  %11 = add i32 %10, %6
+  %12 = getelementptr inbounds i32, ptr %x, i32 12
+  %wide.load.3 = load <4 x i32>, ptr %12, align 4
+  %13 = getelementptr inbounds i32, ptr %y, i32 12
+  %wide.load10.3 = load <4 x i32>, ptr %13, align 4
+  %14 = mul nsw <4 x i32> %wide.load10.3, %wide.load.3
+  %15 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %14)
+  %16 = add i32 %15, %11
+  %17 = getelementptr inbounds i32, ptr %x, i32 16
+  %wide.load.4 = load <4 x i32>, ptr %17, align 4
+  %18 = getelementptr inbounds i32, ptr %y, i32 16
+  %wide.load10.4 = load <4 x i32>, ptr %18, align 4
+  %19 = mul nsw <4 x i32> %wide.load10.4, %wide.load.4
+  %20 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %19)
+  %21 = add i32 %20, %16
+  %22 = getelementptr inbounds i32, ptr %x, i32 20
+  %wide.load.5 = load <4 x i32>, ptr %22, align 4
+  %23 = getelementptr inbounds i32, ptr %y, i32 20
+  %wide.load10.5 = load <4 x i32>, ptr %23, align 4
+  %24 = mul nsw <4 x i32> %wide.load10.5, %wide.load.5
+  %25 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %24)
+  %26 = add i32 %25, %21
+  %27 = getelementptr inbounds i32, ptr %x, i32 24
+  %wide.load.6 = load <4 x i32>, ptr %27, align 4
+  %28 = getelementptr inbounds i32, ptr %y, i32 24
+  %wide.load10.6 = load <4 x i32>, ptr %28, align 4
+  %29 = mul nsw <4 x i32> %wide.load10.6, %wide.load.6
   %30 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %29)
-  %31 = add i32 %30, %24
-  %32 = getelementptr inbounds i32, i32* %x, i32 20
-  %33 = bitcast i32* %32 to <4 x i32>*
-  %wide.load.5 = load <4 x i32>, <4 x i32>* %33, align 4
-  %34 = getelementptr inbounds i32, i32* %y, i32 20
-  %35 = bitcast i32* %34 to <4 x i32>*
-  %wide.load10.5 = load <4 x i32>, <4 x i32>* %35, align 4
-  %36 = mul nsw <4 x i32> %wide.load10.5, %wide.load.5
-  %37 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %36)
-  %38 = add i32 %37, %31
-  %39 = getelementptr inbounds i32, i32* %x, i32 24
-  %40 = bitcast i32* %39 to <4 x i32>*
-  %wide.load.6 = load <4 x i32>, <4 x i32>* %40, align 4
-  %41 = getelementptr inbounds i32, i32* %y, i32 24
-  %42 = bitcast i32* %41 to <4 x i32>*
-  %wide.load10.6 = load <4 x i32>, <4 x i32>* %42, align 4
-  %43 = mul nsw <4 x i32> %wide.load10.6, %wide.load.6
-  %44 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %43)
-  %45 = add i32 %44, %38
-  %46 = getelementptr inbounds i32, i32* %x, i32 28
-  %47 = bitcast i32* %46 to <4 x i32>*
-  %wide.load.7 = load <4 x i32>, <4 x i32>* %47, align 4
-  %48 = getelementptr inbounds i32, i32* %y, i32 28
-  %49 = bitcast i32* %48 to <4 x i32>*
-  %wide.load10.7 = load <4 x i32>, <4 x i32>* %49, align 4
-  %50 = mul nsw <4 x i32> %wide.load10.7, %wide.load.7
-  %51 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %50)
-  %52 = add i32 %51, %45
-  %53 = getelementptr inbounds i32, i32* %x, i32 32
-  %54 = bitcast i32* %53 to <4 x i32>*
-  %wide.load.8 = load <4 x i32>, <4 x i32>* %54, align 4
-  %55 = getelementptr inbounds i32, i32* %y, i32 32
-  %56 = bitcast i32* %55 to <4 x i32>*
-  %wide.load10.8 = load <4 x i32>, <4 x i32>* %56, align 4
-  %57 = mul nsw <4 x i32> %wide.load10.8, %wide.load.8
-  %58 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %57)
-  %59 = add i32 %58, %52
-  %60 = getelementptr inbounds i32, i32* %x, i32 36
-  %61 = bitcast i32* %60 to <4 x i32>*
-  %wide.load.9 = load <4 x i32>, <4 x i32>* %61, align 4
-  %62 = getelementptr inbounds i32, i32* %y, i32 36
-  %63 = bitcast i32* %62 to <4 x i32>*
-  %wide.load10.9 = load <4 x i32>, <4 x i32>* %63, align 4
-  %64 = mul nsw <4 x i32> %wide.load10.9, %wide.load.9
+  %31 = add i32 %30, %26
+  %32 = getelementptr inbounds i32, ptr %x, i32 28
+  %wide.load.7 = load <4 x i32>, ptr %32, align 4
+  %33 = getelementptr inbounds i32, ptr %y, i32 28
+  %wide.load10.7 = load <4 x i32>, ptr %33, align 4
+  %34 = mul nsw <4 x i32> %wide.load10.7, %wide.load.7
+  %35 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %34)
+  %36 = add i32 %35, %31
+  %37 = getelementptr inbounds i32, ptr %x, i32 32
+  %wide.load.8 = load <4 x i32>, ptr %37, align 4
+  %38 = getelementptr inbounds i32, ptr %y, i32 32
+  %wide.load10.8 = load <4 x i32>, ptr %38, align 4
+  %39 = mul nsw <4 x i32> %wide.load10.8, %wide.load.8
+  %40 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %39)
+  %41 = add i32 %40, %36
+  %42 = getelementptr inbounds i32, ptr %x, i32 36
+  %wide.load.9 = load <4 x i32>, ptr %42, align 4
+  %43 = getelementptr inbounds i32, ptr %y, i32 36
+  %wide.load10.9 = load <4 x i32>, ptr %43, align 4
+  %44 = mul nsw <4 x i32> %wide.load10.9, %wide.load.9
+  %45 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %44)
+  %46 = add i32 %45, %41
+  %47 = getelementptr inbounds i32, ptr %x, i32 40
+  %wide.load.10 = load <4 x i32>, ptr %47, align 4
+  %48 = getelementptr inbounds i32, ptr %y, i32 40
+  %wide.load10.10 = load <4 x i32>, ptr %48, align 4
+  %49 = mul nsw <4 x i32> %wide.load10.10, %wide.load.10
+  %50 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %49)
+  %51 = add i32 %50, %46
+  %52 = getelementptr inbounds i32, ptr %x, i32 44
+  %wide.load.11 = load <4 x i32>, ptr %52, align 4
+  %53 = getelementptr inbounds i32, ptr %y, i32 44
+  %wide.load10.11 = load <4 x i32>, ptr %53, align 4
+  %54 = mul nsw <4 x i32> %wide.load10.11, %wide.load.11
+  %55 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %54)
+  %56 = add i32 %55, %51
+  %57 = getelementptr inbounds i32, ptr %x, i32 48
+  %wide.load.12 = load <4 x i32>, ptr %57, align 4
+  %58 = getelementptr inbounds i32, ptr %y, i32 48
+  %wide.load10.12 = load <4 x i32>, ptr %58, align 4
+  %59 = mul nsw <4 x i32> %wide.load10.12, %wide.load.12
+  %60 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %59)
+  %61 = add i32 %60, %56
+  %62 = getelementptr inbounds i32, ptr %x, i32 52
+  %wide.load.13 = load <4 x i32>, ptr %62, align 4
+  %63 = getelementptr inbounds i32, ptr %y, i32 52
+  %wide.load10.13 = load <4 x i32>, ptr %63, align 4
+  %64 = mul nsw <4 x i32> %wide.load10.13, %wide.load.13
   %65 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %64)
-  %66 = add i32 %65, %59
-  %67 = getelementptr inbounds i32, i32* %x, i32 40
-  %68 = bitcast i32* %67 to <4 x i32>*
-  %wide.load.10 = load <4 x i32>, <4 x i32>* %68, align 4
-  %69 = getelementptr inbounds i32, i32* %y, i32 40
-  %70 = bitcast i32* %69 to <4 x i32>*
-  %wide.load10.10 = load <4 x i32>, <4 x i32>* %70, align 4
-  %71 = mul nsw <4 x i32> %wide.load10.10, %wide.load.10
-  %72 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %71)
-  %73 = add i32 %72, %66
-  %74 = getelementptr inbounds i32, i32* %x, i32 44
-  %75 = bitcast i32* %74 to <4 x i32>*
-  %wide.load.11 = load <4 x i32>, <4 x i32>* %75, align 4
-  %76 = getelementptr inbounds i32, i32* %y, i32 44
-  %77 = bitcast i32* %76 to <4 x i32>*
-  %wide.load10.11 = load <4 x i32>, <4 x i32>* %77, align 4
-  %78 = mul nsw <4 x i32> %wide.load10.11, %wide.load.11
-  %79 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %78)
-  %80 = add i32 %79, %73
-  %81 = getelementptr inbounds i32, i32* %x, i32 48
-  %82 = bitcast i32* %81 to <4 x i32>*
-  %wide.load.12 = load <4 x i32>, <4 x i32>* %82, align 4
-  %83 = getelementptr inbounds i32, i32* %y, i32 48
-  %84 = bitcast i32* %83 to <4 x i32>*
-  %wide.load10.12 = load <4 x i32>, <4 x i32>* %84, align 4
-  %85 = mul nsw <4 x i32> %wide.load10.12, %wide.load.12
-  %86 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %85)
-  %87 = add i32 %86, %80
-  %88 = getelementptr inbounds i32, i32* %x, i32 52
-  %89 = bitcast i32* %88 to <4 x i32>*
-  %wide.load.13 = load <4 x i32>, <4 x i32>* %89, align 4
-  %90 = getelementptr inbounds i32, i32* %y, i32 52
-  %91 = bitcast i32* %90 to <4 x i32>*
-  %wide.load10.13 = load <4 x i32>, <4 x i32>* %91, align 4
-  %92 = mul nsw <4 x i32> %wide.load10.13, %wide.load.13
-  %93 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %92)
-  %94 = add i32 %93, %87
-  %95 = getelementptr inbounds i32, i32* %x, i32 56
-  %96 = bitcast i32* %95 to <4 x i32>*
-  %wide.load.14 = load <4 x i32>, <4 x i32>* %96, align 4
-  %97 = getelementptr inbounds i32, i32* %y, i32 56
-  %98 = bitcast i32* %97 to <4 x i32>*
-  %wide.load10.14 = load <4 x i32>, <4 x i32>* %98, align 4
-  %99 = mul nsw <4 x i32> %wide.load10.14, %wide.load.14
-  %100 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %99)
-  %101 = add i32 %100, %94
-  %102 = getelementptr inbounds i32, i32* %x, i32 60
-  %103 = bitcast i32* %102 to <4 x i32>*
-  %wide.load.15 = load <4 x i32>, <4 x i32>* %103, align 4
-  %104 = getelementptr inbounds i32, i32* %y, i32 60
-  %105 = bitcast i32* %104 to <4 x i32>*
-  %wide.load10.15 = load <4 x i32>, <4 x i32>* %105, align 4
-  %106 = mul nsw <4 x i32> %wide.load10.15, %wide.load.15
-  %107 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %106)
-  %108 = add i32 %107, %101
-  ret i32 %108
+  %66 = add i32 %65, %61
+  %67 = getelementptr inbounds i32, ptr %x, i32 56
+  %wide.load.14 = load <4 x i32>, ptr %67, align 4
+  %68 = getelementptr inbounds i32, ptr %y, i32 56
+  %wide.load10.14 = load <4 x i32>, ptr %68, align 4
+  %69 = mul nsw <4 x i32> %wide.load10.14, %wide.load.14
+  %70 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %69)
+  %71 = add i32 %70, %66
+  %72 = getelementptr inbounds i32, ptr %x, i32 60
+  %wide.load.15 = load <4 x i32>, ptr %72, align 4
+  %73 = getelementptr inbounds i32, ptr %y, i32 60
+  %wide.load10.15 = load <4 x i32>, ptr %73, align 4
+  %74 = mul nsw <4 x i32> %wide.load10.15, %wide.load.15
+  %75 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %74)
+  %76 = add i32 %75, %71
+  ret i32 %76
 }
 
-define i32 @mlav128i32i32(i32* %x, i32* %y) {
+define i32 @mlav128i32i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav128i32i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -1893,295 +1728,231 @@ define i32 @mlav128i32i32(i32* %x, i32* %y) {
 ; CHECK-NEXT:    vmlava.u32 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i32* %x to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %0, align 4
-  %1 = bitcast i32* %y to <4 x i32>*
-  %wide.load10 = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = mul nsw <4 x i32> %wide.load10, %wide.load
-  %3 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %2)
-  %4 = getelementptr inbounds i32, i32* %x, i32 4
-  %5 = bitcast i32* %4 to <4 x i32>*
-  %wide.load.1 = load <4 x i32>, <4 x i32>* %5, align 4
-  %6 = getelementptr inbounds i32, i32* %y, i32 4
-  %7 = bitcast i32* %6 to <4 x i32>*
-  %wide.load10.1 = load <4 x i32>, <4 x i32>* %7, align 4
-  %8 = mul nsw <4 x i32> %wide.load10.1, %wide.load.1
-  %9 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %8)
-  %10 = add i32 %9, %3
-  %11 = getelementptr inbounds i32, i32* %x, i32 8
-  %12 = bitcast i32* %11 to <4 x i32>*
-  %wide.load.2 = load <4 x i32>, <4 x i32>* %12, align 4
-  %13 = getelementptr inbounds i32, i32* %y, i32 8
-  %14 = bitcast i32* %13 to <4 x i32>*
-  %wide.load10.2 = load <4 x i32>, <4 x i32>* %14, align 4
-  %15 = mul nsw <4 x i32> %wide.load10.2, %wide.load.2
-  %16 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %15)
-  %17 = add i32 %16, %10
-  %18 = getelementptr inbounds i32, i32* %x, i32 12
-  %19 = bitcast i32* %18 to <4 x i32>*
-  %wide.load.3 = load <4 x i32>, <4 x i32>* %19, align 4
-  %20 = getelementptr inbounds i32, i32* %y, i32 12
-  %21 = bitcast i32* %20 to <4 x i32>*
-  %wide.load10.3 = load <4 x i32>, <4 x i32>* %21, align 4
-  %22 = mul nsw <4 x i32> %wide.load10.3, %wide.load.3
-  %23 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %22)
-  %24 = add i32 %23, %17
-  %25 = getelementptr inbounds i32, i32* %x, i32 16
-  %26 = bitcast i32* %25 to <4 x i32>*
-  %wide.load.4 = load <4 x i32>, <4 x i32>* %26, align 4
-  %27 = getelementptr inbounds i32, i32* %y, i32 16
-  %28 = bitcast i32* %27 to <4 x i32>*
-  %wide.load10.4 = load <4 x i32>, <4 x i32>* %28, align 4
-  %29 = mul nsw <4 x i32> %wide.load10.4, %wide.load.4
+  %wide.load = load <4 x i32>, ptr %x, align 4
+  %wide.load10 = load <4 x i32>, ptr %y, align 4
+  %0 = mul nsw <4 x i32> %wide.load10, %wide.load
+  %1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %0)
+  %2 = getelementptr inbounds i32, ptr %x, i32 4
+  %wide.load.1 = load <4 x i32>, ptr %2, align 4
+  %3 = getelementptr inbounds i32, ptr %y, i32 4
+  %wide.load10.1 = load <4 x i32>, ptr %3, align 4
+  %4 = mul nsw <4 x i32> %wide.load10.1, %wide.load.1
+  %5 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %4)
+  %6 = add i32 %5, %1
+  %7 = getelementptr inbounds i32, ptr %x, i32 8
+  %wide.load.2 = load <4 x i32>, ptr %7, align 4
+  %8 = getelementptr inbounds i32, ptr %y, i32 8
+  %wide.load10.2 = load <4 x i32>, ptr %8, align 4
+  %9 = mul nsw <4 x i32> %wide.load10.2, %wide.load.2
+  %10 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %9)
+  %11 = add i32 %10, %6
+  %12 = getelementptr inbounds i32, ptr %x, i32 12
+  %wide.load.3 = load <4 x i32>, ptr %12, align 4
+  %13 = getelementptr inbounds i32, ptr %y, i32 12
+  %wide.load10.3 = load <4 x i32>, ptr %13, align 4
+  %14 = mul nsw <4 x i32> %wide.load10.3, %wide.load.3
+  %15 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %14)
+  %16 = add i32 %15, %11
+  %17 = getelementptr inbounds i32, ptr %x, i32 16
+  %wide.load.4 = load <4 x i32>, ptr %17, align 4
+  %18 = getelementptr inbounds i32, ptr %y, i32 16
+  %wide.load10.4 = load <4 x i32>, ptr %18, align 4
+  %19 = mul nsw <4 x i32> %wide.load10.4, %wide.load.4
+  %20 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %19)
+  %21 = add i32 %20, %16
+  %22 = getelementptr inbounds i32, ptr %x, i32 20
+  %wide.load.5 = load <4 x i32>, ptr %22, align 4
+  %23 = getelementptr inbounds i32, ptr %y, i32 20
+  %wide.load10.5 = load <4 x i32>, ptr %23, align 4
+  %24 = mul nsw <4 x i32> %wide.load10.5, %wide.load.5
+  %25 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %24)
+  %26 = add i32 %25, %21
+  %27 = getelementptr inbounds i32, ptr %x, i32 24
+  %wide.load.6 = load <4 x i32>, ptr %27, align 4
+  %28 = getelementptr inbounds i32, ptr %y, i32 24
+  %wide.load10.6 = load <4 x i32>, ptr %28, align 4
+  %29 = mul nsw <4 x i32> %wide.load10.6, %wide.load.6
   %30 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %29)
-  %31 = add i32 %30, %24
-  %32 = getelementptr inbounds i32, i32* %x, i32 20
-  %33 = bitcast i32* %32 to <4 x i32>*
-  %wide.load.5 = load <4 x i32>, <4 x i32>* %33, align 4
-  %34 = getelementptr inbounds i32, i32* %y, i32 20
-  %35 = bitcast i32* %34 to <4 x i32>*
-  %wide.load10.5 = load <4 x i32>, <4 x i32>* %35, align 4
-  %36 = mul nsw <4 x i32> %wide.load10.5, %wide.load.5
-  %37 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %36)
-  %38 = add i32 %37, %31
-  %39 = getelementptr inbounds i32, i32* %x, i32 24
-  %40 = bitcast i32* %39 to <4 x i32>*
-  %wide.load.6 = load <4 x i32>, <4 x i32>* %40, align 4
-  %41 = getelementptr inbounds i32, i32* %y, i32 24
-  %42 = bitcast i32* %41 to <4 x i32>*
-  %wide.load10.6 = load <4 x i32>, <4 x i32>* %42, align 4
-  %43 = mul nsw <4 x i32> %wide.load10.6, %wide.load.6
-  %44 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %43)
-  %45 = add i32 %44, %38
-  %46 = getelementptr inbounds i32, i32* %x, i32 28
-  %47 = bitcast i32* %46 to <4 x i32>*
-  %wide.load.7 = load <4 x i32>, <4 x i32>* %47, align 4
-  %48 = getelementptr inbounds i32, i32* %y, i32 28
-  %49 = bitcast i32* %48 to <4 x i32>*
-  %wide.load10.7 = load <4 x i32>, <4 x i32>* %49, align 4
-  %50 = mul nsw <4 x i32> %wide.load10.7, %wide.load.7
-  %51 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %50)
-  %52 = add i32 %51, %45
-  %53 = getelementptr inbounds i32, i32* %x, i32 32
-  %54 = bitcast i32* %53 to <4 x i32>*
-  %wide.load.8 = load <4 x i32>, <4 x i32>* %54, align 4
-  %55 = getelementptr inbounds i32, i32* %y, i32 32
-  %56 = bitcast i32* %55 to <4 x i32>*
-  %wide.load10.8 = load <4 x i32>, <4 x i32>* %56, align 4
-  %57 = mul nsw <4 x i32> %wide.load10.8, %wide.load.8
-  %58 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %57)
-  %59 = add i32 %58, %52
-  %60 = getelementptr inbounds i32, i32* %x, i32 36
-  %61 = bitcast i32* %60 to <4 x i32>*
-  %wide.load.9 = load <4 x i32>, <4 x i32>* %61, align 4
-  %62 = getelementptr inbounds i32, i32* %y, i32 36
-  %63 = bitcast i32* %62 to <4 x i32>*
-  %wide.load10.9 = load <4 x i32>, <4 x i32>* %63, align 4
-  %64 = mul nsw <4 x i32> %wide.load10.9, %wide.load.9
+  %31 = add i32 %30, %26
+  %32 = getelementptr inbounds i32, ptr %x, i32 28
+  %wide.load.7 = load <4 x i32>, ptr %32, align 4
+  %33 = getelementptr inbounds i32, ptr %y, i32 28
+  %wide.load10.7 = load <4 x i32>, ptr %33, align 4
+  %34 = mul nsw <4 x i32> %wide.load10.7, %wide.load.7
+  %35 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %34)
+  %36 = add i32 %35, %31
+  %37 = getelementptr inbounds i32, ptr %x, i32 32
+  %wide.load.8 = load <4 x i32>, ptr %37, align 4
+  %38 = getelementptr inbounds i32, ptr %y, i32 32
+  %wide.load10.8 = load <4 x i32>, ptr %38, align 4
+  %39 = mul nsw <4 x i32> %wide.load10.8, %wide.load.8
+  %40 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %39)
+  %41 = add i32 %40, %36
+  %42 = getelementptr inbounds i32, ptr %x, i32 36
+  %wide.load.9 = load <4 x i32>, ptr %42, align 4
+  %43 = getelementptr inbounds i32, ptr %y, i32 36
+  %wide.load10.9 = load <4 x i32>, ptr %43, align 4
+  %44 = mul nsw <4 x i32> %wide.load10.9, %wide.load.9
+  %45 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %44)
+  %46 = add i32 %45, %41
+  %47 = getelementptr inbounds i32, ptr %x, i32 40
+  %wide.load.10 = load <4 x i32>, ptr %47, align 4
+  %48 = getelementptr inbounds i32, ptr %y, i32 40
+  %wide.load10.10 = load <4 x i32>, ptr %48, align 4
+  %49 = mul nsw <4 x i32> %wide.load10.10, %wide.load.10
+  %50 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %49)
+  %51 = add i32 %50, %46
+  %52 = getelementptr inbounds i32, ptr %x, i32 44
+  %wide.load.11 = load <4 x i32>, ptr %52, align 4
+  %53 = getelementptr inbounds i32, ptr %y, i32 44
+  %wide.load10.11 = load <4 x i32>, ptr %53, align 4
+  %54 = mul nsw <4 x i32> %wide.load10.11, %wide.load.11
+  %55 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %54)
+  %56 = add i32 %55, %51
+  %57 = getelementptr inbounds i32, ptr %x, i32 48
+  %wide.load.12 = load <4 x i32>, ptr %57, align 4
+  %58 = getelementptr inbounds i32, ptr %y, i32 48
+  %wide.load10.12 = load <4 x i32>, ptr %58, align 4
+  %59 = mul nsw <4 x i32> %wide.load10.12, %wide.load.12
+  %60 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %59)
+  %61 = add i32 %60, %56
+  %62 = getelementptr inbounds i32, ptr %x, i32 52
+  %wide.load.13 = load <4 x i32>, ptr %62, align 4
+  %63 = getelementptr inbounds i32, ptr %y, i32 52
+  %wide.load10.13 = load <4 x i32>, ptr %63, align 4
+  %64 = mul nsw <4 x i32> %wide.load10.13, %wide.load.13
   %65 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %64)
-  %66 = add i32 %65, %59
-  %67 = getelementptr inbounds i32, i32* %x, i32 40
-  %68 = bitcast i32* %67 to <4 x i32>*
-  %wide.load.10 = load <4 x i32>, <4 x i32>* %68, align 4
-  %69 = getelementptr inbounds i32, i32* %y, i32 40
-  %70 = bitcast i32* %69 to <4 x i32>*
-  %wide.load10.10 = load <4 x i32>, <4 x i32>* %70, align 4
-  %71 = mul nsw <4 x i32> %wide.load10.10, %wide.load.10
-  %72 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %71)
-  %73 = add i32 %72, %66
-  %74 = getelementptr inbounds i32, i32* %x, i32 44
-  %75 = bitcast i32* %74 to <4 x i32>*
-  %wide.load.11 = load <4 x i32>, <4 x i32>* %75, align 4
-  %76 = getelementptr inbounds i32, i32* %y, i32 44
-  %77 = bitcast i32* %76 to <4 x i32>*
-  %wide.load10.11 = load <4 x i32>, <4 x i32>* %77, align 4
-  %78 = mul nsw <4 x i32> %wide.load10.11, %wide.load.11
-  %79 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %78)
-  %80 = add i32 %79, %73
-  %81 = getelementptr inbounds i32, i32* %x, i32 48
-  %82 = bitcast i32* %81 to <4 x i32>*
-  %wide.load.12 = load <4 x i32>, <4 x i32>* %82, align 4
-  %83 = getelementptr inbounds i32, i32* %y, i32 48
-  %84 = bitcast i32* %83 to <4 x i32>*
-  %wide.load10.12 = load <4 x i32>, <4 x i32>* %84, align 4
-  %85 = mul nsw <4 x i32> %wide.load10.12, %wide.load.12
-  %86 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %85)
-  %87 = add i32 %86, %80
-  %88 = getelementptr inbounds i32, i32* %x, i32 52
-  %89 = bitcast i32* %88 to <4 x i32>*
-  %wide.load.13 = load <4 x i32>, <4 x i32>* %89, align 4
-  %90 = getelementptr inbounds i32, i32* %y, i32 52
-  %91 = bitcast i32* %90 to <4 x i32>*
-  %wide.load10.13 = load <4 x i32>, <4 x i32>* %91, align 4
-  %92 = mul nsw <4 x i32> %wide.load10.13, %wide.load.13
-  %93 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %92)
-  %94 = add i32 %93, %87
-  %95 = getelementptr inbounds i32, i32* %x, i32 56
-  %96 = bitcast i32* %95 to <4 x i32>*
-  %wide.load.14 = load <4 x i32>, <4 x i32>* %96, align 4
-  %97 = getelementptr inbounds i32, i32* %y, i32 56
-  %98 = bitcast i32* %97 to <4 x i32>*
-  %wide.load10.14 = load <4 x i32>, <4 x i32>* %98, align 4
-  %99 = mul nsw <4 x i32> %wide.load10.14, %wide.load.14
+  %66 = add i32 %65, %61
+  %67 = getelementptr inbounds i32, ptr %x, i32 56
+  %wide.load.14 = load <4 x i32>, ptr %67, align 4
+  %68 = getelementptr inbounds i32, ptr %y, i32 56
+  %wide.load10.14 = load <4 x i32>, ptr %68, align 4
+  %69 = mul nsw <4 x i32> %wide.load10.14, %wide.load.14
+  %70 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %69)
+  %71 = add i32 %70, %66
+  %72 = getelementptr inbounds i32, ptr %x, i32 60
+  %wide.load.15 = load <4 x i32>, ptr %72, align 4
+  %73 = getelementptr inbounds i32, ptr %y, i32 60
+  %wide.load10.15 = load <4 x i32>, ptr %73, align 4
+  %74 = mul nsw <4 x i32> %wide.load10.15, %wide.load.15
+  %75 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %74)
+  %76 = add i32 %75, %71
+  %77 = getelementptr inbounds i32, ptr %x, i32 64
+  %wide.load.16 = load <4 x i32>, ptr %77, align 4
+  %78 = getelementptr inbounds i32, ptr %y, i32 64
+  %wide.load10.16 = load <4 x i32>, ptr %78, align 4
+  %79 = mul nsw <4 x i32> %wide.load10.16, %wide.load.16
+  %80 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %79)
+  %81 = add i32 %80, %76
+  %82 = getelementptr inbounds i32, ptr %x, i32 68
+  %wide.load.17 = load <4 x i32>, ptr %82, align 4
+  %83 = getelementptr inbounds i32, ptr %y, i32 68
+  %wide.load10.17 = load <4 x i32>, ptr %83, align 4
+  %84 = mul nsw <4 x i32> %wide.load10.17, %wide.load.17
+  %85 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %84)
+  %86 = add i32 %85, %81
+  %87 = getelementptr inbounds i32, ptr %x, i32 72
+  %wide.load.18 = load <4 x i32>, ptr %87, align 4
+  %88 = getelementptr inbounds i32, ptr %y, i32 72
+  %wide.load10.18 = load <4 x i32>, ptr %88, align 4
+  %89 = mul nsw <4 x i32> %wide.load10.18, %wide.load.18
+  %90 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %89)
+  %91 = add i32 %90, %86
+  %92 = getelementptr inbounds i32, ptr %x, i32 76
+  %wide.load.19 = load <4 x i32>, ptr %92, align 4
+  %93 = getelementptr inbounds i32, ptr %y, i32 76
+  %wide.load10.19 = load <4 x i32>, ptr %93, align 4
+  %94 = mul nsw <4 x i32> %wide.load10.19, %wide.load.19
+  %95 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %94)
+  %96 = add i32 %95, %91
+  %97 = getelementptr inbounds i32, ptr %x, i32 80
+  %wide.load.20 = load <4 x i32>, ptr %97, align 4
+  %98 = getelementptr inbounds i32, ptr %y, i32 80
+  %wide.load10.20 = load <4 x i32>, ptr %98, align 4
+  %99 = mul nsw <4 x i32> %wide.load10.20, %wide.load.20
   %100 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %99)
-  %101 = add i32 %100, %94
-  %102 = getelementptr inbounds i32, i32* %x, i32 60
-  %103 = bitcast i32* %102 to <4 x i32>*
-  %wide.load.15 = load <4 x i32>, <4 x i32>* %103, align 4
-  %104 = getelementptr inbounds i32, i32* %y, i32 60
-  %105 = bitcast i32* %104 to <4 x i32>*
-  %wide.load10.15 = load <4 x i32>, <4 x i32>* %105, align 4
-  %106 = mul nsw <4 x i32> %wide.load10.15, %wide.load.15
-  %107 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %106)
-  %108 = add i32 %107, %101
-  %109 = getelementptr inbounds i32, i32* %x, i32 64
-  %110 = bitcast i32* %109 to <4 x i32>*
-  %wide.load.16 = load <4 x i32>, <4 x i32>* %110, align 4
-  %111 = getelementptr inbounds i32, i32* %y, i32 64
-  %112 = bitcast i32* %111 to <4 x i32>*
-  %wide.load10.16 = load <4 x i32>, <4 x i32>* %112, align 4
-  %113 = mul nsw <4 x i32> %wide.load10.16, %wide.load.16
-  %114 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %113)
-  %115 = add i32 %114, %108
-  %116 = getelementptr inbounds i32, i32* %x, i32 68
-  %117 = bitcast i32* %116 to <4 x i32>*
-  %wide.load.17 = load <4 x i32>, <4 x i32>* %117, align 4
-  %118 = getelementptr inbounds i32, i32* %y, i32 68
-  %119 = bitcast i32* %118 to <4 x i32>*
-  %wide.load10.17 = load <4 x i32>, <4 x i32>* %119, align 4
-  %120 = mul nsw <4 x i32> %wide.load10.17, %wide.load.17
-  %121 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %120)
-  %122 = add i32 %121, %115
-  %123 = getelementptr inbounds i32, i32* %x, i32 72
-  %124 = bitcast i32* %123 to <4 x i32>*
-  %wide.load.18 = load <4 x i32>, <4 x i32>* %124, align 4
-  %125 = getelementptr inbounds i32, i32* %y, i32 72
-  %126 = bitcast i32* %125 to <4 x i32>*
-  %wide.load10.18 = load <4 x i32>, <4 x i32>* %126, align 4
-  %127 = mul nsw <4 x i32> %wide.load10.18, %wide.load.18
-  %128 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %127)
-  %129 = add i32 %128, %122
-  %130 = getelementptr inbounds i32, i32* %x, i32 76
-  %131 = bitcast i32* %130 to <4 x i32>*
-  %wide.load.19 = load <4 x i32>, <4 x i32>* %131, align 4
-  %132 = getelementptr inbounds i32, i32* %y, i32 76
-  %133 = bitcast i32* %132 to <4 x i32>*
-  %wide.load10.19 = load <4 x i32>, <4 x i32>* %133, align 4
-  %134 = mul nsw <4 x i32> %wide.load10.19, %wide.load.19
+  %101 = add i32 %100, %96
+  %102 = getelementptr inbounds i32, ptr %x, i32 84
+  %wide.load.21 = load <4 x i32>, ptr %102, align 4
+  %103 = getelementptr inbounds i32, ptr %y, i32 84
+  %wide.load10.21 = load <4 x i32>, ptr %103, align 4
+  %104 = mul nsw <4 x i32> %wide.load10.21, %wide.load.21
+  %105 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %104)
+  %106 = add i32 %105, %101
+  %107 = getelementptr inbounds i32, ptr %x, i32 88
+  %wide.load.22 = load <4 x i32>, ptr %107, align 4
+  %108 = getelementptr inbounds i32, ptr %y, i32 88
+  %wide.load10.22 = load <4 x i32>, ptr %108, align 4
+  %109 = mul nsw <4 x i32> %wide.load10.22, %wide.load.22
+  %110 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %109)
+  %111 = add i32 %110, %106
+  %112 = getelementptr inbounds i32, ptr %x, i32 92
+  %wide.load.23 = load <4 x i32>, ptr %112, align 4
+  %113 = getelementptr inbounds i32, ptr %y, i32 92
+  %wide.load10.23 = load <4 x i32>, ptr %113, align 4
+  %114 = mul nsw <4 x i32> %wide.load10.23, %wide.load.23
+  %115 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %114)
+  %116 = add i32 %115, %111
+  %117 = getelementptr inbounds i32, ptr %x, i32 96
+  %wide.load.24 = load <4 x i32>, ptr %117, align 4
+  %118 = getelementptr inbounds i32, ptr %y, i32 96
+  %wide.load10.24 = load <4 x i32>, ptr %118, align 4
+  %119 = mul nsw <4 x i32> %wide.load10.24, %wide.load.24
+  %120 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %119)
+  %121 = add i32 %120, %116
+  %122 = getelementptr inbounds i32, ptr %x, i32 100
+  %wide.load.25 = load <4 x i32>, ptr %122, align 4
+  %123 = getelementptr inbounds i32, ptr %y, i32 100
+  %wide.load10.25 = load <4 x i32>, ptr %123, align 4
+  %124 = mul nsw <4 x i32> %wide.load10.25, %wide.load.25
+  %125 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %124)
+  %126 = add i32 %125, %121
+  %127 = getelementptr inbounds i32, ptr %x, i32 104
+  %wide.load.26 = load <4 x i32>, ptr %127, align 4
+  %128 = getelementptr inbounds i32, ptr %y, i32 104
+  %wide.load10.26 = load <4 x i32>, ptr %128, align 4
+  %129 = mul nsw <4 x i32> %wide.load10.26, %wide.load.26
+  %130 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %129)
+  %131 = add i32 %130, %126
+  %132 = getelementptr inbounds i32, ptr %x, i32 108
+  %wide.load.27 = load <4 x i32>, ptr %132, align 4
+  %133 = getelementptr inbounds i32, ptr %y, i32 108
+  %wide.load10.27 = load <4 x i32>, ptr %133, align 4
+  %134 = mul nsw <4 x i32> %wide.load10.27, %wide.load.27
   %135 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %134)
-  %136 = add i32 %135, %129
-  %137 = getelementptr inbounds i32, i32* %x, i32 80
-  %138 = bitcast i32* %137 to <4 x i32>*
-  %wide.load.20 = load <4 x i32>, <4 x i32>* %138, align 4
-  %139 = getelementptr inbounds i32, i32* %y, i32 80
-  %140 = bitcast i32* %139 to <4 x i32>*
-  %wide.load10.20 = load <4 x i32>, <4 x i32>* %140, align 4
-  %141 = mul nsw <4 x i32> %wide.load10.20, %wide.load.20
-  %142 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %141)
-  %143 = add i32 %142, %136
-  %144 = getelementptr inbounds i32, i32* %x, i32 84
-  %145 = bitcast i32* %144 to <4 x i32>*
-  %wide.load.21 = load <4 x i32>, <4 x i32>* %145, align 4
-  %146 = getelementptr inbounds i32, i32* %y, i32 84
-  %147 = bitcast i32* %146 to <4 x i32>*
-  %wide.load10.21 = load <4 x i32>, <4 x i32>* %147, align 4
-  %148 = mul nsw <4 x i32> %wide.load10.21, %wide.load.21
-  %149 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %148)
-  %150 = add i32 %149, %143
-  %151 = getelementptr inbounds i32, i32* %x, i32 88
-  %152 = bitcast i32* %151 to <4 x i32>*
-  %wide.load.22 = load <4 x i32>, <4 x i32>* %152, align 4
-  %153 = getelementptr inbounds i32, i32* %y, i32 88
-  %154 = bitcast i32* %153 to <4 x i32>*
-  %wide.load10.22 = load <4 x i32>, <4 x i32>* %154, align 4
-  %155 = mul nsw <4 x i32> %wide.load10.22, %wide.load.22
-  %156 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %155)
-  %157 = add i32 %156, %150
-  %158 = getelementptr inbounds i32, i32* %x, i32 92
-  %159 = bitcast i32* %158 to <4 x i32>*
-  %wide.load.23 = load <4 x i32>, <4 x i32>* %159, align 4
-  %160 = getelementptr inbounds i32, i32* %y, i32 92
-  %161 = bitcast i32* %160 to <4 x i32>*
-  %wide.load10.23 = load <4 x i32>, <4 x i32>* %161, align 4
-  %162 = mul nsw <4 x i32> %wide.load10.23, %wide.load.23
-  %163 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %162)
-  %164 = add i32 %163, %157
-  %165 = getelementptr inbounds i32, i32* %x, i32 96
-  %166 = bitcast i32* %165 to <4 x i32>*
-  %wide.load.24 = load <4 x i32>, <4 x i32>* %166, align 4
-  %167 = getelementptr inbounds i32, i32* %y, i32 96
-  %168 = bitcast i32* %167 to <4 x i32>*
-  %wide.load10.24 = load <4 x i32>, <4 x i32>* %168, align 4
-  %169 = mul nsw <4 x i32> %wide.load10.24, %wide.load.24
-  %170 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %169)
-  %171 = add i32 %170, %164
-  %172 = getelementptr inbounds i32, i32* %x, i32 100
-  %173 = bitcast i32* %172 to <4 x i32>*
-  %wide.load.25 = load <4 x i32>, <4 x i32>* %173, align 4
-  %174 = getelementptr inbounds i32, i32* %y, i32 100
-  %175 = bitcast i32* %174 to <4 x i32>*
-  %wide.load10.25 = load <4 x i32>, <4 x i32>* %175, align 4
-  %176 = mul nsw <4 x i32> %wide.load10.25, %wide.load.25
-  %177 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %176)
-  %178 = add i32 %177, %171
-  %179 = getelementptr inbounds i32, i32* %x, i32 104
-  %180 = bitcast i32* %179 to <4 x i32>*
-  %wide.load.26 = load <4 x i32>, <4 x i32>* %180, align 4
-  %181 = getelementptr inbounds i32, i32* %y, i32 104
-  %182 = bitcast i32* %181 to <4 x i32>*
-  %wide.load10.26 = load <4 x i32>, <4 x i32>* %182, align 4
-  %183 = mul nsw <4 x i32> %wide.load10.26, %wide.load.26
-  %184 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %183)
-  %185 = add i32 %184, %178
-  %186 = getelementptr inbounds i32, i32* %x, i32 108
-  %187 = bitcast i32* %186 to <4 x i32>*
-  %wide.load.27 = load <4 x i32>, <4 x i32>* %187, align 4
-  %188 = getelementptr inbounds i32, i32* %y, i32 108
-  %189 = bitcast i32* %188 to <4 x i32>*
-  %wide.load10.27 = load <4 x i32>, <4 x i32>* %189, align 4
-  %190 = mul nsw <4 x i32> %wide.load10.27, %wide.load.27
-  %191 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %190)
-  %192 = add i32 %191, %185
-  %193 = getelementptr inbounds i32, i32* %x, i32 112
-  %194 = bitcast i32* %193 to <4 x i32>*
-  %wide.load.28 = load <4 x i32>, <4 x i32>* %194, align 4
-  %195 = getelementptr inbounds i32, i32* %y, i32 112
-  %196 = bitcast i32* %195 to <4 x i32>*
-  %wide.load10.28 = load <4 x i32>, <4 x i32>* %196, align 4
-  %197 = mul nsw <4 x i32> %wide.load10.28, %wide.load.28
-  %198 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %197)
-  %199 = add i32 %198, %192
-  %200 = getelementptr inbounds i32, i32* %x, i32 116
-  %201 = bitcast i32* %200 to <4 x i32>*
-  %wide.load.29 = load <4 x i32>, <4 x i32>* %201, align 4
-  %202 = getelementptr inbounds i32, i32* %y, i32 116
-  %203 = bitcast i32* %202 to <4 x i32>*
-  %wide.load10.29 = load <4 x i32>, <4 x i32>* %203, align 4
-  %204 = mul nsw <4 x i32> %wide.load10.29, %wide.load.29
-  %205 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %204)
-  %206 = add i32 %205, %199
-  %207 = getelementptr inbounds i32, i32* %x, i32 120
-  %208 = bitcast i32* %207 to <4 x i32>*
-  %wide.load.30 = load <4 x i32>, <4 x i32>* %208, align 4
-  %209 = getelementptr inbounds i32, i32* %y, i32 120
-  %210 = bitcast i32* %209 to <4 x i32>*
-  %wide.load10.30 = load <4 x i32>, <4 x i32>* %210, align 4
-  %211 = mul nsw <4 x i32> %wide.load10.30, %wide.load.30
-  %212 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %211)
-  %213 = add i32 %212, %206
-  %214 = getelementptr inbounds i32, i32* %x, i32 124
-  %215 = bitcast i32* %214 to <4 x i32>*
-  %wide.load.31 = load <4 x i32>, <4 x i32>* %215, align 4
-  %216 = getelementptr inbounds i32, i32* %y, i32 124
-  %217 = bitcast i32* %216 to <4 x i32>*
-  %wide.load10.31 = load <4 x i32>, <4 x i32>* %217, align 4
-  %218 = mul nsw <4 x i32> %wide.load10.31, %wide.load.31
-  %219 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %218)
-  %220 = add i32 %219, %213
-  ret i32 %220
+  %136 = add i32 %135, %131
+  %137 = getelementptr inbounds i32, ptr %x, i32 112
+  %wide.load.28 = load <4 x i32>, ptr %137, align 4
+  %138 = getelementptr inbounds i32, ptr %y, i32 112
+  %wide.load10.28 = load <4 x i32>, ptr %138, align 4
+  %139 = mul nsw <4 x i32> %wide.load10.28, %wide.load.28
+  %140 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %139)
+  %141 = add i32 %140, %136
+  %142 = getelementptr inbounds i32, ptr %x, i32 116
+  %wide.load.29 = load <4 x i32>, ptr %142, align 4
+  %143 = getelementptr inbounds i32, ptr %y, i32 116
+  %wide.load10.29 = load <4 x i32>, ptr %143, align 4
+  %144 = mul nsw <4 x i32> %wide.load10.29, %wide.load.29
+  %145 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %144)
+  %146 = add i32 %145, %141
+  %147 = getelementptr inbounds i32, ptr %x, i32 120
+  %wide.load.30 = load <4 x i32>, ptr %147, align 4
+  %148 = getelementptr inbounds i32, ptr %y, i32 120
+  %wide.load10.30 = load <4 x i32>, ptr %148, align 4
+  %149 = mul nsw <4 x i32> %wide.load10.30, %wide.load.30
+  %150 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %149)
+  %151 = add i32 %150, %146
+  %152 = getelementptr inbounds i32, ptr %x, i32 124
+  %wide.load.31 = load <4 x i32>, ptr %152, align 4
+  %153 = getelementptr inbounds i32, ptr %y, i32 124
+  %wide.load10.31 = load <4 x i32>, ptr %153, align 4
+  %154 = mul nsw <4 x i32> %wide.load10.31, %wide.load.31
+  %155 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %154)
+  %156 = add i32 %155, %151
+  ret i32 %156
 }
 
-define i32 @mlav2i32i16(i16* %x, i16* %y) {
+define i32 @mlav2i32i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav2i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrsh.w r2, [r0]
@@ -2192,23 +1963,23 @@ define i32 @mlav2i32i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    smlabb r0, r3, r2, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %x, align 2
+  %0 = load i16, ptr %x, align 2
   %conv = sext i16 %0 to i32
-  %1 = load i16, i16* %y, align 2
+  %1 = load i16, ptr %y, align 2
   %conv2 = sext i16 %1 to i32
   %mul = mul nsw i32 %conv2, %conv
-  %arrayidx.1 = getelementptr inbounds i16, i16* %x, i32 1
-  %2 = load i16, i16* %arrayidx.1, align 2
+  %arrayidx.1 = getelementptr inbounds i16, ptr %x, i32 1
+  %2 = load i16, ptr %arrayidx.1, align 2
   %conv.1 = sext i16 %2 to i32
-  %arrayidx1.1 = getelementptr inbounds i16, i16* %y, i32 1
-  %3 = load i16, i16* %arrayidx1.1, align 2
+  %arrayidx1.1 = getelementptr inbounds i16, ptr %y, i32 1
+  %3 = load i16, ptr %arrayidx1.1, align 2
   %conv2.1 = sext i16 %3 to i32
   %mul.1 = mul nsw i32 %conv2.1, %conv.1
   %add.1 = add nsw i32 %mul.1, %mul
   ret i32 %add.1
 }
 
-define i32 @mlav4i32i16(i16* %x, i16* %y) {
+define i32 @mlav4i32i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav4i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r0]
@@ -2216,18 +1987,16 @@ define i32 @mlav4i32i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    vmlav.u32 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <4 x i16>*
-  %1 = load <4 x i16>, <4 x i16>* %0, align 2
-  %2 = sext <4 x i16> %1 to <4 x i32>
-  %3 = bitcast i16* %y to <4 x i16>*
-  %4 = load <4 x i16>, <4 x i16>* %3, align 2
-  %5 = sext <4 x i16> %4 to <4 x i32>
-  %6 = mul nsw <4 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %6)
-  ret i32 %7
+  %0 = load <4 x i16>, ptr %x, align 2
+  %1 = sext <4 x i16> %0 to <4 x i32>
+  %2 = load <4 x i16>, ptr %y, align 2
+  %3 = sext <4 x i16> %2 to <4 x i32>
+  %4 = mul nsw <4 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %4)
+  ret i32 %5
 }
 
-define i32 @mlav8i32i16(i16* %x, i16* %y) {
+define i32 @mlav8i32i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav8i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
@@ -2235,18 +2004,16 @@ define i32 @mlav8i32i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    vmlav.s16 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <8 x i16>*
-  %1 = load <8 x i16>, <8 x i16>* %0, align 2
-  %2 = sext <8 x i16> %1 to <8 x i32>
-  %3 = bitcast i16* %y to <8 x i16>*
-  %4 = load <8 x i16>, <8 x i16>* %3, align 2
-  %5 = sext <8 x i16> %4 to <8 x i32>
-  %6 = mul nsw <8 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %6)
-  ret i32 %7
+  %0 = load <8 x i16>, ptr %x, align 2
+  %1 = sext <8 x i16> %0 to <8 x i32>
+  %2 = load <8 x i16>, ptr %y, align 2
+  %3 = sext <8 x i16> %2 to <8 x i32>
+  %4 = mul nsw <8 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
+  ret i32 %5
 }
 
-define i32 @mlav16i32i16(i16* %x, i16* %y) {
+define i32 @mlav16i32i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav16i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r0]
@@ -2264,18 +2031,16 @@ define i32 @mlav16i32i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <16 x i16>*
-  %1 = load <16 x i16>, <16 x i16>* %0, align 2
-  %2 = sext <16 x i16> %1 to <16 x i32>
-  %3 = bitcast i16* %y to <16 x i16>*
-  %4 = load <16 x i16>, <16 x i16>* %3, align 2
-  %5 = sext <16 x i16> %4 to <16 x i32>
-  %6 = mul nsw <16 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %6)
-  ret i32 %7
+  %0 = load <16 x i16>, ptr %x, align 2
+  %1 = sext <16 x i16> %0 to <16 x i32>
+  %2 = load <16 x i16>, ptr %y, align 2
+  %3 = sext <16 x i16> %2 to <16 x i32>
+  %4 = mul nsw <16 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %4)
+  ret i32 %5
 }
 
-define i32 @mlav24i32i16(i16* %x, i16* %y) {
+define i32 @mlav24i32i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav24i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
@@ -2296,29 +2061,25 @@ define i32 @mlav24i32i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    vmlava.u32 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <8 x i16>*
-  %1 = load <8 x i16>, <8 x i16>* %0, align 2
-  %2 = sext <8 x i16> %1 to <8 x i32>
-  %3 = bitcast i16* %y to <8 x i16>*
-  %4 = load <8 x i16>, <8 x i16>* %3, align 2
-  %5 = sext <8 x i16> %4 to <8 x i32>
-  %6 = mul nsw <8 x i32> %5, %2
-  %arrayidx.8 = getelementptr inbounds i16, i16* %x, i32 8
-  %arrayidx1.8 = getelementptr inbounds i16, i16* %y, i32 8
-  %7 = bitcast i16* %arrayidx.8 to <16 x i16>*
-  %8 = load <16 x i16>, <16 x i16>* %7, align 2
-  %9 = sext <16 x i16> %8 to <16 x i32>
-  %10 = bitcast i16* %arrayidx1.8 to <16 x i16>*
-  %11 = load <16 x i16>, <16 x i16>* %10, align 2
-  %12 = sext <16 x i16> %11 to <16 x i32>
-  %13 = mul nsw <16 x i32> %12, %9
-  %14 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %13)
-  %15 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %6)
-  %op.rdx = add nsw i32 %14, %15
+  %0 = load <8 x i16>, ptr %x, align 2
+  %1 = sext <8 x i16> %0 to <8 x i32>
+  %2 = load <8 x i16>, ptr %y, align 2
+  %3 = sext <8 x i16> %2 to <8 x i32>
+  %4 = mul nsw <8 x i32> %3, %1
+  %arrayidx.8 = getelementptr inbounds i16, ptr %x, i32 8
+  %arrayidx1.8 = getelementptr inbounds i16, ptr %y, i32 8
+  %5 = load <16 x i16>, ptr %arrayidx.8, align 2
+  %6 = sext <16 x i16> %5 to <16 x i32>
+  %7 = load <16 x i16>, ptr %arrayidx1.8, align 2
+  %8 = sext <16 x i16> %7 to <16 x i32>
+  %9 = mul nsw <16 x i32> %8, %6
+  %10 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %9)
+  %11 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
+  %op.rdx = add nsw i32 %10, %11
   ret i32 %op.rdx
 }
 
-define i32 @mlav32i32i16(i16* %x, i16* %y) {
+define i32 @mlav32i32i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav32i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r0]
@@ -2348,18 +2109,16 @@ define i32 @mlav32i32i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    vmlava.u32 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <32 x i16>*
-  %1 = load <32 x i16>, <32 x i16>* %0, align 2
-  %2 = sext <32 x i16> %1 to <32 x i32>
-  %3 = bitcast i16* %y to <32 x i16>*
-  %4 = load <32 x i16>, <32 x i16>* %3, align 2
-  %5 = sext <32 x i16> %4 to <32 x i32>
-  %6 = mul nsw <32 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %6)
-  ret i32 %7
+  %0 = load <32 x i16>, ptr %x, align 2
+  %1 = sext <32 x i16> %0 to <32 x i32>
+  %2 = load <32 x i16>, ptr %y, align 2
+  %3 = sext <32 x i16> %2 to <32 x i32>
+  %4 = mul nsw <32 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %4)
+  ret i32 %5
 }
 
-define i32 @mlav64i32i16(i16* %x, i16* %y) {
+define i32 @mlav64i32i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav64i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
@@ -2389,95 +2148,79 @@ define i32 @mlav64i32i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    vmlava.s16 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %0, align 2
-  %1 = sext <8 x i16> %wide.load to <8 x i32>
-  %2 = bitcast i16* %y to <8 x i16>*
-  %wide.load11 = load <8 x i16>, <8 x i16>* %2, align 2
-  %3 = sext <8 x i16> %wide.load11 to <8 x i32>
-  %4 = mul nsw <8 x i32> %3, %1
-  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
-  %6 = getelementptr inbounds i16, i16* %x, i32 8
-  %7 = bitcast i16* %6 to <8 x i16>*
-  %wide.load.1 = load <8 x i16>, <8 x i16>* %7, align 2
-  %8 = sext <8 x i16> %wide.load.1 to <8 x i32>
-  %9 = getelementptr inbounds i16, i16* %y, i32 8
-  %10 = bitcast i16* %9 to <8 x i16>*
-  %wide.load11.1 = load <8 x i16>, <8 x i16>* %10, align 2
-  %11 = sext <8 x i16> %wide.load11.1 to <8 x i32>
-  %12 = mul nsw <8 x i32> %11, %8
-  %13 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %12)
-  %14 = add i32 %13, %5
-  %15 = getelementptr inbounds i16, i16* %x, i32 16
-  %16 = bitcast i16* %15 to <8 x i16>*
-  %wide.load.2 = load <8 x i16>, <8 x i16>* %16, align 2
-  %17 = sext <8 x i16> %wide.load.2 to <8 x i32>
-  %18 = getelementptr inbounds i16, i16* %y, i32 16
-  %19 = bitcast i16* %18 to <8 x i16>*
-  %wide.load11.2 = load <8 x i16>, <8 x i16>* %19, align 2
-  %20 = sext <8 x i16> %wide.load11.2 to <8 x i32>
-  %21 = mul nsw <8 x i32> %20, %17
-  %22 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %21)
-  %23 = add i32 %22, %14
-  %24 = getelementptr inbounds i16, i16* %x, i32 24
-  %25 = bitcast i16* %24 to <8 x i16>*
-  %wide.load.3 = load <8 x i16>, <8 x i16>* %25, align 2
-  %26 = sext <8 x i16> %wide.load.3 to <8 x i32>
-  %27 = getelementptr inbounds i16, i16* %y, i32 24
-  %28 = bitcast i16* %27 to <8 x i16>*
-  %wide.load11.3 = load <8 x i16>, <8 x i16>* %28, align 2
-  %29 = sext <8 x i16> %wide.load11.3 to <8 x i32>
-  %30 = mul nsw <8 x i32> %29, %26
-  %31 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %30)
-  %32 = add i32 %31, %23
-  %33 = getelementptr inbounds i16, i16* %x, i32 32
-  %34 = bitcast i16* %33 to <8 x i16>*
-  %wide.load.4 = load <8 x i16>, <8 x i16>* %34, align 2
-  %35 = sext <8 x i16> %wide.load.4 to <8 x i32>
-  %36 = getelementptr inbounds i16, i16* %y, i32 32
-  %37 = bitcast i16* %36 to <8 x i16>*
-  %wide.load11.4 = load <8 x i16>, <8 x i16>* %37, align 2
-  %38 = sext <8 x i16> %wide.load11.4 to <8 x i32>
-  %39 = mul nsw <8 x i32> %38, %35
-  %40 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %39)
-  %41 = add i32 %40, %32
-  %42 = getelementptr inbounds i16, i16* %x, i32 40
-  %43 = bitcast i16* %42 to <8 x i16>*
-  %wide.load.5 = load <8 x i16>, <8 x i16>* %43, align 2
-  %44 = sext <8 x i16> %wide.load.5 to <8 x i32>
-  %45 = getelementptr inbounds i16, i16* %y, i32 40
-  %46 = bitcast i16* %45 to <8 x i16>*
-  %wide.load11.5 = load <8 x i16>, <8 x i16>* %46, align 2
-  %47 = sext <8 x i16> %wide.load11.5 to <8 x i32>
-  %48 = mul nsw <8 x i32> %47, %44
-  %49 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %48)
-  %50 = add i32 %49, %41
-  %51 = getelementptr inbounds i16, i16* %x, i32 48
-  %52 = bitcast i16* %51 to <8 x i16>*
-  %wide.load.6 = load <8 x i16>, <8 x i16>* %52, align 2
-  %53 = sext <8 x i16> %wide.load.6 to <8 x i32>
-  %54 = getelementptr inbounds i16, i16* %y, i32 48
-  %55 = bitcast i16* %54 to <8 x i16>*
-  %wide.load11.6 = load <8 x i16>, <8 x i16>* %55, align 2
-  %56 = sext <8 x i16> %wide.load11.6 to <8 x i32>
-  %57 = mul nsw <8 x i32> %56, %53
-  %58 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %57)
-  %59 = add i32 %58, %50
-  %60 = getelementptr inbounds i16, i16* %x, i32 56
-  %61 = bitcast i16* %60 to <8 x i16>*
-  %wide.load.7 = load <8 x i16>, <8 x i16>* %61, align 2
-  %62 = sext <8 x i16> %wide.load.7 to <8 x i32>
-  %63 = getelementptr inbounds i16, i16* %y, i32 56
-  %64 = bitcast i16* %63 to <8 x i16>*
-  %wide.load11.7 = load <8 x i16>, <8 x i16>* %64, align 2
-  %65 = sext <8 x i16> %wide.load11.7 to <8 x i32>
-  %66 = mul nsw <8 x i32> %65, %62
-  %67 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %66)
-  %68 = add i32 %67, %59
-  ret i32 %68
+  %wide.load = load <8 x i16>, ptr %x, align 2
+  %0 = sext <8 x i16> %wide.load to <8 x i32>
+  %wide.load11 = load <8 x i16>, ptr %y, align 2
+  %1 = sext <8 x i16> %wide.load11 to <8 x i32>
+  %2 = mul nsw <8 x i32> %1, %0
+  %3 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %2)
+  %4 = getelementptr inbounds i16, ptr %x, i32 8
+  %wide.load.1 = load <8 x i16>, ptr %4, align 2
+  %5 = sext <8 x i16> %wide.load.1 to <8 x i32>
+  %6 = getelementptr inbounds i16, ptr %y, i32 8
+  %wide.load11.1 = load <8 x i16>, ptr %6, align 2
+  %7 = sext <8 x i16> %wide.load11.1 to <8 x i32>
+  %8 = mul nsw <8 x i32> %7, %5
+  %9 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %8)
+  %10 = add i32 %9, %3
+  %11 = getelementptr inbounds i16, ptr %x, i32 16
+  %wide.load.2 = load <8 x i16>, ptr %11, align 2
+  %12 = sext <8 x i16> %wide.load.2 to <8 x i32>
+  %13 = getelementptr inbounds i16, ptr %y, i32 16
+  %wide.load11.2 = load <8 x i16>, ptr %13, align 2
+  %14 = sext <8 x i16> %wide.load11.2 to <8 x i32>
+  %15 = mul nsw <8 x i32> %14, %12
+  %16 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %15)
+  %17 = add i32 %16, %10
+  %18 = getelementptr inbounds i16, ptr %x, i32 24
+  %wide.load.3 = load <8 x i16>, ptr %18, align 2
+  %19 = sext <8 x i16> %wide.load.3 to <8 x i32>
+  %20 = getelementptr inbounds i16, ptr %y, i32 24
+  %wide.load11.3 = load <8 x i16>, ptr %20, align 2
+  %21 = sext <8 x i16> %wide.load11.3 to <8 x i32>
+  %22 = mul nsw <8 x i32> %21, %19
+  %23 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %22)
+  %24 = add i32 %23, %17
+  %25 = getelementptr inbounds i16, ptr %x, i32 32
+  %wide.load.4 = load <8 x i16>, ptr %25, align 2
+  %26 = sext <8 x i16> %wide.load.4 to <8 x i32>
+  %27 = getelementptr inbounds i16, ptr %y, i32 32
+  %wide.load11.4 = load <8 x i16>, ptr %27, align 2
+  %28 = sext <8 x i16> %wide.load11.4 to <8 x i32>
+  %29 = mul nsw <8 x i32> %28, %26
+  %30 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %29)
+  %31 = add i32 %30, %24
+  %32 = getelementptr inbounds i16, ptr %x, i32 40
+  %wide.load.5 = load <8 x i16>, ptr %32, align 2
+  %33 = sext <8 x i16> %wide.load.5 to <8 x i32>
+  %34 = getelementptr inbounds i16, ptr %y, i32 40
+  %wide.load11.5 = load <8 x i16>, ptr %34, align 2
+  %35 = sext <8 x i16> %wide.load11.5 to <8 x i32>
+  %36 = mul nsw <8 x i32> %35, %33
+  %37 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %36)
+  %38 = add i32 %37, %31
+  %39 = getelementptr inbounds i16, ptr %x, i32 48
+  %wide.load.6 = load <8 x i16>, ptr %39, align 2
+  %40 = sext <8 x i16> %wide.load.6 to <8 x i32>
+  %41 = getelementptr inbounds i16, ptr %y, i32 48
+  %wide.load11.6 = load <8 x i16>, ptr %41, align 2
+  %42 = sext <8 x i16> %wide.load11.6 to <8 x i32>
+  %43 = mul nsw <8 x i32> %42, %40
+  %44 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %43)
+  %45 = add i32 %44, %38
+  %46 = getelementptr inbounds i16, ptr %x, i32 56
+  %wide.load.7 = load <8 x i16>, ptr %46, align 2
+  %47 = sext <8 x i16> %wide.load.7 to <8 x i32>
+  %48 = getelementptr inbounds i16, ptr %y, i32 56
+  %wide.load11.7 = load <8 x i16>, ptr %48, align 2
+  %49 = sext <8 x i16> %wide.load11.7 to <8 x i32>
+  %50 = mul nsw <8 x i32> %49, %47
+  %51 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %50)
+  %52 = add i32 %51, %45
+  ret i32 %52
 }
 
-define i32 @mlav128i32i16(i16* %x, i16* %y) {
+define i32 @mlav128i32i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav128i32i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
@@ -2531,183 +2274,151 @@ define i32 @mlav128i32i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    vmlava.s16 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %0, align 2
-  %1 = sext <8 x i16> %wide.load to <8 x i32>
-  %2 = bitcast i16* %y to <8 x i16>*
-  %wide.load11 = load <8 x i16>, <8 x i16>* %2, align 2
-  %3 = sext <8 x i16> %wide.load11 to <8 x i32>
-  %4 = mul nsw <8 x i32> %3, %1
-  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
-  %6 = getelementptr inbounds i16, i16* %x, i32 8
-  %7 = bitcast i16* %6 to <8 x i16>*
-  %wide.load.1 = load <8 x i16>, <8 x i16>* %7, align 2
-  %8 = sext <8 x i16> %wide.load.1 to <8 x i32>
-  %9 = getelementptr inbounds i16, i16* %y, i32 8
-  %10 = bitcast i16* %9 to <8 x i16>*
-  %wide.load11.1 = load <8 x i16>, <8 x i16>* %10, align 2
-  %11 = sext <8 x i16> %wide.load11.1 to <8 x i32>
-  %12 = mul nsw <8 x i32> %11, %8
-  %13 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %12)
-  %14 = add i32 %13, %5
-  %15 = getelementptr inbounds i16, i16* %x, i32 16
-  %16 = bitcast i16* %15 to <8 x i16>*
-  %wide.load.2 = load <8 x i16>, <8 x i16>* %16, align 2
-  %17 = sext <8 x i16> %wide.load.2 to <8 x i32>
-  %18 = getelementptr inbounds i16, i16* %y, i32 16
-  %19 = bitcast i16* %18 to <8 x i16>*
-  %wide.load11.2 = load <8 x i16>, <8 x i16>* %19, align 2
-  %20 = sext <8 x i16> %wide.load11.2 to <8 x i32>
-  %21 = mul nsw <8 x i32> %20, %17
-  %22 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %21)
-  %23 = add i32 %22, %14
-  %24 = getelementptr inbounds i16, i16* %x, i32 24
-  %25 = bitcast i16* %24 to <8 x i16>*
-  %wide.load.3 = load <8 x i16>, <8 x i16>* %25, align 2
-  %26 = sext <8 x i16> %wide.load.3 to <8 x i32>
-  %27 = getelementptr inbounds i16, i16* %y, i32 24
-  %28 = bitcast i16* %27 to <8 x i16>*
-  %wide.load11.3 = load <8 x i16>, <8 x i16>* %28, align 2
-  %29 = sext <8 x i16> %wide.load11.3 to <8 x i32>
-  %30 = mul nsw <8 x i32> %29, %26
-  %31 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %30)
-  %32 = add i32 %31, %23
-  %33 = getelementptr inbounds i16, i16* %x, i32 32
-  %34 = bitcast i16* %33 to <8 x i16>*
-  %wide.load.4 = load <8 x i16>, <8 x i16>* %34, align 2
-  %35 = sext <8 x i16> %wide.load.4 to <8 x i32>
-  %36 = getelementptr inbounds i16, i16* %y, i32 32
-  %37 = bitcast i16* %36 to <8 x i16>*
-  %wide.load11.4 = load <8 x i16>, <8 x i16>* %37, align 2
-  %38 = sext <8 x i16> %wide.load11.4 to <8 x i32>
-  %39 = mul nsw <8 x i32> %38, %35
-  %40 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %39)
-  %41 = add i32 %40, %32
-  %42 = getelementptr inbounds i16, i16* %x, i32 40
-  %43 = bitcast i16* %42 to <8 x i16>*
-  %wide.load.5 = load <8 x i16>, <8 x i16>* %43, align 2
-  %44 = sext <8 x i16> %wide.load.5 to <8 x i32>
-  %45 = getelementptr inbounds i16, i16* %y, i32 40
-  %46 = bitcast i16* %45 to <8 x i16>*
-  %wide.load11.5 = load <8 x i16>, <8 x i16>* %46, align 2
-  %47 = sext <8 x i16> %wide.load11.5 to <8 x i32>
-  %48 = mul nsw <8 x i32> %47, %44
-  %49 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %48)
-  %50 = add i32 %49, %41
-  %51 = getelementptr inbounds i16, i16* %x, i32 48
-  %52 = bitcast i16* %51 to <8 x i16>*
-  %wide.load.6 = load <8 x i16>, <8 x i16>* %52, align 2
-  %53 = sext <8 x i16> %wide.load.6 to <8 x i32>
-  %54 = getelementptr inbounds i16, i16* %y, i32 48
-  %55 = bitcast i16* %54 to <8 x i16>*
-  %wide.load11.6 = load <8 x i16>, <8 x i16>* %55, align 2
-  %56 = sext <8 x i16> %wide.load11.6 to <8 x i32>
-  %57 = mul nsw <8 x i32> %56, %53
+  %wide.load = load <8 x i16>, ptr %x, align 2
+  %0 = sext <8 x i16> %wide.load to <8 x i32>
+  %wide.load11 = load <8 x i16>, ptr %y, align 2
+  %1 = sext <8 x i16> %wide.load11 to <8 x i32>
+  %2 = mul nsw <8 x i32> %1, %0
+  %3 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %2)
+  %4 = getelementptr inbounds i16, ptr %x, i32 8
+  %wide.load.1 = load <8 x i16>, ptr %4, align 2
+  %5 = sext <8 x i16> %wide.load.1 to <8 x i32>
+  %6 = getelementptr inbounds i16, ptr %y, i32 8
+  %wide.load11.1 = load <8 x i16>, ptr %6, align 2
+  %7 = sext <8 x i16> %wide.load11.1 to <8 x i32>
+  %8 = mul nsw <8 x i32> %7, %5
+  %9 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %8)
+  %10 = add i32 %9, %3
+  %11 = getelementptr inbounds i16, ptr %x, i32 16
+  %wide.load.2 = load <8 x i16>, ptr %11, align 2
+  %12 = sext <8 x i16> %wide.load.2 to <8 x i32>
+  %13 = getelementptr inbounds i16, ptr %y, i32 16
+  %wide.load11.2 = load <8 x i16>, ptr %13, align 2
+  %14 = sext <8 x i16> %wide.load11.2 to <8 x i32>
+  %15 = mul nsw <8 x i32> %14, %12
+  %16 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %15)
+  %17 = add i32 %16, %10
+  %18 = getelementptr inbounds i16, ptr %x, i32 24
+  %wide.load.3 = load <8 x i16>, ptr %18, align 2
+  %19 = sext <8 x i16> %wide.load.3 to <8 x i32>
+  %20 = getelementptr inbounds i16, ptr %y, i32 24
+  %wide.load11.3 = load <8 x i16>, ptr %20, align 2
+  %21 = sext <8 x i16> %wide.load11.3 to <8 x i32>
+  %22 = mul nsw <8 x i32> %21, %19
+  %23 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %22)
+  %24 = add i32 %23, %17
+  %25 = getelementptr inbounds i16, ptr %x, i32 32
+  %wide.load.4 = load <8 x i16>, ptr %25, align 2
+  %26 = sext <8 x i16> %wide.load.4 to <8 x i32>
+  %27 = getelementptr inbounds i16, ptr %y, i32 32
+  %wide.load11.4 = load <8 x i16>, ptr %27, align 2
+  %28 = sext <8 x i16> %wide.load11.4 to <8 x i32>
+  %29 = mul nsw <8 x i32> %28, %26
+  %30 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %29)
+  %31 = add i32 %30, %24
+  %32 = getelementptr inbounds i16, ptr %x, i32 40
+  %wide.load.5 = load <8 x i16>, ptr %32, align 2
+  %33 = sext <8 x i16> %wide.load.5 to <8 x i32>
+  %34 = getelementptr inbounds i16, ptr %y, i32 40
+  %wide.load11.5 = load <8 x i16>, ptr %34, align 2
+  %35 = sext <8 x i16> %wide.load11.5 to <8 x i32>
+  %36 = mul nsw <8 x i32> %35, %33
+  %37 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %36)
+  %38 = add i32 %37, %31
+  %39 = getelementptr inbounds i16, ptr %x, i32 48
+  %wide.load.6 = load <8 x i16>, ptr %39, align 2
+  %40 = sext <8 x i16> %wide.load.6 to <8 x i32>
+  %41 = getelementptr inbounds i16, ptr %y, i32 48
+  %wide.load11.6 = load <8 x i16>, ptr %41, align 2
+  %42 = sext <8 x i16> %wide.load11.6 to <8 x i32>
+  %43 = mul nsw <8 x i32> %42, %40
+  %44 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %43)
+  %45 = add i32 %44, %38
+  %46 = getelementptr inbounds i16, ptr %x, i32 56
+  %wide.load.7 = load <8 x i16>, ptr %46, align 2
+  %47 = sext <8 x i16> %wide.load.7 to <8 x i32>
+  %48 = getelementptr inbounds i16, ptr %y, i32 56
+  %wide.load11.7 = load <8 x i16>, ptr %48, align 2
+  %49 = sext <8 x i16> %wide.load11.7 to <8 x i32>
+  %50 = mul nsw <8 x i32> %49, %47
+  %51 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %50)
+  %52 = add i32 %51, %45
+  %53 = getelementptr inbounds i16, ptr %x, i32 64
+  %wide.load.8 = load <8 x i16>, ptr %53, align 2
+  %54 = sext <8 x i16> %wide.load.8 to <8 x i32>
+  %55 = getelementptr inbounds i16, ptr %y, i32 64
+  %wide.load11.8 = load <8 x i16>, ptr %55, align 2
+  %56 = sext <8 x i16> %wide.load11.8 to <8 x i32>
+  %57 = mul nsw <8 x i32> %56, %54
   %58 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %57)
-  %59 = add i32 %58, %50
-  %60 = getelementptr inbounds i16, i16* %x, i32 56
-  %61 = bitcast i16* %60 to <8 x i16>*
-  %wide.load.7 = load <8 x i16>, <8 x i16>* %61, align 2
-  %62 = sext <8 x i16> %wide.load.7 to <8 x i32>
-  %63 = getelementptr inbounds i16, i16* %y, i32 56
-  %64 = bitcast i16* %63 to <8 x i16>*
-  %wide.load11.7 = load <8 x i16>, <8 x i16>* %64, align 2
-  %65 = sext <8 x i16> %wide.load11.7 to <8 x i32>
-  %66 = mul nsw <8 x i32> %65, %62
-  %67 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %66)
-  %68 = add i32 %67, %59
-  %69 = getelementptr inbounds i16, i16* %x, i32 64
-  %70 = bitcast i16* %69 to <8 x i16>*
-  %wide.load.8 = load <8 x i16>, <8 x i16>* %70, align 2
-  %71 = sext <8 x i16> %wide.load.8 to <8 x i32>
-  %72 = getelementptr inbounds i16, i16* %y, i32 64
-  %73 = bitcast i16* %72 to <8 x i16>*
-  %wide.load11.8 = load <8 x i16>, <8 x i16>* %73, align 2
-  %74 = sext <8 x i16> %wide.load11.8 to <8 x i32>
-  %75 = mul nsw <8 x i32> %74, %71
-  %76 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %75)
-  %77 = add i32 %76, %68
-  %78 = getelementptr inbounds i16, i16* %x, i32 72
-  %79 = bitcast i16* %78 to <8 x i16>*
-  %wide.load.9 = load <8 x i16>, <8 x i16>* %79, align 2
-  %80 = sext <8 x i16> %wide.load.9 to <8 x i32>
-  %81 = getelementptr inbounds i16, i16* %y, i32 72
-  %82 = bitcast i16* %81 to <8 x i16>*
-  %wide.load11.9 = load <8 x i16>, <8 x i16>* %82, align 2
-  %83 = sext <8 x i16> %wide.load11.9 to <8 x i32>
-  %84 = mul nsw <8 x i32> %83, %80
-  %85 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %84)
-  %86 = add i32 %85, %77
-  %87 = getelementptr inbounds i16, i16* %x, i32 80
-  %88 = bitcast i16* %87 to <8 x i16>*
-  %wide.load.10 = load <8 x i16>, <8 x i16>* %88, align 2
-  %89 = sext <8 x i16> %wide.load.10 to <8 x i32>
-  %90 = getelementptr inbounds i16, i16* %y, i32 80
-  %91 = bitcast i16* %90 to <8 x i16>*
-  %wide.load11.10 = load <8 x i16>, <8 x i16>* %91, align 2
-  %92 = sext <8 x i16> %wide.load11.10 to <8 x i32>
-  %93 = mul nsw <8 x i32> %92, %89
-  %94 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %93)
-  %95 = add i32 %94, %86
-  %96 = getelementptr inbounds i16, i16* %x, i32 88
-  %97 = bitcast i16* %96 to <8 x i16>*
-  %wide.load.11 = load <8 x i16>, <8 x i16>* %97, align 2
-  %98 = sext <8 x i16> %wide.load.11 to <8 x i32>
-  %99 = getelementptr inbounds i16, i16* %y, i32 88
-  %100 = bitcast i16* %99 to <8 x i16>*
-  %wide.load11.11 = load <8 x i16>, <8 x i16>* %100, align 2
-  %101 = sext <8 x i16> %wide.load11.11 to <8 x i32>
-  %102 = mul nsw <8 x i32> %101, %98
-  %103 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %102)
-  %104 = add i32 %103, %95
-  %105 = getelementptr inbounds i16, i16* %x, i32 96
-  %106 = bitcast i16* %105 to <8 x i16>*
-  %wide.load.12 = load <8 x i16>, <8 x i16>* %106, align 2
-  %107 = sext <8 x i16> %wide.load.12 to <8 x i32>
-  %108 = getelementptr inbounds i16, i16* %y, i32 96
-  %109 = bitcast i16* %108 to <8 x i16>*
-  %wide.load11.12 = load <8 x i16>, <8 x i16>* %109, align 2
-  %110 = sext <8 x i16> %wide.load11.12 to <8 x i32>
-  %111 = mul nsw <8 x i32> %110, %107
-  %112 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %111)
-  %113 = add i32 %112, %104
-  %114 = getelementptr inbounds i16, i16* %x, i32 104
-  %115 = bitcast i16* %114 to <8 x i16>*
-  %wide.load.13 = load <8 x i16>, <8 x i16>* %115, align 2
-  %116 = sext <8 x i16> %wide.load.13 to <8 x i32>
-  %117 = getelementptr inbounds i16, i16* %y, i32 104
-  %118 = bitcast i16* %117 to <8 x i16>*
-  %wide.load11.13 = load <8 x i16>, <8 x i16>* %118, align 2
-  %119 = sext <8 x i16> %wide.load11.13 to <8 x i32>
-  %120 = mul nsw <8 x i32> %119, %116
-  %121 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %120)
-  %122 = add i32 %121, %113
-  %123 = getelementptr inbounds i16, i16* %x, i32 112
-  %124 = bitcast i16* %123 to <8 x i16>*
-  %wide.load.14 = load <8 x i16>, <8 x i16>* %124, align 2
-  %125 = sext <8 x i16> %wide.load.14 to <8 x i32>
-  %126 = getelementptr inbounds i16, i16* %y, i32 112
-  %127 = bitcast i16* %126 to <8 x i16>*
-  %wide.load11.14 = load <8 x i16>, <8 x i16>* %127, align 2
-  %128 = sext <8 x i16> %wide.load11.14 to <8 x i32>
-  %129 = mul nsw <8 x i32> %128, %125
-  %130 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %129)
-  %131 = add i32 %130, %122
-  %132 = getelementptr inbounds i16, i16* %x, i32 120
-  %133 = bitcast i16* %132 to <8 x i16>*
-  %wide.load.15 = load <8 x i16>, <8 x i16>* %133, align 2
-  %134 = sext <8 x i16> %wide.load.15 to <8 x i32>
-  %135 = getelementptr inbounds i16, i16* %y, i32 120
-  %136 = bitcast i16* %135 to <8 x i16>*
-  %wide.load11.15 = load <8 x i16>, <8 x i16>* %136, align 2
-  %137 = sext <8 x i16> %wide.load11.15 to <8 x i32>
-  %138 = mul nsw <8 x i32> %137, %134
-  %139 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %138)
-  %140 = add i32 %139, %131
-  ret i32 %140
+  %59 = add i32 %58, %52
+  %60 = getelementptr inbounds i16, ptr %x, i32 72
+  %wide.load.9 = load <8 x i16>, ptr %60, align 2
+  %61 = sext <8 x i16> %wide.load.9 to <8 x i32>
+  %62 = getelementptr inbounds i16, ptr %y, i32 72
+  %wide.load11.9 = load <8 x i16>, ptr %62, align 2
+  %63 = sext <8 x i16> %wide.load11.9 to <8 x i32>
+  %64 = mul nsw <8 x i32> %63, %61
+  %65 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %64)
+  %66 = add i32 %65, %59
+  %67 = getelementptr inbounds i16, ptr %x, i32 80
+  %wide.load.10 = load <8 x i16>, ptr %67, align 2
+  %68 = sext <8 x i16> %wide.load.10 to <8 x i32>
+  %69 = getelementptr inbounds i16, ptr %y, i32 80
+  %wide.load11.10 = load <8 x i16>, ptr %69, align 2
+  %70 = sext <8 x i16> %wide.load11.10 to <8 x i32>
+  %71 = mul nsw <8 x i32> %70, %68
+  %72 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %71)
+  %73 = add i32 %72, %66
+  %74 = getelementptr inbounds i16, ptr %x, i32 88
+  %wide.load.11 = load <8 x i16>, ptr %74, align 2
+  %75 = sext <8 x i16> %wide.load.11 to <8 x i32>
+  %76 = getelementptr inbounds i16, ptr %y, i32 88
+  %wide.load11.11 = load <8 x i16>, ptr %76, align 2
+  %77 = sext <8 x i16> %wide.load11.11 to <8 x i32>
+  %78 = mul nsw <8 x i32> %77, %75
+  %79 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %78)
+  %80 = add i32 %79, %73
+  %81 = getelementptr inbounds i16, ptr %x, i32 96
+  %wide.load.12 = load <8 x i16>, ptr %81, align 2
+  %82 = sext <8 x i16> %wide.load.12 to <8 x i32>
+  %83 = getelementptr inbounds i16, ptr %y, i32 96
+  %wide.load11.12 = load <8 x i16>, ptr %83, align 2
+  %84 = sext <8 x i16> %wide.load11.12 to <8 x i32>
+  %85 = mul nsw <8 x i32> %84, %82
+  %86 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %85)
+  %87 = add i32 %86, %80
+  %88 = getelementptr inbounds i16, ptr %x, i32 104
+  %wide.load.13 = load <8 x i16>, ptr %88, align 2
+  %89 = sext <8 x i16> %wide.load.13 to <8 x i32>
+  %90 = getelementptr inbounds i16, ptr %y, i32 104
+  %wide.load11.13 = load <8 x i16>, ptr %90, align 2
+  %91 = sext <8 x i16> %wide.load11.13 to <8 x i32>
+  %92 = mul nsw <8 x i32> %91, %89
+  %93 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %92)
+  %94 = add i32 %93, %87
+  %95 = getelementptr inbounds i16, ptr %x, i32 112
+  %wide.load.14 = load <8 x i16>, ptr %95, align 2
+  %96 = sext <8 x i16> %wide.load.14 to <8 x i32>
+  %97 = getelementptr inbounds i16, ptr %y, i32 112
+  %wide.load11.14 = load <8 x i16>, ptr %97, align 2
+  %98 = sext <8 x i16> %wide.load11.14 to <8 x i32>
+  %99 = mul nsw <8 x i32> %98, %96
+  %100 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %99)
+  %101 = add i32 %100, %94
+  %102 = getelementptr inbounds i16, ptr %x, i32 120
+  %wide.load.15 = load <8 x i16>, ptr %102, align 2
+  %103 = sext <8 x i16> %wide.load.15 to <8 x i32>
+  %104 = getelementptr inbounds i16, ptr %y, i32 120
+  %wide.load11.15 = load <8 x i16>, ptr %104, align 2
+  %105 = sext <8 x i16> %wide.load11.15 to <8 x i32>
+  %106 = mul nsw <8 x i32> %105, %103
+  %107 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %106)
+  %108 = add i32 %107, %101
+  ret i32 %108
 }
 
-define i32 @mlav2i32i8(i8* %x, i8* %y) {
+define i32 @mlav2i32i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav2i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrb r2, [r0]
@@ -2718,23 +2429,23 @@ define i32 @mlav2i32i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    smlabb r0, r3, r2, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i8, i8* %x, align 1
+  %0 = load i8, ptr %x, align 1
   %conv = zext i8 %0 to i32
-  %1 = load i8, i8* %y, align 1
+  %1 = load i8, ptr %y, align 1
   %conv2 = zext i8 %1 to i32
   %mul = mul nuw nsw i32 %conv2, %conv
-  %arrayidx.1 = getelementptr inbounds i8, i8* %x, i32 1
-  %2 = load i8, i8* %arrayidx.1, align 1
+  %arrayidx.1 = getelementptr inbounds i8, ptr %x, i32 1
+  %2 = load i8, ptr %arrayidx.1, align 1
   %conv.1 = zext i8 %2 to i32
-  %arrayidx1.1 = getelementptr inbounds i8, i8* %y, i32 1
-  %3 = load i8, i8* %arrayidx1.1, align 1
+  %arrayidx1.1 = getelementptr inbounds i8, ptr %y, i32 1
+  %3 = load i8, ptr %arrayidx1.1, align 1
   %conv2.1 = zext i8 %3 to i32
   %mul.1 = mul nuw nsw i32 %conv2.1, %conv.1
   %add.1 = add nuw nsw i32 %mul.1, %mul
   ret i32 %add.1
 }
 
-define i32 @mlav4i32i8(i8* %x, i8* %y) {
+define i32 @mlav4i32i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav4i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u32 q0, [r0]
@@ -2742,18 +2453,16 @@ define i32 @mlav4i32i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    vmlav.u32 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <4 x i8>*
-  %1 = load <4 x i8>, <4 x i8>* %0, align 1
-  %2 = zext <4 x i8> %1 to <4 x i32>
-  %3 = bitcast i8* %y to <4 x i8>*
-  %4 = load <4 x i8>, <4 x i8>* %3, align 1
-  %5 = zext <4 x i8> %4 to <4 x i32>
-  %6 = mul nuw nsw <4 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %6)
-  ret i32 %7
+  %0 = load <4 x i8>, ptr %x, align 1
+  %1 = zext <4 x i8> %0 to <4 x i32>
+  %2 = load <4 x i8>, ptr %y, align 1
+  %3 = zext <4 x i8> %2 to <4 x i32>
+  %4 = mul nuw nsw <4 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %4)
+  ret i32 %5
 }
 
-define i32 @mlav8i32i8(i8* %x, i8* %y) {
+define i32 @mlav8i32i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav8i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u16 q0, [r0]
@@ -2761,18 +2470,16 @@ define i32 @mlav8i32i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    vmlav.u16 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <8 x i8>*
-  %1 = load <8 x i8>, <8 x i8>* %0, align 1
-  %2 = zext <8 x i8> %1 to <8 x i32>
-  %3 = bitcast i8* %y to <8 x i8>*
-  %4 = load <8 x i8>, <8 x i8>* %3, align 1
-  %5 = zext <8 x i8> %4 to <8 x i32>
-  %6 = mul nuw nsw <8 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %6)
-  ret i32 %7
+  %0 = load <8 x i8>, ptr %x, align 1
+  %1 = zext <8 x i8> %0 to <8 x i32>
+  %2 = load <8 x i8>, ptr %y, align 1
+  %3 = zext <8 x i8> %2 to <8 x i32>
+  %4 = mul nuw nsw <8 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
+  ret i32 %5
 }
 
-define i32 @mlav16i32i8(i8* %x, i8* %y) {
+define i32 @mlav16i32i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav16i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q0, [r0]
@@ -2780,18 +2487,16 @@ define i32 @mlav16i32i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    vmlav.u8 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0, align 1
-  %2 = zext <16 x i8> %1 to <16 x i32>
-  %3 = bitcast i8* %y to <16 x i8>*
-  %4 = load <16 x i8>, <16 x i8>* %3, align 1
-  %5 = zext <16 x i8> %4 to <16 x i32>
-  %6 = mul nuw nsw <16 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %6)
-  ret i32 %7
+  %0 = load <16 x i8>, ptr %x, align 1
+  %1 = zext <16 x i8> %0 to <16 x i32>
+  %2 = load <16 x i8>, ptr %y, align 1
+  %3 = zext <16 x i8> %2 to <16 x i32>
+  %4 = mul nuw nsw <16 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %4)
+  ret i32 %5
 }
 
-define i32 @mlav24i32i8(i8* %x, i8* %y) {
+define i32 @mlav24i32i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav24i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u16 q0, [r0]
@@ -2803,29 +2508,25 @@ define i32 @mlav24i32i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <8 x i8>*
-  %1 = load <8 x i8>, <8 x i8>* %0, align 1
-  %2 = zext <8 x i8> %1 to <8 x i32>
-  %3 = bitcast i8* %y to <8 x i8>*
-  %4 = load <8 x i8>, <8 x i8>* %3, align 1
-  %5 = zext <8 x i8> %4 to <8 x i32>
-  %6 = mul nuw nsw <8 x i32> %5, %2
-  %arrayidx.8 = getelementptr inbounds i8, i8* %x, i32 8
-  %arrayidx1.8 = getelementptr inbounds i8, i8* %y, i32 8
-  %7 = bitcast i8* %arrayidx.8 to <16 x i8>*
-  %8 = load <16 x i8>, <16 x i8>* %7, align 1
-  %9 = zext <16 x i8> %8 to <16 x i32>
-  %10 = bitcast i8* %arrayidx1.8 to <16 x i8>*
-  %11 = load <16 x i8>, <16 x i8>* %10, align 1
-  %12 = zext <16 x i8> %11 to <16 x i32>
-  %13 = mul nuw nsw <16 x i32> %12, %9
-  %14 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %13)
-  %15 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %6)
-  %op.rdx = add nuw nsw i32 %14, %15
+  %0 = load <8 x i8>, ptr %x, align 1
+  %1 = zext <8 x i8> %0 to <8 x i32>
+  %2 = load <8 x i8>, ptr %y, align 1
+  %3 = zext <8 x i8> %2 to <8 x i32>
+  %4 = mul nuw nsw <8 x i32> %3, %1
+  %arrayidx.8 = getelementptr inbounds i8, ptr %x, i32 8
+  %arrayidx1.8 = getelementptr inbounds i8, ptr %y, i32 8
+  %5 = load <16 x i8>, ptr %arrayidx.8, align 1
+  %6 = zext <16 x i8> %5 to <16 x i32>
+  %7 = load <16 x i8>, ptr %arrayidx1.8, align 1
+  %8 = zext <16 x i8> %7 to <16 x i32>
+  %9 = mul nuw nsw <16 x i32> %8, %6
+  %10 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %9)
+  %11 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
+  %op.rdx = add nuw nsw i32 %10, %11
   ret i32 %op.rdx
 }
 
-define i32 @mlav32i32i8(i8* %x, i8* %y) {
+define i32 @mlav32i32i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav32i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u32 q0, [r0]
@@ -2855,18 +2556,16 @@ define i32 @mlav32i32i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    vmlava.u32 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <32 x i8>*
-  %1 = load <32 x i8>, <32 x i8>* %0, align 1
-  %2 = zext <32 x i8> %1 to <32 x i32>
-  %3 = bitcast i8* %y to <32 x i8>*
-  %4 = load <32 x i8>, <32 x i8>* %3, align 1
-  %5 = zext <32 x i8> %4 to <32 x i32>
-  %6 = mul nuw nsw <32 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %6)
-  ret i32 %7
+  %0 = load <32 x i8>, ptr %x, align 1
+  %1 = zext <32 x i8> %0 to <32 x i32>
+  %2 = load <32 x i8>, ptr %y, align 1
+  %3 = zext <32 x i8> %2 to <32 x i32>
+  %4 = mul nuw nsw <32 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %4)
+  ret i32 %5
 }
 
-define i32 @mlav64i32i8(i8* %x, i8* %y) {
+define i32 @mlav64i32i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav64i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q0, [r0]
@@ -2884,51 +2583,43 @@ define i32 @mlav64i32i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %0, align 1
-  %1 = zext <16 x i8> %wide.load to <16 x i32>
-  %2 = bitcast i8* %y to <16 x i8>*
-  %wide.load11 = load <16 x i8>, <16 x i8>* %2, align 1
-  %3 = zext <16 x i8> %wide.load11 to <16 x i32>
-  %4 = mul nuw nsw <16 x i32> %3, %1
-  %5 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %4)
-  %6 = getelementptr inbounds i8, i8* %x, i32 16
-  %7 = bitcast i8* %6 to <16 x i8>*
-  %wide.load.1 = load <16 x i8>, <16 x i8>* %7, align 1
-  %8 = zext <16 x i8> %wide.load.1 to <16 x i32>
-  %9 = getelementptr inbounds i8, i8* %y, i32 16
-  %10 = bitcast i8* %9 to <16 x i8>*
-  %wide.load11.1 = load <16 x i8>, <16 x i8>* %10, align 1
-  %11 = zext <16 x i8> %wide.load11.1 to <16 x i32>
-  %12 = mul nuw nsw <16 x i32> %11, %8
-  %13 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %12)
-  %14 = add i32 %13, %5
-  %15 = getelementptr inbounds i8, i8* %x, i32 32
-  %16 = bitcast i8* %15 to <16 x i8>*
-  %wide.load.2 = load <16 x i8>, <16 x i8>* %16, align 1
-  %17 = zext <16 x i8> %wide.load.2 to <16 x i32>
-  %18 = getelementptr inbounds i8, i8* %y, i32 32
-  %19 = bitcast i8* %18 to <16 x i8>*
-  %wide.load11.2 = load <16 x i8>, <16 x i8>* %19, align 1
-  %20 = zext <16 x i8> %wide.load11.2 to <16 x i32>
-  %21 = mul nuw nsw <16 x i32> %20, %17
-  %22 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %21)
-  %23 = add i32 %22, %14
-  %24 = getelementptr inbounds i8, i8* %x, i32 48
-  %25 = bitcast i8* %24 to <16 x i8>*
-  %wide.load.3 = load <16 x i8>, <16 x i8>* %25, align 1
-  %26 = zext <16 x i8> %wide.load.3 to <16 x i32>
-  %27 = getelementptr inbounds i8, i8* %y, i32 48
-  %28 = bitcast i8* %27 to <16 x i8>*
-  %wide.load11.3 = load <16 x i8>, <16 x i8>* %28, align 1
-  %29 = zext <16 x i8> %wide.load11.3 to <16 x i32>
-  %30 = mul nuw nsw <16 x i32> %29, %26
-  %31 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %30)
-  %32 = add i32 %31, %23
-  ret i32 %32
+  %wide.load = load <16 x i8>, ptr %x, align 1
+  %0 = zext <16 x i8> %wide.load to <16 x i32>
+  %wide.load11 = load <16 x i8>, ptr %y, align 1
+  %1 = zext <16 x i8> %wide.load11 to <16 x i32>
+  %2 = mul nuw nsw <16 x i32> %1, %0
+  %3 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %2)
+  %4 = getelementptr inbounds i8, ptr %x, i32 16
+  %wide.load.1 = load <16 x i8>, ptr %4, align 1
+  %5 = zext <16 x i8> %wide.load.1 to <16 x i32>
+  %6 = getelementptr inbounds i8, ptr %y, i32 16
+  %wide.load11.1 = load <16 x i8>, ptr %6, align 1
+  %7 = zext <16 x i8> %wide.load11.1 to <16 x i32>
+  %8 = mul nuw nsw <16 x i32> %7, %5
+  %9 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %8)
+  %10 = add i32 %9, %3
+  %11 = getelementptr inbounds i8, ptr %x, i32 32
+  %wide.load.2 = load <16 x i8>, ptr %11, align 1
+  %12 = zext <16 x i8> %wide.load.2 to <16 x i32>
+  %13 = getelementptr inbounds i8, ptr %y, i32 32
+  %wide.load11.2 = load <16 x i8>, ptr %13, align 1
+  %14 = zext <16 x i8> %wide.load11.2 to <16 x i32>
+  %15 = mul nuw nsw <16 x i32> %14, %12
+  %16 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %15)
+  %17 = add i32 %16, %10
+  %18 = getelementptr inbounds i8, ptr %x, i32 48
+  %wide.load.3 = load <16 x i8>, ptr %18, align 1
+  %19 = zext <16 x i8> %wide.load.3 to <16 x i32>
+  %20 = getelementptr inbounds i8, ptr %y, i32 48
+  %wide.load11.3 = load <16 x i8>, ptr %20, align 1
+  %21 = zext <16 x i8> %wide.load11.3 to <16 x i32>
+  %22 = mul nuw nsw <16 x i32> %21, %19
+  %23 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %22)
+  %24 = add i32 %23, %17
+  ret i32 %24
 }
 
-define i32 @mlav128i32i8(i8* %x, i8* %y) {
+define i32 @mlav128i32i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav128i32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q0, [r0]
@@ -2958,95 +2649,79 @@ define i32 @mlav128i32i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    vmlava.u8 r0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %0, align 1
-  %1 = zext <16 x i8> %wide.load to <16 x i32>
-  %2 = bitcast i8* %y to <16 x i8>*
-  %wide.load11 = load <16 x i8>, <16 x i8>* %2, align 1
-  %3 = zext <16 x i8> %wide.load11 to <16 x i32>
-  %4 = mul nuw nsw <16 x i32> %3, %1
-  %5 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %4)
-  %6 = getelementptr inbounds i8, i8* %x, i32 16
-  %7 = bitcast i8* %6 to <16 x i8>*
-  %wide.load.1 = load <16 x i8>, <16 x i8>* %7, align 1
-  %8 = zext <16 x i8> %wide.load.1 to <16 x i32>
-  %9 = getelementptr inbounds i8, i8* %y, i32 16
-  %10 = bitcast i8* %9 to <16 x i8>*
-  %wide.load11.1 = load <16 x i8>, <16 x i8>* %10, align 1
-  %11 = zext <16 x i8> %wide.load11.1 to <16 x i32>
-  %12 = mul nuw nsw <16 x i32> %11, %8
-  %13 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %12)
-  %14 = add i32 %13, %5
-  %15 = getelementptr inbounds i8, i8* %x, i32 32
-  %16 = bitcast i8* %15 to <16 x i8>*
-  %wide.load.2 = load <16 x i8>, <16 x i8>* %16, align 1
-  %17 = zext <16 x i8> %wide.load.2 to <16 x i32>
-  %18 = getelementptr inbounds i8, i8* %y, i32 32
-  %19 = bitcast i8* %18 to <16 x i8>*
-  %wide.load11.2 = load <16 x i8>, <16 x i8>* %19, align 1
-  %20 = zext <16 x i8> %wide.load11.2 to <16 x i32>
-  %21 = mul nuw nsw <16 x i32> %20, %17
-  %22 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %21)
-  %23 = add i32 %22, %14
-  %24 = getelementptr inbounds i8, i8* %x, i32 48
-  %25 = bitcast i8* %24 to <16 x i8>*
-  %wide.load.3 = load <16 x i8>, <16 x i8>* %25, align 1
-  %26 = zext <16 x i8> %wide.load.3 to <16 x i32>
-  %27 = getelementptr inbounds i8, i8* %y, i32 48
-  %28 = bitcast i8* %27 to <16 x i8>*
-  %wide.load11.3 = load <16 x i8>, <16 x i8>* %28, align 1
-  %29 = zext <16 x i8> %wide.load11.3 to <16 x i32>
-  %30 = mul nuw nsw <16 x i32> %29, %26
-  %31 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %30)
-  %32 = add i32 %31, %23
-  %33 = getelementptr inbounds i8, i8* %x, i32 64
-  %34 = bitcast i8* %33 to <16 x i8>*
-  %wide.load.4 = load <16 x i8>, <16 x i8>* %34, align 1
-  %35 = zext <16 x i8> %wide.load.4 to <16 x i32>
-  %36 = getelementptr inbounds i8, i8* %y, i32 64
-  %37 = bitcast i8* %36 to <16 x i8>*
-  %wide.load11.4 = load <16 x i8>, <16 x i8>* %37, align 1
-  %38 = zext <16 x i8> %wide.load11.4 to <16 x i32>
-  %39 = mul nuw nsw <16 x i32> %38, %35
-  %40 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %39)
-  %41 = add i32 %40, %32
-  %42 = getelementptr inbounds i8, i8* %x, i32 80
-  %43 = bitcast i8* %42 to <16 x i8>*
-  %wide.load.5 = load <16 x i8>, <16 x i8>* %43, align 1
-  %44 = zext <16 x i8> %wide.load.5 to <16 x i32>
-  %45 = getelementptr inbounds i8, i8* %y, i32 80
-  %46 = bitcast i8* %45 to <16 x i8>*
-  %wide.load11.5 = load <16 x i8>, <16 x i8>* %46, align 1
-  %47 = zext <16 x i8> %wide.load11.5 to <16 x i32>
-  %48 = mul nuw nsw <16 x i32> %47, %44
-  %49 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %48)
-  %50 = add i32 %49, %41
-  %51 = getelementptr inbounds i8, i8* %x, i32 96
-  %52 = bitcast i8* %51 to <16 x i8>*
-  %wide.load.6 = load <16 x i8>, <16 x i8>* %52, align 1
-  %53 = zext <16 x i8> %wide.load.6 to <16 x i32>
-  %54 = getelementptr inbounds i8, i8* %y, i32 96
-  %55 = bitcast i8* %54 to <16 x i8>*
-  %wide.load11.6 = load <16 x i8>, <16 x i8>* %55, align 1
-  %56 = zext <16 x i8> %wide.load11.6 to <16 x i32>
-  %57 = mul nuw nsw <16 x i32> %56, %53
-  %58 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %57)
-  %59 = add i32 %58, %50
-  %60 = getelementptr inbounds i8, i8* %x, i32 112
-  %61 = bitcast i8* %60 to <16 x i8>*
-  %wide.load.7 = load <16 x i8>, <16 x i8>* %61, align 1
-  %62 = zext <16 x i8> %wide.load.7 to <16 x i32>
-  %63 = getelementptr inbounds i8, i8* %y, i32 112
-  %64 = bitcast i8* %63 to <16 x i8>*
-  %wide.load11.7 = load <16 x i8>, <16 x i8>* %64, align 1
-  %65 = zext <16 x i8> %wide.load11.7 to <16 x i32>
-  %66 = mul nuw nsw <16 x i32> %65, %62
-  %67 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %66)
-  %68 = add i32 %67, %59
-  ret i32 %68
+  %wide.load = load <16 x i8>, ptr %x, align 1
+  %0 = zext <16 x i8> %wide.load to <16 x i32>
+  %wide.load11 = load <16 x i8>, ptr %y, align 1
+  %1 = zext <16 x i8> %wide.load11 to <16 x i32>
+  %2 = mul nuw nsw <16 x i32> %1, %0
+  %3 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %2)
+  %4 = getelementptr inbounds i8, ptr %x, i32 16
+  %wide.load.1 = load <16 x i8>, ptr %4, align 1
+  %5 = zext <16 x i8> %wide.load.1 to <16 x i32>
+  %6 = getelementptr inbounds i8, ptr %y, i32 16
+  %wide.load11.1 = load <16 x i8>, ptr %6, align 1
+  %7 = zext <16 x i8> %wide.load11.1 to <16 x i32>
+  %8 = mul nuw nsw <16 x i32> %7, %5
+  %9 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %8)
+  %10 = add i32 %9, %3
+  %11 = getelementptr inbounds i8, ptr %x, i32 32
+  %wide.load.2 = load <16 x i8>, ptr %11, align 1
+  %12 = zext <16 x i8> %wide.load.2 to <16 x i32>
+  %13 = getelementptr inbounds i8, ptr %y, i32 32
+  %wide.load11.2 = load <16 x i8>, ptr %13, align 1
+  %14 = zext <16 x i8> %wide.load11.2 to <16 x i32>
+  %15 = mul nuw nsw <16 x i32> %14, %12
+  %16 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %15)
+  %17 = add i32 %16, %10
+  %18 = getelementptr inbounds i8, ptr %x, i32 48
+  %wide.load.3 = load <16 x i8>, ptr %18, align 1
+  %19 = zext <16 x i8> %wide.load.3 to <16 x i32>
+  %20 = getelementptr inbounds i8, ptr %y, i32 48
+  %wide.load11.3 = load <16 x i8>, ptr %20, align 1
+  %21 = zext <16 x i8> %wide.load11.3 to <16 x i32>
+  %22 = mul nuw nsw <16 x i32> %21, %19
+  %23 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %22)
+  %24 = add i32 %23, %17
+  %25 = getelementptr inbounds i8, ptr %x, i32 64
+  %wide.load.4 = load <16 x i8>, ptr %25, align 1
+  %26 = zext <16 x i8> %wide.load.4 to <16 x i32>
+  %27 = getelementptr inbounds i8, ptr %y, i32 64
+  %wide.load11.4 = load <16 x i8>, ptr %27, align 1
+  %28 = zext <16 x i8> %wide.load11.4 to <16 x i32>
+  %29 = mul nuw nsw <16 x i32> %28, %26
+  %30 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %29)
+  %31 = add i32 %30, %24
+  %32 = getelementptr inbounds i8, ptr %x, i32 80
+  %wide.load.5 = load <16 x i8>, ptr %32, align 1
+  %33 = zext <16 x i8> %wide.load.5 to <16 x i32>
+  %34 = getelementptr inbounds i8, ptr %y, i32 80
+  %wide.load11.5 = load <16 x i8>, ptr %34, align 1
+  %35 = zext <16 x i8> %wide.load11.5 to <16 x i32>
+  %36 = mul nuw nsw <16 x i32> %35, %33
+  %37 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %36)
+  %38 = add i32 %37, %31
+  %39 = getelementptr inbounds i8, ptr %x, i32 96
+  %wide.load.6 = load <16 x i8>, ptr %39, align 1
+  %40 = zext <16 x i8> %wide.load.6 to <16 x i32>
+  %41 = getelementptr inbounds i8, ptr %y, i32 96
+  %wide.load11.6 = load <16 x i8>, ptr %41, align 1
+  %42 = zext <16 x i8> %wide.load11.6 to <16 x i32>
+  %43 = mul nuw nsw <16 x i32> %42, %40
+  %44 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %43)
+  %45 = add i32 %44, %38
+  %46 = getelementptr inbounds i8, ptr %x, i32 112
+  %wide.load.7 = load <16 x i8>, ptr %46, align 1
+  %47 = zext <16 x i8> %wide.load.7 to <16 x i32>
+  %48 = getelementptr inbounds i8, ptr %y, i32 112
+  %wide.load11.7 = load <16 x i8>, ptr %48, align 1
+  %49 = zext <16 x i8> %wide.load11.7 to <16 x i32>
+  %50 = mul nuw nsw <16 x i32> %49, %47
+  %51 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %50)
+  %52 = add i32 %51, %45
+  ret i32 %52
 }
 
-define signext i16 @mlav2i16i16(i16* %x, i16* %y) {
+define signext i16 @mlav2i16i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav2i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrh r2, [r0]
@@ -3058,19 +2733,19 @@ define signext i16 @mlav2i16i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %x, align 2
-  %1 = load i16, i16* %y, align 2
+  %0 = load i16, ptr %x, align 2
+  %1 = load i16, ptr %y, align 2
   %mul = mul i16 %1, %0
-  %arrayidx.1 = getelementptr inbounds i16, i16* %x, i32 1
-  %2 = load i16, i16* %arrayidx.1, align 2
-  %arrayidx1.1 = getelementptr inbounds i16, i16* %y, i32 1
-  %3 = load i16, i16* %arrayidx1.1, align 2
+  %arrayidx.1 = getelementptr inbounds i16, ptr %x, i32 1
+  %2 = load i16, ptr %arrayidx.1, align 2
+  %arrayidx1.1 = getelementptr inbounds i16, ptr %y, i32 1
+  %3 = load i16, ptr %arrayidx1.1, align 2
   %mul.1 = mul i16 %3, %2
   %add.1 = add i16 %mul.1, %mul
   ret i16 %add.1
 }
 
-define signext i16 @mlav4i16i16(i16* %x, i16* %y) {
+define signext i16 @mlav4i16i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav4i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u32 q0, [r0]
@@ -3079,16 +2754,14 @@ define signext i16 @mlav4i16i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <4 x i16>*
-  %1 = load <4 x i16>, <4 x i16>* %0, align 2
-  %2 = bitcast i16* %y to <4 x i16>*
-  %3 = load <4 x i16>, <4 x i16>* %2, align 2
-  %4 = mul <4 x i16> %3, %1
-  %5 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %4)
-  ret i16 %5
+  %0 = load <4 x i16>, ptr %x, align 2
+  %1 = load <4 x i16>, ptr %y, align 2
+  %2 = mul <4 x i16> %1, %0
+  %3 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %2)
+  ret i16 %3
 }
 
-define signext i16 @mlav8i16i16(i16* %x, i16* %y) {
+define signext i16 @mlav8i16i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav8i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
@@ -3097,16 +2770,14 @@ define signext i16 @mlav8i16i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <8 x i16>*
-  %1 = load <8 x i16>, <8 x i16>* %0, align 2
-  %2 = bitcast i16* %y to <8 x i16>*
-  %3 = load <8 x i16>, <8 x i16>* %2, align 2
-  %4 = mul <8 x i16> %3, %1
-  %5 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %4)
-  ret i16 %5
+  %0 = load <8 x i16>, ptr %x, align 2
+  %1 = load <8 x i16>, ptr %y, align 2
+  %2 = mul <8 x i16> %1, %0
+  %3 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %2)
+  ret i16 %3
 }
 
-define signext i16 @mlav16i16i16(i16* %x, i16* %y) {
+define signext i16 @mlav16i16i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav16i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
@@ -3118,16 +2789,14 @@ define signext i16 @mlav16i16i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    sxth r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <16 x i16>*
-  %1 = load <16 x i16>, <16 x i16>* %0, align 2
-  %2 = bitcast i16* %y to <16 x i16>*
-  %3 = load <16 x i16>, <16 x i16>* %2, align 2
-  %4 = mul <16 x i16> %3, %1
-  %5 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %4)
-  ret i16 %5
+  %0 = load <16 x i16>, ptr %x, align 2
+  %1 = load <16 x i16>, ptr %y, align 2
+  %2 = mul <16 x i16> %1, %0
+  %3 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %2)
+  ret i16 %3
 }
 
-define signext i16 @mlav24i16i16(i16* %x, i16* %y) {
+define signext i16 @mlav24i16i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav24i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
@@ -3142,25 +2811,21 @@ define signext i16 @mlav24i16i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    sxth r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <8 x i16>*
-  %1 = load <8 x i16>, <8 x i16>* %0, align 2
-  %2 = bitcast i16* %y to <8 x i16>*
-  %3 = load <8 x i16>, <8 x i16>* %2, align 2
-  %4 = mul <8 x i16> %3, %1
-  %arrayidx.8 = getelementptr inbounds i16, i16* %x, i32 8
-  %arrayidx1.8 = getelementptr inbounds i16, i16* %y, i32 8
-  %5 = bitcast i16* %arrayidx.8 to <16 x i16>*
-  %6 = load <16 x i16>, <16 x i16>* %5, align 2
-  %7 = bitcast i16* %arrayidx1.8 to <16 x i16>*
-  %8 = load <16 x i16>, <16 x i16>* %7, align 2
-  %9 = mul <16 x i16> %8, %6
-  %10 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %9)
-  %11 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %4)
-  %op.rdx = add i16 %10, %11
+  %0 = load <8 x i16>, ptr %x, align 2
+  %1 = load <8 x i16>, ptr %y, align 2
+  %2 = mul <8 x i16> %1, %0
+  %arrayidx.8 = getelementptr inbounds i16, ptr %x, i32 8
+  %arrayidx1.8 = getelementptr inbounds i16, ptr %y, i32 8
+  %3 = load <16 x i16>, ptr %arrayidx.8, align 2
+  %4 = load <16 x i16>, ptr %arrayidx1.8, align 2
+  %5 = mul <16 x i16> %4, %3
+  %6 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %5)
+  %7 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %2)
+  %op.rdx = add i16 %6, %7
   ret i16 %op.rdx
 }
 
-define signext i16 @mlav32i16i16(i16* %x, i16* %y) {
+define signext i16 @mlav32i16i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav32i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
@@ -3178,16 +2843,14 @@ define signext i16 @mlav32i16i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    sxth r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <32 x i16>*
-  %1 = load <32 x i16>, <32 x i16>* %0, align 2
-  %2 = bitcast i16* %y to <32 x i16>*
-  %3 = load <32 x i16>, <32 x i16>* %2, align 2
-  %4 = mul <32 x i16> %3, %1
-  %5 = call i16 @llvm.vector.reduce.add.v32i16(<32 x i16> %4)
-  ret i16 %5
+  %0 = load <32 x i16>, ptr %x, align 2
+  %1 = load <32 x i16>, ptr %y, align 2
+  %2 = mul <32 x i16> %1, %0
+  %3 = call i16 @llvm.vector.reduce.add.v32i16(<32 x i16> %2)
+  ret i16 %3
 }
 
-define signext i16 @mlav64i16i16(i16* %x, i16* %y) {
+define signext i16 @mlav64i16i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav64i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
@@ -3217,79 +2880,63 @@ define signext i16 @mlav64i16i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    sxth r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %0, align 2
-  %1 = bitcast i16* %y to <8 x i16>*
-  %wide.load13 = load <8 x i16>, <8 x i16>* %1, align 2
-  %2 = mul <8 x i16> %wide.load13, %wide.load
-  %3 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %2)
-  %4 = getelementptr inbounds i16, i16* %x, i32 8
-  %5 = bitcast i16* %4 to <8 x i16>*
-  %wide.load.1 = load <8 x i16>, <8 x i16>* %5, align 2
-  %6 = getelementptr inbounds i16, i16* %y, i32 8
-  %7 = bitcast i16* %6 to <8 x i16>*
-  %wide.load13.1 = load <8 x i16>, <8 x i16>* %7, align 2
-  %8 = mul <8 x i16> %wide.load13.1, %wide.load.1
-  %9 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %8)
-  %10 = add i16 %9, %3
-  %11 = getelementptr inbounds i16, i16* %x, i32 16
-  %12 = bitcast i16* %11 to <8 x i16>*
-  %wide.load.2 = load <8 x i16>, <8 x i16>* %12, align 2
-  %13 = getelementptr inbounds i16, i16* %y, i32 16
-  %14 = bitcast i16* %13 to <8 x i16>*
-  %wide.load13.2 = load <8 x i16>, <8 x i16>* %14, align 2
-  %15 = mul <8 x i16> %wide.load13.2, %wide.load.2
-  %16 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %15)
-  %17 = add i16 %16, %10
-  %18 = getelementptr inbounds i16, i16* %x, i32 24
-  %19 = bitcast i16* %18 to <8 x i16>*
-  %wide.load.3 = load <8 x i16>, <8 x i16>* %19, align 2
-  %20 = getelementptr inbounds i16, i16* %y, i32 24
-  %21 = bitcast i16* %20 to <8 x i16>*
-  %wide.load13.3 = load <8 x i16>, <8 x i16>* %21, align 2
-  %22 = mul <8 x i16> %wide.load13.3, %wide.load.3
-  %23 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %22)
-  %24 = add i16 %23, %17
-  %25 = getelementptr inbounds i16, i16* %x, i32 32
-  %26 = bitcast i16* %25 to <8 x i16>*
-  %wide.load.4 = load <8 x i16>, <8 x i16>* %26, align 2
-  %27 = getelementptr inbounds i16, i16* %y, i32 32
-  %28 = bitcast i16* %27 to <8 x i16>*
-  %wide.load13.4 = load <8 x i16>, <8 x i16>* %28, align 2
-  %29 = mul <8 x i16> %wide.load13.4, %wide.load.4
+  %wide.load = load <8 x i16>, ptr %x, align 2
+  %wide.load13 = load <8 x i16>, ptr %y, align 2
+  %0 = mul <8 x i16> %wide.load13, %wide.load
+  %1 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %0)
+  %2 = getelementptr inbounds i16, ptr %x, i32 8
+  %wide.load.1 = load <8 x i16>, ptr %2, align 2
+  %3 = getelementptr inbounds i16, ptr %y, i32 8
+  %wide.load13.1 = load <8 x i16>, ptr %3, align 2
+  %4 = mul <8 x i16> %wide.load13.1, %wide.load.1
+  %5 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %4)
+  %6 = add i16 %5, %1
+  %7 = getelementptr inbounds i16, ptr %x, i32 16
+  %wide.load.2 = load <8 x i16>, ptr %7, align 2
+  %8 = getelementptr inbounds i16, ptr %y, i32 16
+  %wide.load13.2 = load <8 x i16>, ptr %8, align 2
+  %9 = mul <8 x i16> %wide.load13.2, %wide.load.2
+  %10 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %9)
+  %11 = add i16 %10, %6
+  %12 = getelementptr inbounds i16, ptr %x, i32 24
+  %wide.load.3 = load <8 x i16>, ptr %12, align 2
+  %13 = getelementptr inbounds i16, ptr %y, i32 24
+  %wide.load13.3 = load <8 x i16>, ptr %13, align 2
+  %14 = mul <8 x i16> %wide.load13.3, %wide.load.3
+  %15 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %14)
+  %16 = add i16 %15, %11
+  %17 = getelementptr inbounds i16, ptr %x, i32 32
+  %wide.load.4 = load <8 x i16>, ptr %17, align 2
+  %18 = getelementptr inbounds i16, ptr %y, i32 32
+  %wide.load13.4 = load <8 x i16>, ptr %18, align 2
+  %19 = mul <8 x i16> %wide.load13.4, %wide.load.4
+  %20 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %19)
+  %21 = add i16 %20, %16
+  %22 = getelementptr inbounds i16, ptr %x, i32 40
+  %wide.load.5 = load <8 x i16>, ptr %22, align 2
+  %23 = getelementptr inbounds i16, ptr %y, i32 40
+  %wide.load13.5 = load <8 x i16>, ptr %23, align 2
+  %24 = mul <8 x i16> %wide.load13.5, %wide.load.5
+  %25 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %24)
+  %26 = add i16 %25, %21
+  %27 = getelementptr inbounds i16, ptr %x, i32 48
+  %wide.load.6 = load <8 x i16>, ptr %27, align 2
+  %28 = getelementptr inbounds i16, ptr %y, i32 48
+  %wide.load13.6 = load <8 x i16>, ptr %28, align 2
+  %29 = mul <8 x i16> %wide.load13.6, %wide.load.6
   %30 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %29)
-  %31 = add i16 %30, %24
-  %32 = getelementptr inbounds i16, i16* %x, i32 40
-  %33 = bitcast i16* %32 to <8 x i16>*
-  %wide.load.5 = load <8 x i16>, <8 x i16>* %33, align 2
-  %34 = getelementptr inbounds i16, i16* %y, i32 40
-  %35 = bitcast i16* %34 to <8 x i16>*
-  %wide.load13.5 = load <8 x i16>, <8 x i16>* %35, align 2
-  %36 = mul <8 x i16> %wide.load13.5, %wide.load.5
-  %37 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %36)
-  %38 = add i16 %37, %31
-  %39 = getelementptr inbounds i16, i16* %x, i32 48
-  %40 = bitcast i16* %39 to <8 x i16>*
-  %wide.load.6 = load <8 x i16>, <8 x i16>* %40, align 2
-  %41 = getelementptr inbounds i16, i16* %y, i32 48
-  %42 = bitcast i16* %41 to <8 x i16>*
-  %wide.load13.6 = load <8 x i16>, <8 x i16>* %42, align 2
-  %43 = mul <8 x i16> %wide.load13.6, %wide.load.6
-  %44 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %43)
-  %45 = add i16 %44, %38
-  %46 = getelementptr inbounds i16, i16* %x, i32 56
-  %47 = bitcast i16* %46 to <8 x i16>*
-  %wide.load.7 = load <8 x i16>, <8 x i16>* %47, align 2
-  %48 = getelementptr inbounds i16, i16* %y, i32 56
-  %49 = bitcast i16* %48 to <8 x i16>*
-  %wide.load13.7 = load <8 x i16>, <8 x i16>* %49, align 2
-  %50 = mul <8 x i16> %wide.load13.7, %wide.load.7
-  %51 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %50)
-  %52 = add i16 %51, %45
-  ret i16 %52
+  %31 = add i16 %30, %26
+  %32 = getelementptr inbounds i16, ptr %x, i32 56
+  %wide.load.7 = load <8 x i16>, ptr %32, align 2
+  %33 = getelementptr inbounds i16, ptr %y, i32 56
+  %wide.load13.7 = load <8 x i16>, ptr %33, align 2
+  %34 = mul <8 x i16> %wide.load13.7, %wide.load.7
+  %35 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %34)
+  %36 = add i16 %35, %31
+  ret i16 %36
 }
 
-define signext i16 @mlav128i16i16(i16* %x, i16* %y) {
+define signext i16 @mlav128i16i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav128i16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
@@ -3343,151 +2990,119 @@ define signext i16 @mlav128i16i16(i16* %x, i16* %y) {
 ; CHECK-NEXT:    sxth r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i16* %x to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %0, align 2
-  %1 = bitcast i16* %y to <8 x i16>*
-  %wide.load13 = load <8 x i16>, <8 x i16>* %1, align 2
-  %2 = mul <8 x i16> %wide.load13, %wide.load
-  %3 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %2)
-  %4 = getelementptr inbounds i16, i16* %x, i32 8
-  %5 = bitcast i16* %4 to <8 x i16>*
-  %wide.load.1 = load <8 x i16>, <8 x i16>* %5, align 2
-  %6 = getelementptr inbounds i16, i16* %y, i32 8
-  %7 = bitcast i16* %6 to <8 x i16>*
-  %wide.load13.1 = load <8 x i16>, <8 x i16>* %7, align 2
-  %8 = mul <8 x i16> %wide.load13.1, %wide.load.1
-  %9 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %8)
-  %10 = add i16 %9, %3
-  %11 = getelementptr inbounds i16, i16* %x, i32 16
-  %12 = bitcast i16* %11 to <8 x i16>*
-  %wide.load.2 = load <8 x i16>, <8 x i16>* %12, align 2
-  %13 = getelementptr inbounds i16, i16* %y, i32 16
-  %14 = bitcast i16* %13 to <8 x i16>*
-  %wide.load13.2 = load <8 x i16>, <8 x i16>* %14, align 2
-  %15 = mul <8 x i16> %wide.load13.2, %wide.load.2
-  %16 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %15)
-  %17 = add i16 %16, %10
-  %18 = getelementptr inbounds i16, i16* %x, i32 24
-  %19 = bitcast i16* %18 to <8 x i16>*
-  %wide.load.3 = load <8 x i16>, <8 x i16>* %19, align 2
-  %20 = getelementptr inbounds i16, i16* %y, i32 24
-  %21 = bitcast i16* %20 to <8 x i16>*
-  %wide.load13.3 = load <8 x i16>, <8 x i16>* %21, align 2
-  %22 = mul <8 x i16> %wide.load13.3, %wide.load.3
-  %23 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %22)
-  %24 = add i16 %23, %17
-  %25 = getelementptr inbounds i16, i16* %x, i32 32
-  %26 = bitcast i16* %25 to <8 x i16>*
-  %wide.load.4 = load <8 x i16>, <8 x i16>* %26, align 2
-  %27 = getelementptr inbounds i16, i16* %y, i32 32
-  %28 = bitcast i16* %27 to <8 x i16>*
-  %wide.load13.4 = load <8 x i16>, <8 x i16>* %28, align 2
-  %29 = mul <8 x i16> %wide.load13.4, %wide.load.4
+  %wide.load = load <8 x i16>, ptr %x, align 2
+  %wide.load13 = load <8 x i16>, ptr %y, align 2
+  %0 = mul <8 x i16> %wide.load13, %wide.load
+  %1 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %0)
+  %2 = getelementptr inbounds i16, ptr %x, i32 8
+  %wide.load.1 = load <8 x i16>, ptr %2, align 2
+  %3 = getelementptr inbounds i16, ptr %y, i32 8
+  %wide.load13.1 = load <8 x i16>, ptr %3, align 2
+  %4 = mul <8 x i16> %wide.load13.1, %wide.load.1
+  %5 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %4)
+  %6 = add i16 %5, %1
+  %7 = getelementptr inbounds i16, ptr %x, i32 16
+  %wide.load.2 = load <8 x i16>, ptr %7, align 2
+  %8 = getelementptr inbounds i16, ptr %y, i32 16
+  %wide.load13.2 = load <8 x i16>, ptr %8, align 2
+  %9 = mul <8 x i16> %wide.load13.2, %wide.load.2
+  %10 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %9)
+  %11 = add i16 %10, %6
+  %12 = getelementptr inbounds i16, ptr %x, i32 24
+  %wide.load.3 = load <8 x i16>, ptr %12, align 2
+  %13 = getelementptr inbounds i16, ptr %y, i32 24
+  %wide.load13.3 = load <8 x i16>, ptr %13, align 2
+  %14 = mul <8 x i16> %wide.load13.3, %wide.load.3
+  %15 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %14)
+  %16 = add i16 %15, %11
+  %17 = getelementptr inbounds i16, ptr %x, i32 32
+  %wide.load.4 = load <8 x i16>, ptr %17, align 2
+  %18 = getelementptr inbounds i16, ptr %y, i32 32
+  %wide.load13.4 = load <8 x i16>, ptr %18, align 2
+  %19 = mul <8 x i16> %wide.load13.4, %wide.load.4
+  %20 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %19)
+  %21 = add i16 %20, %16
+  %22 = getelementptr inbounds i16, ptr %x, i32 40
+  %wide.load.5 = load <8 x i16>, ptr %22, align 2
+  %23 = getelementptr inbounds i16, ptr %y, i32 40
+  %wide.load13.5 = load <8 x i16>, ptr %23, align 2
+  %24 = mul <8 x i16> %wide.load13.5, %wide.load.5
+  %25 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %24)
+  %26 = add i16 %25, %21
+  %27 = getelementptr inbounds i16, ptr %x, i32 48
+  %wide.load.6 = load <8 x i16>, ptr %27, align 2
+  %28 = getelementptr inbounds i16, ptr %y, i32 48
+  %wide.load13.6 = load <8 x i16>, ptr %28, align 2
+  %29 = mul <8 x i16> %wide.load13.6, %wide.load.6
   %30 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %29)
-  %31 = add i16 %30, %24
-  %32 = getelementptr inbounds i16, i16* %x, i32 40
-  %33 = bitcast i16* %32 to <8 x i16>*
-  %wide.load.5 = load <8 x i16>, <8 x i16>* %33, align 2
-  %34 = getelementptr inbounds i16, i16* %y, i32 40
-  %35 = bitcast i16* %34 to <8 x i16>*
-  %wide.load13.5 = load <8 x i16>, <8 x i16>* %35, align 2
-  %36 = mul <8 x i16> %wide.load13.5, %wide.load.5
-  %37 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %36)
-  %38 = add i16 %37, %31
-  %39 = getelementptr inbounds i16, i16* %x, i32 48
-  %40 = bitcast i16* %39 to <8 x i16>*
-  %wide.load.6 = load <8 x i16>, <8 x i16>* %40, align 2
-  %41 = getelementptr inbounds i16, i16* %y, i32 48
-  %42 = bitcast i16* %41 to <8 x i16>*
-  %wide.load13.6 = load <8 x i16>, <8 x i16>* %42, align 2
-  %43 = mul <8 x i16> %wide.load13.6, %wide.load.6
-  %44 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %43)
-  %45 = add i16 %44, %38
-  %46 = getelementptr inbounds i16, i16* %x, i32 56
-  %47 = bitcast i16* %46 to <8 x i16>*
-  %wide.load.7 = load <8 x i16>, <8 x i16>* %47, align 2
-  %48 = getelementptr inbounds i16, i16* %y, i32 56
-  %49 = bitcast i16* %48 to <8 x i16>*
-  %wide.load13.7 = load <8 x i16>, <8 x i16>* %49, align 2
-  %50 = mul <8 x i16> %wide.load13.7, %wide.load.7
-  %51 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %50)
-  %52 = add i16 %51, %45
-  %53 = getelementptr inbounds i16, i16* %x, i32 64
-  %54 = bitcast i16* %53 to <8 x i16>*
-  %wide.load.8 = load <8 x i16>, <8 x i16>* %54, align 2
-  %55 = getelementptr inbounds i16, i16* %y, i32 64
-  %56 = bitcast i16* %55 to <8 x i16>*
-  %wide.load13.8 = load <8 x i16>, <8 x i16>* %56, align 2
-  %57 = mul <8 x i16> %wide.load13.8, %wide.load.8
-  %58 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %57)
-  %59 = add i16 %58, %52
-  %60 = getelementptr inbounds i16, i16* %x, i32 72
-  %61 = bitcast i16* %60 to <8 x i16>*
-  %wide.load.9 = load <8 x i16>, <8 x i16>* %61, align 2
-  %62 = getelementptr inbounds i16, i16* %y, i32 72
-  %63 = bitcast i16* %62 to <8 x i16>*
-  %wide.load13.9 = load <8 x i16>, <8 x i16>* %63, align 2
-  %64 = mul <8 x i16> %wide.load13.9, %wide.load.9
+  %31 = add i16 %30, %26
+  %32 = getelementptr inbounds i16, ptr %x, i32 56
+  %wide.load.7 = load <8 x i16>, ptr %32, align 2
+  %33 = getelementptr inbounds i16, ptr %y, i32 56
+  %wide.load13.7 = load <8 x i16>, ptr %33, align 2
+  %34 = mul <8 x i16> %wide.load13.7, %wide.load.7
+  %35 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %34)
+  %36 = add i16 %35, %31
+  %37 = getelementptr inbounds i16, ptr %x, i32 64
+  %wide.load.8 = load <8 x i16>, ptr %37, align 2
+  %38 = getelementptr inbounds i16, ptr %y, i32 64
+  %wide.load13.8 = load <8 x i16>, ptr %38, align 2
+  %39 = mul <8 x i16> %wide.load13.8, %wide.load.8
+  %40 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %39)
+  %41 = add i16 %40, %36
+  %42 = getelementptr inbounds i16, ptr %x, i32 72
+  %wide.load.9 = load <8 x i16>, ptr %42, align 2
+  %43 = getelementptr inbounds i16, ptr %y, i32 72
+  %wide.load13.9 = load <8 x i16>, ptr %43, align 2
+  %44 = mul <8 x i16> %wide.load13.9, %wide.load.9
+  %45 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %44)
+  %46 = add i16 %45, %41
+  %47 = getelementptr inbounds i16, ptr %x, i32 80
+  %wide.load.10 = load <8 x i16>, ptr %47, align 2
+  %48 = getelementptr inbounds i16, ptr %y, i32 80
+  %wide.load13.10 = load <8 x i16>, ptr %48, align 2
+  %49 = mul <8 x i16> %wide.load13.10, %wide.load.10
+  %50 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %49)
+  %51 = add i16 %50, %46
+  %52 = getelementptr inbounds i16, ptr %x, i32 88
+  %wide.load.11 = load <8 x i16>, ptr %52, align 2
+  %53 = getelementptr inbounds i16, ptr %y, i32 88
+  %wide.load13.11 = load <8 x i16>, ptr %53, align 2
+  %54 = mul <8 x i16> %wide.load13.11, %wide.load.11
+  %55 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %54)
+  %56 = add i16 %55, %51
+  %57 = getelementptr inbounds i16, ptr %x, i32 96
+  %wide.load.12 = load <8 x i16>, ptr %57, align 2
+  %58 = getelementptr inbounds i16, ptr %y, i32 96
+  %wide.load13.12 = load <8 x i16>, ptr %58, align 2
+  %59 = mul <8 x i16> %wide.load13.12, %wide.load.12
+  %60 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %59)
+  %61 = add i16 %60, %56
+  %62 = getelementptr inbounds i16, ptr %x, i32 104
+  %wide.load.13 = load <8 x i16>, ptr %62, align 2
+  %63 = getelementptr inbounds i16, ptr %y, i32 104
+  %wide.load13.13 = load <8 x i16>, ptr %63, align 2
+  %64 = mul <8 x i16> %wide.load13.13, %wide.load.13
   %65 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %64)
-  %66 = add i16 %65, %59
-  %67 = getelementptr inbounds i16, i16* %x, i32 80
-  %68 = bitcast i16* %67 to <8 x i16>*
-  %wide.load.10 = load <8 x i16>, <8 x i16>* %68, align 2
-  %69 = getelementptr inbounds i16, i16* %y, i32 80
-  %70 = bitcast i16* %69 to <8 x i16>*
-  %wide.load13.10 = load <8 x i16>, <8 x i16>* %70, align 2
-  %71 = mul <8 x i16> %wide.load13.10, %wide.load.10
-  %72 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %71)
-  %73 = add i16 %72, %66
-  %74 = getelementptr inbounds i16, i16* %x, i32 88
-  %75 = bitcast i16* %74 to <8 x i16>*
-  %wide.load.11 = load <8 x i16>, <8 x i16>* %75, align 2
-  %76 = getelementptr inbounds i16, i16* %y, i32 88
-  %77 = bitcast i16* %76 to <8 x i16>*
-  %wide.load13.11 = load <8 x i16>, <8 x i16>* %77, align 2
-  %78 = mul <8 x i16> %wide.load13.11, %wide.load.11
-  %79 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %78)
-  %80 = add i16 %79, %73
-  %81 = getelementptr inbounds i16, i16* %x, i32 96
-  %82 = bitcast i16* %81 to <8 x i16>*
-  %wide.load.12 = load <8 x i16>, <8 x i16>* %82, align 2
-  %83 = getelementptr inbounds i16, i16* %y, i32 96
-  %84 = bitcast i16* %83 to <8 x i16>*
-  %wide.load13.12 = load <8 x i16>, <8 x i16>* %84, align 2
-  %85 = mul <8 x i16> %wide.load13.12, %wide.load.12
-  %86 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %85)
-  %87 = add i16 %86, %80
-  %88 = getelementptr inbounds i16, i16* %x, i32 104
-  %89 = bitcast i16* %88 to <8 x i16>*
-  %wide.load.13 = load <8 x i16>, <8 x i16>* %89, align 2
-  %90 = getelementptr inbounds i16, i16* %y, i32 104
-  %91 = bitcast i16* %90 to <8 x i16>*
-  %wide.load13.13 = load <8 x i16>, <8 x i16>* %91, align 2
-  %92 = mul <8 x i16> %wide.load13.13, %wide.load.13
-  %93 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %92)
-  %94 = add i16 %93, %87
-  %95 = getelementptr inbounds i16, i16* %x, i32 112
-  %96 = bitcast i16* %95 to <8 x i16>*
-  %wide.load.14 = load <8 x i16>, <8 x i16>* %96, align 2
-  %97 = getelementptr inbounds i16, i16* %y, i32 112
-  %98 = bitcast i16* %97 to <8 x i16>*
-  %wide.load13.14 = load <8 x i16>, <8 x i16>* %98, align 2
-  %99 = mul <8 x i16> %wide.load13.14, %wide.load.14
-  %100 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %99)
-  %101 = add i16 %100, %94
-  %102 = getelementptr inbounds i16, i16* %x, i32 120
-  %103 = bitcast i16* %102 to <8 x i16>*
-  %wide.load.15 = load <8 x i16>, <8 x i16>* %103, align 2
-  %104 = getelementptr inbounds i16, i16* %y, i32 120
-  %105 = bitcast i16* %104 to <8 x i16>*
-  %wide.load13.15 = load <8 x i16>, <8 x i16>* %105, align 2
-  %106 = mul <8 x i16> %wide.load13.15, %wide.load.15
-  %107 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %106)
-  %108 = add i16 %107, %101
-  ret i16 %108
+  %66 = add i16 %65, %61
+  %67 = getelementptr inbounds i16, ptr %x, i32 112
+  %wide.load.14 = load <8 x i16>, ptr %67, align 2
+  %68 = getelementptr inbounds i16, ptr %y, i32 112
+  %wide.load13.14 = load <8 x i16>, ptr %68, align 2
+  %69 = mul <8 x i16> %wide.load13.14, %wide.load.14
+  %70 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %69)
+  %71 = add i16 %70, %66
+  %72 = getelementptr inbounds i16, ptr %x, i32 120
+  %wide.load.15 = load <8 x i16>, ptr %72, align 2
+  %73 = getelementptr inbounds i16, ptr %y, i32 120
+  %wide.load13.15 = load <8 x i16>, ptr %73, align 2
+  %74 = mul <8 x i16> %wide.load13.15, %wide.load.15
+  %75 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %74)
+  %76 = add i16 %75, %71
+  ret i16 %76
 }
 
-define zeroext i8 @mlav2i8i8(i8* %x, i8* %y) {
+define zeroext i8 @mlav2i8i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav2i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrb r2, [r0]
@@ -3499,19 +3114,19 @@ define zeroext i8 @mlav2i8i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i8, i8* %x, align 1
-  %1 = load i8, i8* %y, align 1
+  %0 = load i8, ptr %x, align 1
+  %1 = load i8, ptr %y, align 1
   %mul = mul i8 %1, %0
-  %arrayidx.1 = getelementptr inbounds i8, i8* %x, i32 1
-  %2 = load i8, i8* %arrayidx.1, align 1
-  %arrayidx1.1 = getelementptr inbounds i8, i8* %y, i32 1
-  %3 = load i8, i8* %arrayidx1.1, align 1
+  %arrayidx.1 = getelementptr inbounds i8, ptr %x, i32 1
+  %2 = load i8, ptr %arrayidx.1, align 1
+  %arrayidx1.1 = getelementptr inbounds i8, ptr %y, i32 1
+  %3 = load i8, ptr %arrayidx1.1, align 1
   %mul.1 = mul i8 %3, %2
   %add.1 = add i8 %mul.1, %mul
   ret i8 %add.1
 }
 
-define zeroext i8 @mlav4i8i8(i8* %x, i8* %y) {
+define zeroext i8 @mlav4i8i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav4i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u32 q0, [r0]
@@ -3520,16 +3135,14 @@ define zeroext i8 @mlav4i8i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <4 x i8>*
-  %1 = load <4 x i8>, <4 x i8>* %0, align 1
-  %2 = bitcast i8* %y to <4 x i8>*
-  %3 = load <4 x i8>, <4 x i8>* %2, align 1
-  %4 = mul <4 x i8> %3, %1
-  %5 = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> %4)
-  ret i8 %5
+  %0 = load <4 x i8>, ptr %x, align 1
+  %1 = load <4 x i8>, ptr %y, align 1
+  %2 = mul <4 x i8> %1, %0
+  %3 = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> %2)
+  ret i8 %3
 }
 
-define zeroext i8 @mlav8i8i8(i8* %x, i8* %y) {
+define zeroext i8 @mlav8i8i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav8i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u16 q0, [r0]
@@ -3538,16 +3151,14 @@ define zeroext i8 @mlav8i8i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <8 x i8>*
-  %1 = load <8 x i8>, <8 x i8>* %0, align 1
-  %2 = bitcast i8* %y to <8 x i8>*
-  %3 = load <8 x i8>, <8 x i8>* %2, align 1
-  %4 = mul <8 x i8> %3, %1
-  %5 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %4)
-  ret i8 %5
+  %0 = load <8 x i8>, ptr %x, align 1
+  %1 = load <8 x i8>, ptr %y, align 1
+  %2 = mul <8 x i8> %1, %0
+  %3 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %2)
+  ret i8 %3
 }
 
-define zeroext i8 @mlav16i8i8(i8* %x, i8* %y) {
+define zeroext i8 @mlav16i8i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav16i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q0, [r0]
@@ -3556,16 +3167,14 @@ define zeroext i8 @mlav16i8i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0, align 1
-  %2 = bitcast i8* %y to <16 x i8>*
-  %3 = load <16 x i8>, <16 x i8>* %2, align 1
-  %4 = mul <16 x i8> %3, %1
-  %5 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %4)
-  ret i8 %5
+  %0 = load <16 x i8>, ptr %x, align 1
+  %1 = load <16 x i8>, ptr %y, align 1
+  %2 = mul <16 x i8> %1, %0
+  %3 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %2)
+  ret i8 %3
 }
 
-define zeroext i8 @mlav24i8i8(i8* %x, i8* %y) {
+define zeroext i8 @mlav24i8i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav24i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u16 q0, [r0]
@@ -3577,25 +3186,21 @@ define zeroext i8 @mlav24i8i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    uxtb r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <8 x i8>*
-  %1 = load <8 x i8>, <8 x i8>* %0, align 1
-  %2 = bitcast i8* %y to <8 x i8>*
-  %3 = load <8 x i8>, <8 x i8>* %2, align 1
-  %4 = mul <8 x i8> %3, %1
-  %arrayidx.8 = getelementptr inbounds i8, i8* %x, i32 8
-  %arrayidx1.8 = getelementptr inbounds i8, i8* %y, i32 8
-  %5 = bitcast i8* %arrayidx.8 to <16 x i8>*
-  %6 = load <16 x i8>, <16 x i8>* %5, align 1
-  %7 = bitcast i8* %arrayidx1.8 to <16 x i8>*
-  %8 = load <16 x i8>, <16 x i8>* %7, align 1
-  %9 = mul <16 x i8> %8, %6
-  %10 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %9)
-  %11 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %4)
-  %op.rdx = add i8 %10, %11
+  %0 = load <8 x i8>, ptr %x, align 1
+  %1 = load <8 x i8>, ptr %y, align 1
+  %2 = mul <8 x i8> %1, %0
+  %arrayidx.8 = getelementptr inbounds i8, ptr %x, i32 8
+  %arrayidx1.8 = getelementptr inbounds i8, ptr %y, i32 8
+  %3 = load <16 x i8>, ptr %arrayidx.8, align 1
+  %4 = load <16 x i8>, ptr %arrayidx1.8, align 1
+  %5 = mul <16 x i8> %4, %3
+  %6 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %5)
+  %7 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %2)
+  %op.rdx = add i8 %6, %7
   ret i8 %op.rdx
 }
 
-define zeroext i8 @mlav32i8i8(i8* %x, i8* %y) {
+define zeroext i8 @mlav32i8i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav32i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q0, [r0]
@@ -3607,16 +3212,14 @@ define zeroext i8 @mlav32i8i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    uxtb r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <32 x i8>*
-  %1 = load <32 x i8>, <32 x i8>* %0, align 1
-  %2 = bitcast i8* %y to <32 x i8>*
-  %3 = load <32 x i8>, <32 x i8>* %2, align 1
-  %4 = mul <32 x i8> %3, %1
-  %5 = call i8 @llvm.vector.reduce.add.v32i8(<32 x i8> %4)
-  ret i8 %5
+  %0 = load <32 x i8>, ptr %x, align 1
+  %1 = load <32 x i8>, ptr %y, align 1
+  %2 = mul <32 x i8> %1, %0
+  %3 = call i8 @llvm.vector.reduce.add.v32i8(<32 x i8> %2)
+  ret i8 %3
 }
 
-define zeroext i8 @mlav64i8i8(i8* %x, i8* %y) {
+define zeroext i8 @mlav64i8i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav64i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q0, [r0]
@@ -3634,43 +3237,35 @@ define zeroext i8 @mlav64i8i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    uxtb r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %0, align 1
-  %1 = bitcast i8* %y to <16 x i8>*
-  %wide.load12 = load <16 x i8>, <16 x i8>* %1, align 1
-  %2 = mul <16 x i8> %wide.load12, %wide.load
-  %3 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %2)
-  %4 = getelementptr inbounds i8, i8* %x, i32 16
-  %5 = bitcast i8* %4 to <16 x i8>*
-  %wide.load.1 = load <16 x i8>, <16 x i8>* %5, align 1
-  %6 = getelementptr inbounds i8, i8* %y, i32 16
-  %7 = bitcast i8* %6 to <16 x i8>*
-  %wide.load12.1 = load <16 x i8>, <16 x i8>* %7, align 1
-  %8 = mul <16 x i8> %wide.load12.1, %wide.load.1
-  %9 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %8)
-  %10 = add i8 %9, %3
-  %11 = getelementptr inbounds i8, i8* %x, i32 32
-  %12 = bitcast i8* %11 to <16 x i8>*
-  %wide.load.2 = load <16 x i8>, <16 x i8>* %12, align 1
-  %13 = getelementptr inbounds i8, i8* %y, i32 32
-  %14 = bitcast i8* %13 to <16 x i8>*
-  %wide.load12.2 = load <16 x i8>, <16 x i8>* %14, align 1
-  %15 = mul <16 x i8> %wide.load12.2, %wide.load.2
-  %16 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %15)
-  %17 = add i8 %16, %10
-  %18 = getelementptr inbounds i8, i8* %x, i32 48
-  %19 = bitcast i8* %18 to <16 x i8>*
-  %wide.load.3 = load <16 x i8>, <16 x i8>* %19, align 1
-  %20 = getelementptr inbounds i8, i8* %y, i32 48
-  %21 = bitcast i8* %20 to <16 x i8>*
-  %wide.load12.3 = load <16 x i8>, <16 x i8>* %21, align 1
-  %22 = mul <16 x i8> %wide.load12.3, %wide.load.3
-  %23 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %22)
-  %24 = add i8 %23, %17
-  ret i8 %24
+  %wide.load = load <16 x i8>, ptr %x, align 1
+  %wide.load12 = load <16 x i8>, ptr %y, align 1
+  %0 = mul <16 x i8> %wide.load12, %wide.load
+  %1 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %0)
+  %2 = getelementptr inbounds i8, ptr %x, i32 16
+  %wide.load.1 = load <16 x i8>, ptr %2, align 1
+  %3 = getelementptr inbounds i8, ptr %y, i32 16
+  %wide.load12.1 = load <16 x i8>, ptr %3, align 1
+  %4 = mul <16 x i8> %wide.load12.1, %wide.load.1
+  %5 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %4)
+  %6 = add i8 %5, %1
+  %7 = getelementptr inbounds i8, ptr %x, i32 32
+  %wide.load.2 = load <16 x i8>, ptr %7, align 1
+  %8 = getelementptr inbounds i8, ptr %y, i32 32
+  %wide.load12.2 = load <16 x i8>, ptr %8, align 1
+  %9 = mul <16 x i8> %wide.load12.2, %wide.load.2
+  %10 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %9)
+  %11 = add i8 %10, %6
+  %12 = getelementptr inbounds i8, ptr %x, i32 48
+  %wide.load.3 = load <16 x i8>, ptr %12, align 1
+  %13 = getelementptr inbounds i8, ptr %y, i32 48
+  %wide.load12.3 = load <16 x i8>, ptr %13, align 1
+  %14 = mul <16 x i8> %wide.load12.3, %wide.load.3
+  %15 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %14)
+  %16 = add i8 %15, %11
+  ret i8 %16
 }
 
-define zeroext i8 @mlav128i8i8(i8* %x, i8* %y) {
+define zeroext i8 @mlav128i8i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: mlav128i8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q0, [r0]
@@ -3700,76 +3295,60 @@ define zeroext i8 @mlav128i8i8(i8* %x, i8* %y) {
 ; CHECK-NEXT:    uxtb r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast i8* %x to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %0, align 1
-  %1 = bitcast i8* %y to <16 x i8>*
-  %wide.load12 = load <16 x i8>, <16 x i8>* %1, align 1
-  %2 = mul <16 x i8> %wide.load12, %wide.load
-  %3 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %2)
-  %4 = getelementptr inbounds i8, i8* %x, i32 16
-  %5 = bitcast i8* %4 to <16 x i8>*
-  %wide.load.1 = load <16 x i8>, <16 x i8>* %5, align 1
-  %6 = getelementptr inbounds i8, i8* %y, i32 16
-  %7 = bitcast i8* %6 to <16 x i8>*
-  %wide.load12.1 = load <16 x i8>, <16 x i8>* %7, align 1
-  %8 = mul <16 x i8> %wide.load12.1, %wide.load.1
-  %9 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %8)
-  %10 = add i8 %9, %3
-  %11 = getelementptr inbounds i8, i8* %x, i32 32
-  %12 = bitcast i8* %11 to <16 x i8>*
-  %wide.load.2 = load <16 x i8>, <16 x i8>* %12, align 1
-  %13 = getelementptr inbounds i8, i8* %y, i32 32
-  %14 = bitcast i8* %13 to <16 x i8>*
-  %wide.load12.2 = load <16 x i8>, <16 x i8>* %14, align 1
-  %15 = mul <16 x i8> %wide.load12.2, %wide.load.2
-  %16 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %15)
-  %17 = add i8 %16, %10
-  %18 = getelementptr inbounds i8, i8* %x, i32 48
-  %19 = bitcast i8* %18 to <16 x i8>*
-  %wide.load.3 = load <16 x i8>, <16 x i8>* %19, align 1
-  %20 = getelementptr inbounds i8, i8* %y, i32 48
-  %21 = bitcast i8* %20 to <16 x i8>*
-  %wide.load12.3 = load <16 x i8>, <16 x i8>* %21, align 1
-  %22 = mul <16 x i8> %wide.load12.3, %wide.load.3
-  %23 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %22)
-  %24 = add i8 %23, %17
-  %25 = getelementptr inbounds i8, i8* %x, i32 64
-  %26 = bitcast i8* %25 to <16 x i8>*
-  %wide.load.4 = load <16 x i8>, <16 x i8>* %26, align 1
-  %27 = getelementptr inbounds i8, i8* %y, i32 64
-  %28 = bitcast i8* %27 to <16 x i8>*
-  %wide.load12.4 = load <16 x i8>, <16 x i8>* %28, align 1
-  %29 = mul <16 x i8> %wide.load12.4, %wide.load.4
+  %wide.load = load <16 x i8>, ptr %x, align 1
+  %wide.load12 = load <16 x i8>, ptr %y, align 1
+  %0 = mul <16 x i8> %wide.load12, %wide.load
+  %1 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %0)
+  %2 = getelementptr inbounds i8, ptr %x, i32 16
+  %wide.load.1 = load <16 x i8>, ptr %2, align 1
+  %3 = getelementptr inbounds i8, ptr %y, i32 16
+  %wide.load12.1 = load <16 x i8>, ptr %3, align 1
+  %4 = mul <16 x i8> %wide.load12.1, %wide.load.1
+  %5 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %4)
+  %6 = add i8 %5, %1
+  %7 = getelementptr inbounds i8, ptr %x, i32 32
+  %wide.load.2 = load <16 x i8>, ptr %7, align 1
+  %8 = getelementptr inbounds i8, ptr %y, i32 32
+  %wide.load12.2 = load <16 x i8>, ptr %8, align 1
+  %9 = mul <16 x i8> %wide.load12.2, %wide.load.2
+  %10 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %9)
+  %11 = add i8 %10, %6
+  %12 = getelementptr inbounds i8, ptr %x, i32 48
+  %wide.load.3 = load <16 x i8>, ptr %12, align 1
+  %13 = getelementptr inbounds i8, ptr %y, i32 48
+  %wide.load12.3 = load <16 x i8>, ptr %13, align 1
+  %14 = mul <16 x i8> %wide.load12.3, %wide.load.3
+  %15 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %14)
+  %16 = add i8 %15, %11
+  %17 = getelementptr inbounds i8, ptr %x, i32 64
+  %wide.load.4 = load <16 x i8>, ptr %17, align 1
+  %18 = getelementptr inbounds i8, ptr %y, i32 64
+  %wide.load12.4 = load <16 x i8>, ptr %18, align 1
+  %19 = mul <16 x i8> %wide.load12.4, %wide.load.4
+  %20 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %19)
+  %21 = add i8 %20, %16
+  %22 = getelementptr inbounds i8, ptr %x, i32 80
+  %wide.load.5 = load <16 x i8>, ptr %22, align 1
+  %23 = getelementptr inbounds i8, ptr %y, i32 80
+  %wide.load12.5 = load <16 x i8>, ptr %23, align 1
+  %24 = mul <16 x i8> %wide.load12.5, %wide.load.5
+  %25 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %24)
+  %26 = add i8 %25, %21
+  %27 = getelementptr inbounds i8, ptr %x, i32 96
+  %wide.load.6 = load <16 x i8>, ptr %27, align 1
+  %28 = getelementptr inbounds i8, ptr %y, i32 96
+  %wide.load12.6 = load <16 x i8>, ptr %28, align 1
+  %29 = mul <16 x i8> %wide.load12.6, %wide.load.6
   %30 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %29)
-  %31 = add i8 %30, %24
-  %32 = getelementptr inbounds i8, i8* %x, i32 80
-  %33 = bitcast i8* %32 to <16 x i8>*
-  %wide.load.5 = load <16 x i8>, <16 x i8>* %33, align 1
-  %34 = getelementptr inbounds i8, i8* %y, i32 80
-  %35 = bitcast i8* %34 to <16 x i8>*
-  %wide.load12.5 = load <16 x i8>, <16 x i8>* %35, align 1
-  %36 = mul <16 x i8> %wide.load12.5, %wide.load.5
-  %37 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %36)
-  %38 = add i8 %37, %31
-  %39 = getelementptr inbounds i8, i8* %x, i32 96
-  %40 = bitcast i8* %39 to <16 x i8>*
-  %wide.load.6 = load <16 x i8>, <16 x i8>* %40, align 1
-  %41 = getelementptr inbounds i8, i8* %y, i32 96
-  %42 = bitcast i8* %41 to <16 x i8>*
-  %wide.load12.6 = load <16 x i8>, <16 x i8>* %42, align 1
-  %43 = mul <16 x i8> %wide.load12.6, %wide.load.6
-  %44 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %43)
-  %45 = add i8 %44, %38
-  %46 = getelementptr inbounds i8, i8* %x, i32 112
-  %47 = bitcast i8* %46 to <16 x i8>*
-  %wide.load.7 = load <16 x i8>, <16 x i8>* %47, align 1
-  %48 = getelementptr inbounds i8, i8* %y, i32 112
-  %49 = bitcast i8* %48 to <16 x i8>*
-  %wide.load12.7 = load <16 x i8>, <16 x i8>* %49, align 1
-  %50 = mul <16 x i8> %wide.load12.7, %wide.load.7
-  %51 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %50)
-  %52 = add i8 %51, %45
-  ret i8 %52
+  %31 = add i8 %30, %26
+  %32 = getelementptr inbounds i8, ptr %x, i32 112
+  %wide.load.7 = load <16 x i8>, ptr %32, align 1
+  %33 = getelementptr inbounds i8, ptr %y, i32 112
+  %wide.load12.7 = load <16 x i8>, ptr %33, align 1
+  %34 = mul <16 x i8> %wide.load12.7, %wide.load.7
+  %35 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %34)
+  %36 = add i8 %35, %31
+  ret i8 %36
 }
 
 

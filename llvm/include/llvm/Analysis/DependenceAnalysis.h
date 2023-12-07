@@ -82,14 +82,16 @@ namespace llvm {
     /// has a direction (or perhaps a union of several directions), and
     /// perhaps a distance.
     struct DVEntry {
-      enum { NONE = 0,
-             LT = 1,
-             EQ = 2,
-             LE = 3,
-             GT = 4,
-             NE = 5,
-             GE = 6,
-             ALL = 7 };
+      enum : unsigned char {
+        NONE = 0,
+        LT = 1,
+        EQ = 2,
+        LE = 3,
+        GT = 4,
+        NE = 5,
+        GE = 6,
+        ALL = 7
+      };
       unsigned char Direction : 3; // Init to ALL, then refine.
       bool Scalar    : 1; // Init to true.
       bool PeelFirst : 1; // Peeling the first iteration will break dependence.

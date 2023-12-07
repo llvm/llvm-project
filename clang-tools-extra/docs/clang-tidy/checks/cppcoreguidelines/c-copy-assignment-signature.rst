@@ -5,6 +5,6 @@
 cppcoreguidelines-c-copy-assignment-signature
 =============================================
 
-The cppcoreguidelines-c-copy-assignment-signature check is an alias, please see
-`misc-unconventional-assign-operator <../misc/unconventional-assign-operator.html>`_
+The `cppcoreguidelines-c-copy-assignment-signature` check is an alias, please see
+:doc:`misc-unconventional-assign-operator <../misc/unconventional-assign-operator>`
 for more information.

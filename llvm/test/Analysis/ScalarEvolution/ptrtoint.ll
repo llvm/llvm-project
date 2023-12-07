@@ -288,7 +288,7 @@ define void @ptrtoint_of_umax(ptr %in0, ptr %in1, ptr %out0) {
 ; X32-NEXT:    %s = select i1 %c, ptr %in0, ptr %in1
 ; X32-NEXT:    --> (%in0 umax %in1) U: full-set S: full-set
 ; X32-NEXT:    %p0 = ptrtoint ptr %s to i64
-; X32-NEXT:    --> (zext i32 ((ptrtoint ptr %in0 to i32) umax (ptrtoint ptr %in1 to i32)) to i64) U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:    --> ((zext i32 (ptrtoint ptr %in0 to i32) to i64) umax (zext i32 (ptrtoint ptr %in1 to i32) to i64)) U: [0,4294967296) S: [0,4294967296)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_umax
 ;
   %c = icmp uge ptr %in0, %in1
@@ -336,7 +336,7 @@ define void @ptrtoint_of_umin(ptr %in0, ptr %in1, ptr %out0) {
 ; X32-NEXT:    %s = select i1 %c, ptr %in0, ptr %in1
 ; X32-NEXT:    --> (%in0 umin %in1) U: full-set S: full-set
 ; X32-NEXT:    %p0 = ptrtoint ptr %s to i64
-; X32-NEXT:    --> (zext i32 ((ptrtoint ptr %in0 to i32) umin (ptrtoint ptr %in1 to i32)) to i64) U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:    --> ((zext i32 (ptrtoint ptr %in0 to i32) to i64) umin (zext i32 (ptrtoint ptr %in1 to i32) to i64)) U: [0,4294967296) S: [0,4294967296)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_umin
 ;
   %c = icmp ule ptr %in0, %in1

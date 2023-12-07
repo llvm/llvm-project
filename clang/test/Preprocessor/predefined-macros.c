@@ -118,12 +118,15 @@
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SYNC_CAS_ARMv6
 // CHECK-SYNC_CAS_ARMv6-NOT: __GCC_HAVE_SYNC_COMPARE_AND_SWAP
 //
+// RUN: %clang_cc1 %s -E -dM -o - -triple mips -target-cpu mips1 \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SYNC_CAS_MIPS32_MIPS1
 // RUN: %clang_cc1 %s -E -dM -o - -triple mips -target-cpu mips2 \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SYNC_CAS_MIPS \
 // RUN:         --check-prefix=CHECK-SYNC_CAS_MIPS32
 // RUN: %clang_cc1 %s -E -dM -o - -triple mips64 -target-cpu mips3 \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SYNC_CAS_MIPS \
 // RUN:         --check-prefix=CHECK-SYNC_CAS_MIPS64
+// CHECK-SYNC_CAS_MIPS32_MIPS1-NOT: __GCC_HAVE_SYNC_COMPARE_AND_SWAP
 // CHECK-SYNC_CAS_MIPS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 // CHECK-SYNC_CAS_MIPS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
 // CHECK-SYNC_CAS_MIPS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1

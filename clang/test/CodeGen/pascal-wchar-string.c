@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -emit-llvm -o -  %s -fpascal-strings -fwchar-type=short -fno-signed-wchar | FileCheck %s
-// rdar://8020384
 
 #include <stddef.h>
 

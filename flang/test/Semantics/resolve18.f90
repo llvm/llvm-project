@@ -55,11 +55,11 @@ end
 module m4b
   type :: foo
   end type
-  !ERROR: 'foo' is already declared in this scoping unit
   interface foo
     procedure :: foo
   end interface foo
 contains
+  !ERROR: 'foo' is already declared in this scoping unit
   function foo(x)
   end
 end
@@ -125,12 +125,12 @@ end module m8
 module m9
   type f9
   end type f9
-  !ERROR: 'f9' is already declared in this scoping unit
   interface f9
     real function f9()
     end function f9
   end interface f9
 contains
+  !ERROR: 'f9' is already declared in this scoping unit
   function f9(x)
   end function f9
 end module m9
@@ -208,3 +208,69 @@ module m15
     integer(4) :: x
   end subroutine gen2
 end module m15
+
+module m15a
+  interface foo
+    module procedure foo
+  end interface
+ contains
+  function foo()
+  end
+end
+
+module m15b
+  interface foo
+    module procedure foo
+  end interface
+ contains
+  function foo(x)
+  end
+end
+
+subroutine test15
+  use m15a
+  !ERROR: Cannot use-associate generic interface 'foo' with specific procedure of the same name when another such interface and procedure are in scope
+  use m15b
+end
+
+module m16a
+  type foo
+    integer j
+  end type
+  interface foo
+    module procedure bar
+  end interface
+ contains
+  function bar(j)
+  end
+end
+
+module m16b
+  type foo
+    integer j, k
+  end type
+  interface foo
+    module procedure bar
+  end interface
+ contains
+  function bar(x,y)
+  end
+end
+
+subroutine test16
+  use m16a
+  !ERROR: Generic interface 'foo' has ambiguous derived types from modules 'm16a' and 'm16b'
+  use m16b
+end
+
+subroutine test17
+  use m15a
+  !ERROR: Cannot use-associate generic interface 'foo' with derived type of the same name when another such interface and procedure are in scope
+  use m16a
+end
+
+subroutine test18
+  use m16a
+  !ERROR: Cannot use-associate generic interface 'foo' with specific procedure of the same name when another such interface and derived type are in scope
+  use m15a
+end

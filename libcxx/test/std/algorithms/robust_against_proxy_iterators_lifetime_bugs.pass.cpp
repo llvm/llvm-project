@@ -145,7 +145,7 @@ class LifetimeIterator {
       assert(lifetime_cache.contains(this) && lifetime_cache.contains(&rhs));
       assert(!rhs.moved_from_);
 
-      v_ = rhs.v_;
+      *v_ = *rhs.v_;
       moved_from_ = false;
 
       return *this;
@@ -157,7 +157,7 @@ class LifetimeIterator {
       assert(!rhs.moved_from_);
       rhs.moved_from_ = true;
 
-      v_ = rhs.v_;
+      *v_ = *rhs.v_;
       moved_from_ = false;
 
       return *this;
@@ -547,15 +547,15 @@ class ConstexprIterator {
 
 #endif // TEST_STD_VER > 17
 
-template <class T, size_t N = 32>
+template <class T, std::size_t N = 32>
 class Input {
   using Array = std::array<T, N>;
 
-  size_t size_ = 0;
+  std::size_t size_ = 0;
   Array values_ = {};
 
 public:
-  template <size_t N2>
+  template <std::size_t N2>
   TEST_CONSTEXPR_CXX20 Input(std::array<T, N2> from) {
     static_assert(N2 <= N, "");
 
@@ -565,7 +565,7 @@ public:
 
   TEST_CONSTEXPR_CXX20 typename Array::iterator begin() { return values_.begin(); }
   TEST_CONSTEXPR_CXX20 typename Array::iterator end() { return values_.begin() + size_; }
-  TEST_CONSTEXPR_CXX20 size_t size() const { return size_; }
+  TEST_CONSTEXPR_CXX20 std::size_t size() const { return size_; }
 };
 
 // TODO: extend `Value` and `Reference` so that it's possible to pass plain integers to all the algorithms.
@@ -624,14 +624,14 @@ TEST_CONSTEXPR_CXX20 std::array<Input<typename Iter::value_type>, 8> get_sort_te
   return result;
 }
 
-template <class Input, size_t N, class Func>
+template <class Input, std::size_t N, class Func>
 TEST_CONSTEXPR_CXX20 void test(std::array<Input, N> inputs, Func func) {
   for (auto&& in : inputs) {
     func(in.begin(), in.end());
   }
 }
 
-template <class Input, size_t N, class Func>
+template <class Input, std::size_t N, class Func>
 TEST_CONSTEXPR_CXX20 void test_n(std::array<Input, N> inputs, Func func) {
   for (auto&& in : inputs) {
     func(in.begin(), in.size());
@@ -698,17 +698,17 @@ TEST_CONSTEXPR_CXX20 bool test() {
   // TODO: is_permutation
   test(simple_in, [&](I b, I e) { (void) std::for_each(b, e, is_neg); });
 #if TEST_STD_VER > 14
-  test_n(simple_in, [&](I b, size_t n) { (void) std::for_each_n(b, n, is_neg); });
+  test_n(simple_in, [&](I b, std::size_t n) { (void) std::for_each_n(b, n, is_neg); });
 #endif
   test(simple_in, [&](I b, I e) { (void) std::copy(b, e, out); });
-  test_n(simple_in, [&](I b, size_t n) { (void) std::copy_n(b, n, out); });
+  test_n(simple_in, [&](I b, std::size_t n) { (void) std::copy_n(b, n, out); });
   test(simple_in, [&](I b, I e) { (void) std::copy_backward(b, e, out + N); });
   test(simple_in, [&](I b, I e) { (void) std::copy_if(b, e, out, is_neg); });
   test(simple_in, [&](I b, I e) { (void) std::move(b, e, out); });
   test(simple_in, [&](I b, I e) { (void) std::move_backward(b, e, out + N); });
   test(simple_in, [&](I b, I e) { (void) std::transform(b, e, out, identity); });
   test(simple_in, [&](I b, I e) { (void) std::generate(b, e, gen); });
-  test_n(simple_in, [&](I b, size_t n) { (void) std::generate_n(b, n, gen); });
+  test_n(simple_in, [&](I b, std::size_t n) { (void) std::generate_n(b, n, gen); });
   test(simple_in, [&](I b, I e) { (void) std::remove_copy(b, e, out, x); });
   test(simple_in, [&](I b, I e) { (void) std::remove_copy_if(b, e, out, is_neg); });
   test(simple_in, [&](I b, I e) { (void) std::replace(b, e, x, y); });

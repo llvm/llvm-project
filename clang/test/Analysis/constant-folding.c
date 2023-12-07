@@ -303,7 +303,8 @@ void testDisequalityRules(unsigned int u1, unsigned int u2, unsigned int u3,
 
   if (s1 < 0 && s1 > -4 && u1 > UINT_MAX - 4 && u1 < UINT_MAX - 1) {
     // s1: [-3, -1], u1: [UINT_MAX - 3, UINT_MAX - 2]
-    clang_analyzer_eval(u1 != s1); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(u1 != s1); // expected-warning{{TRUE}}
+    clang_analyzer_eval(s1 != u1); // expected-warning{{TRUE}}
   }
 
   if (s1 < 1 && s1 > -6 && s1 != -4 && s1 != -3 &&
@@ -400,12 +401,10 @@ void testDisequalityRules(unsigned int u1, unsigned int u2, unsigned int u3,
     clang_analyzer_eval(uch != sch); // expected-warning{{UNKNOWN}}
   }
 
-  // FIXME: Casting smaller signed types to unsigned one may leave us with
-  // overlapping values, falsely indicating UNKNOWN, where it is possible to
-  // assert TRUE.
   if (uch > 1 && sch < 1) {
     // uch: [2, UCHAR_MAX], sch: [SCHAR_MIN, 0]
-    clang_analyzer_eval(uch != sch); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(uch != sch); // expected-warning{{TRUE}}
+    clang_analyzer_eval(sch != uch); // expected-warning{{TRUE}}
   }
 
   if (uch <= 1 && uch >= 1 && sch <= 1 && sch >= 1) {
@@ -419,10 +418,9 @@ void testDisequalityRules(unsigned int u1, unsigned int u2, unsigned int u3,
     clang_analyzer_eval(ush != ssh); // expected-warning{{UNKNOWN}}
   }
 
-  // FIXME: Casting leave us with overlapping values. Should be TRUE.
   if (ush > 1 && ssh < 1) {
     // ush: [2, USHRT_MAX], ssh: [SHRT_MIN, 0]
-    clang_analyzer_eval(ush != ssh); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(ush != ssh); // expected-warning{{TRUE}}
   }
 
   if (ush <= 1 && ush >= 1 && ssh <= 1 && ssh >= 1) {

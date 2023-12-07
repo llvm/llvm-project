@@ -3,7 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck --check-prefix=GFX6 %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=GFX8 %s
 
-define amdgpu_kernel void @test_udivrem(i32 addrspace(1)* %out0, [8 x i32], i32 addrspace(1)* %out1, [8 x i32], i32 %x, [8 x i32], i32 %y) {
+define amdgpu_kernel void @test_udivrem(ptr addrspace(1) %out0, [8 x i32], ptr addrspace(1) %out1, [8 x i32], i32 %x, [8 x i32], i32 %y) {
 ; R600-LABEL: test_udivrem:
 ; R600:       ; %bb.0:
 ; R600-NEXT:    ALU 21, @4, KC0[CB0:0-32], KC1[]
@@ -116,13 +116,13 @@ define amdgpu_kernel void @test_udivrem(i32 addrspace(1)* %out0, [8 x i32], i32 
 ; GFX8-NEXT:    flat_store_dword v[2:3], v0
 ; GFX8-NEXT:    s_endpgm
   %result0 = udiv i32 %x, %y
-  store i32 %result0, i32 addrspace(1)* %out0
+  store i32 %result0, ptr addrspace(1) %out0
   %result1 = urem i32 %x, %y
-  store i32 %result1, i32 addrspace(1)* %out1
+  store i32 %result1, ptr addrspace(1) %out1
   ret void
 }
 
-define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i32> %x, <2 x i32> %y) {
+define amdgpu_kernel void @test_udivrem_v2(ptr addrspace(1) %out, <2 x i32> %x, <2 x i32> %y) {
 ; R600-LABEL: test_udivrem_v2:
 ; R600:       ; %bb.0:
 ; R600-NEXT:    ALU 29, @4, KC0[CB0:0-32], KC1[]
@@ -175,7 +175,7 @@ define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i3
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_lo_u32 v1, s2, v0
 ; GFX6-NEXT:    v_mul_hi_u32 v1, v0, v1
-; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; GFX6-NEXT:    v_mul_hi_u32 v0, s4, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v2
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v1, v1
@@ -193,7 +193,7 @@ define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i3
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    v_mul_hi_u32 v0, v1, v0
-; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
 ; GFX6-NEXT:    v_mul_hi_u32 v0, s5, v0
 ; GFX6-NEXT:    v_readfirstlane_b32 s6, v0
 ; GFX6-NEXT:    s_mul_i32 s6, s6, s7
@@ -223,7 +223,7 @@ define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i3
 ; GFX8-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX8-NEXT:    v_mul_lo_u32 v1, s2, v0
 ; GFX8-NEXT:    v_mul_hi_u32 v1, v0, v1
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
 ; GFX8-NEXT:    v_mul_hi_u32 v0, s4, v0
 ; GFX8-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v2
 ; GFX8-NEXT:    v_cvt_u32_f32_e32 v1, v1
@@ -241,7 +241,7 @@ define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i3
 ; GFX8-NEXT:    v_mul_lo_u32 v0, s3, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    v_mul_hi_u32 v0, v1, v0
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
 ; GFX8-NEXT:    v_mul_hi_u32 v1, s5, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_readfirstlane_b32 s2, v1
@@ -257,13 +257,13 @@ define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i3
 ; GFX8-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_endpgm
   %result0 = udiv <2 x i32> %x, %y
-  store <2 x i32> %result0, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %result0, ptr addrspace(1) %out
   %result1 = urem <2 x i32> %x, %y
-  store <2 x i32> %result1, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %result1, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_udivrem_v4(<4 x i32> addrspace(1)* %out, <4 x i32> %x, <4 x i32> %y) {
+define amdgpu_kernel void @test_udivrem_v4(ptr addrspace(1) %out, <4 x i32> %x, <4 x i32> %y) {
 ; R600-LABEL: test_udivrem_v4:
 ; R600:       ; %bb.0:
 ; R600-NEXT:    ALU 57, @4, KC0[CB0:0-32], KC1[]
@@ -362,7 +362,7 @@ define amdgpu_kernel void @test_udivrem_v4(<4 x i32> addrspace(1)* %out, <4 x i3
 ; GFX6-NEXT:    v_mul_lo_u32 v0, s2, v1
 ; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v2
 ; GFX6-NEXT:    v_mul_hi_u32 v0, v1, v0
-; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
 ; GFX6-NEXT:    v_mul_hi_u32 v0, s5, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v2
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v1, v1
@@ -380,7 +380,7 @@ define amdgpu_kernel void @test_udivrem_v4(<4 x i32> addrspace(1)* %out, <4 x i3
 ; GFX6-NEXT:    v_mul_lo_u32 v0, s2, v1
 ; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v2
 ; GFX6-NEXT:    v_mul_hi_u32 v0, v1, v0
-; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
 ; GFX6-NEXT:    v_mul_hi_u32 v0, s6, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v2
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v1, v1
@@ -450,7 +450,7 @@ define amdgpu_kernel void @test_udivrem_v4(<4 x i32> addrspace(1)* %out, <4 x i3
 ; GFX8-NEXT:    v_mul_lo_u32 v0, s3, v1
 ; GFX8-NEXT:    v_rcp_iflag_f32_e32 v2, v2
 ; GFX8-NEXT:    v_mul_hi_u32 v0, v1, v0
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
 ; GFX8-NEXT:    v_mul_hi_u32 v0, s5, v0
 ; GFX8-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v2
 ; GFX8-NEXT:    v_cvt_u32_f32_e32 v1, v1
@@ -468,7 +468,7 @@ define amdgpu_kernel void @test_udivrem_v4(<4 x i32> addrspace(1)* %out, <4 x i3
 ; GFX8-NEXT:    v_mul_lo_u32 v0, s4, v1
 ; GFX8-NEXT:    v_rcp_iflag_f32_e32 v2, v2
 ; GFX8-NEXT:    v_mul_hi_u32 v0, v1, v0
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
 ; GFX8-NEXT:    v_mul_hi_u32 v0, s6, v0
 ; GFX8-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v2
 ; GFX8-NEXT:    v_cvt_u32_f32_e32 v1, v1
@@ -502,8 +502,8 @@ define amdgpu_kernel void @test_udivrem_v4(<4 x i32> addrspace(1)* %out, <4 x i3
 ; GFX8-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX8-NEXT:    s_endpgm
   %result0 = udiv <4 x i32> %x, %y
-  store <4 x i32> %result0, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %result0, ptr addrspace(1) %out
   %result1 = urem <4 x i32> %x, %y
-  store <4 x i32> %result1, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %result1, ptr addrspace(1) %out
   ret void
 }

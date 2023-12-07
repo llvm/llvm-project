@@ -149,34 +149,31 @@ func.func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
 
 // CHECK-LABEL:func @materialize_write(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 func.func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
-  // CHECK-DAG:  %{{.*}} = arith.constant dense<1.000000e+00> : vector<5x4x3xf32>
+  // CHECK-DAG:  %{{.*}} = arith.constant dense<1.000000e+00> : vector<3x4x1x5xf32>
   // CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
   // CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
   // CHECK-DAG:  %[[C3:.*]] = arith.constant 3 : index
   // CHECK-DAG:  %[[C4:.*]] = arith.constant 4 : index
-  // CHECK-DAG:  %[[C5:.*]] = arith.constant 5 : index
   // CHECK:      %{{.*}} = memref.alloc(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : memref<?x?x?x?xf32>
   // CHECK-NEXT: affine.for %[[I0:.*]] = 0 to %{{.*}} step 3 {
   // CHECK-NEXT:   affine.for %[[I1:.*]] = 0 to %{{.*}} step 4 {
   // CHECK-NEXT:     affine.for %[[I2:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:       affine.for %[[I3:.*]] = 0 to %{{.*}} step 5 {
-  // CHECK:              %[[ALLOC:.*]] = memref.alloca() : memref<vector<5x4x3xf32>>
-  // CHECK:              memref.store %{{.*}}, %[[ALLOC]][] : memref<vector<5x4x3xf32>>
-  // CHECK:              %[[VECTOR_VIEW1:.*]] = vector.type_cast %[[ALLOC]] : memref<vector<5x4x3xf32>> to memref<5xvector<4x3xf32>>
-  // CHECK:              scf.for %[[I4:.*]] = %[[C0]] to %[[C5]] step %[[C1]] {
+  // CHECK:              %[[ALLOC:.*]] = memref.alloca() : memref<vector<3x4x1x5xf32>>
+  // CHECK:              memref.store %{{.*}}, %[[ALLOC]][] : memref<vector<3x4x1x5xf32>>
+  // CHECK:              %[[VECTOR_VIEW1:.*]] = vector.type_cast %[[ALLOC]] : memref<vector<3x4x1x5xf32>> to memref<3xvector<4x1x5xf32>>
+  // CHECK:              scf.for %[[I4:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
   // CHECK:                scf.if
-  // CHECK:                  %[[S3:.*]] = affine.apply #[[$ADD]](%[[I3]], %[[I4]])
-  // CHECK:                  %[[VECTOR_VIEW2:.*]] = vector.type_cast %[[VECTOR_VIEW1]] : memref<5xvector<4x3xf32>> to memref<5x4xvector<3xf32>>
+  // CHECK:                  %[[S3:.*]] = affine.apply #[[$ADD]](%[[I0]], %[[I4]])
+  // CHECK:                  %[[VECTOR_VIEW2:.*]] = vector.type_cast %[[VECTOR_VIEW1]] : memref<3xvector<4x1x5xf32>> to memref<3x4xvector<1x5xf32>>
   // CHECK:                  scf.for %[[I5:.*]] = %[[C0]] to %[[C4]] step %[[C1]] {
   // CHECK:                    scf.if
   // CHECK:                      %[[S1:.*]] = affine.apply #[[$ADD]](%[[I1]], %[[I5]])
-  // CHECK:                      %[[VEC:.*]] = memref.load %[[VECTOR_VIEW2]][%[[I4]], %[[I5]]] : memref<5x4xvector<3xf32>>
-  // CHECK:                      scf.for %[[I6:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
-  // CHECK:                        %[[S0:.*]] = affine.apply #[[$ADD]](%[[I0]], %[[I6]])
-  // CHECK:                        scf.if
-  // CHECK:                          %[[SCAL:.*]] = vector.extractelement %[[VEC]][%[[I6]] : index] : vector<3xf32>
-  // CHECK:                          memref.store %[[SCAL]], {{.*}}[%[[S0]], %[[S1]], %[[I2]], %[[S3]]] : memref<?x?x?x?xf32>
-  // CHECK:                        }
+  // CHECK:                      %[[VECTOR_VIEW3:.*]] = vector.type_cast %[[VECTOR_VIEW2]] : memref<3x4xvector<1x5xf32>> to memref<3x4x1xvector<5xf32>>
+  // CHECK:                      scf.for %[[I6:.*]] = %[[C0]] to %[[C1]] step %[[C1]] {
+  // CHECK:                        %[[S0:.*]] = affine.apply #[[$ADD]](%[[I2]], %[[I6]])
+  // CHECK:                        %[[VEC:.*]] = memref.load %[[VECTOR_VIEW3]][%[[I4]], %[[I5]], %[[I6]]] : memref<3x4x1xvector<5xf32>>
+  // CHECK:                        vector.transfer_write %[[VEC]], %{{.*}}[%[[S3]], %[[S1]], %[[S0]], %[[I3]]] : vector<5xf32>, memref<?x?x?x?xf32>
   // CHECK:                      }
   // CHECK:                    }
   // CHECK:                  }
@@ -500,3 +497,141 @@ func.func @transfer_read_within_async_execute(%A : memref<2x2xf32>) -> !async.to
   }
   return %token : !async.token
 }
+
+// -----
+
+// CHECK-LABEL: transfer_read_with_tensor
+func.func @transfer_read_with_tensor(%arg: tensor<f32>) -> vector<1xf32> {
+    // CHECK:      %[[EXTRACTED:.*]] = tensor.extract %{{.*}}[] : tensor<f32>
+    // CHECK-NEXT: %[[RESULT:.*]] = vector.broadcast %[[EXTRACTED]] : f32 to vector<1xf32>
+    // CHECK-NEXT: return %[[RESULT]] : vector<1xf32>
+    %f0 = arith.constant 0.0 : f32
+    %0 = vector.transfer_read %arg[], %f0 {permutation_map = affine_map<()->(0)>} :
+      tensor<f32>, vector<1xf32>
+    return %0: vector<1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: transfer_write_scalable
+func.func @transfer_write_scalable(%arg0: memref<?xf32, strided<[?], offset: ?>>, %arg1: f32) {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  %c0 = arith.constant 0 : index
+  %dim = memref.dim %arg0, %c0 : memref<?xf32, strided<[?], offset: ?>>
+  %1 = llvm.intr.experimental.stepvector : vector<[16]xi32>
+  %2 = arith.index_cast %dim : index to i32
+  %3 = llvm.mlir.undef : vector<[16]xi32>
+  %4 = llvm.insertelement %2, %3[%0 : i32] : vector<[16]xi32>
+  %5 = llvm.shufflevector %4, %3 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<[16]xi32>
+  %6 = arith.cmpi slt, %1, %5 : vector<[16]xi32>
+  %7 = llvm.mlir.undef : vector<[16]xf32>
+  %8 = llvm.insertelement %arg1, %7[%0 : i32] : vector<[16]xf32>
+  %9 = llvm.shufflevector %8, %7 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<[16]xf32>
+  vector.transfer_write %9, %arg0[%c0], %6 {in_bounds = [true]} : vector<[16]xf32>, memref<?xf32, strided<[?], offset: ?>>
+  return
+}
+
+// CHECK-SAME:      %[[ARG_0:.*]]: memref<?xf32, strided<[?], offset: ?>>,
+// CHECK:           %[[C_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C_16:.*]] = arith.constant 16 : index
+// CHECK:           %[[STEP:.*]] = arith.constant 1 : index
+// CHECK:           %[[MASK_VEC:.*]] = arith.cmpi slt, %{{.*}}, %{{.*}} : vector<[16]xi32>
+// CHECK:           %[[VSCALE:.*]] = vector.vscale
+// CHECK:           %[[UB:.*]] = arith.muli %[[VSCALE]], %[[C_16]] : index
+// CHECK:           scf.for %[[IDX:.*]] = %[[C_0]] to %[[UB]] step %[[STEP]] {
+// CHECK:             %[[MASK_VAL:.*]] = vector.extractelement %[[MASK_VEC]][%[[IDX]] : index] : vector<[16]xi1>
+// CHECK:             scf.if %[[MASK_VAL]] {
+// CHECK:               %[[VAL_TO_STORE:.*]] = vector.extractelement %{{.*}}[%[[IDX]] : index] : vector<[16]xf32>
+// CHECK:               memref.store %[[VAL_TO_STORE]], %[[ARG_0]][%[[IDX]]] : memref<?xf32, strided<[?], offset: ?>>
+// CHECK:             } else {
+// CHECK:             }
+// CHECK:           }
+
+// -----
+
+func.func @vector_print_vector_0d(%arg0: vector<f32>) {
+  vector.print %arg0 : vector<f32>
+  return
+}
+// CHECK-LABEL:   func.func @vector_print_vector_0d(
+// CHECK-SAME:                                      %[[VEC:.*]]: vector<f32>) {
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[FLAT_VEC:.*]] = vector.shape_cast %[[VEC]] : vector<f32> to vector<1xf32>
+// CHECK:           vector.print punctuation <open>
+// CHECK:           scf.for %[[IDX:.*]] = %[[C0]] to %[[C1]] step %[[C1]] {
+// CHECK:             %[[EL:.*]] = vector.extractelement %[[FLAT_VEC]]{{\[}}%[[IDX]] : index] : vector<1xf32>
+// CHECK:             vector.print %[[EL]] : f32 punctuation <no_punctuation>
+// CHECK:             %[[IS_NOT_LAST:.*]] = arith.cmpi ult, %[[IDX]], %[[C0]] : index
+// CHECK:             scf.if %[[IS_NOT_LAST]] {
+// CHECK:               vector.print punctuation <comma>
+// CHECK:             }
+// CHECK:           }
+// CHECK:           vector.print punctuation <close>
+// CHECK:           vector.print
+// CHECK:           return
+// CHECK:         }
+
+// -----
+
+func.func @vector_print_vector(%arg0: vector<2x2xf32>) {
+  vector.print %arg0 : vector<2x2xf32>
+  return
+}
+// CHECK-LABEL:   func.func @vector_print_vector(
+// CHECK-SAME:                                   %[[VEC:.*]]: vector<2x2xf32>) {
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C2:.*]] = arith.constant 2 : index
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[FLAT_VEC:.*]] = vector.shape_cast %[[VEC]] : vector<2x2xf32> to vector<4xf32>
+// CHECK:           vector.print punctuation <open>
+// CHECK:           scf.for %[[I:.*]] = %[[C0]] to %[[C2]] step %[[C1]] {
+// CHECK:             vector.print punctuation <open>
+// CHECK:             scf.for %[[J:.*]] = %[[C0]] to %[[C2]] step %[[C1]] {
+// CHECK:               %[[OUTER_INDEX:.*]] = arith.muli %[[I]], %[[C2]] : index
+// CHECK:               %[[FLAT_INDEX:.*]] = arith.addi %[[J]], %[[OUTER_INDEX]] : index
+// CHECK:               %[[EL:.*]] = vector.extractelement %[[FLAT_VEC]]{{\[}}%[[FLAT_INDEX]] : index] : vector<4xf32>
+// CHECK:               vector.print %[[EL]] : f32 punctuation <no_punctuation>
+// CHECK:               %[[IS_NOT_LAST_J:.*]] = arith.cmpi ult, %[[J]], %[[C1]] : index
+// CHECK:               scf.if %[[IS_NOT_LAST_J]] {
+// CHECK:                 vector.print punctuation <comma>
+// CHECK:               }
+// CHECK:             }
+// CHECK:             vector.print punctuation <close>
+// CHECK:             %[[IS_NOT_LAST_I:.*]] = arith.cmpi ult, %[[I]], %[[C1]] : index
+// CHECK:             scf.if %[[IS_NOT_LAST_I]] {
+// CHECK:               vector.print punctuation <comma>
+// CHECK:             }
+// CHECK:           }
+// CHECK:           vector.print punctuation <close>
+// CHECK:           vector.print
+// CHECK:           return
+// CHECK:         }
+
+// -----
+
+func.func @vector_print_scalable_vector(%arg0: vector<[4]xi32>) {
+  vector.print %arg0 : vector<[4]xi32>
+  return
+}
+// CHECK-LABEL:   func.func @vector_print_scalable_vector(
+// CHECK-SAME:                                            %[[VEC:.*]]: vector<[4]xi32>) {
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C4:.*]] = arith.constant 4 : index
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VSCALE:.*]] = vector.vscale
+// CHECK:           %[[UPPER_BOUND:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
+// CHECK:           %[[LAST_INDEX:.*]] = arith.subi %[[UPPER_BOUND]], %[[C1]] : index
+// CHECK:           vector.print punctuation <open>
+// CHECK:           scf.for %[[IDX:.*]] = %[[C0]] to %[[UPPER_BOUND]] step %[[C1]] {
+// CHECK:             %[[EL:.*]] = vector.extractelement %[[VEC]]{{\[}}%[[IDX]] : index] : vector<[4]xi32>
+// CHECK:             vector.print %[[EL]] : i32 punctuation <no_punctuation>
+// CHECK:             %[[IS_NOT_LAST:.*]] = arith.cmpi ult, %[[IDX]], %[[LAST_INDEX]] : index
+// CHECK:             scf.if %[[IS_NOT_LAST]] {
+// CHECK:               vector.print punctuation <comma>
+// CHECK:             }
+// CHECK:           }
+// CHECK:           vector.print punctuation <close>
+// CHECK:           vector.print
+// CHECK:           return
+// CHECK:         }

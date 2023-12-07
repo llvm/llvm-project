@@ -20,24 +20,28 @@ namespace opts {
 
 extern cl::opt<unsigned> Verbosity;
 extern cl::OptionCategory BoltOptCategory;
+extern cl::opt<bool> InferStaleProfile;
 
 static llvm::cl::opt<bool>
     IgnoreHash("profile-ignore-hash",
                cl::desc("ignore hash while reading function profile"),
                cl::Hidden, cl::cat(BoltOptCategory));
+
+llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
+                                  cl::desc("use DFS order for YAML profile"),
+                                  cl::Hidden, cl::cat(BoltOptCategory));
 }
 
 namespace llvm {
 namespace bolt {
 
 bool YAMLProfileReader::isYAML(const StringRef Filename) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-      MemoryBuffer::getFileOrSTDIN(Filename);
-  if (std::error_code EC = MB.getError())
-    report_error(Filename, EC);
-  StringRef Buffer = MB.get()->getBuffer();
-  if (Buffer.startswith("---\n"))
-    return true;
+  if (auto MB = MemoryBuffer::getFileOrSTDIN(Filename)) {
+    StringRef Buffer = (*MB)->getBuffer();
+    return Buffer.startswith("---\n");
+  } else {
+    report_error(Filename, MB.getError());
+  }
   return false;
 }
 
@@ -61,19 +65,16 @@ void YAMLProfileReader::buildNameMaps(
 }
 
 bool YAMLProfileReader::hasLocalsWithFileName() const {
-  for (const StringMapEntry<yaml::bolt::BinaryFunctionProfile *> &KV :
-       ProfileNameToProfile) {
-    const StringRef &FuncName = KV.getKey();
-    if (FuncName.count('/') == 2 && FuncName[0] != '/')
-      return true;
-  }
-  return false;
+  return llvm::any_of(ProfileNameToProfile.keys(), [](StringRef FuncName) {
+    return FuncName.count('/') == 2 && FuncName[0] != '/';
+  });
 }
 
 bool YAMLProfileReader::parseFunctionProfile(
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
   BinaryContext &BC = BF.getBinaryContext();
 
+  const bool IsDFSOrder = YamlBP.Header.IsDFSOrder;
   bool ProfileMatched = true;
   uint64_t MismatchedBlocks = 0;
   uint64_t MismatchedCalls = 0;
@@ -83,7 +84,13 @@ bool YAMLProfileReader::parseFunctionProfile(
 
   BF.setExecutionCount(YamlBF.ExecCount);
 
-  if (!opts::IgnoreHash && YamlBF.Hash != BF.computeHash(/*UseDFS=*/true)) {
+  uint64_t FuncRawBranchCount = 0;
+  for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks)
+    for (const yaml::bolt::SuccessorInfo &YamlSI : YamlBB.Successors)
+      FuncRawBranchCount += YamlSI.Count;
+  BF.setRawBranchCount(FuncRawBranchCount);
+
+  if (!opts::IgnoreHash && YamlBF.Hash != BF.computeHash(IsDFSOrder)) {
     if (opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: function hash mismatch\n";
     ProfileMatched = false;
@@ -95,10 +102,14 @@ bool YAMLProfileReader::parseFunctionProfile(
     ProfileMatched = false;
   }
 
-  BinaryFunction::BasicBlockOrderType DFSOrder = BF.dfs();
+  BinaryFunction::BasicBlockOrderType Order;
+  if (IsDFSOrder)
+    llvm::copy(BF.dfs(), std::back_inserter(Order));
+  else
+    llvm::copy(BF.getLayout().blocks(), std::back_inserter(Order));
 
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
-    if (YamlBB.Index >= DFSOrder.size()) {
+    if (YamlBB.Index >= Order.size()) {
       if (opts::Verbosity >= 2)
         errs() << "BOLT-WARNING: index " << YamlBB.Index
                << " is out of bounds\n";
@@ -106,7 +117,7 @@ bool YAMLProfileReader::parseFunctionProfile(
       continue;
     }
 
-    BinaryBasicBlock &BB = *DFSOrder[YamlBB.Index];
+    BinaryBasicBlock &BB = *Order[YamlBB.Index];
 
     // Basic samples profile (without LBR) does not have branches information
     // and needs a special processing.
@@ -190,14 +201,14 @@ bool YAMLProfileReader::parseFunctionProfile(
     }
 
     for (const yaml::bolt::SuccessorInfo &YamlSI : YamlBB.Successors) {
-      if (YamlSI.Index >= DFSOrder.size()) {
+      if (YamlSI.Index >= Order.size()) {
         if (opts::Verbosity >= 1)
           errs() << "BOLT-WARNING: index out of bounds for profiled block\n";
         ++MismatchedEdges;
         continue;
       }
 
-      BinaryBasicBlock &SuccessorBB = *DFSOrder[YamlSI.Index];
+      BinaryBasicBlock &SuccessorBB = *Order[YamlSI.Index];
       if (!BB.getSuccessor(SuccessorBB.getLabel())) {
         if (opts::Verbosity >= 1)
           errs() << "BOLT-WARNING: no successor for block " << BB.getName()
@@ -232,6 +243,13 @@ bool YAMLProfileReader::parseFunctionProfile(
     errs() << "BOLT-WARNING: " << MismatchedBlocks << " blocks, "
            << MismatchedCalls << " calls, and " << MismatchedEdges
            << " edges in profile did not match function " << BF << '\n';
+
+  if (!ProfileMatched && opts::InferStaleProfile) {
+    if (inferStaleProfile(BF, YamlBF)) {
+      ProfileMatched = true;
+      BF.markProfiled(YamlBP.Header.Flags);
+    }
+  }
 
   return ProfileMatched;
 }
@@ -285,10 +303,10 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
 
 bool YAMLProfileReader::mayHaveProfileData(const BinaryFunction &BF) {
   for (StringRef Name : BF.getNames()) {
-    if (ProfileNameToProfile.find(Name) != ProfileNameToProfile.end())
+    if (ProfileNameToProfile.contains(Name))
       return true;
     if (const std::optional<StringRef> CommonName = getLTOCommonName(Name)) {
-      if (LTOCommonNameMap.find(*CommonName) != LTOCommonNameMap.end())
+      if (LTOCommonNameMap.contains(*CommonName))
         return true;
     }
   }
@@ -301,12 +319,9 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
   auto profileMatches = [](const yaml::bolt::BinaryFunctionProfile &Profile,
                            BinaryFunction &BF) {
-    if (opts::IgnoreHash && Profile.NumBasicBlocks == BF.size())
-      return true;
-    if (!opts::IgnoreHash &&
-        Profile.Hash == static_cast<uint64_t>(BF.getHash()))
-      return true;
-    return false;
+    if (opts::IgnoreHash)
+      return Profile.NumBasicBlocks == BF.size();
+    return Profile.Hash == static_cast<uint64_t>(BF.getHash());
   };
 
   // We have to do 2 passes since LTO introduces an ambiguity in function
@@ -321,7 +336,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
     // Recompute hash once per function.
     if (!opts::IgnoreHash)
-      Function.computeHash(/*UseDFS=*/true);
+      Function.computeHash(YamlBP.Header.IsDFSOrder);
 
     for (StringRef FunctionName : Function.getNames()) {
       auto PI = ProfileNameToProfile.find(FunctionName);
@@ -329,8 +344,10 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
         continue;
 
       yaml::bolt::BinaryFunctionProfile &YamlBF = *PI->getValue();
-      if (profileMatches(YamlBF, Function))
+      if (profileMatches(YamlBF, Function)) {
         matchProfileToFunction(YamlBF, Function);
+        break;
+      }
     }
   }
 

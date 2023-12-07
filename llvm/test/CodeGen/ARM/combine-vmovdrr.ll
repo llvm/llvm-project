@@ -7,7 +7,7 @@ declare <8 x i8> @llvm.arm.neon.vtbl2(<8 x i8> %shuffle.i.i307, <8 x i8> %shuffl
 ; The bitcasts force the values to go through the GPRs, whereas
 ; they are defined on VPRs and used on VPRs.
 ;
-define void @motivatingExample(<2 x i64>* %addr, <8 x i8>* %addr2) {
+define void @motivatingExample(ptr %addr, ptr %addr2) {
 ; CHECK-LABEL: motivatingExample:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -15,19 +15,19 @@ define void @motivatingExample(<2 x i64>* %addr, <8 x i8>* %addr2) {
 ; CHECK-NEXT:    vtbl.8 d16, {d16, d17}, d18
 ; CHECK-NEXT:    vstr d16, [r1]
 ; CHECK-NEXT:    bx lr
-  %shuffle.i.bc.i309 = load <2 x i64>, <2 x i64>* %addr
-  %vtbl2.i25.i = load <8 x i8>, <8 x i8>* %addr2
+  %shuffle.i.bc.i309 = load <2 x i64>, ptr %addr
+  %vtbl2.i25.i = load <8 x i8>, ptr %addr2
   %shuffle.i.extract.i310 = extractelement <2 x i64> %shuffle.i.bc.i309, i32 0
   %shuffle.i27.extract.i311 = extractelement <2 x i64> %shuffle.i.bc.i309, i32 1
   %tmp45 = bitcast i64 %shuffle.i.extract.i310 to <8 x i8>
   %tmp46 = bitcast i64 %shuffle.i27.extract.i311 to <8 x i8>
   %vtbl2.i25.i313 = tail call <8 x i8> @llvm.arm.neon.vtbl2(<8 x i8> %tmp45, <8 x i8> %tmp46, <8 x i8> %vtbl2.i25.i)
-  store <8 x i8> %vtbl2.i25.i313, <8 x i8>* %addr2
+  store <8 x i8> %vtbl2.i25.i313, ptr %addr2
   ret void
 }
 
 ; Check that we do not perform the transformation for dynamic index.
-define void @dynamicIndex(<2 x i64>* %addr, <8 x i8>* %addr2, i32 %index) {
+define void @dynamicIndex(ptr %addr, ptr %addr2, i32 %index) {
 ; CHECK-LABEL: dynamicIndex:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, r6, r7, lr}
@@ -58,20 +58,20 @@ define void @dynamicIndex(<2 x i64>* %addr, <8 x i8>* %addr2, i32 %index) {
 ; CHECK-NEXT:    vstr d16, [r1]
 ; CHECK-NEXT:    mov sp, r4
 ; CHECK-NEXT:    pop {r4, r6, r7, pc}
-  %shuffle.i.bc.i309 = load <2 x i64>, <2 x i64>* %addr
-  %vtbl2.i25.i = load <8 x i8>, <8 x i8>* %addr2
+  %shuffle.i.bc.i309 = load <2 x i64>, ptr %addr
+  %vtbl2.i25.i = load <8 x i8>, ptr %addr2
   %shuffle.i.extract.i310 = extractelement <2 x i64> %shuffle.i.bc.i309, i32 %index
   %shuffle.i27.extract.i311 = extractelement <2 x i64> %shuffle.i.bc.i309, i32 1
   %tmp45 = bitcast i64 %shuffle.i.extract.i310 to <8 x i8>
   %tmp46 = bitcast i64 %shuffle.i27.extract.i311 to <8 x i8>
   %vtbl2.i25.i313 = tail call <8 x i8> @llvm.arm.neon.vtbl2(<8 x i8> %tmp45, <8 x i8> %tmp46, <8 x i8> %vtbl2.i25.i)
-  store <8 x i8> %vtbl2.i25.i313, <8 x i8>* %addr2
+  store <8 x i8> %vtbl2.i25.i313, ptr %addr2
   ret void
 }
 
 ; Check that we do not perform the transformation when there are several uses
 ; of the result of the bitcast.
-define i64 @severalUses(<2 x i64>* %addr, <8 x i8>* %addr2) {
+define i64 @severalUses(ptr %addr, ptr %addr2) {
 ; CHECK-LABEL: severalUses:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -81,13 +81,13 @@ define i64 @severalUses(<2 x i64>* %addr, <8 x i8>* %addr2) {
 ; CHECK-NEXT:    vstr d16, [r1]
 ; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    bx lr
-  %shuffle.i.bc.i309 = load <2 x i64>, <2 x i64>* %addr
-  %vtbl2.i25.i = load <8 x i8>, <8 x i8>* %addr2
+  %shuffle.i.bc.i309 = load <2 x i64>, ptr %addr
+  %vtbl2.i25.i = load <8 x i8>, ptr %addr2
   %shuffle.i.extract.i310 = extractelement <2 x i64> %shuffle.i.bc.i309, i32 0
   %shuffle.i27.extract.i311 = extractelement <2 x i64> %shuffle.i.bc.i309, i32 1
   %tmp45 = bitcast i64 %shuffle.i.extract.i310 to <8 x i8>
   %tmp46 = bitcast i64 %shuffle.i27.extract.i311 to <8 x i8>
   %vtbl2.i25.i313 = tail call <8 x i8> @llvm.arm.neon.vtbl2(<8 x i8> %tmp45, <8 x i8> %tmp46, <8 x i8> %vtbl2.i25.i)
-  store <8 x i8> %vtbl2.i25.i313, <8 x i8>* %addr2
+  store <8 x i8> %vtbl2.i25.i313, ptr %addr2
   ret i64 %shuffle.i.extract.i310
 }

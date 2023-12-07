@@ -30,7 +30,7 @@ public:
                                                std::string &);
 
 private:
-  const MCInstrDesc *Desc;          // Raw array to allow static init'n
+  const MCInstrDesc *LastDesc;      // Raw array to allow static init'n
   const unsigned *InstrNameIndices; // Array for name indices in InstrNameData
   const char *InstrNameData;        // Instruction name string pool
   // Subtarget feature that an instruction is deprecated on, if any
@@ -48,7 +48,7 @@ public:
   void InitMCInstrInfo(const MCInstrDesc *D, const unsigned *NI, const char *ND,
                        const uint8_t *DF,
                        const ComplexDeprecationPredicate *CDI, unsigned NO) {
-    Desc = D;
+    LastDesc = D + NO - 1;
     InstrNameIndices = NI;
     InstrNameData = ND;
     DeprecatedFeatures = DF;
@@ -62,7 +62,8 @@ public:
   /// specified instruction opcode.
   const MCInstrDesc &get(unsigned Opcode) const {
     assert(Opcode < NumOpcodes && "Invalid opcode!");
-    return Desc[Opcode];
+    // The table is indexed backwards from the last entry.
+    return *(LastDesc - Opcode);
   }
 
   /// Returns the name for the instructions with the given opcode.

@@ -12,6 +12,7 @@ set(LLVM_LINK_COMPONENTS
   ProfileData
   Support
   Symbolize
+  TargetParser
   )
 
 add_llvm_tool(llvm-profgen

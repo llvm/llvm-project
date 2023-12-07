@@ -130,6 +130,16 @@ public:
                                 const yaml::StringValue &RegisterSource,
                                 bool IsRestored, int FrameIdx);
 
+  struct VarExprLoc {
+    DILocalVariable *DIVar = nullptr;
+    DIExpression *DIExpr = nullptr;
+    DILocation *DILoc = nullptr;
+  };
+
+  std::optional<VarExprLoc> parseVarExprLoc(PerFunctionMIParsingState &PFS,
+                                            const yaml::StringValue &VarStr,
+                                            const yaml::StringValue &ExprStr,
+                                            const yaml::StringValue &LocStr);
   template <typename T>
   bool parseStackObjectsDebugInfo(PerFunctionMIParsingState &PFS,
                                   const T &Object,
@@ -234,7 +244,8 @@ MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
     // Create an empty module when the MIR file is empty.
     NoMIRDocuments = true;
     auto M = std::make_unique<Module>(Filename, Context);
-    if (auto LayoutOverride = DataLayoutCallback(M->getTargetTriple()))
+    if (auto LayoutOverride =
+            DataLayoutCallback(M->getTargetTriple(), M->getDataLayoutStr()))
       M->setDataLayout(*LayoutOverride);
     return M;
   }
@@ -257,7 +268,8 @@ MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
   } else {
     // Create an new, empty module.
     M = std::make_unique<Module>(Filename, Context);
-    if (auto LayoutOverride = DataLayoutCallback(M->getTargetTriple()))
+    if (auto LayoutOverride =
+            DataLayoutCallback(M->getTargetTriple(), M->getDataLayoutStr()))
       M->setDataLayout(*LayoutOverride);
     NoLLVMIR = true;
   }
@@ -390,7 +402,7 @@ bool MIRParserImpl::initializeCallSiteInfo(
   MachineFunction &MF = PFS.MF;
   SMDiagnostic Error;
   const LLVMTargetMachine &TM = MF.getTarget();
-  for (auto YamlCSInfo : YamlMF.CallSitesInfo) {
+  for (auto &YamlCSInfo : YamlMF.CallSitesInfo) {
     yaml::CallSiteInfo::MachineInstrLoc MILoc = YamlCSInfo.CallLocation;
     if (MILoc.BlockNum >= MF.size())
       return error(Twine(MF.getName()) +
@@ -441,6 +453,9 @@ void MIRParserImpl::setupDebugValueTracking(
     MF.makeDebugValueSubstitution({Sub.SrcInst, Sub.SrcOp},
                                   {Sub.DstInst, Sub.DstOp}, Sub.Subreg);
   }
+
+  // Flag for whether we're supposed to be using DBG_INSTR_REF.
+  MF.setUseDebugInstrRef(YamlMF.UseDebugInstrRef);
 }
 
 bool
@@ -463,6 +478,7 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   MF.setHasEHCatchret(YamlMF.HasEHCatchret);
   MF.setHasEHScopes(YamlMF.HasEHScopes);
   MF.setHasEHFunclets(YamlMF.HasEHFunclets);
+  MF.setIsOutlined(YamlMF.IsOutlined);
 
   if (YamlMF.Legalized)
     MF.getProperties().set(MachineFunctionProperties::Property::Legalized);
@@ -659,9 +675,11 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
                                       const yaml::MachineFunction &YamlMF) {
   MachineFunction &MF = PFS.MF;
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+
   bool Error = false;
   // Create VRegs
-  auto populateVRegInfo = [&] (const VRegInfo &Info, Twine Name) {
+  auto populateVRegInfo = [&](const VRegInfo &Info, Twine Name) {
     Register Reg = Info.VReg;
     switch (Info.Kind) {
     case VRegInfo::UNKNOWN:
@@ -670,6 +688,14 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
       Error = true;
       break;
     case VRegInfo::NORMAL:
+      if (!Info.D.RC->isAllocatable()) {
+        error(Twine("Cannot use non-allocatable class '") +
+              TRI->getRegClassName(Info.D.RC) + "' for virtual register " +
+              Name + " in function '" + MF.getName() + "'");
+        Error = true;
+        break;
+      }
+
       MRI.setRegClass(Reg, Info.D.RC);
       if (Info.PreferredReg != 0)
         MRI.setSimpleHint(Reg, Info.PreferredReg);
@@ -695,7 +721,6 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
   // Compute MachineRegisterInfo::UsedPhysRegMask
   for (const MachineBasicBlock &MBB : MF) {
     // Make sure MRI knows about registers clobbered by unwinder.
-    const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (MBB.isEHPad())
       if (auto *RegMask = TRI->getCustomEHPadPreservedMask(MF))
         MRI.addPhysRegsUsedFromRegMask(RegMask);
@@ -776,6 +801,24 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
       return true;
     if (parseStackObjectsDebugInfo(PFS, Object, ObjectIdx))
       return true;
+  }
+
+  for (const auto &Object : YamlMF.EntryValueObjects) {
+    SMDiagnostic Error;
+    Register Reg;
+    if (parseNamedRegisterReference(PFS, Reg, Object.EntryValueRegister.Value,
+                                    Error))
+      return error(Error, Object.EntryValueRegister.SourceRange);
+    if (!Reg.isPhysical())
+      return error(Object.EntryValueRegister.SourceRange.Start,
+                   "Expected physical register for entry value field");
+    std::optional<VarExprLoc> MaybeInfo = parseVarExprLoc(
+        PFS, Object.DebugVar, Object.DebugExpr, Object.DebugLoc);
+    if (!MaybeInfo)
+      return true;
+    if (MaybeInfo->DIVar || MaybeInfo->DIExpr || MaybeInfo->DILoc)
+      PFS.MF.setVariableDbgInfo(MaybeInfo->DIVar, MaybeInfo->DIExpr,
+                                Reg.asMCReg(), MaybeInfo->DILoc);
   }
 
   // Initialize the ordinary frame objects.
@@ -873,26 +916,37 @@ static bool typecheckMDNode(T *&Result, MDNode *Node,
   return false;
 }
 
-template <typename T>
-bool MIRParserImpl::parseStackObjectsDebugInfo(PerFunctionMIParsingState &PFS,
-    const T &Object, int FrameIdx) {
-  // Debug information can only be attached to stack objects; Fixed stack
-  // objects aren't supported.
-  MDNode *Var = nullptr, *Expr = nullptr, *Loc = nullptr;
-  if (parseMDNode(PFS, Var, Object.DebugVar) ||
-      parseMDNode(PFS, Expr, Object.DebugExpr) ||
-      parseMDNode(PFS, Loc, Object.DebugLoc))
-    return true;
-  if (!Var && !Expr && !Loc)
-    return false;
+std::optional<MIRParserImpl::VarExprLoc> MIRParserImpl::parseVarExprLoc(
+    PerFunctionMIParsingState &PFS, const yaml::StringValue &VarStr,
+    const yaml::StringValue &ExprStr, const yaml::StringValue &LocStr) {
+  MDNode *Var = nullptr;
+  MDNode *Expr = nullptr;
+  MDNode *Loc = nullptr;
+  if (parseMDNode(PFS, Var, VarStr) || parseMDNode(PFS, Expr, ExprStr) ||
+      parseMDNode(PFS, Loc, LocStr))
+    return std::nullopt;
   DILocalVariable *DIVar = nullptr;
   DIExpression *DIExpr = nullptr;
   DILocation *DILoc = nullptr;
-  if (typecheckMDNode(DIVar, Var, Object.DebugVar, "DILocalVariable", *this) ||
-      typecheckMDNode(DIExpr, Expr, Object.DebugExpr, "DIExpression", *this) ||
-      typecheckMDNode(DILoc, Loc, Object.DebugLoc, "DILocation", *this))
+  if (typecheckMDNode(DIVar, Var, VarStr, "DILocalVariable", *this) ||
+      typecheckMDNode(DIExpr, Expr, ExprStr, "DIExpression", *this) ||
+      typecheckMDNode(DILoc, Loc, LocStr, "DILocation", *this))
+    return std::nullopt;
+  return VarExprLoc{DIVar, DIExpr, DILoc};
+}
+
+template <typename T>
+bool MIRParserImpl::parseStackObjectsDebugInfo(PerFunctionMIParsingState &PFS,
+                                               const T &Object, int FrameIdx) {
+  std::optional<VarExprLoc> MaybeInfo =
+      parseVarExprLoc(PFS, Object.DebugVar, Object.DebugExpr, Object.DebugLoc);
+  if (!MaybeInfo)
     return true;
-  PFS.MF.setVariableDbgInfo(DIVar, DIExpr, FrameIdx, DILoc);
+  // Debug information can only be attached to stack objects; Fixed stack
+  // objects aren't supported.
+  if (MaybeInfo->DIVar || MaybeInfo->DIExpr || MaybeInfo->DILoc)
+    PFS.MF.setVariableDbgInfo(MaybeInfo->DIVar, MaybeInfo->DIExpr, FrameIdx,
+                              MaybeInfo->DILoc);
   return false;
 }
 

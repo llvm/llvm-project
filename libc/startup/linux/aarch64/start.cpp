@@ -11,7 +11,7 @@
 #include "src/__support/threads/thread.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
-#include "src/string/memory_utils/memcpy_implementations.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 #include <arm_acle.h>
 
@@ -34,7 +34,7 @@ static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
 #elif SYS_mmap
 static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap;
 #else
-#error "Target platform does not have SYS_mmap or SYS_mmap2 defined"
+#error "mmap and mmap2 syscalls not available."
 #endif
 
 AppProperties app;
@@ -69,13 +69,13 @@ void init_tls(TLSDescriptor &tls_descriptor) {
   // We cannot call the mmap function here as the functions set errno on
   // failure. Since errno is implemented via a thread local variable, we cannot
   // use errno before TLS is setup.
-  long mmap_ret_val = __llvm_libc::syscall_impl(
+  long mmap_ret_val = __llvm_libc::syscall_impl<long>(
       MMAP_SYSCALL_NUMBER, nullptr, alloc_size, PROT_READ | PROT_WRITE,
       MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   // We cannot check the return value with MAP_FAILED as that is the return
   // of the mmap function and not the mmap syscall.
   if (mmap_ret_val < 0 && static_cast<uintptr_t>(mmap_ret_val) > -app.pageSize)
-    __llvm_libc::syscall_impl(SYS_exit, 1);
+    __llvm_libc::syscall_impl<long>(SYS_exit, 1);
   uintptr_t thread_ptr = uintptr_t(reinterpret_cast<uintptr_t *>(mmap_ret_val));
   uintptr_t tls_addr = thread_ptr + size_of_pointers + padding;
   __llvm_libc::inline_memcpy(reinterpret_cast<char *>(tls_addr),
@@ -89,7 +89,7 @@ void init_tls(TLSDescriptor &tls_descriptor) {
 void cleanup_tls(uintptr_t addr, uintptr_t size) {
   if (size == 0)
     return;
-  __llvm_libc::syscall_impl(SYS_munmap, addr, size);
+  __llvm_libc::syscall_impl<long>(SYS_munmap, addr, size);
 }
 
 static void set_thread_ptr(uintptr_t val) { __arm_wsr64("tpidr_el0", val); }
@@ -134,10 +134,10 @@ struct AuxEntry {
 };
 
 __attribute__((noinline)) static void do_start() {
-  auto tid = __llvm_libc::syscall_impl(SYS_gettid);
+  auto tid = __llvm_libc::syscall_impl<long>(SYS_gettid);
   if (tid <= 0)
-    __llvm_libc::syscall_impl(SYS_exit, 1);
-  __llvm_libc::main_thread_attrib.tid = tid;
+    __llvm_libc::syscall_impl<long>(SYS_exit, 1);
+  __llvm_libc::main_thread_attrib.tid = static_cast<int>(tid);
 
   // After the argv array, is a 8-byte long NULL value before the array of env
   // values. The end of the env values is marked by another 8-byte long NULL
@@ -200,10 +200,12 @@ __attribute__((noinline)) static void do_start() {
   __llvm_libc::atexit(&__llvm_libc::call_fini_array_callbacks);
 
   __llvm_libc::call_init_array_callbacks(
-      app.args->argc, reinterpret_cast<char **>(app.args->argv),
+      static_cast<int>(app.args->argc),
+      reinterpret_cast<char **>(app.args->argv),
       reinterpret_cast<char **>(env_ptr));
 
-  int retval = main(app.args->argc, reinterpret_cast<char **>(app.args->argv),
+  int retval = main(static_cast<int>(app.args->argc),
+                    reinterpret_cast<char **>(app.args->argv),
                     reinterpret_cast<char **>(env_ptr));
 
   // TODO: TLS cleanup should be done after all other atexit callbacks

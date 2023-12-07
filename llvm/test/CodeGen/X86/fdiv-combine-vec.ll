@@ -61,7 +61,7 @@ define <4 x float> @splat_fdiv_v4f32(<4 x float> %x, float %y) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vdivss %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; AVX-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %vy = insertelement <4 x float> undef, float %y, i32 0
@@ -84,7 +84,7 @@ define <8 x float> @splat_fdiv_v8f32(<8 x float> %x, float %y) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vdivss %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
 ; AVX-NEXT:    vmulps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
@@ -115,7 +115,7 @@ define <4 x float> @splat_fdiv_v4f32_estimate(<4 x float> %x, float %y) #0 {
 ; AVX-NEXT:    vsubss %xmm1, %xmm3, %xmm1
 ; AVX-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vaddss %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; AVX-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %vy = insertelement <4 x float> undef, float %y, i32 0
@@ -146,7 +146,7 @@ define <8 x float> @splat_fdiv_v8f32_estimate(<8 x float> %x, float %y) #0 {
 ; AVX-NEXT:    vsubss %xmm1, %xmm3, %xmm1
 ; AVX-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vaddss %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
 ; AVX-NEXT:    vmulps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq

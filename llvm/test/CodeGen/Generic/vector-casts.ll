@@ -1,45 +1,45 @@
 ; RUN: llc < %s
 ; PR2671
 
-define void @a(<2 x double>* %p, <2 x i8>* %q) {
-  %t = load <2 x double>, <2 x double>* %p
+define void @a(ptr %p, ptr %q) {
+  %t = load <2 x double>, ptr %p
   %r = fptosi <2 x double> %t to <2 x i8>
-  store <2 x i8> %r, <2 x i8>* %q
+  store <2 x i8> %r, ptr %q
   ret void
 }
-define void @b(<2 x double>* %p, <2 x i8>* %q) {
-  %t = load <2 x double>, <2 x double>* %p
+define void @b(ptr %p, ptr %q) {
+  %t = load <2 x double>, ptr %p
   %r = fptoui <2 x double> %t to <2 x i8>
-  store <2 x i8> %r, <2 x i8>* %q
+  store <2 x i8> %r, ptr %q
   ret void
 }
-define void @c(<2 x i8>* %p, <2 x double>* %q) {
-  %t = load <2 x i8>, <2 x i8>* %p
+define void @c(ptr %p, ptr %q) {
+  %t = load <2 x i8>, ptr %p
   %r = sitofp <2 x i8> %t to <2 x double>
-  store <2 x double> %r, <2 x double>* %q
+  store <2 x double> %r, ptr %q
   ret void
 }
-define void @d(<2 x i8>* %p, <2 x double>* %q) {
-  %t = load <2 x i8>, <2 x i8>* %p
+define void @d(ptr %p, ptr %q) {
+  %t = load <2 x i8>, ptr %p
   %r = uitofp <2 x i8> %t to <2 x double>
-  store <2 x double> %r, <2 x double>* %q
+  store <2 x double> %r, ptr %q
   ret void
 }
-define void @e(<2 x i8>* %p, <2 x i16>* %q) {
-  %t = load <2 x i8>, <2 x i8>* %p
+define void @e(ptr %p, ptr %q) {
+  %t = load <2 x i8>, ptr %p
   %r = sext <2 x i8> %t to <2 x i16>
-  store <2 x i16> %r, <2 x i16>* %q
+  store <2 x i16> %r, ptr %q
   ret void
 }
-define void @f(<2 x i8>* %p, <2 x i16>* %q) {
-  %t = load <2 x i8>, <2 x i8>* %p
+define void @f(ptr %p, ptr %q) {
+  %t = load <2 x i8>, ptr %p
   %r = zext <2 x i8> %t to <2 x i16>
-  store <2 x i16> %r, <2 x i16>* %q
+  store <2 x i16> %r, ptr %q
   ret void
 }
-define void @g(<2 x i16>* %p, <2 x i8>* %q) {
-  %t = load <2 x i16>, <2 x i16>* %p
+define void @g(ptr %p, ptr %q) {
+  %t = load <2 x i16>, ptr %p
   %r = trunc <2 x i16> %t to <2 x i8>
-  store <2 x i8> %r, <2 x i8>* %q
+  store <2 x i8> %r, ptr %q
   ret void
 }

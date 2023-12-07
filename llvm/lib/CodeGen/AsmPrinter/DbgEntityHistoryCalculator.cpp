@@ -76,7 +76,7 @@ bool DbgValueHistoryMap::startDbgValue(InlinedEntity Var,
   auto &Entries = VarEntries[Var];
   if (!Entries.empty() && Entries.back().isDbgValue() &&
       !Entries.back().isClosed() &&
-      Entries.back().getInstr()->isIdenticalTo(MI)) {
+      Entries.back().getInstr()->isEquivalentDbgInstr(MI)) {
     LLVM_DEBUG(dbgs() << "Coalescing identical DBG_VALUE entries:\n"
                       << "\t" << Entries.back().getInstr() << "\t" << MI
                       << "\n");
@@ -137,6 +137,9 @@ void DbgValueHistoryMap::trimLocationRanges(
   // Entries reference other entries by index. Offsets is used to remap these
   // references if any entries are removed.
   SmallVector<size_t, 4> Offsets;
+
+  LLVM_DEBUG(dbgs() << "Trimming location ranges for function '" << MF.getName()
+                    << "'\n");
 
   for (auto &Record : VarEntries) {
     auto &HistoryMapEntries = Record.second;
@@ -213,6 +216,8 @@ void DbgValueHistoryMap::trimLocationRanges(
         // count of the closing entry, if one exists.
         if (EndIndex != NoEntry)
           ReferenceCount[EndIndex] -= 1;
+        LLVM_DEBUG(dbgs() << "Dropping value outside scope range of variable: ";
+                   StartMI->print(llvm::dbgs()););
       }
     }
 
@@ -253,6 +258,8 @@ void DbgValueHistoryMap::trimLocationRanges(
     // ToRemove indices are valid after each erase.
     for (EntryIndex Idx : llvm::reverse(ToRemove))
       HistoryMapEntries.erase(HistoryMapEntries.begin() + Idx);
+    LLVM_DEBUG(llvm::dbgs() << "New HistoryMap('" << LocalVar->getName()
+                            << "') size: " << HistoryMapEntries.size() << "\n");
   }
 }
 
@@ -264,7 +271,7 @@ bool DbgValueHistoryMap::hasNonEmptyLocation(const Entries &Entries) const {
     const MachineInstr *MI = Entry.getInstr();
     assert(MI->isDebugValue());
     // A DBG_VALUE $noreg is an empty variable location
-    if (MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == 0)
+    if (MI->isUndefDebugValue())
       continue;
 
     return true;
@@ -495,7 +502,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
             continue;
           // If this is a virtual register, only clobber it since it doesn't
           // have aliases.
-          if (Register::isVirtualRegister(MO.getReg()))
+          if (MO.getReg().isVirtual())
             clobberRegisterUses(RegVars, MO.getReg(), DbgValues, LiveEntries,
                                 MI);
           // If this is a register def operand, it may end a debug value
@@ -555,8 +562,8 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void DbgValueHistoryMap::dump() const {
-  dbgs() << "DbgValueHistoryMap:\n";
+LLVM_DUMP_METHOD void DbgValueHistoryMap::dump(StringRef FuncName) const {
+  dbgs() << "DbgValueHistoryMap('" << FuncName << "'):\n";
   for (const auto &VarRangePair : *this) {
     const InlinedEntity &Var = VarRangePair.first;
     const Entries &Entries = VarRangePair.second;

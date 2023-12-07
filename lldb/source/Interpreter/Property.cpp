@@ -226,6 +226,7 @@ Property::Property(const PropertyDefinition &definition)
     }
     break;
   }
+  assert(m_value_sp && "invalid property definition");
 }
 
 Property::Property(llvm::StringRef name, llvm::StringRef desc, bool is_global,

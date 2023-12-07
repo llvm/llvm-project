@@ -42,9 +42,9 @@ FILE *funopen(const void *,
               fpos_t (*)(void *, fpos_t, int),
               int (*)(void *));
 
-FILE *fopen(const char *path, const char *mode);
+FILE *fopen(const char *restrict path, const char *restrict mode);
 FILE *tmpfile(void);
-FILE *freopen(const char *pathname, const char *mode, FILE *stream);
+FILE *freopen(const char *restrict pathname, const char *restrict mode, FILE *restrict stream);
 int fclose(FILE *fp);
 size_t fread(void *restrict, size_t, size_t, FILE *restrict);
 size_t fwrite(const void *restrict, size_t, size_t, FILE *restrict);
@@ -52,7 +52,7 @@ int fputc(int ch, FILE *stream);
 int fseek(FILE *__stream, long int __off, int __whence);
 long int ftell(FILE *__stream);
 void rewind(FILE *__stream);
-int fgetpos(FILE *stream, fpos_t *pos);
+int fgetpos(FILE *restrict stream, fpos_t *restrict pos);
 int fsetpos(FILE *stream, const fpos_t *pos);
 void clearerr(FILE *stream);
 int feof(FILE *stream);
@@ -63,7 +63,9 @@ size_t strlen(const char *);
 
 char *strcpy(char *restrict, const char *restrict);
 char *strncpy(char *dst, const char *src, size_t n);
+char *strsep(char **stringp, const char *delim);
 void *memcpy(void *dst, const void *src, size_t n);
+void *memset(void *s, int c, size_t n);
 
 typedef unsigned long __darwin_pthread_key_t;
 typedef __darwin_pthread_key_t pthread_key_t;

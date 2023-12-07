@@ -54,12 +54,13 @@ public:
   constexpr MessageFixedText &operator=(MessageFixedText &&) = default;
 
   CharBlock text() const { return text_; }
+  bool empty() const { return text_.empty(); }
   Severity severity() const { return severity_; }
   MessageFixedText &set_severity(Severity severity) {
     severity_ = severity;
     return *this;
   }
-  bool isFatal() const {
+  bool IsFatal() const {
     return severity_ == Severity::Error || severity_ == Severity::Todo;
   }
 
@@ -111,7 +112,7 @@ public:
   MessageFormattedText &operator=(const MessageFormattedText &) = default;
   MessageFormattedText &operator=(MessageFormattedText &&) = default;
   const std::string &string() const { return string_; }
-  bool isFatal() const {
+  bool IsFatal() const {
     return severity_ == Severity::Error || severity_ == Severity::Todo;
   }
   Severity severity() const { return severity_; }

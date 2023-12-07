@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_TYPEERASEDDATAFLOWANALYSIS_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_TYPEERASEDDATAFLOWANALYSIS_H
 
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -21,22 +22,22 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
-#include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "llvm/ADT/Any.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {
 namespace dataflow {
 
 struct DataflowAnalysisOptions {
-  /// Options for the built-in transfer functions, or empty to not apply them.
+  /// Options for the built-in model, or empty to not apply them.
   // FIXME: Remove this option once the framework supports composing analyses
   // (at which point the built-in transfer functions can be simply a standalone
   // analysis).
-  llvm::Optional<TransferOptions> BuiltinTransferOpts = TransferOptions{};
+  std::optional<DataflowAnalysisContext::Options> BuiltinOpts =
+      DataflowAnalysisContext::Options{};
 };
 
 /// Type-erased lattice element container.
@@ -71,7 +72,7 @@ public:
   /// Joins two type-erased lattice elements by computing their least upper
   /// bound. Places the join result in the left element and returns an effect
   /// indicating whether any changes were made to it.
-  virtual LatticeJoinEffect joinTypeErased(TypeErasedLattice &,
+  virtual TypeErasedLattice joinTypeErased(const TypeErasedLattice &,
                                            const TypeErasedLattice &) = 0;
 
   /// Chooses a lattice element that approximates the current element at a
@@ -95,7 +96,7 @@ public:
 
   /// Applies the analysis transfer function for a given control flow graph
   /// element and type-erased lattice element.
-  virtual void transferTypeErased(const CFGElement *, TypeErasedLattice &,
+  virtual void transferTypeErased(const CFGElement &, TypeErasedLattice &,
                                   Environment &) = 0;
 
   /// Applies the analysis transfer function for a given edge from a CFG block
@@ -103,14 +104,15 @@ public:
   /// @param Stmt The condition which is responsible for the split in the CFG.
   /// @param Branch True if the edge goes to the basic block where the
   /// condition is true.
+  // FIXME: Change `Stmt` argument to a reference.
   virtual void transferBranchTypeErased(bool Branch, const Stmt *,
                                         TypeErasedLattice &, Environment &) = 0;
 
-  /// If the built-in transfer functions (which model the heap and stack in the
-  /// `Environment`) are to be applied, returns the options to be passed to
+  /// If the built-in model is enabled, returns the options to be passed to
   /// them. Otherwise returns empty.
-  llvm::Optional<TransferOptions> builtinTransferOptions() const {
-    return Options.BuiltinTransferOpts;
+  const std::optional<DataflowAnalysisContext::Options> &
+  builtinOptions() const {
+    return Options.BuiltinOpts;
   }
 };
 
@@ -124,6 +126,10 @@ struct TypeErasedDataflowAnalysisState {
 
   TypeErasedDataflowAnalysisState(TypeErasedLattice Lattice, Environment Env)
       : Lattice(std::move(Lattice)), Env(std::move(Env)) {}
+
+  TypeErasedDataflowAnalysisState fork() const {
+    return TypeErasedDataflowAnalysisState(Lattice, Env.fork());
+  }
 };
 
 /// Transfers the state of a basic block by evaluating each of its elements in
@@ -138,7 +144,7 @@ struct TypeErasedDataflowAnalysisState {
 ///   `std::nullopt` represent basic blocks that are not evaluated yet.
 TypeErasedDataflowAnalysisState transferBlock(
     const ControlFlowContext &CFCtx,
-    llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates,
+    llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockStates,
     const CFGBlock &Block, const Environment &InitEnv,
     TypeErasedDataflowAnalysis &Analysis,
     std::function<void(const CFGElement &,
@@ -151,7 +157,7 @@ TypeErasedDataflowAnalysisState transferBlock(
 /// dataflow analysis cannot be performed successfully. Otherwise, calls
 /// `PostVisitCFG` on each CFG element with the final analysis results at that
 /// program point.
-llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
+llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const ControlFlowContext &CFCtx, TypeErasedDataflowAnalysis &Analysis,
     const Environment &InitEnv,

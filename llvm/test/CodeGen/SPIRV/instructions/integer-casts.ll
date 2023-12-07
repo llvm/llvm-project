@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK-DAG: OpName [[TRUNC32_16:%.*]] "i32toi16"
 ; CHECK-DAG: OpName [[TRUNC32_8:%.*]] "i32toi8"

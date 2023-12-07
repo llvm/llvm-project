@@ -45,11 +45,11 @@
 // CHECK-NO-IGNORELIST-NOT: -fsanitize-ignorelist
 
 // Driver barks on unexisting ignorelist files.
-// RUN: %clang -target x86_64-linux-gnu -fno-sanitize-ignorelist -fsanitize-ignorelist=unexisting.txt %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-SUCH-FILE
+// RUN: not %clang --target=x86_64-linux-gnu -fno-sanitize-ignorelist -fsanitize-ignorelist=unexisting.txt %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-SUCH-FILE
 // CHECK-NO-SUCH-FILE: error: no such file or directory: 'unexisting.txt'
 
 // Driver properly reports malformed ignorelist files.
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-ignorelist=%t.second -fsanitize-ignorelist=%t.bad -fsanitize-ignorelist=%t.good %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-BAD-IGNORELIST
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-ignorelist=%t.second -fsanitize-ignorelist=%t.bad -fsanitize-ignorelist=%t.good %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-BAD-IGNORELIST
 // CHECK-BAD-IGNORELIST: error: malformed sanitizer ignorelist: 'error parsing file '{{.*}}.bad': malformed line 1: 'badline''
 
 // -fno-sanitize-ignorelist disables all ignorelists specified earlier.
@@ -63,7 +63,7 @@
 // CHECK-DISABLED-SYSTEM-NOT: -fsanitize-system-ignorelist
 
 // If cfi_ignorelist.txt cannot be found in the resource dir, driver should fail.
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=default -resource-dir=/dev/null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-CFI-IGNORELIST
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=default -resource-dir=/dev/null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-CFI-IGNORELIST
 // CHECK-MISSING-CFI-IGNORELIST: error: missing sanitizer ignorelist: '{{.*}}cfi_ignorelist.txt'
 
 // -fno-sanitize-ignorelist disables checking for cfi_ignorelist.txt in the resource dir.

@@ -11,12 +11,16 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
+
+#ifdef _WIN32
+#include "llvm/Support/Windows/WindowsSupport.h"
+#endif
 
 #include <chrono>
 #include <thread>
@@ -95,7 +99,7 @@ protected:
 
   void SetUp() override { CurrentPhase = 0; }
 
-  std::vector<llvm::BitVector> RunOnAllSockets(ThreadPoolStrategy S);
+  SmallVector<llvm::BitVector, 0> RunOnAllSockets(ThreadPoolStrategy S);
 
   std::condition_variable CurrentPhaseCondition;
   std::mutex CurrentPhaseMutex;
@@ -223,7 +227,7 @@ TEST_F(ThreadPoolTest, Groups) {
   // might block a thread until all tasks in group1 finish.
   ThreadPoolStrategy S = hardware_concurrency(2);
   if (S.compute_thread_count() < 2)
-    return;
+    GTEST_SKIP();
   ThreadPool Pool(S);
   PhaseResetHelper Helper(this);
   ThreadPoolTaskGroup Group1(Pool);
@@ -296,7 +300,7 @@ TEST_F(ThreadPoolTest, RecursiveWaitDeadlock) {
   CHECK_UNSUPPORTED();
   ThreadPoolStrategy S = hardware_concurrency(2);
   if (S.compute_thread_count() < 2)
-    return;
+    GTEST_SKIP();
   ThreadPool Pool(S);
   PhaseResetHelper Helper(this);
   ThreadPoolTaskGroup Group(Pool);
@@ -342,7 +346,7 @@ TEST_F(ThreadPoolTest, RecursiveWaitDeadlock) {
 // isn't implemented for Unix (need AffinityMask in Support/Unix/Program.inc).
 #ifdef _WIN32
 
-std::vector<llvm::BitVector>
+SmallVector<llvm::BitVector, 0>
 ThreadPoolTest::RunOnAllSockets(ThreadPoolStrategy S) {
   llvm::SetVector<llvm::BitVector> ThreadsUsed;
   std::mutex Lock;
@@ -378,14 +382,23 @@ ThreadPoolTest::RunOnAllSockets(ThreadPoolStrategy S) {
 
 TEST_F(ThreadPoolTest, AllThreads_UseAllRessources) {
   CHECK_UNSUPPORTED();
-  std::vector<llvm::BitVector> ThreadsUsed = RunOnAllSockets({});
+  // After Windows 11, the OS is free to deploy the threads on any CPU socket.
+  // We cannot relibly ensure that all thread affinity mask are covered,
+  // therefore this test should not run.
+  if (llvm::RunningWindows11OrGreater())
+    GTEST_SKIP();
+  auto ThreadsUsed = RunOnAllSockets({});
   ASSERT_EQ(llvm::get_cpus(), ThreadsUsed.size());
 }
 
 TEST_F(ThreadPoolTest, AllThreads_OneThreadPerCore) {
   CHECK_UNSUPPORTED();
-  std::vector<llvm::BitVector> ThreadsUsed =
-      RunOnAllSockets(llvm::heavyweight_hardware_concurrency());
+  // After Windows 11, the OS is free to deploy the threads on any CPU socket.
+  // We cannot relibly ensure that all thread affinity mask are covered,
+  // therefore this test should not run.
+  if (llvm::RunningWindows11OrGreater())
+    GTEST_SKIP();
+  auto ThreadsUsed = RunOnAllSockets(llvm::heavyweight_hardware_concurrency());
   ASSERT_EQ(llvm::get_cpus(), ThreadsUsed.size());
 }
 
@@ -408,7 +421,7 @@ TEST_F(ThreadPoolTest, AffinityMask) {
 
   using namespace llvm::sys;
   if (getenv("LLVM_THREADPOOL_AFFINITYMASK")) {
-    std::vector<llvm::BitVector> ThreadsUsed = RunOnAllSockets({});
+    auto ThreadsUsed = RunOnAllSockets({});
     // Ensure the threads only ran on CPUs 0-3.
     // NOTE: Don't use ASSERT* here because this runs in a subprocess,
     // and will show up as un-executed in the parent.

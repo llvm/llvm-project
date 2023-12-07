@@ -24,7 +24,7 @@ b1:                                               ; preds = %b3, %b0
   br i1 undef, label %b2, label %b3
 
 b2:                                               ; preds = %b1
-  store i32 %v8, i32* undef, align 4
+  store i32 %v8, ptr undef, align 4
   br label %b3
 
 b3:                                               ; preds = %b2, %b1

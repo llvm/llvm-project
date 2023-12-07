@@ -1,10 +1,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTStructuralEquivalence.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 #include "DeclMatcher.h"
 
@@ -130,15 +131,20 @@ struct StructuralEquivalenceTest : ::testing::Test {
     return makeStmts(Wrap(SrcCode0), Wrap(SrcCode1), Lang, AMatcher);
   }
 
-  bool testStructuralMatch(Decl *D0, Decl *D1) {
+  bool testStructuralMatch(Decl *D0, Decl *D1,
+                           bool IgnoreTemplateParmDepth = false) {
     llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls01;
     llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls10;
     StructuralEquivalenceContext Ctx01(
-        D0->getASTContext(), D1->getASTContext(),
-        NonEquivalentDecls01, StructuralEquivalenceKind::Default, false, false);
+        D0->getASTContext(), D1->getASTContext(), NonEquivalentDecls01,
+        StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+        /*Complain=*/false, /*ErrorOnTagTypeMismatch=*/false,
+        IgnoreTemplateParmDepth);
     StructuralEquivalenceContext Ctx10(
-        D1->getASTContext(), D0->getASTContext(),
-        NonEquivalentDecls10, StructuralEquivalenceKind::Default, false, false);
+        D1->getASTContext(), D0->getASTContext(), NonEquivalentDecls10,
+        StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+        /*Complain=*/false, /*ErrorOnTagTypeMismatch=*/false,
+        IgnoreTemplateParmDepth);
     bool Eq01 = Ctx01.IsEquivalent(D0, D1);
     bool Eq10 = Ctx10.IsEquivalent(D1, D0);
     EXPECT_EQ(Eq01, Eq10);
@@ -165,8 +171,9 @@ struct StructuralEquivalenceTest : ::testing::Test {
     return testStructuralMatch(get<0>(t), get<1>(t));
   }
 
-  bool testStructuralMatch(std::tuple<Decl *, Decl *> t) {
-    return testStructuralMatch(get<0>(t), get<1>(t));
+  bool testStructuralMatch(std::tuple<Decl *, Decl *> t,
+                           bool IgnoreTemplateParmDepth = false) {
+    return testStructuralMatch(get<0>(t), get<1>(t), IgnoreTemplateParmDepth);
   }
 };
 
@@ -460,7 +467,7 @@ TEST_F(StructuralEquivalenceFunctionTest,
   // These attributes may not be available on certain platforms.
   if (llvm::Triple(llvm::sys::getDefaultTargetTriple()).getArch() !=
       llvm::Triple::x86_64)
-    return;
+    GTEST_SKIP();
   auto t = makeNamedDecls("__attribute__((preserve_all)) void foo();",
                           "__attribute__((ms_abi))   void foo();", Lang_C99);
   EXPECT_FALSE(testStructuralMatch(t));
@@ -469,7 +476,7 @@ TEST_F(StructuralEquivalenceFunctionTest,
 TEST_F(StructuralEquivalenceFunctionTest, FunctionsWithDifferentSavedRegsAttr) {
   if (llvm::Triple(llvm::sys::getDefaultTargetTriple()).getArch() !=
       llvm::Triple::x86_64)
-    return;
+    GTEST_SKIP();
   auto t = makeNamedDecls(
       "__attribute__((no_caller_saved_registers)) void foo();",
       "                                           void foo();", Lang_C99);
@@ -992,8 +999,8 @@ TEST_F(StructuralEquivalenceRecordContextTest, NamespaceInlineVsInline) {
 
 TEST_F(StructuralEquivalenceRecordContextTest, NamespaceInlineTopLevel) {
   auto Decls =
-      makeNamedDecls("inline namespace A { class X; } }",
-                     "inline namespace B { class X; } }", Lang_CXX17, "X");
+      makeNamedDecls("inline namespace A { class X; }",
+                     "inline namespace B { class X; }", Lang_CXX17, "X");
   EXPECT_TRUE(testStructuralMatch(Decls));
 }
 
@@ -1141,6 +1148,18 @@ TEST_F(StructuralEquivalenceObjCCategoryTest, CategoriesWithDifferentNames) {
                                        "@interface A @end @interface A(Y) @end",
                                        Lang_OBJC, objcCategoryDecl());
   EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, CategoriesWithoutInterfaces) {
+  auto t = makeDecls<ObjCCategoryDecl>("                  @interface A(X) @end",
+                                       "@interface A @end @interface A(X) @end",
+                                       Lang_OBJC, objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+
+  auto t2 = makeDecls<ObjCCategoryDecl>("@interface A(X) @end",
+                                        "@interface A(X) @end",
+                                        Lang_OBJC, objcCategoryDecl());
+  EXPECT_TRUE(testStructuralMatch(t2));
 }
 
 TEST_F(StructuralEquivalenceObjCCategoryTest, CategoryAndExtension) {
@@ -1677,6 +1696,40 @@ TEST_F(
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceTemplateTest,
+       IgnoreTemplateParmDepthAtTemplateTypeParmDecl) {
+  auto Decls = makeDecls<ClassTemplateDecl>(
+      R"(
+        template<class> struct A;
+      )",
+      R"(
+        template<class> struct S {
+          template<class> friend struct A;
+        };
+      )",
+      Lang_CXX03, classTemplateDecl(hasName("A")),
+      classTemplateDecl(hasName("A")));
+  EXPECT_TRUE(testStructuralMatch(Decls));
+  EXPECT_TRUE(testStructuralMatch(Decls, true));
+}
+
+TEST_F(StructuralEquivalenceTemplateTest,
+       IgnoreTemplateParmDepthAtNonTypeTemplateParmDecl) {
+  auto Decls = makeDecls<ClassTemplateDecl>(
+      R"(
+        template<class T, T U> struct A;
+      )",
+      R"(
+        template<class T> struct S {
+          template<class P, P Q> friend struct A;
+        };
+      )",
+      Lang_CXX03, classTemplateDecl(hasName("A")),
+      classTemplateDecl(hasName("A")));
+  EXPECT_FALSE(testStructuralMatch(Decls));
+  EXPECT_TRUE(testStructuralMatch(Decls, /*IgnoreTemplateParmDepth=*/true));
+}
+
 TEST_F(
     StructuralEquivalenceTemplateTest,
     ClassTemplSpecWithInequivalentShadowedTemplArg) {
@@ -2123,6 +2176,129 @@ TEST_F(StructuralEquivalenceStmtTest, UnaryOperator) {
 TEST_F(StructuralEquivalenceStmtTest, UnaryOperatorDifferentOps) {
   auto t = makeWrappedStmts("+1", "-1", Lang_CXX03, unaryOperator());
   EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, UnresolvedLookupDifferentName) {
+  auto t = makeStmts(
+      R"(
+      void f1(int);
+      template <typename T>
+      void f(T t) {
+        f1(t);
+      }
+      void g() { f<int>(1); }
+      )",
+      R"(
+      void f2(int);
+      template <typename T>
+      void f(T t) {
+        f2(t);
+      }
+      void g() { f<int>(1); }
+      )",
+      Lang_CXX03, unresolvedLookupExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, UnresolvedLookupDifferentQualifier) {
+  auto t = makeStmts(
+      R"(
+      struct X {
+        static void g(int);
+        static void g(char);
+      };
+
+      template <typename T>
+      void f(T t) {
+        X::g(t);
+      }
+
+      void g() { f<int>(1); }
+      )",
+      R"(
+      struct Y {
+        static void g(int);
+        static void g(char);
+      };
+
+      template <typename T>
+      void f(T t) {
+        Y::g(t);
+      }
+
+      void g() { f<int>(1); }
+      )",
+      Lang_CXX03, unresolvedLookupExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest,
+       UnresolvedLookupDifferentTemplateArgument) {
+  auto t = makeStmts(
+      R"(
+      struct A {};
+      template<typename T1, typename T2>
+      void g() {}
+
+      template <typename T>
+      void f() {
+        g<A, T>();
+      }
+
+      void h() { f<int>(); }
+      )",
+      R"(
+      struct B {};
+      template<typename T1, typename T2>
+      void g() {}
+
+      template <typename T>
+      void f() {
+        g<B, T>();
+      }
+
+      void h() { f<int>(); }
+      )",
+      Lang_CXX03, unresolvedLookupExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, UnresolvedLookup) {
+  auto t = makeStmts(
+      R"(
+      struct A {};
+      struct B {
+        template<typename T1, typename T2>
+        static void g(int) {};
+        template<typename T1, typename T2>
+        static void g(char) {};
+      };
+
+      template <typename T1, typename T2>
+      void f(T2 x) {
+        B::g<A, T1>(x);
+      }
+
+      void g() { f<char, int>(1); }
+      )",
+      R"(
+      struct A {};
+      struct B {
+        template<typename T1, typename T2>
+        static void g(int) {};
+        template<typename T1, typename T2>
+        static void g(char) {};
+      };
+
+      template <typename T1, typename T2>
+      void f(T2 x) {
+        B::g<A, T1>(x);
+      }
+
+      void g() { f<char, int>(1); }
+      )",
+      Lang_CXX03, unresolvedLookupExpr());
+  EXPECT_TRUE(testStructuralMatch(t));
 }
 
 } // end namespace ast_matchers

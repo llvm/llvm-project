@@ -14,6 +14,8 @@
 
 #include "VPlanVerifier.h"
 #include "VPlan.h"
+#include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -43,9 +45,7 @@ static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
 /// \p Region. Checks in this function are generic for VPBlockBases. They are
 /// not specific for VPBasicBlocks or VPRegionBlocks.
 static void verifyBlocksInRegion(const VPRegionBlock *Region) {
-  for (const VPBlockBase *VPB : make_range(
-           df_iterator<const VPBlockBase *>::begin(Region->getEntry()),
-           df_iterator<const VPBlockBase *>::end(Region->getExiting()))) {
+  for (const VPBlockBase *VPB : vp_depth_first_shallow(Region->getEntry())) {
     // Check block's parent.
     assert(VPB->getParent() == Region && "VPBlockBase has wrong parent");
 
@@ -190,9 +190,8 @@ static bool verifyPhiRecipes(const VPBasicBlock *VPBB) {
   return true;
 }
 
-static bool
-verifyVPBasicBlock(const VPBasicBlock *VPBB,
-                   DenseMap<const VPBlockBase *, unsigned> &BlockNumbering) {
+static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
+                               VPDominatorTree &VPDT) {
   if (!verifyPhiRecipes(VPBB))
     return false;
 
@@ -207,7 +206,8 @@ verifyVPBasicBlock(const VPBasicBlock *VPBB,
     for (const VPValue *V : R.definedValues()) {
       for (const VPUser *U : V->users()) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
-        if (!UI || isa<VPHeaderPHIRecipe>(UI))
+        // TODO: check dominance of incoming values for phis properly.
+        if (!UI || isa<VPHeaderPHIRecipe>(UI) || isa<VPPredInstPHIRecipe>(UI))
           continue;
 
         // If the user is in the same block, check it comes after R in the
@@ -220,27 +220,7 @@ verifyVPBasicBlock(const VPBasicBlock *VPBB,
           continue;
         }
 
-        // Skip blocks outside any region for now and blocks outside
-        // replicate-regions.
-        auto *ParentR = VPBB->getParent();
-        if (!ParentR || !ParentR->isReplicator())
-          continue;
-
-        // For replicators, verify that VPPRedInstPHIRecipe defs are only used
-        // in subsequent blocks.
-        if (isa<VPPredInstPHIRecipe>(&R)) {
-          auto I = BlockNumbering.find(UI->getParent());
-          unsigned BlockNumber = I == BlockNumbering.end() ? std::numeric_limits<unsigned>::max() : I->second;
-          if (BlockNumber < BlockNumbering[ParentR]) {
-            errs() << "Use before def!\n";
-            return false;
-          }
-          continue;
-        }
-
-        // All non-VPPredInstPHIRecipe recipes in the block must be used in
-        // the replicate region only.
-        if (UI->getParent()->getParent() != ParentR) {
+        if (!VPDT.dominates(VPBB, UI->getParent())) {
           errs() << "Use before def!\n";
           return false;
         }
@@ -251,16 +231,13 @@ verifyVPBasicBlock(const VPBasicBlock *VPBB,
 }
 
 bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
-  DenseMap<const VPBlockBase *, unsigned> BlockNumbering;
-  unsigned Cnt = 0;
-  auto Iter = depth_first(
-      VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
-  for (const VPBlockBase *VPB : Iter) {
-    BlockNumbering[VPB] = Cnt++;
-    auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
-    if (!VPBB)
-      continue;
-    if (!verifyVPBasicBlock(VPBB, BlockNumbering))
+  VPDominatorTree VPDT;
+  VPDT.recalculate(const_cast<VPlan &>(Plan));
+
+  auto Iter = vp_depth_first_deep(Plan.getEntry());
+  for (const VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<const VPBasicBlock>(Iter)) {
+    if (!verifyVPBasicBlock(VPBB, VPDT))
       return false;
   }
 
@@ -299,8 +276,7 @@ bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
 
   for (const VPRegionBlock *Region :
        VPBlockUtils::blocksOnly<const VPRegionBlock>(
-           depth_first(VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(
-               Plan.getEntry())))) {
+           vp_depth_first_deep(Plan.getEntry()))) {
     if (Region->getEntry()->getNumPredecessors() != 0) {
       errs() << "region entry block has predecessors\n";
       return false;

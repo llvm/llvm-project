@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+set -e
+
+PROGNAME="$(basename "${0}")"
+function usage() {
+cat <<EOF
+Usage:
+${PROGNAME} [-h|--help] <build-directory> [lit options...] tests...
+
+Shortcut to build the libc++ testing dependencies and run the libc++ tests with Lit.
+
+<build-directory>  The path to the build directory to use for building the library.
+[lit options...]   Optional options to pass to 'llvm-lit'.
+tests...           Paths of the tests to run. Those paths are relative to '<monorepo-root>'.
+
+Example
+=======
+$ cmake -S runtimes -B build/ -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"
+$ libcxx-lit build/ -sv libcxx/test/std/utilities/
+EOF
+}
+
+for arg in $@; do
+    if [[ "${arg}" == "-h" || "${arg}" == "--help" ]]; then
+        usage
+        exit 0
+    fi
+done
+
+if [[ $# -lt 1 ]]; then
+    usage
+    exit 1
+fi
+
+build_dir="${1}"
+shift
+
+cmake --build "${build_dir}" --target cxx-test-depends
+"${build_dir}/bin/llvm-lit" ${@}

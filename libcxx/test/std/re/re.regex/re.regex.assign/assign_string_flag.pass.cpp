@@ -14,8 +14,10 @@
 //   basic_regex& assign(const basic_string<charT, string_traits, A>& s,
 //                       flag_type f = regex_constants::ECMAScript);
 
-#include <regex>
 #include <cassert>
+#include <regex>
+#include <string>
+
 #include "test_macros.h"
 
 int main(int, char**)

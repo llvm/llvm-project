@@ -147,6 +147,8 @@ public:
 
   virtual bool GetPointerReturnRegister(const char *&name) { return false; }
 
+  virtual uint64_t GetStackFrameSize() { return 512 * 1024; }
+
   static lldb::ABISP FindPlugin(lldb::ProcessSP process_sp, const ArchSpec &arch);
 
 protected:

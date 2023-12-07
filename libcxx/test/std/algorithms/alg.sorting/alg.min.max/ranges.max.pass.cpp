@@ -176,19 +176,38 @@ constexpr void test_initializer_list() {
 
 template <class It, class Sent = It>
 constexpr void test_range_types() {
-  int a[] = {7, 6, 9, 3, 5, 1, 2, 4};
+  std::iter_value_t<It> a[] = {7, 6, 9, 3, 5, 1, 2, 4};
   auto range = std::ranges::subrange(It(a), Sent(It(a + 8)));
-  int ret = std::ranges::max(range);
+  auto ret = std::ranges::max(range);
   assert(ret == 9);
 }
 
 constexpr void test_range() {
-  { // check that all range types work
-    test_range_types<cpp20_input_iterator<int*>, sentinel_wrapper<cpp20_input_iterator<int*>>>();
-    test_range_types<forward_iterator<int*>>();
-    test_range_types<bidirectional_iterator<int*>>();
-    test_range_types<random_access_iterator<int*>>();
-    test_range_types<contiguous_iterator<int*>>();
+  // check that all range types work
+  {
+    struct NonTrivialInt {
+      int val_;
+      constexpr NonTrivialInt(int val) : val_(val) {}
+      constexpr NonTrivialInt(const NonTrivialInt& other) : val_(other.val_) {}
+      constexpr NonTrivialInt& operator=(const NonTrivialInt& other) {
+        val_ = other.val_;
+        return *this;
+      }
+
+      constexpr ~NonTrivialInt() {}
+
+      auto operator<=>(const NonTrivialInt&) const = default;
+    };
+
+    auto call_with_sentinels = []<class Iter> {
+      if constexpr (std::forward_iterator<Iter>)
+        test_range_types<Iter, Iter>();
+      test_range_types<Iter, sentinel_wrapper<Iter>>();
+      test_range_types<Iter, sized_sentinel<Iter>>();
+    };
+
+    types::for_each(types::cpp20_input_iterator_list<int*>{}, call_with_sentinels);
+    types::for_each(types::cpp20_input_iterator_list<NonTrivialInt*>{}, call_with_sentinels);
   }
 
   int a[] = {7, 6, 9, 3, 5, 1, 2, 4};

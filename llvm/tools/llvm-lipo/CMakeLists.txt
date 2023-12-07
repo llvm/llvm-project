@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   Option
   Support
+  TargetParser
   TextAPI
   Core
   BinaryFormat

@@ -7,6 +7,7 @@ block data foo
   !ERROR: An initialized variable in BLOCK DATA must be in a COMMON block
   integer :: notInCommon = 1
   integer :: uninitialized ! ok
+  !PORTABILITY: Procedure pointer 'q' should not have an ELEMENTAL intrinsic as its interface
   !ERROR: 'q' may not appear in a BLOCK DATA subprogram
   procedure(sin), pointer :: q => cos
   !ERROR: 'p' may not be a procedure as it is in a COMMON block

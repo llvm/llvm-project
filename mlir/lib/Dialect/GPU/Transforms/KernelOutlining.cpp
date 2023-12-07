@@ -20,12 +20,14 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include <limits>
 
 namespace mlir {
 #define GEN_PASS_DEF_GPULAUNCHSINKINDEXCOMPUTATIONS
@@ -47,8 +49,7 @@ static void createForAllDimensions(OpBuilder &builder, Location loc,
 /// entry block of `launchOpBody`, to the corresponding result value of the
 /// added operations.
 static void injectGpuIndexOperations(Location loc, Region &launchFuncOpBody,
-                                     Region &launchOpBody,
-                                     BlockAndValueMapping &map) {
+                                     Region &launchOpBody, IRMapping &map) {
   OpBuilder builder(loc->getContext());
   Block &firstBlock = launchOpBody.front();
   builder.setInsertionPointToStart(&launchFuncOpBody.front());
@@ -135,7 +136,7 @@ LogicalResult mlir::sinkOperationsIntoLaunchOp(
   }
 
   // Insert operations so that the defs get cloned before uses.
-  BlockAndValueMapping map;
+  IRMapping map;
   OpBuilder builder(launchOpBody);
   for (Operation *op : toBeSunk) {
     Operation *clonedOp = builder.clone(*op, map);
@@ -147,8 +148,27 @@ LogicalResult mlir::sinkOperationsIntoLaunchOp(
   return success();
 }
 
+/// Return the provided KernelDim3 as an array of i32 constants if possible.
+static DenseI32ArrayAttr maybeConstantDimsAttr(gpu::KernelDim3 dims) {
+  SmallVector<int32_t, 3> constants;
+  MLIRContext *ctx = dims.x.getContext();
+  for (Value v : {dims.x, dims.y, dims.z}) {
+    APInt constValue;
+    if (!matchPattern(v, m_ConstantInt(&constValue)))
+      return nullptr;
+    // In the event someone called for a too-large block or grid dimension,
+    // don't set bounds as it is likely to cause more confusing behavior.
+    if (constValue.ugt(std::numeric_limits<uint32_t>::max()))
+      return nullptr;
+    constants.push_back(
+        constValue.getLimitedValue(std::numeric_limits<uint32_t>::max()));
+  }
+  return DenseI32ArrayAttr::get(ctx, constants);
+}
+
 /// Outline the `gpu.launch` operation body into a kernel function. Replace
 /// `gpu.terminator` operations by `gpu.return` in the generated function.
+/// Set block and grid size bounds if known.
 static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
                                             StringRef kernelFnName,
                                             SetVector<Value> &operands) {
@@ -170,15 +190,41 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   }
   FunctionType type =
       FunctionType::get(launchOp.getContext(), kernelOperandTypes, {});
-  auto outlinedFunc = builder.create<gpu::GPUFuncOp>(loc, kernelFnName, type);
+  auto outlinedFunc = builder.create<gpu::GPUFuncOp>(
+      loc, kernelFnName, type,
+      TypeRange(ValueRange(launchOp.getWorkgroupAttributions())),
+      TypeRange(ValueRange(launchOp.getPrivateAttributions())));
   outlinedFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
                         builder.getUnitAttr());
-  BlockAndValueMapping map;
+
+  // If we can infer bounds on the grid and/or block sizes from the arguments
+  // to the launch op, propagate them to the generated kernel. This is safe
+  // because multiple launches with the same body are not deduplicated.
+  if (auto blockBounds =
+          maybeConstantDimsAttr(launchOp.getBlockSizeOperandValues()))
+    outlinedFunc->setAttr(gpu::GPUFuncOp::getKnownBlockSizeAttrName(),
+                          blockBounds);
+  if (auto gridBounds =
+          maybeConstantDimsAttr(launchOp.getGridSizeOperandValues()))
+    outlinedFunc->setAttr(gpu::GPUFuncOp::getKnownGridSizeAttrName(),
+                          gridBounds);
+
+  IRMapping map;
 
   // Map the arguments corresponding to the launch parameters like blockIdx,
   // threadIdx, etc.
   Region &outlinedFuncBody = outlinedFunc.getBody();
   injectGpuIndexOperations(loc, outlinedFuncBody, launchOpBody, map);
+
+  // Map memory attributions from the LaunOp op to the GPUFuncOp attributions.
+  for (const auto &[launchArg, funcArg] :
+       llvm::zip(launchOp.getWorkgroupAttributions(),
+                 outlinedFunc.getWorkgroupAttributions()))
+    map.map(launchArg, funcArg);
+  for (const auto &[launchArg, funcArg] :
+       llvm::zip(launchOp.getPrivateAttributions(),
+                 outlinedFunc.getPrivateAttributions()))
+    map.map(launchArg, funcArg);
 
   // Map arguments from gpu.launch region to the arguments of the gpu.func
   // operation.
@@ -292,7 +338,7 @@ public:
       if (!resultAttr)
         return failure();
 
-      dataLayoutSpec = resultAttr.dyn_cast<DataLayoutSpecInterface>();
+      dataLayoutSpec = dyn_cast<DataLayoutSpecInterface>(resultAttr);
       if (!dataLayoutSpec)
         return failure();
     }
@@ -360,11 +406,11 @@ private:
 
     SmallVector<Operation *, 8> symbolDefWorklist = {kernelFunc};
     while (!symbolDefWorklist.empty()) {
-      if (Optional<SymbolTable::UseRange> symbolUses =
+      if (std::optional<SymbolTable::UseRange> symbolUses =
               SymbolTable::getSymbolUses(symbolDefWorklist.pop_back_val())) {
         for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
           StringRef symbolName =
-              symbolUse.getSymbolRef().cast<FlatSymbolRefAttr>().getValue();
+              cast<FlatSymbolRefAttr>(symbolUse.getSymbolRef()).getValue();
           if (symbolTable.lookup(symbolName))
             continue;
 

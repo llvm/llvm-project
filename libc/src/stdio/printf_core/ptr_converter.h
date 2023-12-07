@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PTR_CONVERTER_H
 
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/common.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/int_converter.h"
@@ -18,7 +19,7 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-int inline convert_pointer(Writer *writer, const FormatSection &to_conv) {
+LIBC_INLINE int convert_pointer(Writer *writer, const FormatSection &to_conv) {
   if (to_conv.conv_val_ptr == (void *)(nullptr)) {
     RET_IF_RESULT_NEGATIVE(writer->write("(nullptr)"));
   } else {

@@ -9,36 +9,32 @@ target triple = "wasm32-unknown-unknown"
 define swiftcc void @foo(i32, i32) {
   ret void
 }
-@data = global i8* bitcast (void (i32, i32)* @foo to i8*)
+@data = global ptr @foo
 
 ; CHECK-LABEL: bar:
 ; CHECK-NEXT: .functype       bar (i32, i32) -> ()
 define swiftcc void @bar() {
-  %1 = load i8*, i8** @data
+  %1 = load ptr, ptr @data
 ; REG: call    foo, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
   call swiftcc void @foo(i32 1, i32 2)
 
-  %2 = bitcast i8* %1 to void (i32, i32)*
 ; REG: call_indirect   $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
 ; CHECK: call_indirect   (i32, i32, i32, i32) -> ()
-  call swiftcc void %2(i32 1, i32 2)
+  call swiftcc void %1(i32 1, i32 2)
 
-  %3 = bitcast i8* %1 to void (i32, i32, i32)*
 ; REG: call_indirect   $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
 ; CHECK: call_indirect   (i32, i32, i32, i32) -> ()
-  call swiftcc void %3(i32 1, i32 2, i32 swiftself 3)
+  call swiftcc void %1(i32 1, i32 2, i32 swiftself 3)
 
-  %err = alloca swifterror i32*, align 4
+  %err = alloca swifterror ptr, align 4
 
-  %4 = bitcast i8* %1 to void (i32, i32, i32**)*
 ; REG: call_indirect   $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
 ; CHECK: call_indirect   (i32, i32, i32, i32) -> ()
-  call swiftcc void %4(i32 1, i32 2, i32** swifterror %err)
+  call swiftcc void %1(i32 1, i32 2, ptr swifterror %err)
 
-  %5 = bitcast i8* %1 to void (i32, i32, i32, i32**)*
 ; REG: call_indirect   $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}
 ; CHECK: call_indirect   (i32, i32, i32, i32) -> ()
-  call swiftcc void %5(i32 1, i32 2, i32 swiftself 3, i32** swifterror %err)
+  call swiftcc void %1(i32 1, i32 2, i32 swiftself 3, ptr swifterror %err)
 
   ret void
 }

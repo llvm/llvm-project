@@ -17,8 +17,10 @@
 #define LLVM_UTILS_TABLEGEN_X86RECOGNIZABLEINSTR_H
 
 #include "CodeGenInstruction.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/X86DisassemblerDecoderCommon.h"
+#include <cstdint>
+#include <string>
+#include <vector>
 
 struct InstructionSpecifier;
 
@@ -180,10 +182,8 @@ struct RecognizableInstrBase {
   bool HasREX_W;
   /// The hasVEX_4V field from the record
   bool HasVEX_4V;
-  /// The HasVEX_WPrefix field from the record
-  bool HasVEX_W;
-  /// The IgnoresVEX_W field from the record
-  bool IgnoresVEX_W;
+  /// The IgnoresW field from the record
+  bool IgnoresW;
   /// The hasVEX_L field from the record
   bool HasVEX_L;
   /// The ignoreVEX_L field from the record

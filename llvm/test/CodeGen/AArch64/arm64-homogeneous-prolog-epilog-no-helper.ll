@@ -20,12 +20,12 @@ define float @_Z3foofffi(float %b, float %x, float %y, i32 %z) uwtable ssp minsi
 ; CHECK-NEXT:    .cfi_offset b10, -56
 ; CHECK-NEXT:    .cfi_offset b11, -64
 ; CHECK-NEXT:    fmov s3, #1.00000000
-; CHECK-NEXT:    scvtf s4, w0
 ; CHECK-NEXT:    sub w19, w0, #1
 ; CHECK-NEXT:    fadd s8, s0, s3
 ; CHECK-NEXT:    fadd s0, s8, s1
+; CHECK-NEXT:    scvtf s1, w0
 ; CHECK-NEXT:    fadd s0, s0, s2
-; CHECK-NEXT:    fsub s9, s0, s4
+; CHECK-NEXT:    fsub s9, s0, s1
 ; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __Z3goof
 ; CHECK-NEXT:    fmov s10, s0
@@ -59,12 +59,12 @@ define float @_Z3foofffi(float %b, float %x, float %y, i32 %z) uwtable ssp minsi
 ; CHECK-LINUX-NEXT:    .cfi_offset b10, -56
 ; CHECK-LINUX-NEXT:    .cfi_offset b11, -64
 ; CHECK-LINUX-NEXT:    fmov s3, #1.00000000
-; CHECK-LINUX-NEXT:    scvtf s4, w0
 ; CHECK-LINUX-NEXT:    sub w19, w0, #1
 ; CHECK-LINUX-NEXT:    fadd s8, s0, s3
 ; CHECK-LINUX-NEXT:    fadd s0, s8, s1
+; CHECK-LINUX-NEXT:    scvtf s1, w0
 ; CHECK-LINUX-NEXT:    fadd s0, s0, s2
-; CHECK-LINUX-NEXT:    fsub s9, s0, s4
+; CHECK-LINUX-NEXT:    fsub s9, s0, s1
 ; CHECK-LINUX-NEXT:    fmov s0, s8
 ; CHECK-LINUX-NEXT:    bl _Z3goof
 ; CHECK-LINUX-NEXT:    fmov s10, s0

@@ -1,6 +1,9 @@
 ;; Check that optnone is correctly ignored when extension is not enabled
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
+; CHECK-SPIRV: OpCapability OptNoneINTEL
+; CHECK-SPIRV: OpExtension "SPV_INTEL_optnone"
+
 ;; Per SPIR-V spec:
 ;; FunctionControlDontInlineMask = 0x2 (2)
 ; CHECK-SPIRV: %[[#]] = OpFunction %[[#]] DontInline

@@ -12,7 +12,6 @@ void *sel_registerName(const char *);
 @end
 
 @implementation Foo
-// radar 7522803
 static void foo(id bar) {
         int i = ((Foo *)bar)->a;
 }

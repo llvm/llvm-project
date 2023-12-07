@@ -85,7 +85,7 @@ constexpr uptr OffsetMask = (1UL << 16) - 1;
 constexpr uptr ChecksumMask = (1UL << 16) - 1;
 
 constexpr uptr getHeaderSize() {
-  return roundUpTo(sizeof(PackedHeader), 1U << SCUDO_MIN_ALIGNMENT_LOG);
+  return roundUp(sizeof(PackedHeader), 1U << SCUDO_MIN_ALIGNMENT_LOG);
 }
 
 inline AtomicPackedHeader *getAtomicHeader(void *Ptr) {

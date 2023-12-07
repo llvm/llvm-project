@@ -29,6 +29,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
+#include <optional>
 using namespace clang;
 using namespace CodeGen;
 
@@ -139,7 +140,7 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
     LValue LV = MakeNaturalAlignAddrLValue(Constant, IdTy);
     llvm::Value *Ptr = EmitLoadOfScalar(LV, E->getBeginLoc());
     cast<llvm::LoadInst>(Ptr)->setMetadata(
-        CGM.getModule().getMDKindID("invariant.load"),
+        llvm::LLVMContext::MD_invariant_load,
         llvm::MDNode::get(getLLVMContext(), std::nullopt));
     return Builder.CreateBitCast(Ptr, ConvertType(E->getType()));
   }
@@ -221,6 +222,7 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
   QualType ResultType = E->getType();
   const ObjCObjectPointerType *InterfacePointerType
     = ResultType->getAsObjCInterfacePointerType();
+  assert(InterfacePointerType && "Unexpected InterfacePointerType - null");
   ObjCInterfaceDecl *Class
     = InterfacePointerType->getObjectType()->getInterface();
   CGObjCRuntime &Runtime = CGM.getObjCRuntime();
@@ -373,12 +375,10 @@ static const Expr *findWeakLValue(const Expr *E) {
 /// If the runtime does support a required entrypoint, then this method will
 /// generate a call and return the resulting value.  Otherwise it will return
 /// std::nullopt and the caller can generate a msgSend instead.
-static Optional<llvm::Value *>
-tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
-                                  llvm::Value *Receiver,
-                                  const CallArgList& Args, Selector Sel,
-                                  const ObjCMethodDecl *method,
-                                  bool isClassMessage) {
+static std::optional<llvm::Value *> tryGenerateSpecializedMessageSend(
+    CodeGenFunction &CGF, QualType ResultType, llvm::Value *Receiver,
+    const CallArgList &Args, Selector Sel, const ObjCMethodDecl *method,
+    bool isClassMessage) {
   auto &CGM = CGF.CGM;
   if (!CGM.getCodeGenOpts().ObjCConvertMessagesToRuntimeCalls)
     return std::nullopt;
@@ -441,7 +441,7 @@ CodeGen::RValue CGObjCRuntime::GeneratePossiblySpecializedMessageSend(
     Selector Sel, llvm::Value *Receiver, const CallArgList &Args,
     const ObjCInterfaceDecl *OID, const ObjCMethodDecl *Method,
     bool isClassMessage) {
-  if (Optional<llvm::Value *> SpecializedResult =
+  if (std::optional<llvm::Value *> SpecializedResult =
           tryGenerateSpecializedMessageSend(CGF, ResultType, Receiver, Args,
                                             Sel, Method, isClassMessage)) {
     return RValue::get(*SpecializedResult);
@@ -522,7 +522,7 @@ CGObjCRuntime::GetRuntimeProtocolList(ObjCProtocolDecl::protocol_iterator begin,
 /// Instead of '[[MyClass alloc] init]', try to generate
 /// 'objc_alloc_init(MyClass)'. This provides a code size improvement on the
 /// caller side, as well as the optimized objc_alloc.
-static Optional<llvm::Value *>
+static std::optional<llvm::Value *>
 tryEmitSpecializedAllocInit(CodeGenFunction &CGF, const ObjCMessageExpr *OME) {
   auto &Runtime = CGF.getLangOpts().ObjCRuntime;
   if (!Runtime.shouldUseRuntimeFunctionForCombinedAllocInit())
@@ -592,7 +592,7 @@ RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
     }
   }
 
-  if (Optional<llvm::Value *> Val = tryEmitSpecializedAllocInit(*this, E))
+  if (std::optional<llvm::Value *> Val = tryEmitSpecializedAllocInit(*this, E))
     return AdjustObjCObjectType(*this, E->getType(), RValue::get(*Val));
 
   // We don't retain the receiver in delegate init calls, and this is
@@ -1191,7 +1191,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
 
     // Perform an atomic load.  This does not impose ordering constraints.
     Address ivarAddr = LV.getAddress(*this);
-    ivarAddr = Builder.CreateElementBitCast(ivarAddr, bitcastType);
+    ivarAddr = ivarAddr.withElementType(bitcastType);
     llvm::LoadInst *load = Builder.CreateLoad(ivarAddr, "load");
     load->setAtomic(llvm::AtomicOrdering::Unordered);
 
@@ -1205,8 +1205,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
       bitcastType = llvm::Type::getIntNTy(getLLVMContext(), retTySize);
       ivarVal = Builder.CreateTrunc(load, bitcastType);
     }
-    Builder.CreateStore(ivarVal,
-                        Builder.CreateElementBitCast(ReturnValue, bitcastType));
+    Builder.CreateStore(ivarVal, ReturnValue.withElementType(bitcastType));
 
     // Make sure we don't do an autorelease.
     AutoreleaseResult = false;
@@ -1486,15 +1485,13 @@ CodeGenFunction::generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
 
     // Currently, all atomic accesses have to be through integer
     // types, so there's no point in trying to pick a prettier type.
-    llvm::Type *bitcastType =
-      llvm::Type::getIntNTy(getLLVMContext(),
-                            getContext().toBits(strategy.getIvarSize()));
+    llvm::Type *castType = llvm::Type::getIntNTy(
+        getLLVMContext(), getContext().toBits(strategy.getIvarSize()));
 
     // Cast both arguments to the chosen operation type.
-    argAddr = Builder.CreateElementBitCast(argAddr, bitcastType);
-    ivarAddr = Builder.CreateElementBitCast(ivarAddr, bitcastType);
+    argAddr = argAddr.withElementType(castType);
+    ivarAddr = ivarAddr.withElementType(castType);
 
-    // This bitcast load is likely to cause some nasty IR.
     llvm::Value *load = Builder.CreateLoad(argAddr);
 
     // Perform an atomic store.  There are no memory ordering requirements.
@@ -2206,18 +2203,7 @@ static llvm::Value *emitARCLoadOperation(CodeGenFunction &CGF, Address addr,
   if (!fn)
     fn = getARCIntrinsic(IntID, CGF.CGM);
 
-  // Cast the argument to 'id*'.
-  llvm::Type *origType = addr.getElementType();
-  addr = CGF.Builder.CreateElementBitCast(addr, CGF.Int8PtrTy);
-
-  // Call the function.
-  llvm::Value *result = CGF.EmitNounwindRuntimeCall(fn, addr.getPointer());
-
-  // Cast the result back to a dereference of the original type.
-  if (origType != CGF.Int8PtrTy)
-    result = CGF.Builder.CreateBitCast(result, origType);
-
-  return result;
+  return CGF.EmitNounwindRuntimeCall(fn, addr.getPointer());
 }
 
 /// Perform an operation having the following signature:
@@ -2661,9 +2647,6 @@ void CodeGenFunction::EmitARCDestroyWeak(Address addr) {
   llvm::Function *&fn = CGM.getObjCEntrypoints().objc_destroyWeak;
   if (!fn)
     fn = getARCIntrinsic(llvm::Intrinsic::objc_destroyWeak, CGM);
-
-  // Cast the argument to 'id*'.
-  addr = Builder.CreateElementBitCast(addr, Int8PtrTy);
 
   EmitNounwindRuntimeCall(fn, addr.getPointer());
 }

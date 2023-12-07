@@ -18,11 +18,11 @@
 #include "clang/Analysis/MacroExpansionContext.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 namespace clang {
 class CompilerInstance;
@@ -181,7 +181,7 @@ public:
                                                    ASTUnit *Unit);
 
   /// Get a name to identify a named decl.
-  static llvm::Optional<std::string> getLookupName(const NamedDecl *ND);
+  static std::optional<std::string> getLookupName(const NamedDecl *ND);
 
   /// Emit diagnostics for the user for potential configuration errors.
   void emitCrossTUDiagnostics(const IndexError &IE);
@@ -193,7 +193,7 @@ public:
   ///       source-location, empty is returned.
   /// \note Macro expansion tracking for imported TUs is not implemented yet.
   ///       It returns empty unconditionally.
-  llvm::Optional<clang::MacroExpansionContext>
+  std::optional<clang::MacroExpansionContext>
   getMacroExpansionContextForSourceLocation(
       const clang::SourceLocation &ToLoc) const;
 
@@ -263,7 +263,7 @@ private:
     StringRef InvocationListFilePath;
     /// In case of on-demand parsing, the invocations for parsing the source
     /// files is stored.
-    llvm::Optional<InvocationListTy> InvocationList;
+    std::optional<InvocationListTy> InvocationList;
     index_error_code PreviousParsingResult = index_error_code::success;
   };
 

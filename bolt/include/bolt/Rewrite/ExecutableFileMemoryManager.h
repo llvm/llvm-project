@@ -10,7 +10,7 @@
 #define BOLT_REWRITE_EXECUTABLE_FILE_MEMORY_MANAGER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include <cstdint>
 #include <string>
 
@@ -20,20 +20,12 @@ namespace bolt {
 class BinaryContext;
 
 /// Class responsible for allocating and managing code and data sections.
-class ExecutableFileMemoryManager : public RuntimeDyld::MemoryManager {
+class ExecutableFileMemoryManager : public jitlink::JITLinkMemoryManager {
 private:
-  uint8_t *allocateSection(uintptr_t Size, unsigned Alignment,
-                           unsigned SectionID, StringRef SectionName,
-                           bool IsCode, bool IsReadOnly);
-  BinaryContext &BC;
-  bool AllowStubs;
+  void updateSection(const jitlink::Section &Section, uint8_t *Contents,
+                     size_t Size, size_t Alignment);
 
-  struct AllocInfo {
-    uint8_t *Address;
-    size_t Size;
-    size_t Alignment;
-  };
-  SmallVector<AllocInfo, 8> AllocatedSections;
+  BinaryContext &BC;
 
   // All new sections will be identified by the following prefix.
   std::string NewSecPrefix;
@@ -50,48 +42,14 @@ public:
   // user-supplied objects into the main input executable.
   uint32_t ObjectsLoaded{0};
 
-  ExecutableFileMemoryManager(BinaryContext &BC, bool AllowStubs)
-      : BC(BC), AllowStubs(AllowStubs) {}
+  ExecutableFileMemoryManager(BinaryContext &BC) : BC(BC) {}
 
-  ~ExecutableFileMemoryManager();
+  void allocate(const jitlink::JITLinkDylib *JD, jitlink::LinkGraph &G,
+                OnAllocatedFunction OnAllocated) override;
 
-  uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
-                               unsigned SectionID,
-                               StringRef SectionName) override {
-    return allocateSection(Size, Alignment, SectionID, SectionName,
-                           /*IsCode=*/true, true);
-  }
-
-  uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
-                               unsigned SectionID, StringRef SectionName,
-                               bool IsReadOnly) override {
-    return allocateSection(Size, Alignment, SectionID, SectionName,
-                           /*IsCode=*/false, IsReadOnly);
-  }
-
-  // Ignore TLS sections by treating them as a regular data section
-  TLSSection allocateTLSSection(uintptr_t Size, unsigned Alignment,
-                                unsigned SectionID,
-                                StringRef SectionName) override {
-    TLSSection Res;
-    Res.Offset = 0;
-    Res.InitializationImage = allocateDataSection(
-        Size, Alignment, SectionID, SectionName, /*IsReadOnly=*/false);
-    return Res;
-  }
-
-  bool allowStubAllocation() const override { return AllowStubs; }
-
-  /// Count processed objects and skip memory finalization.
-  bool finalizeMemory(std::string *ErrMsg) override {
-    ++ObjectsLoaded;
-    return false;
-  }
-
-  /// Ignore EH frames.
-  void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr,
-                        size_t Size) override {}
-  void deregisterEHFrames() override {}
+  void deallocate(std::vector<FinalizedAlloc> Allocs,
+                  OnDeallocatedFunction OnDeallocated) override;
+  using JITLinkMemoryManager::deallocate;
 
   /// Section name management.
   void setNewSecPrefix(StringRef Prefix) { NewSecPrefix = Prefix; }

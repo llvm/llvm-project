@@ -1,12 +1,12 @@
 """Test the SBEnvironment APIs."""
 
 
-
 from math import fabs
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class SBEnvironmentAPICase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
@@ -26,14 +26,11 @@ class SBEnvironmentAPICase(TestBase):
             (name, value) = entries.GetStringAtIndex(i).split("=")
             self.assertIn(name + "=" + value, entries)
 
-
-
-    @skipIfRemote # Remote environment not supported.
+    @skipIfRemote  # Remote environment not supported.
     def test_platform_environment(self):
         env = self.dbg.GetSelectedPlatform().GetEnvironment()
         # We assume at least PATH is set
         self.assertNotEqual(env.Get("PATH"), None)
-
 
     def test_launch_info(self):
         target = self.dbg.CreateTarget("")
@@ -64,8 +61,7 @@ class SBEnvironmentAPICase(TestBase):
         launch_info.SetEnvironment(env, False)
         self.assertEqualEntries(launch_info.GetEnvironment(), ["BAR=foo", "X=y"])
 
-
-    @skipIfRemote # Remote environment not supported.
+    @skipIfRemote  # Remote environment not supported.
     def test_target_environment(self):
         env = self.dbg.GetSelectedTarget().GetEnvironment()
         # There is no target, so env should be empty

@@ -34,6 +34,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "lanai-isel"
+#define PASS_NAME "Lanai DAG->DAG Pattern Instruction Selection"
 
 //===----------------------------------------------------------------------===//
 // Instruction Selector Implementation
@@ -49,16 +50,13 @@ class LanaiDAGToDAGISel : public SelectionDAGISel {
 public:
   static char ID;
 
+  LanaiDAGToDAGISel() = delete;
+
   explicit LanaiDAGToDAGISel(LanaiTargetMachine &TargetMachine)
       : SelectionDAGISel(ID, TargetMachine) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     return SelectionDAGISel::runOnMachineFunction(MF);
-  }
-
-  // Pass Name
-  StringRef getPassName() const override {
-    return "Lanai DAG->DAG Pattern Instruction Selection";
   }
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintCode,
@@ -101,6 +99,8 @@ bool canBeRepresentedAsSls(const ConstantSDNode &CN) {
 } // namespace
 
 char LanaiDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(LanaiDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 // Helper functions for ComplexPattern used on LanaiInstrInfo
 // Used on Lanai Load/Store instructions.
@@ -211,6 +211,37 @@ bool LanaiDAGToDAGISel::selectAddrSpls(SDValue Addr, SDValue &Base,
                                        SDValue &Offset, SDValue &AluOp) {
   return selectAddrRiSpls(Addr, Base, Offset, AluOp, /*RiMode=*/false);
 }
+
+namespace llvm {
+namespace LPAC {
+static AluCode isdToLanaiAluCode(ISD::NodeType Node_type) {
+  switch (Node_type) {
+  case ISD::ADD:
+    return AluCode::ADD;
+  case ISD::ADDE:
+    return AluCode::ADDC;
+  case ISD::SUB:
+    return AluCode::SUB;
+  case ISD::SUBE:
+    return AluCode::SUBB;
+  case ISD::AND:
+    return AluCode::AND;
+  case ISD::OR:
+    return AluCode::OR;
+  case ISD::XOR:
+    return AluCode::XOR;
+  case ISD::SHL:
+    return AluCode::SHL;
+  case ISD::SRL:
+    return AluCode::SRL;
+  case ISD::SRA:
+    return AluCode::SRA;
+  default:
+    return AluCode::UNKNOWN;
+  }
+}
+} // namespace LPAC
+} // namespace llvm
 
 bool LanaiDAGToDAGISel::selectAddrRr(SDValue Addr, SDValue &R1, SDValue &R2,
                                      SDValue &AluOp) {

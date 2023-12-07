@@ -13,7 +13,7 @@
 ;
 declare double @f(...) #1
 
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -28,7 +28,7 @@ for:
       br label %bodyB
 
     bodyB:
-      store double %val, double* %A
+      store double %val, ptr %A
       br label %inc
 
 inc:

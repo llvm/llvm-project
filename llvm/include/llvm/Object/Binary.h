@@ -14,11 +14,11 @@
 #define LLVM_OBJECT_BINARY_H
 
 #include "llvm-c/Types.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Triple.h"
 #include <memory>
 #include <utility>
 
@@ -69,6 +69,7 @@ protected:
     ID_MachO64L, // MachO 64-bit, little endian
     ID_MachO64B, // MachO 64-bit, big endian
 
+    ID_GOFF,
     ID_Wasm,
 
     ID_EndObjects
@@ -145,6 +146,8 @@ public:
     return TypeID == ID_IR;
   }
 
+  bool isGOFF() const { return TypeID == ID_GOFF; }
+
   bool isMinidump() const { return TypeID == ID_Minidump; }
 
   bool isTapiFile() const { return TypeID == ID_TapiFile; }
@@ -164,6 +167,8 @@ public:
       return Triple::MachO;
     if (isELF())
       return Triple::ELF;
+    if (isGOFF())
+      return Triple::GOFF;
     return Triple::UnknownObjectFormat;
   }
 

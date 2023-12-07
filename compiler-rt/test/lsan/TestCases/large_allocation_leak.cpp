@@ -4,7 +4,7 @@
 
 // For 32 bit LSan it's pretty likely that large chunks are "reachable" from some
 // internal data structures (e.g. Glibc global data).
-// UNSUPPORTED: x86,i686,arm
+// UNSUPPORTED: i686,target={{(x86|arm).*}}
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,4 +19,4 @@ int main() {
 // CHECK: Test alloc: [[ADDR:0x[0-9,a-f]+]]
 // CHECK: LeakSanitizer: detected memory leaks
 // CHECK: [[ADDR]] (33554432 bytes)
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:
+// CHECK: SUMMARY: {{.*}}Sanitizer:

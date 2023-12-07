@@ -145,5 +145,5 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
 }
 
 llvm::ArrayRef<OptionDefinition> CommandOptionsProcessLaunch::GetDefinitions() {
-  return llvm::makeArrayRef(g_process_launch_options);
+  return llvm::ArrayRef(g_process_launch_options);
 }

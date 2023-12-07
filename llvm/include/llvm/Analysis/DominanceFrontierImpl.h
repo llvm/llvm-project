@@ -57,8 +57,7 @@ template <class BlockT, bool IsPostDom>
 void DominanceFrontierBase<BlockT, IsPostDom>::addToFrontier(iterator I,
                                                              BlockT *Node) {
   assert(I != end() && "BB is not in DominanceFrontier!");
-  assert(I->second.count(Node) && "Node is not in DominanceFrontier of BB");
-  I->second.erase(Node);
+  I->second.insert(Node);
 }
 
 template <class BlockT, bool IsPostDom>

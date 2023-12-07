@@ -21,7 +21,7 @@ _ZN12gjkepa2_impl3EPA6appendERNS0_5sListEPNS0_5sFaceE.exit71: ; preds = %bb.i69,
   %1 = fdiv float %0, undef
   %2 = fcmp ult float %1, 0xBF847AE140000000
   %storemerge9 = select i1 %2, float %1, float 0.000000e+00
-  store float %storemerge9, float* undef, align 4
+  store float %storemerge9, ptr undef, align 4
   br i1 undef, label %bb42, label %bb47
 
 bb42:                                             ; preds = %_ZN12gjkepa2_impl3EPA6appendERNS0_5sListEPNS0_5sFaceE.exit71

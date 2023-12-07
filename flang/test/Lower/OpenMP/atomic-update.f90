@@ -1,16 +1,18 @@
 ! This test checks lowering of atomic and atomic update constructs
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir -fopenmp %s -o - | FileCheck %s
 
 program OmpAtomicUpdate
     use omp_lib
     integer :: x, y, z
     integer, pointer :: a, b
     integer, target :: c, d
+    integer(1) :: i1
+
     a=>c
     b=>d
 
-!CHECK: func.func @_QQmain() {
+!CHECK: func.func @_QQmain() attributes {fir.bindc_name = "ompatomicupdate"} {
 !CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "a", uniq_name = "_QFEa"}
 !CHECK: %[[A_ADDR:.*]] = fir.alloca !fir.ptr<i32> {uniq_name = "_QFEa.addr"}
 !CHECK: %{{.*}} = fir.zero_bits !fir.ptr<i32>
@@ -21,6 +23,7 @@ program OmpAtomicUpdate
 !CHECK: fir.store %{{.*}} to %[[B_ADDR]] : !fir.ref<!fir.ptr<i32>>
 !CHECK: %[[C_ADDR:.*]] = fir.address_of(@_QFEc) : !fir.ref<i32>
 !CHECK: %[[D_ADDR:.*]] = fir.address_of(@_QFEd) : !fir.ref<i32>
+!CHECK: %[[I1:.*]] = fir.alloca i8 {bindc_name = "i1", uniq_name = "_QFEi1"}
 !CHECK: %[[X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
 !CHECK: %[[Y:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
 !CHECK: %[[Z:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFEz"}
@@ -115,10 +118,22 @@ program OmpAtomicUpdate
 !CHECK:    %[[RESULT:.*]] = arith.addi %[[LOADED_Y]], %[[ARG]] : i32
 !CHECK:    omp.yield(%[[RESULT]] : i32)
 !CHECK:  }
-!CHECK:  return
-!CHECK: }
     !$omp atomic hint(omp_sync_hint_nonspeculative) seq_cst
         y = 10 + y
     !$omp atomic seq_cst update
         z = y + z
+
+!CHECK:  omp.atomic.update   %[[I1]] : !fir.ref<i8> {
+!CHECK:  ^bb0(%[[VAL:.*]]: i8):
+!CHECK:    %[[CVT_VAL:.*]] = fir.convert %[[VAL]] : (i8) -> i32
+!CHECK:    %[[C1_VAL:.*]] = arith.constant 1 : i32
+!CHECK:    %[[ADD_VAL:.*]] = arith.addi %[[CVT_VAL]], %[[C1_VAL]] : i32
+!CHECK:    %[[UPDATED_VAL:.*]] = fir.convert %[[ADD_VAL]] : (i32) -> i8
+!CHECK:    omp.yield(%[[UPDATED_VAL]] : i8)
+!CHECK:  }
+    !$omp atomic
+      i1 = i1 + 1
+    !$omp end atomic
+!CHECK:  return
+!CHECK: }
 end program OmpAtomicUpdate

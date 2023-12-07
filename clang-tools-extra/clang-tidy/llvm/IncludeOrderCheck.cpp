@@ -14,21 +14,19 @@
 
 #include <map>
 
-namespace clang {
-namespace tidy {
-namespace llvm_check {
+namespace clang::tidy::llvm_check {
 
 namespace {
 class IncludeOrderPPCallbacks : public PPCallbacks {
 public:
   explicit IncludeOrderPPCallbacks(ClangTidyCheck &Check,
                                    const SourceManager &SM)
-      : LookForMainModule(true), Check(Check), SM(SM) {}
+      : Check(Check), SM(SM) {}
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          OptionalFileEntryRef File, StringRef SearchPath,
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
   void EndOfMainFile() override;
@@ -42,9 +40,9 @@ private:
     bool IsMainModule;     ///< true if this was the first include in a file
   };
 
-  typedef std::vector<IncludeDirective> FileIncludes;
+  using FileIncludes = std::vector<IncludeDirective>;
   std::map<clang::FileID, FileIncludes> IncludeDirectives;
-  bool LookForMainModule;
+  bool LookForMainModule = true;
 
   ClangTidyCheck &Check;
   const SourceManager &SM;
@@ -82,7 +80,7 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
 
 void IncludeOrderPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
+    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
     StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   // We recognize the first include as a special main module header and want
@@ -145,7 +143,7 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
     // block.
     for (unsigned BI = 0, BE = Blocks.size() - 1; BI != BE; ++BI) {
       // Find the first include that's not in the right position.
-      unsigned I, E;
+      unsigned I = 0, E = 0;
       for (I = Blocks[BI], E = Blocks[BI + 1]; I != E; ++I)
         if (IncludeIndices[I] != I)
           break;
@@ -183,6 +181,4 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
   IncludeDirectives.clear();
 }
 
-} // namespace llvm_check
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::llvm_check

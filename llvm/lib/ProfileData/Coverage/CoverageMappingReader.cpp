@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
@@ -36,6 +35,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <vector>
 
 using namespace llvm;
@@ -822,8 +822,6 @@ static Error readCoverageMappingData(
   return Error::success();
 }
 
-static const char *TestingFormatMagic = "llvmcovmtestdata";
-
 Expected<std::unique_ptr<BinaryCoverageReader>>
 BinaryCoverageReader::createCoverageReaderFromBuffer(
     StringRef Coverage, FuncRecordsStorage &&FuncRecords,
@@ -865,7 +863,16 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   uint8_t BytesInAddress = 8;
   support::endianness Endian = support::endianness::little;
 
-  Data = Data.substr(StringRef(TestingFormatMagic).size());
+  // Read the magic and version.
+  Data = Data.substr(sizeof(TestingFormatMagic));
+  if (Data.size() < sizeof(uint64_t))
+    return make_error<CoverageMapError>(coveragemap_error::malformed);
+  auto TestingVersion =
+      support::endian::byte_swap<uint64_t, support::endianness::little>(
+          *reinterpret_cast<const uint64_t *>(Data.data()));
+  Data = Data.substr(sizeof(uint64_t));
+
+  // Read the ProfileNames data.
   if (Data.empty())
     return make_error<CoverageMapError>(coveragemap_error::truncated);
   unsigned N = 0;
@@ -886,8 +893,23 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   if (Error E = ProfileNames.create(Data.substr(0, ProfileNamesSize), Address))
     return std::move(E);
   Data = Data.substr(ProfileNamesSize);
+
+  // In Version2, the size of CoverageMapping is stored directly.
+  uint64_t CoverageMappingSize;
+  if (TestingVersion == uint64_t(TestingFormatVersion::Version2)) {
+    N = 0;
+    CoverageMappingSize = decodeULEB128(Data.bytes_begin(), &N);
+    if (N > Data.size())
+      return make_error<CoverageMapError>(coveragemap_error::malformed);
+    Data = Data.substr(N);
+    if (CoverageMappingSize < sizeof(CovMapHeader))
+      return make_error<CoverageMapError>(coveragemap_error::malformed);
+  } else if (TestingVersion != uint64_t(TestingFormatVersion::Version1)) {
+    return make_error<CoverageMapError>(coveragemap_error::unsupported_version);
+  }
+
   // Skip the padding bytes because coverage map data has an alignment of 8.
-  size_t Pad = offsetToAlignedAddr(Data.data(), Align(8));
+  auto Pad = offsetToAlignedAddr(Data.data(), Align(8));
   if (Data.size() < Pad)
     return make_error<CoverageMapError>(coveragemap_error::malformed);
   Data = Data.substr(Pad);
@@ -895,32 +917,38 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
     return make_error<CoverageMapError>(coveragemap_error::malformed);
   auto const *CovHeader = reinterpret_cast<const CovMapHeader *>(
       Data.substr(0, sizeof(CovMapHeader)).data());
-  CovMapVersion Version =
-      (CovMapVersion)CovHeader->getVersion<support::endianness::little>();
-  StringRef CoverageMapping;
-  BinaryCoverageReader::FuncRecordsStorage CoverageRecords;
+  auto Version =
+      CovMapVersion(CovHeader->getVersion<support::endianness::little>());
+
+  // In Version1, the size of CoverageMapping is calculated.
+  if (TestingVersion == uint64_t(TestingFormatVersion::Version1)) {
+    if (Version < CovMapVersion::Version4) {
+      CoverageMappingSize = Data.size();
+    } else {
+      auto FilenamesSize =
+          CovHeader->getFilenamesSize<support::endianness::little>();
+      CoverageMappingSize = sizeof(CovMapHeader) + FilenamesSize;
+    }
+  }
+
+  auto CoverageMapping = Data.substr(0, CoverageMappingSize);
+  Data = Data.substr(CoverageMappingSize);
+
+  // Read the CoverageRecords data.
   if (Version < CovMapVersion::Version4) {
-    CoverageMapping = Data;
-    if (CoverageMapping.empty())
-      return make_error<CoverageMapError>(coveragemap_error::truncated);
-    CoverageRecords = MemoryBuffer::getMemBuffer("");
+    if (!Data.empty())
+      return make_error<CoverageMapError>(coveragemap_error::malformed);
   } else {
-    uint32_t FilenamesSize =
-        CovHeader->getFilenamesSize<support::endianness::little>();
-    uint32_t CoverageMappingSize = sizeof(CovMapHeader) + FilenamesSize;
-    CoverageMapping = Data.substr(0, CoverageMappingSize);
-    if (CoverageMapping.empty())
-      return make_error<CoverageMapError>(coveragemap_error::truncated);
-    Data = Data.substr(CoverageMappingSize);
     // Skip the padding bytes because coverage records data has an alignment
     // of 8.
     Pad = offsetToAlignedAddr(Data.data(), Align(8));
     if (Data.size() < Pad)
       return make_error<CoverageMapError>(coveragemap_error::malformed);
-    CoverageRecords = MemoryBuffer::getMemBuffer(Data.substr(Pad));
-    if (CoverageRecords->getBufferSize() == 0)
-      return make_error<CoverageMapError>(coveragemap_error::truncated);
+    Data = Data.substr(Pad);
   }
+  BinaryCoverageReader::FuncRecordsStorage CoverageRecords =
+      MemoryBuffer::getMemBuffer(Data);
+
   return BinaryCoverageReader::createCoverageReaderFromBuffer(
       CoverageMapping, std::move(CoverageRecords), std::move(ProfileNames),
       BytesInAddress, Endian, CompilationDir);
@@ -954,7 +982,8 @@ static Expected<std::vector<SectionRef>> lookupSections(ObjectFile &OF,
 
 static Expected<std::unique_ptr<BinaryCoverageReader>>
 loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
-                 StringRef CompilationDir = "") {
+                 StringRef CompilationDir = "",
+                 object::BuildIDRef *BinaryID = nullptr) {
   std::unique_ptr<ObjectFile> OF;
   if (auto *Universal = dyn_cast<MachOUniversalBinary>(Bin.get())) {
     // If we have a universal binary, try to look up the object for the
@@ -1052,6 +1081,9 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
     FuncRecords = std::move(WritableBuffer);
   }
 
+  if (BinaryID)
+    *BinaryID = getBuildID(OF.get());
+
   return BinaryCoverageReader::createCoverageReaderFromBuffer(
       CoverageMapping, std::move(FuncRecords), std::move(ProfileNames),
       BytesInAddress, Endian, CompilationDir);
@@ -1074,17 +1106,22 @@ Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
 BinaryCoverageReader::create(
     MemoryBufferRef ObjectBuffer, StringRef Arch,
     SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers,
-    StringRef CompilationDir) {
+    StringRef CompilationDir, SmallVectorImpl<object::BuildIDRef> *BinaryIDs) {
   std::vector<std::unique_ptr<BinaryCoverageReader>> Readers;
 
-  if (ObjectBuffer.getBuffer().startswith(TestingFormatMagic)) {
-    // This is a special format used for testing.
-    auto ReaderOrErr =
-        loadTestingFormat(ObjectBuffer.getBuffer(), CompilationDir);
-    if (!ReaderOrErr)
-      return ReaderOrErr.takeError();
-    Readers.push_back(std::move(ReaderOrErr.get()));
-    return std::move(Readers);
+  if (ObjectBuffer.getBuffer().size() > sizeof(TestingFormatMagic)) {
+    uint64_t Magic =
+        support::endian::byte_swap<uint64_t, support::endianness::little>(
+            *reinterpret_cast<const uint64_t *>(ObjectBuffer.getBufferStart()));
+    if (Magic == TestingFormatMagic) {
+      // This is a special format used for testing.
+      auto ReaderOrErr =
+          loadTestingFormat(ObjectBuffer.getBuffer(), CompilationDir);
+      if (!ReaderOrErr)
+        return ReaderOrErr.takeError();
+      Readers.push_back(std::move(ReaderOrErr.get()));
+      return std::move(Readers);
+    }
   }
 
   auto BinOrErr = createBinary(ObjectBuffer);
@@ -1114,7 +1151,7 @@ BinaryCoverageReader::create(
 
       return BinaryCoverageReader::create(
           ArchiveOrErr.get()->getMemoryBufferRef(), Arch, ObjectFileBuffers,
-          CompilationDir);
+          CompilationDir, BinaryIDs);
     }
   }
 
@@ -1127,7 +1164,8 @@ BinaryCoverageReader::create(
         return ChildBufOrErr.takeError();
 
       auto ChildReadersOrErr = BinaryCoverageReader::create(
-          ChildBufOrErr.get(), Arch, ObjectFileBuffers, CompilationDir);
+          ChildBufOrErr.get(), Arch, ObjectFileBuffers, CompilationDir,
+          BinaryIDs);
       if (!ChildReadersOrErr)
         return ChildReadersOrErr.takeError();
       for (auto &Reader : ChildReadersOrErr.get())
@@ -1146,10 +1184,14 @@ BinaryCoverageReader::create(
     return std::move(Readers);
   }
 
-  auto ReaderOrErr = loadBinaryFormat(std::move(Bin), Arch, CompilationDir);
+  object::BuildIDRef BinaryID;
+  auto ReaderOrErr = loadBinaryFormat(std::move(Bin), Arch, CompilationDir,
+                                      BinaryIDs ? &BinaryID : nullptr);
   if (!ReaderOrErr)
     return ReaderOrErr.takeError();
   Readers.push_back(std::move(ReaderOrErr.get()));
+  if (!BinaryID.empty())
+    BinaryIDs->push_back(BinaryID);
   return std::move(Readers);
 }
 
@@ -1161,7 +1203,7 @@ Error BinaryCoverageReader::readNextRecord(CoverageMappingRecord &Record) {
   Expressions.clear();
   MappingRegions.clear();
   auto &R = MappingRecords[CurrentRecord];
-  auto F = makeArrayRef(Filenames).slice(R.FilenamesBegin, R.FilenamesSize);
+  auto F = ArrayRef(Filenames).slice(R.FilenamesBegin, R.FilenamesSize);
   RawCoverageMappingReader Reader(R.CoverageMapping, F, FunctionsFilenames,
                                   Expressions, MappingRegions);
   if (auto Err = Reader.read())

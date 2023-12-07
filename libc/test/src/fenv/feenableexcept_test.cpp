@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "src/fenv/fedisableexcept.h"
 #include "src/fenv/feenableexcept.h"
 #include "src/fenv/fegetexcept.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <fenv.h>
 
 TEST(LlvmLibcFEnvTest, EnableTest) {
-#if defined(LLVM_LIBC_ARCH_AARCH64)
-  // Few aarch64 HW implementations do not trap exceptions. We skip this test
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) || defined(LIBC_TARGET_ARCH_IS_RISCV64)
+  // Few Arm HW implementations do not trap exceptions. We skip this test
   // completely on such HW.
   //
   // Whether HW supports trapping exceptions or not is deduced by enabling an
@@ -28,7 +28,7 @@ TEST(LlvmLibcFEnvTest, EnableTest) {
   __llvm_libc::feenableexcept(FE_DIVBYZERO);
   if (__llvm_libc::fegetexcept() == 0)
     return;
-#endif // defined(LLVM_LIBC_ARCH_AARCH64)
+#endif // Architectures where exception trapping is not supported
 
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};

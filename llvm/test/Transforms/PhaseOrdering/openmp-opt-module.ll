@@ -1,21 +1,22 @@
 ; RUN: opt -passes='default<O2>' -pass-remarks-missed=openmp-opt < %s 2>&1 | FileCheck %s --check-prefix=MODULE
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 
-%struct.ident_t = type { i32, i32, i32, i32, ptr }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
+%struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
 
 @.str = private unnamed_addr constant [13 x i8] c"Alloc Shared\00", align 1
-
 @S = external local_unnamed_addr global ptr
+@foo_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1 }, ptr null, ptr null }
 
 ; MODULE: remark: openmp_opt_module.c:5:7: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 
-define void @foo() {
+define void @foo() "kernel" {
 entry:
-  %i = call i32 @__kmpc_target_init(ptr null, i1 false, i1 true, i1 true)
+  %i = call i32 @__kmpc_target_init(ptr @foo_kernel_environment)
   %x = call ptr @__kmpc_alloc_shared(i64 4), !dbg !10
   call void @use(ptr %x)
   call void @__kmpc_free_shared(ptr %x)
-  call void @__kmpc_target_deinit(ptr null, i1 false, i1 true)
+  call void @__kmpc_target_deinit()
   ret void
 }
 
@@ -31,8 +32,8 @@ entry:
 declare ptr @_Z10SafeMallocmPKc(i64 %size, ptr nocapture readnone %msg)
 
 declare void @__kmpc_free_shared(ptr)
-declare i32 @__kmpc_target_init(ptr, i1, i1 %use_generic_state_machine, i1)
-declare void @__kmpc_target_deinit(ptr, i1, i1)
+declare i32 @__kmpc_target_init(ptr)
+declare void @__kmpc_target_deinit()
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

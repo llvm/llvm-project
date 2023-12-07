@@ -97,8 +97,8 @@ define i32 @test_simplify7(ptr %dst, ptr %str) {
 ; WITHSTPCPY-NEXT:    [[STPCPY:%.*]] = call ptr @stpcpy(ptr [[DST:%.*]], ptr [[STR:%.*]])
 ; WITHSTPCPY-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[STPCPY]] to i32
 ; WITHSTPCPY-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[DST]] to i32
-; WITHSTPCPY-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]
-; WITHSTPCPY-NEXT:    ret i32 [[TMP3]]
+; WITHSTPCPY-NEXT:    [[R:%.*]] = sub i32 [[TMP1]], [[TMP2]]
+; WITHSTPCPY-NEXT:    ret i32 [[R]]
 ;
 ; NOSTPCPY-LABEL: @test_simplify7(
 ; NOSTPCPY-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) [[STR:%.*]])
@@ -127,8 +127,8 @@ define i32 @test_simplify9(ptr %dst, ptr %str) {
 ; WITHSTPCPY-NEXT:    [[STPCPY:%.*]] = call ptr @stpcpy(ptr [[DST:%.*]], ptr [[STR:%.*]])
 ; WITHSTPCPY-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[STPCPY]] to i32
 ; WITHSTPCPY-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[DST]] to i32
-; WITHSTPCPY-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]
-; WITHSTPCPY-NEXT:    ret i32 [[TMP3]]
+; WITHSTPCPY-NEXT:    [[R:%.*]] = sub i32 [[TMP1]], [[TMP2]]
+; WITHSTPCPY-NEXT:    ret i32 [[R]]
 ;
 ; NOSTPCPY-LABEL: @test_simplify9(
 ; NOSTPCPY-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) [[STR:%.*]])
@@ -163,8 +163,8 @@ define i32 @test_no_simplify3(ptr %dst, ptr %str) minsize {
 ; WITHSTPCPY-NEXT:    [[STPCPY:%.*]] = call ptr @stpcpy(ptr [[DST:%.*]], ptr [[STR:%.*]])
 ; WITHSTPCPY-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[STPCPY]] to i32
 ; WITHSTPCPY-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[DST]] to i32
-; WITHSTPCPY-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]
-; WITHSTPCPY-NEXT:    ret i32 [[TMP3]]
+; WITHSTPCPY-NEXT:    [[R:%.*]] = sub i32 [[TMP1]], [[TMP2]]
+; WITHSTPCPY-NEXT:    ret i32 [[R]]
 ;
 ; NOSTPCPY-LABEL: @test_no_simplify3(
 ; NOSTPCPY-NEXT:    [[R:%.*]] = call i32 (ptr, ptr, ...) @sprintf(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) @percent_s, ptr [[STR:%.*]])

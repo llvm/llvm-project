@@ -8,6 +8,7 @@
 
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
@@ -152,6 +153,8 @@ mlir::hasEffect<MemoryEffects::Write, MemoryEffects::Free>(Operation *, Value);
 bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   if (op->mightHaveTrait<OpTrait::IsTerminator>())
     return false;
+  if (isa<SymbolOpInterface>(op))
+    return false;
   return wouldOpBeTriviallyDeadImpl(op);
 }
 
@@ -177,6 +180,39 @@ bool mlir::isMemoryEffectFree(Operation *op) {
       if (!isMemoryEffectFree(&op))
         return false;
   return true;
+}
+
+// the returned vector may contain duplicate effects
+std::optional<llvm::SmallVector<MemoryEffects::EffectInstance>>
+mlir::getEffectsRecursively(Operation *rootOp) {
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  SmallVector<Operation *> effectingOps(1, rootOp);
+  while (!effectingOps.empty()) {
+    Operation *op = effectingOps.pop_back_val();
+
+    // If the operation has recursive effects, push all of the nested
+    // operations on to the stack to consider.
+    bool hasRecursiveEffects =
+        op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
+    if (hasRecursiveEffects) {
+      for (Region &region : op->getRegions()) {
+        for (Block &block : region) {
+          for (Operation &nestedOp : block) {
+            effectingOps.push_back(&nestedOp);
+          }
+        }
+      }
+    }
+
+    if (auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
+      effectInterface.getEffects(effects);
+    } else if (!hasRecursiveEffects) {
+      // the operation does not have recursive memory effects or implement
+      // the memory effect op interface. Its effects are unknown.
+      return std::nullopt;
+    }
+  }
+  return effects;
 }
 
 bool mlir::isSpeculatable(Operation *op) {

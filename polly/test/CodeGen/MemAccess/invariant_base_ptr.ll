@@ -7,10 +7,10 @@
 ; generated when invariant load hoisting is disabled. This test case checks
 ; that in case invariant load hoisting is enabled, we generate correct code.
 
-; CHECK: %polly.access.polly.access.X.load = getelementptr float, float* %polly.access.X.load, i64 %polly.indvar
+; CHECK: %polly.access.polly.access.X.load = getelementptr float, ptr %polly.access.X.load, i64 %polly.indvar
 
-define void @invariant_base_ptr(float* noalias %Array, float** noalias %X,
-                                float* noalias %C) {
+define void @invariant_base_ptr(ptr noalias %Array, ptr noalias %X,
+                                ptr noalias %C) {
 
 start:
   br label %loop
@@ -22,15 +22,15 @@ loop:
   br i1 %cmp, label %body, label %exit
 
 body:
-  %gep= getelementptr float, float* %Array, i64 %indvar
-  store float 42.0, float* %gep
+  %gep= getelementptr float, ptr %Array, i64 %indvar
+  store float 42.0, ptr %gep
   br label %body2
 
 body2:
-  %Base = load float*, float** %X
-  %gep2 = getelementptr float, float* %Base, i64 %indvar
-  %val2 = load float, float* %gep2
-  store float %val2, float* %C
+  %Base = load ptr, ptr %X
+  %gep2 = getelementptr float, ptr %Base, i64 %indvar
+  %val2 = load float, ptr %gep2
+  store float %val2, ptr %C
   br label %latch
 
 latch:

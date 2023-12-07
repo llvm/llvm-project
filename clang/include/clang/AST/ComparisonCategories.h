@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include <array>
 #include <cassert>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -38,9 +39,8 @@ class NamespaceDecl;
 /// An enumeration representing the different comparison categories
 /// types.
 ///
-/// C++2a [cmp.categories.pre] The types weak_equality, strong_equality,
-/// partial_ordering, weak_ordering, and strong_ordering are collectively
-/// termed the comparison category types.
+/// C++20 [cmp.categories.pre] The types partial_ordering, weak_ordering, and
+/// strong_ordering are collectively termed the comparison category types.
 enum class ComparisonCategoryType : unsigned char {
   PartialOrdering,
   WeakOrdering,
@@ -58,7 +58,8 @@ inline ComparisonCategoryType commonComparisonType(ComparisonCategoryType A,
 
 /// Get the comparison category that should be used when comparing values of
 /// type \c T.
-Optional<ComparisonCategoryType> getComparisonCategoryForBuiltinCmp(QualType T);
+std::optional<ComparisonCategoryType>
+getComparisonCategoryForBuiltinCmp(QualType T);
 
 /// An enumeration representing the possible results of a three-way
 /// comparison. These values map onto instances of comparison category types

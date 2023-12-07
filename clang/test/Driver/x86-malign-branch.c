@@ -6,8 +6,8 @@
 // RUN: %clang -target x86_64-unknown-linux -malign-branch-boundary=16 -flto %s -### 2>&1 | FileCheck %s --check-prefix=BOUNDARY-LTO
 // BOUNDARY-LTO: "-plugin-opt=-x86-align-branch-boundary=16"
 
-// RUN: %clang -target x86_64 -malign-branch-boundary=8 %s -c -### 2>&1 | FileCheck %s --check-prefix=BOUNDARY-ERR
-// RUN: %clang -target x86_64 -malign-branch-boundary=15 %s -c -### 2>&1 | FileCheck %s --check-prefix=BOUNDARY-ERR
+// RUN: not %clang -target x86_64 -malign-branch-boundary=8 %s -c -### 2>&1 | FileCheck %s --check-prefix=BOUNDARY-ERR
+// RUN: not %clang -target x86_64 -malign-branch-boundary=15 %s -c -### 2>&1 | FileCheck %s --check-prefix=BOUNDARY-ERR
 // BOUNDARY-ERR: invalid argument {{.*}} to -malign-branch-boundary=
 
 /// Test -malign-branch=
@@ -18,7 +18,7 @@
 // RUN: %clang -target x86_64-unknown-linux -malign-branch=fused,jcc,jmp -flto %s -### %s 2>&1 | FileCheck %s --check-prefix=TYPE0-LTO
 // TYPE0-LTO: "-plugin-opt=-x86-align-branch=fused+jcc+jmp"
 
-// RUN: %clang -target x86_64 -malign-branch=fused,foo,bar %s -c -### %s 2>&1 | FileCheck %s --check-prefix=TYPE-ERR
+// RUN: not %clang --target=x86_64 -malign-branch=fused,foo,bar %s -c -### %s 2>&1 | FileCheck %s --check-prefix=TYPE-ERR
 // TYPE-ERR: invalid argument 'foo' to -malign-branch=; each element must be one of: fused, jcc, jmp, call, ret, indirect
 // TYPE-ERR: invalid argument 'bar' to -malign-branch=; each element must be one of: fused, jcc, jmp, call, ret, indirect
 
@@ -37,8 +37,8 @@
 // 32B-LTO: "-plugin-opt=-x86-branches-within-32B-boundaries"
 
 /// Unsupported on other targets.
-// RUN: %clang -target aarch64 -malign-branch=jmp %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
-// RUN: %clang -target aarch64 -malign-branch-boundary=7 %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
-// RUN: %clang -target aarch64 -mpad-max-prefix-size=15 %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
-// RUN: %clang -target aarch64 -mbranches-within-32B-boundaries %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
-// UNUSED: warning: argument unused
+// RUN: not %clang -target aarch64 -malign-branch=jmp %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
+// RUN: not %clang -target aarch64 -malign-branch-boundary=7 %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
+// RUN: not %clang -target aarch64 -mpad-max-prefix-size=15 %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
+// RUN: not %clang -target aarch64 -mbranches-within-32B-boundaries %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
+// UNUSED: error: unsupported option '{{.*}}' for target '{{.*}}'

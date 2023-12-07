@@ -38,9 +38,7 @@ AST_MATCHER(clang::ParmVarDecl, isArgvOfMain) {
 
 } // namespace
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 void AvoidCArraysCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -63,6 +61,4 @@ void AvoidCArraysCheck::check(const MatchFinder::MatchResult &Result) {
       << ArrayType->getTypePtr()->isVariableArrayType();
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

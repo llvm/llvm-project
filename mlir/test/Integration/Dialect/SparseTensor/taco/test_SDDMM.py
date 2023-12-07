@@ -1,4 +1,4 @@
-# RUN: SUPPORTLIB=%mlir_lib_dir/libmlir_c_runner_utils%shlibext %PYTHON %s | FileCheck %s
+# RUN: env SUPPORTLIB=%mlir_c_runner_utils %PYTHON %s | FileCheck %s
 
 import filecmp
 import numpy as np
@@ -46,13 +46,13 @@ expected = """; extended FROSTT format
 
 # Force evaluation of the kernels by writing out X and Y.
 with tempfile.TemporaryDirectory() as test_dir:
-  x_file = os.path.join(test_dir, "X.tns")
-  y_file = os.path.join(test_dir, "Y.tns")
-  pt.write(x_file, X)
-  pt.write(y_file, Y)
-  #
-  # CHECK: Compare result True True
-  #
-  x_data = utils.file_as_string(x_file)
-  y_data = utils.file_as_string(y_file)
-  print(f"Compare result {x_data == expected} {y_data == expected}")
+    x_file = os.path.join(test_dir, "X.tns")
+    y_file = os.path.join(test_dir, "Y.tns")
+    pt.write(x_file, X)
+    pt.write(y_file, Y)
+    #
+    # CHECK: Compare result True True
+    #
+    x_data = utils.file_as_string(x_file)
+    y_data = utils.file_as_string(y_file)
+    print(f"Compare result {x_data == expected} {y_data == expected}")

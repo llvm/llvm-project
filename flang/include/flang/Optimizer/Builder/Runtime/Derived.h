@@ -31,11 +31,23 @@ void genDerivedTypeInitialize(fir::FirOpBuilder &builder, mlir::Location loc,
 void genDerivedTypeDestroy(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value box);
 
+/// Generate call to derived type destruction runtime routine to
+/// destroy \p box without finalization
+void genDerivedTypeDestroyWithoutFinalization(fir::FirOpBuilder &builder,
+                                              mlir::Location loc,
+                                              mlir::Value box);
+
 /// Generate call to `PointerNullifyDerived` runtime function to nullify
 /// and set the correct dynamic type to a boxed derived type.
 void genNullifyDerivedType(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value box, fir::RecordType derivedType,
                            unsigned rank = 0);
+
+mlir::Value genSameTypeAs(fir::FirOpBuilder &builder, mlir::Location loc,
+                          mlir::Value a, mlir::Value b);
+
+mlir::Value genExtendsTypeOf(fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Value a, mlir::Value b);
 
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_DERIVED_H

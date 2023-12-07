@@ -26,13 +26,15 @@
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 
+#include "clang/Analysis/AnyCall.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
 
@@ -81,7 +83,8 @@ class NullabilityChecker
     : public Checker<check::Bind, check::PreCall, check::PreStmt<ReturnStmt>,
                      check::PostCall, check::PostStmt<ExplicitCastExpr>,
                      check::PostObjCMessage, check::DeadSymbols, eval::Assume,
-                     check::Location, check::Event<ImplicitNullDerefEvent>> {
+                     check::Location, check::Event<ImplicitNullDerefEvent>,
+                     check::BeginFunction> {
 
 public:
   // If true, the checker will not diagnose nullabilility issues for calls
@@ -102,6 +105,7 @@ public:
   void checkEvent(ImplicitNullDerefEvent Event) const;
   void checkLocation(SVal Location, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const;
+  void checkBeginFunction(CheckerContext &Ctx) const;
   ProgramStateRef evalAssume(ProgramStateRef State, SVal Cond,
                              bool Assumption) const;
 
@@ -306,6 +310,10 @@ static NullConstraint getNullConstraint(DefinedOrUnknownSVal Val,
   return NullConstraint::Unknown;
 }
 
+static bool isValidPointerType(QualType T) {
+  return T->isAnyPointerType() || T->isBlockPointerType();
+}
+
 const SymbolicRegion *
 NullabilityChecker::getTrackRegion(SVal Val, bool CheckSuperRegion) const {
   if (!NeedTracking)
@@ -491,25 +499,21 @@ void NullabilityChecker::checkDeadSymbols(SymbolReaper &SR,
                                           CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   NullabilityMapTy Nullabilities = State->get<NullabilityMap>();
-  for (NullabilityMapTy::iterator I = Nullabilities.begin(),
-                                  E = Nullabilities.end();
-       I != E; ++I) {
-    const auto *Region = I->first->getAs<SymbolicRegion>();
+  for (const MemRegion *Reg : llvm::make_first_range(Nullabilities)) {
+    const auto *Region = Reg->getAs<SymbolicRegion>();
     assert(Region && "Non-symbolic region is tracked.");
     if (SR.isDead(Region->getSymbol())) {
-      State = State->remove<NullabilityMap>(I->first);
+      State = State->remove<NullabilityMap>(Reg);
     }
   }
 
   // When an object goes out of scope, we can free the history associated
   // with any property accesses on that object
   PropertyAccessesMapTy PropertyAccesses = State->get<PropertyAccessesMap>();
-  for (PropertyAccessesMapTy::iterator I = PropertyAccesses.begin(),
-                                       E = PropertyAccesses.end();
-       I != E; ++I) {
-    const MemRegion *ReceiverRegion = I->first.first;
+  for (ObjectPropPair PropKey : llvm::make_first_range(PropertyAccesses)) {
+    const MemRegion *ReceiverRegion = PropKey.first;
     if (!SR.isLiveRegion(ReceiverRegion)) {
-      State = State->remove<PropertyAccessesMap>(I->first);
+      State = State->remove<PropertyAccessesMap>(PropKey);
     }
   }
 
@@ -557,6 +561,37 @@ void NullabilityChecker::checkEvent(ImplicitNullDerefEvent Event) const {
                 Event.SinkNode, Region, BR);
     }
   }
+}
+
+void NullabilityChecker::checkBeginFunction(CheckerContext &C) const {
+  if (!C.inTopFrame())
+    return;
+
+  const LocationContext *LCtx = C.getLocationContext();
+  auto AbstractCall = AnyCall::forDecl(LCtx->getDecl());
+  if (!AbstractCall || AbstractCall->parameters().empty())
+    return;
+
+  ProgramStateRef State = C.getState();
+  for (const ParmVarDecl *Param : AbstractCall->parameters()) {
+    if (!isValidPointerType(Param->getType()))
+      continue;
+
+    Nullability RequiredNullability =
+        getNullabilityAnnotation(Param->getType());
+    if (RequiredNullability != Nullability::Nullable)
+      continue;
+
+    const VarRegion *ParamRegion = State->getRegion(Param, LCtx);
+    const MemRegion *ParamPointeeRegion =
+        State->getSVal(ParamRegion).getAsRegion();
+    if (!ParamPointeeRegion)
+      continue;
+
+    State = State->set<NullabilityMap>(ParamPointeeRegion,
+                                       NullabilityState(RequiredNullability));
+  }
+  C.addTransition(State);
 }
 
 // Whenever we see a load from a typed memory region that's been annotated as
@@ -621,7 +656,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   if (!RetExpr)
     return;
 
-  if (!RetExpr->getType()->isAnyPointerType())
+  if (!isValidPointerType(RetExpr->getType()))
     return;
 
   ProgramStateRef State = C.getState();
@@ -754,7 +789,7 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
     if (!ArgSVal)
       continue;
 
-    if (!Param->getType()->isAnyPointerType() &&
+    if (!isValidPointerType(Param->getType()) &&
         !Param->getType()->isReferenceType())
       continue;
 
@@ -763,7 +798,7 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
     Nullability RequiredNullability =
         getNullabilityAnnotation(Param->getType());
     Nullability ArgExprTypeLevelNullability =
-        getNullabilityAnnotation(ArgExpr->getType());
+        getNullabilityAnnotation(lookThroughImplicitCasts(ArgExpr)->getType());
 
     unsigned ParamIdx = Param->getFunctionScopeIndex() + 1;
 
@@ -841,7 +876,7 @@ void NullabilityChecker::checkPostCall(const CallEvent &Call,
   if (!FuncType)
     return;
   QualType ReturnType = FuncType->getReturnType();
-  if (!ReturnType->isAnyPointerType())
+  if (!isValidPointerType(ReturnType))
     return;
   ProgramStateRef State = C.getState();
   if (State->get<InvariantViolated>())
@@ -907,18 +942,16 @@ static Nullability getReceiverNullability(const ObjCMethodCall &M,
 ProgramStateRef NullabilityChecker::evalAssume(ProgramStateRef State, SVal Cond,
                                                bool Assumption) const {
   PropertyAccessesMapTy PropertyAccesses = State->get<PropertyAccessesMap>();
-  for (PropertyAccessesMapTy::iterator I = PropertyAccesses.begin(),
-                                       E = PropertyAccesses.end();
-       I != E; ++I) {
-    if (!I->second.isConstrainedNonnull) {
-      ConditionTruthVal IsNonNull = State->isNonNull(I->second.Value);
+  for (auto [PropKey, PropVal] : PropertyAccesses) {
+    if (!PropVal.isConstrainedNonnull) {
+      ConditionTruthVal IsNonNull = State->isNonNull(PropVal.Value);
       if (IsNonNull.isConstrainedTrue()) {
-        ConstrainedPropertyVal Replacement = I->second;
+        ConstrainedPropertyVal Replacement = PropVal;
         Replacement.isConstrainedNonnull = true;
-        State = State->set<PropertyAccessesMap>(I->first, Replacement);
+        State = State->set<PropertyAccessesMap>(PropKey, Replacement);
       } else if (IsNonNull.isConstrainedFalse()) {
         // Space optimization: no point in tracking constrained-null cases
-        State = State->remove<PropertyAccessesMap>(I->first);
+        State = State->remove<PropertyAccessesMap>(PropKey);
       }
     }
   }
@@ -935,7 +968,7 @@ void NullabilityChecker::checkPostObjCMessage(const ObjCMethodCall &M,
   if (!Decl)
     return;
   QualType RetType = Decl->getReturnType();
-  if (!RetType->isAnyPointerType())
+  if (!isValidPointerType(RetType))
     return;
 
   ProgramStateRef State = C.getState();
@@ -1089,9 +1122,9 @@ void NullabilityChecker::checkPostStmt(const ExplicitCastExpr *CE,
                                        CheckerContext &C) const {
   QualType OriginType = CE->getSubExpr()->getType();
   QualType DestType = CE->getType();
-  if (!OriginType->isAnyPointerType())
+  if (!isValidPointerType(OriginType))
     return;
-  if (!DestType->isAnyPointerType())
+  if (!isValidPointerType(DestType))
     return;
 
   ProgramStateRef State = C.getState();
@@ -1215,7 +1248,7 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
     return;
 
   QualType LocType = TVR->getValueType();
-  if (!LocType->isAnyPointerType())
+  if (!isValidPointerType(LocType))
     return;
 
   ProgramStateRef State = C.getState();
@@ -1337,9 +1370,9 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
   if (!State->get<InvariantViolated>())
     Out << Sep << NL;
 
-  for (NullabilityMapTy::iterator I = B.begin(), E = B.end(); I != E; ++I) {
-    Out << I->first << " : ";
-    I->second.print(Out);
+  for (auto [Region, State] : B) {
+    Out << Region << " : ";
+    State.print(Out);
     Out << NL;
   }
 }

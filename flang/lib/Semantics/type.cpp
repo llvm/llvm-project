@@ -11,6 +11,7 @@
 #include "compute-offsets.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/type.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/scope.h"
@@ -109,57 +110,79 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
   }
   evaluated_ = true;
   auto &messages{foldingContext.messages()};
-
-  // Fold the explicit type parameter value expressions first.  Do not
-  // fold them within the scope of the derived type being instantiated;
-  // these expressions cannot use its type parameters.  Convert the values
-  // of the expressions to the declared types of the type parameters.
-  auto parameterDecls{OrderParameterDeclarations(typeSymbol_)};
-  for (const Symbol &symbol : parameterDecls) {
-    const SourceName &name{symbol.name()};
-    if (ParamValue * paramValue{FindParameter(name)}) {
-      if (const MaybeIntExpr & expr{paramValue->GetExplicit()}) {
-        if (auto converted{evaluate::ConvertToType(symbol, SomeExpr{*expr})}) {
-          SomeExpr folded{
-              evaluate::Fold(foldingContext, std::move(*converted))};
-          if (auto *intExpr{std::get_if<SomeIntExpr>(&folded.u)}) {
-            paramValue->SetExplicit(std::move(*intExpr));
-            continue;
-          }
-        }
-        if (!context.HasError(symbol)) {
-          evaluate::SayWithDeclaration(messages, symbol,
-              "Value of type parameter '%s' (%s) is not convertible to its"
-              " type"_err_en_US,
-              name, expr->AsFortran());
+  for (const Symbol &symbol : OrderParameterDeclarations(typeSymbol_)) {
+    SourceName name{symbol.name()};
+    int parameterKind{evaluate::TypeParamInquiry::Result::kind};
+    // Compute the integer kind value of the type parameter,
+    // which may depend on the values of earlier ones.
+    if (const auto *typeSpec{symbol.GetType()}) {
+      if (const IntrinsicTypeSpec * intrinType{typeSpec->AsIntrinsic()};
+          intrinType && intrinType->category() == TypeCategory::Integer) {
+        auto restorer{foldingContext.WithPDTInstance(*this)};
+        auto folded{Fold(foldingContext, KindExpr{intrinType->kind()})};
+        if (auto k{evaluate::ToInt64(folded)}; k &&
+            evaluate::IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
+          parameterKind = static_cast<int>(*k);
+        } else {
+          messages.Say(
+              "Type of type parameter '%s' (%s) is not a valid kind of INTEGER"_err_en_US,
+              name, intrinType->kind().AsFortran());
         }
       }
     }
-  }
-
-  // Default initialization expressions for the derived type's parameters
-  // may reference other parameters so long as the declaration precedes the
-  // use in the expression (10.1.12).  This is not necessarily the same
-  // order as "type parameter order" (7.5.3.2).
-  // Type parameter default value expressions are folded in declaration order
-  // within the scope of the derived type so that the values of earlier type
-  // parameters are available for use in the default initialization
-  // expressions of later parameters.
-  auto restorer{foldingContext.WithPDTInstance(*this)};
-  for (const Symbol &symbol : parameterDecls) {
-    const SourceName &name{symbol.name()};
-    if (!FindParameter(name)) {
+    bool ok{
+        symbol.get<TypeParamDetails>().attr() == common::TypeParamAttr::Len};
+    if (ParamValue * paramValue{FindParameter(name)}) {
+      // Explicit type parameter value expressions are not folded within
+      // the scope of the derived type being instantiated, as the expressions
+      // themselves are not in that scope and cannot reference its type
+      // parameters.
+      if (const MaybeIntExpr & expr{paramValue->GetExplicit()}) {
+        evaluate::DynamicType dyType{TypeCategory::Integer, parameterKind};
+        if (auto converted{evaluate::ConvertToType(dyType, SomeExpr{*expr})}) {
+          SomeExpr folded{
+              evaluate::Fold(foldingContext, std::move(*converted))};
+          if (auto *intExpr{std::get_if<SomeIntExpr>(&folded.u)}) {
+            ok = ok || evaluate::IsActuallyConstant(*intExpr);
+            paramValue->SetExplicit(std::move(*intExpr));
+          }
+        } else if (!context.HasError(symbol)) {
+          evaluate::SayWithDeclaration(messages, symbol,
+              "Value of type parameter '%s' (%s) is not convertible to its type (%s)"_err_en_US,
+              name, expr->AsFortran(), dyType.AsFortran());
+        }
+      }
+    } else {
+      // Default type parameter value expressions are folded within
+      // the scope of the derived type being instantiated.
       const TypeParamDetails &details{symbol.get<TypeParamDetails>()};
       if (details.init()) {
-        auto expr{evaluate::Fold(foldingContext, SomeExpr{*details.init()})};
-        AddParamValue(name,
-            ParamValue{
-                std::move(std::get<SomeIntExpr>(expr.u)), details.attr()});
+        evaluate::DynamicType dyType{TypeCategory::Integer, parameterKind};
+        if (auto converted{
+                evaluate::ConvertToType(dyType, SomeExpr{*details.init()})}) {
+          auto restorer{foldingContext.WithPDTInstance(*this)};
+          SomeExpr folded{
+              evaluate::Fold(foldingContext, std::move(*converted))};
+          ok = ok || evaluate::IsActuallyConstant(folded);
+          AddParamValue(name,
+              ParamValue{
+                  std::move(std::get<SomeIntExpr>(folded.u)), details.attr()});
+        } else {
+          if (!context.HasError(symbol)) {
+            evaluate::SayWithDeclaration(messages, symbol,
+                "Default value of type parameter '%s' (%s) is not convertible to its type (%s)"_err_en_US,
+                name, details.init()->AsFortran(), dyType.AsFortran());
+          }
+        }
       } else if (!context.HasError(symbol)) {
         messages.Say(name_,
             "Type parameter '%s' lacks a value and has no default"_err_en_US,
             name);
       }
+    }
+    if (!ok && !context.HasError(symbol)) {
+      messages.Say(
+          "Value of KIND type parameter '%s' must be constant"_err_en_US, name);
     }
   }
 }
@@ -178,16 +201,18 @@ bool DerivedTypeSpec::IsForwardReferenced() const {
   return typeSymbol_.get<DerivedTypeDetails>().isForwardReferenced();
 }
 
-bool DerivedTypeSpec::HasDefaultInitialization(bool ignoreAllocatable) const {
+bool DerivedTypeSpec::HasDefaultInitialization(
+    bool ignoreAllocatable, bool ignorePointer) const {
   DirectComponentIterator components{*this};
   return bool{std::find_if(
       components.begin(), components.end(), [&](const Symbol &component) {
-        return IsInitialized(component, true, ignoreAllocatable);
+        return IsInitialized(component, /*ignoreDataStatements=*/true,
+            ignoreAllocatable, ignorePointer);
       })};
 }
 
 bool DerivedTypeSpec::HasDestruction() const {
-  if (!typeSymbol().get<DerivedTypeDetails>().finals().empty()) {
+  if (!FinalsForDerivedTypeInstantiation(*this).empty()) {
     return true;
   }
   DirectComponentIterator components{*this};
@@ -325,28 +350,36 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
     const SourceName &name{symbol.name()};
     if (typeScope.find(symbol.name()) != typeScope.end()) {
       // This type parameter belongs to the derived type itself, not to
-      // one of its ancestors.  Put the type parameter expression value
-      // into the new scope as the initialization value for the parameter.
+      // one of its ancestors.  Put the type parameter expression value,
+      // when there is one, into the new scope as the initialization value
+      // for the parameter.  And when there is no explicit value, add an
+      // uninitialized type parameter to forestall use of any default.
       if (ParamValue * paramValue{FindParameter(name)}) {
         const TypeParamDetails &details{symbol.get<TypeParamDetails>()};
         paramValue->set_attr(details.attr());
+        desc += sep;
+        desc += name.ToString();
+        desc += '=';
+        sep = ',';
+        TypeParamDetails instanceDetails{details.attr()};
         if (MaybeIntExpr expr{paramValue->GetExplicit()}) {
-          if (auto folded{evaluate::NonPointerInitializationExpr(symbol,
-                  SomeExpr{std::move(*expr)}, foldingContext, &newScope)}) {
-            desc += sep;
-            desc += name.ToString();
-            desc += '=';
-            desc += folded->AsFortran();
-            sep = ',';
-            TypeParamDetails instanceDetails{details.attr()};
-            if (const DeclTypeSpec * type{details.type()}) {
-              instanceDetails.set_type(*type);
-            }
-            instanceDetails.set_init(
-                std::move(DEREF(evaluate::UnwrapExpr<SomeIntExpr>(*folded))));
-            newScope.try_emplace(name, std::move(instanceDetails));
+          desc += expr->AsFortran();
+          instanceDetails.set_init(
+              std::move(DEREF(evaluate::UnwrapExpr<SomeIntExpr>(*expr))));
+          if (auto dyType{expr->GetType()}) {
+            instanceDetails.set_type(newScope.MakeNumericType(
+                TypeCategory::Integer, KindExpr{dyType->kind()}));
           }
         }
+        if (!instanceDetails.type()) {
+          if (const DeclTypeSpec * type{details.type()}) {
+            instanceDetails.set_type(*type);
+          }
+        }
+        if (!instanceDetails.init()) {
+          desc += '*';
+        }
+        newScope.try_emplace(name, std::move(instanceDetails));
       }
     }
   }
@@ -360,9 +393,8 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
     }
     newScope.set_instantiationContext(contextMessage);
   }
-  // Instantiate every non-parameter symbol from the original derived
+  // Instantiate nearly every non-parameter symbol from the original derived
   // type's scope into the new instance.
-  newScope.AddSourceRange(typeScope.sourceRange());
   auto restorer2{foldingContext.messages().SetContext(contextMessage)};
   if (PlumbPDTInstantiationDepth(&containingScope) > 100) {
     foldingContext.messages().Say(
@@ -558,6 +590,60 @@ DerivedTypeSpec InstantiateHelper::CreateDerivedTypeSpec(
     }
   }
   return result;
+}
+
+std::string DerivedTypeSpec::VectorTypeAsFortran() const {
+  std::string buf;
+  llvm::raw_string_ostream ss{buf};
+
+  switch (category()) {
+    SWITCH_COVERS_ALL_CASES
+  case (Fortran::semantics::DerivedTypeSpec::Category::IntrinsicVector): {
+    int64_t vecElemKind;
+    int64_t vecElemCategory;
+
+    for (const auto &pair : parameters()) {
+      if (pair.first == "element_category") {
+        vecElemCategory =
+            Fortran::evaluate::ToInt64(pair.second.GetExplicit()).value_or(-1);
+      } else if (pair.first == "element_kind") {
+        vecElemKind =
+            Fortran::evaluate::ToInt64(pair.second.GetExplicit()).value_or(0);
+      }
+    }
+
+    assert((vecElemCategory >= 0 &&
+               static_cast<size_t>(vecElemCategory) <
+                   Fortran::common::VectorElementCategory_enumSize) &&
+        "Vector element type is not specified");
+    assert(vecElemKind && "Vector element kind is not specified");
+
+    ss << "vector(";
+    switch (static_cast<common::VectorElementCategory>(vecElemCategory)) {
+      SWITCH_COVERS_ALL_CASES
+    case common::VectorElementCategory::Integer:
+      ss << "integer(" << vecElemKind << ")";
+      break;
+    case common::VectorElementCategory::Unsigned:
+      ss << "unsigned(" << vecElemKind << ")";
+      break;
+    case common::VectorElementCategory::Real:
+      ss << "real(" << vecElemKind << ")";
+      break;
+    }
+    ss << ")";
+    break;
+  }
+  case (Fortran::semantics::DerivedTypeSpec::Category::PairVector):
+    ss << "__vector_pair";
+    break;
+  case (Fortran::semantics::DerivedTypeSpec::Category::QuadVector):
+    ss << "__vector_quad";
+    break;
+  case (Fortran::semantics::DerivedTypeSpec::Category::DerivedType):
+    Fortran::common::die("Vector element type not implemented");
+  }
+  return ss.str();
 }
 
 std::string DerivedTypeSpec::AsFortran() const {
@@ -774,6 +860,8 @@ std::string DeclTypeSpec::AsFortran() const {
             .get<DerivedTypeDetails>()
             .isDECStructure()) {
       return "RECORD" + derivedTypeSpec().typeSymbol().name().ToString();
+    } else if (derivedTypeSpec().IsVectorType()) {
+      return derivedTypeSpec().VectorTypeAsFortran();
     } else {
       return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
     }
@@ -788,6 +876,12 @@ std::string DeclTypeSpec::AsFortran() const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DeclTypeSpec &x) {
   return o << x.AsFortran();
+}
+
+bool IsInteroperableIntrinsicType(
+    const DeclTypeSpec &type, const common::LanguageFeatureControl &features) {
+  auto dyType{evaluate::DynamicType::From(type)};
+  return dyType && IsInteroperableIntrinsicType(*dyType, &features);
 }
 
 } // namespace Fortran::semantics

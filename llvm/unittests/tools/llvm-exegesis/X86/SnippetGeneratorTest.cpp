@@ -73,10 +73,10 @@ TEST_F(X86SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughImplicitReg) 
   // - hasAliasingImplicitRegisters (execution is always serial)
   // - hasAliasingRegisters
   const unsigned Opcode = X86::ADC16i16;
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitDefs()[0], X86::AX);
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitDefs()[1], X86::EFLAGS);
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitUses()[0], X86::AX);
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitUses()[1], X86::EFLAGS);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_defs()[0], X86::AX);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_defs()[1], X86::EFLAGS);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_uses()[0], X86::AX);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_uses()[1], X86::EFLAGS);
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
   const auto &CT = CodeTemplates[0];
@@ -99,7 +99,7 @@ TEST_F(X86SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughTiedRegs) {
   // - hasTiedRegisters (execution is always serial)
   // - hasAliasingRegisters
   const unsigned Opcode = X86::ADD16ri;
-  EXPECT_THAT(InstrInfo.get(Opcode).getImplicitDefs()[0], X86::EFLAGS);
+  EXPECT_THAT(InstrInfo.get(Opcode).implicit_defs()[0], X86::EFLAGS);
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
   const auto &CT = CodeTemplates[0];
@@ -155,6 +155,39 @@ TEST_F(X86SerialSnippetGeneratorTest,
       Generator.generateCodeTemplates(&Instr, AllRegisters).takeError();
   EXPECT_TRUE((bool)Error);
   consumeError(std::move(Error));
+}
+
+TEST_F(X86SerialSnippetGeneratorTest,
+       ImplicitSelfDependencyThroughExplicitRegsForbidAlmostAll) {
+  // - VXORPSrr
+  // - Op0 Explicit Def RegClass(VR128)
+  // - Op1 Explicit Use RegClass(VR128)
+  // - Op2 Explicit Use RegClass(VR128)
+  // - Var0 [Op0]
+  // - Var1 [Op1]
+  // - Var2 [Op2]
+  // - hasAliasingRegisters
+  const unsigned Opcode = X86::VXORPSrr;
+  randomGenerator().seed(0); // Initialize seed.
+  const Instruction &Instr = State.getIC().getInstr(Opcode);
+  auto ForbiddenRegisters = State.getRATC().emptyRegisters();
+  ForbiddenRegisters.flip();
+  ForbiddenRegisters.reset(X86::XMM0);
+  auto Error = Generator.generateCodeTemplates(&Instr, ForbiddenRegisters);
+  EXPECT_FALSE((bool)Error.takeError());
+  auto CodeTemplates = std::move(Error.get());
+  ASSERT_THAT(CodeTemplates, SizeIs(Gt(0U))) << "Templates are available";
+  for (const auto &CT : CodeTemplates) {
+    EXPECT_THAT(CT.Execution, ExecutionMode::SERIAL_VIA_EXPLICIT_REGS);
+    ASSERT_THAT(CT.Instructions, SizeIs(1));
+    const InstructionTemplate &IT = CT.Instructions[0];
+    EXPECT_THAT(IT.getOpcode(), Opcode);
+    ASSERT_THAT(IT.getVariableValues(), SizeIs(3));
+    for (const auto &Var : IT.getVariableValues()) {
+      if (Var.isReg())
+        EXPECT_FALSE(ForbiddenRegisters[Var.getReg()]);
+    }
+  }
 }
 
 TEST_F(X86SerialSnippetGeneratorTest, DependencyThroughOtherOpcode) {

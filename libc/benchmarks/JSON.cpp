@@ -105,7 +105,7 @@ static Error fromJson(const json::Value &V,
                              "Can't parse BenchmarkLog, not a String");
   const auto String = *V.getAsString();
   auto Parsed =
-      llvm::StringSwitch<Optional<libc_benchmarks::BenchmarkLog>>(String)
+      llvm::StringSwitch<std::optional<libc_benchmarks::BenchmarkLog>>(String)
           .Case("None", libc_benchmarks::BenchmarkLog::None)
           .Case("Last", libc_benchmarks::BenchmarkLog::Last)
           .Case("Full", libc_benchmarks::BenchmarkLog::Full)

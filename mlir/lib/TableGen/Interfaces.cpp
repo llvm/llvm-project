@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Interfaces.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -74,14 +76,44 @@ Interface::Interface(const llvm::Record *def) : def(def) {
   assert(def->isSubClassOf("Interface") &&
          "must be subclass of TableGen 'Interface' class");
 
+  // Initialize the interface methods.
   auto *listInit = dyn_cast<llvm::ListInit>(def->getValueInit("methods"));
   for (llvm::Init *init : listInit->getValues())
     methods.emplace_back(cast<llvm::DefInit>(init)->getDef());
+
+  // Initialize the interface base classes.
+  auto *basesInit =
+      dyn_cast<llvm::ListInit>(def->getValueInit("baseInterfaces"));
+  // Chained inheritance will produce duplicates in the base interface set.
+  StringSet<> basesAdded;
+  llvm::unique_function<void(Interface)> addBaseInterfaceFn =
+      [&](const Interface &baseInterface) {
+        // Inherit any base interfaces.
+        for (const auto &baseBaseInterface : baseInterface.getBaseInterfaces())
+          addBaseInterfaceFn(baseBaseInterface);
+
+        // Add the base interface.
+        if (basesAdded.contains(baseInterface.getName()))
+          return;
+        baseInterfaces.push_back(std::make_unique<Interface>(baseInterface));
+        basesAdded.insert(baseInterface.getName());
+      };
+  for (llvm::Init *init : basesInit->getValues())
+    addBaseInterfaceFn(Interface(cast<llvm::DefInit>(init)->getDef()));
 }
 
 // Return the name of this interface.
 StringRef Interface::getName() const {
   return def->getValueAsString("cppInterfaceName");
+}
+
+// Returns this interface's name prefixed with namespaces.
+std::string Interface::getFullyQualifiedName() const {
+  StringRef cppNamespace = getCppNamespace();
+  StringRef name = getName();
+  if (cppNamespace.empty())
+    return name.str();
+  return (cppNamespace + "::" + name).str();
 }
 
 // Return the C++ namespace of this interface.
@@ -113,6 +145,11 @@ std::optional<StringRef> Interface::getExtraTraitClassDeclaration() const {
 // Return the shared extra class declaration code.
 std::optional<StringRef> Interface::getExtraSharedClassDeclaration() const {
   auto value = def->getValueAsString("extraSharedClassDeclaration");
+  return value.empty() ? std::optional<StringRef>() : value;
+}
+
+std::optional<StringRef> Interface::getExtraClassOf() const {
+  auto value = def->getValueAsString("extraClassOf");
   return value.empty() ? std::optional<StringRef>() : value;
 }
 

@@ -7,12 +7,12 @@ target triple = "armv7--linux-gnueabi"
 ; CHECK: vmovl.u8	[[QREG:q[0-9]+]], [[DREG]]
 ; CHECK: vmovl.u16	[[QREG]], [[DREG]]
 
-define void @f(i32 %dstStride, i8* %indvars.iv, <2 x i8>* %zz) {
+define void @f(i32 %dstStride, ptr %indvars.iv, ptr %zz) {
 entry:
   br label %for.body
 
 for.body:
-  %tmp = load <2 x i8>, <2 x i8>* %zz, align 1
+  %tmp = load <2 x i8>, ptr %zz, align 1
   %tmp1 = extractelement <2 x i8> %tmp, i32 0
   %.lhs.rhs = zext i8 %tmp1 to i32
   call void @g(i32 %.lhs.rhs)

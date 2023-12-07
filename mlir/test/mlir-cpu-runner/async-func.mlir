@@ -1,13 +1,15 @@
-// RUN:   mlir-opt %s -pass-pipeline="builtin.module(async-func-to-async-runtime,async-to-async-runtime,func.func(async-runtime-ref-counting,async-runtime-ref-counting-opt),convert-async-to-llvm,func.func(convert-linalg-to-loops,convert-scf-to-cf),convert-linalg-to-llvm,convert-vector-to-llvm,func.func(convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" \
+// RUN:   mlir-opt %s -pass-pipeline="builtin.module(async-func-to-async-runtime,async-to-async-runtime,func.func(async-runtime-ref-counting,async-runtime-ref-counting-opt),convert-async-to-llvm,test-lower-to-llvm)" \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
-// RUN:     -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext  \
-// RUN:     -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext    \
-// RUN:     -shared-libs=%mlir_lib_dir/libmlir_async_runtime%shlibext   \
+// RUN:     -shared-libs=%mlir_c_runner_utils  \
+// RUN:     -shared-libs=%mlir_runner_utils    \
+// RUN:     -shared-libs=%mlir_async_runtime   \
 // RUN: | FileCheck %s --dump-input=always
 
 // FIXME: https://github.com/llvm/llvm-project/issues/57231
 // UNSUPPORTED: hwasan
+// FIXME: Windows does not have aligned_alloc
+// UNSUPPORTED: system-windows
 
 async.func @async_func_empty() -> !async.token {
   return
@@ -61,6 +63,19 @@ async.func @async_func_passed_memref(%arg0 : !async.value<memref<f32>>) -> !asyn
   %0 = memref.load %unwrapped[] : memref<f32>
   %1 = arith.addf %0, %0 : f32
   memref.store %1, %unwrapped[] : memref<f32>
+  return
+}
+
+async.func @async_execute_in_async_func(%arg0 : !async.value<memref<f32>>) -> !async.token {
+  %token0 = async.execute {
+    %unwrapped = async.await %arg0 : !async.value<memref<f32>>
+    %0 = memref.load %unwrapped[] : memref<f32>
+    %1 = arith.addf %0, %0 : f32
+    memref.store %1, %unwrapped[] : memref<f32>
+    async.yield
+  }
+
+  async.await %token0 : !async.token
   return
 }
 
@@ -138,6 +153,17 @@ func.func @main() {
   // CHECK: Unranked Memref
   // CHECK-SAME: rank = 0 offset = 0 sizes = [] strides = []
   // CHECK-NEXT: [0.5]
+  call @printMemrefF32(%6) : (memref<*xf32>) -> ()
+
+  // ------------------------------------------------------------------------ //
+  // async.execute inside async.func
+  // ------------------------------------------------------------------------ //
+  %token4 = async.call @async_execute_in_async_func(%result1) : (!async.value<memref<f32>>) -> !async.token
+  async.await %token4 : !async.token
+
+  // CHECK: Unranked Memref
+  // CHECK-SAME: rank = 0 offset = 0 sizes = [] strides = []
+  // CHECK-NEXT: [1]
   call @printMemrefF32(%6) : (memref<*xf32>) -> ()
 
   memref.dealloc %5 : memref<f32>

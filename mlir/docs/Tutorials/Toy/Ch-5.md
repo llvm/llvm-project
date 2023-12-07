@@ -64,7 +64,7 @@ void ToyToAffineLoweringPass::runOnOperation() {
   // We define the specific operations, or dialects, that are legal targets for
   // this lowering. In our case, we are lowering to a combination of the
   // `Affine`, `Arith`, `Func`, and `MemRef` dialects.
-  target.addLegalDialect<AffineDialect, arith::ArithDialect,
+  target.addLegalDialect<affine::AffineDialect, arith::ArithDialect,
                          func::FuncDialect, memref::MemRefDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
@@ -297,8 +297,8 @@ func.func @main() {
 Our naive lowering is correct, but it leaves a lot to be desired with regards to
 efficiency. For example, the lowering of `toy.mul` has generated some redundant
 loads. Let's look at how adding a few existing optimizations to the pipeline can
-help clean this up. Adding the `LoopFusion` and `MemRefDataFlowOpt` passes to
-the pipeline gives the following result:
+help clean this up. Adding the `LoopFusion` and `AffineScalarReplacement` passes
+to the pipeline gives the following result:
 
 ```mlir
 func.func @main() {

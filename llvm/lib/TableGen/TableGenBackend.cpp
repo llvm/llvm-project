@@ -13,11 +13,20 @@
 #include "llvm/TableGen/TableGenBackend.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
+#include <cstddef>
 
 using namespace llvm;
 
 const size_t MAX_LINE_LEN = 80U;
+
+namespace llvm::TableGen::Emitter {
+ManagedStatic<cl::opt<FnT>, OptCreatorT> Action;
+void *OptCreatorT::call() {
+  return new cl::opt<FnT>(cl::desc("Action to perform:"));
+}
+} // namespace llvm::TableGen::Emitter
 
 static void printLine(raw_ostream &OS, const Twine &Prefix, char Fill,
                       StringRef Suffix) {

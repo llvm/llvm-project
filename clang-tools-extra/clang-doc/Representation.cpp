@@ -54,51 +54,16 @@ int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
   return -1;
 }
 
-void reduceChildren(std::vector<Reference> &Children,
-                    std::vector<Reference> &&ChildrenToMerge) {
+template <typename T>
+void reduceChildren(std::vector<T> &Children,
+                    std::vector<T> &&ChildrenToMerge) {
   for (auto &ChildToMerge : ChildrenToMerge) {
-    int mergeIdx = getChildIndexIfExists(Children, ChildToMerge);
-    if (mergeIdx == -1) {
+    int MergeIdx = getChildIndexIfExists(Children, ChildToMerge);
+    if (MergeIdx == -1) {
       Children.push_back(std::move(ChildToMerge));
       continue;
     }
-    Children[mergeIdx].merge(std::move(ChildToMerge));
-  }
-}
-
-void reduceChildren(std::vector<FunctionInfo> &Children,
-                    std::vector<FunctionInfo> &&ChildrenToMerge) {
-  for (auto &ChildToMerge : ChildrenToMerge) {
-    int mergeIdx = getChildIndexIfExists(Children, ChildToMerge);
-    if (mergeIdx == -1) {
-      Children.push_back(std::move(ChildToMerge));
-      continue;
-    }
-    Children[mergeIdx].merge(std::move(ChildToMerge));
-  }
-}
-
-void reduceChildren(std::vector<EnumInfo> &Children,
-                    std::vector<EnumInfo> &&ChildrenToMerge) {
-  for (auto &ChildToMerge : ChildrenToMerge) {
-    int mergeIdx = getChildIndexIfExists(Children, ChildToMerge);
-    if (mergeIdx == -1) {
-      Children.push_back(std::move(ChildToMerge));
-      continue;
-    }
-    Children[mergeIdx].merge(std::move(ChildToMerge));
-  }
-}
-
-void reduceChildren(std::vector<TypedefInfo> &Children,
-                    std::vector<TypedefInfo> &&ChildrenToMerge) {
-  for (auto &ChildToMerge : ChildrenToMerge) {
-    int mergeIdx = getChildIndexIfExists(Children, ChildToMerge);
-    if (mergeIdx == -1) {
-      Children.push_back(std::move(ChildToMerge));
-      continue;
-    }
-    Children[mergeIdx].merge(std::move(ChildToMerge));
+    Children[MergeIdx].merge(std::move(ChildToMerge));
   }
 }
 
@@ -126,6 +91,41 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unexpected info type");
   }
+}
+
+bool CommentInfo::operator==(const CommentInfo &Other) const {
+  auto FirstCI = std::tie(Kind, Text, Name, Direction, ParamName, CloseName,
+                          SelfClosing, Explicit, AttrKeys, AttrValues, Args);
+  auto SecondCI =
+      std::tie(Other.Kind, Other.Text, Other.Name, Other.Direction,
+               Other.ParamName, Other.CloseName, Other.SelfClosing,
+               Other.Explicit, Other.AttrKeys, Other.AttrValues, Other.Args);
+
+  if (FirstCI != SecondCI || Children.size() != Other.Children.size())
+    return false;
+
+  return std::equal(Children.begin(), Children.end(), Other.Children.begin(),
+                    llvm::deref<std::equal_to<>>{});
+}
+
+bool CommentInfo::operator<(const CommentInfo &Other) const {
+  auto FirstCI = std::tie(Kind, Text, Name, Direction, ParamName, CloseName,
+                          SelfClosing, Explicit, AttrKeys, AttrValues, Args);
+  auto SecondCI =
+      std::tie(Other.Kind, Other.Text, Other.Name, Other.Direction,
+               Other.ParamName, Other.CloseName, Other.SelfClosing,
+               Other.Explicit, Other.AttrKeys, Other.AttrValues, Other.Args);
+
+  if (FirstCI < SecondCI)
+    return true;
+
+  if (FirstCI == SecondCI) {
+    return std::lexicographical_compare(
+        Children.begin(), Children.end(), Other.Children.begin(),
+        Other.Children.end(), llvm::deref<std::less<>>());
+  }
+
+  return false;
 }
 
 static llvm::SmallString<64>
@@ -220,6 +220,9 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
   mergeBase(std::move(Other));
 }
 
+NamespaceInfo::NamespaceInfo(SymbolID USR, StringRef Name, StringRef Path)
+      : Info(InfoType::IT_namespace, USR, Name, Path) {}
+
 void NamespaceInfo::merge(NamespaceInfo &&Other) {
   assert(mergeable(Other));
   // Reduce children if necessary.
@@ -230,6 +233,9 @@ void NamespaceInfo::merge(NamespaceInfo &&Other) {
   reduceChildren(Children.Typedefs, std::move(Other.Children.Typedefs));
   mergeBase(std::move(Other));
 }
+
+RecordInfo::RecordInfo(SymbolID USR, StringRef Name, StringRef Path)
+    : SymbolInfo(InfoType::IT_record, USR, Name, Path) {}
 
 void RecordInfo::merge(RecordInfo &&Other) {
   assert(mergeable(Other));
@@ -288,6 +294,14 @@ void TypedefInfo::merge(TypedefInfo &&Other) {
     Underlying = Other.Underlying;
   SymbolInfo::merge(std::move(Other));
 }
+
+BaseRecordInfo::BaseRecordInfo() : RecordInfo() {}
+
+BaseRecordInfo::BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path,
+                               bool IsVirtual, AccessSpecifier Access,
+                               bool IsParent)
+    : RecordInfo(USR, Name, Path), IsVirtual(IsVirtual), Access(Access),
+      IsParent(IsParent) {}
 
 llvm::SmallString<16> Info::extractName() const {
   if (!Name.empty())

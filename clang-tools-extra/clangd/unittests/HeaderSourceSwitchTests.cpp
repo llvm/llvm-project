@@ -16,6 +16,7 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -30,7 +31,7 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
   FS.Files[FooCpp];
   FS.Files[FooH];
   FS.Files[Invalid];
-  Optional<Path> PathResult =
+  std::optional<Path> PathResult =
       getCorrespondingHeaderOrSource(FooCpp, FS.view(std::nullopt));
   EXPECT_TRUE(PathResult.has_value());
   ASSERT_EQ(*PathResult, FooH);
@@ -141,7 +142,7 @@ TEST(HeaderSourceSwitchTest, FromHeaderToSource) {
   // Test for switch from .h header to .cc source
   struct {
     llvm::StringRef HeaderCode;
-    llvm::Optional<std::string> ExpectedSource;
+    std::optional<std::string> ExpectedSource;
   } TestCases[] = {
       {"// empty, no header found", std::nullopt},
       {R"cpp(
@@ -210,7 +211,7 @@ TEST(HeaderSourceSwitchTest, FromSourceToHeader) {
   // Test for switching from .cc source file to .h header.
   struct {
     llvm::StringRef SourceCode;
-    llvm::Optional<std::string> ExpectedResult;
+    std::optional<std::string> ExpectedResult;
   } TestCases[] = {
       {"// empty, no header found", std::nullopt},
       {R"cpp(

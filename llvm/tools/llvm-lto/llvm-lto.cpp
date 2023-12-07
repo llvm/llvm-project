@@ -481,12 +481,11 @@ static void printMachOCPUOnly() {
 /// currently available via the gold plugin via -thinlto.
 static void createCombinedModuleSummaryIndex() {
   ModuleSummaryIndex CombinedIndex(/*HaveGVs=*/false);
-  uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
     ExitOnError ExitOnErr("llvm-lto: error loading file '" + Filename + "': ");
     std::unique_ptr<MemoryBuffer> MB =
         ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(Filename)));
-    ExitOnErr(readModuleSummaryIndex(*MB, CombinedIndex, NextModuleId++));
+    ExitOnErr(readModuleSummaryIndex(*MB, CombinedIndex));
   }
   // In order to use this index for testing, specifically import testing, we
   // need to update any indirect call edges created from SamplePGO, so that they
@@ -516,11 +515,10 @@ static void getThinLTOOldAndNewPrefix(std::string &OldPrefix,
 /// Given the original \p Path to an output file, replace any path
 /// prefix matching \p OldPrefix with \p NewPrefix. Also, create the
 /// resulting directory if it does not yet exist.
-static std::string getThinLTOOutputFile(const std::string &Path,
-                                        const std::string &OldPrefix,
-                                        const std::string &NewPrefix) {
+static std::string getThinLTOOutputFile(StringRef Path, StringRef OldPrefix,
+                                        StringRef NewPrefix) {
   if (OldPrefix.empty() && NewPrefix.empty())
-    return Path;
+    return std::string(Path);
   SmallString<128> NewPath(Path);
   llvm::sys::path::replace_path_prefix(NewPath, OldPrefix, NewPrefix);
   StringRef ParentPath = llvm::sys::path::parent_path(NewPath.str());

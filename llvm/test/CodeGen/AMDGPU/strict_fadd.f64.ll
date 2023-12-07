@@ -13,7 +13,6 @@ define double @v_constained_fadd_f64_fpexcept_strict(double %x, double %y) #0 {
 ; GFX10-LABEL: v_constained_fadd_f64_fpexcept_strict:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val = call double @llvm.experimental.constrained.fadd.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -30,7 +29,6 @@ define double @v_constained_fadd_f64_fpexcept_ignore(double %x, double %y) #0 {
 ; GFX10-LABEL: v_constained_fadd_f64_fpexcept_ignore:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val = call double @llvm.experimental.constrained.fadd.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -47,7 +45,6 @@ define double @v_constained_fadd_f64_fpexcept_maytrap(double %x, double %y) #0 {
 ; GFX10-LABEL: v_constained_fadd_f64_fpexcept_maytrap:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val = call double @llvm.experimental.constrained.fadd.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
@@ -65,7 +62,6 @@ define <2 x double> @v_constained_fadd_v2f64_fpexcept_strict(<2 x double> %x, <2
 ; GFX10-LABEL: v_constained_fadd_v2f64_fpexcept_strict:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f64 v[0:1], v[0:1], v[4:5]
 ; GFX10-NEXT:    v_add_f64 v[2:3], v[2:3], v[6:7]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -84,7 +80,6 @@ define <2 x double> @v_constained_fadd_v2f64_fpexcept_ignore(<2 x double> %x, <2
 ; GFX10-LABEL: v_constained_fadd_v2f64_fpexcept_ignore:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f64 v[0:1], v[0:1], v[4:5]
 ; GFX10-NEXT:    v_add_f64 v[2:3], v[2:3], v[6:7]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -103,7 +98,6 @@ define <2 x double> @v_constained_fadd_v2f64_fpexcept_maytrap(<2 x double> %x, <
 ; GFX10-LABEL: v_constained_fadd_v2f64_fpexcept_maytrap:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f64 v[0:1], v[0:1], v[4:5]
 ; GFX10-NEXT:    v_add_f64 v[2:3], v[2:3], v[6:7]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -123,7 +117,6 @@ define <3 x double> @v_constained_fadd_v3f64_fpexcept_strict(<3 x double> %x, <3
 ; GFX10-LABEL: v_constained_fadd_v3f64_fpexcept_strict:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f64 v[0:1], v[0:1], v[6:7]
 ; GFX10-NEXT:    v_add_f64 v[2:3], v[2:3], v[8:9]
 ; GFX10-NEXT:    v_add_f64 v[4:5], v[4:5], v[10:11]

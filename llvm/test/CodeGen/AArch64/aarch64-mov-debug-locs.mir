@@ -4,7 +4,7 @@
 #
 # This test is for the problem from https://bugs.llvm.org/show_bug.cgi?id=38714.
 # 
-# Specifically, Simple Register Coalescing creates following conversion :
+# Specifically, Register Coalescer creates following conversion :
 #
 # undef %0.sub_32:gpr64 = ORRWrs $wzr, %3:gpr32common, 0, debug-location !24;
 #

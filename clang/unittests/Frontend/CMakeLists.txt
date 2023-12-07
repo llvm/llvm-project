@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Support
+  TargetParser
   )
 
 add_clang_unittest(FrontendTests
@@ -11,6 +12,7 @@ add_clang_unittest(FrontendTests
   CodeGenActionTest.cpp
   ParsedSourceLocationTest.cpp
   PCHPreambleTest.cpp
+  ReparseWorkingDirTest.cpp
   OutputStreamTest.cpp
   TextDiagnosticTest.cpp
   UtilsTest.cpp

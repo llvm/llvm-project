@@ -16,7 +16,7 @@ entry:
   ]
 
 sw.bb:                                            ; preds = %entry
-  tail call void bitcast (void (...)* @baz1 to void ()*)() nounwind
+  tail call void @baz1() nounwind
   br label %sw.epilog
 
 sw.bb1:                                           ; preds = %entry

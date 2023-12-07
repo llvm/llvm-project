@@ -5,8 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // REQUIRES: long_tests
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // <random>
 
@@ -15,9 +16,11 @@
 
 // template<class _URNG> result_type operator()(_URNG& g);
 
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
 #include <random>
 #include <vector>
-#include <cassert>
 
 #include "test_macros.h"
 
@@ -305,8 +308,8 @@ int main(int, char**) {
     tests<unsigned long long>();
 
 #if defined(_LIBCPP_VERSION) // extension
-    tests<int8_t>();
-    tests<uint8_t>();
+    tests<std::int8_t>();
+    tests<std::uint8_t>();
 #if !defined(TEST_HAS_NO_INT128)
     tests<__int128_t>();
     tests<__uint128_t>();

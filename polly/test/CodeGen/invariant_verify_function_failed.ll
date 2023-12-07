@@ -23,8 +23,8 @@ if.end:                                           ; preds = %entry
   br i1 undef, label %land.lhs.true, label %if.end.18
 
 land.lhs.true:                                    ; preds = %if.end
-  %call9 = tail call i32* @__errno_location() #2
-  %tmp = load i32, i32* %call9, align 4, !tbaa !1
+  %call9 = tail call ptr @__errno_location() #2
+  %tmp = load i32, ptr %call9, align 4, !tbaa !1
   br i1 false, label %if.then.12, label %if.end.18
 
 if.then.12:                                       ; preds = %land.lhs.true
@@ -45,7 +45,7 @@ cleanup:                                          ; preds = %if.end.27, %entry
 }
 
 ; Function Attrs: nounwind readnone
-declare i32* @__errno_location() #1
+declare ptr @__errno_location() #1
 
 attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }

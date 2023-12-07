@@ -38,8 +38,9 @@ class TestContinue(GDBRemoteTestBase):
         self.runCmd("platform select remote-linux")
         target = self.createTarget("a.yaml")
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateExited])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateExited]
+        )
         self.assertPacketLogContains(["vCont;C13:401"])
 
     def test_continue_no_vCont(self):
@@ -57,8 +58,9 @@ class TestContinue(GDBRemoteTestBase):
         self.runCmd("platform select remote-linux")
         target = self.createTarget("a.yaml")
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateExited])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateExited]
+        )
         self.assertPacketLogContains(["Hc401", "C13"])
 
     def test_continue_multiprocess(self):
@@ -69,6 +71,7 @@ class TestContinue(GDBRemoteTestBase):
         self.runCmd("platform select remote-linux")
         target = self.createTarget("a.yaml")
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateExited])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateExited]
+        )
         self.assertPacketLogContains(["vCont;C13:p400.401"])

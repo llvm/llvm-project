@@ -102,3 +102,19 @@ TEST(Perf, RealLogicalCoreIDs) {
   ASSERT_TRUE((bool)cpu_ids);
   ASSERT_GT((int)cpu_ids->size(), 0) << "We must see at least one core";
 }
+
+TEST(Perf, RealPtraceScope) {
+  // We first check we can read /proc/sys/kernel/yama/ptrace_scope
+  auto buffer_or_error =
+      errorOrToExpected(getProcFile("sys/kernel/yama/ptrace_scope"));
+  if (!buffer_or_error)
+    GTEST_SKIP() << toString(buffer_or_error.takeError());
+
+  // At this point we shouldn't fail parsing the ptrace_scope value.
+  Expected<int> ptrace_scope = GetPtraceScope();
+  ASSERT_TRUE((bool)ptrace_scope) << ptrace_scope.takeError();
+  ASSERT_GE(*ptrace_scope, 0)
+      << "Sensible values of ptrace_scope are between 0 and 3";
+  ASSERT_LE(*ptrace_scope, 3)
+      << "Sensible values of ptrace_scope are between 0 and 3";
+}

@@ -13,9 +13,7 @@
 #include <string>
 #include <vector>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 /// This check looks for cases when inserting new element into std::vector but
 /// the element is constructed temporarily.
@@ -45,8 +43,6 @@ private:
   const std::vector<StringRef> EmplacyFunctions;
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USE_EMPLACE_H

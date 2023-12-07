@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+unaligned-access-mode < %s | FileCheck --check-prefix=GFX11 %s
 
 ; Should not merge this to a dword load
-define i32 @global_load_2xi16_align2(i16 addrspace(1)* %p) #0 {
+define i32 @global_load_2xi16_align2(ptr addrspace(1) %p) #0 {
 ; GFX7-ALIGNED-LABEL: global_load_2xi16_align2:
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -23,49 +23,33 @@ define i32 @global_load_2xi16_align2(i16 addrspace(1)* %p) #0 {
 ; GFX7-UNALIGNED-LABEL: global_load_2xi16_align2:
 ; GFX7-UNALIGNED:       ; %bb.0:
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-UNALIGNED-NEXT:    v_add_i32_e32 v2, vcc, 2, v0
-; GFX7-UNALIGNED-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; GFX7-UNALIGNED-NEXT:    flat_load_ushort v2, v[2:3]
-; GFX7-UNALIGNED-NEXT:    flat_load_ushort v0, v[0:1]
-; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(1)
-; GFX7-UNALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
+; GFX7-UNALIGNED-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-UNALIGNED-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_load_2xi16_align2:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v2, v[0:1], off
-; GFX9-NEXT:    global_load_ushort v3, v[0:1], off offset:2
+; GFX9-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshl_or_b32 v0, v3, 16, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_load_2xi16_align2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    global_load_ushort v2, v[0:1], off
-; GFX10-NEXT:    global_load_ushort v3, v[0:1], off offset:2
+; GFX10-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_lshl_or_b32 v0, v3, 16, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: global_load_2xi16_align2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_load_u16 v2, v[0:1], off
-; GFX11-NEXT:    global_load_u16 v0, v[0:1], off offset:2
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep.p = getelementptr i16, i16 addrspace(1)* %p, i64 1
-  %p.0 = load i16, i16 addrspace(1)* %p, align 2
-  %p.1 = load i16, i16 addrspace(1)* %gep.p, align 2
+  %gep.p = getelementptr i16, ptr addrspace(1) %p, i64 1
+  %p.0 = load i16, ptr addrspace(1) %p, align 2
+  %p.1 = load i16, ptr addrspace(1) %gep.p, align 2
   %zext.0 = zext i16 %p.0 to i32
   %zext.1 = zext i16 %p.1 to i32
   %shl.1 = shl i32 %zext.1, 16
@@ -74,7 +58,7 @@ define i32 @global_load_2xi16_align2(i16 addrspace(1)* %p) #0 {
 }
 
 ; Should not merge this to a dword store
-define amdgpu_kernel void @global_store_2xi16_align2(i16 addrspace(1)* %p, i16 addrspace(1)* %r) #0 {
+define amdgpu_kernel void @global_store_2xi16_align2(ptr addrspace(1) %p, ptr addrspace(1) %r) #0 {
 ; GFX7-ALIGNED-LABEL: global_store_2xi16_align2:
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
@@ -94,60 +78,48 @@ define amdgpu_kernel void @global_store_2xi16_align2(i16 addrspace(1)* %p, i16 a
 ; GFX7-UNALIGNED-LABEL: global_store_2xi16_align2:
 ; GFX7-UNALIGNED:       ; %bb.0:
 ; GFX7-UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
-; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v2, 1
+; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v2, 0x20001
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
-; GFX7-UNALIGNED-NEXT:    s_add_u32 s2, s0, 2
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-UNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX7-UNALIGNED-NEXT:    flat_store_short v[0:1], v2
-; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v0, s2
-; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v2, 2
-; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v1, s3
-; GFX7-UNALIGNED-NEXT:    flat_store_short v[0:1], v2
+; GFX7-UNALIGNED-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-UNALIGNED-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: global_store_2xi16_align2:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    v_mov_b32_e32 v1, 1
-; GFX9-NEXT:    v_mov_b32_e32 v2, 2
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x20001
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX9-NEXT:    global_store_short v0, v2, s[0:1] offset:2
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: global_store_2xi16_align2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    v_mov_b32_e32 v1, 1
-; GFX10-NEXT:    v_mov_b32_e32 v2, 2
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0x20001
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX10-NEXT:    global_store_short v0, v2, s[0:1] offset:2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_store_2xi16_align2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 1
-; GFX11-NEXT:    v_mov_b32_e32 v2, 2
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    global_store_b16 v0, v2, s[0:1] offset:2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep.r = getelementptr i16, i16 addrspace(1)* %r, i64 1
-  store i16 1, i16 addrspace(1)* %r, align 2
-  store i16 2, i16 addrspace(1)* %gep.r, align 2
+  %gep.r = getelementptr i16, ptr addrspace(1) %r, i64 1
+  store i16 1, ptr addrspace(1) %r, align 2
+  store i16 2, ptr addrspace(1) %gep.r, align 2
   ret void
 }
 
 ; Should produce align 1 dword when legal
-define i32 @global_load_2xi16_align1(i16 addrspace(1)* %p) #0 {
+define i32 @global_load_2xi16_align1(ptr addrspace(1) %p) #0 {
 ; GFX7-ALIGNED-LABEL: global_load_2xi16_align1:
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -190,7 +162,6 @@ define i32 @global_load_2xi16_align1(i16 addrspace(1)* %p) #0 {
 ; GFX10-LABEL: global_load_2xi16_align1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -198,13 +169,12 @@ define i32 @global_load_2xi16_align1(i16 addrspace(1)* %p) #0 {
 ; GFX11-LABEL: global_load_2xi16_align1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep.p = getelementptr i16, i16 addrspace(1)* %p, i64 1
-  %p.0 = load i16, i16 addrspace(1)* %p, align 1
-  %p.1 = load i16, i16 addrspace(1)* %gep.p, align 1
+  %gep.p = getelementptr i16, ptr addrspace(1) %p, i64 1
+  %p.0 = load i16, ptr addrspace(1) %p, align 1
+  %p.1 = load i16, ptr addrspace(1) %gep.p, align 1
   %zext.0 = zext i16 %p.0 to i32
   %zext.1 = zext i16 %p.1 to i32
   %shl.1 = shl i32 %zext.1, 16
@@ -213,7 +183,7 @@ define i32 @global_load_2xi16_align1(i16 addrspace(1)* %p) #0 {
 }
 
 ; Should produce align 1 dword when legal
-define amdgpu_kernel void @global_store_2xi16_align1(i16 addrspace(1)* %p, i16 addrspace(1)* %r) #0 {
+define amdgpu_kernel void @global_store_2xi16_align1(ptr addrspace(1) %p, ptr addrspace(1) %r) #0 {
 ; GFX7-ALIGNED-LABEL: global_store_2xi16_align1:
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
@@ -275,16 +245,17 @@ define amdgpu_kernel void @global_store_2xi16_align1(i16 addrspace(1)* %p, i16 a
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep.r = getelementptr i16, i16 addrspace(1)* %r, i64 1
-  store i16 1, i16 addrspace(1)* %r, align 1
-  store i16 2, i16 addrspace(1)* %gep.r, align 1
+  %gep.r = getelementptr i16, ptr addrspace(1) %r, i64 1
+  store i16 1, ptr addrspace(1) %r, align 1
+  store i16 2, ptr addrspace(1) %gep.r, align 1
   ret void
 }
 
 ; Should merge this to a dword load
-define i32 @global_load_2xi16_align4(i16 addrspace(1)* %p) #0 {
+define i32 @global_load_2xi16_align4(ptr addrspace(1) %p) #0 {
 ; GFX7-ALIGNED-LABEL: global_load_2xi16_align4:
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -309,7 +280,6 @@ define i32 @global_load_2xi16_align4(i16 addrspace(1)* %p) #0 {
 ; GFX10-LABEL: global_load_2xi16_align4:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -317,13 +287,12 @@ define i32 @global_load_2xi16_align4(i16 addrspace(1)* %p) #0 {
 ; GFX11-LABEL: global_load_2xi16_align4:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep.p = getelementptr i16, i16 addrspace(1)* %p, i64 1
-  %p.0 = load i16, i16 addrspace(1)* %p, align 4
-  %p.1 = load i16, i16 addrspace(1)* %gep.p, align 2
+  %gep.p = getelementptr i16, ptr addrspace(1) %p, i64 1
+  %p.0 = load i16, ptr addrspace(1) %p, align 4
+  %p.1 = load i16, ptr addrspace(1) %gep.p, align 2
   %zext.0 = zext i16 %p.0 to i32
   %zext.1 = zext i16 %p.1 to i32
   %shl.1 = shl i32 %zext.1, 16
@@ -332,17 +301,7 @@ define i32 @global_load_2xi16_align4(i16 addrspace(1)* %p) #0 {
 }
 
 ; Should merge this to a dword store
-define amdgpu_kernel void @global_store_2xi16_align4(i16 addrspace(1)* %p, i16 addrspace(1)* %r) #0 {
-; GFX7-LABEL: global_store_2xi16_align4:
-; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
-; GFX7-NEXT:    v_mov_b32_e32 v2, 0x20001
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s0
-; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    flat_store_dword v[0:1], v2
-; GFX7-NEXT:    s_endpgm
-;
+define amdgpu_kernel void @global_store_2xi16_align4(ptr addrspace(1) %p, ptr addrspace(1) %r) #0 {
 ; GFX7-ALIGNED-LABEL: global_store_2xi16_align4:
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
@@ -387,11 +346,12 @@ define amdgpu_kernel void @global_store_2xi16_align4(i16 addrspace(1)* %p, i16 a
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep.r = getelementptr i16, i16 addrspace(1)* %r, i64 1
-  store i16 1, i16 addrspace(1)* %r, align 4
-  store i16 2, i16 addrspace(1)* %gep.r, align 2
+  %gep.r = getelementptr i16, ptr addrspace(1) %r, i64 1
+  store i16 1, ptr addrspace(1) %r, align 4
+  store i16 2, ptr addrspace(1) %gep.r, align 2
   ret void
 }
 

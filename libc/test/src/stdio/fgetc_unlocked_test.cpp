@@ -17,9 +17,9 @@
 #include "src/stdio/funlockfile.h"
 #include "src/stdio/fwrite.h"
 #include "src/stdio/getc_unlocked.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 
 class LlvmLibcGetcTest : public __llvm_libc::testing::Test {
@@ -36,7 +36,7 @@ public:
     // This is an error and not a real EOF.
     ASSERT_EQ(__llvm_libc::feof(file), 0);
     ASSERT_NE(__llvm_libc::ferror(file), 0);
-    errno = 0;
+    libc_errno = 0;
 
     ASSERT_EQ(0, __llvm_libc::fclose(file));
 

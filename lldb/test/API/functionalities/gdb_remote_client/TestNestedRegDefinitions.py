@@ -4,8 +4,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.gdbclientutils import *
 from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
-class TestNestedRegDefinitions(GDBRemoteTestBase):
 
+class TestNestedRegDefinitions(GDBRemoteTestBase):
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test(self):
@@ -13,14 +13,18 @@ class TestNestedRegDefinitions(GDBRemoteTestBase):
         Test lldb's parsing of the <architecture> tag in the target.xml register
         description packet.
         """
-        class MyResponder(MockGDBServerResponder):
 
+        class MyResponder(MockGDBServerResponder):
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?><!DOCTYPE target SYSTEM "gdb-target.dtd"><target><architecture>i386:x86-64</architecture><xi:include href="i386-64bit.xml"/></target>""", False
+                    return (
+                        """<?xml version="1.0"?><!DOCTYPE target SYSTEM "gdb-target.dtd"><target><architecture>i386:x86-64</architecture><xi:include href="i386-64bit.xml"/></target>""",
+                        False,
+                    )
 
                 if annex == "i386-64bit.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
 <!-- Copyright (C) 2010-2017 Free Software Foundation, Inc.
 
      Copying and distribution of this file, with or without modification,
@@ -33,10 +37,13 @@ class TestNestedRegDefinitions(GDBRemoteTestBase):
 <feature name="org.gnu.gdb.i386.64bit">
   <xi:include href="i386-64bit-core.xml"/>
   <xi:include href="i386-64bit-sse.xml"/>
-</feature>""", False
+</feature>""",
+                        False,
+                    )
 
                 if annex == "i386-64bit-core.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
 <!-- Copyright (C) 2010-2015 Free Software Foundation, Inc.
 
      Copying and distribution of this file, with or without modification,
@@ -108,10 +115,13 @@ class TestNestedRegDefinitions(GDBRemoteTestBase):
   <reg name="foseg" bitsize="32" type="int" group="float"/>
   <reg name="fooff" bitsize="32" type="int" group="float"/>
   <reg name="fop" bitsize="32" type="int" group="float"/>
-</feature>""", False
+</feature>""",
+                        False,
+                    )
 
                 if annex == "i386-64bit-sse.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
 <!-- Copyright (C) 2010-2017 Free Software Foundation, Inc.
 
      Copying and distribution of this file, with or without modification,
@@ -170,7 +180,9 @@ class TestNestedRegDefinitions(GDBRemoteTestBase):
   <reg name="xmm15" bitsize="128" type="vec128"/>
 
   <reg name="mxcsr" bitsize="32" type="i386_mxcsr" group="vector"/>
-</feature>""", False
+</feature>""",
+                        False,
+                    )
 
                 return None, False
 
@@ -185,7 +197,7 @@ class TestNestedRegDefinitions(GDBRemoteTestBase):
 
             def qfThreadInfo(self):
                 return "mdead"
-            
+
             def qC(self):
                 return ""
 
@@ -201,8 +213,7 @@ class TestNestedRegDefinitions(GDBRemoteTestBase):
         self.server.responder = MyResponder()
         if self.TraceOn():
             self.runCmd("log enable gdb-remote packets")
-            self.addTearDownHook(
-                    lambda: self.runCmd("log disable gdb-remote packets"))
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
 
         target = self.dbg.CreateTargetWithFileAndArch(None, None)
 
@@ -215,21 +226,41 @@ class TestNestedRegDefinitions(GDBRemoteTestBase):
             print(result.GetOutput())
 
         rip_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("rip")
-        self.assertEqual(rip_valobj.GetValueAsUnsigned(), 0x00ffff800041120e)
+        self.assertEqual(rip_valobj.GetValueAsUnsigned(), 0x00FFFF800041120E)
 
         r15_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("r15")
-        self.assertEqual(r15_valobj.GetValueAsUnsigned(), 0xffffff8000c0b778)
+        self.assertEqual(r15_valobj.GetValueAsUnsigned(), 0xFFFFFF8000C0B778)
 
-        mxcsr_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("mxcsr")
-        self.assertEqual(mxcsr_valobj.GetValueAsUnsigned(), 0x00001f80)
+        mxcsr_valobj = (
+            process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("mxcsr")
+        )
+        self.assertEqual(mxcsr_valobj.GetValueAsUnsigned(), 0x00001F80)
 
-        gpr_reg_set_name = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetRegisters().GetValueAtIndex(0).GetName()
+        gpr_reg_set_name = (
+            process.GetThreadAtIndex(0)
+            .GetFrameAtIndex(0)
+            .GetRegisters()
+            .GetValueAtIndex(0)
+            .GetName()
+        )
         self.assertEqual(gpr_reg_set_name, "general")
 
-        float_reg_set_name = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetRegisters().GetValueAtIndex(1).GetName()
+        float_reg_set_name = (
+            process.GetThreadAtIndex(0)
+            .GetFrameAtIndex(0)
+            .GetRegisters()
+            .GetValueAtIndex(1)
+            .GetName()
+        )
         self.assertEqual(float_reg_set_name, "float")
 
-        vector_reg_set_name = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetRegisters().GetValueAtIndex(2).GetName()
+        vector_reg_set_name = (
+            process.GetThreadAtIndex(0)
+            .GetFrameAtIndex(0)
+            .GetRegisters()
+            .GetValueAtIndex(2)
+            .GetName()
+        )
         self.assertEqual(vector_reg_set_name, "vector")
 
         if self.TraceOn():

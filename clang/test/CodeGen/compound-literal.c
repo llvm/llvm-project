@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
 
 // Capture the type and name so matching later is cleaner.
 struct CompoundTy { int a; };
@@ -28,17 +28,15 @@ void f(void) {
   // CHECK: [[S:%[a-zA-Z0-9.]+]] = alloca [[STRUCT:%[a-zA-Z0-9.]+]],
   struct S s;
   // CHECK-NEXT: [[COMPOUNDLIT:%[a-zA-Z0-9.]+]] = alloca [[STRUCT]]
-  // CHECK-NEXT: [[CX:%[a-zA-Z0-9.]+]] = getelementptr inbounds [[STRUCT]], [[STRUCT]]* [[COMPOUNDLIT]], i32 0, i32 0
-  // CHECK-NEXT: [[SY:%[a-zA-Z0-9.]+]] = getelementptr inbounds [[STRUCT]], [[STRUCT]]* [[S]], i32 0, i32 1
-  // CHECK-NEXT: [[TMP:%[a-zA-Z0-9.]+]] = load i32, i32* [[SY]]
-  // CHECK-NEXT: store i32 [[TMP]], i32* [[CX]]
-  // CHECK-NEXT: [[CY:%[a-zA-Z0-9.]+]] = getelementptr inbounds [[STRUCT]], [[STRUCT]]* [[COMPOUNDLIT]], i32 0, i32 1
-  // CHECK-NEXT: [[SX:%[a-zA-Z0-9.]+]] = getelementptr inbounds [[STRUCT]], [[STRUCT]]* [[S]], i32 0, i32 0
-  // CHECK-NEXT: [[TMP:%[a-zA-Z0-9.]+]] = load i32, i32* [[SX]]
-  // CHECK-NEXT: store i32 [[TMP]], i32* [[CY]]
-  // CHECK-NEXT: [[SI8:%[a-zA-Z0-9.]+]] = bitcast [[STRUCT]]* [[S]] to i8*
-  // CHECK-NEXT: [[COMPOUNDLITI8:%[a-zA-Z0-9.]+]] = bitcast [[STRUCT]]* [[COMPOUNDLIT]] to i8*
-  // CHECK-NEXT: call void @llvm.memcpy{{.*}}(i8* align {{[0-9]+}} [[SI8]], i8* align {{[0-9]+}} [[COMPOUNDLITI8]]
+  // CHECK-NEXT: [[CX:%[a-zA-Z0-9.]+]] = getelementptr inbounds [[STRUCT]], ptr [[COMPOUNDLIT]], i32 0, i32 0
+  // CHECK-NEXT: [[SY:%[a-zA-Z0-9.]+]] = getelementptr inbounds [[STRUCT]], ptr [[S]], i32 0, i32 1
+  // CHECK-NEXT: [[TMP:%[a-zA-Z0-9.]+]] = load i32, ptr [[SY]]
+  // CHECK-NEXT: store i32 [[TMP]], ptr [[CX]]
+  // CHECK-NEXT: [[CY:%[a-zA-Z0-9.]+]] = getelementptr inbounds [[STRUCT]], ptr [[COMPOUNDLIT]], i32 0, i32 1
+  // CHECK-NEXT: [[SX:%[a-zA-Z0-9.]+]] = getelementptr inbounds [[STRUCT]], ptr [[S]], i32 0, i32 0
+  // CHECK-NEXT: [[TMP:%[a-zA-Z0-9.]+]] = load i32, ptr [[SX]]
+  // CHECK-NEXT: store i32 [[TMP]], ptr [[CY]]
+  // CHECK-NEXT: call void @llvm.memcpy{{.*}}(ptr align {{[0-9]+}} [[S]], ptr align {{[0-9]+}} [[COMPOUNDLIT]]
   s = (S){s.y,s.x};
   // CHECK-NEXT: ret void
 }
@@ -56,24 +54,22 @@ struct G g(int x, int y, int z) {
   // CHECK-NEXT: store i32
 
   // Evaluate the compound literal directly in the result value slot.
-  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[G]], [[G]]* [[RESULT]], i32 0, i32 0
-  // CHECK-NEXT: [[T1:%.*]] = load i32, i32* [[X]], align 4
+  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[G]], ptr [[RESULT]], i32 0, i32 0
+  // CHECK-NEXT: [[T1:%.*]] = load i32, ptr [[X]], align 4
   // CHECK-NEXT: [[T2:%.*]] = trunc i32 [[T1]] to i16
-  // CHECK-NEXT: store i16 [[T2]], i16* [[T0]], align 2
-  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[G]], [[G]]* [[RESULT]], i32 0, i32 1
-  // CHECK-NEXT: [[T1:%.*]] = load i32, i32* [[Y]], align 4
+  // CHECK-NEXT: store i16 [[T2]], ptr [[T0]], align 2
+  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[G]], ptr [[RESULT]], i32 0, i32 1
+  // CHECK-NEXT: [[T1:%.*]] = load i32, ptr [[Y]], align 4
   // CHECK-NEXT: [[T2:%.*]] = trunc i32 [[T1]] to i16
-  // CHECK-NEXT: store i16 [[T2]], i16* [[T0]], align 2
-  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[G]], [[G]]* [[RESULT]], i32 0, i32 2
-  // CHECK-NEXT: [[T1:%.*]] = load i32, i32* [[Z]], align 4
+  // CHECK-NEXT: store i16 [[T2]], ptr [[T0]], align 2
+  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[G]], ptr [[RESULT]], i32 0, i32 2
+  // CHECK-NEXT: [[T1:%.*]] = load i32, ptr [[Z]], align 4
   // CHECK-NEXT: [[T2:%.*]] = trunc i32 [[T1]] to i16
-  // CHECK-NEXT: store i16 [[T2]], i16* [[T0]], align 2
+  // CHECK-NEXT: store i16 [[T2]], ptr [[T0]], align 2
   return (struct G) { x, y, z };
 
-  // CHECK-NEXT: [[T0:%.*]] = bitcast i48* [[COERCE_TEMP]] to i8*
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[G]]* [[RESULT]] to i8*
-  // CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align {{[0-9]+}} [[T0]], i8* align {{[0-9]+}} [[T1]], i64 6
-  // CHECK-NEXT: [[T0:%.*]] = load i48, i48* [[COERCE_TEMP]]
+  // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align {{[0-9]+}} [[COERCE_TEMP]], ptr align {{[0-9]+}} [[RESULT]], i64 6
+  // CHECK-NEXT: [[T0:%.*]] = load i48, ptr [[COERCE_TEMP]]
   // CHECK-NEXT: ret i48 [[T0]]
 }
 
@@ -81,9 +77,9 @@ struct G g(int x, int y, int z) {
 // const pointer to a variable initialized by a compound literal.
 // CHECK-LABEL: define{{.*}} i32 @compareMyCLH() #0
 int compareMyCLH(void) {
-  // CHECK: store i8* bitcast ([[MY_CLH]] to i8*)
+  // CHECK: store [[MY_CLH]]
   const void *a = MyCLH;
-  // CHECK: store i8* bitcast ([[MY_CLH]] to i8*)
+  // CHECK: store [[MY_CLH]]
   const void *b = MyCLH;
   return a == b;
 }
@@ -92,7 +88,7 @@ int compareMyCLH(void) {
 // for a local variable.
 // CHECK-LABEL: define{{.*}} i32 @compound_array_fn()
 // CHECK: [[COMPOUND_ARRAY:%.*]] = alloca [8 x i32]
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}}, i64 32, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64({{.*}}, i64 32, i1 false)
 int compound_array_fn(void) {
   int compound_array[] = (int[]){1,2,3,4,5,6,7,8};
   return compound_array[0];

@@ -37,9 +37,7 @@ AST_POLYMORPHIC_MATCHER_P(
 
 } // namespace
 
-namespace clang {
-namespace tidy {
-namespace cert {
+namespace clang::tidy::cert {
 
 void DontModifyStdNamespaceCheck::registerMatchers(MatchFinder *Finder) {
   auto HasStdParent =
@@ -99,9 +97,7 @@ void DontModifyStdNamespaceCheck::registerMatchers(MatchFinder *Finder) {
                          .bind("decl"),
                      this);
 }
-} // namespace cert
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cert
 
 static const NamespaceDecl *getTopLevelLexicalNamespaceDecl(const Decl *D) {
   const NamespaceDecl *LastNS = nullptr;

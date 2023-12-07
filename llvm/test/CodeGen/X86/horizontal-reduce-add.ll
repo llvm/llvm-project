@@ -320,36 +320,36 @@ define i32 @PR37890_v16i32(<16 x i32> %a)  {
 ; SSE2-LABEL: PR37890_v16i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    paddd %xmm3, %xmm1
-; SSE2-NEXT:    paddd %xmm2, %xmm1
-; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSE2-NEXT:    paddd %xmm2, %xmm0
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-SLOW-LABEL: PR37890_v16i32:
 ; SSSE3-SLOW:       # %bb.0:
 ; SSSE3-SLOW-NEXT:    paddd %xmm3, %xmm1
-; SSSE3-SLOW-NEXT:    paddd %xmm2, %xmm1
-; SSSE3-SLOW-NEXT:    paddd %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSSE3-SLOW-NEXT:    paddd %xmm2, %xmm0
 ; SSSE3-SLOW-NEXT:    paddd %xmm1, %xmm0
-; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSSE3-SLOW-NEXT:    paddd %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    movd %xmm1, %eax
+; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSSE3-SLOW-NEXT:    paddd %xmm1, %xmm0
+; SSSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSSE3-SLOW-NEXT:    retq
 ;
 ; SSSE3-FAST-LABEL: PR37890_v16i32:
 ; SSSE3-FAST:       # %bb.0:
 ; SSSE3-FAST-NEXT:    paddd %xmm3, %xmm1
-; SSSE3-FAST-NEXT:    paddd %xmm2, %xmm1
-; SSSE3-FAST-NEXT:    paddd %xmm0, %xmm1
-; SSSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSSE3-FAST-NEXT:    paddd %xmm2, %xmm0
 ; SSSE3-FAST-NEXT:    paddd %xmm1, %xmm0
-; SSSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
-; SSSE3-FAST-NEXT:    movd %xmm0, %eax
+; SSSE3-FAST-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSSE3-FAST-NEXT:    paddd %xmm0, %xmm1
+; SSSE3-FAST-NEXT:    phaddd %xmm1, %xmm1
+; SSSE3-FAST-NEXT:    movd %xmm1, %eax
 ; SSSE3-FAST-NEXT:    retq
 ;
 ; AVX1-SLOW-LABEL: PR37890_v16i32:
@@ -357,8 +357,8 @@ define i32 @PR37890_v16i32(<16 x i32> %a)  {
 ; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-SLOW-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
-; AVX1-SLOW-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-SLOW-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]

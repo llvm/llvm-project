@@ -185,6 +185,8 @@ void InstallAtExitHandler() {}
 
 void HwasanInstallAtForkHandler() {}
 
+void InstallAtExitCheckLeaks() {}
+
 void InitializeOsSupport() {
 #ifdef __aarch64__
   uint32_t features = 0;
@@ -201,6 +203,12 @@ void InitializeOsSupport() {
 }
 
 }  // namespace __hwasan
+
+namespace __lsan {
+
+bool UseExitcodeOnLeak() { return __hwasan::flags()->halt_on_error; }
+
+}  // namespace __lsan
 
 extern "C" {
 

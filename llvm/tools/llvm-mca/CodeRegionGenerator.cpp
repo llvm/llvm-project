@@ -17,7 +17,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SMLoc.h"
@@ -29,46 +28,12 @@ namespace mca {
 // This virtual dtor serves as the anchor for the CodeRegionGenerator class.
 CodeRegionGenerator::~CodeRegionGenerator() {}
 
-// This class provides the callbacks that occur when parsing input assembly.
-class MCStreamerWrapper final : public MCStreamer {
-  CodeRegions &Regions;
-
-public:
-  MCStreamerWrapper(MCContext &Context, mca::CodeRegions &R)
-      : MCStreamer(Context), Regions(R) {}
-
-  // We only want to intercept the emission of new instructions.
-  void emitInstruction(const MCInst &Inst,
-                       const MCSubtargetInfo & /* unused */) override {
-    Regions.addInstruction(Inst);
-  }
-
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
-    return true;
-  }
-
-  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        Align ByteAlignment) override {}
-  void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
-                    uint64_t Size = 0, Align ByteAlignment = Align(1),
-                    SMLoc Loc = SMLoc()) override {}
-  void emitGPRel32Value(const MCExpr *Value) override {}
-  void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}
-  void emitCOFFSymbolStorageClass(int StorageClass) override {}
-  void emitCOFFSymbolType(int Type) override {}
-  void endCOFFSymbolDef() override {}
-
-  ArrayRef<MCInst> GetInstructionSequence(unsigned Index) const {
-    return Regions.getInstructionSequence(Index);
-  }
-};
-
 Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
     const std::unique_ptr<MCInstPrinter> &IP) {
   MCTargetOptions Opts;
   Opts.PreserveAsmComments = false;
   CodeRegions &Regions = getRegions();
-  MCStreamerWrapper Str(Ctx, Regions);
+  MCStreamerWrapper *Str = getMCStreamer();
 
   // Need to initialize an MCTargetStreamer otherwise
   // certain asm directives will cause a segfault.
@@ -76,13 +41,13 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
   // doesn't show up in the llvm-mca output.
   raw_ostream &OSRef = nulls();
   formatted_raw_ostream FOSRef(OSRef);
-  TheTarget.createAsmTargetStreamer(Str, FOSRef, IP.get(),
+  TheTarget.createAsmTargetStreamer(*Str, FOSRef, IP.get(),
                                     /*IsVerboseAsm=*/true);
 
   // Create a MCAsmParser and setup the lexer to recognize llvm-mca ASM
   // comments.
   std::unique_ptr<MCAsmParser> Parser(
-      createMCAsmParser(Regions.getSourceMgr(), Ctx, Str, MAI));
+      createMCAsmParser(Regions.getSourceMgr(), Ctx, *Str, MAI));
   MCAsmLexer &Lexer = Parser->getLexer();
   MCACommentConsumer *CCP = getCommentConsumer();
   Lexer.setCommentConsumer(CCP);
@@ -184,7 +149,7 @@ void InstrumentRegionCommentConsumer::HandleComment(SMLoc Loc,
     return;
   }
 
-  SharedInstrument I = IM.createInstrument(InstrumentKind, Data);
+  UniqueInstrument I = IM.createInstrument(InstrumentKind, Data);
   if (!I) {
     if (Data.empty())
       SM.PrintMessage(Loc, llvm::SourceMgr::DK_Error,
@@ -202,7 +167,7 @@ void InstrumentRegionCommentConsumer::HandleComment(SMLoc Loc,
   if (Regions.isRegionActive(InstrumentKind))
     Regions.endRegion(InstrumentKind, Loc);
   // Start new instrumentation region
-  Regions.beginRegion(InstrumentKind, Loc, I);
+  Regions.beginRegion(InstrumentKind, Loc, std::move(I));
 }
 
 } // namespace mca

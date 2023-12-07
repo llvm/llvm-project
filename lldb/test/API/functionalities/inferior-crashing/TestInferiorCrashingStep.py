@@ -9,7 +9,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class CrashingInferiorStepTestCase(TestBase):
-
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @expectedFailureNetBSD
     def test_inferior_crashing(self):
@@ -22,7 +21,7 @@ class CrashingInferiorStepTestCase(TestBase):
         self.build()
         self.inferior_crashing_registers()
 
-    @add_test_categories(['pyapi'])
+    @add_test_categories(["pyapi"])
     def test_inferior_crashing_python(self):
         """Test that lldb reliably catches the inferior crashing (Python API)."""
         self.build()
@@ -55,16 +54,20 @@ class CrashingInferiorStepTestCase(TestBase):
 
     def set_breakpoint(self, line):
         lldbutil.run_break_set_by_file_and_line(
-            self, "main.c", line, num_expected_locations=1, loc_exact=True)
+            self, "main.c", line, num_expected_locations=1, loc_exact=True
+        )
 
     def check_stop_reason(self):
         # We should have one crashing thread
         self.assertEqual(
             len(
                 lldbutil.get_crashed_threads(
-                    self,
-                    self.dbg.GetSelectedTarget().GetProcess())), 1,
-            STOPPED_DUE_TO_EXC_BAD_ACCESS)
+                    self, self.dbg.GetSelectedTarget().GetProcess()
+                )
+            ),
+            1,
+            STOPPED_DUE_TO_EXC_BAD_ACCESS,
+        )
 
     def get_api_stop_reason(self):
         return lldb.eStopReasonException
@@ -73,7 +76,7 @@ class CrashingInferiorStepTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number of the crash.
-        self.line = line_number('main.c', '// Crash here.')
+        self.line = line_number("main.c", "// Crash here.")
 
     def inferior_crashing(self):
         """Inferior crashes upon launching; lldb should catch the event and stop."""
@@ -83,20 +86,21 @@ class CrashingInferiorStepTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
         # The exact stop reason depends on the platform
         if self.platformIsDarwin():
-            stop_reason = 'stop reason = EXC_BAD_ACCESS'
+            stop_reason = "stop reason = EXC_BAD_ACCESS"
         elif self.getPlatform() == "linux" or self.getPlatform() == "freebsd":
-            stop_reason = 'stop reason = signal SIGSEGV'
+            stop_reason = "stop reason = signal SIGSEGV"
         else:
-            stop_reason = 'stop reason = invalid address'
+            stop_reason = "stop reason = invalid address"
         self.expect(
             "thread list",
             STOPPED_DUE_TO_EXC_BAD_ACCESS,
-            substrs=['stopped', stop_reason])
+            substrs=["stopped", stop_reason],
+        )
 
         # And it should report the correct line number.
         self.expect(
-            "thread backtrace all",
-            substrs=[stop_reason, 'main.c:%d' % self.line])
+            "thread backtrace all", substrs=[stop_reason, "main.c:%d" % self.line]
+        )
 
     def inferior_crashing_python(self):
         """Inferior crashes upon launching; lldb should catch the event and stop."""
@@ -107,18 +111,19 @@ class CrashingInferiorStepTestCase(TestBase):
 
         # Now launch the process, and do not stop at entry point.
         # Both argv and envp are null.
-        process = target.LaunchSimple(None, None,
-                                      self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         if process.GetState() != lldb.eStateStopped:
-            self.fail("Process should be in the 'stopped' state, "
-                      "instead the actual state is: '%s'" %
-                      lldbutil.state_type_to_str(process.GetState()))
+            self.fail(
+                "Process should be in the 'stopped' state, "
+                "instead the actual state is: '%s'"
+                % lldbutil.state_type_to_str(process.GetState())
+            )
 
         threads = lldbutil.get_crashed_threads(self, process)
         self.assertEqual(
-            len(threads), 1,
-            "Failed to stop the thread upon bad access exception")
+            len(threads), 1, "Failed to stop the thread upon bad access exception"
+        )
 
         if self.TraceOn():
             lldbutil.print_stacktrace(threads[0])
@@ -145,9 +150,9 @@ class CrashingInferiorStepTestCase(TestBase):
 
         # The lldb expression interpreter should be able to read from addresses
         # of the inferior after a crash.
-        self.expect("p argc", startstr='(int) $0 = 1')
+        self.expect("expression argc", startstr="(int) $0 = 1")
 
-        self.expect("p hello_world", substrs=['Hello'])
+        self.expect("expression hello_world", substrs=["Hello"])
 
     def inferior_crashing_step(self):
         """Test that lldb functions correctly after stepping through a crash."""
@@ -160,22 +165,23 @@ class CrashingInferiorStepTestCase(TestBase):
         self.expect(
             "thread list",
             STOPPED_DUE_TO_BREAKPOINT,
-            substrs=['main.c:%d' % self.line, 'stop reason = breakpoint'])
+            substrs=["main.c:%d" % self.line, "stop reason = breakpoint"],
+        )
 
         self.runCmd("next")
         self.check_stop_reason()
 
         # The lldb expression interpreter should be able to read from addresses
         # of the inferior after a crash.
-        self.expect("p argv[0]", substrs=['a.out'])
-        self.expect("p null_ptr", substrs=['= 0x0'])
+        self.expect("expression argv[0]", substrs=["a.out"])
+        self.expect("expression null_ptr", substrs=["= 0x0"])
 
         # lldb should be able to read from registers from the inferior after
         # crashing.
         lldbplatformutil.check_first_register_readable(self)
 
         # And it should report the correct line number.
-        self.expect("thread backtrace all", substrs=['main.c:%d' % self.line])
+        self.expect("thread backtrace all", substrs=["main.c:%d" % self.line])
 
     @expectedFailureNetBSD
     def inferior_crashing_step_after_break(self):
@@ -186,19 +192,16 @@ class CrashingInferiorStepTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
         self.check_stop_reason()
 
-        expected_state = 'exited'  # Provide the exit code.
+        expected_state = "exited"  # Provide the exit code.
         if self.platformIsDarwin():
             # TODO: Determine why 'next' and 'continue' have no effect after a
             # crash.
-            expected_state = 'stopped'
+            expected_state = "stopped"
 
-        self.expect("next", substrs=['Process', expected_state])
+        self.expect("next", substrs=["Process", expected_state])
 
-        if expected_state == 'exited':
-            self.expect(
-                "thread list",
-                error=True,
-                substrs=['Process must be launched'])
+        if expected_state == "exited":
+            self.expect("thread list", error=True, substrs=["Process must be launched"])
         else:
             self.check_stop_reason()
 
@@ -212,11 +215,11 @@ class CrashingInferiorStepTestCase(TestBase):
 
         # The lldb expression interpreter should be able to read from addresses
         # of the inferior after a crash.
-        self.expect("p argv[0]", substrs=['a.out'])
+        self.expect("expression argv[0]", substrs=["a.out"])
 
         self.runCmd("next")
         self.check_stop_reason()
 
         # The lldb expression interpreter should be able to read from addresses
         # of the inferior after a crash.
-        self.expect("p argv[0]", substrs=['a.out'])
+        self.expect("expression argv[0]", substrs=["a.out"])

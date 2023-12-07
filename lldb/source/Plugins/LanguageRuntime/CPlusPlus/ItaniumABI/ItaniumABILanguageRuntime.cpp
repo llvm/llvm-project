@@ -318,9 +318,9 @@ ItaniumABILanguageRuntime::CreateInstance(Process *process,
 class CommandObjectMultiwordItaniumABI_Demangle : public CommandObjectParsed {
 public:
   CommandObjectMultiwordItaniumABI_Demangle(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "demangle",
-                            "Demangle a C++ mangled name.",
-                            "language cplusplus demangle") {
+      : CommandObjectParsed(
+            interpreter, "demangle", "Demangle a C++ mangled name.",
+            "language cplusplus demangle [<mangled-name> ...]") {
     CommandArgumentEntry arg;
     CommandArgumentData index_arg;
 
@@ -525,13 +525,13 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
   if (!thread_sp->SafeToCallFunctions())
     return {};
 
-  TypeSystemClang *clang_ast_context =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(m_process->GetTarget());
-  if (!clang_ast_context)
+  if (!scratch_ts_sp)
     return {};
 
   CompilerType voidstar =
-      clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
 
   DiagnosticManager diagnostics;
   ExecutionContext exe_ctx;
@@ -583,7 +583,11 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
   ValueObjectSP exception = ValueObject::CreateValueObjectFromData(
       "exception", exception_isw.GetAsData(m_process->GetByteOrder()), exe_ctx,
       voidstar);
-  exception = exception->GetDynamicValue(eDynamicDontRunTarget);
+  ValueObjectSP dyn_exception 
+      = exception->GetDynamicValue(eDynamicDontRunTarget);
+  // If we succeed in making a dynamic value, return that:
+  if (dyn_exception) 
+     return dyn_exception;
 
   return exception;
 }

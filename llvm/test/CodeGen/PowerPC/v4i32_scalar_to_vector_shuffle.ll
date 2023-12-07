@@ -573,14 +573,12 @@ define void @test_v2i64_none() {
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
 ; CHECK-AIX-32-P8-NEXT:    lfiwzx f0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    xxspltw vs0, vs0, 1
-; CHECK-AIX-32-P8-NEXT:    xxmrghw vs0, vs0, vs0
 ; CHECK-AIX-32-P8-NEXT:    stxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    blr
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v2i64_none:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    lxvwsx vs0, 0, r3
-; CHECK-AIX-32-P9-NEXT:    xxmrghw vs0, vs0, vs0
 ; CHECK-AIX-32-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-AIX-32-P9-NEXT:    blr
 entry:

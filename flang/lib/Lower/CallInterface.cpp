@@ -21,41 +21,45 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include <optional>
 
 //===----------------------------------------------------------------------===//
 // BIND(C) mangling helpers
 //===----------------------------------------------------------------------===//
 
 // Return the binding label (from BIND(C...)) or the mangled name of a symbol.
-static std::string getMangledName(mlir::Location loc,
+static std::string getMangledName(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::semantics::Symbol &symbol) {
   const std::string *bindName = symbol.GetBindName();
   // TODO: update GetBindName so that it does not return a label for internal
   // procedures.
   if (bindName && Fortran::semantics::ClassifyProcedure(symbol) ==
                       Fortran::semantics::ProcedureDefinitionClass::Internal)
-    TODO(loc, "BIND(C) internal procedures");
-  return bindName ? *bindName : Fortran::lower::mangle::mangleName(symbol);
+    TODO(converter.getCurrentLocation(), "BIND(C) internal procedures");
+  return bindName ? *bindName : converter.mangleName(symbol);
+}
+
+mlir::Type Fortran::lower::getUntypedBoxProcType(mlir::MLIRContext *context) {
+  llvm::SmallVector<mlir::Type> resultTys;
+  llvm::SmallVector<mlir::Type> inputTys;
+  auto untypedFunc = mlir::FunctionType::get(context, inputTys, resultTys);
+  return fir::BoxProcType::get(context, untypedFunc);
 }
 
 /// Return the type of a dummy procedure given its characteristic (if it has
 /// one).
-mlir::Type getProcedureDesignatorType(
+static mlir::Type getProcedureDesignatorType(
     const Fortran::evaluate::characteristics::Procedure *,
     Fortran::lower::AbstractConverter &converter) {
   // TODO: Get actual function type of the dummy procedure, at least when an
   // interface is given. The result type should be available even if the arity
   // and type of the arguments is not.
-  llvm::SmallVector<mlir::Type> resultTys;
-  llvm::SmallVector<mlir::Type> inputTys;
   // In general, that is a nice to have but we cannot guarantee to find the
   // function type that will match the one of the calls, we may not even know
   // how many arguments the dummy procedure accepts (e.g. if a procedure
   // pointer is only transiting through the current procedure without being
   // called), so a function type cast must always be inserted.
-  auto *context = &converter.getMLIRContext();
-  auto untypedFunc = mlir::FunctionType::get(context, inputTys, resultTys);
-  return fir::BoxProcType::get(context, untypedFunc);
+  return Fortran::lower::getUntypedBoxProcType(&converter.getMLIRContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -69,8 +73,7 @@ bool Fortran::lower::CallerInterface::hasAlternateReturns() const {
 std::string Fortran::lower::CallerInterface::getMangledName() const {
   const Fortran::evaluate::ProcedureDesignator &proc = procRef.proc();
   if (const Fortran::semantics::Symbol *symbol = proc.GetSymbol())
-    return ::getMangledName(converter.getCurrentLocation(),
-                            symbol->GetUltimate());
+    return ::getMangledName(converter, symbol->GetUltimate());
   assert(proc.GetSpecificIntrinsic() &&
          "expected intrinsic procedure in designator");
   return proc.GetName();
@@ -107,7 +110,7 @@ bool Fortran::lower::CallerInterface::requireDispatchCall() const {
 std::optional<unsigned>
 Fortran::lower::CallerInterface::getPassArgIndex() const {
   unsigned passArgIdx = 0;
-  std::optional<unsigned> passArg = std::nullopt;
+  std::optional<unsigned> passArg;
   for (const auto &arg : getCallDescription().arguments()) {
     if (arg && arg->isPassedObject()) {
       passArg = passArgIdx;
@@ -182,6 +185,14 @@ asImplicitArg(Fortran::evaluate::characteristics::DummyArgument &&dummy) {
       dummy.u);
 }
 
+static bool isExternalDefinedInSameCompilationUnit(
+    const Fortran::evaluate::ProcedureDesignator &proc) {
+  if (const auto *symbol{proc.GetSymbol()})
+    return symbol->has<Fortran::semantics::SubprogramDetails>() &&
+           symbol->owner().IsGlobal();
+  return false;
+}
+
 Fortran::evaluate::characteristics::Procedure
 Fortran::lower::CallerInterface::characterize() const {
   Fortran::evaluate::FoldingContext &foldingContext =
@@ -191,27 +202,58 @@ Fortran::lower::CallerInterface::characterize() const {
           procRef.proc(), foldingContext);
   assert(characteristic && "Failed to get characteristic from procRef");
   // The characteristic may not contain the argument characteristic if the
-  // ProcedureDesignator has no interface.
-  if (!characteristic->HasExplicitInterface()) {
+  // ProcedureDesignator has no interface, or may mismatch in case of implicit
+  // interface.
+  if (!characteristic->HasExplicitInterface() ||
+      (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
+       isExternalDefinedInSameCompilationUnit(procRef.proc()) &&
+       characteristic->CanBeCalledViaImplicitInterface())) {
+    // In HLFIR lowering, calls to subprogram with implicit interfaces are
+    // always prepared according to the actual arguments. This is to support
+    // cases where the implicit interfaces are "abused" in old and not so old
+    // Fortran code (e.g, passing REAL(8) to CHARACTER(8), passing object
+    // pointers to procedure dummies, passing regular procedure dummies to
+    // character procedure dummies, omitted arguments....).
+    // In all those case, if the subprogram definition is in the same
+    // compilation unit, the "characteristic" from Characterize will be the one
+    // from the definition, in case of "abuses" (for which semantics raise a
+    // warning), lowering will be placed in a difficult position if it is given
+    // the dummy characteristic from the definition and an actual that has
+    // seemingly nothing to do with it: it would need to battle to anticipate
+    // and handle these mismatches (e.g., be able to prepare a fir.boxchar<>
+    // from a fir.real<> and so one). This was the approach of the lowering to
+    // FIR, and usually lead to compiler bug every time a new "abuse" was met in
+    // the wild.
+    // Instead, in HLFIR, the dummy characteristic is always computed from the
+    // actual for subprogram with implicit interfaces, and in case of call site
+    // vs fun.func MLIR function type signature mismatch, a function cast is
+    // done before placing the call. This is a hammer that should cover all
+    // cases and behave like existing compiler that "do not see" the definition
+    // when placing the call.
+    characteristic->dummyArguments.clear();
     for (const std::optional<Fortran::evaluate::ActualArgument> &arg :
          procRef.arguments()) {
-      if (arg.value().isAlternateReturn()) {
-        characteristic->dummyArguments.emplace_back(
-            Fortran::evaluate::characteristics::AlternateReturn{});
-      } else {
-        // Argument cannot be optional with implicit interface
-        const Fortran::lower::SomeExpr *expr = arg.value().UnwrapExpr();
-        assert(
-            expr &&
-            "argument in call with implicit interface cannot be assumed type");
-        std::optional<Fortran::evaluate::characteristics::DummyArgument>
-            argCharacteristic =
-                Fortran::evaluate::characteristics::DummyArgument::FromActual(
-                    "actual", *expr, foldingContext);
-        assert(argCharacteristic &&
-               "failed to characterize argument in implicit call");
-        characteristic->dummyArguments.emplace_back(
-            asImplicitArg(std::move(*argCharacteristic)));
+      // "arg" may be null if this is a call with missing arguments compared
+      // to the subprogram definition. Do not compute any characteristic
+      // in this case.
+      if (arg.has_value()) {
+        if (arg.value().isAlternateReturn()) {
+          characteristic->dummyArguments.emplace_back(
+              Fortran::evaluate::characteristics::AlternateReturn{});
+        } else {
+          // Argument cannot be optional with implicit interface
+          const Fortran::lower::SomeExpr *expr = arg.value().UnwrapExpr();
+          assert(expr && "argument in call with implicit interface cannot be "
+                         "assumed type");
+          std::optional<Fortran::evaluate::characteristics::DummyArgument>
+              argCharacteristic =
+                  Fortran::evaluate::characteristics::DummyArgument::FromActual(
+                      "actual", *expr, foldingContext);
+          assert(argCharacteristic &&
+                 "failed to characterize argument in implicit call");
+          characteristic->dummyArguments.emplace_back(
+              asImplicitArg(std::move(*argCharacteristic)));
+        }
       }
     }
   }
@@ -378,14 +420,13 @@ bool Fortran::lower::CalleeInterface::hasAlternateReturns() const {
 std::string Fortran::lower::CalleeInterface::getMangledName() const {
   if (funit.isMainProgram())
     return fir::NameUniquer::doProgramEntry().str();
-  return ::getMangledName(converter.getCurrentLocation(),
-                          funit.getSubprogramSymbol());
+  return ::getMangledName(converter, funit.getSubprogramSymbol());
 }
 
 const Fortran::semantics::Symbol *
 Fortran::lower::CalleeInterface::getProcedureSymbol() const {
   if (funit.isMainProgram())
-    return nullptr;
+    return funit.getMainProgramSymbol();
   return &funit.getSubprogramSymbol();
 }
 
@@ -426,7 +467,7 @@ Fortran::lower::CalleeInterface::addEntryBlockAndMapArguments() {
 }
 
 bool Fortran::lower::CalleeInterface::hasHostAssociated() const {
-  return funit.parentHasHostAssoc();
+  return funit.parentHasTupleHostAssoc();
 }
 
 mlir::Type Fortran::lower::CalleeInterface::getHostAssociatedTy() const {
@@ -439,9 +480,15 @@ mlir::Value Fortran::lower::CalleeInterface::getHostAssociatedTuple() const {
   return converter.hostAssocTupleValue();
 }
 
+void Fortran::lower::CalleeInterface::setFuncAttrs(
+    mlir::func::FuncOp func) const {
+  if (funit.parentHasHostAssoc())
+    func->setAttr(fir::getInternalProcedureAttrName(),
+                  mlir::UnitAttr::get(func->getContext()));
+}
+
 //===----------------------------------------------------------------------===//
-// CallInterface implementation: this part is common to both caller and caller
-// sides.
+// CallInterface implementation: this part is common to both caller and callee.
 //===----------------------------------------------------------------------===//
 
 static void addSymbolAttribute(mlir::func::FuncOp func,
@@ -479,11 +526,19 @@ void Fortran::lower::CallInterface<T>::declare() {
       mlir::Location loc = side().getCalleeLocation();
       mlir::FunctionType ty = genFunctionType();
       func = fir::FirOpBuilder::createFunction(loc, module, name, ty);
-      if (const Fortran::semantics::Symbol *sym = side().getProcedureSymbol())
-        addSymbolAttribute(func, *sym, converter.getMLIRContext());
+      if (const Fortran::semantics::Symbol *sym = side().getProcedureSymbol()) {
+        if (side().isMainProgram()) {
+          func->setAttr(fir::getSymbolAttrName(),
+                        mlir::StringAttr::get(&converter.getMLIRContext(),
+                                              sym->name().ToString()));
+        } else {
+          addSymbolAttribute(func, *sym, converter.getMLIRContext());
+        }
+      }
       for (const auto &placeHolder : llvm::enumerate(inputs))
         if (!placeHolder.value().attributes.empty())
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
+      side().setFuncAttrs(func);
     }
   }
 }
@@ -677,7 +732,7 @@ public:
                      interface.side().getHostAssociatedTuple(), emptyValue()});
   }
 
-  static llvm::Optional<Fortran::evaluate::DynamicType> getResultDynamicType(
+  static std::optional<Fortran::evaluate::DynamicType> getResultDynamicType(
       const Fortran::evaluate::characteristics::Procedure &procedure) {
     if (const std::optional<Fortran::evaluate::characteristics::FunctionResult>
             &result = procedure.functionResult)
@@ -705,7 +760,7 @@ public:
     // array function with assumed length (f18 forbides defining such
     // interfaces). Hence, passing the length is most likely useless, but stick
     // with ifort/nag/xlf interface here.
-    if (llvm::Optional<Fortran::evaluate::DynamicType> type =
+    if (std::optional<Fortran::evaluate::DynamicType> type =
             getResultDynamicType(procedure))
       return type->category() == Fortran::common::TypeCategory::Character;
     return false;
@@ -733,10 +788,12 @@ private:
       }
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Derived) {
-      // Derived result need to be allocated by the caller and the result value
-      // must be saved. Derived type in implicit interface cannot have length
-      // parameters.
-      setSaveResult();
+      if (!dynamicType.GetDerivedTypeSpec().IsVectorType()) {
+        // Derived result need to be allocated by the caller and the result
+        // value must be saved. Derived type in implicit interface cannot have
+        // length parameters.
+        setSaveResult();
+      }
       mlir::Type mlirType = translateDynamicType(dynamicType);
       addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
                    Property::Value);
@@ -823,7 +880,7 @@ private:
     if ((obj.type.attrs() & shapeRequiringBox).any())
       // Need to pass shape/coshape info in fir.box.
       return true;
-    if (obj.type.type().IsPolymorphic())
+    if (obj.type.type().IsPolymorphic() && !obj.type.type().IsAssumedType())
       // Need to pass dynamic type info in fir.box.
       return true;
     if (const Fortran::semantics::DerivedTypeSpec *derived =
@@ -978,7 +1035,7 @@ private:
         proc.procedure.value();
     mlir::Type funcType =
         getProcedureDesignatorType(&procedure, interface.converter);
-    llvm::Optional<Fortran::evaluate::DynamicType> resultTy =
+    std::optional<Fortran::evaluate::DynamicType> resultTy =
         getResultDynamicType(procedure);
     if (resultTy && mustPassLengthWithDummyProcedure(procedure)) {
       // The result length of dummy procedures that are character functions must
@@ -1112,12 +1169,7 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeModifiedByCall()
     return true;
   if (characteristics->GetIntent() == Fortran::common::Intent::In)
     return false;
-  const auto *dummy =
-      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
-          &characteristics->u);
-  return !dummy ||
-         !dummy->attrs.test(
-             Fortran::evaluate::characteristics::DummyDataObject::Attr::Value);
+  return !hasValueAttribute();
 }
 template <typename T>
 bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeReadByCall() const {
@@ -1125,6 +1177,20 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeReadByCall() const {
     return true;
   return characteristics->GetIntent() != Fortran::common::Intent::Out;
 }
+
+template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::testTKR(
+    Fortran::common::IgnoreTKR flag) const {
+  if (!characteristics)
+    return false;
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  if (!dummy)
+    return false;
+  return dummy->ignoreTKR.test(flag);
+}
+
 template <typename T>
 bool Fortran::lower::CallInterface<T>::PassedEntity::isIntentOut() const {
   if (!characteristics)
@@ -1151,6 +1217,69 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::mustBeMadeContiguous()
     return false;
   // Explicit shape arrays are contiguous.
   return dummy->type.Rank() > 0;
+}
+
+template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::hasValueAttribute() const {
+  if (!characteristics)
+    return false;
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  return dummy &&
+         dummy->attrs.test(
+             Fortran::evaluate::characteristics::DummyDataObject::Attr::Value);
+}
+
+template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::hasAllocatableAttribute()
+    const {
+  if (!characteristics)
+    return false;
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
+  return dummy && dummy->attrs.test(Attrs::Allocatable);
+}
+
+template <typename T>
+bool Fortran::lower::CallInterface<
+    T>::PassedEntity::mayRequireIntentoutFinalization() const {
+  // Conservatively assume that the finalization is needed.
+  if (!characteristics)
+    return true;
+
+  // No INTENT(OUT) dummy arguments do not require finalization on entry.
+  if (!isIntentOut())
+    return false;
+
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  if (!dummy)
+    return true;
+
+  // POINTER/ALLOCATABLE dummy arguments do not require finalization.
+  using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
+  if (dummy->attrs.test(Attrs::Allocatable) ||
+      dummy->attrs.test(Attrs::Pointer))
+    return false;
+
+  // Polymorphic and unlimited polymorphic INTENT(OUT) dummy arguments
+  // may need finalization.
+  const Fortran::evaluate::DynamicType &type = dummy->type.type();
+  if (type.IsPolymorphic() || type.IsUnlimitedPolymorphic())
+    return true;
+
+  // INTENT(OUT) dummy arguments of derived types require finalization,
+  // if their type has finalization.
+  const Fortran::semantics::DerivedTypeSpec *derived =
+      Fortran::evaluate::GetDerivedTypeSpec(type);
+  if (!derived)
+    return false;
+
+  return Fortran::semantics::IsFinalizable(*derived);
 }
 
 template <typename T>

@@ -31,10 +31,9 @@ static cl::opt<bool> GroupStubs("group-stubs",
 namespace llvm {
 namespace bolt {
 
-namespace {
 constexpr unsigned ColdFragAlign = 16;
 
-void relaxStubToShortJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
+static void relaxStubToShortJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   const BinaryContext &BC = StubBB.getFunction()->getBinaryContext();
   InstructionListType Seq;
   BC.MIB->createShortJmp(Seq, Tgt, BC.Ctx.get());
@@ -42,7 +41,7 @@ void relaxStubToShortJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   StubBB.addInstructions(Seq.begin(), Seq.end());
 }
 
-void relaxStubToLongJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
+static void relaxStubToLongJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   const BinaryContext &BC = StubBB.getFunction()->getBinaryContext();
   InstructionListType Seq;
   BC.MIB->createLongJmp(Seq, Tgt, BC.Ctx.get());
@@ -50,7 +49,7 @@ void relaxStubToLongJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   StubBB.addInstructions(Seq.begin(), Seq.end());
 }
 
-BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
+static BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
   if (!Func.isSplit() || Func.empty())
     return nullptr;
 
@@ -65,12 +64,10 @@ BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
   llvm_unreachable("No hot-colt split point found");
 }
 
-bool shouldInsertStub(const BinaryContext &BC, const MCInst &Inst) {
+static bool shouldInsertStub(const BinaryContext &BC, const MCInst &Inst) {
   return (BC.MIB->isBranch(Inst) || BC.MIB->isCall(Inst)) &&
          !BC.MIB->isIndirectBranch(Inst) && !BC.MIB->isIndirectCall(Inst);
 }
-
-} // end anonymous namespace
 
 std::pair<std::unique_ptr<BinaryBasicBlock>, MCSymbol *>
 LongJmpPass::createNewStub(BinaryBasicBlock &SourceBB, const MCSymbol *TgtSym,

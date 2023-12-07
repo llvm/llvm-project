@@ -1,4 +1,4 @@
-; RUN: opt -passes=redundant-dbg-inst-elim -S %s -o - -experimental-assignment-tracking \
+; RUN: opt -passes=redundant-dbg-inst-elim -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; $ cat -n reduce.c
@@ -83,7 +83,7 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #4
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!6, !7, !8, !9, !10}
+!llvm.module.flags = !{!6, !7, !8, !9, !10, !1000}
 !llvm.ident = !{!11}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -129,3 +129,4 @@ declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg) 
 !46 = !DILocation(line: 18, scope: !12)
 !47 = !DISubprogram(name: "ext", scope: !3, file: !3, line: 1, type: !13, spFlags: DISPFlagOptimized, retainedNodes: !48)
 !48 = !{}
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

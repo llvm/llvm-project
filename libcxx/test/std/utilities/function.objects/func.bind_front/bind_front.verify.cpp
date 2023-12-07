@@ -15,8 +15,6 @@
 
 #include <functional>
 
-#include "test_macros.h"
-
 constexpr int pass(const int n) { return n; }
 
 int simple(int n) { return n; }
@@ -34,8 +32,7 @@ struct NotMoveConst
 
 void testNotMoveConst(NotMoveConst) { }
 
-int main(int, char**)
-{
+void f() {
     int n = 1;
     const int c = 1;
 
@@ -45,6 +42,4 @@ int main(int, char**)
     auto d = std::bind_front(do_nothing, n); // expected-error {{no matching function for call to 'bind_front'}}
 
     auto t = std::bind_front(testNotMoveConst, NotMoveConst(0)); // expected-error {{no matching function for call to 'bind_front'}}
-
-    return 0;
 }

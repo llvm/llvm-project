@@ -61,7 +61,7 @@ define %pair @pair_call_return() {
 ; REF:        call_indirect __indirect_function_table, () -> (i32, i64){{$}}
 ; CHECK-NEXT: end_function{{$}}
 ; REGS: call_indirect $push{{[0-9]+}}=, $push{{[0-9]+}}=, $0{{$}}
-define %pair @pair_call_indirect(%pair()* %f) {
+define %pair @pair_call_indirect(ptr %f) {
   %p = call %pair %f()
   ret %pair %p
 }
@@ -242,7 +242,7 @@ define %rpair @pair_pass_through_swap(%pair %p) {
 ; CHECK-NEXT: .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT: end_loop{{$}}
 ; CHECK-NEXT: end_function{{$}}
-define %pair @minimal_loop(i32* %p) {
+define %pair @minimal_loop(ptr %p) {
 entry:
   br label %loop
 loop:

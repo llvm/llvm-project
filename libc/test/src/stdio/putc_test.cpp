@@ -13,9 +13,8 @@
 
 #include "src/stdio/putc.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <stdio.h>
 
 TEST(LlvmLibcPutcTest, WriteToFile) {

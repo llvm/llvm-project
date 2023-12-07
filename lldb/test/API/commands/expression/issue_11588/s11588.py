@@ -1,5 +1,4 @@
 class Issue11581SyntheticProvider(object):
-
     def __init__(self, valobj, dict):
         self.valobj = valobj
         self.addrOf = valobj.AddressOf()
@@ -13,11 +12,11 @@ class Issue11581SyntheticProvider(object):
         if index == 0:
             return self.addrOf
         if index == 1:
-            return self.valobj.CreateValueFromExpression(
-                "addr", str(self.addr))
+            return self.valobj.CreateValueFromExpression("addr", str(self.addr))
         if index == 2:
             return self.valobj.CreateValueFromExpression(
-                "load_address", str(self.load_address))
+                "load_address", str(self.load_address)
+            )
 
     def get_child_index(self, name):
         if name == "addrOf":

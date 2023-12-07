@@ -15,8 +15,8 @@ from mlir.dialects.linalg.opdsl.lang import *
 # Log everything to stderr and flush so that we have a unified stream to match
 # errors/info emitted by MLIR to stderr.
 def log(*args):
-  print(*args, file=sys.stderr)
-  sys.stderr.flush()
+    print(*args, file=sys.stderr)
+    sys.stderr.flush()
 
 
 elemwise_boiler = """
@@ -186,428 +186,458 @@ func.func @main() -> i32 attributes {llvm.emit_c_interface} {
 
 
 def transform(module, boilerplate):
-  # TODO: Allow cloning functions from one module to another.
-  # Atm we have to resort to string concatenation.
-  ops = module.operation.regions[0].blocks[0].operations
-  mod = Module.parse("\n".join([str(op) for op in ops]) + boilerplate)
+    # TODO: Allow cloning functions from one module to another.
+    # Atm we have to resort to string concatenation.
+    ops = module.operation.regions[0].blocks[0].operations
+    mod = Module.parse("\n".join([str(op) for op in ops]) + boilerplate)
 
-  pm = PassManager('builtin.module')
-  pm.add("func.func(convert-linalg-to-loops)")
-  pm.add("func.func(lower-affine)")
-  pm.add("func.func(convert-math-to-llvm)")
-  pm.add("func.func(convert-scf-to-cf)")
-  pm.add("func.func(arith-expand)")
-  pm.add("func.func(memref-expand)")
-  pm.add("convert-vector-to-llvm")
-  pm.add("convert-memref-to-llvm")
-  pm.add("convert-func-to-llvm")
-  pm.add("reconcile-unrealized-casts")
-  pm.run(mod)
-  return mod
+    pm = PassManager("builtin.module")
+    pm.add("func.func(convert-linalg-to-loops)")
+    pm.add("func.func(lower-affine)")
+    pm.add("func.func(convert-math-to-llvm)")
+    pm.add("func.func(convert-scf-to-cf)")
+    pm.add("func.func(arith-expand)")
+    pm.add("func.func(memref-expand)")
+    pm.add("convert-vector-to-llvm")
+    pm.add("finalize-memref-to-llvm")
+    pm.add("convert-func-to-llvm")
+    pm.add("reconcile-unrealized-casts")
+    pm.run(mod.operation)
+    return mod
 
 
 def test_elemwise_builtin():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    i8 = IntegerType.get_signless(8)
-    with InsertionPoint(module.body):
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        i8 = IntegerType.get_signless(8)
+        with InsertionPoint(module.body):
 
-      @func.FuncOp.from_py_func(
-          MemRefType.get((), f32), MemRefType.get((4, 8), f32),
-          MemRefType.get((4, 8), f32))
-      def elemwise_exp_add_on_buffers(lhs, rhs, out):
-        linalg.elemwise_unary(lhs, outs=[out])
-        linalg.elemwise_binary(out, rhs, outs=[out])
+            @func.FuncOp.from_py_func(
+                MemRefType.get((), f32),
+                MemRefType.get((4, 8), f32),
+                MemRefType.get((4, 8), f32),
+            )
+            def elemwise_exp_add_on_buffers(lhs, rhs, out):
+                linalg.elemwise_unary(lhs, outs=[out])
+                linalg.elemwise_binary(out, rhs, outs=[out])
 
-      @func.FuncOp.from_py_func(
-          MemRefType.get((), f32), MemRefType.get((4, 8), f32),
-          MemRefType.get((4, 8), f32))
-      def elemwise_log_mul_on_buffers(lhs, rhs, out):
-        linalg.elemwise_unary(lhs, outs=[out], fun=UnaryFn.log)
-        linalg.elemwise_binary(out, rhs, outs=[out], fun=BinaryFn.mul)
+            @func.FuncOp.from_py_func(
+                MemRefType.get((), f32),
+                MemRefType.get((4, 8), f32),
+                MemRefType.get((4, 8), f32),
+            )
+            def elemwise_log_mul_on_buffers(lhs, rhs, out):
+                linalg.elemwise_unary(lhs, outs=[out], fun=UnaryFn.log)
+                linalg.elemwise_binary(out, rhs, outs=[out], fun=BinaryFn.mul)
 
-    execution_engine = ExecutionEngine(transform(module, elemwise_boiler))
+        execution_engine = ExecutionEngine(transform(module, elemwise_boiler))
 
-    # TODO: FFI-based solution to allow testing and printing with python code.
-    # Prepare arguments: one result f32.
-    # Arguments must be passed as pointers.
-    c_float_p = ctypes.c_float * 1
-    res = c_float_p(-1.)
-    execution_engine.invoke("main", res)
+        # TODO: FFI-based solution to allow testing and printing with python code.
+        # Prepare arguments: one result f32.
+        # Arguments must be passed as pointers.
+        c_float_p = ctypes.c_float * 1
+        res = c_float_p(-1.0)
+        execution_engine.invoke("main", res)
 
-    log("RESULT: ", res[0])
-    # elemwise_exp_add_on_buffers: exp(1.0) + 2.0 = 4.71828182846
-    # elemwise_log_mul_on_buffers: log(1.0) * 2.0 = 0.0
-    # CHECK: RESULT: 4.71828
+        log("RESULT: ", res[0])
+        # elemwise_exp_add_on_buffers: exp(1.0) + 2.0 = 4.71828182846
+        # elemwise_log_mul_on_buffers: log(1.0) * 2.0 = 0.0
+        # CHECK: RESULT: 4.71828
 
 
 test_elemwise_builtin()
 
 
 def test_elemwise_generic():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    i8 = IntegerType.get_signless(8)
-    with InsertionPoint(module.body):
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        i8 = IntegerType.get_signless(8)
+        with InsertionPoint(module.body):
 
-      @func.FuncOp.from_py_func(
-          MemRefType.get((), f32), MemRefType.get((4, 8), f32),
-          MemRefType.get((4, 8), f32))
-      def elemwise_exp_add_on_buffers(lhs, rhs, out):
-        linalg.elemwise_unary(lhs, outs=[out], emit_generic=True)
-        linalg.elemwise_binary(out, rhs, outs=[out], emit_generic=True)
+            @func.FuncOp.from_py_func(
+                MemRefType.get((), f32),
+                MemRefType.get((4, 8), f32),
+                MemRefType.get((4, 8), f32),
+            )
+            def elemwise_exp_add_on_buffers(lhs, rhs, out):
+                linalg.elemwise_unary(lhs, outs=[out], emit_generic=True)
+                linalg.elemwise_binary(out, rhs, outs=[out], emit_generic=True)
 
-      @func.FuncOp.from_py_func(
-          MemRefType.get((), f32), MemRefType.get((4, 8), f32),
-          MemRefType.get((4, 8), f32))
-      def elemwise_log_mul_on_buffers(lhs, rhs, out):
-        linalg.elemwise_unary(
-            lhs, outs=[out], fun=UnaryFn.log, emit_generic=True)
-        linalg.elemwise_binary(
-            out, rhs, outs=[out], fun=BinaryFn.mul, emit_generic=True)
+            @func.FuncOp.from_py_func(
+                MemRefType.get((), f32),
+                MemRefType.get((4, 8), f32),
+                MemRefType.get((4, 8), f32),
+            )
+            def elemwise_log_mul_on_buffers(lhs, rhs, out):
+                linalg.elemwise_unary(
+                    lhs, outs=[out], fun=UnaryFn.log, emit_generic=True
+                )
+                linalg.elemwise_binary(
+                    out, rhs, outs=[out], fun=BinaryFn.mul, emit_generic=True
+                )
 
-    execution_engine = ExecutionEngine(transform(module, elemwise_boiler))
+        execution_engine = ExecutionEngine(transform(module, elemwise_boiler))
 
-    # TODO: FFI-based solution to allow testing and printing with python code.
-    # Prepare arguments: one result f32.
-    # Arguments must be passed as pointers.
-    c_float_p = ctypes.c_float * 1
-    res = c_float_p(-1.)
-    execution_engine.invoke("main", res)
+        # TODO: FFI-based solution to allow testing and printing with python code.
+        # Prepare arguments: one result f32.
+        # Arguments must be passed as pointers.
+        c_float_p = ctypes.c_float * 1
+        res = c_float_p(-1.0)
+        execution_engine.invoke("main", res)
 
-    log("RESULT: ", res[0])
-    # elemwise_exp_add_on_buffers: exp(1.0) + 2.0 = 4.71828182846
-    # elemwise_log_mul_on_buffers: log(1.0) * 2.0 = 0.0
-    # CHECK: RESULT: 4.71828
+        log("RESULT: ", res[0])
+        # elemwise_exp_add_on_buffers: exp(1.0) + 2.0 = 4.71828182846
+        # elemwise_log_mul_on_buffers: log(1.0) * 2.0 = 0.0
+        # CHECK: RESULT: 4.71828
 
 
 test_elemwise_generic()
 
 
 def test_matmul_builtin():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    i8 = IntegerType.get_signless(8)
-    with InsertionPoint(module.body):
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        i8 = IntegerType.get_signless(8)
+        with InsertionPoint(module.body):
 
-      @func.FuncOp.from_py_func(
-          MemRefType.get((4, 16), i8), MemRefType.get((16, 8), f32),
-          MemRefType.get((4, 8), f32))
-      def matmul_signed_on_buffers(lhs, rhs, out):
-        linalg.matmul(lhs, rhs, outs=[out])
+            @func.FuncOp.from_py_func(
+                MemRefType.get((4, 16), i8),
+                MemRefType.get((16, 8), f32),
+                MemRefType.get((4, 8), f32),
+            )
+            def matmul_signed_on_buffers(lhs, rhs, out):
+                linalg.matmul(lhs, rhs, outs=[out])
 
-      @func.FuncOp.from_py_func(
-          MemRefType.get((4, 16), i8), MemRefType.get((16, 8), f32),
-          MemRefType.get((4, 8), f32))
-      def matmul_unsigned_on_buffers(lhs, rhs, out):
-        linalg.matmul(lhs, rhs, outs=[out], cast=TypeFn.cast_unsigned)
+            @func.FuncOp.from_py_func(
+                MemRefType.get((4, 16), i8),
+                MemRefType.get((16, 8), f32),
+                MemRefType.get((4, 8), f32),
+            )
+            def matmul_unsigned_on_buffers(lhs, rhs, out):
+                linalg.matmul(lhs, rhs, outs=[out], cast=TypeFn.cast_unsigned)
 
-    execution_engine = ExecutionEngine(transform(module, matmul_boiler))
+        execution_engine = ExecutionEngine(transform(module, matmul_boiler))
 
-    # TODO: FFI-based solution to allow testing and printing with python code.
-    # Prepare arguments: one result f32.
-    # Arguments must be passed as pointers.
-    c_float_p = ctypes.c_float * 1
-    res = c_float_p(-1.)
-    execution_engine.invoke("main", res)
+        # TODO: FFI-based solution to allow testing and printing with python code.
+        # Prepare arguments: one result f32.
+        # Arguments must be passed as pointers.
+        c_float_p = ctypes.c_float * 1
+        res = c_float_p(-1.0)
+        execution_engine.invoke("main", res)
 
-    log("RESULT: ", res[0])
-    # matmul_signed_on_buffers: -1 * 2.0 * 16 = -32
-    # matmul_unsigned_on_buffers: (2^8-1) * 2.0 * 16 = 8160
-    # CHECK: RESULT: 8128
+        log("RESULT: ", res[0])
+        # matmul_signed_on_buffers: -1 * 2.0 * 16 = -32
+        # matmul_unsigned_on_buffers: (2^8-1) * 2.0 * 16 = 8160
+        # CHECK: RESULT: 8128
 
 
 test_matmul_builtin()
 
 
 def test_matmul_generic():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    i8 = IntegerType.get_signless(8)
-    with InsertionPoint(module.body):
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        i8 = IntegerType.get_signless(8)
+        with InsertionPoint(module.body):
 
-      @func.FuncOp.from_py_func(
-          MemRefType.get((4, 16), i8), MemRefType.get((16, 8), f32),
-          MemRefType.get((4, 8), f32))
-      def matmul_signed_on_buffers(lhs, rhs, out):
-        linalg.matmul(lhs, rhs, outs=[out], emit_generic=True)
+            @func.FuncOp.from_py_func(
+                MemRefType.get((4, 16), i8),
+                MemRefType.get((16, 8), f32),
+                MemRefType.get((4, 8), f32),
+            )
+            def matmul_signed_on_buffers(lhs, rhs, out):
+                linalg.matmul(lhs, rhs, outs=[out], emit_generic=True)
 
-      @func.FuncOp.from_py_func(
-          MemRefType.get((4, 16), i8), MemRefType.get((16, 8), f32),
-          MemRefType.get((4, 8), f32))
-      def matmul_unsigned_on_buffers(lhs, rhs, out):
-        linalg.matmul(
-            lhs, rhs, outs=[out], cast=TypeFn.cast_unsigned, emit_generic=True)
+            @func.FuncOp.from_py_func(
+                MemRefType.get((4, 16), i8),
+                MemRefType.get((16, 8), f32),
+                MemRefType.get((4, 8), f32),
+            )
+            def matmul_unsigned_on_buffers(lhs, rhs, out):
+                linalg.matmul(
+                    lhs, rhs, outs=[out], cast=TypeFn.cast_unsigned, emit_generic=True
+                )
 
-    execution_engine = ExecutionEngine(transform(module, matmul_boiler))
+        execution_engine = ExecutionEngine(transform(module, matmul_boiler))
 
-    # TODO: FFI-based solution to allow testing and printing with python code.
-    # Prepare arguments: one result f32.
-    # Arguments must be passed as pointers.
-    c_float_p = ctypes.c_float * 1
-    res = c_float_p(-1.)
-    execution_engine.invoke("main", res)
+        # TODO: FFI-based solution to allow testing and printing with python code.
+        # Prepare arguments: one result f32.
+        # Arguments must be passed as pointers.
+        c_float_p = ctypes.c_float * 1
+        res = c_float_p(-1.0)
+        execution_engine.invoke("main", res)
 
-    log("RESULT: ", res[0])
-    # matmul_signed_on_buffers = -1 * 2.0 * 16 = -32
-    # matmul_unsigned_on_buffers = (2^8-1) * 2.0 * 16 = 8160
-    # CHECK: RESULT: 8128
+        log("RESULT: ", res[0])
+        # matmul_signed_on_buffers = -1 * 2.0 * 16 = -32
+        # matmul_unsigned_on_buffers = (2^8-1) * 2.0 * 16 = 8160
+        # CHECK: RESULT: 8128
 
 
 test_matmul_generic()
 
 
 def test_fill_builtin():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    i32 = IntegerType.get_signless(32)
-    with InsertionPoint(module.body):
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(module.body):
 
-      @func.FuncOp.from_py_func(f32, MemRefType.get([], i32))
-      def fill_0d_on_buffers(value, out):
-        linalg.fill(value, outs=[out])
+            @func.FuncOp.from_py_func(f32, MemRefType.get([], i32))
+            def fill_0d_on_buffers(value, out):
+                linalg.fill(value, outs=[out])
 
-      @func.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
-      def fill_1d_on_buffers(value, out):
-        linalg.fill(value, outs=[out])
+            @func.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
+            def fill_1d_on_buffers(value, out):
+                linalg.fill(value, outs=[out])
 
-      @func.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
-      def fill_2d_on_buffers(value, out):
-        linalg.fill(value, outs=[out])
+            @func.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
+            def fill_2d_on_buffers(value, out):
+                linalg.fill(value, outs=[out])
 
-    execution_engine = ExecutionEngine(transform(module, fill_boiler))
+        execution_engine = ExecutionEngine(transform(module, fill_boiler))
 
-    # TODO: FFI-based solution to allow testing and printing with python code.
-    # Prepare arguments: one result i32.
-    # Arguments must be passed as pointers.
-    c_int_p = ctypes.c_int * 1
-    res = c_int_p(-1)
-    execution_engine.invoke("main", res)
+        # TODO: FFI-based solution to allow testing and printing with python code.
+        # Prepare arguments: one result i32.
+        # Arguments must be passed as pointers.
+        c_int_p = ctypes.c_int * 1
+        res = c_int_p(-1)
+        execution_engine.invoke("main", res)
 
-    log("RESULT: ", res[0])
-    # CHECK: RESULT: 6
+        log("RESULT: ", res[0])
+        # CHECK: RESULT: 6
 
 
 test_fill_builtin()
 
 
 def test_fill_generic():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f32 = F32Type.get()
-    i32 = IntegerType.get_signless(32)
-    with InsertionPoint(module.body):
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(module.body):
 
-      @func.FuncOp.from_py_func(f32, MemRefType.get([], i32))
-      def fill_0d_on_buffers(value, out):
-        linalg.fill(value, outs=[out], emit_generic=True)
+            @func.FuncOp.from_py_func(f32, MemRefType.get([], i32))
+            def fill_0d_on_buffers(value, out):
+                linalg.fill(value, outs=[out], emit_generic=True)
 
-      @func.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
-      def fill_1d_on_buffers(value, out):
-        linalg.fill(value, outs=[out], emit_generic=True)
+            @func.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
+            def fill_1d_on_buffers(value, out):
+                linalg.fill(value, outs=[out], emit_generic=True)
 
-      @func.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
-      def fill_2d_on_buffers(value, out):
-        linalg.fill(value, outs=[out], emit_generic=True)
+            @func.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
+            def fill_2d_on_buffers(value, out):
+                linalg.fill(value, outs=[out], emit_generic=True)
 
-    execution_engine = ExecutionEngine(transform(module, fill_boiler))
+        execution_engine = ExecutionEngine(transform(module, fill_boiler))
 
-    # TODO: FFI-based solution to allow testing and printing with python code.
-    # Prepare arguments: one result i32.
-    # Arguments must be passed as pointers.
-    c_int_p = ctypes.c_int * 1
-    res = c_int_p(-1)
-    execution_engine.invoke("main", res)
+        # TODO: FFI-based solution to allow testing and printing with python code.
+        # Prepare arguments: one result i32.
+        # Arguments must be passed as pointers.
+        c_int_p = ctypes.c_int * 1
+        res = c_int_p(-1)
+        execution_engine.invoke("main", res)
 
-    log("RESULT: ", res[0])
-    # CHECK: RESULT: 6
+        log("RESULT: ", res[0])
+        # CHECK: RESULT: 6
 
 
 test_fill_generic()
 
 
 def test_fill_rng_builtin():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f64 = F64Type.get()
-    i32 = IntegerType.get_signless(32)
-    with InsertionPoint(module.body):
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f64 = F64Type.get()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(module.body):
 
-      @func.FuncOp.from_py_func(f64, f64, i32, MemRefType.get((4, 16), i32))
-      def fill_rng_on_buffers(min, max, seed, out):
-        linalg.fill_rng_2d(min, max, seed, outs=[out])
+            @func.FuncOp.from_py_func(f64, f64, i32, MemRefType.get((4, 16), i32))
+            def fill_rng_on_buffers(min, max, seed, out):
+                linalg.fill_rng_2d(min, max, seed, outs=[out])
 
-    execution_engine = ExecutionEngine(transform(module, fill_rng_boiler))
+        execution_engine = ExecutionEngine(transform(module, fill_rng_boiler))
 
-    # TODO: FFI-based solution to allow testing and printing with python code.
-    # Prepare arguments: one result i32.
-    # Arguments must be passed as pointers.
-    c_int_p = ctypes.c_int * 1
-    res = c_int_p(-1)
-    execution_engine.invoke("main", res)
+        # TODO: FFI-based solution to allow testing and printing with python code.
+        # Prepare arguments: one result i32.
+        # Arguments must be passed as pointers.
+        c_int_p = ctypes.c_int * 1
+        res = c_int_p(-1)
+        execution_engine.invoke("main", res)
 
-    log("RESULT: ", res[0])
-    # CHECK: RESULT: -480
+        log("RESULT: ", res[0])
+        # CHECK: RESULT: -480
 
 
 test_fill_rng_builtin()
 
 
 def test_fill_rng_generic():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f64 = F64Type.get()
-    i32 = IntegerType.get_signless(32)
-    with InsertionPoint(module.body):
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f64 = F64Type.get()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(module.body):
 
-      @func.FuncOp.from_py_func(f64, f64, i32, MemRefType.get((4, 16), i32))
-      def fill_rng_on_buffers(min, max, seed, out):
-        linalg.fill_rng_2d(min, max, seed, outs=[out], emit_generic=True)
+            @func.FuncOp.from_py_func(f64, f64, i32, MemRefType.get((4, 16), i32))
+            def fill_rng_on_buffers(min, max, seed, out):
+                linalg.fill_rng_2d(min, max, seed, outs=[out], emit_generic=True)
 
-    execution_engine = ExecutionEngine(transform(module, fill_rng_boiler))
+        execution_engine = ExecutionEngine(transform(module, fill_rng_boiler))
 
-    # TODO: FFI-based solution to allow testing and printing with python code.
-    # Prepare arguments: one result i32.
-    # Arguments must be passed as pointers.
-    c_int_p = ctypes.c_int * 1
-    res = c_int_p(-1)
-    execution_engine.invoke("main", res)
+        # TODO: FFI-based solution to allow testing and printing with python code.
+        # Prepare arguments: one result i32.
+        # Arguments must be passed as pointers.
+        c_int_p = ctypes.c_int * 1
+        res = c_int_p(-1)
+        execution_engine.invoke("main", res)
 
-    log("RESULT: ", res[0])
-    # CHECK: RESULT: -480
+        log("RESULT: ", res[0])
+        # CHECK: RESULT: -480
 
 
 test_fill_rng_generic()
 
 
 def test_max_pooling_builtin():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f64 = F64Type.get()
-    i32 = IntegerType.get_signless(32)
-    with InsertionPoint(module.body):
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f64 = F64Type.get()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(module.body):
 
-      @func.FuncOp.from_py_func(
-          MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
-          MemRefType.get((1, 2, 4, 1), i32))
-      def pooling_on_buffers(input, shape, output):
-        linalg.pooling_nhwc_max(
-            input, shape, outs=[output], strides=[2, 4], dilations=[1, 2])
+            @func.FuncOp.from_py_func(
+                MemRefType.get((1, 4, 16, 1), f64),
+                MemRefType.get((2, 2), f64),
+                MemRefType.get((1, 2, 4, 1), i32),
+            )
+            def pooling_on_buffers(input, shape, output):
+                linalg.pooling_nhwc_max(
+                    input, shape, outs=[output], strides=[2, 4], dilations=[1, 2]
+                )
 
-    execution_engine = ExecutionEngine(transform(module, pooling_boiler))
+        execution_engine = ExecutionEngine(transform(module, pooling_boiler))
 
-    # TODO: FFI-based solution to allow testing and printing with python code.
-    # Prepare arguments: one result i32.
-    # Arguments must be passed as pointers.
-    c_int_p = ctypes.c_int * 1
-    res = c_int_p(-1)
-    execution_engine.invoke("main", res)
+        # TODO: FFI-based solution to allow testing and printing with python code.
+        # Prepare arguments: one result i32.
+        # Arguments must be passed as pointers.
+        c_int_p = ctypes.c_int * 1
+        res = c_int_p(-1)
+        execution_engine.invoke("main", res)
 
-    log("RESULT: ", res[0])
-    # 77 is not selected due to the dilation 2 in the second dimension.
-    # CHECK: RESULT: 42
+        log("RESULT: ", res[0])
+        # 77 is not selected due to the dilation 2 in the second dimension.
+        # CHECK: RESULT: 42
 
 
 test_max_pooling_builtin()
 
 
 def test_max_pooling_generic():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f64 = F64Type.get()
-    i32 = IntegerType.get_signless(32)
-    with InsertionPoint(module.body):
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f64 = F64Type.get()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(module.body):
 
-      @func.FuncOp.from_py_func(
-          MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
-          MemRefType.get((1, 2, 4, 1), i32))
-      def pooling_on_buffers(input, shape, output):
-        linalg.pooling_nhwc_max(
-            input,
-            shape,
-            outs=[output],
-            strides=[2, 4],
-            dilations=[1, 2],
-            emit_generic=True)
+            @func.FuncOp.from_py_func(
+                MemRefType.get((1, 4, 16, 1), f64),
+                MemRefType.get((2, 2), f64),
+                MemRefType.get((1, 2, 4, 1), i32),
+            )
+            def pooling_on_buffers(input, shape, output):
+                linalg.pooling_nhwc_max(
+                    input,
+                    shape,
+                    outs=[output],
+                    strides=[2, 4],
+                    dilations=[1, 2],
+                    emit_generic=True,
+                )
 
-    execution_engine = ExecutionEngine(transform(module, pooling_boiler))
+        execution_engine = ExecutionEngine(transform(module, pooling_boiler))
 
-    # TODO: FFI-based solution to allow testing and printing with python code.
-    # Prepare arguments: one result i32.
-    # Arguments must be passed as pointers.
-    c_int_p = ctypes.c_int * 1
-    res = c_int_p(-1)
-    execution_engine.invoke("main", res)
+        # TODO: FFI-based solution to allow testing and printing with python code.
+        # Prepare arguments: one result i32.
+        # Arguments must be passed as pointers.
+        c_int_p = ctypes.c_int * 1
+        res = c_int_p(-1)
+        execution_engine.invoke("main", res)
 
-    log("RESULT: ", res[0])
-    # 77 is not selected due to the dilation 2 in the second dimension.
-    # CHECK: RESULT: 42
+        log("RESULT: ", res[0])
+        # 77 is not selected due to the dilation 2 in the second dimension.
+        # CHECK: RESULT: 42
 
 
 test_max_pooling_generic()
 
 
 def test_min_pooling_builtin():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f64 = F64Type.get()
-    i32 = IntegerType.get_signless(32)
-    with InsertionPoint(module.body):
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f64 = F64Type.get()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(module.body):
 
-      @func.FuncOp.from_py_func(
-          MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
-          MemRefType.get((1, 2, 4, 1), i32))
-      # Set the strides and use the default dilations.
-      def pooling_on_buffers(input, shape, output):
-        linalg.pooling_nhwc_min(input, shape, outs=[output], strides=[2, 4])
+            @func.FuncOp.from_py_func(
+                MemRefType.get((1, 4, 16, 1), f64),
+                MemRefType.get((2, 2), f64),
+                MemRefType.get((1, 2, 4, 1), i32),
+            )
+            # Set the strides and use the default dilations.
+            def pooling_on_buffers(input, shape, output):
+                linalg.pooling_nhwc_min(input, shape, outs=[output], strides=[2, 4])
 
-    execution_engine = ExecutionEngine(transform(module, pooling_boiler))
+        execution_engine = ExecutionEngine(transform(module, pooling_boiler))
 
-    # TODO: FFI-based solution to allow testing and printing with python code.
-    # Prepare arguments: one result i32.
-    # Arguments must be passed as pointers.
-    c_int_p = ctypes.c_int * 1
-    res = c_int_p(-1)
-    execution_engine.invoke("main", res)
+        # TODO: FFI-based solution to allow testing and printing with python code.
+        # Prepare arguments: one result i32.
+        # Arguments must be passed as pointers.
+        c_int_p = ctypes.c_int * 1
+        res = c_int_p(-1)
+        execution_engine.invoke("main", res)
 
-    log("RESULT: ", res[0])
-    # CHECK: RESULT: -13
+        log("RESULT: ", res[0])
+        # CHECK: RESULT: -13
 
 
 test_min_pooling_builtin()
 
 
 def test_min_pooling_generic():
-  with Context() as ctx, Location.unknown():
-    module = Module.create()
-    f64 = F64Type.get()
-    i32 = IntegerType.get_signless(32)
-    with InsertionPoint(module.body):
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        f64 = F64Type.get()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(module.body):
 
-      @func.FuncOp.from_py_func(
-          MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
-          MemRefType.get((1, 2, 4, 1), i32))
-      # Set the strides and use the default dilations.
-      def pooling_on_buffers(input, shape, output):
-        linalg.pooling_nhwc_min(
-            input, shape, outs=[output], strides=[2, 4], emit_generic=True)
+            @func.FuncOp.from_py_func(
+                MemRefType.get((1, 4, 16, 1), f64),
+                MemRefType.get((2, 2), f64),
+                MemRefType.get((1, 2, 4, 1), i32),
+            )
+            # Set the strides and use the default dilations.
+            def pooling_on_buffers(input, shape, output):
+                linalg.pooling_nhwc_min(
+                    input, shape, outs=[output], strides=[2, 4], emit_generic=True
+                )
 
-    execution_engine = ExecutionEngine(transform(module, pooling_boiler))
+        execution_engine = ExecutionEngine(transform(module, pooling_boiler))
 
-    # TODO: FFI-based solution to allow testing and printing with python code.
-    # Prepare arguments: one result i32.
-    # Arguments must be passed as pointers.
-    c_int_p = ctypes.c_int * 1
-    res = c_int_p(-1)
-    execution_engine.invoke("main", res)
+        # TODO: FFI-based solution to allow testing and printing with python code.
+        # Prepare arguments: one result i32.
+        # Arguments must be passed as pointers.
+        c_int_p = ctypes.c_int * 1
+        res = c_int_p(-1)
+        execution_engine.invoke("main", res)
 
-    log("RESULT: ", res[0])
-    # CHECK: RESULT: -13
+        log("RESULT: ", res[0])
+        # CHECK: RESULT: -13
 
 
 test_min_pooling_generic()

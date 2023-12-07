@@ -76,6 +76,90 @@ bool M68kAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
 }
 
+void M68kAsmPrinter::printDisp(const MachineInstr *MI, unsigned opNum,
+                               raw_ostream &O) {
+  // Print immediate displacement without the '#' predix
+  const MachineOperand &Op = MI->getOperand(opNum);
+  if (Op.isImm()) {
+    O << Op.getImm();
+    return;
+  }
+  // Displacement is relocatable, so we're pretty permissive about what
+  // can be put here.
+  printOperand(MI, opNum, O);
+}
+
+void M68kAsmPrinter::printAbsMem(const MachineInstr *MI, unsigned OpNum,
+                                 raw_ostream &O) {
+  const MachineOperand &MO = MI->getOperand(OpNum);
+  if (MO.isImm())
+    O << format("$%0" PRIx64, (uint64_t)MO.getImm());
+  else
+    PrintAsmMemoryOperand(MI, OpNum, nullptr, O);
+}
+
+bool M68kAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
+                                           unsigned OpNo, const char *ExtraCode,
+                                           raw_ostream &OS) {
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  switch (MO.getType()) {
+  case MachineOperand::MO_Immediate:
+    // Immediate value that goes here is the addressing mode kind we set
+    // in M68kDAGToDAGISel::SelectInlineAsmMemoryOperand.
+    using namespace M68k;
+    // Skip the addressing mode kind operand.
+    ++OpNo;
+    // Decode MemAddrModeKind.
+    switch (static_cast<MemAddrModeKind>(MO.getImm())) {
+    case MemAddrModeKind::j:
+      printARIMem(MI, OpNo, OS);
+      break;
+    case MemAddrModeKind::o:
+      printARIPIMem(MI, OpNo, OS);
+      break;
+    case MemAddrModeKind::e:
+      printARIPDMem(MI, OpNo, OS);
+      break;
+    case MemAddrModeKind::p:
+      printARIDMem(MI, OpNo, OS);
+      break;
+    case MemAddrModeKind::f:
+    case MemAddrModeKind::F:
+      printARIIMem(MI, OpNo, OS);
+      break;
+    case MemAddrModeKind::k:
+      printPCIMem(MI, 0, OpNo, OS);
+      break;
+    case MemAddrModeKind::q:
+      printPCDMem(MI, 0, OpNo, OS);
+      break;
+    case MemAddrModeKind::b:
+      printAbsMem(MI, OpNo, OS);
+      break;
+    default:
+      llvm_unreachable("Unrecognized memory addressing mode");
+    }
+    return false;
+  case MachineOperand::MO_GlobalAddress:
+    PrintSymbolOperand(MO, OS);
+    return false;
+  case MachineOperand::MO_BlockAddress:
+    GetBlockAddressSymbol(MO.getBlockAddress())->print(OS, MAI);
+    return false;
+  case MachineOperand::MO_Register:
+    // This is a special case where it is treated as a memory reference, with
+    // the register holding the address value. Thus, we print it as ARI here.
+    if (M68kII::isAddressRegister(MO.getReg())) {
+      printARIMem(MI, OpNo, OS);
+      return false;
+    }
+    break;
+  default:
+    break;
+  }
+  return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, ExtraCode, OS);
+}
+
 void M68kAsmPrinter::emitInstruction(const MachineInstr *MI) {
   M68k_MC::verifyInstructionPredicates(MI->getOpcode(),
                                        getSubtargetInfo().getFeatureBits());

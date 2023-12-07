@@ -82,7 +82,7 @@ void LiveRangeEdit::scanRemattable() {
   for (VNInfo *VNI : getParent().valnos) {
     if (VNI->isUnused())
       continue;
-    unsigned Original = VRM->getOriginal(getReg());
+    Register Original = VRM->getOriginal(getReg());
     LiveInterval &OrigLI = LIS.getInterval(Original);
     VNInfo *OrigVNI = OrigLI.getVNInfoAt(VNI->def);
     if (!OrigVNI)
@@ -114,7 +114,7 @@ bool LiveRangeEdit::allUsesAvailableAt(const MachineInstr *OrigMI,
 
     // We can't remat physreg uses, unless it is a constant or target wants
     // to ignore this use.
-    if (Register::isPhysicalRegister(MO.getReg())) {
+    if (MO.getReg().isPhysical()) {
       if (MRI.isConstantPhysReg(MO.getReg()) || TII.isIgnorableUse(MO))
         continue;
       return false;
@@ -181,11 +181,9 @@ bool LiveRangeEdit::canRematerializeAt(Remat &RM, VNInfo *OrigVNI,
 
 SlotIndex LiveRangeEdit::rematerializeAt(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MI,
-                                         unsigned DestReg,
-                                         const Remat &RM,
+                                         Register DestReg, const Remat &RM,
                                          const TargetRegisterInfo &tri,
-                                         bool Late,
-                                         unsigned SubIdx,
+                                         bool Late, unsigned SubIdx,
                                          MachineInstr *ReplaceIndexMI) {
   assert(RM.OrigMI && "Invalid remat");
   TII.reMaterialize(MBB, MI, DestReg, SubIdx, *RM.OrigMI, tri);
@@ -288,8 +286,12 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
 
   // Never delete a bundled instruction.
   if (MI->isBundled()) {
+    // TODO: Handle deleting copy bundles
+    LLVM_DEBUG(dbgs() << "Won't delete dead bundled inst: " << Idx << '\t'
+                      << *MI);
     return;
   }
+
   // Never delete inline asm.
   if (MI->isInlineAsm()) {
     LLVM_DEBUG(dbgs() << "Won't delete: " << Idx << '\t' << *MI);
@@ -306,7 +308,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
   LLVM_DEBUG(dbgs() << "Deleting dead def " << Idx << '\t' << *MI);
 
   // Collect virtual registers to be erased after MI is gone.
-  SmallVector<unsigned, 8> RegsToErase;
+  SmallVector<Register, 8> RegsToErase;
   bool ReadsPhysRegs = false;
   bool isOrigDef = false;
   Register Dest;
@@ -336,7 +338,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     if (!MO.isReg())
       continue;
     Register Reg = MO.getReg();
-    if (!Register::isVirtualRegister(Reg)) {
+    if (!Reg.isVirtual()) {
       // Check if MI reads any unreserved physregs.
       if (Reg && MO.readsReg() && !MRI.isReserved(Reg))
         ReadsPhysRegs = true;
@@ -350,7 +352,8 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     // unlikely to change anything. We typically don't want to shrink the
     // PIC base register that has lots of uses everywhere.
     // Always shrink COPY uses that probably come from live range splitting.
-    if ((MI->readsVirtualRegister(Reg) && (MI->isCopy() || MO.isDef())) ||
+    if ((MI->readsVirtualRegister(Reg) &&
+         (MO.isDef() || TII.isCopyInstr(*MI))) ||
         (MO.readsReg() && (MRI.hasOneNonDBGUse(Reg) || useIsKill(LI, MO))))
       ToShrink.insert(&LI);
     else if (MO.readsReg())
@@ -378,7 +381,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     // Remove all operands that aren't physregs.
     for (unsigned i = MI->getNumOperands(); i; --i) {
       const MachineOperand &MO = MI->getOperand(i-1);
-      if (MO.isReg() && Register::isPhysicalRegister(MO.getReg()))
+      if (MO.isReg() && MO.getReg().isPhysical())
         continue;
       MI->removeOperand(i-1);
     }

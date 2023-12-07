@@ -59,11 +59,7 @@ ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
 }
 
 ModuleFile *ModuleManager::lookup(const FileEntry *File) const {
-  auto Known = Modules.find(File);
-  if (Known == Modules.end())
-    return nullptr;
-
-  return Known->second;
+  return Modules.lookup(File);
 }
 
 std::unique_ptr<llvm::MemoryBuffer>
@@ -444,14 +440,14 @@ void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
 
 bool ModuleManager::lookupModuleFile(StringRef FileName, off_t ExpectedSize,
                                      time_t ExpectedModTime,
-                                     Optional<FileEntryRef> &File) {
+                                     OptionalFileEntryRef &File) {
   File = std::nullopt;
   if (FileName == "-")
     return false;
 
   // Open the file immediately to ensure there is no race between stat'ing and
   // opening the file.
-  Optional<FileEntryRef> FileOrErr =
+  OptionalFileEntryRef FileOrErr =
       expectedToOptional(FileMgr.getFileRef(FileName, /*OpenFile=*/true,
                                             /*CacheFailure=*/false));
   if (!FileOrErr)

@@ -34,7 +34,8 @@ namespace clang {
       ArrayRef<intptr_t> QualTypeVals);
 
   /// Returns a desugared version of the QualType, and marks ShouldAKA as true
-  /// whenever we remove significant sugar from the type.
+  /// whenever we remove significant sugar from the type. Make sure ShouldAKA
+  /// is initialized before passing it in.
   QualType desugarForDiagnostic(ASTContext &Context, QualType QT,
                                 bool &ShouldAKA);
 }  // end namespace clang

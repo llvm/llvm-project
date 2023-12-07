@@ -12,10 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
-namespace objc {
+namespace clang::tidy::google::objc {
 
 void AvoidThrowingObjCExceptionCheck::registerMatchers(MatchFinder *Finder) {
 
@@ -57,7 +54,4 @@ void AvoidThrowingObjCExceptionCheck::check(
        "Objective-C errors");
 }
 
-}  // namespace objc
-}  // namespace google
-}  // namespace tidy
-}  // namespace clang
+} // namespace clang::tidy::google::objc

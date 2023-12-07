@@ -138,7 +138,7 @@ module real_tests
   real(4), parameter :: r4_nan_add2 = r4_pinf + r4_ninf
   TEST_ISNAN(r4_nan_add2)
 
-  ! No warnings expected here (quite NaN propagation)
+  ! No warnings expected here (quiet NaN propagation)
   real(4), parameter :: r4_nan_sub3 = 0._4 - r4_nan
   TEST_ISNAN(r4_nan_sub3)
   real(4), parameter :: r4_nan_sub4 = r4_nan - r4_pmax
@@ -201,7 +201,7 @@ module real_tests
   real(4), parameter :: r4_nan_mult2 = 0._4*r4_ninf
   TEST_ISNAN(r4_nan_mult2)
 
-  ! No warnings expected here (quite NaN propagation)
+  ! No warnings expected here (quiet NaN propagation)
   real(4), parameter :: r4_nan_div6 = 0._4/r4_nan
   TEST_ISNAN(r4_nan_div6)
   real(4), parameter :: r4_nan_div7 = r4_nan/r4_nan

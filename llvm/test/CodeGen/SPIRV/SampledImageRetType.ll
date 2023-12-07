@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
 %opencl.image1d_ro_t = type opaque
 ; CHECK: %[[#image1d_t:]] = OpTypeImage

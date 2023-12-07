@@ -73,7 +73,7 @@ std::string NVPTXAssignValidGlobalNames::cleanUpName(StringRef Name) {
   std::string ValidName;
   raw_string_ostream ValidNameStream(ValidName);
   for (char C : Name) {
-    if (C == '.' || C == '@') {
+    if (C == '.' || C == '@' || C == '<' || C == '>') {
       ValidNameStream << "_$_";
     } else {
       ValidNameStream << C;

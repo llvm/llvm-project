@@ -45,7 +45,7 @@ entry:
 ; CHECK-LABEL: func2:
 ; CHECK-NEXT: .seh_proc func2
 ; CHECK-NEXT: // %bb.0:
-; CHECK-NEXT: pacib x30, sp
+; CHECK-NEXT: pacibsp
 ; CHECK-NEXT: .seh_pac_sign_lr
 ; CHECK-NEXT: str x19, [sp, #-16]!
 ; CHECK-NEXT: .seh_save_reg_x x19, 16

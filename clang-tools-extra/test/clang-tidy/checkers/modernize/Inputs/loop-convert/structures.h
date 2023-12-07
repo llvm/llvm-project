@@ -1,6 +1,14 @@
 #ifndef STRUCTURES_H
 #define STRUCTURES_H
 
+namespace std {
+template <class T> constexpr auto begin(T& t) -> decltype(t.begin());
+template <class T> constexpr auto begin(const T& t) -> decltype(t.begin());
+template <class T> constexpr auto end(T& t) -> decltype(t.end());
+template <class T> constexpr auto end(const T& t) -> decltype(t.end());
+template <class T> constexpr auto size(const T& t) -> decltype(t.size());
+} // namespace std
+
 extern "C" {
 extern int printf(const char *restrict, ...);
 }
@@ -28,6 +36,8 @@ struct TriviallyCopyableButBig {
   char Array[16];
 };
 
+namespace ADT {
+
 struct S {
   typedef MutableVal *iterator;
   typedef const MutableVal *const_iterator;
@@ -38,6 +48,14 @@ struct S {
   iterator begin();
   iterator end();
 };
+
+S::const_iterator begin(const S&);
+S::const_iterator end(const S&);
+S::const_iterator cbegin(const S&);
+S::const_iterator cend(const S&);
+S::iterator begin(S&);
+S::iterator end(S&);
+unsigned size(const S&);
 
 struct T {
   typedef int value_type;
@@ -52,6 +70,13 @@ struct T {
   iterator begin();
   iterator end();
 };
+T::iterator begin(T&);
+T::iterator end(T&);
+
+} // namespace ADT
+
+using ADT::S;
+using ADT::T;
 
 struct Q {
   typedef int value_type;
@@ -90,6 +115,8 @@ struct X {
   S getS();
 };
 
+namespace ADT {
+
 template<typename ElemType>
 class dependent {
  public:
@@ -125,6 +152,20 @@ class dependent {
   void foo();
   void constFoo() const;
 };
+
+template<typename ElemType>
+unsigned size(const dependent<ElemType>&);
+template<typename ElemType>
+unsigned length(const dependent<ElemType>&);
+
+template<typename ElemType>
+class dependent_derived : public dependent<ElemType> {
+};
+
+} // namespace ADT
+
+using ADT::dependent;
+using ADT::dependent_derived;
 
 template<typename First, typename Second>
 class doublyDependent{

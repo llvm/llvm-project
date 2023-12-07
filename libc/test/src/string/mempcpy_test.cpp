@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/mempcpy.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 // Since this function just calls out to memcpy, and memcpy has its own unit
 // tests, it is assumed that memcpy works. These tests are just for the specific
@@ -24,5 +24,5 @@ TEST(LlvmLibcMempcpyTest, ZeroCount) {
   const char *src = "12345";
   char dest[10];
   void *result = __llvm_libc::mempcpy(dest, src, 0);
-  ASSERT_EQ(static_cast<char *>(result), dest);
+  ASSERT_EQ(static_cast<char *>(result), dest + 0);
 }

@@ -163,12 +163,12 @@ public:
 
   /// Return the value the effect is applied on, or nullptr if there isn't a
   /// known value being affected.
-  Value getValue() const { return value ? value.dyn_cast<Value>() : Value(); }
+  Value getValue() const { return value ? llvm::dyn_cast_if_present<Value>(value) : Value(); }
 
   /// Return the symbol reference the effect is applied on, or nullptr if there
   /// isn't a known smbol being affected.
   SymbolRefAttr getSymbolRef() const {
-    return value ? value.dyn_cast<SymbolRefAttr>() : SymbolRefAttr();
+    return value ? llvm::dyn_cast_if_present<SymbolRefAttr>(value) : SymbolRefAttr();
   }
 
   /// Return the resource that the effect applies to.
@@ -316,6 +316,8 @@ bool isOpTriviallyDead(Operation *op);
 /// Return true if the given operation would be dead if unused, and has no side
 /// effects on memory that would prevent erasing. This is equivalent to checking
 /// `isOpTriviallyDead` if `op` was unused.
+///
+/// Note: Terminators and symbols are never considered to be trivially dead.
 bool wouldOpBeTriviallyDead(Operation *op);
 
 /// Returns true if the given operation is free of memory effects.
@@ -329,6 +331,17 @@ bool wouldOpBeTriviallyDead(Operation *op);
 /// If the operation has both, then it is free of memory effects if both
 /// conditions are satisfied.
 bool isMemoryEffectFree(Operation *op);
+
+/// Returns the side effects of an operation. If the operation has
+/// RecursiveMemoryEffects, include all side effects of child operations.
+///
+/// std::nullopt indicates that an option did not have a memory effect interface
+/// and so no result could be obtained. An empty vector indicates that there
+/// were no memory effects found (but every operation implemented the memory
+/// effect interface or has RecursiveMemoryEffects). If the vector contains
+/// multiple effects, these effects may be duplicates.
+std::optional<llvm::SmallVector<MemoryEffects::EffectInstance>>
+getEffectsRecursively(Operation *rootOp);
 
 /// Returns true if the given operation is speculatable, i.e. has no undefined
 /// behavior or other side effects.

@@ -116,6 +116,12 @@ OPTIONS
  Display the specified section(s) as hexadecimal bytes. ``section`` may be a
  section index or section name.
 
+.. option:: --memtag
+
+ Display information about memory tagging present in the binary. This includes
+ various memtag-specific dynamic entries, decoded global descriptor sections,
+ and decoded Android-specific ELF notes.
+
 .. option:: --needed-libs
 
  Display the needed libraries.

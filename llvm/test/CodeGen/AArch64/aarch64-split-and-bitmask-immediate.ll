@@ -116,7 +116,7 @@ entry:
 
 ; The split bitmask immediates should be hoisted outside loop because they are
 ; loop invariant.
-define void @test8(i64 %a, i64* noalias %src, i64* noalias %dst, i64 %n) {
+define void @test8(i64 %a, ptr noalias %src, ptr noalias %dst, i64 %n) {
 ; CHECK-LABEL: test8:
 ; CHECK:       // %bb.0: // %loop.ph
 ; CHECK-NEXT:    and x9, x0, #0x3ffc00
@@ -150,10 +150,10 @@ loop:
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:
-  %src.arrayidx = getelementptr inbounds i64, i64* %src, i64 %iv
-  %val = load i64, i64* %src.arrayidx
-  %dst.arrayidx = getelementptr inbounds i64, i64* %dst, i64 %iv
-  store i64 %val, i64* %dst.arrayidx
+  %src.arrayidx = getelementptr inbounds i64, ptr %src, i64 %iv
+  %val = load i64, ptr %src.arrayidx
+  %dst.arrayidx = getelementptr inbounds i64, ptr %dst, i64 %iv
+  store i64 %val, ptr %dst.arrayidx
   br label %for.inc
 
 if.else:
@@ -169,7 +169,7 @@ exit:
 }
 
 ; This constant should not be split because the `and` is not loop invariant.
-define i32 @test9(i32* nocapture %x, i32* nocapture readonly %y, i32 %n) {
+define i32 @test9(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: test9:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w2, #1
@@ -201,11 +201,11 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %y, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %y, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %and = and i32 %0, 2098176
-  %arrayidx2 = getelementptr inbounds i32, i32* %x, i64 %indvars.iv
-  store i32 %and, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %x, i64 %indvars.iv
+  store i32 %and, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
@@ -222,7 +222,7 @@ for.body:                                         ; preds = %for.body.preheader,
 ;
 ; In this case, the constant should not be split because it causes more
 ; instructions.
-define void @test10(i32* nocapture %x, i32* nocapture readonly %y, i32* nocapture %z) {
+define void @test10(ptr nocapture %x, ptr nocapture readonly %y, ptr nocapture %z) {
 ; CHECK-LABEL: test10:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x1]
@@ -235,12 +235,12 @@ define void @test10(i32* nocapture %x, i32* nocapture readonly %y, i32* nocaptur
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i32, i32* %y, align 4
+  %0 = load i32, ptr %y, align 4
   %and = and i32 %0, 2098176
-  store i32 %and, i32* %x, align 4
-  %1 = load i32, i32* %y, align 4
+  store i32 %and, ptr %x, align 4
+  %1 = load i32, ptr %y, align 4
   %or = or i32 %1, 2098176
-  store i32 %or, i32* %z, align 4
+  store i32 %or, ptr %z, align 4
   ret void
 }
 

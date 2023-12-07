@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodegenUtils.h"
+#include "LoopEmitter.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -43,22 +44,24 @@ struct VL {
   bool enableSIMDIndex32;
 };
 
-/// Helper to test for given index value.
-static bool isIntValue(Value val, int64_t idx) {
-  if (auto ival = getConstantIntValue(val))
-    return *ival == idx;
-  return false;
+/// Helper test for invariant value (defined outside given block).
+static bool isInvariantValue(Value val, Block *block) {
+  return val.getDefiningOp() && val.getDefiningOp()->getBlock() != block;
+}
+
+/// Helper test for invariant argument (defined outside given block).
+static bool isInvariantArg(BlockArgument arg, Block *block) {
+  return arg.getOwner() != block;
 }
 
 /// Constructs vector type for element type.
 static VectorType vectorType(VL vl, Type etp) {
-  unsigned numScalableDims = vl.enableVLAVectorization;
-  return VectorType::get(vl.vectorLength, etp, numScalableDims);
+  return VectorType::get(vl.vectorLength, etp, vl.enableVLAVectorization);
 }
 
-/// Constructs vector type from pointer.
-static VectorType vectorType(VL vl, Value ptr) {
-  return vectorType(vl, ptr.getType().cast<MemRefType>().getElementType());
+/// Constructs vector type from a memref value.
+static VectorType vectorType(VL vl, Value mem) {
+  return vectorType(vl, getMemRefType(mem).getElementType());
 }
 
 /// Constructs vector iteration mask.
@@ -87,8 +90,8 @@ static Value genVectorMask(PatternRewriter &rewriter, Location loc, VL vl,
       {rewriter.getAffineSymbolExpr(0),
        rewriter.getAffineDimExpr(0) - rewriter.getAffineDimExpr(1)},
       rewriter.getContext());
-  Value end =
-      rewriter.createOrFold<AffineMinOp>(loc, min, ValueRange{hi, iv, step});
+  Value end = rewriter.createOrFold<affine::AffineMinOp>(
+      loc, min, ValueRange{hi, iv, step});
   return rewriter.create<vector::CreateMaskOp>(loc, mtp, end);
 }
 
@@ -105,17 +108,17 @@ static Value genVectorInvariantValue(PatternRewriter &rewriter, VL vl,
 /// that the sparse compiler can only generate indirect loads in
 /// the last index, i.e. back().
 static Value genVectorLoad(PatternRewriter &rewriter, Location loc, VL vl,
-                           Value ptr, ArrayRef<Value> idxs, Value vmask) {
-  VectorType vtp = vectorType(vl, ptr);
+                           Value mem, ArrayRef<Value> idxs, Value vmask) {
+  VectorType vtp = vectorType(vl, mem);
   Value pass = constantZero(rewriter, loc, vtp);
-  if (idxs.back().getType().isa<VectorType>()) {
+  if (llvm::isa<VectorType>(idxs.back().getType())) {
     SmallVector<Value> scalarArgs(idxs.begin(), idxs.end());
     Value indexVec = idxs.back();
     scalarArgs.back() = constantIndex(rewriter, loc, 0);
-    return rewriter.create<vector::GatherOp>(loc, vtp, ptr, scalarArgs,
+    return rewriter.create<vector::GatherOp>(loc, vtp, mem, scalarArgs,
                                              indexVec, vmask, pass);
   }
-  return rewriter.create<vector::MaskedLoadOp>(loc, vtp, ptr, idxs, vmask,
+  return rewriter.create<vector::MaskedLoadOp>(loc, vtp, mem, idxs, vmask,
                                                pass);
 }
 
@@ -123,17 +126,17 @@ static Value genVectorLoad(PatternRewriter &rewriter, Location loc, VL vl,
 /// where 'lo' denotes the current index and 'hi = lo + vl - 1'. Note
 /// that the sparse compiler can only generate indirect stores in
 /// the last index, i.e. back().
-static void genVectorStore(PatternRewriter &rewriter, Location loc, Value ptr,
+static void genVectorStore(PatternRewriter &rewriter, Location loc, Value mem,
                            ArrayRef<Value> idxs, Value vmask, Value rhs) {
-  if (idxs.back().getType().isa<VectorType>()) {
+  if (llvm::isa<VectorType>(idxs.back().getType())) {
     SmallVector<Value> scalarArgs(idxs.begin(), idxs.end());
     Value indexVec = idxs.back();
     scalarArgs.back() = constantIndex(rewriter, loc, 0);
-    rewriter.create<vector::ScatterOp>(loc, ptr, scalarArgs, indexVec, vmask,
+    rewriter.create<vector::ScatterOp>(loc, mem, scalarArgs, indexVec, vmask,
                                        rhs);
     return;
   }
-  rewriter.create<vector::MaskedStoreOp>(loc, ptr, idxs, vmask, rhs);
+  rewriter.create<vector::MaskedStoreOp>(loc, mem, idxs, vmask, rhs);
 }
 
 /// Detects a vectorizable reduction operations and returns the
@@ -222,9 +225,9 @@ static Value genVectorReducInit(PatternRewriter &rewriter, Location loc,
 /// See https://llvm.org/docs/GetElementPtr.html for some background on
 /// the complications described below.
 ///
-/// We need to generate a pointer/index load from the sparse storage scheme.
-/// Narrower data types need to be zero extended before casting the value
-/// into the index type used for looping and indexing.
+/// We need to generate a position/coordinate load from the sparse storage
+/// scheme.  Narrower data types need to be zero extended before casting
+/// the value into the `index` type used for looping and indexing.
 ///
 /// For the scalar case, subscripts simply zero extend narrower indices
 /// into 64-bit values before casting to an index type without a performance
@@ -236,13 +239,15 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
                                 Value vmask, SmallVectorImpl<Value> &idxs) {
   unsigned d = 0;
   unsigned dim = subs.size();
+  Block *block = &forOp.getRegion().front();
   for (auto sub : subs) {
     bool innermost = ++d == dim;
     // Invariant subscripts in outer dimensions simply pass through.
     // Note that we rely on LICM to hoist loads where all subscripts
     // are invariant in the innermost loop.
-    if (sub.getDefiningOp() &&
-        sub.getDefiningOp()->getBlock() != &forOp.getRegion().front()) {
+    // Example:
+    //   a[inv][i] for inv
+    if (isInvariantValue(sub, block)) {
       if (innermost)
         return false;
       if (codegen)
@@ -252,9 +257,10 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
     // Invariant block arguments (including outer loop indices) in outer
     // dimensions simply pass through. Direct loop indices in the
     // innermost loop simply pass through as well.
-    if (auto barg = sub.dyn_cast<BlockArgument>()) {
-      bool invariant = barg.getOwner() != &forOp.getRegion().front();
-      if (invariant == innermost)
+    // Example:
+    //   a[i][j] for both i and j
+    if (auto arg = llvm::dyn_cast<BlockArgument>(sub)) {
+      if (isInvariantArg(arg, block) == innermost)
         return false;
       if (codegen)
         idxs.push_back(sub);
@@ -281,6 +287,8 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
     // values, there is no good way to state that the indices are unsigned,
     // which creates the potential of incorrect address calculations in the
     // unlikely case we need such extremely large offsets.
+    // Example:
+    //    a[ ind[i] ]
     if (auto load = cast.getDefiningOp<memref::LoadOp>()) {
       if (!innermost)
         return false;
@@ -289,8 +297,8 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
         Location loc = forOp.getLoc();
         Value vload =
             genVectorLoad(rewriter, loc, vl, load.getMemRef(), idxs2, vmask);
-        Type etp = vload.getType().cast<VectorType>().getElementType();
-        if (!etp.isa<IndexType>()) {
+        Type etp = llvm::cast<VectorType>(vload.getType()).getElementType();
+        if (!llvm::isa<IndexType>(etp)) {
           if (etp.getIntOrFloatBitWidth() < 32)
             vload = rewriter.create<arith::ExtUIOp>(
                 loc, vectorType(vl, rewriter.getI32Type()), vload);
@@ -303,18 +311,20 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
       continue; // success so far
     }
     // Address calculation 'i = add inv, idx' (after LICM).
+    // Example:
+    //    a[base + i]
     if (auto load = cast.getDefiningOp<arith::AddIOp>()) {
       Value inv = load.getOperand(0);
       Value idx = load.getOperand(1);
-      if (inv.getDefiningOp() &&
-          inv.getDefiningOp()->getBlock() != &forOp.getRegion().front() &&
-          idx.dyn_cast<BlockArgument>()) {
-        if (!innermost)
-          return false;
-        if (codegen)
-          idxs.push_back(
-              rewriter.create<arith::AddIOp>(forOp.getLoc(), inv, idx));
-        continue; // success so far
+      if (isInvariantValue(inv, block)) {
+        if (auto arg = llvm::dyn_cast<BlockArgument>(idx)) {
+          if (isInvariantArg(arg, block) || !innermost)
+            return false;
+          if (codegen)
+            idxs.push_back(
+                rewriter.create<arith::AddIOp>(forOp.getLoc(), inv, idx));
+          continue; // success so far
+        }
       }
     }
     return false;
@@ -358,7 +368,7 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
   if (!VectorType::isValidElementType(exp.getType()))
     return false;
   // A block argument is invariant/reduction/index.
-  if (auto arg = exp.dyn_cast<BlockArgument>()) {
+  if (auto arg = llvm::dyn_cast<BlockArgument>(exp)) {
     if (arg == forOp.getInductionVar()) {
       // We encountered a single, innermost index inside the computation,
       // such as a[i] = i, which must convert to [i, i+1, ...].
@@ -380,26 +390,26 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
         vexp = rewriter.create<arith::AddIOp>(loc, veci, incr);
       }
       return true;
-    } else {
-      // An invariant or reduction. In both cases, we treat this as an
-      // invariant value, and rely on later replacing and folding to
-      // construct a proper reduction chain for the latter case.
-      if (codegen)
-        vexp = genVectorInvariantValue(rewriter, vl, exp);
-      return true;
     }
+    // An invariant or reduction. In both cases, we treat this as an
+    // invariant value, and rely on later replacing and folding to
+    // construct a proper reduction chain for the latter case.
+    if (codegen)
+      vexp = genVectorInvariantValue(rewriter, vl, exp);
+    return true;
   }
   // Something defined outside the loop-body is invariant.
   Operation *def = exp.getDefiningOp();
-  if (def->getBlock() != &forOp.getRegion().front()) {
+  Block *block = &forOp.getRegion().front();
+  if (def->getBlock() != block) {
     if (codegen)
       vexp = genVectorInvariantValue(rewriter, vl, exp);
     return true;
   }
   // Proper load operations. These are either values involved in the
   // actual computation, such as a[i] = b[i] becomes a[lo:hi] = b[lo:hi],
-  // or index values inside the computation that are now fetched from
-  // the sparse storage index arrays, such as a[i] = i becomes
+  // or coordinate values inside the computation that are now fetched from
+  // the sparse storage coordinates arrays, such as a[i] = i becomes
   // a[lo:hi] = ind[lo:hi], where 'lo' denotes the current index
   // and 'hi = lo + vl - 1'.
   if (auto load = dyn_cast<memref::LoadOp>(def)) {
@@ -452,6 +462,17 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
                       vx) &&
         vectorizeExpr(rewriter, forOp, vl, def->getOperand(1), codegen, vmask,
                       vy)) {
+      // We only accept shift-by-invariant (where the same shift factor applies
+      // to all packed elements). In the vector dialect, this is still
+      // represented with an expanded vector at the right-hand-side, however,
+      // so that we do not have to special case the code generation.
+      if (isa<arith::ShLIOp>(def) || isa<arith::ShRUIOp>(def) ||
+          isa<arith::ShRSIOp>(def)) {
+        Value shiftFactor = def->getOperand(1);
+        if (!isInvariantValue(shiftFactor, block))
+          return false;
+      }
+      // Generate code.
       BINOP(arith::MulFOp)
       BINOP(arith::MulIOp)
       BINOP(arith::DivFOp)
@@ -464,8 +485,10 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
       BINOP(arith::AndIOp)
       BINOP(arith::OrIOp)
       BINOP(arith::XOrIOp)
+      BINOP(arith::ShLIOp)
+      BINOP(arith::ShRUIOp)
+      BINOP(arith::ShRSIOp)
       // TODO: complex?
-      // TODO: shift by invariant?
     }
   }
   return false;
@@ -481,8 +504,15 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
 /// that analysis and rewriting code stay in sync.
 static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
                           bool codegen) {
-  Location loc = forOp.getLoc();
   Block &block = forOp.getRegion().front();
+  // For loops with single yield statement (as below) could be generated
+  // when custom reduce is used with unary operation.
+  // for (...)
+  //   yield c_0
+  if (block.getOperations().size() <= 1)
+    return false;
+
+  Location loc = forOp.getLoc();
   scf::YieldOp yield = cast<scf::YieldOp>(block.getTerminator());
   auto &last = *++block.rbegin();
   scf::ForOp forOpNew;
@@ -511,12 +541,11 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
       forOpNew = rewriter.create<scf::ForOp>(
           loc, forOp.getLowerBound(), forOp.getUpperBound(), step, vinit);
       forOpNew->setAttr(
-          SparseTensorLoopEmitter::getLoopEmitterLoopAttrName(),
-          forOp->getAttr(
-              SparseTensorLoopEmitter::getLoopEmitterLoopAttrName()));
+          LoopEmitter::getLoopEmitterLoopAttrName(),
+          forOp->getAttr(LoopEmitter::getLoopEmitterLoopAttrName()));
       rewriter.setInsertionPointToStart(forOpNew.getBody());
     } else {
-      forOp.setStep(step);
+      rewriter.updateRootInPlace(forOp, [&]() { forOp.setStep(step); });
       rewriter.setInsertionPoint(yield);
     }
     vmask = genVectorMask(rewriter, loc, vl, forOp.getInductionVar(),
@@ -545,10 +574,11 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
         // Now do some relinking (last one is not completely type safe
         // but all bad ones are removed right away). This also folds away
         // nop broadcast operations.
-        forOp.getResult(0).replaceAllUsesWith(vres);
-        forOp.getInductionVar().replaceAllUsesWith(forOpNew.getInductionVar());
-        forOp.getRegionIterArg(0).replaceAllUsesWith(
-            forOpNew.getRegionIterArg(0));
+        rewriter.replaceAllUsesWith(forOp.getResult(0), vres);
+        rewriter.replaceAllUsesWith(forOp.getInductionVar(),
+                                    forOpNew.getInductionVar());
+        rewriter.replaceAllUsesWith(forOp.getRegionIterArg(0),
+                                    forOpNew.getRegionIterArg(0));
         rewriter.eraseOp(forOp);
       }
       return true;
@@ -580,16 +610,16 @@ public:
 
   ForOpRewriter(MLIRContext *context, unsigned vectorLength,
                 bool enableVLAVectorization, bool enableSIMDIndex32)
-      : OpRewritePattern(context),
-        vl{vectorLength, enableVLAVectorization, enableSIMDIndex32} {}
+      : OpRewritePattern(context), vl{vectorLength, enableVLAVectorization,
+                                      enableSIMDIndex32} {}
 
   LogicalResult matchAndRewrite(scf::ForOp op,
                                 PatternRewriter &rewriter) const override {
     // Check for single block, unit-stride for-loop that is generated by
     // sparse compiler, which means no data dependence analysis is required,
     // and its loop-body is very restricted in form.
-    if (!op.getRegion().hasOneBlock() || !isIntValue(op.getStep(), 1) ||
-        !op->hasAttr(SparseTensorLoopEmitter::getLoopEmitterLoopAttrName()))
+    if (!op.getRegion().hasOneBlock() || !isConstantIntValue(op.getStep(), 1) ||
+        !op->hasAttr(LoopEmitter::getLoopEmitterLoopAttrName()))
       return failure();
     // Analyze (!codegen) and rewrite (codegen) loop-body.
     if (vectorizeStmt(rewriter, op, vl, /*codegen=*/false) &&
@@ -617,8 +647,7 @@ public:
     Value inp = op.getSource();
     if (auto redOp = inp.getDefiningOp<vector::ReductionOp>()) {
       if (auto forOp = redOp.getVector().getDefiningOp<scf::ForOp>()) {
-        if (forOp->hasAttr(
-                SparseTensorLoopEmitter::getLoopEmitterLoopAttrName())) {
+        if (forOp->hasAttr(LoopEmitter::getLoopEmitterLoopAttrName())) {
           rewriter.replaceOp(op, redOp.getVector());
           return success();
         }

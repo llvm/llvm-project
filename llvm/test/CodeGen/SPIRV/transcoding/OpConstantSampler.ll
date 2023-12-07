@@ -10,7 +10,7 @@
 ;;   read_imagef(src, sampler2, 0, 0);
 ;; }
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV: %[[#SamplerID0:]] = OpConstantSampler %[[#]] Repeat 1 Nearest
 ; CHECK-SPIRV: %[[#SamplerID1:]] = OpConstantSampler %[[#]] None 0 Nearest

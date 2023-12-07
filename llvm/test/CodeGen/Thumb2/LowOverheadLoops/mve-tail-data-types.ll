@@ -332,20 +332,20 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_char(i8* nocapture readonly
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    beq.w .LBB5_11
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.lr.ph
-; CHECK-NEXT:    add.w r5, r3, r4, lsl #2
-; CHECK-NEXT:    adds r6, r1, r4
-; CHECK-NEXT:    cmp r5, r1
-; CHECK-NEXT:    add.w r7, r0, r4
-; CHECK-NEXT:    cset r12, hi
-; CHECK-NEXT:    cmp r6, r3
-; CHECK-NEXT:    cset r6, hi
-; CHECK-NEXT:    cmp r5, r0
-; CHECK-NEXT:    cset r5, hi
+; CHECK-NEXT:    adds r7, r1, r4
+; CHECK-NEXT:    add.w r6, r3, r4, lsl #2
 ; CHECK-NEXT:    cmp r7, r3
+; CHECK-NEXT:    add.w r5, r0, r4
 ; CHECK-NEXT:    cset r7, hi
-; CHECK-NEXT:    tst r7, r5
+; CHECK-NEXT:    cmp r6, r1
+; CHECK-NEXT:    csel r7, zr, r7, ls
+; CHECK-NEXT:    cmp r6, r0
+; CHECK-NEXT:    cset r6, hi
+; CHECK-NEXT:    cmp r5, r3
+; CHECK-NEXT:    cset r5, hi
+; CHECK-NEXT:    tst r5, r6
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    andseq.w r7, r6, r12
+; CHECK-NEXT:    cmpeq r7, #0
 ; CHECK-NEXT:    beq .LBB5_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
 ; CHECK-NEXT:    subs r7, r4, #1
@@ -608,20 +608,20 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_uchar(i8* nocapture readonl
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    beq.w .LBB7_11
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.lr.ph
-; CHECK-NEXT:    add.w r5, r3, r4, lsl #2
-; CHECK-NEXT:    adds r6, r1, r4
-; CHECK-NEXT:    cmp r5, r1
-; CHECK-NEXT:    add.w r7, r0, r4
-; CHECK-NEXT:    cset r12, hi
-; CHECK-NEXT:    cmp r6, r3
-; CHECK-NEXT:    cset r6, hi
-; CHECK-NEXT:    cmp r5, r0
-; CHECK-NEXT:    cset r5, hi
+; CHECK-NEXT:    adds r7, r1, r4
+; CHECK-NEXT:    add.w r6, r3, r4, lsl #2
 ; CHECK-NEXT:    cmp r7, r3
+; CHECK-NEXT:    add.w r5, r0, r4
 ; CHECK-NEXT:    cset r7, hi
-; CHECK-NEXT:    tst r7, r5
+; CHECK-NEXT:    cmp r6, r1
+; CHECK-NEXT:    csel r7, zr, r7, ls
+; CHECK-NEXT:    cmp r6, r0
+; CHECK-NEXT:    cset r6, hi
+; CHECK-NEXT:    cmp r5, r3
+; CHECK-NEXT:    cset r5, hi
+; CHECK-NEXT:    tst r5, r6
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    andseq.w r7, r6, r12
+; CHECK-NEXT:    cmpeq r7, #0
 ; CHECK-NEXT:    beq .LBB7_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
 ; CHECK-NEXT:    subs r7, r4, #1
@@ -884,20 +884,20 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_int(i32* nocapture readonly
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    beq.w .LBB9_11
 ; CHECK-NEXT:  @ %bb.1: @ %vector.memcheck
-; CHECK-NEXT:    add.w r5, r3, r4, lsl #2
-; CHECK-NEXT:    add.w r6, r1, r4, lsl #2
-; CHECK-NEXT:    cmp r5, r1
-; CHECK-NEXT:    add.w r7, r0, r4, lsl #2
-; CHECK-NEXT:    cset r12, hi
-; CHECK-NEXT:    cmp r6, r3
-; CHECK-NEXT:    cset r6, hi
-; CHECK-NEXT:    cmp r5, r0
-; CHECK-NEXT:    cset r5, hi
+; CHECK-NEXT:    add.w r7, r1, r4, lsl #2
+; CHECK-NEXT:    add.w r6, r3, r4, lsl #2
 ; CHECK-NEXT:    cmp r7, r3
+; CHECK-NEXT:    add.w r5, r0, r4, lsl #2
 ; CHECK-NEXT:    cset r7, hi
-; CHECK-NEXT:    tst r7, r5
+; CHECK-NEXT:    cmp r6, r1
+; CHECK-NEXT:    csel r7, zr, r7, ls
+; CHECK-NEXT:    cmp r6, r0
+; CHECK-NEXT:    cset r6, hi
+; CHECK-NEXT:    cmp r5, r3
+; CHECK-NEXT:    cset r5, hi
+; CHECK-NEXT:    tst r5, r6
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    andseq.w r7, r6, r12
+; CHECK-NEXT:    cmpeq r7, #0
 ; CHECK-NEXT:    beq .LBB9_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
 ; CHECK-NEXT:    subs r7, r4, #1

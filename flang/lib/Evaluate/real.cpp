@@ -745,12 +745,12 @@ template <typename W, int P> Real<W, P> Real<W, P>::SPACING() const {
     return *this;
   } else if (IsInfinite()) {
     return NotANumber();
-  } else if (IsZero()) {
-    return TINY();
+  } else if (IsZero() || IsSubnormal()) {
+    return TINY(); // mandated by standard
   } else {
     Real result;
     result.Normalize(false, Exponent(), Fraction::MASKR(1));
-    return result;
+    return result.IsZero() ? TINY() : result;
   }
 }
 

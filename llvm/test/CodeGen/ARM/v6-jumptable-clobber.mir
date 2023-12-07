@@ -20,8 +20,8 @@
   target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv6m-none--eabi"
   
-  define void @foo(i8 %in, i32* %addr) {
-    store i32 12345678, i32* %addr
+  define void @foo(i8 %in, ptr %addr) {
+    store i32 12345678, ptr %addr
     %1 = call i32 @llvm.arm.space(i32 980, i32 undef)
     %2 = zext i8 %in to i32
     switch i32 %2, label %default [
@@ -99,8 +99,8 @@
     unreachable
   }
 
-  define void @bar(i8 %in, i32* %addr) {
-      store i32 12345678, i32* %addr
+  define void @bar(i8 %in, ptr %addr) {
+      store i32 12345678, ptr %addr
     %1 = zext i8 %in to i32
     switch i32 %1, label %default [
       i32 0, label %d1
@@ -181,7 +181,7 @@
   declare i32 @llvm.arm.space(i32, i32) #0
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #0
+  declare void @llvm.stackprotector(ptr, ptr) #0
   
   attributes #0 = { nounwind }
 

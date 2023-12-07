@@ -8,10 +8,9 @@ module {}
 // The operation is invalid because the body does not have a terminator, print
 // the generic form.
 // CHECK:      Invalid operation:
-// CHECK-NEXT: "func.func"() ({
+// CHECK-NEXT: "func.func"() <{function_type = () -> (), sym_name = "test"}> ({
 // CHECK-NEXT: ^bb0:
 // CHECK-NEXT: })
-// CHECK-SAME: sym_name = "test"
 
 // The operation is valid because the body has a terminator, print the custom
 // form.

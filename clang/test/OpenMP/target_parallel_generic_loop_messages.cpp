@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -verify -fopenmp \
-// RUN:  -fopenmp-version=51 -Wuninitialized %s
+// RUN:  -Wuninitialized %s
 
 void foo()
 {

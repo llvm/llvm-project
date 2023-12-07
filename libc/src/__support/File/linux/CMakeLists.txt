@@ -1,0 +1,53 @@
+add_object_library(
+  file
+  SRCS
+    file.cpp
+  HDRS
+    file.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.stdio
+    libc.include.sys_syscall
+    libc.src.__support.CPP.new
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    libc.src.__support.error_or
+    libc.src.__support.File.file
+)
+
+add_object_library(
+  stdout
+  SRCS
+    stdout.cpp
+  DEPENDS
+    .file
+)
+
+add_object_library(
+  stdin
+  SRCS
+    stdin.cpp
+  DEPENDS
+    .file
+)
+
+add_object_library(
+  stderr
+  SRCS
+    stderr.cpp
+  DEPENDS
+    .file
+)
+
+add_object_library(
+  linux_dir
+  SRCS
+    dir.cpp
+  DEPENDS
+    libc.include.fcntl
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.error_or
+    libc.src.errno.errno
+    libc.src.__support.File.dir
+)

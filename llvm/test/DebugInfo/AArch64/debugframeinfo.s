@@ -3,12 +3,18 @@
 
 # CHECK: .debug_frame contents:
 # CHECK-EMPTY:
-# CHECK-NEXT: 00000000 00000014 ffffffff CIE
+# CHECK-NEXT: {{.+}}
+
 # CHECK: .eh_frame contents:
 # CHECK-EMPTY:
+# CHECK-EMPTY:
 
- .cfi_startproc
- .cfi_signal_frame
- .cfi_def_cfa x28, 0x340
- .cfi_endproc
- .cfi_sections .debug_frame
+        .cfi_sections .debug_frame
+        .cfi_startproc
+        .cfi_personality 0x9b, g
+        .cfi_lsda 0x1b, h
+        .cfi_endproc
+        .global g
+g:
+        .global h
+h:

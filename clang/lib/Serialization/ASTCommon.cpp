@@ -250,6 +250,11 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
     ID = PREDEF_TYPE_##Id##_ID;                                                \
     break;
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId)                                       \
+  case BuiltinType::Id:                                                        \
+    ID = PREDEF_TYPE_##Id##_ID;                                                \
+    break;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
   case BuiltinType::BuiltinFn:
     ID = PREDEF_TYPE_BUILTIN_FN;
     break;
@@ -479,8 +484,7 @@ bool serialization::needsAnonymousDeclarationNumber(const NamedDecl *D) {
   }
 
   // Otherwise, we only care about anonymous class members / block-scope decls.
-  // FIXME: We need to handle lambdas and blocks within inline / templated
-  // variables too.
+  // FIXME: We need to handle blocks within inline / templated variables too.
   if (D->getDeclName())
     return false;
   if (!isa<RecordDecl, ObjCInterfaceDecl>(D->getLexicalDeclContext()))

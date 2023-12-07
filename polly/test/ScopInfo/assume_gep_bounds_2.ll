@@ -21,7 +21,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo([20 x float]* noalias %A, [20 x float]* noalias %B, i64 %n, i64 %m, i64 %p) {
+define void @foo(ptr noalias %A, ptr noalias %B, i64 %n, i64 %m, i64 %p) {
 entry:
   br label %for.cond
 
@@ -41,8 +41,8 @@ for.cond1:                                        ; preds = %for.inc, %for.body
 for.body3:                                        ; preds = %for.cond1
   %add = add nsw i64 %i.0, %j.0
   %conv = sitofp i64 %add to float
-  %arrayidx4 = getelementptr inbounds [20 x float], [20 x float]* %A, i64 %i.0, i64 %j.0
-  store float %conv, float* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds [20 x float], ptr %A, i64 %i.0, i64 %j.0
+  store float %conv, ptr %arrayidx4, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body3
@@ -75,8 +75,8 @@ for.cond14:                                       ; preds = %for.inc22, %for.bod
 for.body17:                                       ; preds = %for.cond14
   %add18 = add nsw i64 %i8.0, %j13.0
   %conv19 = sitofp i64 %add18 to float
-  %arrayidx21 = getelementptr inbounds [20 x float], [20 x float]* %B, i64 %i8.0, i64 %j13.0
-  store float %conv19, float* %arrayidx21, align 4
+  %arrayidx21 = getelementptr inbounds [20 x float], ptr %B, i64 %i8.0, i64 %j13.0
+  store float %conv19, ptr %arrayidx21, align 4
   br label %for.inc22
 
 for.inc22:                                        ; preds = %for.body17

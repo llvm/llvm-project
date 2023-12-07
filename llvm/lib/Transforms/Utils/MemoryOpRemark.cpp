@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/MemoryOpRemark.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DebugInfo.h"
@@ -309,7 +310,7 @@ void MemoryOpRemark::visitVariable(const Value *V,
                                    SmallVectorImpl<VariableInfo> &Result) {
   if (auto *GV = dyn_cast<GlobalVariable>(V)) {
     auto *Ty = GV->getValueType();
-    uint64_t Size = DL.getTypeSizeInBits(Ty).getFixedSize();
+    uint64_t Size = DL.getTypeSizeInBits(Ty).getFixedValue();
     VariableInfo Var{nameOrNone(GV), Size};
     if (!Var.isEmpty())
       Result.push_back(std::move(Var));
@@ -321,7 +322,7 @@ void MemoryOpRemark::visitVariable(const Value *V,
   // Try to get an llvm.dbg.declare, which has a DILocalVariable giving us the
   // real debug info name and size of the variable.
   for (const DbgVariableIntrinsic *DVI :
-       FindDbgAddrUses(const_cast<Value *>(V))) {
+       FindDbgDeclareUses(const_cast<Value *>(V))) {
     if (DILocalVariable *DILV = DVI->getVariable()) {
       std::optional<uint64_t> DISize = getSizeInBytes(DILV->getSizeInBits());
       VariableInfo Var{DILV->getName(), DISize};
@@ -341,9 +342,9 @@ void MemoryOpRemark::visitVariable(const Value *V,
     return;
 
   // If not, get it from the alloca.
-  std::optional<TypeSize> TySize = AI->getAllocationSizeInBits(DL);
+  std::optional<TypeSize> TySize = AI->getAllocationSize(DL);
   std::optional<uint64_t> Size =
-      TySize ? getSizeInBytes(TySize->getFixedSize()) : std::nullopt;
+      TySize ? std::optional(TySize->getFixedValue()) : std::nullopt;
   VariableInfo Var{nameOrNone(AI), Size};
   if (!Var.isEmpty())
     Result.push_back(std::move(Var));
@@ -387,7 +388,8 @@ bool AutoInitRemark::canHandle(const Instruction *I) {
     return false;
   return any_of(I->getMetadata(LLVMContext::MD_annotation)->operands(),
                 [](const MDOperand &Op) {
-                  return cast<MDString>(Op.get())->getString() == "auto-init";
+                  return isa<MDString>(Op.get()) &&
+                         cast<MDString>(Op.get())->getString() == "auto-init";
                 });
 }
 

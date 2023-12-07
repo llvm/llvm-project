@@ -20,28 +20,24 @@ declare <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8>, <16 x i8>)
 define void @ass_pair(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-LABEL: ass_pair:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmr v3, v2
+; CHECK-NEXT:    stxv v2, 0(r3)
 ; CHECK-NEXT:    stxv v2, 16(r3)
-; CHECK-NEXT:    stxv v3, 0(r3)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NOMMA-LABEL: ass_pair:
 ; CHECK-NOMMA:       # %bb.0: # %entry
-; CHECK-NOMMA-NEXT:    vmr v3, v2
+; CHECK-NOMMA-NEXT:    stxv v2, 0(r3)
 ; CHECK-NOMMA-NEXT:    stxv v2, 16(r3)
-; CHECK-NOMMA-NEXT:    stxv v3, 0(r3)
 ; CHECK-NOMMA-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: ass_pair:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vmr v3, v2
 ; CHECK-BE-NEXT:    stxv v2, 16(r3)
 ; CHECK-BE-NEXT:    stxv v2, 0(r3)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-BE-NOMMA-LABEL: ass_pair:
 ; CHECK-BE-NOMMA:       # %bb.0: # %entry
-; CHECK-BE-NOMMA-NEXT:    vmr v3, v2
 ; CHECK-BE-NOMMA-NEXT:    stxv v2, 16(r3)
 ; CHECK-BE-NOMMA-NEXT:    stxv v2, 0(r3)
 ; CHECK-BE-NOMMA-NEXT:    blr

@@ -1,8 +1,26 @@
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -std=c++11 -triple i386-linux -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -std=c++11 -triple x86_64-darwin -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -std=c++11 -triple arm64-ehabi -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -std=c++11 -triple i386-windows -emit-llvm -o - %s | FileCheck %s --check-prefix=MSABI --check-prefix=WIN32
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -std=c++11 -triple x86_64-windows -emit-llvm -o - %s | FileCheck %s --check-prefix=MSABI --check-prefix=WIN64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple i386-linux -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple x86_64-darwin -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple arm64-ehabi -emit-llvm -o - %s | FileCheck %s --check-prefix=ITANIUM
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple i386-windows -emit-llvm -o - %s | FileCheck %s --check-prefix=MSABI --check-prefix=WIN32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple x86_64-windows -emit-llvm -o - %s | FileCheck %s --check-prefix=MSABI --check-prefix=WIN64
+
+// PR63618: make sure we generate definitions for all the globals defined in the test
+// MSABI: @"?b@@3UB@@A" = {{.*}} zeroinitializer
+// MSABI: @"?d@@3UD@@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@noninline_nonvirt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@noninline_nonvirt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@noninline_virt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@noninline_virt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@inalloca_nonvirt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@inalloca_nonvirt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@inalloca_virt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@inalloca_virt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@inline_nonvirt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@inline_nonvirt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@inline_virt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@inline_virt@@3UC@1@A" = {{.*}} zeroinitializer
+
+// MSABI-NOT: @this
 
 // PR12219
 struct A { A(int); virtual ~A(); };
@@ -46,28 +64,28 @@ namespace noninline_nonvirt {
   B b(1, 2, &b);
   // ITANIUM-LABEL: define {{.*}} @__cxx_global_var_init
   // ITANIUM: call void @_ZN1QC1Ei({{.*}} %[[TMP:.*]], i32 2)
-  // ITANIUM: call void @_ZN17noninline_nonvirt1BCI1NS_1AEEiO1QPvU17pass_object_size0({{.*}} @_ZN17noninline_nonvirt1bE, i32 1, {{.*}} %[[TMP]], i8* {{.*}} @_ZN17noninline_nonvirt1bE{{.*}}, i{{32|64}} 12)
+  // ITANIUM: call void @_ZN17noninline_nonvirt1BCI1NS_1AEEiO1QPvU17pass_object_size0({{.*}} @_ZN17noninline_nonvirt1bE, i32 1, {{.*}} %[[TMP]], ptr @_ZN17noninline_nonvirt1bE{{.*}}, i{{32|64}} 12)
   // ITANIUM: call void @_ZN1QD1Ev({{.*}} %[[TMP]])
   // ITANIUM: call i32 @__cxa_atexit(
 
   // Complete object ctor for B delegates to base object ctor.
   // ITANIUM-LABEL: define linkonce_odr void @_ZN17noninline_nonvirt1BCI1NS_1AEEiO1QPvU17pass_object_size0(
-  // ITANIUM: call void @_ZN17noninline_nonvirt1BCI2NS_1AEEiO1QPvU17pass_object_size0({{.*}}, i32 {{.*}}, %{{.*}}* {{.*}}, i8* {{.*}}, i{{32|64}} {{.*}})
+  // ITANIUM: call void @_ZN17noninline_nonvirt1BCI2NS_1AEEiO1QPvU17pass_object_size0({{.*}}, i32 {{.*}}, ptr {{.*}}, ptr {{.*}}, i{{32|64}} {{.*}})
 
   // In MSABI, we don't have ctor variants. B ctor forwards to A ctor.
-  // MSABI-LABEL: define internal {{.*}} @"??0B@noninline_nonvirt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(%{{.*}}, i32{{.*}}, %{{.*}}, i8*{{.*}}, i{{32|64}}{{.*}})
+  // MSABI-LABEL: define internal {{.*}} @"??0B@noninline_nonvirt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(ptr{{.*}}, i32{{.*}}, ptr{{.*}}, ptr{{.*}}, i{{32|64}}{{.*}})
   // MSABI: call {{.*}} @"??0Z@@Q{{AE|EAA}}@XZ"(
-  // MSABI: call {{.*}} @"??0A@noninline_nonvirt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(%{{.*}}, i32{{.*}}, %{{.*}}, i8*{{.*}}, i{{32|64}}{{.*}})
+  // MSABI: call {{.*}} @"??0A@noninline_nonvirt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(ptr{{.*}}, i32{{.*}}, ptr{{.*}}, ptr{{.*}}, i{{32|64}}{{.*}})
   // MSABI: call {{.*}} @"??0Z@@Q{{AE|EAA}}@XZ"(
 
   struct C : B { using B::B; };
   C c(1, 2, &c);
   // Complete object ctor for C delegates.
   // ITANIUM-LABEL: define linkonce_odr void @_ZN17noninline_nonvirt1CCI1NS_1AEEiO1QPvU17pass_object_size0(
-  // ITANIUM: call void @_ZN17noninline_nonvirt1CCI2NS_1AEEiO1QPvU17pass_object_size0({{.*}}, i32 {{.*}}, %{{.*}}* {{.*}}, i8* {{.*}}, i{{32|64}} {{.*}})
+  // ITANIUM: call void @_ZN17noninline_nonvirt1CCI2NS_1AEEiO1QPvU17pass_object_size0({{.*}}, i32 {{.*}}, ptr {{.*}}, ptr {{.*}}, i{{32|64}} {{.*}})
 
-  // MSABI-LABEL: define internal {{.*}} @"??0C@noninline_nonvirt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(%{{.*}}, i32{{.*}}, %{{.*}}, i8*{{.*}}, i{{32|64}}{{.*}})
-  // MSABI: call {{.*}} @"??0B@noninline_nonvirt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(%{{.*}}, i32{{.*}}, %{{.*}}, i8*{{.*}}, i{{32|64}}{{.*}})
+  // MSABI-LABEL: define internal {{.*}} @"??0C@noninline_nonvirt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(ptr{{.*}}, i32{{.*}}, ptr{{.*}}, ptr{{.*}}, i{{32|64}}{{.*}})
+  // MSABI: call {{.*}} @"??0B@noninline_nonvirt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(ptr{{.*}}, i32{{.*}}, ptr{{.*}}, ptr{{.*}}, i{{32|64}}{{.*}})
 }
 
 namespace noninline_virt {
@@ -76,15 +94,15 @@ namespace noninline_virt {
   B b(1, 2, &b);
   // Complete object ctor forwards to A ctor then constructs Zs.
   // ITANIUM-LABEL: define linkonce_odr void @_ZN14noninline_virt1BCI1NS_1AEEiO1QPvU17pass_object_size0(
-  // ITANIUM: call void @_ZN14noninline_virt1AC2EiO1QPvU17pass_object_size0({{.*}} %{{.*}}, i32 %{{.*}}, %{{.*}}* {{.*}}, i8* {{.*}}, i{{32|64}} %{{.*}}
+  // ITANIUM: call void @_ZN14noninline_virt1AC2EiO1QPvU17pass_object_size0({{.*}} %{{.*}}, i32 %{{.*}}, ptr {{.*}}, ptr {{.*}}, i{{32|64}} %{{.*}}
   // ITANIUM: call void @_ZN1ZC2Ev(
   // ITANIUM: store {{.*}} @_ZTVN14noninline_virt1BE
   // ITANIUM: call void @_ZN1ZC1Ev(
 
-  // MSABI-LABEL: define internal {{.*}} @"??0B@noninline_virt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(%{{.*}}, i32{{.*}}, %{{.*}}, i8*{{.*}}, i{{32|64}}{{.*}}, i32 %{{.*}})
+  // MSABI-LABEL: define internal {{.*}} @"??0B@noninline_virt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(ptr{{.*}}, i32{{.*}}, ptr{{.*}}, ptr{{.*}}, i{{32|64}}{{.*}}, i32 %{{.*}})
   // MSABI: %[[COMPLETE:.*]] = icmp ne
   // MSABI: br i1 %[[COMPLETE]],
-  // MSABI: call {{.*}} @"??0A@noninline_virt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(%{{.*}}, i32{{.*}}, %{{.*}}, i8*{{.*}}, i{{32|64}}{{.*}})
+  // MSABI: call {{.*}} @"??0A@noninline_virt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(ptr{{.*}}, i32{{.*}}, ptr{{.*}}, ptr{{.*}}, i{{32|64}}{{.*}})
   // MSABI: br
   // MSABI: call {{.*}} @"??0Z@@Q{{AE|EAA}}@XZ"(
   // MSABI: call {{.*}} @"??0Z@@Q{{AE|EAA}}@XZ"(
@@ -94,19 +112,19 @@ namespace noninline_virt {
   // Complete object ctor forwards to A ctor, then calls B's base inheriting
   // constructor, which takes no arguments other than the this pointer and VTT.
   // ITANIUM-LABEL: define linkonce_odr void @_ZN14noninline_virt1CCI1NS_1AEEiO1QPvU17pass_object_size0(
-  // ITANIUM: call void @_ZN14noninline_virt1AC2EiO1QPvU17pass_object_size0({{.*}} %{{.*}}, i32 %{{.*}}, %{{.*}}* {{.*}}, i8* %{{.*}}, i{{32|64}} %{{.*}})
-  // ITANIUM: call void @_ZN14noninline_virt1BCI2NS_1AEEiO1QPvU17pass_object_size0(%{{.*}}* {{[^,]*}} %{{.*}}, i8** getelementptr inbounds ([2 x i8*], [2 x i8*]* @_ZTTN14noninline_virt1CE, i64 0, i64 1))
+  // ITANIUM: call void @_ZN14noninline_virt1AC2EiO1QPvU17pass_object_size0({{.*}} %{{.*}}, i32 %{{.*}}, ptr {{.*}}, ptr %{{.*}}, i{{32|64}} %{{.*}})
+  // ITANIUM: call void @_ZN14noninline_virt1BCI2NS_1AEEiO1QPvU17pass_object_size0(ptr {{[^,]*}} %{{.*}}, ptr getelementptr inbounds ([2 x ptr], ptr @_ZTTN14noninline_virt1CE, i64 0, i64 1))
   // ITANIUM: store {{.*}} @_ZTVN14noninline_virt1CE
 
   // C constructor forwards to B constructor and A constructor. We pass the args
   // to both. FIXME: Can we pass undef here instead, for the base object
   // constructor call?
-  // MSABI-LABEL: define internal {{.*}} @"??0C@noninline_virt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(%{{.*}}, i32{{.*}}, %{{.*}}, i8*{{.*}}, i{{32|64}}{{.*}}, i32 %{{.*}})
+  // MSABI-LABEL: define internal {{.*}} @"??0C@noninline_virt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(ptr{{.*}}, i32{{.*}}, ptr{{.*}}, ptr{{.*}}, i{{32|64}}{{.*}}, i32 %{{.*}})
   // MSABI: %[[COMPLETE:.*]] = icmp ne
   // MSABI: br i1 %[[COMPLETE]],
-  // MSABI: call {{.*}} @"??0A@noninline_virt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(%{{.*}}, i32{{.*}}, %{{.*}}, i8*{{.*}}, i{{32|64}}{{.*}})
+  // MSABI: call {{.*}} @"??0A@noninline_virt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(ptr{{.*}}, i32{{.*}}, ptr{{.*}}, ptr{{.*}}, i{{32|64}}{{.*}})
   // MSABI: br
-  // MSABI: call {{.*}} @"??0B@noninline_virt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(%{{.*}}, i32{{.*}}, %{{.*}}, i8*{{.*}}, i{{32|64}}{{.*}}, i32 0)
+  // MSABI: call {{.*}} @"??0B@noninline_virt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(ptr{{.*}}, i32{{.*}}, ptr{{.*}}, ptr{{.*}}, i{{32|64}}{{.*}}, i32 0)
 }
 
 // For MSABI only, check that inalloca arguments result in inlining.
@@ -122,20 +140,20 @@ namespace inalloca_nonvirt {
 
   // On Win32, the inalloca call can't be forwarded so we force inlining.
   // WIN32: %[[TMP:.*]] = alloca
-  // WIN32: call i8* @llvm.stacksave()
+  // WIN32: call ptr @llvm.stacksave.p0()
   // WIN32: %[[ARGMEM:.*]] = alloca inalloca
-  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(%{{.*}}* {{[^,]*}} %[[TMP]], i32 4)
+  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[TMP]], i32 4)
   // WIN32: %[[ARG3:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"({{.*}}* {{[^,]*}} %[[ARG3]], i32 3)
+  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
   // WIN32: %[[ARG1:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"({{.*}}* {{[^,]*}} %[[ARG1]], i32 1)
+  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN32: call {{.*}} @"??0Z@@QAE@XZ"(
   // WIN32: %[[ARG2:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: store i32 2, i32* %[[ARG2]]
+  // WIN32: store i32 2, ptr %[[ARG2]]
   // WIN32: %[[ARG4:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: store {{.*}}* %[[TMP]], {{.*}}** %[[ARG4]]
-  // WIN32: call {{.*}} @"??0A@inalloca_nonvirt@@QAE@UQ@@H0$$QAU2@@Z"(%{{[^,]*}}, <{{.*}}>* inalloca(<{{.*}}>) %[[ARGMEM]])
-  // WIN32: call void @llvm.stackrestore(
+  // WIN32: store ptr %[[TMP]], ptr %[[ARG4]]
+  // WIN32: call {{.*}} @"??0A@inalloca_nonvirt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) %[[ARGMEM]])
+  // WIN32: call void @llvm.stackrestore.p0(
   // WIN32: call {{.*}} @"??0Z@@QAE@XZ"(
   // WIN32: call {{.*}} @"??1Q@@QAE@XZ"(
 
@@ -144,13 +162,13 @@ namespace inalloca_nonvirt {
   // WIN64: %[[TMP:.*]] = alloca
   // WIN64: %[[ARG3:.*]] = alloca
   // WIN64: %[[ARG1:.*]] = alloca
-  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"({{.*}}* {{[^,]*}} %[[TMP]], i32 4)
-  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"({{.*}}* {{[^,]*}} %[[ARG3]], i32 3)
-  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"({{.*}}* {{[^,]*}} %[[ARG1]], i32 1)
+  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[TMP]], i32 4)
+  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
+  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
-  // WIN64: call {{.*}} @"??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(%{{.*}}, %{{.*}}* %[[ARG1]], i32 2, %{{.*}}* %[[ARG3]], %{{.*}} %[[TMP]])
+  // WIN64: call {{.*}} @"??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr %[[ARG1]], i32 2, ptr %[[ARG3]], ptr{{.*}} %[[TMP]])
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
-  // WIN64: call void @"??1Q@@QEAA@XZ"({{.*}}* {{[^,]*}} %[[TMP]])
+  // WIN64: call void @"??1Q@@QEAA@XZ"(ptr {{[^,]*}} %[[TMP]])
 
   struct C : B { using B::B; };
   C c(1, 2, 3, 4);
@@ -158,20 +176,20 @@ namespace inalloca_nonvirt {
 
   // On Win32, the inalloca call can't be forwarded so we force inlining.
   // WIN32: %[[TMP:.*]] = alloca
-  // WIN32: call i8* @llvm.stacksave()
+  // WIN32: call ptr @llvm.stacksave.p0()
   // WIN32: %[[ARGMEM:.*]] = alloca inalloca
-  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(%{{.*}}* {{[^,]*}} %[[TMP]], i32 4)
+  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[TMP]], i32 4)
   // WIN32: %[[ARG3:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"({{.*}}* {{[^,]*}} %[[ARG3]], i32 3)
+  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
   // WIN32: %[[ARG1:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"({{.*}}* {{[^,]*}} %[[ARG1]], i32 1)
+  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN32: call {{.*}} @"??0Z@@QAE@XZ"(
   // WIN32: %[[ARG2:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: store i32 2, i32* %[[ARG2]]
+  // WIN32: store i32 2, ptr %[[ARG2]]
   // WIN32: %[[ARG4:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: store {{.*}}* %[[TMP]], {{.*}}** %[[ARG4]]
-  // WIN32: call {{.*}} @"??0A@inalloca_nonvirt@@QAE@UQ@@H0$$QAU2@@Z"(%{{[^,]*}}, <{{.*}}>* inalloca(<{{.*}}>) %[[ARGMEM]])
-  // WIN32: call void @llvm.stackrestore(
+  // WIN32: store ptr %[[TMP]], ptr %[[ARG4]]
+  // WIN32: call {{.*}} @"??0A@inalloca_nonvirt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) %[[ARGMEM]])
+  // WIN32: call void @llvm.stackrestore.p0(
   // WIN32: call {{.*}} @"??0Z@@QAE@XZ"(
   // WIN32: call {{.*}} @"??1Q@@QAE@XZ"(
 
@@ -180,13 +198,13 @@ namespace inalloca_nonvirt {
   // WIN64: %[[TMP:.*]] = alloca
   // WIN64: %[[ARG3:.*]] = alloca
   // WIN64: %[[ARG1:.*]] = alloca
-  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"({{.*}}* {{[^,]*}} %[[TMP]], i32 4)
-  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"({{.*}}* {{[^,]*}} %[[ARG3]], i32 3)
-  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"({{.*}}* {{[^,]*}} %[[ARG1]], i32 1)
+  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[TMP]], i32 4)
+  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
+  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
-  // WIN64: call {{.*}} @"??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(%{{.*}}, %{{.*}}* %[[ARG1]], i32 2, %{{.*}}* %[[ARG3]], %{{.*}} %[[TMP]])
+  // WIN64: call {{.*}} @"??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr %[[ARG1]], i32 2, ptr %[[ARG3]], ptr{{.*}} %[[TMP]])
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
-  // WIN64: call void @"??1Q@@QEAA@XZ"({{.*}}* {{[^,]*}} %[[TMP]])
+  // WIN64: call void @"??1Q@@QEAA@XZ"(ptr {{[^,]*}} %[[TMP]])
 }
 
 namespace inalloca_virt {
@@ -198,26 +216,26 @@ namespace inalloca_virt {
 
   // On Win32, the inalloca call can't be forwarded so we force inlining.
   // WIN32: %[[TMP:.*]] = alloca
-  // WIN32: call i8* @llvm.stacksave()
+  // WIN32: call ptr @llvm.stacksave.p0()
   // WIN32: %[[ARGMEM:.*]] = alloca inalloca
-  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(%{{.*}}* {{[^,]*}} %[[TMP]], i32 4)
+  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[TMP]], i32 4)
   // WIN32: %[[ARG3:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"({{.*}}* {{[^,]*}} %[[ARG3]], i32 3)
+  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
   // WIN32: %[[ARG1:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"({{.*}}* {{[^,]*}} %[[ARG1]], i32 1)
+  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // FIXME: It's dumb to round-trip this though memory and generate a branch.
-  // WIN32: store i32 1, i32* %[[IS_MOST_DERIVED_ADDR:.*]]
-  // WIN32: %[[IS_MOST_DERIVED:.*]] = load i32, i32* %[[IS_MOST_DERIVED_ADDR]]
+  // WIN32: store i32 1, ptr %[[IS_MOST_DERIVED_ADDR:.*]]
+  // WIN32: %[[IS_MOST_DERIVED:.*]] = load i32, ptr %[[IS_MOST_DERIVED_ADDR]]
   // WIN32: %[[IS_MOST_DERIVED_i1:.*]] = icmp ne i32 %[[IS_MOST_DERIVED]], 0
   // WIN32: br i1 %[[IS_MOST_DERIVED_i1]]
   //
   // WIN32: store {{.*}} @"??_8B@inalloca_virt@@7B@"
   // WIN32: %[[ARG2:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: store i32 2, i32* %[[ARG2]]
+  // WIN32: store i32 2, ptr %[[ARG2]]
   // WIN32: %[[ARG4:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: store {{.*}}* %[[TMP]], {{.*}}** %[[ARG4]]
-  // WIN32: call {{.*}} @"??0A@inalloca_virt@@QAE@UQ@@H0$$QAU2@@Z"(%{{[^,]*}}, <{{.*}}>* inalloca(<{{.*}}>) %[[ARGMEM]])
-  // WIN32: call void @llvm.stackrestore(
+  // WIN32: store ptr %[[TMP]], ptr %[[ARG4]]
+  // WIN32: call {{.*}} @"??0A@inalloca_virt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) %[[ARGMEM]])
+  // WIN32: call void @llvm.stackrestore.p0(
   // WIN32: br
   //
   // Note that if we jumped directly to here we would fail to stackrestore and
@@ -231,15 +249,15 @@ namespace inalloca_virt {
   // WIN64: %[[TMP:.*]] = alloca
   // WIN64: %[[ARG3:.*]] = alloca
   // WIN64: %[[ARG1:.*]] = alloca
-  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"({{.*}}* {{[^,]*}} %[[TMP]], i32 4)
-  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"({{.*}}* {{[^,]*}} %[[ARG3]], i32 3)
-  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"({{.*}}* {{[^,]*}} %[[ARG1]], i32 1)
+  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[TMP]], i32 4)
+  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
+  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN64: br i1
-  // WIN64: call {{.*}} @"??0A@inalloca_virt@@QEAA@UQ@@H0$$QEAU2@@Z"(%{{.*}}, %{{.*}}* %[[ARG1]], i32 2, %{{.*}}* %[[ARG3]], %{{.*}} %[[TMP]])
+  // WIN64: call {{.*}} @"??0A@inalloca_virt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr %[[ARG1]], i32 2, ptr %[[ARG3]], ptr{{.*}} %[[TMP]])
   // WIN64: br
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
-  // WIN64: call void @"??1Q@@QEAA@XZ"({{.*}}* {{[^,]*}} %[[TMP]])
+  // WIN64: call void @"??1Q@@QEAA@XZ"(ptr {{[^,]*}} %[[TMP]])
 
   struct C : B { using B::B; };
   C c(1, 2, 3, 4);
@@ -249,25 +267,25 @@ namespace inalloca_virt {
 
   // On Win32, the inalloca call can't be forwarded so we force inlining.
   // WIN32: %[[TMP:.*]] = alloca
-  // WIN32: call i8* @llvm.stacksave()
+  // WIN32: call ptr @llvm.stacksave.p0()
   // WIN32: %[[ARGMEM:.*]] = alloca inalloca
-  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(%{{.*}}* {{[^,]*}} %[[TMP]], i32 4)
+  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[TMP]], i32 4)
   // WIN32: %[[ARG3:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"({{.*}}* {{[^,]*}} %[[ARG3]], i32 3)
+  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
   // WIN32: %[[ARG1:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"({{.*}}* {{[^,]*}} %[[ARG1]], i32 1)
-  // WIN32: store i32 1, i32* %[[IS_MOST_DERIVED_ADDR:.*]]
-  // WIN32: %[[IS_MOST_DERIVED:.*]] = load i32, i32* %[[IS_MOST_DERIVED_ADDR]]
+  // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
+  // WIN32: store i32 1, ptr %[[IS_MOST_DERIVED_ADDR:.*]]
+  // WIN32: %[[IS_MOST_DERIVED:.*]] = load i32, ptr %[[IS_MOST_DERIVED_ADDR]]
   // WIN32: %[[IS_MOST_DERIVED_i1:.*]] = icmp ne i32 %[[IS_MOST_DERIVED]], 0
   // WIN32: br i1 %[[IS_MOST_DERIVED_i1]]
   //
   // WIN32: store {{.*}} @"??_8C@inalloca_virt@@7B@"
   // WIN32: %[[ARG2:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: store i32 2, i32* %[[ARG2]]
+  // WIN32: store i32 2, ptr %[[ARG2]]
   // WIN32: %[[ARG4:.*]] = getelementptr {{.*}} %[[ARGMEM]]
-  // WIN32: store {{.*}}* %[[TMP]], {{.*}}** %[[ARG4]]
-  // WIN32: call {{.*}} @"??0A@inalloca_virt@@QAE@UQ@@H0$$QAU2@@Z"(%{{[^,]*}}, <{{.*}}>* inalloca(<{{.*}}>) %[[ARGMEM]])
-  // WIN32: call void @llvm.stackrestore(
+  // WIN32: store ptr %[[TMP]], ptr %[[ARG4]]
+  // WIN32: call {{.*}} @"??0A@inalloca_virt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) %[[ARGMEM]])
+  // WIN32: call void @llvm.stackrestore.p0(
   // WIN32: br
   //
   // WIN32: call {{.*}} @"??0Z@@QAE@XZ"(
@@ -279,15 +297,15 @@ namespace inalloca_virt {
   // WIN64: %[[TMP:.*]] = alloca
   // WIN64: %[[ARG3:.*]] = alloca
   // WIN64: %[[ARG1:.*]] = alloca
-  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"({{.*}}* {{[^,]*}} %[[TMP]], i32 4)
-  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"({{.*}}* {{[^,]*}} %[[ARG3]], i32 3)
-  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"({{.*}}* {{[^,]*}} %[[ARG1]], i32 1)
+  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[TMP]], i32 4)
+  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
+  // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN64: br i1
   // WIN64: store {{.*}} @"??_8C@inalloca_virt@@7B@"
-  // WIN64: call {{.*}} @"??0A@inalloca_virt@@QEAA@UQ@@H0$$QEAU2@@Z"(%{{.*}}, %{{.*}}* %[[ARG1]], i32 2, %{{.*}}* %[[ARG3]], %{{.*}} %[[TMP]])
+  // WIN64: call {{.*}} @"??0A@inalloca_virt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr %[[ARG1]], i32 2, ptr %[[ARG3]], ptr{{.*}} %[[TMP]])
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
-  // WIN64: call void @"??1Q@@QEAA@XZ"({{.*}}* {{[^,]*}} %[[TMP]])
+  // WIN64: call void @"??1Q@@QEAA@XZ"(ptr {{[^,]*}} %[[TMP]])
 }
 
 namespace inline_nonvirt {
@@ -299,13 +317,10 @@ namespace inline_nonvirt {
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 1)
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 3)
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 4)
-  // ITANIUM: %[[Z_BASE:.*]] = bitcast %{{.*}}* %[[THIS:.*]] to
   // ITANIUM: call void @_ZN1ZC2Ev(
-  // ITANIUM: %[[B_CAST:.*]] = bitcast {{.*}} %[[THIS]]
-  // ITANIUM: %[[A_CAST:.*]] = getelementptr {{.*}} %[[B_CAST]], i{{32|64}} 4
-  // ITANIUM: %[[A:.*]] = bitcast {{.*}} %[[A_CAST]]
-  // ITANIUM: call void ({{.*}}, ...) @_ZN14inline_nonvirt1AC2E1QiS1_OS1_z(%{{.*}}* {{[^,]*}} %[[A]], {{.*}}, i32 2, {{.*}}, {{.*}}, i32 5, i32 6)
-  // ITANIUM: %[[Z_MEMBER:.*]] = getelementptr {{.*}} %[[THIS]], i32 0, i32 2
+  // ITANIUM: %[[A:.*]] = getelementptr {{.*}}, i{{32|64}} 4
+  // ITANIUM: call void ({{.*}}, ...) @_ZN14inline_nonvirt1AC2E1QiS1_OS1_z(ptr {{[^,]*}} %[[A]], {{.*}}, i32 2, {{.*}}, {{.*}}, i32 5, i32 6)
+  // ITANIUM: %[[Z_MEMBER:.*]] = getelementptr {{.*}}, i32 0, i32 2
   // ITANIUM: call void @_ZN1ZC1Ev({{.*}} %[[Z_MEMBER]])
   // ITANIUM: call void @_ZN1QD1Ev(
   // ITANIUM: call void @_ZN1QD1Ev(
@@ -318,12 +333,9 @@ namespace inline_nonvirt {
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 1)
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 3)
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 4)
-  // ITANIUM: %[[Z_BASE:.*]] = bitcast %{{.*}}* %[[THIS:.*]] to
   // ITANIUM: call void @_ZN1ZC2Ev(
-  // ITANIUM: %[[B_CAST:.*]] = bitcast {{.*}} %[[THIS]]
-  // ITANIUM: %[[A_CAST:.*]] = getelementptr {{.*}} %[[B_CAST]], i{{32|64}} 4
-  // ITANIUM: %[[A:.*]] = bitcast {{.*}} %[[A_CAST]]
-  // ITANIUM: call void ({{.*}}, ...) @_ZN14inline_nonvirt1AC2E1QiS1_OS1_z(%{{.*}}* {{[^,]*}} %[[A]], {{.*}}, i32 2, {{.*}}, {{.*}}, i32 5, i32 6)
+  // ITANIUM: %[[A:.*]] = getelementptr {{.*}}, i{{32|64}} 4
+  // ITANIUM: call void ({{.*}}, ...) @_ZN14inline_nonvirt1AC2E1QiS1_OS1_z(ptr {{[^,]*}} %[[A]], {{.*}}, i32 2, {{.*}}, {{.*}}, i32 5, i32 6)
   // ITANIUM: %[[Z_MEMBER:.*]] = getelementptr {{.*}} %{{.*}}, i32 0, i32 2
   // ITANIUM: call void @_ZN1ZC1Ev({{.*}} %[[Z_MEMBER]])
   // ITANIUM: call void @_ZN1QD1Ev(
@@ -340,10 +352,8 @@ namespace inline_virt {
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 1)
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 3)
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 4)
-  // ITANIUM: %[[B_CAST:.*]] = bitcast {{.*}} %[[THIS:.*]]
-  // ITANIUM: %[[A_CAST:.*]] = getelementptr {{.*}} %[[B_CAST]], i{{32|64}} {{12|16}}
-  // ITANIUM: %[[A:.*]] = bitcast {{.*}} %[[A_CAST]]
-  // ITANIUM: call void ({{.*}}, ...) @_ZN11inline_virt1AC2E1QiS1_OS1_z(%{{.*}}* {{[^,]*}} %[[A]], {{.*}}, i32 2, {{.*}}, {{.*}}, i32 5, i32 6)
+  // ITANIUM: %[[A:.*]] = getelementptr {{.*}}, i{{32|64}} {{12|16}}
+  // ITANIUM: call void ({{.*}}, ...) @_ZN11inline_virt1AC2E1QiS1_OS1_z(ptr {{[^,]*}} %[[A]], {{.*}}, i32 2, {{.*}}, {{.*}}, i32 5, i32 6)
   // ITANIUM: call void @_ZN1ZC2Ev(
   // ITANIUM: call void @_ZN1ZC1Ev(
   // ITANIUM: call void @_ZN1QD1Ev(
@@ -359,11 +369,9 @@ namespace inline_virt {
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 1)
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 3)
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 4)
-  // ITANIUM: %[[B_CAST:.*]] = bitcast {{.*}} %[[THIS:.*]]
-  // ITANIUM: %[[A_CAST:.*]] = getelementptr {{.*}} %[[B_CAST]], i{{32|64}} {{12|16}}
-  // ITANIUM: %[[A:.*]] = bitcast {{.*}} %[[A_CAST]]
-  // ITANIUM: call void ({{.*}}, ...) @_ZN11inline_virt1AC2E1QiS1_OS1_z(%{{.*}}* {{[^,]*}} %[[A]], {{.*}}, i32 2, {{.*}}, {{.*}}, i32 5, i32 6)
-  // ITANIUM: call void @_ZN11inline_virt1BCI2NS_1AEE1QiS1_OS1_z({{[^,]*}}, i8** getelementptr inbounds ([2 x i8*], [2 x i8*]* @_ZTTN11inline_virt1CE, i64 0, i64 1))
+  // ITANIUM: %[[A:.*]] = getelementptr {{.*}}, i{{32|64}} {{12|16}}
+  // ITANIUM: call void ({{.*}}, ...) @_ZN11inline_virt1AC2E1QiS1_OS1_z(ptr {{[^,]*}} %[[A]], {{.*}}, i32 2, {{.*}}, {{.*}}, i32 5, i32 6)
+  // ITANIUM: call void @_ZN11inline_virt1BCI2NS_1AEE1QiS1_OS1_z({{[^,]*}}, ptr getelementptr inbounds ([2 x ptr], ptr @_ZTTN11inline_virt1CE, i64 0, i64 1))
   // ITANIUM: store {{.*}} @_ZTVN11inline_virt1CE
   // ITANIUM: call void @_ZN1QD1Ev(
   // ITANIUM: call void @_ZN1QD1Ev(

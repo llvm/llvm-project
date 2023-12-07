@@ -87,8 +87,8 @@ private:
   /// can't access CPlusPlusLanguage::MethodName from within the header.
   template <class ParserT> static ParserT *get(llvm::Any parser) {
     assert(parser.has_value());
-    assert(llvm::any_isa<ParserT *>(parser));
-    return llvm::any_cast<ParserT *>(parser);
+    assert(llvm::any_cast<ParserT *>(&parser));
+    return *llvm::any_cast<ParserT *>(&parser);
   }
 };
 

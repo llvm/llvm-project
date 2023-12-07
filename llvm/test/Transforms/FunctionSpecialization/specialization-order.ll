@@ -1,4 +1,4 @@
-; RUN: opt -S --passes=ipsccp,deadargelim -specialize-functions -force-function-specialization < %s | FileCheck %s
+; RUN: opt -S --passes="ipsccp<func-spec>,deadargelim" -force-specialization < %s | FileCheck %s
 define dso_local i32 @add(i32 %x, i32 %y) {
 entry:
   %add = add nsw i32 %y, %x
@@ -37,8 +37,8 @@ entry:
 }
 
 define dso_local i32 @g2(i32 %x, i32 %y, ptr %v) {
-; CHECK-LABEL @g2
-; CHECK       call i32 @f.1(i32 [[X:%.*]], i32 [[Y:%.*]], ptr [[V:%.*]])
+; CHECK-LABEL: @g2
+; CHECK:       call i32 @f.1(i32 [[X:%.*]], i32 [[Y:%.*]], ptr [[V:%.*]])
 entry:
   %call = tail call i32 @f(i32 %x, i32 %y, ptr @sub, ptr %v)
   ret i32 %call
@@ -54,5 +54,5 @@ entry:
 
 ; CHECK-LABEL: define {{.*}} i32 @f.3
 ; CHECK:       call i32 @add(i32 %x, i32 %y)
-; CHECK-NEXT   call i32 @add(i32 %x, i32 %y)
+; CHECK-NEXT:   call i32 @add(i32 %x, i32 %y)
 

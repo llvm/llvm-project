@@ -1,5 +1,4 @@
 // UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
-// Test for rdar://10278815
 
 // Without PCH
 // RUN: %clang_cc1 -fsyntax-only -verify -include %s %s

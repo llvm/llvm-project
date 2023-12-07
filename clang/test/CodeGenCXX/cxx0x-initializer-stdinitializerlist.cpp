@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-none-linux-gnu -fmerge-all-constants -emit-llvm -o - %s | FileCheck -check-prefixes=X86,CHECK %s
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple amdgcn-amd-amdhsa -DNO_TLS -fmerge-all-constants -emit-llvm -o - %s | FileCheck -check-prefixes=AMDGCN,CHECK %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-none-linux-gnu -fmerge-all-constants -emit-llvm -o - %s | FileCheck -check-prefixes=X86,CHECK %s
+// RUN: %clang_cc1 -std=c++11 -triple amdgcn-amd-amdhsa -DNO_TLS -fmerge-all-constants -emit-llvm -o - %s | FileCheck -check-prefixes=AMDGCN,CHECK %s
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;
@@ -48,9 +48,9 @@ struct wantslist1 {
   ~wantslist1();
 };
 // X86: @_ZGR15globalInitList1_ = internal constant [3 x i32] [i32 1, i32 2, i32 3]
-// X86: @globalInitList1 ={{.*}} global %{{[^ ]+}} { i32* getelementptr inbounds ([3 x i32], [3 x i32]* @_ZGR15globalInitList1_, i32 0, i32 0), i{{32|64}} 3 }
+// X86: @globalInitList1 ={{.*}} global %{{[^ ]+}} { ptr @_ZGR15globalInitList1_, i{{32|64}} 3 }
 // AMDGCN: @_ZGR15globalInitList1_ = internal addrspace(1) constant [3 x i32] [i32 1, i32 2, i32 3]
-// AMDGCN: @globalInitList1 ={{.*}} addrspace(1) global %{{[^ ]+}} { i32* addrspacecast (i32 addrspace(1)* getelementptr inbounds ([3 x i32], [3 x i32] addrspace(1)* @_ZGR15globalInitList1_, i32 0, i32 0) to i32*), i{{32|64}} 3 }
+// AMDGCN: @globalInitList1 ={{.*}} addrspace(1) global %{{[^ ]+}} { ptr addrspacecast (ptr addrspace(1) @_ZGR15globalInitList1_ to ptr), i{{32|64}} 3 }
 std::initializer_list<int> globalInitList1 = {1, 2, 3};
 
 #ifndef NO_TLS
@@ -94,22 +94,21 @@ std::initializer_list<int> thread_local x = {1, 2, 3, 4};
 
 // thread_local initializer:
 // X86-LABEL: define internal void @__cxx_global_var_init
-// X86: store i32* getelementptr inbounds ([4 x i32], [4 x i32]* @_ZGRN25thread_local_global_array1xE_, i64 0, i64 0),
-// X86:       i32** getelementptr inbounds ({{.*}}, {{.*}}* @_ZN25thread_local_global_array1xE, i32 0, i32 0), align 8
-// X86: store i64 4, i64* getelementptr inbounds ({{.*}}, {{.*}}* @_ZN25thread_local_global_array1xE, i32 0, i32 1), align 8
+// X86: [[ADDR:%.*]] = call {{.*}} ptr @llvm.threadlocal.address.p0(ptr {{.*}} @_ZN25thread_local_global_array1xE)
+// X86: store ptr @_ZGRN25thread_local_global_array1xE_, ptr [[ADDR]], align 8
+// X86: store i64 4, ptr getelementptr inbounds ({{.*}}, ptr @_ZN25thread_local_global_array1xE, i32 0, i32 1), align 8
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init
-// X86: call void @_ZN8witharg1C1ERK10destroyme1(%[[WITHARG]]* {{[^,]*}} getelementptr inbounds ([2 x %[[WITHARG]]], [2 x %[[WITHARG]]]* @_ZGR15globalInitList2_, i{{32|64}} 0, i{{32|64}} 0
-// X86: call void @_ZN8witharg1C1ERK10destroyme1(%[[WITHARG]]* {{[^,]*}} getelementptr inbounds ([2 x %[[WITHARG]]], [2 x %[[WITHARG]]]* @_ZGR15globalInitList2_, i{{32|64}} 0, i{{32|64}} 1
-// AMDGCN: call void @_ZN8witharg1C1ERK10destroyme1(%[[WITHARG]]* {{[^,]*}} getelementptr inbounds ([2 x %[[WITHARG]]], [2 x %[[WITHARG]]]* addrspacecast ({{[^@]+}} @_ZGR15globalInitList2_ {{[^)]+}}), i{{32|64}} 0, i{{32|64}} 0
-// AMDGCN: call void @_ZN8witharg1C1ERK10destroyme1(%[[WITHARG]]* {{[^,]*}} getelementptr inbounds ([2 x %[[WITHARG]]], [2 x %[[WITHARG]]]* addrspacecast ({{[^@]+}} @_ZGR15globalInitList2_ {{[^)]+}}), i{{32|64}} 0, i{{32|64}} 1
+// X86: call void @_ZN8witharg1C1ERK10destroyme1(ptr {{[^,]*}} @_ZGR15globalInitList2_
+// X86: call void @_ZN8witharg1C1ERK10destroyme1(ptr {{[^,]*}} getelementptr inbounds (%[[WITHARG]], ptr @_ZGR15globalInitList2_, i{{32|64}} 1)
+// AMDGCN: call void @_ZN8witharg1C1ERK10destroyme1(ptr {{[^,]*}} addrspacecast ({{[^@]+}} @_ZGR15globalInitList2_ {{[^)]+}}
+// AMDGCN: call void @_ZN8witharg1C1ERK10destroyme1(ptr {{[^,]*}} getelementptr inbounds (%[[WITHARG]], ptr addrspacecast ({{[^@]+}} @_ZGR15globalInitList2_ {{[^)]+}}), i{{32|64}} 1
 // CHECK: call i32 @__cxa_atexit
-// X86: store %[[WITHARG]]* getelementptr inbounds ([2 x %[[WITHARG]]], [2 x %[[WITHARG]]]* @_ZGR15globalInitList2_, i64 0, i64 0),
-// X86:       %[[WITHARG]]** getelementptr inbounds (%{{.*}}, %{{.*}}* @globalInitList2, i32 0, i32 0), align 8
-// X86: store i64 2, i64* getelementptr inbounds (%{{.*}}, %{{.*}}* @globalInitList2, i32 0, i32 1), align 8
-// AMDGCN: store %[[WITHARG]]* getelementptr inbounds ([2 x %[[WITHARG]]], [2 x %[[WITHARG]]]* addrspacecast ({{[^@]+}} @_ZGR15globalInitList2_ {{[^)]+}}), i64 0, i64 0),
-// AMDGCN:       %[[WITHARG]]** getelementptr inbounds (%{{.*}}, %{{.*}}* addrspacecast ({{[^@]+}} @globalInitList2 {{[^)]+}}), i32 0, i32 0), align 8
-// AMDGCN: store i64 2, i64* getelementptr inbounds (%{{.*}}, %{{.*}}* addrspacecast ({{[^@]+}} @globalInitList2 {{[^)]+}}), i32 0, i32 1), align 8
+// X86: store ptr @_ZGR15globalInitList2_, ptr @globalInitList2, align 8
+// X86: store i64 2, ptr getelementptr inbounds (%{{.*}}, ptr @globalInitList2, i32 0, i32 1), align 8
+// AMDGCN: store ptr addrspacecast ({{[^@]+}} @_ZGR15globalInitList2_ {{[^)]+}}),
+// AMDGCN:       ptr addrspacecast ({{[^@]+}} @globalInitList2 {{[^)]+}}), align 8
+// AMDGCN: store i64 2, ptr getelementptr inbounds (%{{.*}}, ptr addrspacecast ({{[^@]+}} @globalInitList2 {{[^)]+}}), i32 0, i32 1), align 8
 // CHECK: call void @_ZN10destroyme1D1Ev
 // CHECK-NEXT: call void @_ZN10destroyme1D1Ev
 // CHECK-NEXT: ret void
@@ -122,9 +121,9 @@ void fn1(int i) {
   // temporary array
   // X86: [[array:%[^ ]+]] = alloca [3 x i32]
   // AMDGCN: [[alloca:%[^ ]+]] = alloca [3 x i32], align 4, addrspace(5)
-  // AMDGCN: [[array:%[^ ]+]] ={{.*}} addrspacecast [3 x i32] addrspace(5)* [[alloca]] to [3 x i32]*
-  // CHECK: getelementptr inbounds [3 x i32], [3 x i32]* [[array]], i{{32|64}} 0
-  // CHECK-NEXT: store i32 1, i32*
+  // AMDGCN: [[array:%[^ ]+]] ={{.*}} addrspacecast ptr addrspace(5) [[alloca]] to ptr
+  // CHECK: getelementptr inbounds [3 x i32], ptr [[array]], i{{32|64}} 0
+  // CHECK-NEXT: store i32 1, ptr
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: store
   // CHECK-NEXT: getelementptr
@@ -132,8 +131,8 @@ void fn1(int i) {
   // CHECK-NEXT: store
   // init the list
   // CHECK-NEXT: getelementptr
-  // CHECK-NEXT: getelementptr inbounds [3 x i32], [3 x i32]*
-  // CHECK-NEXT: store i32*
+  // CHECK-NEXT: getelementptr inbounds [3 x i32], ptr
+  // CHECK-NEXT: store ptr
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: store i{{32|64}} 3
   std::initializer_list<int> intlist{1, 2, i};
@@ -239,12 +238,12 @@ void fn9() {
 void fn10(int i) {
   // CHECK-LABEL: define{{.*}} void @_Z4fn10i
   // CHECK: alloca [3 x i32]
-  // CHECK-X86: call noalias nonnull align 16 i8* @_Znw{{[jm]}}
-  // CHECK-AMDGPU: call noalias nonnull align 8 i8* @_Znw{{[jm]}}
+  // CHECK-X86: call noalias nonnull align 16 ptr @_Znw{{[jm]}}
+  // CHECK-AMDGPU: call noalias nonnull align 8 ptr @_Znw{{[jm]}}
   // CHECK: store i32 %
   // CHECK: store i32 2
   // CHECK: store i32 3
-  // CHECK: store i32*
+  // CHECK: store ptr
   (void) new std::initializer_list<int> {i, 2, 3};
 }
 
@@ -357,35 +356,31 @@ namespace partly_constant {
   std::initializer_list<std::initializer_list<int>> &&il = { { 1, 2, 3 }, { 4, k }, { 5, 6, 7, 8 } };
   // First init list.
   // CHECK-NOT: @[[PARTLY_CONSTANT_FIRST]],
-  // CHECK: store i32* getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_FIRST]]{{.*}}, i64 0, i64 0),
-  // CHECK:       i32** getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 0, i64 0, i32 0)
-  // CHECK: store i64 3, i64* getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 0, i64 0, i32 1)
+  // CHECK: store ptr {{.*}}@[[PARTLY_CONSTANT_FIRST]]{{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}
+  // CHECK: store i64 3, ptr getelementptr inbounds ({{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i32 0, i32 1)
   // CHECK-NOT: @[[PARTLY_CONSTANT_FIRST]],
   //
   // Second init list array (non-constant).
-  // CHECK: store i32 4, i32* getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_SECOND]]{{.*}}, i64 0, i64 0)
-  // CHECK: load i32, i32* {{.*}}@_ZN15partly_constant1kE
-  // CHECK: store i32 {{.*}}, i32* getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_SECOND]]{{.*}}, i64 0, i64 1)
+  // CHECK: store i32 4, ptr {{.*}}@[[PARTLY_CONSTANT_SECOND]]{{.*}}
+  // CHECK: load i32, ptr {{.*}}@_ZN15partly_constant1kE
+  // CHECK: store i32 {{.*}}, ptr getelementptr inbounds ({{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_SECOND]]{{.*}}, i64 1)
   //
   // Second init list.
-  // CHECK: store i32* getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_SECOND]]{{.*}}, i64 0, i64 0),
-  // CHECK:       i32** getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 0, i64 1, i32 0)
-  // CHECK: store i64 2, i64* getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 0, i64 1, i32 1)
+  // CHECK: store ptr {{.*}}@[[PARTLY_CONSTANT_SECOND]]{{.*}}, ptr getelementptr inbounds ({{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 1)
+  // CHECK: store i64 2, ptr getelementptr inbounds ({{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 1, i32 1)
   //
   // Third init list.
   // CHECK-NOT: @[[PARTLY_CONSTANT_THIRD]],
-  // CHECK: store i32* getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_THIRD]]{{.*}}, i64 0, i64 0),
-  // CHECK:       i32** getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 0, i64 2, i32 0)
-  // CHECK: store i64 4, i64* getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 0, i64 2, i32 1)
+  // CHECK: store ptr {{.*}}@[[PARTLY_CONSTANT_THIRD]]{{.*}}, ptr getelementptr inbounds ({{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 2)
+  // CHECK: store i64 4, ptr getelementptr inbounds ({{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 2, i32 1)
   // CHECK-NOT: @[[PARTLY_CONSTANT_THIRD]],
   //
   // Outer init list.
-  // CHECK: store {{.*}}* getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 0, i64 0),
-  // CHECK:       {{.*}}** getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_OUTER]]{{.*}}, i32 0, i32 0)
-  // CHECK: store i64 3, i64* getelementptr inbounds ({{.*}}, {{.*}}* {{.*}}@[[PARTLY_CONSTANT_OUTER]]{{.*}}, i32 0, i32 1)
+  // CHECK: store ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_OUTER]]{{.*}}
+  // CHECK: store i64 3, ptr getelementptr inbounds ({{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_OUTER]]{{.*}}, i32 0, i32 1)
   //
   // 'il' reference.
-  // CHECK: store {{.*}}* {{.*}}@[[PARTLY_CONSTANT_OUTER]]{{.*}}, {{.*}}** {{.*}}@_ZN15partly_constant2ilE{{.*}}, align 8
+  // CHECK: store ptr {{.*}}@[[PARTLY_CONSTANT_OUTER]]{{.*}}, ptr {{.*}}@_ZN15partly_constant2ilE{{.*}}, align 8
 }
 namespace nested {
   struct A { A(); ~A(); };
@@ -453,7 +448,7 @@ namespace PR20445 {
   template<int x> void f() { new MyClass({42, 43}); }
   template void f<0>();
   // CHECK-LABEL: define {{.*}} @_ZN7PR204451fILi0EEEvv(
-  // CHECK: store i32* getelementptr inbounds ([2 x i32], [2 x i32]* {{.*}}@[[REFTMP1]]{{.*}}, i64 0, i64 0)
+  // CHECK: store ptr {{.*}}@[[REFTMP1]]{{.*}}
   // CHECK: call void @_ZN7PR204456vectorC1ESt16initializer_listIiE(
   // CHECK: call void @_ZN7PR204457MyClassC1ERKNS_6vectorE(
 }
@@ -467,7 +462,7 @@ namespace ConstExpr {
   void f(std::initializer_list<C>);
   void g() {
     // CHECK-LABEL: _ZN9ConstExpr1gEv
-    // CHECK: store %"class.ConstExpr::C"* getelementptr inbounds ([3 x %"class.ConstExpr::C"], [3 x %"class.ConstExpr::C"]* {{.*}}@[[REFTMP2]]{{.*}}, i64 0, i64 0)
+    // CHECK: store ptr {{.*}}@[[REFTMP2]]{{.*}}
     // CHECK: call void @_ZN9ConstExpr1fESt16initializer_listINS_1CEE
     f({C(1), C(2), C(3)});
   }
@@ -488,13 +483,13 @@ namespace B19773010 {
   void f1() {
     // CHECK-LABEL: @_ZN9B197730102f1Ev
     testcase a{{"", ENUM_CONSTANT}};
-    // X86: store %"struct.B19773010::pair"* getelementptr inbounds ([1 x %"struct.B19773010::pair"], [1 x %"struct.B19773010::pair"]* bitcast ([1 x { i8*, i32 }]* @.ref.tmp{{.*}} to [1 x %"struct.B19773010::pair"]*), i64 0, i64 0), %"struct.B19773010::pair"** %{{.*}}, align 8
-    // AMDGCN: store %"struct.B19773010::pair"* getelementptr inbounds ([1 x %"struct.B19773010::pair"], [1 x %"struct.B19773010::pair"]* addrspacecast{{.*}} bitcast ([1 x { i8*, i32 }] addrspace(4)* @.ref.tmp{{.*}} to [1 x %"struct.B19773010::pair"] addrspace(4)*){{.*}}, i64 0, i64 0), %"struct.B19773010::pair"** %{{.*}}, align 8
+    // X86: store ptr @.ref.tmp{{.*}}, ptr %{{.*}}, align 8
+    // AMDGCN: store ptr addrspacecast{{.*}} @.ref.tmp{{.*}}{{.*}}, ptr %{{.*}}, align 8
   }
   void f2() {
     // CHECK-LABEL: @_ZN9B197730102f2Ev
-    // X86: store %"struct.B19773010::pair"* getelementptr inbounds ([1 x %"struct.B19773010::pair"], [1 x %"struct.B19773010::pair"]* bitcast ([1 x { i8*, i32 }]* @_ZGRZN9B197730102f2EvE1p_ to [1 x %"struct.B19773010::pair"]*), i64 0, i64 0), %"struct.B19773010::pair"** getelementptr inbounds ([2 x %"class.std::initializer_list.10"], [2 x %"class.std::initializer_list.10"]* @_ZZN9B197730102f2EvE1p, i64 0, i64 1, i32 0), align 16
-    // AMDGCN: store %"struct.B19773010::pair"* getelementptr inbounds ([1 x %"struct.B19773010::pair"], [1 x %"struct.B19773010::pair"]* addrspacecast{{.*}} bitcast ([1 x { i8*, i32 }] addrspace(1)* @_ZGRZN9B197730102f2EvE1p_ to [1 x %"struct.B19773010::pair"] addrspace(1)*){{.*}}, i64 0, i64 0), %"struct.B19773010::pair"** getelementptr inbounds ([2 x %"class.std::initializer_list.10"], [2 x %"class.std::initializer_list.10"]* addrspacecast{{.*}}@_ZZN9B197730102f2EvE1p{{.*}}, i64 0, i64 1, i32 0), align 8
+    // X86: store ptr @_ZGRZN9B197730102f2EvE1p_, ptr getelementptr inbounds (%"class.std::initializer_list.10", ptr @_ZZN9B197730102f2EvE1p, i64 1), align 16
+    // AMDGCN: store ptr addrspacecast{{.*}} @_ZGRZN9B197730102f2EvE1p_{{.*}}, ptr getelementptr inbounds (%"class.std::initializer_list.10", ptr addrspacecast{{.*}}@_ZZN9B197730102f2EvE1p{{.*}}, i64 1), align 8
     static std::initializer_list<pair<const char *, E>> a, p[2] =
         {a, {{"", ENUM_CONSTANT}}};
   }

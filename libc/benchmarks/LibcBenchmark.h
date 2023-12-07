@@ -32,12 +32,12 @@
 
 #include "benchmark/benchmark.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 namespace libc_benchmarks {
@@ -99,7 +99,7 @@ struct BenchmarkState {
 struct BenchmarkResult {
   BenchmarkStatus TerminationStatus = BenchmarkStatus::Running;
   Duration BestGuess = {};
-  llvm::Optional<llvm::SmallVector<BenchmarkState, 16>> MaybeBenchmarkLog;
+  std::optional<llvm::SmallVector<BenchmarkState, 16>> MaybeBenchmarkLog;
 };
 
 // Stores information about a cache in the host memory system.

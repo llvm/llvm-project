@@ -515,7 +515,7 @@ int AArch64A57FPLoadBalancing::scavengeRegister(Chain *G, Color C,
   } while (I != ChainBegin);
 
   // Make sure we allocate in-order, to get the cheapest registers first.
-  unsigned RegClassID = ChainBegin->getDesc().OpInfo[0].RegClass;
+  unsigned RegClassID = ChainBegin->getDesc().operands()[0].RegClass;
   auto Ord = RCI.getOrder(TRI->getRegClass(RegClassID));
   for (auto Reg : Ord) {
     if (!Units.available(Reg))

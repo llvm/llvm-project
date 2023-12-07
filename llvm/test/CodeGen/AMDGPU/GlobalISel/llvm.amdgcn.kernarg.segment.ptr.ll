@@ -1,4 +1,4 @@
-; RUN: llc -global-isel -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL %s
+; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,OS-MESA3D,ALL %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-unknown -mcpu=hawaii -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=OS-UNKNOWN,ALL %s
 
@@ -122,3 +122,6 @@ attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind "amdgpu-implicitarg-num-bytes"="0" }
 attributes #2 = { nounwind "amdgpu-implicitarg-num-bytes"="48" }
 attributes #3 = { nounwind "amdgpu-implicitarg-num-bytes"="38" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}

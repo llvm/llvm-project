@@ -1,0 +1,7 @@
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+
+# RUN: %lldb -s %S/Inputs/TestCopyLogs.in -o 'logcommands -f %t/commands.log' -o 'diagnostics dump -d %t/diags'
+
+# RUN: cat %t/diags/commands.log | FileCheck %s
+# CHECK: Processing command: diagnostics dump

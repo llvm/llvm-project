@@ -9,6 +9,7 @@ unittest("ClangPseudoTests") {
     "//clang/lib/Lex",
     "//clang/lib/Testing",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Annotations",
     "//llvm/lib/Testing/Support",
   ]
   include_dirs = [ "../include" ]

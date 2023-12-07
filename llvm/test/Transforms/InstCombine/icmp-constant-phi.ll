@@ -12,8 +12,8 @@ define i1 @test_eq(i1 %cond) {
 ; CHECK:       merge:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
-; CHECK-NEXT:    ret i1 [[TMP0]]
+; CHECK-NEXT:    [[COMPARE:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    ret i1 [[COMPARE]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
@@ -166,7 +166,7 @@ define <2 x i1> @test_ne_int_vector(i1 %cond) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[COMPARE:%.*]] = phi <2 x i1> [ <i1 true, i1 false>, [[IF_FALSE]] ], [ <i1 false, i1 true>, [[IF_TRUE]] ]
+; CHECK-NEXT:    [[COMPARE:%.*]] = phi <2 x i1> [ <i1 false, i1 true>, [[IF_TRUE]] ], [ <i1 true, i1 false>, [[IF_FALSE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret <2 x i1> [[COMPARE]]

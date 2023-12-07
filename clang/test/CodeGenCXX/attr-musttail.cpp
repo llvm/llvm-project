@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fno-elide-constructors -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -fno-elide-constructors -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | opt -passes=verify
+// RUN: %clang_cc1 -fno-elide-constructors -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 -fno-elide-constructors -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | opt -passes=verify
 // FIXME: remove the call to "opt" once the tests are running the Clang verifier automatically again.
 
 int Bar(int);
@@ -36,7 +36,7 @@ int Foo::TailFrom(int x) {
   [[clang::musttail]] return MemberFunction(x);
 }
 
-// CHECK: %call = musttail call noundef i32 @_ZN3Foo14MemberFunctionEi(%class.Foo* noundef nonnull align 1 dereferenceable(1) %this1, i32 noundef %0)
+// CHECK: %call = musttail call noundef i32 @_ZN3Foo14MemberFunctionEi(ptr noundef nonnull align 1 dereferenceable(1) %this1, i32 noundef %0)
 
 int Func3(int x) {
   [[clang::musttail]] return Foo::StaticMethod(x);
@@ -57,13 +57,13 @@ int Foo::TailFrom2(int x) {
   [[clang::musttail]] return ((*this).*pmf)(x);
 }
 
-// CHECK: %call = musttail call noundef i32 %8(%class.Foo* noundef nonnull align 1 dereferenceable(1) %this.adjusted, i32 noundef %9)
+// CHECK: %call = musttail call noundef i32 %5(ptr noundef nonnull align 1 dereferenceable(1) %1, i32 noundef %6)
 
 int Foo::TailFrom3(int x) {
   [[clang::musttail]] return (this->*pmf)(x);
 }
 
-// CHECK: %call = musttail call noundef i32 %8(%class.Foo* noundef nonnull align 1 dereferenceable(1) %this.adjusted, i32 noundef %9)
+// CHECK: %call = musttail call noundef i32 %5(ptr noundef nonnull align 1 dereferenceable(1) %1, i32 noundef %6)
 
 void ReturnsVoid();
 
@@ -92,7 +92,7 @@ int Func7(Data *data) {
   [[clang::musttail]] return data->fptr(data);
 }
 
-// CHECK: %call = musttail call noundef i32 %1(%struct.Data* noundef %2)
+// CHECK: %call = musttail call noundef i32 %1(ptr noundef %2)
 
 template <class T>
 T TemplateFunc(T) {
@@ -152,7 +152,7 @@ void Struct3::NonConstMemberFunction(int *i) {
   [[clang::musttail]] return ConstMemberFunction(i);
 }
 
-// CHECK: musttail call void @_ZNK7Struct319ConstMemberFunctionEPKi(%struct.Struct3* noundef nonnull align 1 dereferenceable(1) %this1, i32* noundef %0)
+// CHECK: musttail call void @_ZNK7Struct319ConstMemberFunctionEPKi(ptr noundef nonnull align 1 dereferenceable(1) %this1, ptr noundef %0)
 
 struct HasNonTrivialCopyConstructor {
   HasNonTrivialCopyConstructor(const HasNonTrivialCopyConstructor &);
@@ -162,7 +162,7 @@ HasNonTrivialCopyConstructor TestNonElidableCopyConstructor() {
   [[clang::musttail]] return (((ReturnsClassByValue())));
 }
 
-// CHECK: musttail call void @_Z19ReturnsClassByValuev(%struct.HasNonTrivialCopyConstructor* sret(%struct.HasNonTrivialCopyConstructor) align 1 %agg.result)
+// CHECK: musttail call void @_Z19ReturnsClassByValuev(ptr sret(%struct.HasNonTrivialCopyConstructor) align 1 %agg.result)
 
 struct HasNonTrivialCopyConstructor2 {
   // Copy constructor works even if it has extra default params.
@@ -191,8 +191,8 @@ LargeWithCopyConstructor TestLargeWithCopyConstructor() {
   [[clang::musttail]] return ReturnsLarge();
 }
 
-// CHECK: define dso_local void @_Z28TestLargeWithCopyConstructorv(%struct.LargeWithCopyConstructor* noalias sret(%struct.LargeWithCopyConstructor) align 1 %agg.result)
-// CHECK: musttail call void @_Z12ReturnsLargev(%struct.LargeWithCopyConstructor* sret(%struct.LargeWithCopyConstructor) align 1 %agg.result)
+// CHECK: define dso_local void @_Z28TestLargeWithCopyConstructorv(ptr noalias sret(%struct.LargeWithCopyConstructor) align 1 %agg.result)
+// CHECK: musttail call void @_Z12ReturnsLargev(ptr sret(%struct.LargeWithCopyConstructor) align 1 %agg.result)
 
 using IntFunctionType = int();
 IntFunctionType *ReturnsIntFunction();
@@ -213,7 +213,7 @@ int TestNonCapturingLambda() {
   [[clang::musttail]] return (+lambda)();
 }
 
-// CHECK: %call = call noundef i32 ()* @"_ZZ22TestNonCapturingLambdavENK3$_0cvPFivEEv"(%class.anon* noundef nonnull align 1 dereferenceable(1) %lambda)
+// CHECK: %call = call noundef ptr @"_ZZ22TestNonCapturingLambdavENK3$_0cvPFivEEv"(ptr noundef nonnull align 1 dereferenceable(1) %lambda)
 // CHECK: musttail call noundef i32 %call()
 
 class TestVirtual {
@@ -225,4 +225,4 @@ void TestVirtual::TailFrom() {
   [[clang::musttail]] return TailTo();
 }
 
-// CHECK: musttail call void %1(%class.TestVirtual* noundef nonnull align 8 dereferenceable(8) %this1)
+// CHECK: musttail call void %0(ptr noundef nonnull align 8 dereferenceable(8) %this1)

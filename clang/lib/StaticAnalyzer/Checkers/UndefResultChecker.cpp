@@ -70,7 +70,7 @@ static bool isLeftShiftResultUnrepresentable(const BinaryOperator *B,
   const llvm::APSInt *LHS = SB.getKnownValue(State, C.getSVal(B->getLHS()));
   const llvm::APSInt *RHS = SB.getKnownValue(State, C.getSVal(B->getRHS()));
   assert(LHS && RHS && "Values unknown, inconsistent state");
-  return (unsigned)RHS->getZExtValue() > LHS->countLeadingZeros();
+  return (unsigned)RHS->getZExtValue() > LHS->countl_zero();
 }
 
 void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
@@ -79,7 +79,6 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
 
     // Do not report assignments of uninitialized values inside swap functions.
     // This should allow to swap partially uninitialized structs
-    // (radar://14129997)
     if (const FunctionDecl *EnclosingFunctionDecl =
         dyn_cast<FunctionDecl>(C.getStackFrame()->getDecl()))
       if (C.getCalleeName(EnclosingFunctionDecl) == "swap")
@@ -92,7 +91,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
 
     if (!BT)
       BT.reset(
-          new BuiltinBug(this, "Result of operation is garbage or undefined"));
+          new BugType(this, "Result of operation is garbage or undefined"));
 
     SmallString<256> sbuf;
     llvm::raw_svector_ostream OS(sbuf);

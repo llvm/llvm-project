@@ -1,7 +1,8 @@
-add_libc_unittest(
+# This test currently uses too much memory to be made hermetic.
+add_libc_test(
   utils_test
   SUITE
-    libc_string_unittests
+    libc-string-tests
   SRCS
     op_tests.cpp
     utils_test.cpp
@@ -9,9 +10,10 @@ add_libc_unittest(
     ${LIBC_COMPILE_OPTIONS_NATIVE}
     -ffreestanding
   DEPENDS
-    libc.src.__support.compiler_features
     libc.src.__support.CPP.array
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.span
+    libc.src.__support.macros.sanitizer
     libc.src.string.memory_utils.memory_utils
+  UNIT_TEST_ONLY
 )

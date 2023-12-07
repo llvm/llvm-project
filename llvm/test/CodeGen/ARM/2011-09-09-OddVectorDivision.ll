@@ -11,13 +11,13 @@ target triple = "armv7-none-linux-gnueabi"
 @z2 = common global <4 x i16> zeroinitializer
 
 define void @f() {
-  %1 = load <3 x i16>, <3 x i16>* @x1
-  %2 = load <3 x i16>, <3 x i16>* @y1
+  %1 = load <3 x i16>, ptr @x1
+  %2 = load <3 x i16>, ptr @y1
   %3 = sdiv <3 x i16> %1, %2
-  store <3 x i16> %3, <3 x i16>* @z1
-  %4 = load <4 x i16>, <4 x i16>* @x2
-  %5 = load <4 x i16>, <4 x i16>* @y2
+  store <3 x i16> %3, ptr @z1
+  %4 = load <4 x i16>, ptr @x2
+  %5 = load <4 x i16>, ptr @y2
   %6 = sdiv <4 x i16> %4, %5
-  store <4 x i16> %6, <4 x i16>* @z2
+  store <4 x i16> %6, ptr @z2
   ret void
 }

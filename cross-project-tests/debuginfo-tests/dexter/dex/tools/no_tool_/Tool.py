@@ -23,25 +23,28 @@ class Tool(ToolBase):
 
     @property
     def name(self):
-        return 'DExTer'
+        return "DExTer"
 
     def add_tool_arguments(self, parser, defaults):
         parser.description = Tool.__doc__
         parser.add_argument(
-            'subtool',
-            choices=[t for t in get_tool_names() if not t.endswith('-')],
-            nargs='?',
-            help='name of subtool')
+            "subtool",
+            choices=[t for t in get_tool_names() if not t.endswith("-")],
+            nargs="?",
+            help="name of subtool",
+        )
         parser.add_argument(
-            'subtool_options',
-            metavar='subtool-options',
-            nargs='*',
-            help='subtool specific options')
+            "subtool_options",
+            metavar="subtool-options",
+            nargs="*",
+            help="subtool specific options",
+        )
 
     def handle_options(self, defaults):
         if not self.context.options.subtool:
-            raise Error('<d>no subtool specified</>\n\n{}\n'.format(
-                self.parser.format_help()))
+            raise Error(
+                "<d>no subtool specified</>\n\n{}\n".format(self.parser.format_help())
+            )
 
     def go(self) -> ReturnCode:
         # This fn is never called because not specifying a subtool raises an

@@ -17,12 +17,11 @@ target triple = "x86_64-apple-darwin"
 define i32 @main() nounwind uwtable ssp {
 entry:
   %l_2 = alloca [1 x i32], align 4
-  %arrayidx = getelementptr inbounds [1 x i32], [1 x i32]* %l_2, i64 0, i64 0
-  store i32 0, i32* %arrayidx, align 4
-  %tmp = load i32, i32* @g_3, align 4
+  store i32 0, ptr %l_2, align 4
+  %tmp = load i32, ptr @g_3, align 4
   %idxprom = sext i32 %tmp to i64
-  %arrayidx1 = getelementptr inbounds [1 x i32], [1 x i32]* %l_2, i64 0, i64 %idxprom
-  %tmp1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [1 x i32], ptr %l_2, i64 0, i64 %idxprom
+  %tmp1 = load i32, ptr %arrayidx1, align 4
   %conv.i.i = and i32 %tmp1, 65535
   %tobool.i.i.i = icmp ne i32 %tmp, 0
   br label %codeRepl
@@ -48,7 +47,7 @@ for.cond.i.i.us:                                  ; preds = %for.inc.i.i.us, %co
 
 for.inc.i.i.us:                                   ; preds = %for.body.i.i.us
   %add.i.i.us = add nsw i32 %tmp2, 1
-  store i32 %add.i.i.us, i32* @g_752, align 4
+  store i32 %add.i.i.us, ptr @g_752, align 4
   br label %for.cond.i.i.us
 
 for.body.i.i.us:                                  ; preds = %codeRepl5.us
@@ -78,7 +77,7 @@ for.body.i.i:                                     ; preds = %codeRepl5
 
 for.inc.i.i:                                      ; preds = %for.body.i.i
   %add.i.i = add nsw i32 %tmp3, 1
-  store i32 %add.i.i, i32* @g_752, align 4
+  store i32 %add.i.i, ptr @g_752, align 4
   br label %for.cond.i.i
 
 func_4.exit:                                      ; No predecessors!

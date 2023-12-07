@@ -13,6 +13,7 @@
 
 #include "connection.h"
 #include "environment.h"
+#include "tools.h"
 #include "utf.h"
 
 namespace Fortran::runtime::io {
@@ -20,6 +21,20 @@ namespace Fortran::runtime::io {
 template <typename CONTEXT, typename CHAR>
 bool EmitEncoded(CONTEXT &to, const CHAR *data, std::size_t chars) {
   ConnectionState &connection{to.GetConnectionState()};
+  if (connection.access == Access::Stream &&
+      connection.internalIoCharKind == 0) {
+    // Stream output: treat newlines as record advancements so that the left tab
+    // limit is correctly managed
+    while (const CHAR * nl{FindCharacter(data, CHAR{'\n'}, chars)}) {
+      auto pos{static_cast<std::size_t>(nl - data)};
+      if (!EmitEncoded(to, data, pos)) {
+        return false;
+      }
+      data += pos + 1;
+      chars -= pos + 1;
+      to.AdvanceRecord();
+    }
+  }
   if (connection.useUTF8<CHAR>()) {
     using UnsignedChar = std::make_unsigned_t<CHAR>;
     const UnsignedChar *uData{reinterpret_cast<const UnsignedChar *>(data)};
@@ -61,7 +76,8 @@ bool EmitEncoded(CONTEXT &to, const CHAR *data, std::size_t chars) {
 template <typename CONTEXT>
 bool EmitAscii(CONTEXT &to, const char *data, std::size_t chars) {
   ConnectionState &connection{to.GetConnectionState()};
-  if (connection.internalIoCharKind <= 1) {
+  if (connection.internalIoCharKind <= 1 &&
+      connection.access != Access::Stream) {
     return to.Emit(data, chars);
   } else {
     return EmitEncoded(to, data, chars);
@@ -74,7 +90,9 @@ bool EmitRepeated(CONTEXT &to, char ch, std::size_t n) {
     return true;
   }
   ConnectionState &connection{to.GetConnectionState()};
-  if (connection.internalIoCharKind <= 1) {
+  if (connection.internalIoCharKind <= 1 &&
+      connection.access != Access::Stream) {
+    // faster path, no encoding needed
     while (n-- > 0) {
       if (!to.Emit(&ch, 1)) {
         return false;

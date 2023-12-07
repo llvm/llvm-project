@@ -11,7 +11,7 @@ entry:
   ret void
 }
 
-define void @f2(i64 addrspace(1)* %p0) {
+define void @f2(ptr addrspace(1) %p0) {
 entry:
   call void @stuff()
   call void @stuff()

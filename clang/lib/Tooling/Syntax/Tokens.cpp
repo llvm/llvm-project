@@ -18,7 +18,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -27,6 +26,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -103,66 +103,13 @@ SourceRange spelledForExpandedSlow(SourceLocation First, SourceLocation Last,
     // The token `a` is wrapped in 4 arg-expansions, we only want to unwrap 2.
     // We distinguish them by whether the macro expands into the target file.
     // Fortunately, the target file ones will always appear first.
-    auto &ExpMacro =
-        SM.getSLocEntry(SM.getFileID(ExpFirst.getExpansionLocStart()))
-            .getExpansion();
-    if (ExpMacro.getExpansionLocStart().isMacroID())
+    auto ExpFileID = SM.getFileID(ExpFirst.getExpansionLocStart());
+    if (ExpFileID == TargetFile)
       break;
     // Replace each endpoint with its spelling inside the macro arg.
     // (This is getImmediateSpellingLoc without repeating lookups).
     First = ExpFirst.getSpellingLoc().getLocWithOffset(DecFirst.second);
     Last = ExpLast.getSpellingLoc().getLocWithOffset(DecLast.second);
-
-    // Now: how do we adjust the previous/next bounds? Three cases:
-    // A) If they are also part of the same macro arg, we translate them too.
-    //   This will ensure that we don't select any macros nested within the
-    //   macro arg that cover extra tokens. Critical case:
-    //      #define ID(X) X
-    //      ID(prev target) // selecting 'target' succeeds
-    //      #define LARGE ID(prev target)
-    //      LARGE // selecting 'target' fails.
-    // B) They are not in the macro at all, then their expansion range is a
-    //    sibling to it, and we can safely substitute that.
-    //      #define PREV prev
-    //      #define ID(X) X
-    //      PREV ID(target) // selecting 'target' succeeds.
-    //      #define LARGE PREV ID(target)
-    //      LARGE // selecting 'target' fails.
-    // C) They are in a different arg of this macro, or the macro body.
-    //    Now selecting the whole macro arg is fine, but the whole macro is not.
-    //    Model this by setting using the edge of the macro call as the bound.
-    //      #define ID2(X, Y) X Y
-    //      ID2(prev, target) // selecting 'target' succeeds
-    //      #define LARGE ID2(prev, target)
-    //      LARGE // selecting 'target' fails
-    auto AdjustBound = [&](SourceLocation &Bound) {
-      if (Bound.isInvalid() || !Bound.isMacroID()) // Non-macro must be case B.
-        return;
-      auto DecBound = SM.getDecomposedLoc(Bound);
-      auto &ExpBound = SM.getSLocEntry(DecBound.first).getExpansion();
-      if (ExpBound.isMacroArgExpansion() &&
-          ExpBound.getExpansionLocStart() == ExpFirst.getExpansionLocStart()) {
-        // Case A: translate to (spelling) loc within the macro arg.
-        Bound = ExpBound.getSpellingLoc().getLocWithOffset(DecBound.second);
-        return;
-      }
-      while (Bound.isMacroID()) {
-        SourceRange Exp = SM.getImmediateExpansionRange(Bound).getAsRange();
-        if (Exp.getBegin() == ExpMacro.getExpansionLocStart()) {
-          // Case B: bounds become the macro call itself.
-          Bound = (&Bound == &Prev) ? Exp.getBegin() : Exp.getEnd();
-          return;
-        }
-        // Either case C, or expansion location will later find case B.
-        // We choose the upper bound for Prev and the lower one for Next:
-        //   ID(prev) target ID(next)
-        //          ^        ^
-        //      new-prev  new-next
-        Bound = (&Bound == &Prev) ? Exp.getEnd() : Exp.getBegin();
-      }
-    };
-    AdjustBound(Prev);
-    AdjustBound(Next);
   }
 
   // In all remaining cases we need the full containing macros.
@@ -170,9 +117,10 @@ SourceRange spelledForExpandedSlow(SourceLocation First, SourceLocation Last,
   SourceRange Candidate =
       SM.getExpansionRange(SourceRange(First, Last)).getAsRange();
   auto DecFirst = SM.getDecomposedExpansionLoc(Candidate.getBegin());
-  auto DecLast = SM.getDecomposedLoc(Candidate.getEnd());
+  auto DecLast = SM.getDecomposedExpansionLoc(Candidate.getEnd());
   // Can end up in the wrong file due to bad input or token-pasting shenanigans.
-  if (Candidate.isInvalid() || DecFirst.first != TargetFile || DecLast.first != TargetFile)
+  if (Candidate.isInvalid() || DecFirst.first != TargetFile ||
+      DecLast.first != TargetFile)
     return SourceRange();
   // Check bounds, which may still be inside macros.
   if (Prev.isValid()) {
@@ -425,8 +373,8 @@ TokenBuffer::expandedForSpelled(llvm::ArrayRef<syntax::Token> Spelled) const {
   // Avoid returning empty ranges.
   if (ExpandedBegin == ExpandedEnd)
     return {};
-  return {llvm::makeArrayRef(ExpandedTokens.data() + ExpandedBegin,
-                             ExpandedTokens.data() + ExpandedEnd)};
+  return {llvm::ArrayRef(ExpandedTokens.data() + ExpandedBegin,
+                         ExpandedTokens.data() + ExpandedEnd)};
 }
 
 llvm::ArrayRef<syntax::Token> TokenBuffer::spelledTokens(FileID FID) const {
@@ -496,7 +444,7 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
     return std::nullopt;
   if (LastMapping && LastMapping->EndExpanded != LastExpanded)
     return std::nullopt;
-  return llvm::makeArrayRef(
+  return llvm::ArrayRef(
       FirstMapping ? File.SpelledTokens.data() + FirstMapping->BeginSpelled
                    : FirstSpelled,
       LastMapping ? File.SpelledTokens.data() + LastMapping->EndSpelled
@@ -506,10 +454,10 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
 TokenBuffer::Expansion TokenBuffer::makeExpansion(const MarkedFile &F,
                                                   const Mapping &M) const {
   Expansion E;
-  E.Spelled = llvm::makeArrayRef(F.SpelledTokens.data() + M.BeginSpelled,
-                                 F.SpelledTokens.data() + M.EndSpelled);
-  E.Expanded = llvm::makeArrayRef(ExpandedTokens.data() + M.BeginExpanded,
-                                  ExpandedTokens.data() + M.EndExpanded);
+  E.Spelled = llvm::ArrayRef(F.SpelledTokens.data() + M.BeginSpelled,
+                             F.SpelledTokens.data() + M.EndSpelled);
+  E.Expanded = llvm::ArrayRef(ExpandedTokens.data() + M.BeginExpanded,
+                              ExpandedTokens.data() + M.EndExpanded);
   return E;
 }
 
@@ -574,8 +522,8 @@ syntax::spelledTokensTouching(SourceLocation Loc,
   bool AcceptRight = Right != Tokens.end() && Right->location() <= Loc;
   bool AcceptLeft =
       Right != Tokens.begin() && (Right - 1)->endLocation() >= Loc;
-  return llvm::makeArrayRef(Right - (AcceptLeft ? 1 : 0),
-                            Right + (AcceptRight ? 1 : 0));
+  return llvm::ArrayRef(Right - (AcceptLeft ? 1 : 0),
+                        Right + (AcceptRight ? 1 : 0));
 }
 
 llvm::ArrayRef<syntax::Token>
@@ -805,7 +753,7 @@ private:
   // In the simplest case, skips spelled tokens until finding one that produced
   // the NextExpanded token, and creates an empty mapping for them.
   // If Drain is provided, skips remaining tokens from that file instead.
-  void discard(llvm::Optional<FileID> Drain = std::nullopt) {
+  void discard(std::optional<FileID> Drain = std::nullopt) {
     SourceLocation Target =
         Drain ? SM.getLocForEndOfFile(*Drain)
               : SM.getExpansionLoc(
@@ -982,11 +930,11 @@ std::string TokenBuffer::dumpForTests() const {
   OS << "expanded tokens:\n"
      << "  ";
   // (!) we do not show '<eof>'.
-  DumpTokens(OS, llvm::makeArrayRef(ExpandedTokens).drop_back());
+  DumpTokens(OS, llvm::ArrayRef(ExpandedTokens).drop_back());
   OS << "\n";
 
   std::vector<FileID> Keys;
-  for (auto F : Files)
+  for (const auto &F : Files)
     Keys.push_back(F.first);
   llvm::sort(Keys);
 

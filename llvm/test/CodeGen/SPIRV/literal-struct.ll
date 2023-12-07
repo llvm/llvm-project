@@ -11,7 +11,7 @@
 ;;   myBlock();
 ;; }
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -opaque-pointers=0 -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK: OpName %[[#StructType0:]] "struct.__opencl_block_literal_generic"
 ; CHECK: %[[#Int8:]] = OpTypeInt 8 0

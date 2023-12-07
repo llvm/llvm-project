@@ -24,8 +24,8 @@ for.body:
   %MaxLeftBorderSum.012 = phi i32 [ %MaxLeftBorderSum.1, %for.body ], [ 0, %for.body.preheader ]
   %i.011 = phi i32 [ %dec, %for.body ], [ %div, %for.body.preheader ]
   %LeftBorderSum.010 = phi i32 [ %add1, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds [8 x i32], [8 x i32]* @A, i32 0, i32 %i.011
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [8 x i32], ptr @A, i32 0, i32 %i.011
+  %0 = load i32, ptr %arrayidx, align 4
   %add1 = add nsw i32 %0, %LeftBorderSum.010
   %cmp2 = icmp sgt i32 %add1, %MaxLeftBorderSum.012
   %MaxLeftBorderSum.1 = select i1 %cmp2, i32 %add1, i32 %MaxLeftBorderSum.012

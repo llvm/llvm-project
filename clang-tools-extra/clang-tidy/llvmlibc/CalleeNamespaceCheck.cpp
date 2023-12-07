@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace llvm_libc {
+namespace clang::tidy::llvm_libc {
 
 // Gets the outermost namespace of a DeclContext, right under the Translation
 // Unit.
@@ -65,6 +63,4 @@ void CalleeNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
        clang::DiagnosticIDs::Note);
 }
 
-} // namespace llvm_libc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::llvm_libc

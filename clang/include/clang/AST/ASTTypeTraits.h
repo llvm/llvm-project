@@ -78,9 +78,12 @@ public:
   constexpr bool isNone() const { return KindId == NKI_None; }
 
   /// Returns \c true if \c this is a base kind of (or same as) \c Other.
+  bool isBaseOf(ASTNodeKind Other) const;
+
+  /// Returns \c true if \c this is a base kind of (or same as) \c Other.
   /// \param Distance If non-null, used to return the distance between \c this
   /// and \c Other in the class hierarchy.
-  bool isBaseOf(ASTNodeKind Other, unsigned *Distance = nullptr) const;
+  bool isBaseOf(ASTNodeKind Other, unsigned *Distance) const;
 
   /// String representation of the kind.
   StringRef asStringRef() const;
@@ -160,11 +163,16 @@ private:
 #define ATTR(A) NKI_##A##Attr,
 #include "clang/Basic/AttrList.inc"
     NKI_ObjCProtocolLoc,
+    NKI_ConceptReference,
     NKI_NumberOfKinds
   };
 
   /// Use getFromNodeKind<T>() to construct the kind.
   constexpr ASTNodeKind(NodeKindId KindId) : KindId(KindId) {}
+
+  /// Returns \c true if \c Base is a base kind of (or same as) \c
+  ///   Derived.
+  static bool isBaseOf(NodeKindId Base, NodeKindId Derived);
 
   /// Returns \c true if \c Base is a base kind of (or same as) \c
   ///   Derived.
@@ -215,6 +223,7 @@ KIND_TO_KIND_ID(OMPClause)
 KIND_TO_KIND_ID(Attr)
 KIND_TO_KIND_ID(ObjCProtocolLoc)
 KIND_TO_KIND_ID(CXXBaseSpecifier)
+KIND_TO_KIND_ID(ConceptReference)
 #define DECL(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED##Decl)
 #include "clang/AST/DeclNodes.inc"
 #define STMT(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED)
@@ -574,6 +583,10 @@ struct DynTypedNode::BaseConverter<CXXBaseSpecifier, void>
 template <>
 struct DynTypedNode::BaseConverter<ObjCProtocolLoc, void>
     : public ValueConverter<ObjCProtocolLoc> {};
+
+template <>
+struct DynTypedNode::BaseConverter<ConceptReference, void>
+    : public PtrConverter<ConceptReference> {};
 
 // The only operation we allow on unsupported types is \c get.
 // This allows to conveniently use \c DynTypedNode when having an arbitrary

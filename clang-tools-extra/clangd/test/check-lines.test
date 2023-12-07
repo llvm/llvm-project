@@ -7,7 +7,7 @@
 // CHECK: Building preamble...
 // CHECK: Building AST...
 // CHECK: Testing features at each token
-// CHECK: tweak: ExpandAutoType ==> FAIL
+// CHECK: tweak: ExpandDeducedType ==> FAIL
 // CHECK: All checks completed, 1 errors
 
 void fun();

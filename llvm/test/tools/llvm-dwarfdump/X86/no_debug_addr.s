@@ -28,6 +28,7 @@
   .byte 35                       # DW_FORM_rnglistx
   .byte 0                        # EOM(1)
   .byte 0                        # EOM(2)
+  .byte 0                        # EOM(3)
 
 .section .debug_rnglists.dwo,"e",@progbits
   .long  .Ldebug_rnglist_table_end1-.Ldebug_rnglist_table_start1 # Length

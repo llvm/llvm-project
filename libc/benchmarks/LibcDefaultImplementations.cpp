@@ -24,30 +24,30 @@ using llvm::libc_benchmarks::MemsetConfiguration;
 llvm::ArrayRef<MemcpyConfiguration> getMemcpyConfigurations() {
   static constexpr MemcpyConfiguration kMemcpyConfigurations[] = {
       {__llvm_libc::memcpy, "__llvm_libc::memcpy"}};
-  return llvm::makeArrayRef(kMemcpyConfigurations);
+  return llvm::ArrayRef(kMemcpyConfigurations);
 }
 llvm::ArrayRef<MemmoveConfiguration> getMemmoveConfigurations() {
   static constexpr MemmoveConfiguration kMemmoveConfigurations[] = {
       {__llvm_libc::memmove, "__llvm_libc::memmove"}};
-  return llvm::makeArrayRef(kMemmoveConfigurations);
+  return llvm::ArrayRef(kMemmoveConfigurations);
 }
 llvm::ArrayRef<MemcmpOrBcmpConfiguration> getMemcmpConfigurations() {
   static constexpr MemcmpOrBcmpConfiguration kMemcmpConfiguration[] = {
       {__llvm_libc::memcmp, "__llvm_libc::memcmp"}};
-  return llvm::makeArrayRef(kMemcmpConfiguration);
+  return llvm::ArrayRef(kMemcmpConfiguration);
 }
 llvm::ArrayRef<MemcmpOrBcmpConfiguration> getBcmpConfigurations() {
   static constexpr MemcmpOrBcmpConfiguration kBcmpConfigurations[] = {
       {__llvm_libc::bcmp, "__llvm_libc::bcmp"}};
-  return llvm::makeArrayRef(kBcmpConfigurations);
+  return llvm::ArrayRef(kBcmpConfigurations);
 }
 llvm::ArrayRef<MemsetConfiguration> getMemsetConfigurations() {
   static constexpr MemsetConfiguration kMemsetConfigurations[] = {
       {__llvm_libc::memset, "__llvm_libc::memset"}};
-  return llvm::makeArrayRef(kMemsetConfigurations);
+  return llvm::ArrayRef(kMemsetConfigurations);
 }
 llvm::ArrayRef<BzeroConfiguration> getBzeroConfigurations() {
   static constexpr BzeroConfiguration kBzeroConfigurations[] = {
       {__llvm_libc::bzero, "__llvm_libc::bzero"}};
-  return llvm::makeArrayRef(kBzeroConfigurations);
+  return llvm::ArrayRef(kBzeroConfigurations);
 }

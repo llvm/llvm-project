@@ -11,8 +11,6 @@ add_integration_test(
     libc-support-threads-integration-tests
   SRCS
     thread_detach_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     libc.src.__support.threads.mutex
     libc.src.__support.threads.thread
@@ -24,8 +22,6 @@ add_integration_test(
     libc-support-threads-integration-tests
   SRCS
     thread_tls_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     libc.src.__support.threads.thread
 )

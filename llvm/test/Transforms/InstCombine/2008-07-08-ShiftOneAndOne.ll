@@ -3,8 +3,8 @@
 
 define i1 @PR2330(i32 %a) {
 ; CHECK-LABEL: @PR2330(
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 %a, 0
-; CHECK-NEXT:    ret i1 [[TOBOOL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[A:%.*]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %tmp15 = shl i32 1, %a
   %tmp237 = and i32 %tmp15, 1

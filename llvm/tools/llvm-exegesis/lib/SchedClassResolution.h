@@ -45,7 +45,7 @@ struct ResolvedSchedClass {
                       const MCInstrInfo &InstrInfo, const MCInst &MCI);
 
   std::vector<BenchmarkMeasure>
-  getAsPoint(InstructionBenchmark::ModeE Mode, const MCSubtargetInfo &STI,
+  getAsPoint(Benchmark::ModeE Mode, const MCSubtargetInfo &STI,
              ArrayRef<PerInstructionStats> Representative) const;
 
   const unsigned SchedClassId;

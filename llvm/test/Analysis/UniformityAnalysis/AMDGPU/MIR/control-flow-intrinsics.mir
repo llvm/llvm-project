@@ -1,0 +1,39 @@
+# RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+
+---
+name:            f1
+body:             |
+  ; CHECK-LABEL: MachineUniformityInfo for function: f1
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    ; CHECK-NOT: DIVERGENT: %1
+    %1:sreg_64(s64) = G_IMPLICIT_DEF
+    ; CHECK: DIVERGENT: {{.*}} SI_IF
+    %2:sreg_64 = SI_IF %1, %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+
+  bb.1:
+    SI_RETURN
+
+  bb.2:
+    G_BR %bb.1
+
+...
+
+---
+name:            f2
+body:             |
+  ; CHECK-LABEL: MachineUniformityInfo for function: f2
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    ; CHECK-NOT: DIVERGENT: %1
+    %1:sreg_64(s64) = G_IMPLICIT_DEF
+    ; CHECK: DIVERGENT: {{.*}} SI_ELSE
+    %2:sreg_64 = SI_ELSE %1, %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+
+  bb.1:
+    SI_RETURN
+
+  bb.2:
+    G_BR %bb.1

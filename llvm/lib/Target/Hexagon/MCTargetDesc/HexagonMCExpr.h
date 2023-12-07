@@ -21,7 +21,6 @@ public:
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
   void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
-  static bool classof(MCExpr const *E);
   MCExpr const *getExpr() const;
   void setMustExtend(bool Val = true);
   bool mustExtend() const;

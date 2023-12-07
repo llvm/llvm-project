@@ -10,7 +10,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @func(i32* %p) {
+define void @func(ptr %p) {
 entry:
   %counters = alloca [64 x i32], align 16
   %lenCounters = alloca [17 x i32], align 16
@@ -21,8 +21,7 @@ for.cond:                                       ; preds = %for.body15, %for.cond
   br i1 false, label %for.body15, label %for.end22
 
 for.body15:                                       ; preds = %for.cond
-  %arrayidx17 = getelementptr inbounds [64 x i32], [64 x i32]* %counters, i64 0, i64 0
-  %0 = load i32, i32* %arrayidx17, align 4
+  %0 = load i32, ptr %counters, align 4
   %add = add i32 %num.0, %0
   br label %for.cond
 
@@ -44,16 +43,16 @@ do.body:                                          ; preds = %cond.end109, %if.en
 
 cond.end109:                                      ; preds = %do.body
   %idxprom122 = zext i32 %e.0 to i64
-  %arrayidx123 = getelementptr inbounds i32, i32* %p, i64 %idxprom122
+  %arrayidx123 = getelementptr inbounds i32, ptr %p, i64 %idxprom122
   %inc128 = add i32 %e.0, 1
   %sub129 = sub i32 %num.0, %inc128
   %cmp130 = icmp ugt i32 %sub129, 1
   br i1 %cmp130, label %do.body, label %do.end
 
 do.end:                                           ; preds = %cond.end109
-  %1 = load i32, i32* %arrayidx123, align 4
-  %arrayidx142 = getelementptr inbounds [17 x i32], [17 x i32]* %lenCounters, i64 0, i64 1
-  store i32 2, i32* %arrayidx142, align 4
+  %1 = load i32, ptr %arrayidx123, align 4
+  %arrayidx142 = getelementptr inbounds [17 x i32], ptr %lenCounters, i64 0, i64 1
+  store i32 2, ptr %arrayidx142, align 4
   br label %for.cond201
 
 for.cond201:                                      ; preds = %for.body204, %do.end

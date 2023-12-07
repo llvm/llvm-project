@@ -5,7 +5,7 @@
 
 @foo = common global i32 0
 
-define i32* @bar1() nounwind readnone {
+define ptr @bar1() nounwind readnone {
 entry:
 ; EABI:      movw    r0, :lower16:foo
 ; EABI-NEXT: movt    r0, :upper16:foo
@@ -18,7 +18,7 @@ entry:
 
 ; IOS-STATIC:      movw    r0, :lower16:_foo
 ; IOS-STATIC-NEXT:       movt    r0, :upper16:_foo
-  ret i32* @foo
+  ret ptr @foo
 }
 
 define void @bar2(i32 %baz) nounwind {
@@ -34,6 +34,6 @@ entry:
 
 ; IOS-STATIC:      movw    r1, :lower16:_foo
 ; IOS-STATIC-NEXT:      movt    r1, :upper16:_foo
-  store i32 %baz, i32* @foo, align 4
+  store i32 %baz, ptr @foo, align 4
   ret void
 }

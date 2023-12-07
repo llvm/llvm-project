@@ -94,26 +94,6 @@ static size_t RoundUp(size_t size, size_t align) {
 }
 
 /*
- * Write binary id length and then its data, because binary id does not
- * have a fixed length.
- */
-static int WriteOneBinaryId(ProfDataWriter *Writer, uint64_t BinaryIdLen,
-                            const uint8_t *BinaryIdData,
-                            uint64_t BinaryIdPadding) {
-  ProfDataIOVec BinaryIdIOVec[] = {
-      {&BinaryIdLen, sizeof(uint64_t), 1, 0},
-      {BinaryIdData, sizeof(uint8_t), BinaryIdLen, 0},
-      {NULL, sizeof(uint8_t), BinaryIdPadding, 1},
-  };
-  if (Writer->Write(Writer, BinaryIdIOVec,
-                    sizeof(BinaryIdIOVec) / sizeof(*BinaryIdIOVec)))
-    return -1;
-
-  /* Successfully wrote binary id, report success. */
-  return 0;
-}
-
-/*
  * Look for the note that has the name "GNU\0" and type NT_GNU_BUILD_ID
  * that contains build id. If build id exists, write binary id.
  *
@@ -135,8 +115,9 @@ static int WriteBinaryIdForNote(ProfDataWriter *Writer,
     const uint8_t *BinaryIdData =
         (const uint8_t *)(NoteName + RoundUp(Note->n_namesz, 4));
     uint8_t BinaryIdPadding = __llvm_profile_get_num_padding_bytes(BinaryIdLen);
-    if (Writer != NULL && WriteOneBinaryId(Writer, BinaryIdLen, BinaryIdData,
-                                           BinaryIdPadding) == -1)
+    if (Writer != NULL &&
+        lprofWriteOneBinaryId(Writer, BinaryIdLen, BinaryIdData,
+                              BinaryIdPadding) == -1)
       return -1;
 
     BinaryIdSize = sizeof(BinaryIdLen) + BinaryIdLen + BinaryIdPadding;
@@ -220,7 +201,7 @@ COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
 
   return TotalBinaryIdsSize;
 }
-#else /* !NT_GNU_BUILD_ID */
+#elif !defined(_AIX) /* !NT_GNU_BUILD_ID */
 /*
  * Fallback implementation for targets that don't support the GNU
  * extensions NT_GNU_BUILD_ID and __ehdr_start.
@@ -228,43 +209,6 @@ COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
 COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
   return 0;
 }
-#endif
-
-#if defined(_AIX)
-// Empty stubs to allow linking object files using the registration-based scheme
-COMPILER_RT_VISIBILITY
-void __llvm_profile_register_function(void *Data_) {}
-
-COMPILER_RT_VISIBILITY
-void __llvm_profile_register_names_function(void *NamesStart,
-                                            uint64_t NamesSize) {}
-
-// The __start_SECNAME and __stop_SECNAME symbols (for SECNAME \in
-// {"__llvm_prf_cnts", "__llvm_prf_data", "__llvm_prf_name", "__llvm_prf_vnds"})
-// are always live when linking on AIX, regardless if the .o's being linked
-// reference symbols from the profile library (for example when no files were
-// compiled with -fprofile-generate). That's because these symbols are kept
-// alive through references in constructor functions that are always live in the
-// default linking model on AIX (-bcdtors:all). The __start_SECNAME and
-// __stop_SECNAME symbols are only resolved by the linker when the SECNAME
-// section exists. So for the scenario where the user objects have no such
-// section (i.e. when they are compiled with -fno-profile-generate), we always
-// define these zero length variables in each of the above 4 sections.
-static int dummy_cnts[0] COMPILER_RT_SECTION(
-    COMPILER_RT_SEG INSTR_PROF_CNTS_SECT_NAME);
-static int dummy_data[0] COMPILER_RT_SECTION(
-    COMPILER_RT_SEG INSTR_PROF_DATA_SECT_NAME);
-static const int dummy_name[0] COMPILER_RT_SECTION(
-    COMPILER_RT_SEG INSTR_PROF_NAME_SECT_NAME);
-static int dummy_vnds[0] COMPILER_RT_SECTION(
-    COMPILER_RT_SEG INSTR_PROF_VNODES_SECT_NAME);
-
-// To avoid GC'ing of the dummy variables by the linker, reference them in an
-// array and reference the array in the runtime registration code
-// (InstrProfilingRuntime.cpp)
-COMPILER_RT_VISIBILITY
-void *__llvm_profile_keep[] = {(void *)&dummy_cnts, (void *)&dummy_data,
-                               (void *)&dummy_name, (void *)&dummy_vnds};
 #endif
 
 #endif

@@ -88,7 +88,7 @@ int main(int, char**)
         }
     }
     // TODO: Move this to std::stringstream once https://llvm.org/PR59083 has been resolved
-#ifndef TEST_HAS_NO_FSTREAM
+#ifndef TEST_HAS_NO_FILESYSTEM
     {
         {
             std::ofstream bs("overflow.dat");
@@ -113,7 +113,7 @@ int main(int, char**)
         }
         std::remove("overflow.dat");
     }
-#endif // TEST_HAS_NO_FSTREAM
+#endif // TEST_HAS_NO_FILESYSTEM
 
     return 0;
 }

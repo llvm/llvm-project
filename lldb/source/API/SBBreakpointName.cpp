@@ -199,7 +199,7 @@ const char *SBBreakpointName::GetName() const {
 
   if (!m_impl_up)
     return "<Invalid Breakpoint Name Object>";
-  return m_impl_up->GetName();
+  return ConstString(m_impl_up->GetName()).GetCString();
 }
 
 void SBBreakpointName::SetEnabled(bool enable) {
@@ -315,9 +315,9 @@ const char *SBBreakpointName::GetCondition() {
     return nullptr;
 
   std::lock_guard<std::recursive_mutex> guard(
-        m_impl_up->GetTarget()->GetAPIMutex());
+      m_impl_up->GetTarget()->GetAPIMutex());
 
-  return bp_name->GetOptions().GetConditionText();
+  return ConstString(bp_name->GetOptions().GetConditionText()).GetCString();
 }
 
 void SBBreakpointName::SetAutoContinue(bool auto_continue) {
@@ -423,9 +423,10 @@ const char *SBBreakpointName::GetThreadName() const {
     return nullptr;
 
   std::lock_guard<std::recursive_mutex> guard(
-        m_impl_up->GetTarget()->GetAPIMutex());
+      m_impl_up->GetTarget()->GetAPIMutex());
 
-  return bp_name->GetOptions().GetThreadSpec()->GetName();
+  return ConstString(bp_name->GetOptions().GetThreadSpec()->GetName())
+      .GetCString();
 }
 
 void SBBreakpointName::SetQueueName(const char *queue_name) {
@@ -450,9 +451,10 @@ const char *SBBreakpointName::GetQueueName() const {
     return nullptr;
 
   std::lock_guard<std::recursive_mutex> guard(
-        m_impl_up->GetTarget()->GetAPIMutex());
+      m_impl_up->GetTarget()->GetAPIMutex());
 
-  return bp_name->GetOptions().GetThreadSpec()->GetQueueName();
+  return ConstString(bp_name->GetOptions().GetThreadSpec()->GetQueueName())
+      .GetCString();
 }
 
 void SBBreakpointName::SetCommandLineCommands(SBStringList &commands) {
@@ -496,7 +498,7 @@ const char *SBBreakpointName::GetHelpString() const {
   if (!bp_name)
     return "";
 
-  return bp_name->GetHelp();
+  return ConstString(bp_name->GetHelp()).GetCString();
 }
 
 void SBBreakpointName::SetHelpString(const char *help_string) {
@@ -593,11 +595,11 @@ SBBreakpointName::SetScriptCallbackBody(const char *callback_body_text) {
         m_impl_up->GetTarget()->GetAPIMutex());
 
   BreakpointOptions &bp_options = bp_name->GetOptions();
-  Status error =
-      m_impl_up->GetTarget()
-          ->GetDebugger()
-          .GetScriptInterpreter()
-          ->SetBreakpointCommandCallback(bp_options, callback_body_text);
+  Status error = m_impl_up->GetTarget()
+                     ->GetDebugger()
+                     .GetScriptInterpreter()
+                     ->SetBreakpointCommandCallback(
+                         bp_options, callback_body_text, /*is_callback=*/false);
   sb_error.SetError(error);
   if (!sb_error.Fail())
     UpdateName(*bp_name);

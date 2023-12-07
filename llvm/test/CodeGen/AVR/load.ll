@@ -140,3 +140,18 @@ while.end:                                        ; preds = %while.body, %entry
   %r.0.lcssa = phi i16 [ 0, %entry ], [ %add, %while.body ]
   ret i16 %r.0.lcssa
 }
+
+define ptr addrspace(1) @load16_postinc_progmem(ptr addrspace(1) readonly %0) {
+; CHECK-LABEL: load16_postinc_progmem:
+; CHECK:         movw r30, [[REG0:r[0-9]+]]
+; CHECK:         lpm  [[REG1:r[0-9]+]], Z+
+; CHECK:         lpm  [[REG1:r[0-9]+]], Z
+; CHECK:         call foo
+; CHECK:         adiw [[REG0:r[0-9]+]], 2
+  %2 = load i16, ptr addrspace(1) %0, align 1
+  tail call addrspace(1) void @foo(i16 %2)
+  %3 = getelementptr inbounds i16, ptr addrspace(1) %0, i16 1
+  ret ptr addrspace(1) %3
+}
+
+declare void @foo(i16)

@@ -216,9 +216,9 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv7--linux-android"
 
-define i32 @f(i32* nocapture readonly %arg5) {
+define i32 @f(ptr nocapture readonly %arg5) {
 bb:
-  %tmp = load i32, i32* %arg5, align 4
+  %tmp = load i32, ptr %arg5, align 4
   %tmp6 = icmp eq i32 %tmp, 0
   br i1 %tmp6, label %bb9, label %bb7
 

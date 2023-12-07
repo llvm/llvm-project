@@ -53,7 +53,7 @@ subroutine issue(c1, c2)
   ! CHECK:       }
 end subroutine
 
-! CHECK-LABEL: func @_QQmain() {
+! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "p"} {
 program p
   ! CHECK-DAG: %[[VAL_0:.*]] = arith.constant 4 : index
   ! CHECK-DAG: %[[VAL_1:.*]] = arith.constant 3 : index
@@ -100,7 +100,7 @@ subroutine charlit
   ! CHECK: %[[VAL_8:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
   ! CHECK: %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_10:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_0]], %[[VAL_9]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-  ! CHECK: %[[VAL_11:.*]] = fir.address_of(@_QQro.4x3xc1.1636b396a657de68ffb870a885ac44b4) : !fir.ref<!fir.array<4x!fir.char<1,3>>>
+  ! CHECK: %[[VAL_11:.*]] = fir.address_of(@_QQro.4x3xc1.0) : !fir.ref<!fir.array<4x!fir.char<1,3>>>
   ! CHECK: %[[VAL_12:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
   ! CHECK: %[[VAL_13:.*]] = fir.allocmem !fir.array<4x!fir.char<1,3>>
   ! CHECK: cf.br ^bb1(%[[VAL_6]], %[[VAL_5]] : index, index)
@@ -174,7 +174,7 @@ subroutine charlit
   ! CHECK:       }
 end
 
-! CHECK: fir.global internal @_QQro.4x3xc1.1636b396a657de68ffb870a885ac44b4 constant : !fir.array<4x!fir.char<1,3>>
+! CHECK: fir.global internal @_QQro.4x3xc1.0 constant : !fir.array<4x!fir.char<1,3>>
 ! CHECK: AA
 ! CHECK: MM
 ! CHECK: ZZ

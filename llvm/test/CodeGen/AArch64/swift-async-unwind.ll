@@ -7,7 +7,7 @@
 ; says to use DWARF correctly.
 
 ; CHECK: compact encoding: 0x03000000
-define void @foo(i8* swiftasync %in) "frame-pointer"="all" {
+define void @foo(ptr swiftasync %in) "frame-pointer"="all" {
   call void asm sideeffect "", "~{x23}"()
   ret void
 }

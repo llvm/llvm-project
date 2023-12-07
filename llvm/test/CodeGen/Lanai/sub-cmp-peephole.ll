@@ -75,12 +75,12 @@ define i32 @j(i32 inreg %a, i32 inreg %b) nounwind {
 ; CHECK:       ! %bb.0: ! %entry
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
-; CHECK-NEXT:    sub.f %r6, %r7, %rv
-; CHECK-NEXT:    bne .LBB4_2
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
+; CHECK-NEXT:    sub.f %r6, %r7, %r0
+; CHECK-NEXT:    bne .LBB4_2
+; CHECK-NEXT:    sub %r6, %r7, %rv
 ; CHECK-NEXT:  .LBB4_1: ! %if.then
-; CHECK-NEXT:    sub.f %r7, %r6, %r0
-; CHECK-NEXT:    sel.gt %rv, %r6, %rv
+; CHECK-NEXT:    sel.lt %rv, %r6, %rv
 ; CHECK-NEXT:  .LBB4_2: ! %if.else
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp

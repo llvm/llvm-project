@@ -16,7 +16,6 @@
 #include "handle_llvm.h"
 #include "input_arrays.h"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -41,6 +40,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -54,14 +54,11 @@ getOptLevel(const std::vector<const char *> &ExtraArgs) {
   CodeGenOpt::Level OLvl = CodeGenOpt::Default;
   for (auto &A : ExtraArgs) {
     if (A[0] == '-' && A[1] == 'O') {
-      switch(A[2]) {
-        case '0': OLvl = CodeGenOpt::None; break;
-        case '1': OLvl = CodeGenOpt::Less; break;
-        case '2': OLvl = CodeGenOpt::Default; break;
-        case '3': OLvl = CodeGenOpt::Aggressive; break;
-        default:
-          errs() << "error: opt level must be between 0 and 3.\n";
-          std::exit(1);
+      if (auto Level = CodeGenOpt::parseLevel(A[2])) {
+        OLvl = *Level;
+      } else {
+        errs() << "error: opt level must be between 0 and 3.\n";
+        std::exit(1);
       }
     }
   }
@@ -106,11 +103,7 @@ static void RunOptimizationPasses(raw_ostream &OS, Module &M,
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  ModulePassManager MPM;
-  if (OL == OptimizationLevel::O0)
-    MPM = PB.buildO0DefaultPipeline(OL);
-  else
-    MPM = PB.buildPerModuleDefaultPipeline(OL);
+  ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OL);
   MPM.addPass(PrintModulePass(OS));
 
   MPM.run(M, MAM);

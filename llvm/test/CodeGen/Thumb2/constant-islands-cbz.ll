@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=thumbv8m.base-none-eabi %s -o - | FileCheck %s --check-prefix=CHECK-T1
 ; RUN: llc < %s -mtriple=thumbv8m.main-none-eabi %s -o - | FileCheck %s --check-prefix=CHECK-T2
 
-define i32* @test(i32* returned %this, i32 %event_size, i8* %event_pointer) {
+define ptr @test(ptr returned %this, i32 %event_size, ptr %event_pointer) {
 ; CHECK-T1-LABEL: test:
 ; CHECK-T1:       @ %bb.0: @ %entry
 ; CHECK-T1-NEXT:    .save {r4, lr}
@@ -43,25 +43,23 @@ define i32* @test(i32* returned %this, i32 %event_size, i8* %event_pointer) {
 ; CHECK-T2-NEXT:    mov r0, r4
 ; CHECK-T2-NEXT:    pop {r4, pc}
 entry:
-  %_update = getelementptr inbounds i32, i32* %this, i32 1
-  %0 = bitcast i32* %_update to i8*
-  tail call void @llvm.memset.p0i8.i32(i8* nonnull align 4 %0, i8 0, i32 16, i1 false) #4
-  %tobool = icmp eq i8* %event_pointer, null
-  %_equeue5 = getelementptr inbounds i32, i32* %this, i32 0
+  %_update = getelementptr inbounds i32, ptr %this, i32 1
+  tail call void @llvm.memset.p0.i32(ptr nonnull align 4 %_update, i8 0, i32 16, i1 false) #4
+  %tobool = icmp eq ptr %event_pointer, null
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %call4 = tail call i32 @equeue_create(i32* %_equeue5, i32 %event_size) #5
+  %call4 = tail call i32 @equeue_create(ptr %this, i32 %event_size) #5
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %call6 = tail call i32 @equeue_create_inplace(i32* %_equeue5, i32 %event_size, i8* nonnull %event_pointer) #5
+  %call6 = tail call i32 @equeue_create_inplace(ptr %this, i32 %event_size, ptr nonnull %event_pointer) #5
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  ret i32* %this
+  ret ptr %this
 }
 
-declare dso_local i32 @equeue_create(i32*, i32) local_unnamed_addr #1
-declare dso_local i32 @equeue_create_inplace(i32*, i32, i8*) local_unnamed_addr #1
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg) #2
+declare dso_local i32 @equeue_create(ptr, i32) local_unnamed_addr #1
+declare dso_local i32 @equeue_create_inplace(ptr, i32, ptr) local_unnamed_addr #1
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg) #2

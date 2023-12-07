@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace altera {
+namespace clang::tidy::altera {
 
 /// Finds structs that are inefficiently packed or aligned, and recommends
 /// packing and/or aligning of said structs as needed.
@@ -31,11 +29,9 @@ public:
 
 private:
   const unsigned MaxConfiguredAlignment;
-  CharUnits computeRecommendedAlignment(CharUnits MinByteSize);
+  CharUnits computeRecommendedAlignment(CharUnits MinByteSize) const;
 };
 
-} // namespace altera
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::altera
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ALTERA_STRUCTPACKALIGNCHECK_H

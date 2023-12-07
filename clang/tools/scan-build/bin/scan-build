@@ -1037,7 +1037,8 @@ sub RunXcodebuild {
   if ($oldBehavior == 0) {
     my $OutputDir = $EnvVars->{"OUTPUT_DIR"};
     my $CLANG = $EnvVars->{"CLANG"};
-    my $OtherFlags = $EnvVars->{"CCC_ANALYZER_ANALYSIS"};
+    my $OtherFlags = $EnvVars->{"CCC_ANALYZER_ANALYSIS"} . " "
+                   . $EnvVars->{"CCC_ANALYZER_CONFIG"};
     push @$Args,
         "RUN_CLANG_STATIC_ANALYZER=YES",
         "CLANG_ANALYZER_OUTPUT=plist-html",

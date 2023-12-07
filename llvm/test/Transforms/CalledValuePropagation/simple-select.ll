@@ -2,7 +2,7 @@
 
 target triple = "aarch64-unknown-linux-gnueabi"
 
-@global_function = internal unnamed_addr global void ()* null, align 8
+@global_function = internal unnamed_addr global ptr null, align 8
 @global_scalar = internal unnamed_addr global i64 zeroinitializer
 
 ; This test checks that we propagate the functions through a select
@@ -16,7 +16,7 @@ target triple = "aarch64-unknown-linux-gnueabi"
 ; always return the constant "1", eliminating the load and store instructions.
 ;
 ; CHECK: call void %tmp0(), !callees ![[MD:[0-9]+]]
-; CHECK: ![[MD]] = !{void ()* @norecurse_1, void ()* @norecurse_2}
+; CHECK: ![[MD]] = !{ptr @norecurse_1, ptr @norecurse_2}
 ;
 define i64 @test_select_entry(i1 %flag) {
 entry:
@@ -26,10 +26,10 @@ entry:
 
 define internal i64 @test_select(i1 %flag) {
 entry:
-  %tmp0 = select i1 %flag, void ()* @norecurse_1, void ()* @norecurse_2
-  store i64 1, i64* @global_scalar
+  %tmp0 = select i1 %flag, ptr @norecurse_1, ptr @norecurse_2
+  store i64 1, ptr @global_scalar
   call void %tmp0()
-  %tmp1 = load i64, i64* @global_scalar
+  %tmp1 = load i64, ptr @global_scalar
   ret i64 %tmp1
 }
 

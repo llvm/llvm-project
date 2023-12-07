@@ -4,67 +4,67 @@
 
 --- |
 
-  define i32 @test(i32* %a) {
+  define i32 @test(ptr %a) {
   entry:
-    %b = load i32, i32* %a
-    store i32 42, i32* %a
+    %b = load i32, ptr %a
+    store i32 42, ptr %a
     ret i32 %b
   }
 
-  define void @test2(i32* %"a value") {
+  define void @test2(ptr %"a value") {
   entry2:
-    %b = load i32, i32* %"a value"
+    %b = load i32, ptr %"a value"
     %c = add i32 %b, 1
-    store i32 %c, i32* %"a value"
+    store i32 %c, ptr %"a value"
     ret void
   }
 
-  define void @test3(i32*) {
+  define void @test3(ptr) {
   entry3:
     %1 = alloca i32
-    %b = load i32, i32* %0
+    %b = load i32, ptr %0
     %c = add i32 %b, 1
-    store i32 %c, i32* %1
+    store i32 %c, ptr %1
     ret void
   }
 
-  define i32 @volatile_inc(i32* %x) {
+  define i32 @volatile_inc(ptr %x) {
   entry:
-    %0 = load volatile i32, i32* %x
+    %0 = load volatile i32, ptr %x
     %1 = add i32 %0, 1
-    store volatile i32 %1, i32* %x
+    store volatile i32 %1, ptr %x
     ret i32 %1
   }
 
-  define void @non_temporal_store(i32* %a, i32 %b) {
+  define void @non_temporal_store(ptr %a, i32 %b) {
   entry:
-    store i32 %b, i32* %a, align 16, !nontemporal !0
+    store i32 %b, ptr %a, align 16, !nontemporal !0
     ret void
   }
 
   !0 = !{i32 1}
 
-  define i32 @invariant_load(i32* %x) {
+  define i32 @invariant_load(ptr %x) {
   entry:
-    %v = load i32, i32* %x, !invariant.load !1
+    %v = load i32, ptr %x, !invariant.load !1
     ret i32 %v
   }
 
   !1 = !{}
 
-  define void @memory_offset(<8 x float>* %vec) {
+  define void @memory_offset(ptr %vec) {
   entry:
-    %v = load <8 x float>, <8 x float>* %vec
+    %v = load <8 x float>, ptr %vec
     %v2 = insertelement <8 x float> %v, float 0.0, i32 4
-    store <8 x float> %v2, <8 x float>* %vec
+    store <8 x float> %v2, ptr %vec
     ret void
   }
 
-  define void @memory_alignment(<16 x float>* %vec) {
+  define void @memory_alignment(ptr %vec) {
   entry:
-    %v = load <16 x float>, <16 x float>* %vec
+    %v = load <16 x float>, ptr %vec
     %v2 = insertelement <16 x float> %v, float 0.0, i32 4
-    store <16 x float> %v2, <16 x float>* %vec
+    store <16 x float> %v2, ptr %vec
     ret void
   }
 
@@ -88,7 +88,7 @@
 
   define i32 @got_psv() {
   entry:
-    %a = load i32, i32* @G
+    %a = load i32, ptr @G
     %b = add i32 %a, 1
     ret i32 %b
   }
@@ -97,9 +97,9 @@
 
   define i32 @global_value() {
   entry:
-    %a = load i32, i32* @G
+    %a = load i32, ptr @G
     %b = add i32 %a, 1
-    %c = load i32, i32* @0
+    %c = load i32, ptr @0
     %d = add i32 %b, %c
     ret i32 %d
   }
@@ -130,10 +130,9 @@
 
   define i32 @tbaa_metadata() {
   entry:
-    %0 = load i32, i32* @a, align 4, !tbaa !2
-    %1 = inttoptr i32 %0 to %struct.XXH_state64_t*
-    %total_len2 = bitcast %struct.XXH_state64_t* %1 to i32*
-    %2 = load i32, i32* %total_len2, align 4, !tbaa !6
+    %0 = load i32, ptr @a, align 4, !tbaa !2
+    %1 = inttoptr i32 %0 to ptr
+    %2 = load i32, ptr %1, align 4, !tbaa !6
     ret i32 %2
   }
 
@@ -145,14 +144,14 @@
   !7 = !{!"XXH_state64_t", !3, i64 0, !3, i64 4, !8, i64 8, !8, i64 16, !8, i64 24}
   !8 = !{!"long long", !4, i64 0}
 
-  define void @aa_scope(float* nocapture %a, float* nocapture readonly %c) #1 {
+  define void @aa_scope(ptr nocapture %a, ptr nocapture readonly %c) #1 {
   entry:
-    %0 = load float, float* %c, align 4, !alias.scope !9
-    %arrayidx.i = getelementptr inbounds float, float* %a, i64 5
-    store float %0, float* %arrayidx.i, align 4, !noalias !9
-    %1 = load float, float* %c, align 4
-    %arrayidx = getelementptr inbounds float, float* %a, i64 7
-    store float %1, float* %arrayidx, align 4
+    %0 = load float, ptr %c, align 4, !alias.scope !9
+    %arrayidx.i = getelementptr inbounds float, ptr %a, i64 5
+    store float %0, ptr %arrayidx.i, align 4, !noalias !9
+    %1 = load float, ptr %c, align 4
+    %arrayidx = getelementptr inbounds float, ptr %a, i64 7
+    store float %1, ptr %arrayidx, align 4
     ret void
   }
 
@@ -162,9 +161,9 @@
   !10 = distinct !{!10, !11, !"some scope"}
   !11 = distinct !{!11, !"some domain"}
 
-  define zeroext i1 @range_metadata(i8* %x) {
+  define zeroext i1 @range_metadata(ptr %x) {
   entry:
-    %0 = load i8, i8* %x, align 1, !range !12
+    %0 = load i8, ptr %x, align 1, !range !12
     %tobool = trunc i8 %0 to i1
     ret i1 %tobool
   }
@@ -178,14 +177,14 @@
   define void @gep_value(i64 %d) {
   entry:
     %conv = trunc i64 %d to i32
-    store i32 %conv, i32* getelementptr inbounds ([50 x %st], [50 x %st]* @values, i64 0, i64 0, i32 0), align 16
+    store i32 %conv, ptr @values, align 16
     ret void
   }
 
-  define i8* @undef_value() {
+  define ptr @undef_value() {
   entry:
-    %0 = load i8*, i8** undef, align 8
-    ret i8* %0
+    %0 = load ptr, ptr undef, align 8
+    ret ptr %0
   }
 
   define void @dummy0() { ret void }
@@ -459,9 +458,9 @@ body: |
     $rax = MOV64rm $rip, 1, _, @a, _ :: (load (s64) from got)
   ; CHECK-LABEL: name: tbaa_metadata
   ; CHECK:      $eax = MOV32rm killed $rax, 1, $noreg, 0, $noreg, implicit-def $rax :: (load (s32) from @a, !tbaa !2)
-  ; CHECK-NEXT: $eax = MOV32rm killed $rax, 1, $noreg, 0, $noreg :: (load (s32) from %ir.total_len2, !tbaa !6)
+  ; CHECK-NEXT: $eax = MOV32rm killed $rax, 1, $noreg, 0, $noreg :: (load (s32) from %ir.1, !tbaa !6)
     $eax = MOV32rm killed $rax, 1, _, 0, _, implicit-def $rax :: (load (s32) from @a, !tbaa !2)
-    $eax = MOV32rm killed $rax, 1, _, 0, _ :: (load (s32) from %ir.total_len2, !tbaa !6)
+    $eax = MOV32rm killed $rax, 1, _, 0, _ :: (load (s32) from %ir.1, !tbaa !6)
     RET64 $eax
 ...
 ---
@@ -506,8 +505,8 @@ body: |
 
     $rax = MOV64rm $rip, 1, _, @values, _ :: (load (s64) from got)
   ; CHECK-LABEL: gep_value
-  ; CHECK: MOV32mr killed $rax, 1, $noreg, 0, $noreg, $edi, implicit killed $rdi :: (store (s32) into `i32* getelementptr inbounds ([50 x %st], [50 x %st]* @values, i64 0, i64 0, i32 0)`, align 16)
-    MOV32mr killed $rax, 1, _, 0, _, $edi, implicit killed $rdi :: (store (s32) into `i32* getelementptr inbounds ([50 x %st], [50 x %st]* @values, i64 0, i64 0, i32 0)`, align 16)
+  ; CHECK: MOV32mr killed $rax, 1, $noreg, 0, $noreg, $edi, implicit killed $rdi :: (store (s32) into @values, align 16)
+    MOV32mr killed $rax, 1, _, 0, _, $edi, implicit killed $rdi :: (store (s32) into @values, align 16)
     RET64
 ...
 ---
@@ -516,8 +515,8 @@ tracksRegLiveness: true
 body: |
   bb.0.entry:
   ; CHECK-LABEL: name: undef_value
-  ; CHECK: $rax = MOV64rm undef $rax, 1, $noreg, 0, $noreg :: (load (s64) from `i8** undef`)
-    $rax = MOV64rm undef $rax, 1, _, 0, _ :: (load (s64) from `i8** undef`)
+  ; CHECK: $rax = MOV64rm undef $rax, 1, $noreg, 0, $noreg :: (load (s64) from `ptr undef`)
+    $rax = MOV64rm undef $rax, 1, _, 0, _ :: (load (s64) from `ptr undef`)
     RET64 $rax
 ...
 ---

@@ -12,6 +12,7 @@
 #include "list.h"
 #include "mutex.h"
 #include "string_utils.h"
+#include "thread_annotations.h"
 
 namespace scudo {
 
@@ -172,7 +173,7 @@ public:
   typedef QuarantineCache<Callback> CacheT;
   using ThisT = GlobalQuarantine<Callback, Node>;
 
-  void init(uptr Size, uptr CacheSize) {
+  void init(uptr Size, uptr CacheSize) NO_THREAD_SAFETY_ANALYSIS {
     DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
     DCHECK_EQ(atomic_load_relaxed(&MaxSize), 0U);
     DCHECK_EQ(atomic_load_relaxed(&MinSize), 0U);
@@ -191,22 +192,31 @@ public:
   uptr getMaxSize() const { return atomic_load_relaxed(&MaxSize); }
   uptr getCacheSize() const { return atomic_load_relaxed(&MaxCacheSize); }
 
+  // This is supposed to be used in test only.
+  bool isEmpty() {
+    ScopedLock L(CacheMutex);
+    return Cache.getSize() == 0U;
+  }
+
   void put(CacheT *C, Callback Cb, Node *Ptr, uptr Size) {
     C->enqueue(Cb, Ptr, Size);
     if (C->getSize() > getCacheSize())
       drain(C, Cb);
   }
 
-  void NOINLINE drain(CacheT *C, Callback Cb) {
+  void NOINLINE drain(CacheT *C, Callback Cb) EXCLUDES(CacheMutex) {
+    bool needRecycle = false;
     {
       ScopedLock L(CacheMutex);
       Cache.transfer(C);
+      needRecycle = Cache.getSize() > getMaxSize();
     }
-    if (Cache.getSize() > getMaxSize() && RecycleMutex.tryLock())
+
+    if (needRecycle && RecycleMutex.tryLock())
       recycle(atomic_load_relaxed(&MinSize), Cb);
   }
 
-  void NOINLINE drainAndRecycle(CacheT *C, Callback Cb) {
+  void NOINLINE drainAndRecycle(CacheT *C, Callback Cb) EXCLUDES(CacheMutex) {
     {
       ScopedLock L(CacheMutex);
       Cache.transfer(C);
@@ -215,20 +225,21 @@ public:
     recycle(0, Cb);
   }
 
-  void getStats(ScopedString *Str) const {
+  void getStats(ScopedString *Str) EXCLUDES(CacheMutex) {
+    ScopedLock L(CacheMutex);
     // It assumes that the world is stopped, just as the allocator's printStats.
     Cache.getStats(Str);
     Str->append("Quarantine limits: global: %zuK; thread local: %zuK\n",
                 getMaxSize() >> 10, getCacheSize() >> 10);
   }
 
-  void disable() {
+  void disable() NO_THREAD_SAFETY_ANALYSIS {
     // RecycleMutex must be locked 1st since we grab CacheMutex within recycle.
     RecycleMutex.lock();
     CacheMutex.lock();
   }
 
-  void enable() {
+  void enable() NO_THREAD_SAFETY_ANALYSIS {
     CacheMutex.unlock();
     RecycleMutex.unlock();
   }
@@ -236,13 +247,14 @@ public:
 private:
   // Read-only data.
   alignas(SCUDO_CACHE_LINE_SIZE) HybridMutex CacheMutex;
-  CacheT Cache;
+  CacheT Cache GUARDED_BY(CacheMutex);
   alignas(SCUDO_CACHE_LINE_SIZE) HybridMutex RecycleMutex;
   atomic_uptr MinSize = {};
   atomic_uptr MaxSize = {};
   alignas(SCUDO_CACHE_LINE_SIZE) atomic_uptr MaxCacheSize = {};
 
-  void NOINLINE recycle(uptr MinSize, Callback Cb) {
+  void NOINLINE recycle(uptr MinSize, Callback Cb) RELEASE(RecycleMutex)
+      EXCLUDES(CacheMutex) {
     CacheT Tmp;
     Tmp.init();
     {

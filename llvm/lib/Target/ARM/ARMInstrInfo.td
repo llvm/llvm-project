@@ -152,11 +152,11 @@ def ARMcall_nolink   : SDNode<"ARMISD::CALL_NOLINK", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                SDNPVariadic]>;
 
-def ARMretflag       : SDNode<"ARMISD::RET_FLAG", SDTNone,
+def ARMretglue       : SDNode<"ARMISD::RET_GLUE", SDTNone,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def ARMseretflag     : SDNode<"ARMISD::SERET_FLAG", SDTNone,
+def ARMseretglue     : SDNode<"ARMISD::SERET_GLUE", SDTNone,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def ARMintretflag    : SDNode<"ARMISD::INTRET_FLAG", SDT_ARMcall,
+def ARMintretglue    : SDNode<"ARMISD::INTRET_GLUE", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov,
                               [SDNPInGlue]>;
@@ -192,8 +192,8 @@ def ARMasrl          : SDNode<"ARMISD::ASRL", SDT_ARMIntShiftParts, []>;
 def ARMlsrl          : SDNode<"ARMISD::LSRL", SDT_ARMIntShiftParts, []>;
 def ARMlsll          : SDNode<"ARMISD::LSLL", SDT_ARMIntShiftParts, []>;
 
-def ARMsrl_flag      : SDNode<"ARMISD::SRL_FLAG", SDTIntUnaryOp, [SDNPOutGlue]>;
-def ARMsra_flag      : SDNode<"ARMISD::SRA_FLAG", SDTIntUnaryOp, [SDNPOutGlue]>;
+def ARMsrl_glue      : SDNode<"ARMISD::SRL_GLUE", SDTIntUnaryOp, [SDNPOutGlue]>;
+def ARMsra_glue      : SDNode<"ARMISD::SRA_GLUE", SDTIntUnaryOp, [SDNPOutGlue]>;
 def ARMrrx           : SDNode<"ARMISD::RRX"     , SDTIntUnaryOp, [SDNPInGlue ]>;
 
 def ARMaddc          : SDNode<"ARMISD::ADDC",  SDTBinaryArithWithFlags,
@@ -426,6 +426,12 @@ def top16Zero: PatLeaf<(i32 GPR:$src), [{
          CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 16));
   }]>;
 
+// topbitsallzero - Return true if all bits except the lowest bit are known zero
+def topbitsallzero32 : PatLeaf<(i32 GPRwithZR:$src), [{
+  return SDValue(N,0)->getValueType(0) == MVT::i32 &&
+         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 31));
+  }]>;
+
 class BinOpFrag<dag res> : PatFrag<(ops node:$LHS, node:$RHS), res>;
 class UnOpFrag <dag res> : PatFrag<(ops node:$Src), res>;
 
@@ -452,6 +458,11 @@ def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
 // An 'fsub' node which checks for single non-hazardous use.
 def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fsub node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
+}]>;
+
+// An 'fadd' node which can be contracted into a fma
+def fadd_contract : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
+  return N->getFlags().hasAllowContract();
 }]>;
 
 def imm_even : ImmLeaf<i32, [{ return (Imm & 1) == 0; }]>;
@@ -954,6 +965,19 @@ def imm0_255 : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 256; }]> {
   let ParserMatchClass = Imm0_255AsmOperand;
 }
 
+// imm0_255_expr - For Thumb1 movs/adds - 8-bit immediate that can also reference
+// a relocatable expression.
+def Imm0_255ExprAsmOperand: AsmOperandClass {
+  let Name = "Imm0_255Expr";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticString = "operand must be an immediate in the range [0,255] or a relocatable expression";
+}
+
+def imm0_255_expr : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 256; }]> {
+  let EncoderMethod = "getHiLoImmOpValue";
+  let ParserMatchClass = Imm0_255ExprAsmOperand;
+}
+
 /// imm0_65535 - An immediate is in the range [0,65535].
 def Imm0_65535AsmOperand: ImmAsmOperand<0,65535> { let Name = "Imm0_65535"; }
 def imm0_65535 : Operand<i32>, ImmLeaf<i32, [{
@@ -979,8 +1003,10 @@ def Imm0_65535ExprAsmOperand: AsmOperandClass {
   let DiagnosticString = "operand must be an immediate in the range [0,0xffff] or a relocatable expression";
 }
 
-def imm0_65535_expr : Operand<i32> {
-  let EncoderMethod = "getHiLo16ImmOpValue";
+def imm0_65535_expr : Operand<i32>, ImmLeaf<i32, [{
+  return Imm >= 0 && Imm < 65536;
+}]> {
+  let EncoderMethod = "getHiLoImmOpValue";
   let ParserMatchClass = Imm0_65535ExprAsmOperand;
 }
 
@@ -2444,14 +2470,14 @@ def LEApcrelJT : ARMPseudoInst<(outs GPR:$Rd),
 let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
   // ARMV4T and above
   def BX_RET : AI<(outs), (ins), BrMiscFrm, IIC_Br,
-                  "bx", "\tlr", [(ARMretflag)]>,
+                  "bx", "\tlr", [(ARMretglue)]>,
                Requires<[IsARM, HasV4T]>, Sched<[WriteBr]> {
     let Inst{27-0}  = 0b0001001011111111111100011110;
   }
 
   // ARMV4 only
   def MOVPCLR : AI<(outs), (ins), BrMiscFrm, IIC_Br,
-                  "mov", "\tpc, lr", [(ARMretflag)]>,
+                  "mov", "\tpc, lr", [(ARMretglue)]>,
                Requires<[IsARM, NoV4T]>, Sched<[WriteBr]> {
     let Inst{27-0} = 0b0001101000001111000000001110;
   }
@@ -2460,7 +2486,7 @@ let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
   // the user-space one).
   def SUBS_PC_LR : ARMPseudoInst<(outs), (ins i32imm:$offset, pred:$p),
                                  4, IIC_Br,
-                                 [(ARMintretflag imm:$offset)]>;
+                                 [(ARMintretglue imm:$offset)]>;
 }
 
 // Indirect branches
@@ -3703,14 +3729,14 @@ def RRX: PseudoInst<(outs GPR:$Rd), (ins GPR:$Rm), IIC_iMOVsi,
                     Requires<[IsARM]>, Sched<[WriteALU]>;
 
 // These aren't really mov instructions, but we have to define them this way
-// due to flag operands.
+// due to glue operands.
 
 let Defs = [CPSR] in {
-def MOVsrl_flag : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
-                      [(set GPR:$dst, (ARMsrl_flag GPR:$src))]>, UnaryDP,
+def MOVsrl_glue : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
+                      [(set GPR:$dst, (ARMsrl_glue GPR:$src))]>, UnaryDP,
                       Sched<[WriteALU]>, Requires<[IsARM]>;
-def MOVsra_flag : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
-                      [(set GPR:$dst, (ARMsra_flag GPR:$src))]>, UnaryDP,
+def MOVsra_glue : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
+                      [(set GPR:$dst, (ARMsra_glue GPR:$src))]>, UnaryDP,
                       Sched<[WriteALU]>, Requires<[IsARM]>;
 }
 
@@ -5331,7 +5357,7 @@ def atomic_load_acquire_16 : acquiring_load<atomic_load_16>;
 def atomic_load_acquire_32 : acquiring_load<atomic_load_32>;
 
 class releasing_store<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
+  : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getSuccessOrdering();
   return isReleaseOrStronger(Ordering);
 }]>;
@@ -5892,8 +5918,12 @@ let isCall = 1,
 }
 
 // Reading thread pointer from coprocessor register
+def : ARMPat<(ARMthread_pointer), (MRC 15, 0, 13, 0, 2)>,
+      Requires<[IsARM, IsReadTPTPIDRURW]>;
 def : ARMPat<(ARMthread_pointer), (MRC 15, 0, 13, 0, 3)>,
-      Requires<[IsARM, IsReadTPHard]>;
+      Requires<[IsARM, IsReadTPTPIDRURO]>;
+def : ARMPat<(ARMthread_pointer), (MRC 15, 0, 13, 0, 4)>,
+      Requires<[IsARM, IsReadTPTPIDRPRW]>;
 
 //===----------------------------------------------------------------------===//
 // SJLJ Exception handling intrinsics
@@ -6154,15 +6184,15 @@ def : ARMPat<(atomic_load_32 ldst_so_reg:$src),
              (LDRrs ldst_so_reg:$src)>;
 def : ARMPat<(atomic_load_32 addrmode_imm12:$src),
              (LDRi12 addrmode_imm12:$src)>;
-def : ARMPat<(atomic_store_8 ldst_so_reg:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_8 GPR:$val, ldst_so_reg:$ptr),
              (STRBrs GPR:$val, ldst_so_reg:$ptr)>;
-def : ARMPat<(atomic_store_8 addrmode_imm12:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_8 GPR:$val, addrmode_imm12:$ptr),
              (STRBi12 GPR:$val, addrmode_imm12:$ptr)>;
-def : ARMPat<(atomic_store_16 addrmode3:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_16 GPR:$val, addrmode3:$ptr),
              (STRH GPR:$val, addrmode3:$ptr)>;
-def : ARMPat<(atomic_store_32 ldst_so_reg:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_32 GPR:$val, ldst_so_reg:$ptr),
              (STRrs GPR:$val, ldst_so_reg:$ptr)>;
-def : ARMPat<(atomic_store_32 addrmode_imm12:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_32 GPR:$val, addrmode_imm12:$ptr),
              (STRi12 GPR:$val, addrmode_imm12:$ptr)>;
 
 
@@ -6480,13 +6510,7 @@ def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$temp),
                              NoItinerary, []>, Sched<[]>;
 }
 
-def CompilerBarrier : PseudoInst<(outs), (ins i32imm:$ordering), NoItinerary,
-                                 [(atomic_fence timm:$ordering, 0)]> {
-  let hasSideEffects = 1;
-  let Size = 0;
-  let AsmString = "@ COMPILER BARRIER";
-  let hasNoSchedulingInfo = 1;
-}
+def : Pat<(atomic_fence (timm), 0), (MEMBARRIER)>;
 
 //===----------------------------------------------------------------------===//
 // Instructions used for emitting unwind opcodes on Windows.

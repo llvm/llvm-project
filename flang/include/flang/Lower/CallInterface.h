@@ -106,7 +106,7 @@ public:
     /// Value means passed by value at the mlir level, it is not necessarily
     /// implied by Fortran Value attribute.
     Value,
-    /// ValueAttribute means dummy has the the Fortran VALUE attribute.
+    /// ValueAttribute means dummy has the Fortran VALUE attribute.
     BaseAddressValueAttribute,
     CharBoxValueAttribute, // BoxChar with VALUE
     // Passing a character procedure as a <procedure address, result length>
@@ -153,16 +153,25 @@ public:
   /// PassedEntity is what is provided back to the CallInterface user.
   /// It describe how the entity is plugged in the interface
   struct PassedEntity {
-    /// Is the dummy argument optional ?
+    /// Is the dummy argument optional?
     bool isOptional() const;
-    /// Can the argument be modified by the callee ?
+    /// Can the argument be modified by the callee?
     bool mayBeModifiedByCall() const;
-    /// Can the argument be read by the callee ?
+    /// Can the argument be read by the callee?
     bool mayBeReadByCall() const;
+    /// Does the argument have the specified IgnoreTKR flag?
+    bool testTKR(Fortran::common::IgnoreTKR flag) const;
     /// Is the argument INTENT(OUT)
     bool isIntentOut() const;
-    /// Does the argument have the CONTIGUOUS attribute or have explicit shape ?
+    /// Does the argument have the CONTIGUOUS attribute or have explicit shape?
     bool mustBeMadeContiguous() const;
+    /// Does the dummy argument have the VALUE attribute?
+    bool hasValueAttribute() const;
+    /// Does the dummy argument have the ALLOCATABLE attribute?
+    bool hasAllocatableAttribute() const;
+    /// May the dummy argument require INTENT(OUT) finalization
+    /// on entry to the invoked procedure? Provides conservative answer.
+    bool mayRequireIntentoutFinalization() const;
     /// How entity is passed by.
     PassEntityBy passBy;
     /// What is the entity (SymbolRef for callee/ActualArgument* for caller)
@@ -345,6 +354,9 @@ public:
     llvm_unreachable("getting host associated type in CallerInterface");
   }
 
+  /// Set attributes on MLIR function.
+  void setFuncAttrs(mlir::func::FuncOp) const {}
+
 private:
   /// Check that the input vector is complete.
   bool verifyActualInputs() const;
@@ -395,6 +407,7 @@ public:
   bool hasHostAssociated() const;
   mlir::Type getHostAssociatedTy() const;
   mlir::Value getHostAssociatedTuple() const;
+  void setFuncAttrs(mlir::func::FuncOp) const;
 
 private:
   Fortran::lower::pft::FunctionLikeUnit &funit;
@@ -422,6 +435,9 @@ getOrDeclareFunction(llvm::StringRef name,
 /// functions).
 mlir::Type getDummyProcedureType(const Fortran::semantics::Symbol &dummyProc,
                                  Fortran::lower::AbstractConverter &);
+
+/// Return !fir.boxproc<() -> ()> type.
+mlir::Type getUntypedBoxProcType(mlir::MLIRContext *context);
 
 /// Return true if \p ty is "!fir.ref<i64>", which is the interface for
 /// type(C_PTR/C_FUNPTR) passed by value.

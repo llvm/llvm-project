@@ -12,11 +12,11 @@
 #include "flang/Runtime/random.h"
 #include "lock.h"
 #include "terminator.h"
+#include "flang/Common/float128.h"
 #include "flang/Common/leading-zero-bit-count.h"
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/float128.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>

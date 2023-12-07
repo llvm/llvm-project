@@ -11,14 +11,18 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+;; Note: we also check for the presence of comments; --lto-emit-asm output should be verbose.
+
+; CHECK-DAG: # -- Begin function f1
 ; CHECK-DAG: f1:
-; OPT-DAG: define void @f1()
+; OPT: define void @f1()
 define void @f1() {
   ret void
 }
 
+; CHECK-DAG: # -- Begin function f2
 ; CHECK-DAG: f2:
-; OPT-DAG: define void @f2()
+; OPT: define void @f2()
 define void @f2() {
   ret void
 }

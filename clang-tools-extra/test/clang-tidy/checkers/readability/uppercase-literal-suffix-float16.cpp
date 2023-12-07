@@ -9,7 +9,7 @@ void float16_normal_literals() {
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: floating point literal has suffix 'f16', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v14 = 1.f16;
   // CHECK-MESSAGES-NEXT: ^ ~
-  // CHECK-MESSAGES-NEXT: {{^ *}}F16{{$}}
+  // CHECK-MESSAGES-NEXT: F16{{$}}
   // CHECK-FIXES: static constexpr auto v14 = 1.F16;
   static_assert(is_same<decltype(v14), const _Float16>::value, "");
   static_assert(v14 == 1.F16, "");
@@ -18,7 +18,7 @@ void float16_normal_literals() {
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: floating point literal has suffix 'f16', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v15 = 1.e0f16;
   // CHECK-MESSAGES-NEXT: ^ ~
-  // CHECK-MESSAGES-NEXT: {{^ *}}F16{{$}}
+  // CHECK-MESSAGES-NEXT: F16{{$}}
   // CHECK-FIXES: static constexpr auto v15 = 1.e0F16;
   static_assert(is_same<decltype(v15), const _Float16>::value, "");
   static_assert(v15 == 1.F16, "");
@@ -39,7 +39,7 @@ void float16_hexadecimal_literals() {
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: floating point literal has suffix 'f16', which is not uppercase
   // CHECK-MESSAGES-NEXT: static constexpr auto v13 = 0xfp0f16;
   // CHECK-MESSAGES-NEXT: ^    ~
-  // CHECK-MESSAGES-NEXT: {{^ *}}F16{{$}}
+  // CHECK-MESSAGES-NEXT: F16{{$}}
   // CHECK-FIXES: static constexpr auto v13 = 0xfp0F16;
   static_assert(is_same<decltype(v13), const _Float16>::value, "");
   static_assert(v13 == 0xfp0F16, "");

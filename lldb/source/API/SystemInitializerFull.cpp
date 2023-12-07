@@ -78,6 +78,9 @@ llvm::Error SystemInitializerFull::Initialize() {
   // Settings must be initialized AFTER PluginManager::Initialize is called.
   Debugger::SettingsInitialize();
 
+  // Use the Debugger's LLDBAssert callback.
+  SetLLDBAssertCallback(Debugger::AssertCallback);
+
   return llvm::Error::success();
 }
 

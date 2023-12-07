@@ -2,7 +2,7 @@
 
 ! Test TARGET attributes on a definition of a global symbol.
 ! CHECK: fir.global @_QMtarget_modEx target : f32 {
-! CHECK:   %[[init:.*]] = fir.undefined f32
+! CHECK:   %[[init:.*]] = fir.zero_bits f32
 ! CHECK:   fir.has_value %[[init]] : f32
 ! CHECK: }
 

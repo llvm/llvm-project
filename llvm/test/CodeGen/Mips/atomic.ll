@@ -285,7 +285,7 @@ define i32 @AtomicLoadAdd32(i32 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %0 = atomicrmw add i32* @x, i32 %incr monotonic
+  %0 = atomicrmw add ptr @x, i32 %incr monotonic
   ret i32 %0
 
 }
@@ -541,7 +541,7 @@ define i32 @AtomicLoadSub32(i32 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %0 = atomicrmw sub i32* @x, i32 %incr monotonic
+  %0 = atomicrmw sub ptr @x, i32 %incr monotonic
   ret i32 %0
 
 }
@@ -797,7 +797,7 @@ define i32 @AtomicLoadXor32(i32 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %0 = atomicrmw xor i32* @x, i32 %incr monotonic
+  %0 = atomicrmw xor ptr @x, i32 %incr monotonic
   ret i32 %0
 }
 
@@ -1052,7 +1052,7 @@ define i32 @AtomicLoadOr32(i32 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %0 = atomicrmw or i32* @x, i32 %incr monotonic
+  %0 = atomicrmw or ptr @x, i32 %incr monotonic
   ret i32 %0
 }
 
@@ -1307,7 +1307,7 @@ define i32 @AtomicLoadAnd32(i32 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %0 = atomicrmw and i32* @x, i32 %incr monotonic
+  %0 = atomicrmw and ptr @x, i32 %incr monotonic
   ret i32 %0
 }
 
@@ -1577,7 +1577,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %0 = atomicrmw nand i32* @x, i32 %incr monotonic
+  %0 = atomicrmw nand ptr @x, i32 %incr monotonic
   ret i32 %0
 
 }
@@ -1871,9 +1871,9 @@ define i32 @AtomicSwap32(i32 signext %newval) nounwind {
 ; MIPS32EB-NEXT:    addiu $sp, $sp, 8
 entry:
   %newval.addr = alloca i32, align 4
-  store i32 %newval, i32* %newval.addr, align 4
-  %tmp = load i32, i32* %newval.addr, align 4
-  %0 = atomicrmw xchg i32* @x, i32 %tmp monotonic
+  store i32 %newval, ptr %newval.addr, align 4
+  %tmp = load i32, ptr %newval.addr, align 4
+  %0 = atomicrmw xchg ptr @x, i32 %tmp monotonic
   ret i32 %0
 
 }
@@ -2227,9 +2227,9 @@ define i32 @AtomicCmpSwap32(i32 signext %oldval, i32 signext %newval) nounwind {
 ; MIPS32EB-NEXT:    addiu $sp, $sp, 8
 entry:
   %newval.addr = alloca i32, align 4
-  store i32 %newval, i32* %newval.addr, align 4
-  %tmp = load i32, i32* %newval.addr, align 4
-  %0 = cmpxchg i32* @x, i32 %oldval, i32 %tmp monotonic monotonic
+  store i32 %newval, ptr %newval.addr, align 4
+  %tmp = load i32, ptr %newval.addr, align 4
+  %0 = cmpxchg ptr @x, i32 %oldval, i32 %tmp monotonic monotonic
   %1 = extractvalue { i32, i1 } %0, 0
   ret i32 %1
 
@@ -2737,7 +2737,7 @@ define signext i8 @AtomicLoadAdd8(i8 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %0 = atomicrmw add i8* @y, i8 %incr monotonic
+  %0 = atomicrmw add ptr @y, i8 %incr monotonic
   ret i8 %0
 }
 
@@ -3241,7 +3241,7 @@ define signext i8 @AtomicLoadSub8(i8 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %0 = atomicrmw sub i8* @y, i8 %incr monotonic
+  %0 = atomicrmw sub ptr @y, i8 %incr monotonic
   ret i8 %0
 
 }
@@ -3761,7 +3761,7 @@ define signext i8 @AtomicLoadNand8(i8 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %0 = atomicrmw nand i8* @y, i8 %incr monotonic
+  %0 = atomicrmw nand ptr @y, i8 %incr monotonic
   ret i8 %0
 
 }
@@ -4251,7 +4251,7 @@ define signext i8 @AtomicSwap8(i8 signext %newval) nounwind {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %0 = atomicrmw xchg i8* @y, i8 %newval monotonic
+  %0 = atomicrmw xchg ptr @y, i8 %newval monotonic
   ret i8 %0
 }
 
@@ -4832,12 +4832,12 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %pair0 = cmpxchg i8* @y, i8 %oldval, i8 %newval monotonic monotonic
+  %pair0 = cmpxchg ptr @y, i8 %oldval, i8 %newval monotonic monotonic
   %0 = extractvalue { i8, i1 } %pair0, 0
   ret i8 %0
 }
 
-define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 signext %oldval, i8 signext %newval) nounwind {
+define i1 @AtomicCmpSwapRes8(ptr %ptr, i8 signext %oldval, i8 signext %newval) nounwind {
 ; MIPS32-LABEL: AtomicCmpSwapRes8:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $1, $zero, -4
@@ -5384,7 +5384,7 @@ define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 signext %oldval, i8 signext %newval) n
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    sltiu $2, $1, 1
 entry:
-  %0 = cmpxchg i8* %ptr, i8 %oldval, i8 %newval monotonic monotonic
+  %0 = cmpxchg ptr %ptr, i8 %oldval, i8 %newval monotonic monotonic
   %1 = extractvalue { i8, i1 } %0, 1
   ret i1 %1
 ; FIXME: -march=mips produces a redundant sign extension here...
@@ -5895,7 +5895,7 @@ define signext i16 @AtomicLoadAdd16(i16 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %0 = atomicrmw add i16* @z, i16 %incr monotonic
+  %0 = atomicrmw add ptr @z, i16 %incr monotonic
   ret i16 %0
 
 }
@@ -5905,7 +5905,7 @@ entry:
 ; value.
 ; The rest of the functions here are testing the atomic expansion, so
 ; we just match the end of the function.
-define {i16, i1} @foo(i16* %addr, i16 %l, i16 %r, i16 %new) {
+define {i16, i1} @foo(ptr %addr, i16 %l, i16 %r, i16 %new) {
 ; MIPS32-LABEL: foo:
 ; MIPS32:       # %bb.0:
 ; MIPS32-NEXT:    addu $1, $5, $6
@@ -6514,7 +6514,7 @@ define {i16, i1} @foo(i16* %addr, i16 %l, i16 %r, i16 %new) {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
   %desired = add i16 %l, %r
-  %res = cmpxchg i16* %addr, i16 %desired, i16 %new seq_cst seq_cst
+  %res = cmpxchg ptr %addr, i16 %desired, i16 %new seq_cst seq_cst
   ret {i16, i1} %res
 }
 
@@ -6797,7 +6797,7 @@ define i32 @CheckSync(i32 signext %v) nounwind noinline {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %0 = atomicrmw add i32* @countsint, i32 %v seq_cst
+  %0 = atomicrmw add ptr @countsint, i32 %v seq_cst
   ret i32 %0
 }
 
@@ -7208,7 +7208,7 @@ define i32 @zeroreg() nounwind {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %pair0 = cmpxchg i32* @a, i32 1, i32 0 seq_cst seq_cst
+  %pair0 = cmpxchg ptr @a, i32 1, i32 0 seq_cst seq_cst
   %0 = extractvalue { i32, i1 } %pair0, 0
   %1 = icmp eq i32 %0, 1
   %conv = zext i1 %1 to i32
@@ -7483,7 +7483,7 @@ define i32 @AtomicLoadAdd32_OffGt9Bit(i32 signext %incr) nounwind {
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    nop
 entry:
-  %0 = atomicrmw add i32* getelementptr(i32, i32* @x, i32 256), i32 %incr monotonic
+  %0 = atomicrmw add ptr getelementptr(i32, ptr @x, i32 256), i32 %incr monotonic
   ret i32 %0
 
 }

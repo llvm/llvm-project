@@ -157,7 +157,7 @@ template<typename ...T> void fn2() {
 
 // Test partial substitution into class-scope pack.
 template<typename ...T> auto lambda1() {
-  return [](auto x) {
+  return [](auto x) { // expected-note 1+{{substituting into a lambda}}
     struct A : T::template X<decltype(x)>... { // expected-note 1+{{instantiation of}}
       using T::template X<decltype(x)>::f ...;
       using typename T::template X<decltype(x)>::type ...;

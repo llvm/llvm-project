@@ -211,6 +211,10 @@ def fir_HeapType : FIR_Type<"Heap", "heap"> {
       return Base::get(elementType.getContext(), elementType);
     }]>,
   ];
+
+  let extraClassDeclaration = [{
+    mlir::Type getElementType() const { return getEleTy(); }
+  }];
 }
 
 def fir_IntegerType : FIR_Type<"Integer", "int"> {
@@ -275,6 +279,10 @@ def fir_LLVMPointerType : FIR_Type<"LLVMPointer", "llvm_ptr"> {
       return Base::get(elementType.getContext(), elementType);
     }]>,
   ];
+
+  let extraClassDeclaration = [{
+    mlir::Type getElementType() const { return getEleTy(); }
+  }];
 }
 
 def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
@@ -561,6 +569,7 @@ def fir_VoidType : FIR_Type<"Void", "void"> {
 // Whether a type is a BaseBoxType
 def IsBaseBoxTypePred
         : CPred<"$_self.isa<::fir::BaseBoxType>()">;
+def fir_BaseBoxType : Type<IsBaseBoxTypePred, "fir.box or fir.class type">;
 
 // Generalized FIR and standard dialect types representing intrinsic types
 def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerLike.predicate,

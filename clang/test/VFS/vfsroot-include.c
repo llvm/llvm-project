@@ -13,4 +13,4 @@
 #include "actual_header.h"
 // CHECK: fatal error: 'actual_header.h' file not found
 // CHECK: 1 error generated.
-// CHECK-NOT: error
+// CHECK-NOT: error:

@@ -44,7 +44,7 @@ struct ValueKnowledge {
   // Get the static knowledge intrinsic to `type`.
   static ValueKnowledge getKnowledgeFromType(Type type) {
     ValueKnowledge result = getPessimisticValueState();
-    if (auto shapedType = type.dyn_cast<ShapedType>()) {
+    if (auto shapedType = dyn_cast<ShapedType>(type)) {
       if (shapedType.hasRank()) {
         result.hasRank = true;
         result.sizes.reserve(shapedType.getRank());
@@ -68,7 +68,7 @@ struct ValueKnowledge {
 
   Type getType() const {
     if (hasRank)
-      return RankedTensorType::get(llvm::makeArrayRef(sizes), dtype);
+      return RankedTensorType::get(llvm::ArrayRef(sizes), dtype);
     return UnrankedTensorType::get(dtype);
   }
 
@@ -138,7 +138,7 @@ struct ValueKnowledge {
     ValueKnowledge result = getPessimisticValueState();
     result.hasError = true;
 
-    if (!rhs || !rhs || lhs.dtype != rhs.dtype)
+    if (!lhs || !rhs || lhs.dtype != rhs.dtype)
       return result;
 
     result.hasError = false;

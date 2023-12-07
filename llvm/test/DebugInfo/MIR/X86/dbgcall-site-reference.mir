@@ -1,4 +1,5 @@
 # RUN: llc -start-before=livedebugvalues -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+# RUN: llc --force-instr-ref-livedebugvalues -start-before=livedebugvalues -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 
 # Based on the following C++ code:
 # struct A { A(A &) {} };
@@ -7,11 +8,7 @@
 # struct D : C { D(B); };
 # D::D(B b) : C(b) {}
 
-# Reproducer for PR44275. Ideally we should get an entry value location list
-# entry for the reference parameter b, but we are currently not able to do that
-# due to limitations in the DWARF emission code, which puts restrictions on the
-# DIExpression. For now verify that we don't crash when trying to add such an
-# entry value.
+# Reproducer for PR44275.
 
 # CHECK: DW_AT_location
 # CHECK-NEXT: [{{0x[0-9a-f]+}}, {{0x[0-9a-f]+}}): DW_OP_reg5 RDI
@@ -19,8 +16,8 @@
 # CHECK-NEXT: DW_AT_name    ("this")
 
 # CHECK: DW_AT_location
-# CHECK-NEXT: [0x0000000000000000, 0x0000000000000004): DW_OP_breg4 RSI+0)
-# TODO: Here we should ideally get a location list entry using an entry value.
+# CHECK-NEXT: [0x0000000000000000, 0x0000000000000004): DW_OP_breg4 RSI+0
+# CHECK-NEXT: [0x0000000000000004, 0x000000000000000b): DW_OP_GNU_entry_value(DW_OP_reg4 RSI))
 # CHECK-NEXT: DW_AT_name    ("b")
 
 --- |

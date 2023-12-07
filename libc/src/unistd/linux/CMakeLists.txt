@@ -97,7 +97,6 @@ add_entrypoint_object(
   HDRS
     ../fork.h
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.threads.fork_callbacks
@@ -113,7 +112,6 @@ add_entrypoint_object(
   HDRS
     ../execv.h
   DEPENDS
-    libc.include.errno
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -127,7 +125,6 @@ add_entrypoint_object(
   HDRS
     ../execve.h
   DEPENDS
-    libc.include.errno
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -166,7 +163,6 @@ add_entrypoint_object(
   HDRS
     ../getcwd.h
   DEPENDS
-    libc.include.errno
     libc.include.stdlib
     libc.include.unistd
     libc.include.sys_syscall
@@ -230,7 +226,6 @@ add_entrypoint_object(
     ../isatty.h
   DEPENDS
     libc.include.unistd
-    libc.include.errno
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno

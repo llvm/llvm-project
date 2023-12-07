@@ -202,6 +202,7 @@
 ---
 name:            foo
 tracksRegLiveness: true
+debugInstrRef: true
 registers:       []
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
@@ -245,6 +246,7 @@ body:             |
 ---
 name:            bar
 tracksRegLiveness: true
+debugInstrRef: true
 registers:       []
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
@@ -290,6 +292,7 @@ body:             |
 ---
 name:            baz
 tracksRegLiveness: true
+debugInstrRef: true
 registers:       []
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }

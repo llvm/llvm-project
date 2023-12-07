@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=aarch64-apple-darwin -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: int_ext_opt
-define i64 @int_ext_opt(i8* %addr, i1 %c1, i1 %c2) {
+define i64 @int_ext_opt(ptr %addr, i1 %c1, i1 %c2) {
 entry:
-  %0 = load i8, i8* %addr
+  %0 = load i8, ptr %addr
   br i1 %c1, label %bb1, label %bb2
 
 bb1:

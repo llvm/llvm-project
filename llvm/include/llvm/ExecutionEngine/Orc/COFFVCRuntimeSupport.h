@@ -33,7 +33,7 @@ public:
   /// Try to create a COFFVCRuntimeBootstrapper instance. An optional
   /// RuntimePath can be given to specify the location of directory that
   /// contains all vc runtime library files such as ucrt.lib and msvcrt.lib. If
-  /// not path was given, it will try to search the MSVC toolchain and Windows
+  /// no path was given, it will try to search the MSVC toolchain and Windows
   /// SDK installation and use the found library files automatically.
   ///
   /// Note that depending on the build setting, a different library
@@ -60,7 +60,7 @@ public:
   /// up COFFPlatform.
   Error initializeStaticVCRuntime(JITDylib &JD);
 
-  /// Adds symbol definitions of dynamic versino of msvc runtie libraries.
+  /// Adds symbol definitions of dynamic version of msvc runtime libraries.
   Expected<std::vector<std::string>>
   loadDynamicVCRuntime(JITDylib &JD, bool DebugVersion = false);
 

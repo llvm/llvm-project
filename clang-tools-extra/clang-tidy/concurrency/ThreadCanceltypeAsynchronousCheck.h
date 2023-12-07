@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace concurrency {
+namespace clang::tidy::concurrency {
 
 /// Finds ``pthread_setcanceltype`` function calls where a thread's
 /// cancellation type is set to asynchronous.
@@ -27,8 +25,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace concurrency
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::concurrency
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CONCURRENCY_THREADCANCELTYPEASYNCHRONOUSCHECK_H

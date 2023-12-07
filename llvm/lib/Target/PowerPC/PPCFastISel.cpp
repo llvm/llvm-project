@@ -1404,7 +1404,7 @@ bool PPCFastISel::processCallArgs(SmallVectorImpl<Value*> &Args,
   }
 
   // Get a count of how many bytes are to be pushed onto the stack.
-  NumBytes = CCInfo.getNextStackOffset();
+  NumBytes = CCInfo.getStackSize();
 
   // The prolog code of the callee may store up to 8 GPR argument registers to
   // the stack, allowing va_start to index over them in memory if its varargs.
@@ -1555,8 +1555,8 @@ bool PPCFastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (!Callee && !Symbol)
     return false;
 
-  // Allow SelectionDAG isel to handle tail calls.
-  if (IsTailCall)
+  // Allow SelectionDAG isel to handle tail calls and long calls.
+  if (IsTailCall || Subtarget->useLongCalls())
     return false;
 
   // Let SDISel handle vararg functions.
@@ -2155,7 +2155,7 @@ unsigned PPCFastISel::PPCMaterialize64BitInt(int64_t Imm,
   // If the value doesn't fit in 32 bits, see if we can shift it
   // so that it fits in 32 bits.
   if (!isInt<32>(Imm)) {
-    Shift = countTrailingZeros<uint64_t>(Imm);
+    Shift = llvm::countr_zero<uint64_t>(Imm);
     int64_t ImmSh = static_cast<uint64_t>(Imm) >> Shift;
 
     if (isInt<32>(ImmSh))

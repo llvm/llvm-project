@@ -3,28 +3,28 @@
 # Check that subs isn't used during the revert because there's a cpsr use after it.
 
 --- |
-  define i32 @do_copy(i32 %n, i32* nocapture %p, i32* nocapture readonly %q) {
+  define i32 @do_copy(i32 %n, ptr nocapture %p, ptr nocapture readonly %q) {
   entry:
-    %scevgep = getelementptr i32, i32* %q, i32 -1
-    %scevgep3 = getelementptr i32, i32* %p, i32 -1
+    %scevgep = getelementptr i32, ptr %q, i32 -1
+    %scevgep3 = getelementptr i32, ptr %p, i32 -1
     %start = call i32 @llvm.start.loop.iterations.i32(i32 %n)
     %limit = lshr i32 %n, 1
     br label %while.body
 
   while.body:                                       ; preds = %while.body, %entry
-    %lsr.iv4 = phi i32* [ %scevgep5, %while.body ], [ %scevgep3, %entry ]
-    %lsr.iv = phi i32* [ %scevgep1, %while.body ], [ %scevgep, %entry ]
+    %lsr.iv4 = phi ptr [ %scevgep5, %while.body ], [ %scevgep3, %entry ]
+    %lsr.iv = phi ptr [ %scevgep1, %while.body ], [ %scevgep, %entry ]
     %tmp = phi i32 [ %start, %entry ], [ %tmp2, %while.body ]
-    %scevgep7 = getelementptr i32, i32* %lsr.iv, i32 1
-    %scevgep4 = getelementptr i32, i32* %lsr.iv4, i32 1
-    %tmp1 = load i32, i32* %scevgep7, align 4
+    %scevgep7 = getelementptr i32, ptr %lsr.iv, i32 1
+    %scevgep4 = getelementptr i32, ptr %lsr.iv4, i32 1
+    %tmp1 = load i32, ptr %scevgep7, align 4
     %tmp2 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %tmp, i32 1)
     %half = lshr i32 %tmp1, 1
     %cmp = icmp ult i32 %tmp, %limit
     %res = select i1 %cmp, i32 %tmp1, i32 %half
-    store i32 %res, i32* %scevgep4, align 4
-    %scevgep1 = getelementptr i32, i32* %lsr.iv, i32 1
-    %scevgep5 = getelementptr i32, i32* %lsr.iv4, i32 1
+    store i32 %res, ptr %scevgep4, align 4
+    %scevgep1 = getelementptr i32, ptr %lsr.iv, i32 1
+    %scevgep5 = getelementptr i32, ptr %lsr.iv4, i32 1
     %tmp3 = icmp ne i32 %tmp2, 0
     br i1 %tmp3, label %while.body, label %while.end
 
@@ -39,7 +39,7 @@
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #0
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { noduplicate nounwind }
   attributes #1 = { nounwind }

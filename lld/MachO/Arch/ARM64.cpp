@@ -139,14 +139,14 @@ void ARM64::populateThunk(InputSection *thunk, Symbol *funcSym) {
   thunk->align = 4;
   thunk->data = {reinterpret_cast<const uint8_t *>(thunkCode),
                  sizeof(thunkCode)};
-  thunk->relocs.push_back({/*type=*/ARM64_RELOC_PAGEOFF12,
-                           /*pcrel=*/false, /*length=*/2,
-                           /*offset=*/4, /*addend=*/0,
-                           /*referent=*/funcSym});
-  thunk->relocs.push_back({/*type=*/ARM64_RELOC_PAGE21,
-                           /*pcrel=*/true, /*length=*/2,
-                           /*offset=*/0, /*addend=*/0,
-                           /*referent=*/funcSym});
+  thunk->relocs.emplace_back(/*type=*/ARM64_RELOC_PAGEOFF12,
+                             /*pcrel=*/false, /*length=*/2,
+                             /*offset=*/4, /*addend=*/0,
+                             /*referent=*/funcSym);
+  thunk->relocs.emplace_back(/*type=*/ARM64_RELOC_PAGE21,
+                             /*pcrel=*/true, /*length=*/2,
+                             /*offset=*/0, /*addend=*/0,
+                             /*referent=*/funcSym);
 }
 
 ARM64::ARM64() : ARM64Common(LP64()) {
@@ -624,7 +624,8 @@ void ARM64::applyOptimizationHints(uint8_t *outBuf, const ObjFile &obj) const {
 
   auto isValidOffset = [&](uint64_t offset) {
     if (offset < sectionAddr || offset >= sectionAddr + section->getSize()) {
-      error("linker optimization hint spans multiple sections");
+      error(toString(&obj) +
+            ": linker optimization hint spans multiple sections");
       return false;
     }
     return true;

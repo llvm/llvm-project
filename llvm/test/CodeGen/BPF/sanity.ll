@@ -152,14 +152,13 @@ define void @foo_printf() #1 {
 ; CHECK-NEXT:    call printf
 ; CHECK-NEXT:    exit
   %fmt = alloca [9 x i8], align 1
-  %1 = getelementptr inbounds [9 x i8], [9 x i8]* %fmt, i64 0, i64 0
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @foo_printf.fmt, i64 0, i64 0), i64 9, i1 false)
-  %2 = call i32 (i8*, ...) @printf(i8* %1) #3
+  call void @llvm.memcpy.p0.p0.i64(ptr %fmt, ptr @foo_printf.fmt, i64 9, i1 false)
+  %1 = call i32 (ptr, ...) @printf(ptr %fmt) #3
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) #3
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) #3
 
 ; Function Attrs: nounwind
-declare i32 @printf(i8* nocapture, ...) #4
+declare i32 @printf(ptr nocapture, ...) #4

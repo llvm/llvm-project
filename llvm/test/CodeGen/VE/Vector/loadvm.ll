@@ -5,7 +5,7 @@
 @v512i1 = common dso_local local_unnamed_addr global <512 x i1> zeroinitializer, align 4
 
 ; Function Attrs: norecurse nounwind readonly
-define fastcc <256 x i1> @loadv256i1(<256 x i1>* nocapture readonly %mp) {
+define fastcc <256 x i1> @loadv256i1(ptr nocapture readonly %mp) {
 ; CHECK-LABEL: loadv256i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld %s1, (, %s0)
@@ -17,7 +17,7 @@ define fastcc <256 x i1> @loadv256i1(<256 x i1>* nocapture readonly %mp) {
 ; CHECK-NEXT:    lvm %vm1, 2, %s3
 ; CHECK-NEXT:    lvm %vm1, 3, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %m = load <256 x i1>, <256 x i1>* %mp, align 16
+  %m = load <256 x i1>, ptr %mp, align 16
   ret <256 x i1> %m
 }
 
@@ -37,12 +37,12 @@ define fastcc <256 x i1> @loadv256i1com() {
 ; CHECK-NEXT:    lvm %vm1, 2, %s3
 ; CHECK-NEXT:    lvm %vm1, 3, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %m = load <256 x i1>, <256 x i1>* @v256i1, align 16
+  %m = load <256 x i1>, ptr @v256i1, align 16
   ret <256 x i1> %m
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define fastcc <512 x i1> @loadv512i1(<512 x i1>* nocapture readonly %mp) {
+define fastcc <512 x i1> @loadv512i1(ptr nocapture readonly %mp) {
 ; CHECK-LABEL: loadv512i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld %s1, (, %s0)
@@ -62,7 +62,7 @@ define fastcc <512 x i1> @loadv512i1(<512 x i1>* nocapture readonly %mp) {
 ; CHECK-NEXT:    lvm %vm2, 2, %s3
 ; CHECK-NEXT:    lvm %vm2, 3, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %m = load <512 x i1>, <512 x i1>* %mp, align 16
+  %m = load <512 x i1>, ptr %mp, align 16
   ret <512 x i1> %m
 }
 
@@ -90,7 +90,7 @@ define fastcc <512 x i1> @loadv512i1com() {
 ; CHECK-NEXT:    lvm %vm2, 2, %s3
 ; CHECK-NEXT:    lvm %vm2, 3, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %m = load <512 x i1>, <512 x i1>* @v512i1, align 16
+  %m = load <512 x i1>, ptr @v512i1, align 16
   ret <512 x i1> %m
 }
 

@@ -9,4 +9,4 @@ define i32 @isr1_user() #0 {
 }
 
 
-attributes #0 = { "interrupt"="user" }
+attributes #0 = { "interrupt"="supervisor" }

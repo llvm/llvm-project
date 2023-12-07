@@ -6,56 +6,55 @@
 ## can be run on these versions of Android.
 
 # RUN: llvm-mc --filetype=obj -triple=aarch64-none-linux-android %s -o %t.o
-# RUN: ld.lld --android-memtag-mode=async --android-memtag-heap %t.o -o %t
-# RUN: llvm-readelf -n %t | FileCheck %s --check-prefixes=NOTE,HEAP,NOSTACK,ASYNC
+# RUN: ld.lld -shared --android-memtag-mode=async --android-memtag-heap %t.o -o %t
+# RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,HEAP,NOSTACK,ASYNC
 
-# RUN: ld.lld --android-memtag-mode=sync --android-memtag-heap %t.o -o %t
-# RUN: llvm-readelf -n %t | FileCheck %s --check-prefixes=NOTE,HEAP,NOSTACK,SYNC
+# RUN: ld.lld -shared --android-memtag-mode=sync --android-memtag-heap %t.o -o %t
+# RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,HEAP,NOSTACK,SYNC
 
-# RUN: ld.lld --android-memtag-mode=async --android-memtag-stack %t.o -o %t
-# RUN: llvm-readelf -n %t | FileCheck %s --check-prefixes=NOTE,NOHEAP,STACK,ASYNC
+# RUN: ld.lld -shared --android-memtag-mode=async --android-memtag-stack %t.o -o %t
+# RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,NOHEAP,STACK,ASYNC
 
-# RUN: ld.lld --android-memtag-mode=sync --android-memtag-stack %t.o -o %t
-# RUN: llvm-readelf -n %t | FileCheck %s --check-prefixes=NOTE,NOHEAP,STACK,SYNC
+# RUN: ld.lld -shared --android-memtag-mode=sync --android-memtag-stack %t.o -o %t
+# RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,NOHEAP,STACK,SYNC
 
-# RUN: ld.lld --android-memtag-mode=async --android-memtag-heap \
+# RUN: ld.lld -shared --android-memtag-mode=async --android-memtag-heap \
 # RUN:    --android-memtag-stack %t.o -o %t
-# RUN: llvm-readelf -n %t | FileCheck %s --check-prefixes=NOTE,HEAP,STACK,ASYNC
+# RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,HEAP,STACK,ASYNC
 
-# RUN: ld.lld --android-memtag-mode=sync --android-memtag-heap \
+# RUN: ld.lld -shared --android-memtag-mode=sync --android-memtag-heap \
 # RUN:    --android-memtag-stack %t.o -o %t
-# RUN: llvm-readelf -n %t | FileCheck %s --check-prefixes=NOTE,HEAP,STACK,SYNC
+# RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,HEAP,STACK,SYNC
 
-# RUN: ld.lld --android-memtag-heap %t.o -o %t
-# RUN: llvm-readelf -n %t | FileCheck %s --check-prefixes=NOTE,HEAP,NOSTACK,SYNC
+# RUN: ld.lld -shared --android-memtag-heap %t.o -o %t 2>&1 | \
+# RUN:    FileCheck %s --check-prefixes=MISSING-MODE
+# RUN: ld.lld -shared --android-memtag-stack %t.o -o %t 2>&1 | \
+# RUN:    FileCheck %s --check-prefixes=MISSING-MODE
+# RUN: ld.lld -shared --android-memtag-heap --android-memtag-stack %t.o -o %t 2>&1 | \
+# RUN:    FileCheck %s --check-prefixes=MISSING-MODE
+# MISSING-MODE: warning: --android-memtag-mode is unspecified, leaving
+# MISSING-MODE: --android-memtag-{{(heap|stack)}} a no-op
 
-# RUN: ld.lld --android-memtag-stack %t.o -o %t
-# RUN: llvm-readelf -n %t | FileCheck %s --check-prefixes=NOTE,NOHEAP,STACK,SYNC
+# CHECK: Memtag Dynamic Entries
+# SYNC:    AARCH64_MEMTAG_MODE: Synchronous (0)
+# ASYNC:   AARCH64_MEMTAG_MODE: Asynchronous (1)
+# HEAP:    AARCH64_MEMTAG_HEAP: Enabled (1)
+# NOHEAP:  AARCH64_MEMTAG_HEAP: Disabled (0)
+# STACK:   AARCH64_MEMTAG_STACK: Enabled (1)
+# NOSTACK: AARCH64_MEMTAG_STACK: Disabled (0)
 
-# RUN: ld.lld --android-memtag-heap --android-memtag-stack %t.o -o %t
-# RUN: llvm-readelf -n %t | FileCheck %s --check-prefixes=NOTE,HEAP,STACK,SYNC
-
-# NOTE: .note.android.memtag
-# NOTE-NEXT: Owner
-# NOTE-NEXT: Android 0x00000004 NT_ANDROID_TYPE_MEMTAG (Android memory tagging
-# NOTE-SAME: information)
-# ASYNC-NEXT: Tagging Mode: ASYNC
-# SYNC-NEXT: Tagging Mode: SYNC
-# HEAP-NEXT: Heap: Enabled
+# CHECK:       Memtag Android Note
+# ASYNC-NEXT:  Tagging Mode: ASYNC
+# SYNC-NEXT:   Tagging Mode: SYNC
+# HEAP-NEXT:   Heap: Enabled
 # NOHEAP-NEXT: Heap: Disabled
-## As of Android 12, stack MTE is unimplemented. However, we pre-emptively emit
-## a bit that signifies to the dynamic loader to map the primary and thread
-## stacks as PROT_MTE, in preparation for the bionic support.
 # STACK-NEXT:   Stack: Enabled
 # NOSTACK-NEXT: Stack: Disabled
 
-# RUN: not ld.lld --android-memtag-mode=asymm --android-memtag-heap 2>&1 | \
+# RUN: not ld.lld -shared --android-memtag-mode=asymm --android-memtag-heap 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=BAD-MODE
-# BAD-MODE: unknown --android-memtag-mode value: "asymm", should be one of {async, sync, none}
-
-# RUN: not ld.lld --android-memtag-mode=async 2>&1 | \
-# RUN:    FileCheck %s --check-prefix=MISSING-STACK-OR-HEAP
-# MISSING-STACK-OR-HEAP: when using --android-memtag-mode, at least one of --android-memtag-heap or --android-memtag-stack is required
+# BAD-MODE: error: unknown --android-memtag-mode value: "asymm", should be one of
+# BAD-MODE: {async, sync, none}
 
 .globl _start
 _start:

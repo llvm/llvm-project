@@ -5,7 +5,7 @@ define void @stride7_i32(ptr noalias nocapture %dst, i64 %n) #0 {
 ; CHECK-LABEL: @stride7_i32(
 ; CHECK:      vector.body
 ; CHECK:        %[[VEC_IND:.*]] = phi <vscale x 4 x i64> [ %{{.*}}, %vector.ph ], [ %{{.*}}, %vector.body ]
-; CHECK-NEXT:   %[[PTR_INDICES:.*]] = mul nuw nsw <vscale x 4 x i64> %[[VEC_IND]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 7, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:   %[[PTR_INDICES:.*]] = mul nuw nsw <vscale x 4 x i64> %[[VEC_IND]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 7, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:   %[[PTRS:.*]] = getelementptr inbounds i32, ptr %dst, <vscale x 4 x i64> %[[PTR_INDICES]]
 ; CHECK-NEXT:   %[[GLOAD:.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %[[PTRS]]
 ; CHECK-NEXT:   %[[VALS:.*]] = add nsw <vscale x 4 x i32> %[[GLOAD]],
@@ -32,7 +32,7 @@ define void @stride7_f64(ptr noalias nocapture %dst, i64 %n) #0 {
 ; CHECK-LABEL: @stride7_f64(
 ; CHECK:      vector.body
 ; CHECK:        %[[VEC_IND:.*]] = phi <vscale x 2 x i64> [ %{{.*}}, %vector.ph ], [ %{{.*}}, %vector.body ]
-; CHECK-NEXT:   %[[PTR_INDICES:.*]] = mul nuw nsw <vscale x 2 x i64> %[[VEC_IND]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 7, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:   %[[PTR_INDICES:.*]] = mul nuw nsw <vscale x 2 x i64> %[[VEC_IND]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 7, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:   %[[PTRS:.*]] = getelementptr inbounds double, ptr %dst, <vscale x 2 x i64> %[[PTR_INDICES]]
 ; CHECK-NEXT:   %[[GLOAD:.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> %[[PTRS]],
 ; CHECK-NEXT:   %[[VALS:.*]] = fadd <vscale x 2 x double> %[[GLOAD]],

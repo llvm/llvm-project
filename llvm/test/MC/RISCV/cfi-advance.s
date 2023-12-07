@@ -3,17 +3,15 @@
 # RUN: llvm-dwarfdump --debug-frame %t.o 2>&1 \
 # RUN:     | FileCheck -check-prefix=CHECK-DWARFDUMP %s
 
-# CHECK: 0x26 R_RISCV_SET8 - 0x0
-# CHECK-NEXT: 0x26 R_RISCV_SUB8 - 0x0
-# CHECK-NEXT: 0x2A R_RISCV_SET16 - 0x0
-# CHECK-NEXT: 0x2A R_RISCV_SUB16 - 0x0
-# CHECK-NEXT: 0x2F R_RISCV_SET32 - 0x0
-# CHECK-DWARFDUMP: DW_CFA_advance_loc1
-# CHECK-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset
-# CHECK-DWARFDUMP-NEXT: DW_CFA_advance_loc2
-# CHECK-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset
-# CHECK-DWARFDUMP-NEXT: DW_CFA_advance_loc4
-# CHECK-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset
+# CHECK:      .rela.eh_frame {
+# CHECK-NEXT:   0x1C R_RISCV_32_PCREL <null> 0x0
+# CHECK-NEXT: }
+# CHECK-DWARFDUMP: DW_CFA_advance_loc1: 104
+# CHECK-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset: +8
+# CHECK-DWARFDUMP-NEXT: DW_CFA_advance_loc2: 259
+# CHECK-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset: +8
+# CHECK-DWARFDUMP-NEXT: DW_CFA_advance_loc4: 65539
+# CHECK-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset: +8
         .text
         .globl  test                            # -- Begin function test
         .p2align        1

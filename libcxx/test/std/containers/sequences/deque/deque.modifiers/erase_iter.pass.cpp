@@ -10,6 +10,7 @@
 
 // iterator erase(const_iterator p)
 
+#include "asan_testing.h"
 #include <deque>
 #include <algorithm>
 #include <iterator>
@@ -119,6 +120,7 @@ int main(int, char**)
     v.erase(--v.end());
     v.erase(v.begin());
     assert(v.size() == 0);
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(v));
     }
 #endif
 

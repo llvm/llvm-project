@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class DebugBreakTestCase(TestBase):
-
     @skipIf(archs=no_match(["i386", "i686", "x86_64"]))
     @no_debug_info_test
     def test_asm_int_3(self):
@@ -20,33 +19,40 @@ class DebugBreakTestCase(TestBase):
 
         # Run the program.
         target = self.dbg.CreateTarget(exe)
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         # We've hit the first stop, so grab the frame.
         self.assertState(process.GetState(), lldb.eStateStopped)
-        stop_reason = lldb.eStopReasonException if (lldbplatformutil.getPlatform(
-        ) == "windows" or lldbplatformutil.getPlatform() == "macosx") else lldb.eStopReasonSignal
+        stop_reason = (
+            lldb.eStopReasonException
+            if (
+                lldbplatformutil.getPlatform() == "windows"
+                or lldbplatformutil.getPlatform() == "macosx"
+            )
+            else lldb.eStopReasonSignal
+        )
         thread = lldbutil.get_stopped_thread(process, stop_reason)
         self.assertIsNotNone(
-            thread, "Unable to find thread stopped at the __debugbreak()")
+            thread, "Unable to find thread stopped at the __debugbreak()"
+        )
         frame = thread.GetFrameAtIndex(0)
 
         # We should be in function 'bar'.
         self.assertTrue(frame.IsValid())
         function_name = frame.GetFunctionName()
-        self.assertIn('bar', function_name,
-                      "Unexpected function name {}".format(function_name))
+        self.assertIn(
+            "bar", function_name, "Unexpected function name {}".format(function_name)
+        )
 
         # We should be able to evaluate the parameter foo.
-        value = frame.EvaluateExpression('*foo')
+        value = frame.EvaluateExpression("*foo")
         self.assertEqual(value.GetValueAsSigned(), 42)
 
         # The counter should be 1 at the first stop and increase by 2 for each
         # subsequent stop.
         counter = 1
         while counter < 20:
-            value = frame.EvaluateExpression('count')
+            value = frame.EvaluateExpression("count")
             self.assertEqual(value.GetValueAsSigned(), counter)
             counter += 2
             process.Continue()

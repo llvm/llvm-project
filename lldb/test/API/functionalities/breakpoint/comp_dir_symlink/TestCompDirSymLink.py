@@ -10,20 +10,20 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-_EXE_NAME = 'CompDirSymLink'  # Must match Makefile
-_SRC_FILE = 'relative.cpp'
-_COMP_DIR_SYM_LINK_PROP = 'symbols.debug-info-symlink-paths'
+_EXE_NAME = "CompDirSymLink"  # Must match Makefile
+_SRC_FILE = "relative.cpp"
+_COMP_DIR_SYM_LINK_PROP = "symbols.debug-info-symlink-paths"
 
 
 class CompDirSymLinkTestCase(TestBase):
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break inside main().
         self.line = line_number(
             os.path.join(self.getSourceDir(), "main.cpp"),
-            '// Set break point at this line.')
+            "// Set break point at this line.",
+        )
 
     @skipIf(hostoslist=["windows"])
     def test_symlink_paths_set(self):
@@ -35,7 +35,7 @@ class CompDirSymLinkTestCase(TestBase):
     @skipIf(hostoslist=no_match(["linux"]))
     def test_symlink_paths_set_procselfcwd(self):
         os.chdir(self.getBuildDir())
-        pwd_symlink = '/proc/self/cwd'
+        pwd_symlink = "/proc/self/cwd"
         self.doBuild(pwd_symlink, pwd_symlink)
         src_path = self.getBuildArtifact(_SRC_FILE)
         # /proc/self/cwd points to a realpath form of current directory.
@@ -52,7 +52,8 @@ class CompDirSymLinkTestCase(TestBase):
             lldbutil.run_break_set_by_file_and_line,
             self,
             src_path,
-            self.line)
+            self.line,
+        )
 
     @skipIf(hostoslist=["windows"])
     def test_symlink_paths_empty(self):
@@ -64,10 +65,11 @@ class CompDirSymLinkTestCase(TestBase):
             lldbutil.run_break_set_by_file_and_line,
             self,
             src_path,
-            self.line)
+            self.line,
+        )
 
     def create_src_symlink(self):
-        pwd_symlink = self.getBuildArtifact('pwd_symlink')
+        pwd_symlink = self.getBuildArtifact("pwd_symlink")
         if os.path.exists(pwd_symlink):
             os.unlink(pwd_symlink)
         os.symlink(self.getBuildDir(), pwd_symlink)
@@ -75,13 +77,13 @@ class CompDirSymLinkTestCase(TestBase):
         return pwd_symlink
 
     def doBuild(self, pwd_symlink, setting_value):
-        self.build(dictionary={'PWD': pwd_symlink})
+        self.build(dictionary={"PWD": pwd_symlink})
 
         if setting_value:
             cmd = "settings set %s '%s'" % (_COMP_DIR_SYM_LINK_PROP, setting_value)
         else:
-            cmd = "settings clear %s"%_COMP_DIR_SYM_LINK_PROP
+            cmd = "settings clear %s" % _COMP_DIR_SYM_LINK_PROP
         self.runCmd(cmd)
 
         exe = self.getBuildArtifact(_EXE_NAME)
-        self.runCmd('file ' + exe, CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)

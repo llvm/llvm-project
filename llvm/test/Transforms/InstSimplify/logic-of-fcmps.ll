@@ -4,12 +4,30 @@
 ; Cycle through commuted variants where one operand of fcmp ord/uno is
 ; known not-a-NAN and the other is repeated in the logically-connected fcmp.
 
+declare float @llvm.fabs.f32(float)
+declare void @llvm.assume(i1 noundef)
+
 define i1 @ord1(float %x, float %y) {
 ; CHECK-LABEL: @ord1(
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp ord float 0.0, %x
+  %cmp2 = fcmp ord float %x, %y
+  %r = and i1 %cmp1, %cmp2
+  ret i1 %r
+}
+
+define i1 @ord1_assume(float %x, float %y, float %not.nan) {
+; CHECK-LABEL: @ord1_assume(
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[NOT_NAN:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %ord = fcmp ord float %not.nan, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp1 = fcmp ord float %not.nan, %x
   %cmp2 = fcmp ord float %x, %y
   %r = and i1 %cmp1, %cmp2
   ret i1 %r
@@ -37,6 +55,21 @@ define <2 x i1> @ord3(<2 x float> %x, <2 x float> %y) {
   ret <2 x i1> %r
 }
 
+define i1 @ord3_assume(float %x, float %y, float %not.nan) {
+; CHECK-LABEL: @ord3_assume(
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[NOT_NAN:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %ord = fcmp ord float %not.nan, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp1 = fcmp ord float %x, %not.nan
+  %cmp2 = fcmp ord float %x, %y
+  %r = and i1 %cmp1, %cmp2
+  ret i1 %r
+}
+
 define <2 x i1> @ord4(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @ord4(
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord <2 x double> [[Y:%.*]], [[X:%.*]]
@@ -60,6 +93,21 @@ define i1 @ord5(float %x, float %y) {
   ret i1 %r
 }
 
+define i1 @ord5_assume(float %x, float %y, float %nnan) {
+; CHECK-LABEL: @ord5_assume(
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[NNAN:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %ord = fcmp ord float %nnan, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp1 = fcmp ord float %x, %y
+  %cmp2 = fcmp ord float %nnan, %x
+  %r = and i1 %cmp1, %cmp2
+  ret i1 %r
+}
+
 define i1 @ord6(double %x, double %y) {
 ; CHECK-LABEL: @ord6(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord double [[Y:%.*]], [[X:%.*]]
@@ -67,6 +115,21 @@ define i1 @ord6(double %x, double %y) {
 ;
   %cmp1 = fcmp ord double %y, %x
   %cmp2 = fcmp ord double 42.0, %x
+  %r = and i1 %cmp1, %cmp2
+  ret i1 %r
+}
+
+define i1 @ord6_assume(double %x, double %y, double %not.nan) {
+; CHECK-LABEL: @ord6_assume(
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord double [[NOT_NAN:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord double [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %ord = fcmp ord double %not.nan, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp1 = fcmp ord double %y, %x
+  %cmp2 = fcmp ord double %not.nan, %x
   %r = and i1 %cmp1, %cmp2
   ret i1 %r
 }
@@ -80,6 +143,21 @@ define <2 x i1> @ord7(<2 x float> %x, <2 x float> %y) {
   %cmp2 = fcmp ord <2 x float> %x, zeroinitializer
   %r = and <2 x i1> %cmp1, %cmp2
   ret <2 x i1> %r
+}
+
+define i1 @ord7_assume(float %x, float %y, float %not.nan) {
+; CHECK-LABEL: @ord7_assume(
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[NOT_NAN:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %ord = fcmp ord float %not.nan, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp1 = fcmp ord float %x, %y
+  %cmp2 = fcmp ord float %x, %not.nan
+  %r = and i1 %cmp1, %cmp2
+  ret i1 %r
 }
 
 define <2 x i1> @ord8(<2 x double> %x, <2 x double> %y) {
@@ -181,4 +259,3 @@ define <2 x i1> @uno8(<2 x double> %x, <2 x double> %y) {
   %r = or <2 x i1> %cmp1, %cmp2
   ret <2 x i1> %r
 }
-

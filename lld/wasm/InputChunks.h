@@ -27,6 +27,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/Wasm.h"
+#include <optional>
 
 namespace lld {
 namespace wasm {
@@ -85,7 +86,7 @@ public:
   OutputSection *outputSec = nullptr;
   uint32_t comdat = UINT32_MAX;
   uint32_t inputSectionOffset = 0;
-  llvm::Align alignment;
+  uint32_t alignment;
   uint32_t flags;
 
   // Only applies to data segments.
@@ -109,8 +110,8 @@ public:
 protected:
   InputChunk(ObjFile *f, Kind k, StringRef name, uint32_t alignment = 0,
              uint32_t flags = 0)
-      : name(name), file(f), alignment(1ULL << alignment), flags(flags),
-        sectionKind(k), live(!config->gcSections), discarded(false) {}
+      : name(name), file(f), alignment(alignment), flags(flags), sectionKind(k),
+        live(!config->gcSections), discarded(false) {}
   ArrayRef<uint8_t> data() const { return rawData; }
   uint64_t getTombstone() const;
 
@@ -252,7 +253,7 @@ public:
       : InputChunk(f, InputChunk::Function, func->SymbolName), signature(s),
         function(func),
         exportName(func && func->ExportName ? (*func->ExportName).str()
-                                            : llvm::Optional<std::string>()) {
+                                            : std::optional<std::string>()) {
     inputSectionOffset = function->CodeSectionOffset;
     rawData =
         file->codeSection->Content.slice(inputSectionOffset, function->Size);
@@ -268,9 +269,9 @@ public:
            c->kind() == InputChunk::SyntheticFunction;
   }
 
-  llvm::Optional<StringRef> getExportName() const {
-    return exportName ? llvm::Optional<StringRef>(*exportName)
-                      : llvm::Optional<StringRef>();
+  std::optional<StringRef> getExportName() const {
+    return exportName ? std::optional<StringRef>(*exportName)
+                      : std::optional<StringRef>();
   }
   void setExportName(std::string exportName) { this->exportName = exportName; }
   uint32_t getFunctionInputOffset() const { return getInputSectionOffset(); }
@@ -299,9 +300,9 @@ public:
   const WasmFunction *function;
 
 protected:
-  llvm::Optional<std::string> exportName;
-  llvm::Optional<uint32_t> functionIndex;
-  llvm::Optional<uint32_t> tableIndex;
+  std::optional<std::string> exportName;
+  std::optional<uint32_t> functionIndex;
+  std::optional<uint32_t> tableIndex;
   uint32_t compressedFuncSize = 0;
   uint32_t compressedSize = 0;
 };

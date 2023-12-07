@@ -1,3 +1,4 @@
+// XFAIL: target=aarch64-{{.*}}-windows-{{.*}}
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_fixunstfdi
 

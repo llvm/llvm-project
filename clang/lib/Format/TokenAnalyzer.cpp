@@ -104,12 +104,12 @@ TokenAnalyzer::process(bool SkipAnnotation) {
   IdentifierTable IdentTable(getFormattingLangOpts(Style));
   FormatTokenLexer Lex(Env.getSourceManager(), Env.getFileID(),
                        Env.getFirstStartColumn(), Style, Encoding, Allocator,
-
                        IdentTable);
   ArrayRef<FormatToken *> Toks(Lex.lex());
   SmallVector<FormatToken *, 10> Tokens(Toks.begin(), Toks.end());
-  UnwrappedLineParser Parser(Style, Lex.getKeywords(),
-                             Env.getFirstStartColumn(), Tokens, *this);
+  UnwrappedLineParser Parser(Env.getSourceManager(), Style, Lex.getKeywords(),
+                             Env.getFirstStartColumn(), Tokens, *this,
+                             Allocator, IdentTable);
   Parser.parse();
   assert(UnwrappedLines.back().empty());
   unsigned Penalty = 0;

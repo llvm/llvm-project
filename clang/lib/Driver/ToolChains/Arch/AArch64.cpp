@@ -12,9 +12,8 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/AArch64TargetParser.h"
-#include "llvm/Support/TargetParser.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -70,7 +69,7 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
 // Decode AArch64 features from string like +[no]featureA+[no]featureB+...
 static bool DecodeAArch64Features(const Driver &D, StringRef text,
                                   std::vector<StringRef> &Features,
-                                  llvm::AArch64::ArchKind ArchKind) {
+                                  const llvm::AArch64::ArchInfo &ArchInfo) {
   SmallVector<StringRef, 8> Split;
   text.split(Split, StringRef("+"), -1, false);
 
@@ -82,6 +81,25 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
       D.Diag(clang::diag::err_drv_no_neon_modifier);
     else
       return false;
+
+    // +sme implies +bf16.
+    // +sme-f64f64 and +sme-i16i64 both imply +sme.
+    if (Feature == "sme") {
+      Features.push_back("+bf16");
+    } else if (Feature == "nosme") {
+      Features.push_back("-sme-f64f64");
+      Features.push_back("-sme-i16i64");
+    } else if (Feature == "sme-f64f64") {
+      Features.push_back("+sme");
+      Features.push_back("+bf16");
+    } else if (Feature == "sme-i16i64") {
+      Features.push_back("+sme");
+      Features.push_back("+bf16");
+    } else if (Feature == "nobf16") {
+      Features.push_back("-sme");
+      Features.push_back("-sme-f64f64");
+      Features.push_back("-sme-i16i64");
+    }
 
     if (Feature == "sve2")
       Features.push_back("+sve");
@@ -104,14 +122,14 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
 
     // +sve implies +f32mm if the base architecture is >= v8.6A (except v9A)
     // It isn't the case in general that sve implies both f64mm and f32mm
-    if ((ArchKind == llvm::AArch64::ArchKind::ARMV8_6A ||
-         ArchKind == llvm::AArch64::ArchKind::ARMV8_7A ||
-         ArchKind == llvm::AArch64::ArchKind::ARMV8_8A ||
-         ArchKind == llvm::AArch64::ArchKind::ARMV8_9A ||
-         ArchKind == llvm::AArch64::ArchKind::ARMV9_1A ||
-         ArchKind == llvm::AArch64::ArchKind::ARMV9_2A ||
-         ArchKind == llvm::AArch64::ArchKind::ARMV9_3A ||
-         ArchKind == llvm::AArch64::ArchKind::ARMV9_4A) &&
+    if ((ArchInfo == llvm::AArch64::ARMV8_6A ||
+         ArchInfo == llvm::AArch64::ARMV8_7A ||
+         ArchInfo == llvm::AArch64::ARMV8_8A ||
+         ArchInfo == llvm::AArch64::ARMV8_9A ||
+         ArchInfo == llvm::AArch64::ARMV9_1A ||
+         ArchInfo == llvm::AArch64::ARMV9_2A ||
+         ArchInfo == llvm::AArch64::ARMV9_3A ||
+         ArchInfo == llvm::AArch64::ARMV9_4A) &&
         Feature == "sve")
       Features.push_back("+f32mm");
   }
@@ -124,9 +142,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
                               std::vector<StringRef> &Features) {
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
   CPU = Split.first;
-  llvm::AArch64::ArchKind ArchKind = llvm::AArch64::ArchKind::ARMV8A;
-
-  CPU = llvm::AArch64::resolveCPUAlias(CPU);
+  const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 
   if (CPU == "native")
     CPU = llvm::sys::getHostCPUName();
@@ -134,21 +150,24 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   if (CPU == "generic") {
     Features.push_back("+neon");
   } else {
-    ArchKind = llvm::AArch64::parseCPUArch(CPU);
-    if (ArchKind == llvm::AArch64::ArchKind::INVALID)
+    const std::optional<llvm::AArch64::CpuInfo> CpuInfo =
+        llvm::AArch64::parseCpu(CPU);
+    if (!CpuInfo)
       return false;
-    Features.push_back(llvm::AArch64::getArchFeature(ArchKind));
+    ArchInfo = &CpuInfo->Arch;
 
-    uint64_t Extension = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
+    Features.push_back(ArchInfo->ArchFeature);
+
+    uint64_t Extension = CpuInfo->getImpliedExtensions();
     if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
       return false;
-   }
+  }
 
-   if (Split.second.size() &&
-       !DecodeAArch64Features(D, Split.second, Features, ArchKind))
-     return false;
+  if (Split.second.size() &&
+      !DecodeAArch64Features(D, Split.second, Features, *ArchInfo))
+    return false;
 
-   return true;
+  return true;
 }
 
 static bool
@@ -158,25 +177,26 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   std::string MarchLowerCase = March.lower();
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
-  llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
+  std::optional <llvm::AArch64::ArchInfo> ArchInfo =
+      llvm::AArch64::parseArch(Split.first);
   if (Split.first == "native")
-    ArchKind = llvm::AArch64::getCPUArchKind(llvm::sys::getHostCPUName().str());
-  if (ArchKind == llvm::AArch64::ArchKind::INVALID)
+    ArchInfo = llvm::AArch64::getArchForCpu(llvm::sys::getHostCPUName().str());
+  if (!ArchInfo)
     return false;
-  Features.push_back(llvm::AArch64::getArchFeature(ArchKind));
+  Features.push_back(ArchInfo->ArchFeature);
 
   // Enable SVE2 by default on Armv9-A.
   // It can still be disabled if +nosve2 is present.
   // We must do this early so that DecodeAArch64Features has the correct state
-  if ((ArchKind == llvm::AArch64::ArchKind::ARMV9A ||
-       ArchKind == llvm::AArch64::ArchKind::ARMV9_1A ||
-       ArchKind == llvm::AArch64::ArchKind::ARMV9_2A)) {
+  if ((*ArchInfo == llvm::AArch64::ARMV9A ||
+       *ArchInfo == llvm::AArch64::ARMV9_1A ||
+       *ArchInfo == llvm::AArch64::ARMV9_2A)) {
     Features.push_back("+sve");
     Features.push_back("+sve2");
   }
 
   if ((Split.second.size() &&
-       !DecodeAArch64Features(D, Split.second, Features, ArchKind)))
+       !DecodeAArch64Features(D, Split.second, Features, *ArchInfo)))
     return false;
 
   return true;
@@ -290,13 +310,15 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
 
   if (Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ)) {
     StringRef Mtp = A->getValue();
-    if (Mtp == "el3")
+    if (Mtp == "el3" || Mtp == "tpidr_el3")
       Features.push_back("+tpidr-el3");
-    else if (Mtp == "el2")
+    else if (Mtp == "el2" || Mtp == "tpidr_el2")
       Features.push_back("+tpidr-el2");
-    else if (Mtp == "el1")
+    else if (Mtp == "el1" || Mtp == "tpidr_el1")
       Features.push_back("+tpidr-el1");
-    else if (Mtp != "el0")
+    else if (Mtp == "tpidrro_el0")
+      Features.push_back("+tpidrro-el0");
+    else if (Mtp != "el0" && Mtp != "tpidr_el0")
       D.Diag(diag::err_drv_invalid_mtp) << A->getAsString(Args);
   }
 
@@ -405,9 +427,10 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     else if (*I == "+crypto") {
       HasCrypto = true;
       HasNoCrypto = false;
-    } else if (*I == "-crypto") {
+    } else if (*I == "-crypto" || *I == "-neon") {
       HasCrypto = false;
       HasNoCrypto = true;
+      HasSM4 = HasSHA2 = HasSHA3 = HasAES = false;
     }
     // Register the iterator position if this is an architecture feature
     if (ArchFeatPos == -1 && (V8Version != -1 || V9Version != -1))
@@ -485,18 +508,6 @@ fp16_fml_fallthrough:
       }
     }
   }
-
-  // FIXME: these insertions should ideally be automated using default
-  // extensions support from the backend target parser.
-  if (V8Version >= 6 || V9Version >= 1)
-    Features.insert(std::next(Features.begin() + ArchFeatPos),
-                    {"+i8mm", "+bf16"});
-
-  // For Armv8.8-a/Armv9.3-a or later, FEAT_HBC and FEAT_MOPS are enabled by
-  // default.
-  if (V8Version >= 8 || V9Version >= 3)
-    Features.insert(std::next(Features.begin() + ArchFeatPos),
-                    {"+hbc", "+mops"});
 
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                options::OPT_munaligned_access)) {
@@ -616,7 +627,7 @@ fp16_fml_fallthrough:
       Features.push_back("+fix-cortex-a53-835769");
     else
       Features.push_back("-fix-cortex-a53-835769");
-  } else if (Triple.isAndroid()) {
+  } else if (Triple.isAndroid() || Triple.isOHOSFamily()) {
     // Enabled A53 errata (835769) workaround by default on android
     Features.push_back("+fix-cortex-a53-835769");
   } else if (Triple.isOSFuchsia()) {

@@ -15,18 +15,19 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
+#include <optional>
 
 namespace mlir {
-
 class AffineExpr;
-class AffineForOp;
 class AffineMap;
 class BlockArgument;
 class MemRefType;
-class NestedPattern;
 class Operation;
 class Value;
+
+namespace affine {
+class AffineForOp;
+class NestedPattern;
 
 /// Returns the trip count of the loop as an affine map with its corresponding
 /// operands if the latter is expressible as an affine expression, and nullptr
@@ -40,7 +41,7 @@ void getTripCountMapAndOperands(AffineForOp forOp, AffineMap *map,
 /// Returns the trip count of the loop if it's a constant, std::nullopt
 /// otherwise. This uses affine expression analysis and is able to determine
 /// constant trip count in non-trivial cases.
-Optional<uint64_t> getConstantTripCount(AffineForOp forOp);
+std::optional<uint64_t> getConstantTripCount(AffineForOp forOp);
 
 /// Returns the greatest known integral divisor of the trip count. Affine
 /// expression analysis is used (indirectly through getTripCount), and
@@ -69,7 +70,7 @@ bool isVectorizableLoopBody(AffineForOp loop,
                             NestedPattern &vectorTransferMatcher);
 
 /// Checks whether the loop is structurally vectorizable and that all the LoadOp
-/// and StoreOp matched have access indexing functions that are are either:
+/// and StoreOp matched have access indexing functions that are either:
 ///   1. invariant along the loop induction variable created by 'loop';
 ///   2. varying along at most one memory dimension. If such a unique dimension
 ///      is found, it is written into `memRefDim`.
@@ -83,6 +84,7 @@ bool isVectorizableLoopBody(AffineForOp loop, int *memRefDim,
 // the support.
 bool isOpwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts);
 
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_ANALYSIS_LOOPANALYSIS_H

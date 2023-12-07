@@ -46,8 +46,6 @@ TEST(ModuleTest, sortGlobalsByName) {
 
     // Sort the globals by name.
     EXPECT_FALSE(std::is_sorted(M.global_begin(), M.global_end(), compare));
-    M.getGlobalList().sort(compare);
-    EXPECT_TRUE(std::is_sorted(M.global_begin(), M.global_end(), compare));
   }
 }
 
@@ -157,6 +155,159 @@ TEST(ModuleTest, setPartialSampleProfileRatio) {
   std::unique_ptr<ProfileSummary> ProfileSummary(
       ProfileSummary::getFromMD(M->getProfileSummary(/*IsCS*/ false)));
   EXPECT_EQ(Ratio, ProfileSummary->getPartialProfileRatio());
+}
+
+TEST(ModuleTest, AliasList) {
+  // This tests all Module's functions that interact with Module::AliasList.
+  LLVMContext C;
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+declare void @Foo()
+@GA = alias void (), ptr @Foo
+)",
+                                                  Err, Context);
+  Function *Foo = M->getFunction("Foo");
+  auto *GA = M->getNamedAlias("GA");
+  EXPECT_EQ(M->alias_size(), 1u);
+  auto *NewGA =
+      GlobalAlias::create(Foo->getType(), 0, GlobalValue::ExternalLinkage,
+                          "NewGA", Foo, /*Parent=*/nullptr);
+  EXPECT_EQ(M->alias_size(), 1u);
+
+  M->insertAlias(NewGA);
+  EXPECT_EQ(&*std::prev(M->aliases().end()), NewGA);
+
+  M->removeAlias(NewGA);
+  EXPECT_EQ(M->alias_size(), 1u);
+  M->insertAlias(NewGA);
+  EXPECT_EQ(M->alias_size(), 2u);
+  EXPECT_EQ(&*std::prev(M->aliases().end()), NewGA);
+
+  auto Range = M->aliases();
+  EXPECT_EQ(&*Range.begin(), GA);
+  EXPECT_EQ(&*std::next(Range.begin()), NewGA);
+  EXPECT_EQ(std::next(Range.begin(), 2), Range.end());
+
+  M->removeAlias(NewGA);
+  EXPECT_EQ(M->alias_size(), 1u);
+
+  M->insertAlias(NewGA);
+  M->eraseAlias(NewGA);
+  EXPECT_EQ(M->alias_size(), 1u);
+}
+
+TEST(ModuleTest, IFuncList) {
+  // This tests all Module's functions that interact with Module::IFuncList.
+  LLVMContext C;
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+declare void @Foo()
+@GIF = ifunc void (), ptr @Foo
+)",
+                                                  Err, Context);
+  Function *Foo = M->getFunction("Foo");
+  auto *GIF = M->getNamedIFunc("GIF");
+  EXPECT_EQ(M->ifunc_size(), 1u);
+  auto *NewGIF =
+      GlobalIFunc::create(Foo->getType(), 0, GlobalValue::ExternalLinkage,
+                          "NewGIF", Foo, /*Parent=*/nullptr);
+  EXPECT_EQ(M->ifunc_size(), 1u);
+
+  M->insertIFunc(NewGIF);
+  EXPECT_EQ(&*std::prev(M->ifuncs().end()), NewGIF);
+
+  M->removeIFunc(NewGIF);
+  EXPECT_EQ(M->ifunc_size(), 1u);
+  M->insertIFunc(NewGIF);
+  EXPECT_EQ(M->ifunc_size(), 2u);
+  EXPECT_EQ(&*std::prev(M->ifuncs().end()), NewGIF);
+
+  auto Range = M->ifuncs();
+  EXPECT_EQ(&*Range.begin(), GIF);
+  EXPECT_EQ(&*std::next(Range.begin()), NewGIF);
+  EXPECT_EQ(std::next(Range.begin(), 2), Range.end());
+
+  M->removeIFunc(NewGIF);
+  EXPECT_EQ(M->ifunc_size(), 1u);
+
+  M->insertIFunc(NewGIF);
+  M->eraseIFunc(NewGIF);
+  EXPECT_EQ(M->ifunc_size(), 1u);
+}
+
+TEST(ModuleTest, NamedMDList) {
+  // This tests all Module's functions that interact with Module::NamedMDList.
+  LLVMContext C;
+  SMDiagnostic Err;
+  LLVMContext Context;
+  auto M = std::make_unique<Module>("M", C);
+  NamedMDNode *MDN1 = M->getOrInsertNamedMetadata("MDN1");
+  EXPECT_EQ(M->named_metadata_size(), 1u);
+  NamedMDNode *MDN2 = M->getOrInsertNamedMetadata("MDN2");
+  EXPECT_EQ(M->named_metadata_size(), 2u);
+  auto *NewMDN = M->getOrInsertNamedMetadata("NewMDN");
+  EXPECT_EQ(M->named_metadata_size(), 3u);
+
+  M->removeNamedMDNode(NewMDN);
+  EXPECT_EQ(M->named_metadata_size(), 2u);
+
+  M->insertNamedMDNode(NewMDN);
+  EXPECT_EQ(&*std::prev(M->named_metadata().end()), NewMDN);
+
+  M->removeNamedMDNode(NewMDN);
+  M->insertNamedMDNode(NewMDN);
+  EXPECT_EQ(M->named_metadata_size(), 3u);
+  EXPECT_EQ(&*std::prev(M->named_metadata().end()), NewMDN);
+
+  auto Range = M->named_metadata();
+  EXPECT_EQ(&*Range.begin(), MDN1);
+  EXPECT_EQ(&*std::next(Range.begin(), 1), MDN2);
+  EXPECT_EQ(&*std::next(Range.begin(), 2), NewMDN);
+  EXPECT_EQ(std::next(Range.begin(), 3), Range.end());
+
+  M->eraseNamedMDNode(NewMDN);
+  EXPECT_EQ(M->named_metadata_size(), 2u);
+}
+
+TEST(ModuleTest, GlobalList) {
+  // This tests all Module's functions that interact with Module::GlobalList.
+  LLVMContext C;
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+@GV = external global i32
+)",
+                                                  Err, Context);
+  auto *GV = cast<GlobalVariable>(M->getNamedValue("GV"));
+  EXPECT_EQ(M->global_size(), 1u);
+  GlobalVariable *NewGV = new GlobalVariable(
+      Type::getInt32Ty(C), /*isConstant=*/true, GlobalValue::InternalLinkage,
+      /*Initializer=*/nullptr, "NewGV");
+  EXPECT_EQ(M->global_size(), 1u);
+  // Insert before
+  M->insertGlobalVariable(M->globals().begin(), NewGV);
+  EXPECT_EQ(M->global_size(), 2u);
+  EXPECT_EQ(&*M->globals().begin(), NewGV);
+  // Insert at end()
+  M->removeGlobalVariable(NewGV);
+  EXPECT_EQ(M->global_size(), 1u);
+  M->insertGlobalVariable(NewGV);
+  EXPECT_EQ(M->global_size(), 2u);
+  EXPECT_EQ(&*std::prev(M->globals().end()), NewGV);
+  // Check globals()
+  auto Range = M->globals();
+  EXPECT_EQ(&*Range.begin(), GV);
+  EXPECT_EQ(&*std::next(Range.begin()), NewGV);
+  EXPECT_EQ(std::next(Range.begin(), 2), Range.end());
+  // Check remove
+  M->removeGlobalVariable(NewGV);
+  EXPECT_EQ(M->global_size(), 1u);
+  // Check erase
+  M->insertGlobalVariable(NewGV);
+  M->eraseGlobalVariable(NewGV);
+  EXPECT_EQ(M->global_size(), 1u);
 }
 
 } // end namespace

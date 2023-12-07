@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: !c++experimental
 
 // friend constexpr bool operator==(const iterator& x, const iterator& y);
 //          requires ref-is-glvalue && equality_comparable<iterator_t<Base>> &&

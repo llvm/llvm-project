@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s readability-uniqueptr-delete-release %t -check-suffix=NULLPTR
 // RUN: %check_clang_tidy %s readability-uniqueptr-delete-release %t -check-suffix=RESET -config='{ \
-// RUN: CheckOptions: [{key: readability-uniqueptr-delete-release.PreferResetCall, value: true}]}'
+// RUN: CheckOptions: {readability-uniqueptr-delete-release.PreferResetCall: true}}'
 namespace std {
 template <typename T>
 struct default_delete {};

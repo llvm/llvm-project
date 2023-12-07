@@ -14,14 +14,16 @@
 #ifndef MLIR_DIALECT_GPU_IR_GPUDIALECT_H
 #define MLIR_DIALECT_GPU_IR_GPUDIALECT_H
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/DLTI/Traits.h"
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -162,6 +164,22 @@ public:
 
 // Adds a `gpu.async.token` to the front of the argument list.
 void addAsyncDependency(Operation *op, Value token);
+
+// Handle types for sparse.
+enum class SparseHandleKind { SpMat, DnTensor, SpGEMMOp };
+
+template <SparseHandleKind K>
+class SparseHandleType
+    : public Type::TypeBase<SparseHandleType<K>, Type, TypeStorage> {
+public:
+  using Base =
+      typename Type::TypeBase<SparseHandleType<K>, Type, TypeStorage>::Base;
+  using Base::Base;
+};
+
+using SparseDnTensorHandleType = SparseHandleType<SparseHandleKind::DnTensor>;
+using SparseSpMatHandleType = SparseHandleType<SparseHandleKind::SpMat>;
+using SparseSpGEMMOpHandleType = SparseHandleType<SparseHandleKind::SpGEMMOp>;
 
 } // namespace gpu
 } // namespace mlir

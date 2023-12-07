@@ -4,3 +4,8 @@
 ; CHECK: ?x@@3HAasdf
 ; CHECK-NEXT: int x
 ; CHECK-NEXT: warning: trailing characters: asdf
+
+.?AVNet@@
+; CHECK: .?AVNet@@
+; CHECK-NEXT: class Net `RTTI Type Descriptor Name'
+; CHECK-NOT: warning: trailing characters

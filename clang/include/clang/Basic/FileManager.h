@@ -102,7 +102,7 @@ class FileManager : public RefCountedBase<FileManager> {
       SeenBypassFileEntries;
 
   /// The file entry for stdin, if it has been accessed through the FileManager.
-  Optional<FileEntryRef> STDIN;
+  OptionalFileEntryRef STDIN;
 
   /// The canonical names of files and directories .
   llvm::DenseMap<const void *, llvm::StringRef> CanonicalNames;
@@ -166,8 +166,8 @@ public:
                                                     bool CacheFailure = true);
 
   /// Get a \c DirectoryEntryRef if it exists, without doing anything on error.
-  llvm::Optional<DirectoryEntryRef>
-  getOptionalDirectoryRef(StringRef DirName, bool CacheFailure = true) {
+  OptionalDirectoryEntryRef getOptionalDirectoryRef(StringRef DirName,
+                                                    bool CacheFailure = true) {
     return llvm::expectedToOptional(getDirectoryRef(DirName, CacheFailure));
   }
 
@@ -231,9 +231,9 @@ public:
   llvm::Expected<FileEntryRef> getSTDIN();
 
   /// Get a FileEntryRef if it exists, without doing anything on error.
-  llvm::Optional<FileEntryRef> getOptionalFileRef(StringRef Filename,
-                                                  bool OpenFile = false,
-                                                  bool CacheFailure = true) {
+  OptionalFileEntryRef getOptionalFileRef(StringRef Filename,
+                                          bool OpenFile = false,
+                                          bool CacheFailure = true) {
     return llvm::expectedToOptional(
         getFileRef(Filename, OpenFile, CacheFailure));
   }
@@ -270,7 +270,7 @@ public:
   /// bypasses all mapping and uniquing, blindly creating a new FileEntry.
   /// There is no attempt to deduplicate these; if you bypass the same file
   /// twice, you get two new file entries.
-  llvm::Optional<FileEntryRef> getBypassFile(FileEntryRef VFE);
+  OptionalFileEntryRef getBypassFile(FileEntryRef VFE);
 
   /// Open the specified file as a MemoryBuffer, returning a new
   /// MemoryBuffer if successful, otherwise returning null.
@@ -320,7 +320,7 @@ public:
   /// This is a very expensive operation, despite its results being cached,
   /// and should only be used when the physical layout of the file system is
   /// required, which is (almost) never.
-  StringRef getCanonicalName(const DirectoryEntry *Dir);
+  StringRef getCanonicalName(DirectoryEntryRef Dir);
 
   /// Retrieve the canonical name for a given file.
   ///
@@ -329,6 +329,13 @@ public:
   /// required, which is (almost) never.
   StringRef getCanonicalName(const FileEntry *File);
 
+private:
+  /// Retrieve the canonical name for a given file or directory.
+  ///
+  /// The first param is a key in the CanonicalNames array.
+  StringRef getCanonicalName(const void *Entry, StringRef Name);
+
+public:
   void PrintStats() const;
 };
 

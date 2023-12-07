@@ -11,7 +11,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <fcntl.h>
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -20,10 +20,10 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(int, linkat,
                    (int fd1, const char *path1, int fd2, const char *path2,
                     int flags)) {
-  long ret =
-      __llvm_libc::syscall_impl(SYS_linkat, fd1, path1, fd2, path2, flags);
+  int ret =
+      __llvm_libc::syscall_impl<int>(SYS_linkat, fd1, path1, fd2, path2, flags);
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   return ret;

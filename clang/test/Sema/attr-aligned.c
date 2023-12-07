@@ -1,8 +1,10 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin9 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fsyntax-only -verify %s
 
 int x __attribute__((aligned(3))); // expected-error {{requested alignment is not a power of 2}}
 int y __attribute__((aligned(1ull << 33))); // expected-error {{requested alignment must be 4294967296 bytes or smaller}}
 int y __attribute__((aligned(1ull << 32)));
+// GH50534
+int z __attribute__((aligned((__int128_t)0x1234567890abcde0ULL << 64))); // expected-error {{requested alignment must be 4294967296 bytes or smaller}}
 
 // PR26444
 int y __attribute__((aligned(1 << 29)));
@@ -12,7 +14,6 @@ int y __attribute__((aligned(1 << 28)));
 short g0[3] __attribute__((aligned));
 short g0_chk[__alignof__(g0) == 16 ? 1 : -1];
 
-// <rdar://problem/6840045>
 typedef char ueber_aligned_char __attribute__((aligned(8)));
 
 struct struct_with_ueber_char {
@@ -32,7 +33,6 @@ char a4[__alignof__(underaligned_longlong) == 1 ?: -1] = {0};
 typedef long long __attribute__((aligned(1))) underaligned_complex_longlong;
 char a5[__alignof__(underaligned_complex_longlong) == 1 ?: -1] = {0};
 
-// rdar://problem/8335865
 int b __attribute__((aligned(2)));
 char b1[__alignof__(b) == 2 ?: -1] = {0};
 

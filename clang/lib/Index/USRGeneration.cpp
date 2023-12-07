@@ -226,6 +226,11 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
   if (ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/isLocal(D)))
     return;
 
+  if (D->getType().isNull()) {
+    IgnoreResults = true;
+    return;
+  }
+
   const unsigned StartSize = Buf.size();
   VisitDeclContext(D->getDeclContext());
   if (Buf.size() == StartSize)
@@ -744,6 +749,8 @@ void USRGenerator::VisitType(QualType T) {
         case BuiltinType::Id: \
           Out << "@BT@" << Name; break;
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
         case BuiltinType::ShortAccum:
           Out << "@BT@ShortAccum"; break;
         case BuiltinType::Accum:
@@ -1139,6 +1146,15 @@ bool clang::index::generateUSRForDecl(const Decl *D,
   // C++'s operator new function, can have invalid locations but it is fine to
   // create USRs that can identify them.
 
+  // Check if the declaration has explicit external USR specified.
+  auto *CD = D->getCanonicalDecl();
+  if (auto *ExternalSymAttr = CD->getAttr<ExternalSourceSymbolAttr>()) {
+    if (!ExternalSymAttr->getUSR().empty()) {
+      llvm::raw_svector_ostream Out(Buf);
+      Out << ExternalSymAttr->getUSR();
+      return false;
+    }
+  }
   USRGenerator UG(&D->getASTContext(), Buf);
   UG.Visit(D);
   return UG.ignoreResults();

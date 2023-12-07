@@ -13,8 +13,8 @@
 #include <cstddef>
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/Hashing.h>
-#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/StringRef.h>
+#include <optional>
 #include <tuple>
 
 namespace llvm {
@@ -127,11 +127,11 @@ enum class FunctionType {
 // every detail but is enough to uniquely identify the implementation.
 struct FunctionDescriptor {
   FunctionType Type;
-  Optional<Contiguous> Contiguous;
-  Optional<Overlap> Overlap;
-  Optional<Loop> Loop;
-  Optional<AlignedLoop> AlignedLoop;
-  Optional<Accelerator> Accelerator;
+  std::optional<Contiguous> Contiguous;
+  std::optional<Overlap> Overlap;
+  std::optional<Loop> Loop;
+  std::optional<AlignedLoop> AlignedLoop;
+  std::optional<Accelerator> Accelerator;
   ElementTypeClass ElementClass;
 
   COMPARABLE_AND_HASHABLE(FunctionDescriptor, Type, Contiguous, Overlap, Loop,

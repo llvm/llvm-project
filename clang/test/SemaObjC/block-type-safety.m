@@ -107,7 +107,6 @@ void test3(void) {
   f4(^(NSArray<P2>* a) { });  // expected-error {{incompatible block pointer types passing 'void (^)(NSArray<P2> *)' to parameter of type 'void (^)(id<P>)'}}
 }
 
-// rdar : //8302845
 @protocol Foo @end
 
 @interface Baz @end
@@ -123,8 +122,6 @@ int test4 (void) {
     };
     return 0;
 }
-
-// rdar:// 9118343
 
 @protocol NSCopying @end
 
@@ -145,7 +142,6 @@ int test5(void) {
 
     // A parameter is used inside a block, so error on changing a parameter type
     // to a more specific than an argument type it will be called with.
-    // rdar://problem/52788423
     void (^blockWithParam)(NSAllArray *);
     void (^genericBlockWithParam)(id<Foo>);
     genericBlockWithParam = blockWithParam; // expected-error {{incompatible block pointer types assigning to 'void (^)(id<Foo>)' from 'void (^)(NSAllArray *)'}}
@@ -172,7 +168,6 @@ int test5(void) {
 }
 #endif
 
-// rdar://10798770
 typedef int NSInteger;
 
 typedef enum : NSInteger {NSOrderedAscending = -1L, NSOrderedSame, NSOrderedDescending} NSComparisonResult;
@@ -190,7 +185,6 @@ void f(void) {
    }];
 }
 
-// rdar://16739120
 @protocol P1 @end
 @protocol P2 @end
 
@@ -232,7 +226,6 @@ void Test3(void) {
   NSObject<NSCopying> *NSO6 = aBlock; // Ok
 }
 
-// rdar://problem/19420731
 typedef NSObject<P1> NSObject_P1;
 typedef NSObject_P1<P2> NSObject_P1_P2;
 

@@ -24,7 +24,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @encode_residual_fixed(i32* %res, i32* %smp, i32 %n, i32 %order) {
+define void @encode_residual_fixed(ptr %res, ptr %smp, i32 %n, i32 %order) {
 bb:
   br label %.split
 
@@ -37,12 +37,12 @@ bb:
 bb1:                                              ; preds = %.split
   %tmp = add nsw i32 %order, -1
   %tmp2 = sext i32 %tmp to i64
-  %tmp3 = getelementptr inbounds i32, i32* %smp, i64 %tmp2
-  %tmp4 = load i32, i32* %tmp3, align 4
+  %tmp3 = getelementptr inbounds i32, ptr %smp, i64 %tmp2
+  %tmp4 = load i32, ptr %tmp3, align 4
   %tmp5 = add nsw i32 %order, -2
   %tmp6 = sext i32 %tmp5 to i64
-  %tmp7 = getelementptr inbounds i32, i32* %smp, i64 %tmp6
-  %tmp8 = load i32, i32* %tmp7, align 4
+  %tmp7 = getelementptr inbounds i32, ptr %smp, i64 %tmp6
+  %tmp8 = load i32, ptr %tmp7, align 4
   %tmp9 = sub nsw i32 %tmp4, %tmp8
   %tmp10 = icmp slt i32 %order, %n
   br i1 %tmp10, label %.lr.ph, label %.loopexit
@@ -54,8 +54,8 @@ bb1:                                              ; preds = %.split
 bb12:                                             ; preds = %bb12, %.lr.ph
   %indvars.iv = phi i64 [ %tmp11, %.lr.ph ], [ %indvars.iv.next, %bb12 ]
   %i.03 = phi i32 [ %order, %.lr.ph ], [ %tmp14, %bb12 ]
-  %tmp13 = getelementptr inbounds i32, i32* %res, i64 %indvars.iv
-  store i32 %tmp9, i32* %tmp13, align 4
+  %tmp13 = getelementptr inbounds i32, ptr %res, i64 %indvars.iv
+  store i32 %tmp9, ptr %tmp13, align 4
   %tmp14 = add nsw i32 %i.03, 2
   %tmp15 = icmp slt i32 %tmp14, %n
   %indvars.iv.next = add nsw i64 %indvars.iv, 2
@@ -64,12 +64,12 @@ bb12:                                             ; preds = %bb12, %.lr.ph
 bb16:                                             ; preds = %.split
   %tmp17 = add nsw i32 %order, -1
   %tmp18 = sext i32 %tmp17 to i64
-  %tmp19 = getelementptr inbounds i32, i32* %smp, i64 %tmp18
-  %tmp20 = load i32, i32* %tmp19, align 4
+  %tmp19 = getelementptr inbounds i32, ptr %smp, i64 %tmp18
+  %tmp20 = load i32, ptr %tmp19, align 4
   %tmp21 = add nsw i32 %order, -2
   %tmp22 = sext i32 %tmp21 to i64
-  %tmp23 = getelementptr inbounds i32, i32* %smp, i64 %tmp22
-  %tmp24 = load i32, i32* %tmp23, align 4
+  %tmp23 = getelementptr inbounds i32, ptr %smp, i64 %tmp22
+  %tmp24 = load i32, ptr %tmp23, align 4
   %tmp25 = sub nsw i32 %tmp20, %tmp24
   %tmp26 = icmp slt i32 %order, %n
   br i1 %tmp26, label %.lr.ph5, label %.loopexit2
@@ -81,8 +81,8 @@ bb16:                                             ; preds = %.split
 bb28:                                             ; preds = %bb28, %.lr.ph5
   %indvars.iv6 = phi i64 [ %tmp27, %.lr.ph5 ], [ %indvars.iv.next7, %bb28 ]
   %i.14 = phi i32 [ %order, %.lr.ph5 ], [ %tmp30, %bb28 ]
-  %tmp29 = getelementptr inbounds i32, i32* %res, i64 %indvars.iv6
-  store i32 %tmp25, i32* %tmp29, align 4
+  %tmp29 = getelementptr inbounds i32, ptr %res, i64 %indvars.iv6
+  store i32 %tmp25, ptr %tmp29, align 4
   %tmp30 = add nsw i32 %i.14, 2
   %tmp31 = icmp slt i32 %tmp30, %n
   %indvars.iv.next7 = add nsw i64 %indvars.iv6, 2
@@ -101,8 +101,8 @@ bb28:                                             ; preds = %bb28, %.lr.ph5
   br label %bb32
 
 bb32:                                             ; preds = %.loopexit2, %.loopexit, %.split
-  %tmp33 = getelementptr inbounds i32, i32* %res, i64 2
-  %tmp34 = load i32, i32* %tmp33, align 4
+  %tmp33 = getelementptr inbounds i32, ptr %res, i64 2
+  %tmp34 = load i32, ptr %tmp33, align 4
   %tmp35 = icmp eq i32 %tmp34, 5
   br i1 %tmp35, label %bb37, label %bb36
 

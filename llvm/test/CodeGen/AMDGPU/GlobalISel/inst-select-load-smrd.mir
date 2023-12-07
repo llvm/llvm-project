@@ -4,7 +4,7 @@
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,GFX9
 
 --- |
-  define amdgpu_kernel void @smrd_imm(i32 addrspace(4)* %const0) { ret void }
+  define amdgpu_kernel void @smrd_imm(ptr addrspace(4) %const0) { ret void }
   define amdgpu_kernel void @smrd_wide() { ret void }
   define amdgpu_kernel void @constant_address_positive() { ret void }
   define amdgpu_kernel void @smrd_sgpr() { ret void }
@@ -218,7 +218,9 @@ body: |
 
 # Test a load with a register offset.
 # GCN-LABEL: name: smrd_sgpr{{$}}
-# GCN: S_LOAD_DWORD_SGPR %0, %1, 0
+# SICI: S_LOAD_DWORD_SGPR %0, %1, 0
+# VI: S_LOAD_DWORD_SGPR %0, %1, 0
+# GFX9: S_LOAD_DWORD_SGPR_IMM %0, %1, 0, 0
 
 name:            smrd_sgpr
 legalized:       true

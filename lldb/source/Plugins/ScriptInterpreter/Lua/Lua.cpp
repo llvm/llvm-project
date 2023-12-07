@@ -83,8 +83,8 @@ Lua::CallBreakpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
   lua_pushlightuserdata(m_lua_state, baton);
   lua_gettable(m_lua_state, LUA_REGISTRYINDEX);
   StructuredDataImpl extra_args_impl(std::move(extra_args_sp));
-  return LLDBSwigLuaBreakpointCallbackFunction(m_lua_state, stop_frame_sp,
-                                               bp_loc_sp, extra_args_impl);
+  return lua::SWIGBridge::LLDBSwigLuaBreakpointCallbackFunction(
+      m_lua_state, stop_frame_sp, bp_loc_sp, extra_args_impl);
 }
 
 llvm::Error Lua::RegisterWatchpointCallback(void *baton, const char *body) {
@@ -109,8 +109,8 @@ Lua::CallWatchpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
 
   lua_pushlightuserdata(m_lua_state, baton);
   lua_gettable(m_lua_state, LUA_REGISTRYINDEX);
-  return LLDBSwigLuaWatchpointCallbackFunction(m_lua_state, stop_frame_sp,
-                                               wp_sp);
+  return lua::SWIGBridge::LLDBSwigLuaWatchpointCallbackFunction(
+      m_lua_state, stop_frame_sp, wp_sp);
 }
 
 llvm::Error Lua::CheckSyntax(llvm::StringRef buffer) {
@@ -131,14 +131,13 @@ llvm::Error Lua::CheckSyntax(llvm::StringRef buffer) {
 }
 
 llvm::Error Lua::LoadModule(llvm::StringRef filename) {
-  FileSpec file(filename);
+  const FileSpec file(filename);
   if (!FileSystem::Instance().Exists(file)) {
     return llvm::make_error<llvm::StringError>("invalid path",
                                                llvm::inconvertibleErrorCode());
   }
 
-  ConstString module_extension = file.GetFileNameExtension();
-  if (module_extension != ".lua") {
+  if (file.GetFileNameExtension() != ".lua") {
     return llvm::make_error<llvm::StringError>("invalid extension",
                                                llvm::inconvertibleErrorCode());
   }

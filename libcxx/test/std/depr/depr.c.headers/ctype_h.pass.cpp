@@ -9,8 +9,6 @@
 // <ctype.h>
 
 #include <ctype.h>
-#include <type_traits>
-#include <cassert>
 
 #include "test_macros.h"
 
@@ -70,37 +68,38 @@
 #error toupper defined
 #endif
 
-int main(int, char**)
-{
-    static_assert((std::is_same<decltype(isalnum(0)), int>::value), "");
-    static_assert((std::is_same<decltype(isalpha(0)), int>::value), "");
-    static_assert((std::is_same<decltype(isblank(0)), int>::value), "");
-    static_assert((std::is_same<decltype(iscntrl(0)), int>::value), "");
-    static_assert((std::is_same<decltype(isdigit(0)), int>::value), "");
-    static_assert((std::is_same<decltype(isgraph(0)), int>::value), "");
-    static_assert((std::is_same<decltype(islower(0)), int>::value), "");
-    static_assert((std::is_same<decltype(isprint(0)), int>::value), "");
-    static_assert((std::is_same<decltype(ispunct(0)), int>::value), "");
-    static_assert((std::is_same<decltype(isspace(0)), int>::value), "");
-    static_assert((std::is_same<decltype(isupper(0)), int>::value), "");
-    static_assert((std::is_same<decltype(isxdigit(0)), int>::value), "");
-    static_assert((std::is_same<decltype(tolower(0)), int>::value), "");
-    static_assert((std::is_same<decltype(toupper(0)), int>::value), "");
+ASSERT_SAME_TYPE(int, decltype(isalnum(0)));
+ASSERT_SAME_TYPE(int, decltype(isalpha(0)));
+ASSERT_SAME_TYPE(int, decltype(isblank(0)));
+ASSERT_SAME_TYPE(int, decltype(iscntrl(0)));
+ASSERT_SAME_TYPE(int, decltype(isdigit(0)));
+ASSERT_SAME_TYPE(int, decltype(isgraph(0)));
+ASSERT_SAME_TYPE(int, decltype(islower(0)));
+ASSERT_SAME_TYPE(int, decltype(isprint(0)));
+ASSERT_SAME_TYPE(int, decltype(ispunct(0)));
+ASSERT_SAME_TYPE(int, decltype(isspace(0)));
+ASSERT_SAME_TYPE(int, decltype(isupper(0)));
+ASSERT_SAME_TYPE(int, decltype(isxdigit(0)));
+ASSERT_SAME_TYPE(int, decltype(tolower(0)));
+ASSERT_SAME_TYPE(int, decltype(toupper(0)));
 
-    assert(isalnum('a'));
-    assert(isalpha('a'));
-    assert(isblank(' '));
-    assert(!iscntrl(' '));
-    assert(!isdigit('a'));
-    assert(isgraph('a'));
-    assert(islower('a'));
-    assert(isprint('a'));
-    assert(!ispunct('a'));
-    assert(!isspace('a'));
-    assert(!isupper('a'));
-    assert(isxdigit('a'));
-    assert(tolower('A') == 'a');
-    assert(toupper('a') == 'A');
+#include <cassert>
+
+int main(int, char**) {
+  assert(isalnum('a'));
+  assert(isalpha('a'));
+  assert(isblank(' '));
+  assert(!iscntrl(' '));
+  assert(!isdigit('a'));
+  assert(isgraph('a'));
+  assert(islower('a'));
+  assert(isprint('a'));
+  assert(!ispunct('a'));
+  assert(!isspace('a'));
+  assert(!isupper('a'));
+  assert(isxdigit('a'));
+  assert(tolower('A') == 'a');
+  assert(toupper('a') == 'A');
 
   return 0;
 }

@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestFS.h"
 #include "index/CanonicalIncludes.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
@@ -30,81 +30,21 @@ FileEntryRef addFile(llvm::vfs::InMemoryFileSystem &FS, FileManager &FM,
   return *File;
 }
 
-TEST(CanonicalIncludesTest, CStandardLibrary) {
-  CanonicalIncludes CI;
-  auto Language = LangOptions();
-  Language.C11 = true;
-  CI.addSystemHeadersMapping(Language);
-  // Usual standard library symbols are mapped correctly.
-  EXPECT_EQ("<stdio.h>", CI.mapSymbol("printf"));
-  EXPECT_EQ("", CI.mapSymbol("unknown_symbol"));
-}
-
-TEST(CanonicalIncludesTest, CXXStandardLibrary) {
-  CanonicalIncludes CI;
-  auto Language = LangOptions();
-  Language.CPlusPlus = true;
-  CI.addSystemHeadersMapping(Language);
-
-  // Usual standard library symbols are mapped correctly.
-  EXPECT_EQ("<vector>", CI.mapSymbol("std::vector"));
-  EXPECT_EQ("<cstdio>", CI.mapSymbol("std::printf"));
-  // std::move is ambiguous, currently always mapped to <utility>
-  EXPECT_EQ("<utility>", CI.mapSymbol("std::move"));
-  // Unknown std symbols aren't mapped.
-  EXPECT_EQ("", CI.mapSymbol("std::notathing"));
-  // iosfwd declares some symbols it doesn't own.
-  EXPECT_EQ("<ostream>", CI.mapSymbol("std::ostream"));
-  // And (for now) we assume it owns the others.
+TEST(CanonicalIncludesTest, SystemHeaderMap) {
   auto InMemFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FileManager Files(FileSystemOptions(), InMemFS);
-  auto File = addFile(*InMemFS, Files, testPath("iosfwd"));
-  EXPECT_EQ("<iosfwd>", CI.mapHeader(File));
-}
-
-TEST(CanonicalIncludesTest, PathMapping) {
-  auto InMemFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  FileManager Files(FileSystemOptions(), InMemFS);
-  std::string BarPath = testPath("foo/bar");
-  auto Bar = addFile(*InMemFS, Files, BarPath);
-  auto Other = addFile(*InMemFS, Files, testPath("foo/baz"));
-  // As used for IWYU pragmas.
-  CanonicalIncludes CI;
-  CI.addMapping(Bar, "<baz>");
-
-  // We added a mapping for baz.
-  EXPECT_EQ("<baz>", CI.mapHeader(Bar));
-  // Other file doesn't have a mapping.
-  EXPECT_EQ("", CI.mapHeader(Other));
-
-  // Add hard link to "foo/bar" and check that it is also mapped to <baz>, hence
-  // does not depend on the header name.
-  std::string HardLinkPath = testPath("hard/link");
-  InMemFS->addHardLink(HardLinkPath, BarPath);
-  auto HardLinkFile = Files.getFileRef(HardLinkPath);
-  ASSERT_THAT_EXPECTED(HardLinkFile, llvm::Succeeded());
-  EXPECT_EQ("<baz>", CI.mapHeader(*HardLinkFile));
-}
-
-TEST(CanonicalIncludesTest, Precedence) {
-  auto InMemFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  FileManager Files(FileSystemOptions(), InMemFS);
-  auto File = addFile(*InMemFS, Files, testPath("some/path"));
 
   CanonicalIncludes CI;
-  CI.addMapping(File, "<path>");
   LangOptions Language;
   Language.CPlusPlus = true;
   CI.addSystemHeadersMapping(Language);
 
-  // We added a mapping from some/path to <path>.
-  ASSERT_EQ("<path>", CI.mapHeader(File));
   // We should have a path from 'bits/stl_vector.h' to '<vector>'.
   // FIXME: The Standrad Library map in CanonicalIncludes expects forward
   // slashes and Windows would use backward slashes instead, so the headers are
   // not matched appropriately.
   auto STLVectorFile = addFile(*InMemFS, Files, "bits/stl_vector.h");
-  ASSERT_EQ("<vector>", CI.mapHeader(STLVectorFile));
+  ASSERT_EQ("<vector>", CI.mapHeader(STLVectorFile.getName()));
 }
 
 } // namespace

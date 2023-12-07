@@ -129,15 +129,12 @@ _start:
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
-// DISASM-NEXT: <$a>:
+// DISASM-NEXT: <.iplt>:
 // DISASM-NEXT:    20130:       add     r12, pc, #0, #12
 // DISASM-NEXT:    20134:       add     r12, r12, #16
 // DISASM-NEXT:    20138:       ldr     pc, [r12, #24]!
-// DISASM: <$d>:
 // DISASM-NEXT:    2013c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM: <$a>:
 // DISASM-NEXT:    20140:       add     r12, pc, #0, #12
 // DISASM-NEXT:    20144:       add     r12, r12, #16
 // DISASM-NEXT:    20148:       ldr     pc, [r12, #12]!
-// DISASM: <$d>:
 // DISASM-NEXT:    2014c:       d4 d4 d4 d4     .word   0xd4d4d4d4

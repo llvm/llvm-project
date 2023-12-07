@@ -1,4 +1,5 @@
-// RUN: mlir-opt -mlir-disable-threading -test-spirv-target-env %s | FileCheck %s
+// RUN: mlir-opt --split-input-file --verify-diagnostics --mlir-disable-threading \
+// RUN:   --test-spirv-target-env %s | FileCheck %s
 
 // Note: The following tests check that a spirv.target_env can properly control
 // the conversion target and filter unavailable ops during the conversion.
@@ -31,6 +32,14 @@
 
 // Vulkan memory model is available via extension SPV_KHR_vulkan_memory_model,
 // which extensions are incorporated into SPIR-V 1.5.
+
+
+// expected-error @+1 {{missing 'spirv.target_env' attribute}}
+func.func @main() {
+  return
+}
+
+// -----
 
 //===----------------------------------------------------------------------===//
 // MaxVersion

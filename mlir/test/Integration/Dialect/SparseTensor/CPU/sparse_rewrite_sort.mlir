@@ -1,8 +1,31 @@
-// RUN: mlir-opt %s --sparse-compiler=enable-runtime-library=false | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
-// RUN: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
+//
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
+// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with vectorization.
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with  VLA vectorization.
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 module {
   func.func private @printMemref1dI32(%ptr : memref<?xi32>) attributes { llvm.emit_c_interface }
@@ -49,23 +72,43 @@ module {
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
 
     // Sort 0 elements.
+    // Quick sort.
     // CHECK: [10,  2,  0,  5,  1]
-    sparse_tensor.sort %i0, %x0 : memref<?xi32>
+    sparse_tensor.sort quick_sort %i0, %x0 : memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
     // Stable sort.
     // CHECK: [10,  2,  0,  5,  1]
-    sparse_tensor.sort stable %i0, %x0 : memref<?xi32>
+    sparse_tensor.sort insertion_sort_stable %i0, %x0 : memref<?xi32>
+    call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
+    // Heap sort.
+    // CHECK: [10,  2,  0,  5,  1]
+    sparse_tensor.sort heap_sort %i0, %x0 : memref<?xi32>
+    call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
+    // Hybrid sort.
+    // CHECK: [10,  2,  0,  5,  1]
+    sparse_tensor.sort hybrid_quick_sort %i0, %x0 : memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
 
     // Sort the first 4 elements, with the last valid value untouched.
+    // Quick sort.
     // CHECK: [0,  2,  5, 10,  1]
-    sparse_tensor.sort %i4, %x0 : memref<?xi32>
+    sparse_tensor.sort quick_sort %i4, %x0 : memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
     // Stable sort.
     // CHECK: [0,  2,  5,  10,  1]
     call @storeValuesTo(%x0, %c10, %c2, %c0, %c5, %c1)
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
-    sparse_tensor.sort stable %i4, %x0 : memref<?xi32>
+    sparse_tensor.sort insertion_sort_stable %i4, %x0 : memref<?xi32>
+    call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
+    // Heap sort.
+    // CHECK: [0,  2,  5,  10,  1]
+    call @storeValuesTo(%x0, %c10, %c2, %c0, %c5, %c1)
+      : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
+    sparse_tensor.sort heap_sort %i4, %x0 : memref<?xi32>
+    call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
+    // Hybrid sort.
+    // CHECK: [0,  2,  5, 10,  1]
+    sparse_tensor.sort hybrid_quick_sort %i4, %x0 : memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
 
     // Prepare more buffers of different dimensions.
@@ -80,7 +123,7 @@ module {
     // CHECK: [1,  1,  2,  5,  10]
     // CHECK: [3,  3,  1,  10,  1
     // CHECK: [9,  9,  4,  7,  2
-    // CHECK: [8,  7,  10,  9,  6
+    // CHECK: [7,  8,  10,  9,  6
     call @storeValuesTo(%x0, %c10, %c2, %c1, %c5, %c1)
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
     call @storeValuesTo(%x1, %c1, %c1, %c3, %c10, %c3)
@@ -89,7 +132,7 @@ module {
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
     call @storeValuesTo(%y0, %c6, %c10, %c8, %c9, %c7)
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
-    sparse_tensor.sort %i5, %x0, %x1, %x2 jointly %y0
+    sparse_tensor.sort quick_sort %i5, %x0, %x1, %x2 jointly %y0
       : memref<?xi32>, memref<?xi32>, memref<?xi32> jointly memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
     call @printMemref1dI32(%x1) : (memref<?xi32>) -> ()
@@ -108,7 +151,26 @@ module {
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
     call @storeValuesTo(%y0, %c6, %c10, %c8, %c9, %c7)
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
-    sparse_tensor.sort stable %i5, %x0, %x1, %x2 jointly %y0
+    sparse_tensor.sort insertion_sort_stable %i5, %x0, %x1, %x2 jointly %y0
+      : memref<?xi32>, memref<?xi32>, memref<?xi32> jointly memref<?xi32>
+    call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
+    call @printMemref1dI32(%x1) : (memref<?xi32>) -> ()
+    call @printMemref1dI32(%x2) : (memref<?xi32>) -> ()
+    call @printMemref1dI32(%y0) : (memref<?xi32>) -> ()
+    // Heap sort.
+    // CHECK: [1,  1,  2,  5,  10]
+    // CHECK: [3,  3,  1,  10,  1
+    // CHECK: [9,  9,  4,  7,  2
+    // CHECK: [7,  8,  10,  9,  6
+    call @storeValuesTo(%x0, %c10, %c2, %c1, %c5, %c1)
+      : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
+    call @storeValuesTo(%x1, %c1, %c1, %c3, %c10, %c3)
+      : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
+    call @storeValuesTo(%x2, %c2, %c4, %c9, %c7, %c9)
+      : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
+    call @storeValuesTo(%y0, %c6, %c10, %c8, %c9, %c7)
+      : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
+    sparse_tensor.sort heap_sort %i5, %x0, %x1, %x2 jointly %y0
       : memref<?xi32>, memref<?xi32>, memref<?xi32> jointly memref<?xi32>
     call @printMemref1dI32(%x0) : (memref<?xi32>) -> ()
     call @printMemref1dI32(%x1) : (memref<?xi32>) -> ()

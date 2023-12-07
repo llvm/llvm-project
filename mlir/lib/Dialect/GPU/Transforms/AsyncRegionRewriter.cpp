@@ -17,8 +17,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Utils.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -111,12 +111,13 @@ private:
     resultTypes.reserve(1 + op->getNumResults());
     copy(op->getResultTypes(), std::back_inserter(resultTypes));
     resultTypes.push_back(tokenType);
-    auto *newOp = Operation::create(op->getLoc(), op->getName(), resultTypes,
-                                    op->getOperands(), op->getAttrDictionary(),
-                                    op->getSuccessors(), op->getNumRegions());
+    auto *newOp = Operation::create(
+        op->getLoc(), op->getName(), resultTypes, op->getOperands(),
+        op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+        op->getSuccessors(), op->getNumRegions());
 
     // Clone regions into new op.
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
     for (auto pair : llvm::zip_first(op->getRegions(), newOp->getRegions()))
       std::get<0>(pair).cloneInto(&std::get<1>(pair), mapping);
 
@@ -157,9 +158,9 @@ async::ExecuteOp addExecuteResults(async::ExecuteOp executeOp,
   transform(executeOp.getResultTypes(), std::back_inserter(resultTypes),
             [](Type type) {
               // Extract value type from !async.value.
-              if (auto valueType = type.dyn_cast<async::ValueType>())
+              if (auto valueType = dyn_cast<async::ValueType>(type))
                 return valueType.getValueType();
-              assert(type.isa<async::TokenType>() && "expected token type");
+              assert(isa<async::TokenType>(type) && "expected token type");
               return type;
             });
   transform(results, std::back_inserter(resultTypes),
@@ -170,7 +171,7 @@ async::ExecuteOp addExecuteResults(async::ExecuteOp executeOp,
   auto newOp = builder.create<async::ExecuteOp>(
       executeOp.getLoc(), TypeRange{resultTypes}.drop_front() /*drop token*/,
       executeOp.getDependencies(), executeOp.getBodyOperands());
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   newOp.getRegion().getBlocks().clear();
   executeOp.getRegion().cloneInto(&newOp.getRegion(), mapper);
 
@@ -304,9 +305,9 @@ struct GpuAsyncRegionPass::SingleTokenUseCallback {
         executeOp.getBodyResults(), [](OpResult result) {
           if (result.use_empty() || result.hasOneUse())
             return false;
-          auto valueType = result.getType().dyn_cast<async::ValueType>();
+          auto valueType = dyn_cast<async::ValueType>(result.getType());
           return valueType &&
-                 valueType.getValueType().isa<gpu::AsyncTokenType>();
+                 isa<gpu::AsyncTokenType>(valueType.getValueType());
         });
     if (multiUseResults.empty())
       return;

@@ -9,11 +9,11 @@ target triple = "thumbv7-apple-ios0.0.0"
 ; CHECK-LABEL: foo:
 ; CHECK: ldrb r[[R0:[0-9]+]], [r0]
 ; CHECK: lsls r{{[0-9]+}}, r[[R0]], #31
-define void @foo(i8* %call, double* %p) nounwind {
+define void @foo(ptr %call, ptr %p) nounwind {
 entry:
-  %tmp2 = load i8, i8* %call
+  %tmp2 = load i8, ptr %call
   %tmp3 = trunc i8 %tmp2 to i1
   %cond = select i1 %tmp3, double 2.000000e+00, double 1.000000e+00
-  store double %cond, double* %p
+  store double %cond, ptr %p
   ret void
 }

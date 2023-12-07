@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fcxx-exceptions -fexceptions -triple x86_64-apple-macosx10.13.99 -std=c++11 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=UNALIGNED %s
-// RUN: %clang_cc1 -no-opaque-pointers -fcxx-exceptions -fexceptions -triple x86_64-apple-macosx10.14 -std=c++11 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ALIGNED %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -triple x86_64-apple-macosx10.13.99 -std=c++11 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=UNALIGNED %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -triple x86_64-apple-macosx10.14 -std=c++11 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ALIGNED %s
 
 struct test1_D {
   double d;
@@ -10,12 +10,10 @@ void test1() {
 }
 
 // CHECK-LABEL:     define{{.*}} void @_Z5test1v()
-// CHECK:       [[EXNOBJ:%.*]] = call i8* @__cxa_allocate_exception(i64 8)
-// CHECK-NEXT:  [[EXN:%.*]] = bitcast i8* [[EXNOBJ]] to [[DSTAR:%[^*]*\*]]
-// CHECK-NEXT:  [[EXN2:%.*]] = bitcast [[DSTAR]] [[EXN]] to i8*
-// UNALIGNED-NEXT:  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[EXN2]], i8* align 8 bitcast ([[DSTAR]] @d1 to i8*), i64 8, i1 false)
-// ALIGNED-NEXT:  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[EXN2]], i8* align 8 bitcast ([[DSTAR]] @d1 to i8*), i64 8, i1 false)
-// CHECK-NEXT:  call void @__cxa_throw(i8* [[EXNOBJ]], i8* bitcast ({ i8*, i8* }* @_ZTI7test1_D to i8*), i8* null) [[NR:#[0-9]+]]
+// CHECK:       [[EXNOBJ:%.*]] = call ptr @__cxa_allocate_exception(i64 8)
+// UNALIGNED-NEXT:  call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[EXNOBJ]], ptr align 8 @d1, i64 8, i1 false)
+// ALIGNED-NEXT:  call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[EXNOBJ]], ptr align 8 @d1, i64 8, i1 false)
+// CHECK-NEXT:  call void @__cxa_throw(ptr [[EXNOBJ]], ptr @_ZTI7test1_D, ptr null) [[NR:#[0-9]+]]
 // CHECK-NEXT:  unreachable
 
 
@@ -31,14 +29,13 @@ void test2() {
 }
 
 // CHECK-LABEL:     define{{.*}} void @_Z5test2v()
-// CHECK:       [[EXNVAR:%.*]] = alloca i8*
+// CHECK:       [[EXNVAR:%.*]] = alloca ptr
 // CHECK-NEXT:  [[SELECTORVAR:%.*]] = alloca i32
-// CHECK-NEXT:  [[EXNOBJ:%.*]] = call i8* @__cxa_allocate_exception(i64 16)
-// CHECK-NEXT:  [[EXN:%.*]] = bitcast i8* [[EXNOBJ]] to [[DSTAR:%[^*]*\*]]
-// CHECK-NEXT:  invoke void @_ZN7test2_DC1ERKS_([[DSTAR]] {{[^,]*}} [[EXN]], [[DSTAR]] noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @d2)
+// CHECK-NEXT:  [[EXNOBJ:%.*]] = call ptr @__cxa_allocate_exception(i64 16)
+// CHECK-NEXT:  invoke void @_ZN7test2_DC1ERKS_(ptr {{[^,]*}} [[EXNOBJ]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @d2)
 // CHECK-NEXT:     to label %[[CONT:.*]] unwind label %{{.*}}
 //      :     [[CONT]]:   (can't check this in Release-Asserts builds)
-// CHECK:       call void @__cxa_throw(i8* [[EXNOBJ]], i8* bitcast ({{.*}}* @_ZTI7test2_D to i8*), i8* null) [[NR]]
+// CHECK:       call void @__cxa_throw(ptr [[EXNOBJ]], ptr @_ZTI7test2_D, ptr null) [[NR]]
 // CHECK-NEXT:  unreachable
 
 
@@ -53,10 +50,9 @@ void test3() {
 }
 
 // CHECK-LABEL:     define{{.*}} void @_Z5test3v()
-// CHECK:       [[EXNOBJ:%.*]] = call i8* @__cxa_allocate_exception(i64 8)
-// CHECK-NEXT:  [[EXN:%.*]] = bitcast i8* [[EXNOBJ]] to [[D:%[^*]+]]**
-// CHECK-NEXT:  store [[D]]* null, [[D]]** [[EXN]]
-// CHECK-NEXT:  call void @__cxa_throw(i8* [[EXNOBJ]], i8* bitcast ({ i8*, i8*, i32, i8* }* @_ZTIPV7test3_D to i8*), i8* null) [[NR]]
+// CHECK:       [[EXNOBJ:%.*]] = call ptr @__cxa_allocate_exception(i64 8)
+// CHECK-NEXT:  store ptr null, ptr [[EXNOBJ]]
+// CHECK-NEXT:  call void @__cxa_throw(ptr [[EXNOBJ]], ptr @_ZTIPV7test3_D, ptr null) [[NR]]
 // CHECK-NEXT:  unreachable
 
 
@@ -68,8 +64,6 @@ void test4() {
 // CHECK:        call void @__cxa_rethrow() [[NR]]
 // CHECK-NEXT:   unreachable
 
-
-// rdar://problem/7696549
 namespace test5 {
   struct A {
     A();
@@ -81,13 +75,12 @@ namespace test5 {
     try { throw A(); } catch (A &x) {}
   }
 // CHECK-LABEL:      define{{.*}} void @_ZN5test54testEv()
-// CHECK:      [[EXNOBJ:%.*]] = call i8* @__cxa_allocate_exception(i64 1)
-// CHECK:      [[EXNCAST:%.*]] = bitcast i8* [[EXNOBJ]] to [[A:%[^*]*]]*
-// CHECK-NEXT: invoke void @_ZN5test51AC1Ev([[A]]* {{[^,]*}} [[EXNCAST]])
-// CHECK:      invoke void @__cxa_throw(i8* [[EXNOBJ]], i8* bitcast ({{.*}}* @_ZTIN5test51AE to i8*), i8* bitcast (void ([[A]]*)* @_ZN5test51AD1Ev to i8*)) [[NR]]
+// CHECK:      [[EXNOBJ:%.*]] = call ptr @__cxa_allocate_exception(i64 1)
+// CHECK: invoke void @_ZN5test51AC1Ev(ptr {{[^,]*}} [[EXNOBJ]])
+// CHECK:      invoke void @__cxa_throw(ptr [[EXNOBJ]], ptr @_ZTIN5test51AE, ptr @_ZN5test51AD1Ev) [[NR]]
 // CHECK-NEXT:   to label {{%.*}} unwind label %[[HANDLER:[^ ]*]]
 //      :    [[HANDLER]]:  (can't check this in Release-Asserts builds)
-// CHECK:      {{%.*}} = call i32 @llvm.eh.typeid.for(i8* bitcast ({{.*}}* @_ZTIN5test51AE to i8*))
+// CHECK:      {{%.*}} = call i32 @llvm.eh.typeid.for(ptr @_ZTIN5test51AE)
 }
 
 namespace test6 {
@@ -103,52 +96,50 @@ namespace test6 {
 // PR7127
 namespace test7 {
 // CHECK-LABEL:      define{{.*}} i32 @_ZN5test73fooEv() 
-// CHECK-SAME:  personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+// CHECK-SAME:  personality ptr @__gxx_personality_v0
   int foo() {
-// CHECK:      [[CAUGHTEXNVAR:%.*]] = alloca i8*
+// CHECK:      [[CAUGHTEXNVAR:%.*]] = alloca ptr
 // CHECK-NEXT: [[SELECTORVAR:%.*]] = alloca i32
 // CHECK-NEXT: [[INTCATCHVAR:%.*]] = alloca i32
     try {
       try {
-// CHECK-NEXT: [[EXNALLOC:%.*]] = call i8* @__cxa_allocate_exception
-// CHECK-NEXT: bitcast i8* [[EXNALLOC]] to i32*
-// CHECK-NEXT: store i32 1, i32*
-// CHECK-NEXT: invoke void @__cxa_throw(i8* [[EXNALLOC]], i8* bitcast (i8** @_ZTIi to i8*), i8* null
+// CHECK-NEXT: [[EXNALLOC:%.*]] = call ptr @__cxa_allocate_exception
+// CHECK-NEXT: store i32 1, ptr
+// CHECK-NEXT: invoke void @__cxa_throw(ptr [[EXNALLOC]], ptr @_ZTIi, ptr null
         throw 1;
       }
 
-// CHECK:      [[CAUGHTVAL:%.*]] = landingpad { i8*, i32 }
-// CHECK-NEXT:   catch i8* bitcast (i8** @_ZTIi to i8*)
-// CHECK-NEXT:   catch i8* null
-// CHECK-NEXT: [[CAUGHTEXN:%.*]] = extractvalue { i8*, i32 } [[CAUGHTVAL]], 0
-// CHECK-NEXT: store i8* [[CAUGHTEXN]], i8** [[CAUGHTEXNVAR]]
-// CHECK-NEXT: [[SELECTOR:%.*]] = extractvalue { i8*, i32 } [[CAUGHTVAL]], 1
-// CHECK-NEXT: store i32 [[SELECTOR]], i32* [[SELECTORVAR]]
+// CHECK:      [[CAUGHTVAL:%.*]] = landingpad { ptr, i32 }
+// CHECK-NEXT:   catch ptr @_ZTIi
+// CHECK-NEXT:   catch ptr null
+// CHECK-NEXT: [[CAUGHTEXN:%.*]] = extractvalue { ptr, i32 } [[CAUGHTVAL]], 0
+// CHECK-NEXT: store ptr [[CAUGHTEXN]], ptr [[CAUGHTEXNVAR]]
+// CHECK-NEXT: [[SELECTOR:%.*]] = extractvalue { ptr, i32 } [[CAUGHTVAL]], 1
+// CHECK-NEXT: store i32 [[SELECTOR]], ptr [[SELECTORVAR]]
 // CHECK-NEXT: br label
-// CHECK:      [[SELECTOR:%.*]] = load i32, i32* [[SELECTORVAR]]
-// CHECK-NEXT: [[T0:%.*]] = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*))
+// CHECK:      [[SELECTOR:%.*]] = load i32, ptr [[SELECTORVAR]]
+// CHECK-NEXT: [[T0:%.*]] = call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
 // CHECK-NEXT: icmp eq i32 [[SELECTOR]], [[T0]]
 // CHECK-NEXT: br i1
-// CHECK:      [[T0:%.*]] = load i8*, i8** [[CAUGHTEXNVAR]]
-// CHECK-NEXT: [[T1:%.*]] = call i8* @__cxa_begin_catch(i8* [[T0]])
-// CHECK-NEXT: [[T2:%.*]] = bitcast i8* [[T1]] to i32*
-// CHECK-NEXT: [[T3:%.*]] = load i32, i32* [[T2]]
-// CHECK-NEXT: store i32 [[T3]], i32* {{%.*}}, align 4
+// CHECK:      [[T0:%.*]] = load ptr, ptr [[CAUGHTEXNVAR]]
+// CHECK-NEXT: [[T1:%.*]] = call ptr @__cxa_begin_catch(ptr [[T0]])
+// CHECK-NEXT: [[T3:%.*]] = load i32, ptr [[T1]]
+// CHECK-NEXT: store i32 [[T3]], ptr {{%.*}}, align 4
 // CHECK-NEXT: invoke void @__cxa_rethrow
       catch (int) {
         throw;
       }
     }
-// CHECK:      [[CAUGHTVAL:%.*]] = landingpad { i8*, i32 }
-// CHECK-NEXT:   catch i8* null
-// CHECK-NEXT: [[CAUGHTEXN:%.*]] = extractvalue { i8*, i32 } [[CAUGHTVAL]], 0
-// CHECK-NEXT: store i8* [[CAUGHTEXN]], i8** [[CAUGHTEXNVAR]]
-// CHECK-NEXT: [[SELECTOR:%.*]] = extractvalue { i8*, i32 } [[CAUGHTVAL]], 1
-// CHECK-NEXT: store i32 [[SELECTOR]], i32* [[SELECTORVAR]]
+// CHECK:      [[CAUGHTVAL:%.*]] = landingpad { ptr, i32 }
+// CHECK-NEXT:   catch ptr null
+// CHECK-NEXT: [[CAUGHTEXN:%.*]] = extractvalue { ptr, i32 } [[CAUGHTVAL]], 0
+// CHECK-NEXT: store ptr [[CAUGHTEXN]], ptr [[CAUGHTEXNVAR]]
+// CHECK-NEXT: [[SELECTOR:%.*]] = extractvalue { ptr, i32 } [[CAUGHTVAL]], 1
+// CHECK-NEXT: store i32 [[SELECTOR]], ptr [[SELECTORVAR]]
 // CHECK-NEXT: call void @__cxa_end_catch()
 // CHECK-NEXT: br label
-// CHECK:      load i8*, i8** [[CAUGHTEXNVAR]]
-// CHECK-NEXT: call i8* @__cxa_begin_catch
+// CHECK:      load ptr, ptr [[CAUGHTEXNVAR]]
+// CHECK-NEXT: call ptr @__cxa_begin_catch
 // CHECK-NEXT: call void @__cxa_end_catch
     catch (...) {
     }
@@ -168,10 +159,9 @@ namespace test8 {
       // CHECK:      invoke void @_ZN5test83barEv()
       bar();
     } catch (A a) {
-      // CHECK:      call i8* @__cxa_get_exception_ptr
-      // CHECK-NEXT: bitcast
+      // CHECK:      call ptr @__cxa_get_exception_ptr
       // CHECK-NEXT: invoke void @_ZN5test81AC1ERKS0_(
-      // CHECK:      call i8* @__cxa_begin_catch
+      // CHECK:      call ptr @__cxa_begin_catch
       // CHECK-NEXT: call void @_ZN5test81AD1Ev(
       // CHECK:      call void @__cxa_end_catch()
       // CHECK:      ret void
@@ -180,27 +170,26 @@ namespace test8 {
 }
 
 // Constructor function-try-block must rethrow on fallthrough.
-// rdar://problem/7696603
 namespace test9 {
   void opaque();
 
   struct A { A(); };
 
 
-  // CHECK-LABEL: define{{.*}} void @_ZN5test91AC2Ev(%"struct.test9::A"* {{[^,]*}} %this) unnamed_addr
-  // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+  // CHECK-LABEL: define{{.*}} void @_ZN5test91AC2Ev(ptr {{[^,]*}} %this) unnamed_addr
+  // CHECK-SAME:  personality ptr @__gxx_personality_v0
   A::A() try {
   // CHECK:      invoke void @_ZN5test96opaqueEv()
     opaque();
   } catch (int x) {
-  // CHECK:      landingpad { i8*, i32 }
-  // CHECK-NEXT:   catch i8* bitcast (i8** @_ZTIi to i8*)
+  // CHECK:      landingpad { ptr, i32 }
+  // CHECK-NEXT:   catch ptr @_ZTIi
 
-  // CHECK:      call i8* @__cxa_begin_catch
+  // CHECK:      call ptr @__cxa_begin_catch
   // CHECK:      invoke void @_ZN5test96opaqueEv()
   // CHECK:      invoke void @__cxa_rethrow()
 
-  // CHECK-LABEL:      define{{.*}} void @_ZN5test91AC1Ev(%"struct.test9::A"* {{[^,]*}} %this) unnamed_addr
+  // CHECK-LABEL:      define{{.*}} void @_ZN5test91AC1Ev(ptr {{[^,]*}} %this) unnamed_addr
   // CHECK:      call void @_ZN5test91AC2Ev
   // CHECK-NEXT: ret void
     opaque();
@@ -222,20 +211,16 @@ namespace test10 {
     // CHECK:      invoke void @_ZN6test106opaqueEv()
       opaque();
     } catch (int i) {
-    // CHECK:      call i8* @__cxa_begin_catch
-    // CHECK-NEXT: bitcast
-    // CHECK-NEXT: load i32, i32*
+    // CHECK:      call ptr @__cxa_begin_catch
+    // CHECK-NEXT: load i32, ptr
     // CHECK-NEXT: store i32
     // CHECK-NEXT: call void @__cxa_end_catch() [[NUW:#[0-9]+]]
     } catch (B a) {
-    // CHECK:      call i8* @__cxa_begin_catch
-    // CHECK-NEXT: bitcast
-    // CHECK-NEXT: bitcast
-    // CHECK-NEXT: bitcast
+    // CHECK:      call ptr @__cxa_begin_catch
     // CHECK-NEXT: call void @llvm.memcpy
     // CHECK-NEXT: invoke void @__cxa_end_catch()
     } catch (...) {
-    // CHECK:      call i8* @__cxa_begin_catch
+    // CHECK:      call ptr @__cxa_begin_catch
     // CHECK-NEXT: invoke void @__cxa_end_catch()
     }
 
@@ -244,7 +229,6 @@ namespace test10 {
 }
 
 // __cxa_begin_catch returns pointers by value, even when catching by reference
-// <rdar://problem/8212123>
 namespace test11 {
   void opaque();
 
@@ -254,11 +238,10 @@ namespace test11 {
       // CHECK:      invoke void @_ZN6test116opaqueEv()
       opaque();
     } catch (int**&p) {
-      // CHECK:      [[EXN:%.*]] = load i8*, i8**
-      // CHECK-NEXT: call i8* @__cxa_begin_catch(i8* [[EXN]]) [[NUW]]
-      // CHECK-NEXT: [[ADJ1:%.*]] = getelementptr i8, i8* [[EXN]], i32 32
-      // CHECK-NEXT: [[ADJ2:%.*]] = bitcast i8* [[ADJ1]] to i32***
-      // CHECK-NEXT: store i32*** [[ADJ2]], i32**** [[P:%.*]]
+      // CHECK:      [[EXN:%.*]] = load ptr, ptr
+      // CHECK-NEXT: call ptr @__cxa_begin_catch(ptr [[EXN]]) [[NUW]]
+      // CHECK-NEXT: [[ADJ1:%.*]] = getelementptr i8, ptr [[EXN]], i32 32
+      // CHECK-NEXT: store ptr [[ADJ1]], ptr [[P:%.*]]
       // CHECK-NEXT: call void @__cxa_end_catch() [[NUW]]
     }
   }
@@ -268,18 +251,17 @@ namespace test11 {
   // CHECK-LABEL: define{{.*}} void @_ZN6test113barEv()
   void bar() {
     try {
-      // CHECK:      [[EXNSLOT:%.*]] = alloca i8*
+      // CHECK:      [[EXNSLOT:%.*]] = alloca ptr
       // CHECK-NEXT: [[SELECTORSLOT:%.*]] = alloca i32
-      // CHECK-NEXT: [[P:%.*]] = alloca [[A:%.*]]**,
-      // CHECK-NEXT: [[TMP:%.*]] = alloca [[A]]*
+      // CHECK-NEXT: [[P:%.*]] = alloca ptr,
+      // CHECK-NEXT: [[TMP:%.*]] = alloca ptr
       // CHECK-NEXT: invoke void @_ZN6test116opaqueEv()
       opaque();
     } catch (A*&p) {
-      // CHECK:      [[EXN:%.*]] = load i8*, i8** [[EXNSLOT]]
-      // CHECK-NEXT: [[ADJ1:%.*]] = call i8* @__cxa_begin_catch(i8* [[EXN]]) [[NUW]]
-      // CHECK-NEXT: [[ADJ2:%.*]] = bitcast i8* [[ADJ1]] to [[A]]*
-      // CHECK-NEXT: store [[A]]* [[ADJ2]], [[A]]** [[TMP]]
-      // CHECK-NEXT: store [[A]]** [[TMP]], [[A]]*** [[P]]
+      // CHECK:      [[EXN:%.*]] = load ptr, ptr [[EXNSLOT]]
+      // CHECK-NEXT: [[ADJ1:%.*]] = call ptr @__cxa_begin_catch(ptr [[EXN]]) [[NUW]]
+      // CHECK-NEXT: store ptr [[ADJ1]], ptr [[TMP]]
+      // CHECK-NEXT: store ptr [[TMP]], ptr [[P]]
       // CHECK-NEXT: call void @__cxa_end_catch() [[NUW]]
     }
   }
@@ -294,7 +276,7 @@ namespace test12 {
   void test() {
     // CHECK: [[X:%.*]] = alloca [[A:%.*]],
     // CHECK: [[EHCLEANUPDEST:%.*]] = alloca i32
-    // CHECK: [[Y:%.*]] = alloca [[A]]
+    // CHECK: [[Y:%.*]] = alloca [[A:%.*]]
     // CHECK: [[Z:%.*]] = alloca [[A]]
     // CHECK: [[CLEANUPDEST:%.*]] = alloca i32
 
@@ -304,8 +286,8 @@ namespace test12 {
       A y;
       A z;
 
-      // CHECK: invoke void @_ZN6test121AD1Ev([[A]]* {{[^,]*}} [[Z]])
-      // CHECK: invoke void @_ZN6test121AD1Ev([[A]]* {{[^,]*}} [[Y]])
+      // CHECK: invoke void @_ZN6test121AD1Ev(ptr {{[^,]*}} [[Z]])
+      // CHECK: invoke void @_ZN6test121AD1Ev(ptr {{[^,]*}} [[Y]])
       // CHECK-NOT: switch
       goto success;
     }
@@ -313,7 +295,7 @@ namespace test12 {
   success:
     bool _ = true;
 
-    // CHECK: call void @_ZN6test121AD1Ev([[A]]* {{[^,]*}} [[X]])
+    // CHECK: call void @_ZN6test121AD1Ev(ptr {{[^,]*}} [[X]])
     // CHECK-NEXT: ret void
   }
 }
@@ -350,7 +332,6 @@ namespace test13 {
   }
 }
 
-// rdar://problem/8231514
 namespace test14 {
   struct A { ~A(); };
   struct B { ~B(); };
@@ -368,7 +349,6 @@ namespace test14 {
   }
 }
 
-// rdar://problem/8231514
 // JumpDests shouldn't get confused by scopes that aren't normal cleanups.
 namespace test15 {
   struct A { ~A(); };
@@ -381,13 +361,13 @@ namespace test15 {
 
     try {
       // CHECK:      [[X:%.*]] = alloca i32
-      // CHECK:      store i32 10, i32* [[X]]
+      // CHECK:      store i32 10, ptr [[X]]
       // CHECK-NEXT: br label
       //   -> while.cond
       int x = 10;
 
       while (true) {
-        // CHECK:      load i32, i32* [[X]]
+        // CHECK:      load i32, ptr [[X]]
         // CHECK-NEXT: [[COND:%.*]] = invoke noundef zeroext i1 @_ZN6test156opaqueEi
         // CHECK:      br i1 [[COND]]
         if (opaque(x))
@@ -411,40 +391,39 @@ namespace test16 {
 
   // CHECK-LABEL: define{{.*}} void @_ZN6test163barEv()
   void bar() {
-    // CHECK:      [[EXN_SAVE:%.*]] = alloca i8*
+    // CHECK:      [[EXN_SAVE:%.*]] = alloca ptr
     // CHECK-NEXT: [[EXN_ACTIVE:%.*]] = alloca i1
     // CHECK-NEXT: [[TEMP:%.*]] = alloca [[A:%.*]],
-    // CHECK-NEXT: [[EXNSLOT:%.*]] = alloca i8*
+    // CHECK-NEXT: [[EXNSLOT:%.*]] = alloca ptr
     // CHECK-NEXT: [[SELECTORSLOT:%.*]] = alloca i32
     // CHECK-NEXT: [[TEMP_ACTIVE:%.*]] = alloca i1
 
     cond() ? throw B(A()) : foo();
 
     // CHECK-NEXT: [[COND:%.*]] = call noundef zeroext i1 @_ZN6test164condEv()
-    // CHECK-NEXT: store i1 false, i1* [[EXN_ACTIVE]]
-    // CHECK-NEXT: store i1 false, i1* [[TEMP_ACTIVE]]
+    // CHECK-NEXT: store i1 false, ptr [[EXN_ACTIVE]]
+    // CHECK-NEXT: store i1 false, ptr [[TEMP_ACTIVE]]
     // CHECK-NEXT: br i1 [[COND]],
 
-    // CHECK:      [[EXN:%.*]] = call i8* @__cxa_allocate_exception(i64 4)
-    // CHECK-NEXT: store i8* [[EXN]], i8** [[EXN_SAVE]]
-    // CHECK-NEXT: store i1 true, i1* [[EXN_ACTIVE]]
-    // CHECK-NEXT: [[T0:%.*]] = bitcast i8* [[EXN]] to [[B:%.*]]*
-    // CHECK-NEXT: invoke void @_ZN6test161AC1Ev([[A]]* {{[^,]*}} [[TEMP]])
-    // CHECK:      store i1 true, i1* [[TEMP_ACTIVE]]
-    // CHECK-NEXT: invoke void @_ZN6test161BC1ERKNS_1AE([[B]]* {{[^,]*}} [[T0]], [[A]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[TEMP]])
-    // CHECK:      store i1 false, i1* [[EXN_ACTIVE]]
-    // CHECK-NEXT: invoke void @__cxa_throw(i8* [[EXN]],
+    // CHECK:      [[EXN:%.*]] = call ptr @__cxa_allocate_exception(i64 4)
+    // CHECK-NEXT: store ptr [[EXN]], ptr [[EXN_SAVE]]
+    // CHECK-NEXT: store i1 true, ptr [[EXN_ACTIVE]]
+    // CHECK-NEXT: invoke void @_ZN6test161AC1Ev(ptr {{[^,]*}} [[TEMP]])
+    // CHECK:      store i1 true, ptr [[TEMP_ACTIVE]]
+    // CHECK-NEXT: invoke void @_ZN6test161BC1ERKNS_1AE(ptr {{[^,]*}} [[EXN]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[TEMP]])
+    // CHECK:      store i1 false, ptr [[EXN_ACTIVE]]
+    // CHECK-NEXT: invoke void @__cxa_throw(ptr [[EXN]],
 
     // CHECK:      invoke void @_ZN6test163fooEv()
     // CHECK:      br label
 
-    // CHECK:      invoke void @_ZN6test161AD1Ev([[A]]* {{[^,]*}} [[TEMP]])
+    // CHECK:      invoke void @_ZN6test161AD1Ev(ptr {{[^,]*}} [[TEMP]])
     // CHECK:      ret void
 
-    // CHECK:      [[T0:%.*]] = load i1, i1* [[EXN_ACTIVE]]
+    // CHECK:      [[T0:%.*]] = load i1, ptr [[EXN_ACTIVE]]
     // CHECK-NEXT: br i1 [[T0]]
-    // CHECK:      [[T1:%.*]] = load i8*, i8** [[EXN_SAVE]]
-    // CHECK-NEXT: call void @__cxa_free_exception(i8* [[T1]])
+    // CHECK:      [[T1:%.*]] = load ptr, ptr [[EXN_SAVE]]
+    // CHECK-NEXT: call void @__cxa_free_exception(ptr [[T1]])
     // CHECK-NEXT: br label
   }
 }
@@ -464,11 +443,9 @@ int foo() {
   throw DerivedException();
   // The alignment passed to memset is 16 on Darwin.
 
-  // CHECK: [[T0:%.*]] = call i8* @__cxa_allocate_exception(i64 16)
-  // CHECK-NEXT: [[T1:%.*]] = bitcast i8* [[T0]] to %"class.test17::DerivedException"*
-  // CHECK-NEXT: [[T2:%.*]] = bitcast %"class.test17::DerivedException"* [[T1]] to i8*
-  // UNALIGNED-NEXT: call void @llvm.memset.p0i8.i64(i8* align 8 [[T2]], i8 0, i64 16, i1 false)
-  // ALIGNED-NEXT: call void @llvm.memset.p0i8.i64(i8* align 16 [[T2]], i8 0, i64 16, i1 false)
+  // CHECK: [[T0:%.*]] = call ptr @__cxa_allocate_exception(i64 16)
+  // UNALIGNED-NEXT: call void @llvm.memset.p0.i64(ptr align 8 [[T0]], i8 0, i64 16, i1 false)
+  // ALIGNED-NEXT: call void @llvm.memset.p0.i64(ptr align 16 [[T0]], i8 0, i64 16, i1 false)
 }
 }
 

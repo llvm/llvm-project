@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: ubsan
-// UNSUPPORTED: libcpp-no-coroutines
 
 // <coroutine>
 // struct noop_coroutine_promise;

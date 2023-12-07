@@ -18,6 +18,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
+#include "SIModeRegisterDefaults.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
@@ -215,13 +216,16 @@ struct SIMode {
 
   SIMode() = default;
 
-  SIMode(const AMDGPU::SIModeRegisterDefaults &Mode) {
+  SIMode(const SIModeRegisterDefaults &Mode) {
     IEEE = Mode.IEEE;
     DX10Clamp = Mode.DX10Clamp;
-    FP32InputDenormals = Mode.FP32InputDenormals;
-    FP32OutputDenormals = Mode.FP32OutputDenormals;
-    FP64FP16InputDenormals = Mode.FP64FP16InputDenormals;
-    FP64FP16OutputDenormals = Mode.FP64FP16OutputDenormals;
+    FP32InputDenormals = Mode.FP32Denormals.Input != DenormalMode::PreserveSign;
+    FP32OutputDenormals =
+        Mode.FP32Denormals.Output != DenormalMode::PreserveSign;
+    FP64FP16InputDenormals =
+        Mode.FP64FP16Denormals.Input != DenormalMode::PreserveSign;
+    FP64FP16OutputDenormals =
+        Mode.FP64FP16Denormals.Output != DenormalMode::PreserveSign;
   }
 
   bool operator ==(const SIMode Other) const {
@@ -252,6 +256,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   uint32_t GDSSize = 0;
   Align DynLDSAlign;
   bool IsEntryFunction = false;
+  bool IsChainFunction = false;
   bool NoSignedZerosFPMath = false;
   bool MemoryBound = false;
   bool WaveLimiter = false;
@@ -272,10 +277,15 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool ReturnsVoid = true;
 
   std::optional<SIArgumentInfo> ArgInfo;
+
+  unsigned PSInputAddr = 0;
+  unsigned PSInputEnable = 0;
+
   SIMode Mode;
   std::optional<FrameIndex> ScavengeFI;
   StringValue VGPRForAGPRCopy;
   StringValue SGPRForEXECCopy;
+  StringValue LongBranchReservedReg;
 
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
@@ -295,6 +305,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("gdsSize", MFI.GDSSize, 0u);
     YamlIO.mapOptional("dynLDSAlign", MFI.DynLDSAlign, Align());
     YamlIO.mapOptional("isEntryFunction", MFI.IsEntryFunction, false);
+    YamlIO.mapOptional("isChainFunction", MFI.IsChainFunction, false);
     YamlIO.mapOptional("noSignedZerosFPMath", MFI.NoSignedZerosFPMath, false);
     YamlIO.mapOptional("memoryBound", MFI.MemoryBound, false);
     YamlIO.mapOptional("waveLimiter", MFI.WaveLimiter, false);
@@ -309,6 +320,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("bytesInStackArgArea", MFI.BytesInStackArgArea, 0u);
     YamlIO.mapOptional("returnsVoid", MFI.ReturnsVoid, true);
     YamlIO.mapOptional("argumentInfo", MFI.ArgInfo);
+    YamlIO.mapOptional("psInputAddr", MFI.PSInputAddr, 0u);
+    YamlIO.mapOptional("psInputEnable", MFI.PSInputEnable, 0u);
     YamlIO.mapOptional("mode", MFI.Mode, SIMode());
     YamlIO.mapOptional("highBitsOf32BitAddress",
                        MFI.HighBitsOf32BitAddress, 0u);
@@ -319,6 +332,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
                        StringValue()); // Don't print out when it's empty.
     YamlIO.mapOptional("sgprForEXECCopy", MFI.SGPRForEXECCopy,
                        StringValue()); // Don't print out when it's empty.
+    YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
+                       StringValue());
   }
 };
 
@@ -360,7 +375,7 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   friend class GCNTargetMachine;
 
   // State of MODE register, assumed FP mode.
-  AMDGPU::SIModeRegisterDefaults Mode;
+  SIModeRegisterDefaults Mode;
 
   // Registers that may be reserved for spilling purposes. These may be the same
   // as the input registers.
@@ -374,6 +389,11 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   // communicate the unswizzled offset from the current dispatch's scratch wave
   // base to the beginning of the new function's frame.
   Register StackPtrOffsetReg = AMDGPU::SP_REG;
+
+  // Registers that may be reserved when RA doesn't allocate enough
+  // registers to plan for the case where an indirect branch ends up
+  // being needed during branch relaxation.
+  Register LongBranchReservedReg;
 
   AMDGPUFunctionArgInfo ArgInfo;
 
@@ -468,7 +488,7 @@ private:
 
   // MachineRegisterInfo callback functions to notify events.
   void MRI_NoteNewVirtualRegister(Register Reg) override;
-  void MRI_NotecloneVirtualRegister(Register NewReg, Register SrcReg) override;
+  void MRI_NoteCloneVirtualRegister(Register NewReg, Register SrcReg) override;
 
 public:
   struct VGPRSpillToAGPR {
@@ -480,13 +500,14 @@ public:
 private:
   // To track virtual VGPR + lane index for each subregister of the SGPR spilled
   // to frameindex key during SILowerSGPRSpills pass.
-  DenseMap<int, std::vector<SIRegisterInfo::SpilledReg>> SGPRSpillToVGPRLanes;
-  // To track physical VGPR + lane index for spilling special SGPRs like Frame
-  // Pointer identified during PrologEpilogInserter.
   DenseMap<int, std::vector<SIRegisterInfo::SpilledReg>>
-      PrologEpilogSGPRSpillToVGPRLanes;
-  unsigned NumVGPRSpillLanes = 0;
-  unsigned NumVGPRPrologEpilogSpillLanes = 0;
+      SGPRSpillsToVirtualVGPRLanes;
+  // To track physical VGPR + lane index for CSR SGPR spills and special SGPRs
+  // like Frame Pointer identified during PrologEpilogInserter.
+  DenseMap<int, std::vector<SIRegisterInfo::SpilledReg>>
+      SGPRSpillsToPhysicalVGPRLanes;
+  unsigned NumVirtualVGPRSpillLanes = 0;
+  unsigned NumPhysicalVGPRSpillLanes = 0;
   SmallVector<Register, 2> SpillVGPRs;
   using WWMSpillsMap = MapVector<Register, int>;
   // To track the registers used in instructions that can potentially modify the
@@ -530,10 +551,10 @@ private:
 private:
   Register VGPRForAGPRCopy;
 
-  bool allocateVGPRForSGPRSpills(MachineFunction &MF, int FI,
-                                 unsigned LaneIndex);
-  bool allocateVGPRForPrologEpilogSGPRSpills(MachineFunction &MF, int FI,
-                                             unsigned LaneIndex);
+  bool allocateVirtualVGPRForSGPRSpills(MachineFunction &MF, int FI,
+                                        unsigned LaneIndex);
+  bool allocatePhysicalVGPRForSGPRSpills(MachineFunction &MF, int FI,
+                                         unsigned LaneIndex);
 
 public:
   Register getVGPRForAGPRCopy() const {
@@ -547,8 +568,8 @@ public:
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
 
 public:
-  SIMachineFunctionInfo(const MachineFunction &MF);
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;
+  SIMachineFunctionInfo(const Function &F, const GCNSubtarget *STI);
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -562,16 +583,14 @@ public:
 
   void reserveWWMRegister(Register Reg) { WWMReservedRegs.insert(Reg); }
 
-  AMDGPU::SIModeRegisterDefaults getMode() const {
-    return Mode;
-  }
+  SIModeRegisterDefaults getMode() const { return Mode; }
 
   ArrayRef<SIRegisterInfo::SpilledReg>
-  getSGPRSpillToVGPRLanes(int FrameIndex) const {
-    auto I = SGPRSpillToVGPRLanes.find(FrameIndex);
-    return (I == SGPRSpillToVGPRLanes.end())
+  getSGPRSpillToVirtualVGPRLanes(int FrameIndex) const {
+    auto I = SGPRSpillsToVirtualVGPRLanes.find(FrameIndex);
+    return (I == SGPRSpillsToVirtualVGPRLanes.end())
                ? ArrayRef<SIRegisterInfo::SpilledReg>()
-               : makeArrayRef(I->second);
+               : ArrayRef(I->second);
   }
 
   ArrayRef<Register> getSGPRSpillVGPRs() const { return SpillVGPRs; }
@@ -590,7 +609,7 @@ public:
   // Check if an entry created for \p Reg in PrologEpilogSGPRSpills. Return true
   // on success and false otherwise.
   bool hasPrologEpilogSGPRSpillEntry(Register Reg) const {
-    return PrologEpilogSGPRSpills.find(Reg) != PrologEpilogSGPRSpills.end();
+    return PrologEpilogSGPRSpills.contains(Reg);
   }
 
   // Get the scratch SGPR if allocated to save/restore \p Reg.
@@ -631,25 +650,27 @@ public:
   }
 
   ArrayRef<SIRegisterInfo::SpilledReg>
-  getPrologEpilogSGPRSpillToVGPRLanes(int FrameIndex) const {
-    auto I = PrologEpilogSGPRSpillToVGPRLanes.find(FrameIndex);
-    return (I == PrologEpilogSGPRSpillToVGPRLanes.end())
+  getSGPRSpillToPhysicalVGPRLanes(int FrameIndex) const {
+    auto I = SGPRSpillsToPhysicalVGPRLanes.find(FrameIndex);
+    return (I == SGPRSpillsToPhysicalVGPRLanes.end())
                ? ArrayRef<SIRegisterInfo::SpilledReg>()
-               : makeArrayRef(I->second);
+               : ArrayRef(I->second);
   }
 
   void setFlag(Register Reg, uint8_t Flag) {
     assert(Reg.isVirtual());
     if (VRegFlags.inBounds(Reg))
-      VRegFlags[Reg] |= (uint8_t)1 << Flag;
+      VRegFlags[Reg] |= Flag;
   }
 
   bool checkFlag(Register Reg, uint8_t Flag) const {
     if (Reg.isPhysical())
       return false;
 
-    return VRegFlags.inBounds(Reg) && VRegFlags[Reg] & ((uint8_t)1 << Flag);
+    return VRegFlags.inBounds(Reg) && VRegFlags[Reg] & Flag;
   }
+
+  bool hasVRegFlags() { return VRegFlags.size(); }
 
   void allocateWWMSpill(MachineFunction &MF, Register VGPR, uint64_t Size = 4,
                         Align Alignment = Align(4));
@@ -721,21 +742,35 @@ public:
   }
 
   // Add system SGPRs.
-  Register addWorkGroupIDX() {
-    ArgInfo.WorkGroupIDX = ArgDescriptor::createRegister(getNextSystemSGPR());
-    NumSystemSGPRs += 1;
+  Register addWorkGroupIDX(bool HasArchitectedSGPRs) {
+    Register Reg =
+        HasArchitectedSGPRs ? (MCPhysReg)AMDGPU::TTMP9 : getNextSystemSGPR();
+    ArgInfo.WorkGroupIDX = ArgDescriptor::createRegister(Reg);
+    if (!HasArchitectedSGPRs)
+      NumSystemSGPRs += 1;
+
     return ArgInfo.WorkGroupIDX.getRegister();
   }
 
-  Register addWorkGroupIDY() {
-    ArgInfo.WorkGroupIDY = ArgDescriptor::createRegister(getNextSystemSGPR());
-    NumSystemSGPRs += 1;
+  Register addWorkGroupIDY(bool HasArchitectedSGPRs) {
+    Register Reg =
+        HasArchitectedSGPRs ? (MCPhysReg)AMDGPU::TTMP7 : getNextSystemSGPR();
+    unsigned Mask = HasArchitectedSGPRs && hasWorkGroupIDZ() ? 0xffff : ~0u;
+    ArgInfo.WorkGroupIDY = ArgDescriptor::createRegister(Reg, Mask);
+    if (!HasArchitectedSGPRs)
+      NumSystemSGPRs += 1;
+
     return ArgInfo.WorkGroupIDY.getRegister();
   }
 
-  Register addWorkGroupIDZ() {
-    ArgInfo.WorkGroupIDZ = ArgDescriptor::createRegister(getNextSystemSGPR());
-    NumSystemSGPRs += 1;
+  Register addWorkGroupIDZ(bool HasArchitectedSGPRs) {
+    Register Reg =
+        HasArchitectedSGPRs ? (MCPhysReg)AMDGPU::TTMP7 : getNextSystemSGPR();
+    unsigned Mask = HasArchitectedSGPRs ? 0xffff << 16 : ~0u;
+    ArgInfo.WorkGroupIDZ = ArgDescriptor::createRegister(Reg, Mask);
+    if (!HasArchitectedSGPRs)
+      NumSystemSGPRs += 1;
+
     return ArgInfo.WorkGroupIDZ.getRegister();
   }
 
@@ -900,6 +935,8 @@ public:
     StackPtrOffsetReg = Reg;
   }
 
+  void setLongBranchReservedReg(Register Reg) { LongBranchReservedReg = Reg; }
+
   // Note the unset value for this is AMDGPU::SP_REG rather than
   // NoRegister. This is mostly a workaround for MIR tests where state that
   // can't be directly computed from the function is not preserved in serialized
@@ -907,6 +944,8 @@ public:
   Register getStackPtrOffsetReg() const {
     return StackPtrOffsetReg;
   }
+
+  Register getLongBranchReservedReg() const { return LongBranchReservedReg; }
 
   Register getQueuePtrUserSGPR() const {
     return ArgInfo.QueuePtr.getRegister();

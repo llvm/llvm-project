@@ -13,10 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
-namespace objc {
+namespace clang::tidy::google::objc {
 
 namespace {
 
@@ -52,7 +49,7 @@ FixItHint generateFixItHint(const FunctionDecl *Decl) {
   // otherwise the check cannot determine the appropriate function name prefix
   // to use.
   if (Decl->getStorageClass() != SC_Static)
-    return FixItHint();
+    return {};
 
   StringRef Name = Decl->getName();
   std::string NewName = Decl->getName().str();
@@ -83,7 +80,7 @@ FixItHint generateFixItHint(const FunctionDecl *Decl) {
         CharSourceRange::getTokenRange(SourceRange(Decl->getLocation())),
         llvm::StringRef(NewName));
 
-  return FixItHint();
+  return {};
 }
 
 } // namespace
@@ -117,7 +114,4 @@ void FunctionNamingCheck::check(const MatchFinder::MatchResult &Result) {
       << MatchedDecl << IsGlobal << generateFixItHint(MatchedDecl);
 }
 
-} // namespace objc
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google::objc

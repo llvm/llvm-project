@@ -1,3 +1,7 @@
+..
+   This work is licensed under a Creative Commons Attribution 3.0 Unported License.
+   SPDX-License-Identifier: CC-BY-3.0
+
 ==============================
 LLVM Community Code of Conduct
 ==============================
@@ -23,7 +27,20 @@ events such as the developer meetings and socials, and any other forums created
 by the project that the community uses for communication. It applies to all of
 your communication and conduct in these spaces, including emails, chats, things
 you say, slides, videos, posters, signs, or even t-shirts you display in these
-spaces. In addition, violations of this code outside these spaces may, in rare
+spaces. 
+
+In rare cases, violations of this code outside of these spaces may affect a 
+person’s ability to participate within these spaces. Important examples 
+include `sexual and gender-based violence`_, `hate crimes`_, and `hate speech`_. 
+We do not conduct proactive research, but we have an obligation to respond 
+to any reported concerns. We are not interested in evaluating severity, 
+responding punitively, or holding people accountable. Both the relevance 
+and our response is instead focused on how a person’s continued participation 
+impacts the community’s safety, wellbeing, and inclusivity. We specifically 
+prioritize remaining a welcoming community to victims as well as groups 
+subjected to systemic marginalization or underrepresentation.
+
+In addition, violations of this code outside these spaces may, in rare
 cases, affect a person's ability to participate within them, when the conduct
 amounts to an egregious violation of this code.
 
@@ -119,7 +136,7 @@ needed) email conduct@llvm.org.
 Code of Conduct Committee
 =========================
 
-The committee will consist of a mininum of 5 members and members are asked to
+The committee will consist of a minimum of 5 members and members are asked to
 serve at least a 1 year term. New committee members will be selected by the
 current committee and the LLVM Foundation Board of Directors.
 
@@ -143,6 +160,8 @@ The current committee members are:
 Transparency Reports
 ====================
 
+* `July 15, 2023 <https://llvm.org/coc-reports/2023-07-15-report.html>`_
+* `July 15, 2022 <https://llvm.org/coc-reports/2022-07-15-report.html>`_
 * `April 28, 2022 <https://llvm.org/coc-reports/2022-04-28-report.html>`_
 
 For details about what a Transparency Report is and what it contains, please see the :doc:`Response Guide<ResponseGuide>`.
@@ -153,10 +172,21 @@ Questions?
 If you have questions, please feel free to contact the LLVM Foundation Code of
 Conduct Committee by emailing conduct@llvm.org.
 
+Thanks!
+=======
 
-(This text is based on the `Django Project`_ Code of Conduct, which is in turn
-based on wording from the `Speak Up! project`_.)
+This text is based on the `Django Project`_ Code of Conduct, which is in turn
+based on wording from the `Speak Up! project`_.
+
+License
+=======
+
+All content on this page is licensed under a `Creative Commons Attribution 3.0
+Unported License`_.
 
 .. _Django Project: https://www.djangoproject.com/conduct/
 .. _Speak Up! project: http://speakup.io/coc.html
-
+.. _sexual and gender-based violence:
+.. _hate crimes: https://hatecrime.osce.org
+.. _hate speech: https://www.un.org/en/genocideprevention/documents/UN%20Strategy%20and%20Plan%20of%20Action%20on%20Hate%20Speech%2018%20June%20SYNOPSIS.pdf
+.. _Creative Commons Attribution 3.0 Unported License: http://creativecommons.org/licenses/by/3.0/

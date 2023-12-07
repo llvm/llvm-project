@@ -5,11 +5,14 @@ unittest("VectorizeTests") {
     "//llvm/lib/Analysis",
     "//llvm/lib/AsmParser",
     "//llvm/lib/IR",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/Vectorize",
   ]
   sources = [
+    "VPDomTreeTest.cpp",
     "VPlanHCFGTest.cpp",
     "VPlanSlpTest.cpp",
     "VPlanTest.cpp",
+    "VPlanVerifierTest.cpp",
   ]
 }

@@ -14,27 +14,28 @@
 #ifndef MLIR_DIALECT_LLVMIR_LLVMDIALECT_H_
 #define MLIR_DIALECT_LLVMIR_LLVMDIALECT_H_
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/ThreadLocalCache.h"
+#include "mlir/Transforms/Mem2Reg.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-
-#include "mlir/Dialect/LLVMIR/LLVMOpsInterfaces.h.inc"
 
 namespace llvm {
 class Type;
@@ -208,7 +209,8 @@ private:
 /// global and use it to compute the address of the first character in the
 /// string (operations inserted at the builder insertion point).
 Value createGlobalString(Location loc, OpBuilder &builder, StringRef name,
-                         StringRef value, Linkage linkage);
+                         StringRef value, Linkage linkage,
+                         bool useOpaquePointers);
 
 /// LLVM requires some operations to be inside of a Module operation. This
 /// function confirms that the Operation has the desired properties.
@@ -221,7 +223,7 @@ SmallVector<IntT> convertArrayToIndices(ArrayRef<Attribute> attrs) {
   SmallVector<IntT> indices;
   indices.reserve(attrs.size());
   for (Attribute attr : attrs)
-    indices.push_back(attr.cast<IntegerAttr>().getInt());
+    indices.push_back(cast<IntegerAttr>(attr).getInt());
   return indices;
 }
 
@@ -234,5 +236,18 @@ SmallVector<IntT> convertArrayToIndices(ArrayAttr attrs) {
 
 } // namespace LLVM
 } // namespace mlir
+
+namespace llvm {
+
+// Allow llvm::cast style functions.
+template <typename To>
+struct CastInfo<To, mlir::LLVM::GEPArg>
+    : public CastInfo<To, mlir::LLVM::GEPArg::PointerUnion> {};
+
+template <typename To>
+struct CastInfo<To, const mlir::LLVM::GEPArg>
+    : public CastInfo<To, const mlir::LLVM::GEPArg::PointerUnion> {};
+
+} // namespace llvm
 
 #endif // MLIR_DIALECT_LLVMIR_LLVMDIALECT_H_

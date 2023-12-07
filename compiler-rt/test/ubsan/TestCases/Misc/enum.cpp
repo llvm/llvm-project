@@ -2,7 +2,7 @@
 
 // FIXME: UBSan fails to add the correct instrumentation code for some reason on
 // Windows.
-// XFAIL: windows-msvc
+// XFAIL: target={{.*windows-msvc.*}}
 
 enum E { a = 1 };
 enum class EClass { a = 1 };

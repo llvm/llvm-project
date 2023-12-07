@@ -16,6 +16,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -308,7 +309,7 @@ static std::unique_ptr<TagNode> genLink(const Twine &Text, const Twine &Link) {
 
 static std::unique_ptr<HTMLNode>
 genReference(const Reference &Type, StringRef CurrentDirectory,
-             llvm::Optional<StringRef> JumpToSection = std::nullopt) {
+             std::optional<StringRef> JumpToSection = std::nullopt) {
   if (Type.Path.empty()) {
     if (!JumpToSection)
       return std::make_unique<TextNode>(Type.Name);
@@ -437,7 +438,7 @@ genReferencesBlock(const std::vector<Reference> &References,
 
 static std::unique_ptr<TagNode>
 writeFileDefinition(const Location &L,
-                    llvm::Optional<StringRef> RepositoryUrl = std::nullopt) {
+                    std::optional<StringRef> RepositoryUrl = std::nullopt) {
   if (!L.IsFileInRootDir || !RepositoryUrl)
     return std::make_unique<TagNode>(
         HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
@@ -865,7 +866,7 @@ HTMLGenerator::generateDocs(StringRef RootDir,
     llvm::SmallString<128> Path;
     llvm::sys::path::native(RootDir, Path);
     llvm::sys::path::append(Path, Info->getRelativeFilePath(""));
-    if (CreatedDirs.find(Path) == CreatedDirs.end()) {
+    if (!CreatedDirs.contains(Path)) {
       if (std::error_code Err = llvm::sys::fs::create_directories(Path);
           Err != std::error_code()) {
         return llvm::createStringError(Err, "Failed to create directory '%s'.",

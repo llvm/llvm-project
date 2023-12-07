@@ -131,14 +131,11 @@ struct ModuleAnalysisInfo {
   DenseMap<unsigned, Register> ExtInstSetMap;
   // Contains the list of all global OpVariables in the module.
   SmallVector<MachineInstr *, 4> GlobalVarList;
-  // Maps function names to coresponding function ID registers.
-  StringMap<Register> FuncNameMap;
+  // Maps functions to corresponding function ID registers.
+  DenseMap<const Function *, Register> FuncMap;
   // The set contains machine instructions which are necessary
   // for correct MIR but will not be emitted in function bodies.
   DenseSet<MachineInstr *> InstrsToDelete;
-  // The set contains machine basic blocks which are necessary
-  // for correct MIR but will not be emitted.
-  DenseSet<MachineBasicBlock *> MBBsToSkip;
   // The table contains global aliases of local registers for each machine
   // function. The aliases are used to substitute local registers during
   // code emission.
@@ -152,9 +149,9 @@ struct ModuleAnalysisInfo {
 
   Register getFuncReg(const Function *F) {
     assert(F && "Function is null");
-    auto FuncReg = FuncNameMap.find(getFunctionGlobalIdentifier(F));
-    assert(FuncReg != FuncNameMap.end() && "Cannot find function Id");
-    return FuncReg->second;
+    auto FuncPtrRegPair = FuncMap.find(F);
+    assert(FuncPtrRegPair != FuncMap.end() && "Cannot find function ID");
+    return FuncPtrRegPair->second;
   }
   Register getExtInstSetReg(unsigned SetNum) { return ExtInstSetMap[SetNum]; }
   InstrList &getMSInstrs(unsigned MSType) { return MS[MSType]; }
@@ -211,7 +208,7 @@ private:
       std::function<bool(const SPIRV::DTSortableEntry *)> Pred,
       bool UsePreOrder);
   void processDefInstrs(const Module &M);
-  void collectFuncNames(MachineInstr &MI, const Function &F);
+  void collectFuncNames(MachineInstr &MI, const Function *F);
   void processOtherInstrs(const Module &M);
   void numberRegistersGlobally(const Module &M);
 

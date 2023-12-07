@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s -verify-machineinstrs | FileCheck %s
 
 ; Check that the code is not scalarized: check that no scalar multiplication
 ; are generated.

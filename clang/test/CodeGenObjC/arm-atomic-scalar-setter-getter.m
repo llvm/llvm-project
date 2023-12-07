@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple armv7-apple-darwin10 -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-ARM %s
-// rdar://7761305
 
 @interface I
 @property long long LONG_PROP;

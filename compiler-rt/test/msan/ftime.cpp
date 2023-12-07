@@ -1,7 +1,7 @@
 // RUN: %clangxx_msan -O0 -g %s -o %t && %run %t
 
 // ftime() is deprecated on FreeBSD and NetBSD.
-// UNSUPPORTED: freebsd, netbsd
+// UNSUPPORTED: target={{.*(freebsd|netbsd).*}}
 
 #include <assert.h>
 #include <sys/timeb.h>

@@ -16,8 +16,9 @@
 #include "OSTargets.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
+#include <optional>
 
 namespace clang {
 namespace targets {
@@ -35,6 +36,8 @@ class LLVM_LIBRARY_VISIBILITY M68kTargetInfo : public TargetInfo {
     CK_68060
   } CPU = CK_Unknown;
 
+  const TargetOptions &TargetOpts;
+
 public:
   M68kTargetInfo(const llvm::Triple &Triple, const TargetOptions &);
 
@@ -47,8 +50,8 @@ public:
   std::string convertConstraint(const char *&Constraint) const override;
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
-  llvm::Optional<std::string> handleAsmEscapedChar(char EscChar) const override;
-  const char *getClobbers() const override;
+  std::optional<std::string> handleAsmEscapedChar(char EscChar) const override;
+  std::string_view getClobbers() const override;
   BuiltinVaListKind getBuiltinVaListKind() const override;
   bool setCPU(const std::string &Name) override;
 };

@@ -25,6 +25,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include <optional>
 #include <vector>
 
 namespace lldb_private {
@@ -94,11 +95,6 @@ public:
   /// parameters from the DIE name and instead always adds template parameter
   /// children DIEs.
   ///
-  /// Currently this is only called in two places, when uniquing C++ classes and
-  /// when looking up the definition for a declaration (which is then cached).
-  /// If this is ever called more than twice per DIE, we need to start caching
-  /// the results to prevent unbounded growth of the created clang AST nodes.
-  ///
   /// \param die The struct/class DWARFDIE containing template parameters.
   /// \return A string, including surrounding '<>', of the template parameters.
   /// If the DIE's name already has '<>', returns an empty ConstString because
@@ -136,6 +132,17 @@ protected:
 
   clang::NamespaceDecl *ResolveNamespaceDIE(const DWARFDIE &die);
 
+  /// Returns the namespace decl that a DW_TAG_imported_declaration imports.
+  ///
+  /// \param[in] die The import declaration to resolve. If the DIE is not a
+  ///                DW_TAG_imported_declaration the behaviour is undefined.
+  ///
+  /// \returns The decl corresponding to the namespace that the specified
+  ///          'die' imports. If the imported entity is not a namespace
+  ///          or another import declaration, returns nullptr. If an error
+  ///          occurs, returns nullptr.
+  clang::NamespaceDecl *ResolveImportedDeclarationDIE(const DWARFDIE &die);
+
   bool ParseTemplateDIE(const DWARFDIE &die,
                         lldb_private::TypeSystemClang::TemplateParameterInfos
                             &template_param_infos);
@@ -144,10 +151,6 @@ protected:
       const DWARFDIE &parent_die,
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
-
-  /// Get the template parameters of a die as a string if the die name does not
-  /// already contain them. This happens with -gsimple-template-names.
-  std::string GetTemplateParametersString(const DWARFDIE &die);
 
   std::string GetCPlusPlusQualifiedName(const DWARFDIE &die);
 
@@ -220,11 +223,15 @@ private:
     uint64_t bit_size = 0;
     uint64_t bit_offset = 0;
     bool is_bitfield = false;
+    bool is_artificial = false;
 
     FieldInfo() = default;
 
     void SetIsBitfield(bool flag) { is_bitfield = flag; }
     bool IsBitfield() { return is_bitfield; }
+
+    void SetIsArtificial(bool flag) { is_artificial = flag; }
+    bool IsArtificial() const { return is_artificial; }
 
     bool NextBitfieldOffsetIsValid(const uint64_t next_bit_offset) const {
       // Any subsequent bitfields must not overlap and must be at a higher
@@ -232,6 +239,22 @@ private:
       return (bit_size + bit_offset) <= next_bit_offset;
     }
   };
+
+  /// Returns 'true' if we should create an unnamed bitfield
+  /// and add it to the parser's current AST.
+  ///
+  /// \param[in] last_field_info FieldInfo of the previous DW_TAG_member
+  ///            we parsed.
+  /// \param[in] last_field_end Offset (in bits) where the last parsed field
+  ///            ended.
+  /// \param[in] this_field_info FieldInfo of the current DW_TAG_member
+  ///            being parsed.
+  /// \param[in] layout_info Layout information of all decls parsed by the
+  ///            current parser.
+  bool ShouldCreateUnnamedBitfield(
+      FieldInfo const &last_field_info, uint64_t last_field_end,
+      FieldInfo const &this_field_info,
+      lldb_private::ClangASTImporter::LayoutInfo const &layout_info) const;
 
   /// Parses a DW_TAG_APPLE_property DIE and appends the parsed data to the
   /// list of delayed Objective-C properties.
@@ -294,6 +317,21 @@ private:
       const lldb::ModuleSP &module_sp,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
+
+  /// Parses DW_TAG_variant_part DIE into a structure that encodes all variants
+  /// Note that this is currently being emitted by rustc and not Clang
+  /// \param die DW_TAG_variant_part DIE to parse
+  /// \param parent_die The parent DW_TAG_structure_type to parse
+  /// \param class_clang_type The Rust struct representing parent_die.
+  /// \param default_accesibility The default accessibility that is given to
+  ///  base classes if they don't have an explicit accessibility set
+  /// \param layout_info The layout information that will be updated for
+  //   base classes with the base offset
+  void
+  ParseRustVariantPart(DWARFDIE &die, const DWARFDIE &parent_die,
+                       lldb_private::CompilerType &class_clang_type,
+                       const lldb::AccessType default_accesibility,
+                       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 };
 
 /// Parsed form of all attributes that are relevant for type reconstruction.
@@ -324,7 +362,7 @@ struct ParsedDWARFTypeAttributes {
   DWARFFormValue specification;
   DWARFFormValue type;
   lldb::LanguageType class_language = lldb::eLanguageTypeUnknown;
-  llvm::Optional<uint64_t> byte_size;
+  std::optional<uint64_t> byte_size;
   size_t calling_convention = llvm::dwarf::DW_CC_normal;
   uint32_t bit_stride = 0;
   uint32_t byte_stride = 0;

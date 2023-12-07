@@ -91,7 +91,7 @@ inline ArrayRef<OpcodeDecoder::RingEntry> OpcodeDecoder::ring() {
       {0xf8, 0xd0, &OpcodeDecoder::Decode_11010nnn},
       {0xc0, 0xc0, &OpcodeDecoder::Decode_11xxxyyy},
   };
-  return makeArrayRef(Ring);
+  return ArrayRef(Ring);
 }
 
 inline void OpcodeDecoder::Decode_00xxxxxx(const uint8_t *Opcodes,

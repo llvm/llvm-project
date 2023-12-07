@@ -9,6 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
 
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/properties/architectures.h"
+
 #include "type_traits.h"
 
 namespace __llvm_libc {
@@ -83,6 +86,14 @@ public:
     return __atomic_fetch_add(&val, increment, int(mem_ord));
   }
 
+  T fetch_or(T mask, MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
+    return __atomic_fetch_or(&val, mask, int(mem_ord));
+  }
+
+  T fetch_and(T mask, MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
+    return __atomic_fetch_and(&val, mask, int(mem_ord));
+  }
+
   T fetch_sub(T decrement, MemoryOrder mem_ord = MemoryOrder::SEQ_CST) {
     return __atomic_fetch_sub(&val, decrement, int(mem_ord));
   }
@@ -91,6 +102,18 @@ public:
   // in initializing atomic values without a constructor.
   void set(T rhs) { val = rhs; }
 };
+
+// Issue a thread fence with the given memory ordering.
+LIBC_INLINE void atomic_thread_fence(MemoryOrder mem_ord) {
+// The NVPTX backend currently does not support atomic thread fences so we use a
+// full system fence instead.
+#ifdef LIBC_TARGET_ARCH_IS_NVPTX
+  (void)mem_ord;
+  __nvvm_membar_sys();
+#else
+  __atomic_thread_fence(int(mem_ord));
+#endif
+}
 
 } // namespace cpp
 } // namespace __llvm_libc

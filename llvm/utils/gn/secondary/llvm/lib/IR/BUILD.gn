@@ -10,6 +10,7 @@ static_library("IR") {
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Remarks",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "AbstractCallSite.cpp",
@@ -23,7 +24,9 @@ static_library("IR") {
     "ConstantFold.cpp",
     "ConstantRange.cpp",
     "Constants.cpp",
+    "ConvergenceVerifier.cpp",
     "Core.cpp",
+    "CycleInfo.cpp",
     "DIBuilder.cpp",
     "DataLayout.cpp",
     "DebugInfo.cpp",
@@ -33,6 +36,7 @@ static_library("IR") {
     "DiagnosticInfo.cpp",
     "DiagnosticPrinter.cpp",
     "Dominators.cpp",
+    "EHPersonalities.cpp",
     "FPEnv.cpp",
     "Function.cpp",
     "GCStrategy.cpp",

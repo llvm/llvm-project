@@ -277,8 +277,6 @@ namespace {
                               unsigned &DeadSize, bool &CanDeleteLEA,
                               bool &BaseRegKill);
     bool optimizeThumb2JumpTables();
-    void fixupBTI(unsigned JTI, MachineBasicBlock &OldBB,
-                  MachineBasicBlock &NewBB);
     MachineBasicBlock *adjustJTTargetBlockForward(unsigned JTI,
                                                   MachineBasicBlock *BB,
                                                   MachineBasicBlock *JTBB);
@@ -607,6 +605,10 @@ void ARMConstantIslands::doInitialJumpTablePlacement(
   auto MJTI = MF->getJumpTableInfo();
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
 
+  // Only inline jump tables are placed in the function.
+  if (MJTI->getEntryKind() != MachineJumpTableInfo::EK_Inline)
+    return;
+
   MachineBasicBlock *LastCorrectlyNumberedBB = nullptr;
   for (MachineBasicBlock &MBB : *MF) {
     auto MI = MBB.getLastNonDebugInstr();
@@ -628,6 +630,11 @@ void ARMConstantIslands::doInitialJumpTablePlacement(
     case ARM::tBR_JTr:
     case ARM::BR_JTm_i12:
     case ARM::BR_JTm_rs:
+      // These instructions are emitted only in ARM or Thumb1 modes which do not
+      // support PACBTI. Hence we don't add BTI instructions in the destination
+      // blocks.
+      assert(!MF->getInfo<ARMFunctionInfo>()->branchTargetEnforcement() &&
+             "Branch protection must not be enabled for Arm or Thumb1 modes");
       JTOpcode = ARM::JUMPTABLE_ADDRS;
       break;
     case ARM::t2BR_JT:
@@ -774,6 +781,11 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
   // Compute block offsets and known bits.
   BBUtils->adjustBBOffsetsAfter(&MF->front());
 
+  // We only care about jump table instructions when jump tables are inline.
+  MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
+  bool InlineJumpTables =
+      MJTI && MJTI->getEntryKind() == MachineJumpTableInfo::EK_Inline;
+
   // Now go back through the instructions and build up our data structures.
   for (MachineBasicBlock &MBB : *MF) {
     // If this block doesn't fall through into the next MBB, then this is
@@ -796,7 +808,8 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
           continue;  // Ignore other JT branches
         case ARM::t2BR_JT:
         case ARM::tBR_JTr:
-          T2JumpTables.push_back(&I);
+          if (InlineJumpTables)
+            T2JumpTables.push_back(&I);
           continue;   // Does not get an entry in ImmBranches
         case ARM::Bcc:
           isCond = true;
@@ -843,7 +856,8 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
 
       // Scan the instructions for constant pool operands.
       for (unsigned op = 0, e = I.getNumOperands(); op != e; ++op)
-        if (I.getOperand(op).isCPI() || I.getOperand(op).isJTI()) {
+        if (I.getOperand(op).isCPI() ||
+            (I.getOperand(op).isJTI() && InlineJumpTables)) {
           // We found one.  The addressing mode tells us the max displacement
           // from the PC that this instruction permits.
 
@@ -2116,8 +2130,7 @@ bool ARMConstantIslands::preserveBaseRegister(MachineInstr *JumpMI,
       break;
     }
 
-    for (unsigned K = 0, E = I->getNumOperands(); K != E; ++K) {
-      const MachineOperand &MO = I->getOperand(K);
+    for (const MachineOperand &MO : I->operands()) {
       if (!MO.isReg() || !MO.getReg())
         continue;
       if (MO.isDef() && MO.getReg() == BaseReg)
@@ -2135,8 +2148,7 @@ bool ARMConstantIslands::preserveBaseRegister(MachineInstr *JumpMI,
   // Check the add really is removable, and that nothing else in the block
   // clobbers BaseReg.
   for (++I; &*I != JumpMI; ++I) {
-    for (unsigned K = 0, E = I->getNumOperands(); K != E; ++K) {
-      const MachineOperand &MO = I->getOperand(K);
+    for (const MachineOperand &MO : I->operands()) {
       if (!MO.isReg() || !MO.getReg())
         continue;
       if (MO.isDef() && MO.getReg() == BaseReg)
@@ -2195,8 +2207,7 @@ static void RemoveDeadAddBetweenLEAAndJT(MachineInstr *LEAMI,
   // Ensure EntryReg is not clobbered or used.
   MachineBasicBlock::iterator J(RemovableAdd);
   for (++J; &*J != JumpMI; ++J) {
-    for (unsigned K = 0, E = J->getNumOperands(); K != E; ++K) {
-      const MachineOperand &MO = J->getOperand(K);
+    for (const MachineOperand &MO : J->operands()) {
       if (!MO.isReg() || !MO.getReg())
         continue;
       if (MO.isDef() && MO.getReg() == EntryReg)
@@ -2278,9 +2289,12 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
       //   %t = tLDRr %base, %idx
       Register BaseReg = User.MI->getOperand(0).getReg();
 
-      if (User.MI->getIterator() == User.MI->getParent()->begin())
+      MachineBasicBlock *UserMBB = User.MI->getParent();
+      MachineBasicBlock::iterator Shift = User.MI->getIterator();
+      if (Shift == UserMBB->begin())
         continue;
-      MachineInstr *Shift = User.MI->getPrevNode();
+
+      Shift = prev_nodbg(Shift, UserMBB->begin());
       if (Shift->getOpcode() != ARM::tLSLri ||
           Shift->getOperand(3).getImm() != 2 ||
           !Shift->getOperand(2).isKill())
@@ -2447,38 +2461,6 @@ bool ARMConstantIslands::reorderThumb2JumpTables() {
   return MadeChange;
 }
 
-void ARMConstantIslands::fixupBTI(unsigned JTI, MachineBasicBlock &OldBB,
-                                  MachineBasicBlock &NewBB) {
-  assert(isThumb2 && "BTI in Thumb1?");
-
-  // Insert a BTI instruction into NewBB
-  BuildMI(NewBB, NewBB.begin(), DebugLoc(), TII->get(ARM::t2BTI));
-
-  // Update jump table reference counts.
-  const MachineJumpTableInfo &MJTI = *MF->getJumpTableInfo();
-  const MachineJumpTableEntry &JTE = MJTI.getJumpTables()[JTI];
-  for (const MachineBasicBlock *MBB : JTE.MBBs) {
-    if (MBB != &OldBB)
-      continue;
-    --BlockJumpTableRefCount[MBB];
-    ++BlockJumpTableRefCount[&NewBB];
-  }
-
-  // If the old basic block reference count dropped to zero, remove
-  // the BTI instruction at its beginning.
-  if (BlockJumpTableRefCount[&OldBB] > 0)
-    return;
-
-  // Skip meta instructions
-  auto BTIPos = llvm::find_if_not(OldBB.instrs(), [](const MachineInstr &MI) {
-    return MI.isMetaInstruction();
-  });
-  assert(BTIPos->getOpcode() == ARM::t2BTI &&
-         "BasicBlock is mentioned in a jump table but does start with BTI");
-  if (BTIPos->getOpcode() == ARM::t2BTI)
-    BTIPos->eraseFromParent();
-}
-
 MachineBasicBlock *ARMConstantIslands::adjustJTTargetBlockForward(
     unsigned JTI, MachineBasicBlock *BB, MachineBasicBlock *JTBB) {
   // If the destination block is terminated by an unconditional branch,
@@ -2537,9 +2519,6 @@ MachineBasicBlock *ARMConstantIslands::adjustJTTargetBlockForward(
   // Update the CFG.
   NewBB->addSuccessor(BB);
   JTBB->replaceSuccessor(BB, NewBB);
-
-  if (MF->getInfo<ARMFunctionInfo>()->branchTargetEnforcement())
-    fixupBTI(JTI, *BB, *NewBB);
 
   ++NumJTInserted;
   return NewBB;

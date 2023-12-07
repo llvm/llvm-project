@@ -6,8 +6,8 @@
 
 target triple="aarch64-unknown-linux-gnu"
 
-; CHECK-VF4: Found an estimated cost of 21 for VF 4 For instruction:   %add = fadd float %0, %sum.07
-; CHECK-VF8: Found an estimated cost of 42 for VF 8 For instruction:   %add = fadd float %0, %sum.07
+; CHECK-VF4: Found an estimated cost of 14 for VF 4 For instruction:   %add = fadd float %0, %sum.07
+; CHECK-VF8: Found an estimated cost of 28 for VF 8 For instruction:   %add = fadd float %0, %sum.07
 
 define float @fadd_strict32(ptr noalias nocapture readonly %a, i64 %n) {
 entry:
@@ -28,8 +28,8 @@ for.end:
 }
 
 
-; CHECK-VF4: Found an estimated cost of 18 for VF 4 For instruction:   %add = fadd double %0, %sum.07
-; CHECK-VF8: Found an estimated cost of 36 for VF 8 For instruction:   %add = fadd double %0, %sum.07
+; CHECK-VF4: Found an estimated cost of 12 for VF 4 For instruction:   %add = fadd double %0, %sum.07
+; CHECK-VF8: Found an estimated cost of 24 for VF 8 For instruction:   %add = fadd double %0, %sum.07
 
 define double @fadd_strict64(ptr noalias nocapture readonly %a, i64 %n) {
 entry:
@@ -49,8 +49,8 @@ for.end:
   ret double %add
 }
 
-; CHECK-VF4: Found an estimated cost of 23 for VF 4 For instruction:   %muladd = tail call float @llvm.fmuladd.f32(float %0, float %1, float %sum.07)
-; CHECK-VF8: Found an estimated cost of 46 for VF 8 For instruction:   %muladd = tail call float @llvm.fmuladd.f32(float %0, float %1, float %sum.07)
+; CHECK-VF4: Found an estimated cost of 16 for VF 4 For instruction:   %muladd = tail call float @llvm.fmuladd.f32(float %0, float %1, float %sum.07)
+; CHECK-VF8: Found an estimated cost of 32 for VF 8 For instruction:   %muladd = tail call float @llvm.fmuladd.f32(float %0, float %1, float %sum.07)
 
 define float @fmuladd_strict32(ptr %a, ptr %b, i64 %n) {
 entry:
@@ -74,8 +74,8 @@ for.end:
 
 declare float @llvm.fmuladd.f32(float, float, float)
 
-; CHECK-VF4: Found an estimated cost of 22 for VF 4 For instruction:   %muladd = tail call double @llvm.fmuladd.f64(double %0, double %1, double %sum.07)
-; CHECK-VF8: Found an estimated cost of 44 for VF 8 For instruction:   %muladd = tail call double @llvm.fmuladd.f64(double %0, double %1, double %sum.07)
+; CHECK-VF4: Found an estimated cost of 16 for VF 4 For instruction:   %muladd = tail call double @llvm.fmuladd.f64(double %0, double %1, double %sum.07)
+; CHECK-VF8: Found an estimated cost of 32 for VF 8 For instruction:   %muladd = tail call double @llvm.fmuladd.f64(double %0, double %1, double %sum.07)
 
 define double @fmuladd_strict64(ptr %a, ptr %b, i64 %n) {
 entry:

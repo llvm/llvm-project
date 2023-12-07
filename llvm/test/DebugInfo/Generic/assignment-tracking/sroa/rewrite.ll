@@ -1,4 +1,4 @@
-; RUN: opt -passes=sroa,verify -S %s -experimental-assignment-tracking -o - \
+; RUN: opt -passes=sroa,verify -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ; Check that the new slices of an alloca and memset intructions get dbg.assign
@@ -37,12 +37,12 @@
 
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_5]], metadata ptr %S.sroa.0, metadata !DIExpression()), !dbg
 ;; Check the middle slice (no memset) gets a correct dbg.assign.
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32))
 ; CHECK-NEXT:   call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_6]], metadata ptr %S.sroa.5, metadata !DIExpression()), !dbg
 
 ;; mem2reg promotes the load/store to the middle slice created by SROA:
 ; CHECK-NEXT: %0 = load i32, ptr @Glob, align 4, !dbg !{{.+}}
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata ![[ID_4:[0-9]+]], metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32))
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -85,7 +85,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!10, !11, !12}
+!llvm.module.flags = !{!10, !11, !12, !1000}
 !llvm.ident = !{!13}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -128,3 +128,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !43 = !DILocation(line: 12, column: 12, scope: !14)
 !44 = !DILocation(line: 13, column: 1, scope: !14)
 !45 = !DILocation(line: 12, column: 3, scope: !14)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

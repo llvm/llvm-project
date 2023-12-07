@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c99 -triple aarch64-arm-none-eabi -target-feature +bf16 -target-feature +sve
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c99 -triple aarch64 -target-feature +bf16 -target-feature +sve
 
 typedef struct N {} N;
 

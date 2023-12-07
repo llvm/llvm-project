@@ -27,7 +27,6 @@ entry:
 ;
 ; CHECK-LABEL: caller_meta_leaf
 ; CHECK:       sub sp, sp, #48
-; CHECK-NEXT: .cfi_def_cfa_offset 48
 ; CHECK-NEXT:  stp x29, x30, [sp, #32]
 ; CHECK-NEXT:  add x29, sp, #32
 ; CHECK:       Ltmp
@@ -83,4 +82,3 @@ entry:
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
 declare i64 @llvm.experimental.patchpoint.i64(i64, i32, ptr, i32, ...)
-

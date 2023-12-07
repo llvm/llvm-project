@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -triple x86_64-linux-gnu -ast-dump -verify -xc++ < %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -triple x86_64-linux-gnu -ast-dump -verify -xc++ < %s | FileCheck %s
 
 template <class A1, A1... A2> struct A {};
 

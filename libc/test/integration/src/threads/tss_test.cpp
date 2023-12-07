@@ -13,7 +13,7 @@
 #include "src/threads/tss_delete.h"
 #include "src/threads/tss_get.h"
 #include "src/threads/tss_set.h"
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <threads.h>
 

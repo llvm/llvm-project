@@ -89,7 +89,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define i32 @jd(i32* noalias %A, i32 %x, i32 %N, i32 %c) {
+define i32 @jd(ptr noalias %A, i32 %x, i32 %N, i32 %c) {
 entry:
   %tmp = sext i32 %N to i64
   %tmp1 = sext i32 %c to i64
@@ -98,8 +98,8 @@ entry:
 for.cond:                                         ; preds = %for.inc5, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc5 ], [ 0, %entry ]
   %x.addr.0 = phi i32 [ %x, %entry ], [ %x.addr.1, %for.inc5 ]
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %x.addr.0, i32* %arrayidx2
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %x.addr.0, ptr %arrayidx2
   %cmp = icmp slt i64 %indvars.iv, %tmp
   br i1 %cmp, label %for.body, label %for.end7
 
@@ -117,8 +117,8 @@ for.body3:                                        ; preds = %for.cond1
   br i1 %cmp4, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.body3
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp2 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp2 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %x.addr.1, %tmp2
   br label %if.end
 

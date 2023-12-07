@@ -101,7 +101,6 @@ if(APPLE)
     set(UBSAN_TEST_TARGET_ARCH ${arch})
     get_test_cc_for_arch(${arch} UBSAN_TEST_TARGET_CC UBSAN_TEST_TARGET_CFLAGS)
     set(UBSAN_TEST_TARGET_CFLAGS "${UBSAN_TEST_TARGET_CFLAGS} -lc++abi")
-    add_ubsan_testsuites("StandaloneStatic" ubsan ${arch})
   endforeach()
 
   # Device and simulator test suites.

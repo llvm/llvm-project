@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -68,7 +68,7 @@ S3 h;
 
 template <class I, class C>
 int foomain(int argc, char **argv) {
-  I e(4); // omp50-note {{'e' defined here}}
+  I e(4); // omp51-note {{'e' defined here}}
   I g(5);
   int i;
   int &j = i;
@@ -100,11 +100,11 @@ int foomain(int argc, char **argv) {
   {
     foo();
   }
-#pragma omp parallel sections lastprivate(conditional: e,argc) lastprivate(conditional: // omp50-error {{expected expression}} omp45-error 2 {{use of undeclared identifier 'conditional'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected list item of scalar type in 'lastprivate' clause with 'conditional' modifier}}
+#pragma omp parallel sections lastprivate(conditional: e,argc) lastprivate(conditional: // omp51-error {{expected expression}} omp45-error 2 {{use of undeclared identifier 'conditional'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp51-error {{expected list item of scalar type in 'lastprivate' clause with 'conditional' modifier}}
   {
     foo();
   }
-#pragma omp parallel sections lastprivate(foo:argc) // omp50-error {{expected 'conditional' in OpenMP clause 'lastprivate'}} omp45-error {{expected ',' or ')' in 'lastprivate' clause}} omp45-error {{expected ')'}} omp45-error {{expected variable name}} omp45-note {{to match this '('}}
+#pragma omp parallel sections lastprivate(foo:argc) // omp51-error {{expected 'conditional' in OpenMP clause 'lastprivate'}} omp45-error {{expected ',' or ')' in 'lastprivate' clause}} omp45-error {{expected ')'}} omp45-error {{expected variable name}} omp45-note {{to match this '('}}
   {
     foo();
   }

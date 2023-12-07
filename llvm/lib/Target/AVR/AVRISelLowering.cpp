@@ -88,6 +88,9 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
   setOperationAction(ISD::SRA, MVT::i16, Custom);
   setOperationAction(ISD::SHL, MVT::i16, Custom);
   setOperationAction(ISD::SRL, MVT::i16, Custom);
+  setOperationAction(ISD::SRA, MVT::i32, Custom);
+  setOperationAction(ISD::SHL, MVT::i32, Custom);
+  setOperationAction(ISD::SRL, MVT::i32, Custom);
   setOperationAction(ISD::SHL_PARTS, MVT::i16, Expand);
   setOperationAction(ISD::SRA_PARTS, MVT::i16, Expand);
   setOperationAction(ISD::SRL_PARTS, MVT::i16, Expand);
@@ -242,15 +245,18 @@ const char *AVRTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
   default:
     return nullptr;
-    NODE(RET_FLAG);
-    NODE(RETI_FLAG);
+    NODE(RET_GLUE);
+    NODE(RETI_GLUE);
     NODE(CALL);
     NODE(WRAPPER);
     NODE(LSL);
+    NODE(LSLW);
     NODE(LSR);
+    NODE(LSRW);
     NODE(ROL);
     NODE(ROR);
     NODE(ASR);
+    NODE(ASRW);
     NODE(LSLLOOP);
     NODE(LSRLOOP);
     NODE(ROLLOOP);
@@ -276,8 +282,59 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
   const SDNode *N = Op.getNode();
   EVT VT = Op.getValueType();
   SDLoc dl(N);
-  assert(isPowerOf2_32(VT.getSizeInBits()) &&
+  assert(llvm::has_single_bit<uint32_t>(VT.getSizeInBits()) &&
          "Expected power-of-2 shift amount");
+
+  if (VT.getSizeInBits() == 32) {
+    if (!isa<ConstantSDNode>(N->getOperand(1))) {
+      // 32-bit shifts are converted to a loop in IR.
+      // This should be unreachable.
+      report_fatal_error("Expected a constant shift amount!");
+    }
+    SDVTList ResTys = DAG.getVTList(MVT::i16, MVT::i16);
+    SDValue SrcLo =
+        DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i16, Op.getOperand(0),
+                    DAG.getConstant(0, dl, MVT::i16));
+    SDValue SrcHi =
+        DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i16, Op.getOperand(0),
+                    DAG.getConstant(1, dl, MVT::i16));
+    uint64_t ShiftAmount =
+        cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+    if (ShiftAmount == 16) {
+      // Special case these two operations because they appear to be used by the
+      // generic codegen parts to lower 32-bit numbers.
+      // TODO: perhaps we can lower shift amounts bigger than 16 to a 16-bit
+      // shift of a part of the 32-bit value?
+      switch (Op.getOpcode()) {
+      case ISD::SHL: {
+        SDValue Zero = DAG.getConstant(0, dl, MVT::i16);
+        return DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i32, Zero, SrcLo);
+      }
+      case ISD::SRL: {
+        SDValue Zero = DAG.getConstant(0, dl, MVT::i16);
+        return DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i32, SrcHi, Zero);
+      }
+      }
+    }
+    SDValue Cnt = DAG.getTargetConstant(ShiftAmount, dl, MVT::i8);
+    unsigned Opc;
+    switch (Op.getOpcode()) {
+    default:
+      llvm_unreachable("Invalid 32-bit shift opcode!");
+    case ISD::SHL:
+      Opc = AVRISD::LSLW;
+      break;
+    case ISD::SRL:
+      Opc = AVRISD::LSRW;
+      break;
+    case ISD::SRA:
+      Opc = AVRISD::ASRW;
+      break;
+    }
+    SDValue Result = DAG.getNode(Opc, dl, ResTys, SrcLo, SrcHi, Cnt);
+    return DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i32, Result.getValue(0),
+                       Result.getValue(1));
+  }
 
   // Expand non-constant shifts to loops.
   if (!isa<ConstantSDNode>(N->getOperand(1))) {
@@ -370,6 +427,33 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
       Victim = DAG.getNode(AVRISD::ASRBN, dl, VT, Victim,
                            DAG.getConstant(7, dl, VT));
       ShiftAmount = 0;
+    } else if (Op.getOpcode() == ISD::ROTL && ShiftAmount == 3) {
+      // Optimize left rotation 3 bits to swap then right rotation 1 bit.
+      Victim = DAG.getNode(AVRISD::SWAP, dl, VT, Victim);
+      Victim =
+          DAG.getNode(AVRISD::ROR, dl, VT, Victim, DAG.getConstant(1, dl, VT));
+      ShiftAmount = 0;
+    } else if (Op.getOpcode() == ISD::ROTR && ShiftAmount == 3) {
+      // Optimize right rotation 3 bits to swap then left rotation 1 bit.
+      Victim = DAG.getNode(AVRISD::SWAP, dl, VT, Victim);
+      Victim =
+          DAG.getNode(AVRISD::ROL, dl, VT, Victim, DAG.getConstant(1, dl, VT));
+      ShiftAmount = 0;
+    } else if (Op.getOpcode() == ISD::ROTL && ShiftAmount == 7) {
+      // Optimize left rotation 7 bits to right rotation 1 bit.
+      Victim =
+          DAG.getNode(AVRISD::ROR, dl, VT, Victim, DAG.getConstant(1, dl, VT));
+      ShiftAmount = 0;
+    } else if (Op.getOpcode() == ISD::ROTR && ShiftAmount == 7) {
+      // Optimize right rotation 7 bits to left rotation 1 bit.
+      Victim =
+          DAG.getNode(AVRISD::ROL, dl, VT, Victim, DAG.getConstant(1, dl, VT));
+      ShiftAmount = 0;
+    } else if ((Op.getOpcode() == ISD::ROTR || Op.getOpcode() == ISD::ROTL) &&
+               ShiftAmount >= 4) {
+      // Optimize left/right rotation with the SWAP instruction.
+      Victim = DAG.getNode(AVRISD::SWAP, dl, VT, Victim);
+      ShiftAmount -= 4;
     }
   } else if (VT.getSizeInBits() == 16) {
     if (Op.getOpcode() == ISD::SRA)
@@ -577,11 +661,35 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS,
   SDValue Cmp;
 
   if (LHS.getSimpleValueType() == MVT::i16 && isa<ConstantSDNode>(RHS)) {
-    // Generate a CPI/CPC pair if RHS is a 16-bit constant.
+    uint64_t Imm = cast<ConstantSDNode>(RHS)->getZExtValue();
+    // Generate a CPI/CPC pair if RHS is a 16-bit constant. Use the zero
+    // register for the constant RHS if its lower or higher byte is zero.
     SDValue LHSlo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
                                 DAG.getIntPtrConstant(0, DL));
     SDValue LHShi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
                                 DAG.getIntPtrConstant(1, DL));
+    SDValue RHSlo = (Imm & 0xff) == 0
+                        ? DAG.getRegister(Subtarget.getZeroRegister(), MVT::i8)
+                        : DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, RHS,
+                                      DAG.getIntPtrConstant(0, DL));
+    SDValue RHShi = (Imm & 0xff00) == 0
+                        ? DAG.getRegister(Subtarget.getZeroRegister(), MVT::i8)
+                        : DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, RHS,
+                                      DAG.getIntPtrConstant(1, DL));
+    Cmp = DAG.getNode(AVRISD::CMP, DL, MVT::Glue, LHSlo, RHSlo);
+    Cmp = DAG.getNode(AVRISD::CMPC, DL, MVT::Glue, LHShi, RHShi, Cmp);
+  } else if (RHS.getSimpleValueType() == MVT::i16 && isa<ConstantSDNode>(LHS)) {
+    // Generate a CPI/CPC pair if LHS is a 16-bit constant. Use the zero
+    // register for the constant LHS if its lower or higher byte is zero.
+    uint64_t Imm = cast<ConstantSDNode>(LHS)->getZExtValue();
+    SDValue LHSlo = (Imm & 0xff) == 0
+                        ? DAG.getRegister(Subtarget.getZeroRegister(), MVT::i8)
+                        : DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
+                                      DAG.getIntPtrConstant(0, DL));
+    SDValue LHShi = (Imm & 0xff00) == 0
+                        ? DAG.getRegister(Subtarget.getZeroRegister(), MVT::i8)
+                        : DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
+                                      DAG.getIntPtrConstant(1, DL));
     SDValue RHSlo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, RHS,
                                 DAG.getIntPtrConstant(0, DL));
     SDValue RHShi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, RHS,
@@ -868,7 +976,7 @@ SDValue AVRTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
       Ops.push_back(Operand);
     }
   }
-  unsigned Flags = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, 1);
+  unsigned Flags = InlineAsm::getFlagWord(InlineAsm::Kind::RegUse, 1);
   Ops.push_back(DAG.getTargetConstant(Flags, dl, MVT::i32));
   Ops.push_back(ZeroReg);
   if (Glue) {
@@ -1047,9 +1155,15 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
       return false;
   } else if (const StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     VT = ST->getMemoryVT();
-    if (AVR::isProgramMemoryAccess(ST)) {
+    // We can not store to program memory.
+    if (AVR::isProgramMemoryAccess(ST))
       return false;
-    }
+    // Since the high byte need to be stored first, we can not emit
+    // i16 post increment store like:
+    // st X+, r24
+    // st X+, r25
+    if (VT == MVT::i16 && !Subtarget.hasLowByteFirst())
+      return false;
   } else {
     return false;
   }
@@ -1069,6 +1183,12 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
     if ((VT == MVT::i16 && RHSC != 2) || (VT == MVT::i8 && RHSC != 1)) {
       return false;
     }
+
+    // FIXME: We temporarily disable post increment load from program memory,
+    //        due to bug https://github.com/llvm/llvm-project/issues/59914.
+    if (const LoadSDNode *LD = dyn_cast<LoadSDNode>(N))
+      if (AVR::isProgramMemoryAccess(LD))
+        return false;
 
     Base = Op->getOperand(0);
     Offset = DAG.getConstant(RHSC, DL, MVT::i8);
@@ -1127,11 +1247,11 @@ static void analyzeArguments(TargetLowering::CallLoweringInfo *CLI,
   ArrayRef<MCPhysReg> RegList8;
   ArrayRef<MCPhysReg> RegList16;
   if (Tiny) {
-    RegList8 = makeArrayRef(RegList8Tiny, std::size(RegList8Tiny));
-    RegList16 = makeArrayRef(RegList16Tiny, std::size(RegList16Tiny));
+    RegList8 = ArrayRef(RegList8Tiny, std::size(RegList8Tiny));
+    RegList16 = ArrayRef(RegList16Tiny, std::size(RegList16Tiny));
   } else {
-    RegList8 = makeArrayRef(RegList8AVR, std::size(RegList8AVR));
-    RegList16 = makeArrayRef(RegList16AVR, std::size(RegList16AVR));
+    RegList8 = ArrayRef(RegList8AVR, std::size(RegList8AVR));
+    RegList16 = ArrayRef(RegList16AVR, std::size(RegList16AVR));
   }
 
   unsigned NumArgs = Args.size();
@@ -1227,11 +1347,11 @@ static void analyzeReturnValues(const SmallVectorImpl<ArgT> &Args,
   ArrayRef<MCPhysReg> RegList8;
   ArrayRef<MCPhysReg> RegList16;
   if (Tiny) {
-    RegList8 = makeArrayRef(RegList8Tiny, std::size(RegList8Tiny));
-    RegList16 = makeArrayRef(RegList16Tiny, std::size(RegList16Tiny));
+    RegList8 = ArrayRef(RegList8Tiny, std::size(RegList8Tiny));
+    RegList16 = ArrayRef(RegList16Tiny, std::size(RegList16Tiny));
   } else {
-    RegList8 = makeArrayRef(RegList8AVR, std::size(RegList8AVR));
-    RegList16 = makeArrayRef(RegList16AVR, std::size(RegList16AVR));
+    RegList8 = ArrayRef(RegList8AVR, std::size(RegList8AVR));
+    RegList16 = ArrayRef(RegList16AVR, std::size(RegList16AVR));
   }
 
   // GCC-ABI says that the size is rounded up to the next even number,
@@ -1348,7 +1468,7 @@ SDValue AVRTargetLowering::LowerFormalArguments(
   // If the function takes variable number of arguments, make a frame index for
   // the start of the first vararg value... for expansion of llvm.va_start.
   if (isVarArg) {
-    unsigned StackSize = CCInfo.getNextStackOffset();
+    unsigned StackSize = CCInfo.getStackSize();
     AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
 
     AFI->setVarArgsFrameIndex(MFI.CreateFixedObject(2, StackSize, true));
@@ -1409,7 +1529,7 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = CCInfo.getNextStackOffset();
+  unsigned NumBytes = CCInfo.getStackSize();
 
   Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, DL);
 
@@ -1485,12 +1605,12 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token chain and
-  // flag operands which copy the outgoing args into registers.  The InFlag in
+  // flag operands which copy the outgoing args into registers.  The InGlue in
   // necessary since all emited instructions must be stuck together.
-  SDValue InFlag;
+  SDValue InGlue;
   for (auto Reg : RegsToPass) {
-    Chain = DAG.getCopyToReg(Chain, DL, Reg.first, Reg.second, InFlag);
-    InFlag = Chain.getValue(1);
+    Chain = DAG.getCopyToReg(Chain, DL, Reg.first, Reg.second, InGlue);
+    InGlue = Chain.getValue(1);
   }
 
   // Returns a chain & a flag for retval copy to use.
@@ -1516,23 +1636,23 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
-  if (InFlag.getNode()) {
-    Ops.push_back(InFlag);
+  if (InGlue.getNode()) {
+    Ops.push_back(InGlue);
   }
 
   Chain = DAG.getNode(AVRISD::CALL, DL, NodeTys, Ops);
-  InFlag = Chain.getValue(1);
+  InGlue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
-  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InFlag, DL);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, DL);
 
   if (!Ins.empty()) {
-    InFlag = Chain.getValue(1);
+    InGlue = Chain.getValue(1);
   }
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  return LowerCallResult(Chain, InFlag, CallConv, isVarArg, Ins, DL, DAG,
+  return LowerCallResult(Chain, InGlue, CallConv, isVarArg, Ins, DL, DAG,
                          InVals);
 }
 
@@ -1540,7 +1660,7 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 /// appropriate copies out of appropriate physical registers.
 ///
 SDValue AVRTargetLowering::LowerCallResult(
-    SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool isVarArg,
+    SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
@@ -1559,9 +1679,9 @@ SDValue AVRTargetLowering::LowerCallResult(
   // Copy all of the result registers out of their specified physreg.
   for (CCValAssign const &RVLoc : RVLocs) {
     Chain = DAG.getCopyFromReg(Chain, dl, RVLoc.getLocReg(), RVLoc.getValVT(),
-                               InFlag)
+                               InGlue)
                 .getValue(1);
-    InFlag = Chain.getValue(2);
+    InGlue = Chain.getValue(2);
     InVals.push_back(Chain.getValue(0));
   }
 
@@ -1607,17 +1727,17 @@ AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     analyzeReturnValues(Outs, CCInfo, Subtarget.hasTinyEncoding());
   }
 
-  SDValue Flag;
+  SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
   // Copy the result values into the output registers.
   for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
     CCValAssign &VA = RVLocs[i];
     assert(VA.isRegLoc() && "Can only return in registers!");
 
-    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), OutVals[i], Flag);
+    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), OutVals[i], Glue);
 
     // Guarantee that all emitted copies are stuck together with flags.
-    Flag = Chain.getValue(1);
+    Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
@@ -1638,12 +1758,12 @@ AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   }
 
   unsigned RetOpc =
-      AFI->isInterruptOrSignalHandler() ? AVRISD::RETI_FLAG : AVRISD::RET_FLAG;
+      AFI->isInterruptOrSignalHandler() ? AVRISD::RETI_GLUE : AVRISD::RET_GLUE;
 
   RetOps[0] = Chain; // Update chain.
 
-  if (Flag.getNode()) {
-    RetOps.push_back(Flag);
+  if (Glue.getNode()) {
+    RetOps.push_back(Glue);
   }
 
   return DAG.getNode(RetOpc, dl, MVT::Other, RetOps);
@@ -1654,11 +1774,11 @@ AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 //===----------------------------------------------------------------------===//
 
 MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
-                                                  MachineBasicBlock *BB) const {
+                                                  MachineBasicBlock *BB,
+                                                  bool Tiny) const {
   unsigned Opc;
   const TargetRegisterClass *RC;
   bool HasRepeatedOperand = false;
-  bool HasZeroOperand = false;
   MachineFunction *F = BB->getParent();
   MachineRegisterInfo &RI = F->getRegInfo();
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
@@ -1693,9 +1813,8 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
     RC = &AVR::DREGSRegClass;
     break;
   case AVR::Rol8:
-    Opc = AVR::ROLBRd;
+    Opc = Tiny ? AVR::ROLBRdR17 : AVR::ROLBRdR1;
     RC = &AVR::GPR8RegClass;
-    HasZeroOperand = true;
     break;
   case AVR::Rol16:
     Opc = AVR::ROLWRd;
@@ -1757,8 +1876,6 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
   auto ShiftMI = BuildMI(LoopBB, dl, TII.get(Opc), ShiftReg2).addReg(ShiftReg);
   if (HasRepeatedOperand)
     ShiftMI.addReg(ShiftReg);
-  if (HasZeroOperand)
-    ShiftMI.addReg(Subtarget.getZeroRegister());
 
   // CheckBB:
   // ShiftReg = phi [%SrcReg, BB], [%ShiftReg2, LoopBB]
@@ -1787,6 +1904,359 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return RemBB;
+}
+
+// Do a multibyte AVR shift. Insert shift instructions and put the output
+// registers in the Regs array.
+// Because AVR does not have a normal shift instruction (only a single bit shift
+// instruction), we have to emulate this behavior with other instructions.
+// It first tries large steps (moving registers around) and then smaller steps
+// like single bit shifts.
+// Large shifts actually reduce the number of shifted registers, so the below
+// algorithms have to work independently of the number of registers that are
+// shifted.
+// For more information and background, see this blogpost:
+// https://aykevl.nl/2021/02/avr-bitshift
+static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
+                                 MutableArrayRef<std::pair<Register, int>> Regs,
+                                 ISD::NodeType Opc, int64_t ShiftAmt) {
+  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
+  const AVRSubtarget &STI = BB->getParent()->getSubtarget<AVRSubtarget>();
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+  const DebugLoc &dl = MI.getDebugLoc();
+
+  const bool ShiftLeft = Opc == ISD::SHL;
+  const bool ArithmeticShift = Opc == ISD::SRA;
+
+  // Zero a register, for use in later operations.
+  Register ZeroReg = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+  BuildMI(*BB, MI, dl, TII.get(AVR::COPY), ZeroReg)
+      .addReg(STI.getZeroRegister());
+
+  // Do a shift modulo 6 or 7. This is a bit more complicated than most shifts
+  // and is hard to compose with the rest, so these are special cased.
+  // The basic idea is to shift one or two bits in the opposite direction and
+  // then move registers around to get the correct end result.
+  if (ShiftLeft && (ShiftAmt % 8) >= 6) {
+    // Left shift modulo 6 or 7.
+
+    // Create a slice of the registers we're going to modify, to ease working
+    // with them.
+    size_t ShiftRegsOffset = ShiftAmt / 8;
+    size_t ShiftRegsSize = Regs.size() - ShiftRegsOffset;
+    MutableArrayRef<std::pair<Register, int>> ShiftRegs =
+        Regs.slice(ShiftRegsOffset, ShiftRegsSize);
+
+    // Shift one to the right, keeping the least significant bit as the carry
+    // bit.
+    insertMultibyteShift(MI, BB, ShiftRegs, ISD::SRL, 1);
+
+    // Rotate the least significant bit from the carry bit into a new register
+    // (that starts out zero).
+    Register LowByte = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+    BuildMI(*BB, MI, dl, TII.get(AVR::RORRd), LowByte).addReg(ZeroReg);
+
+    // Shift one more to the right if this is a modulo-6 shift.
+    if (ShiftAmt % 8 == 6) {
+      insertMultibyteShift(MI, BB, ShiftRegs, ISD::SRL, 1);
+      Register NewLowByte = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+      BuildMI(*BB, MI, dl, TII.get(AVR::RORRd), NewLowByte).addReg(LowByte);
+      LowByte = NewLowByte;
+    }
+
+    // Move all registers to the left, zeroing the bottom registers as needed.
+    for (size_t I = 0; I < Regs.size(); I++) {
+      int ShiftRegsIdx = I + 1;
+      if (ShiftRegsIdx < (int)ShiftRegs.size()) {
+        Regs[I] = ShiftRegs[ShiftRegsIdx];
+      } else if (ShiftRegsIdx == (int)ShiftRegs.size()) {
+        Regs[I] = std::pair(LowByte, 0);
+      } else {
+        Regs[I] = std::pair(ZeroReg, 0);
+      }
+    }
+
+    return;
+  }
+
+  // Right shift modulo 6 or 7.
+  if (!ShiftLeft && (ShiftAmt % 8) >= 6) {
+    // Create a view on the registers we're going to modify, to ease working
+    // with them.
+    size_t ShiftRegsSize = Regs.size() - (ShiftAmt / 8);
+    MutableArrayRef<std::pair<Register, int>> ShiftRegs =
+        Regs.slice(0, ShiftRegsSize);
+
+    // Shift one to the left.
+    insertMultibyteShift(MI, BB, ShiftRegs, ISD::SHL, 1);
+
+    // Sign or zero extend the most significant register into a new register.
+    // The HighByte is the byte that still has one (or two) bits from the
+    // original value. The ExtByte is purely a zero/sign extend byte (all bits
+    // are either 0 or 1).
+    Register HighByte = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+    Register ExtByte = 0;
+    if (ArithmeticShift) {
+      // Sign-extend bit that was shifted out last.
+      BuildMI(*BB, MI, dl, TII.get(AVR::SBCRdRr), HighByte)
+          .addReg(HighByte, RegState::Undef)
+          .addReg(HighByte, RegState::Undef);
+      ExtByte = HighByte;
+      // The highest bit of the original value is the same as the zero-extend
+      // byte, so HighByte and ExtByte are the same.
+    } else {
+      // Use the zero register for zero extending.
+      ExtByte = ZeroReg;
+      // Rotate most significant bit into a new register (that starts out zero).
+      BuildMI(*BB, MI, dl, TII.get(AVR::ADCRdRr), HighByte)
+          .addReg(ExtByte)
+          .addReg(ExtByte);
+    }
+
+    // Shift one more to the left for modulo 6 shifts.
+    if (ShiftAmt % 8 == 6) {
+      insertMultibyteShift(MI, BB, ShiftRegs, ISD::SHL, 1);
+      // Shift the topmost bit into the HighByte.
+      Register NewExt = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+      BuildMI(*BB, MI, dl, TII.get(AVR::ADCRdRr), NewExt)
+          .addReg(HighByte)
+          .addReg(HighByte);
+      HighByte = NewExt;
+    }
+
+    // Move all to the right, while sign or zero extending.
+    for (int I = Regs.size() - 1; I >= 0; I--) {
+      int ShiftRegsIdx = I - (Regs.size() - ShiftRegs.size()) - 1;
+      if (ShiftRegsIdx >= 0) {
+        Regs[I] = ShiftRegs[ShiftRegsIdx];
+      } else if (ShiftRegsIdx == -1) {
+        Regs[I] = std::pair(HighByte, 0);
+      } else {
+        Regs[I] = std::pair(ExtByte, 0);
+      }
+    }
+
+    return;
+  }
+
+  // For shift amounts of at least one register, simply rename the registers and
+  // zero the bottom registers.
+  while (ShiftLeft && ShiftAmt >= 8) {
+    // Move all registers one to the left.
+    for (size_t I = 0; I < Regs.size() - 1; I++) {
+      Regs[I] = Regs[I + 1];
+    }
+
+    // Zero the least significant register.
+    Regs[Regs.size() - 1] = std::pair(ZeroReg, 0);
+
+    // Continue shifts with the leftover registers.
+    Regs = Regs.drop_back(1);
+
+    ShiftAmt -= 8;
+  }
+
+  // And again, the same for right shifts.
+  Register ShrExtendReg = 0;
+  if (!ShiftLeft && ShiftAmt >= 8) {
+    if (ArithmeticShift) {
+      // Sign extend the most significant register into ShrExtendReg.
+      ShrExtendReg = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+      Register Tmp = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+      BuildMI(*BB, MI, dl, TII.get(AVR::ADDRdRr), Tmp)
+          .addReg(Regs[0].first, 0, Regs[0].second)
+          .addReg(Regs[0].first, 0, Regs[0].second);
+      BuildMI(*BB, MI, dl, TII.get(AVR::SBCRdRr), ShrExtendReg)
+          .addReg(Tmp)
+          .addReg(Tmp);
+    } else {
+      ShrExtendReg = ZeroReg;
+    }
+    for (; ShiftAmt >= 8; ShiftAmt -= 8) {
+      // Move all registers one to the right.
+      for (size_t I = Regs.size() - 1; I != 0; I--) {
+        Regs[I] = Regs[I - 1];
+      }
+
+      // Zero or sign extend the most significant register.
+      Regs[0] = std::pair(ShrExtendReg, 0);
+
+      // Continue shifts with the leftover registers.
+      Regs = Regs.drop_front(1);
+    }
+  }
+
+  // The bigger shifts are already handled above.
+  assert((ShiftAmt < 8) && "Unexpect shift amount");
+
+  // Shift by four bits, using a complicated swap/eor/andi/eor sequence.
+  // It only works for logical shifts because the bits shifted in are all
+  // zeroes.
+  // To shift a single byte right, it produces code like this:
+  //   swap r0
+  //   andi r0, 0x0f
+  // For a two-byte (16-bit) shift, it adds the following instructions to shift
+  // the upper byte into the lower byte:
+  //   swap r1
+  //   eor r0, r1
+  //   andi r1, 0x0f
+  //   eor r0, r1
+  // For bigger shifts, it repeats the above sequence. For example, for a 3-byte
+  // (24-bit) shift it adds:
+  //   swap r2
+  //   eor r1, r2
+  //   andi r2, 0x0f
+  //   eor r1, r2
+  if (!ArithmeticShift && ShiftAmt >= 4) {
+    Register Prev = 0;
+    for (size_t I = 0; I < Regs.size(); I++) {
+      size_t Idx = ShiftLeft ? I : Regs.size() - I - 1;
+      Register SwapReg = MRI.createVirtualRegister(&AVR::LD8RegClass);
+      BuildMI(*BB, MI, dl, TII.get(AVR::SWAPRd), SwapReg)
+          .addReg(Regs[Idx].first, 0, Regs[Idx].second);
+      if (I != 0) {
+        Register R = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+        BuildMI(*BB, MI, dl, TII.get(AVR::EORRdRr), R)
+            .addReg(Prev)
+            .addReg(SwapReg);
+        Prev = R;
+      }
+      Register AndReg = MRI.createVirtualRegister(&AVR::LD8RegClass);
+      BuildMI(*BB, MI, dl, TII.get(AVR::ANDIRdK), AndReg)
+          .addReg(SwapReg)
+          .addImm(ShiftLeft ? 0xf0 : 0x0f);
+      if (I != 0) {
+        Register R = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+        BuildMI(*BB, MI, dl, TII.get(AVR::EORRdRr), R)
+            .addReg(Prev)
+            .addReg(AndReg);
+        size_t PrevIdx = ShiftLeft ? Idx - 1 : Idx + 1;
+        Regs[PrevIdx] = std::pair(R, 0);
+      }
+      Prev = AndReg;
+      Regs[Idx] = std::pair(AndReg, 0);
+    }
+    ShiftAmt -= 4;
+  }
+
+  // Shift by one. This is the fallback that always works, and the shift
+  // operation that is used for 1, 2, and 3 bit shifts.
+  while (ShiftLeft && ShiftAmt) {
+    // Shift one to the left.
+    for (ssize_t I = Regs.size() - 1; I >= 0; I--) {
+      Register Out = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+      Register In = Regs[I].first;
+      Register InSubreg = Regs[I].second;
+      if (I == (ssize_t)Regs.size() - 1) { // first iteration
+        BuildMI(*BB, MI, dl, TII.get(AVR::ADDRdRr), Out)
+            .addReg(In, 0, InSubreg)
+            .addReg(In, 0, InSubreg);
+      } else {
+        BuildMI(*BB, MI, dl, TII.get(AVR::ADCRdRr), Out)
+            .addReg(In, 0, InSubreg)
+            .addReg(In, 0, InSubreg);
+      }
+      Regs[I] = std::pair(Out, 0);
+    }
+    ShiftAmt--;
+  }
+  while (!ShiftLeft && ShiftAmt) {
+    // Shift one to the right.
+    for (size_t I = 0; I < Regs.size(); I++) {
+      Register Out = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+      Register In = Regs[I].first;
+      Register InSubreg = Regs[I].second;
+      if (I == 0) {
+        unsigned Opc = ArithmeticShift ? AVR::ASRRd : AVR::LSRRd;
+        BuildMI(*BB, MI, dl, TII.get(Opc), Out).addReg(In, 0, InSubreg);
+      } else {
+        BuildMI(*BB, MI, dl, TII.get(AVR::RORRd), Out).addReg(In, 0, InSubreg);
+      }
+      Regs[I] = std::pair(Out, 0);
+    }
+    ShiftAmt--;
+  }
+
+  if (ShiftAmt != 0) {
+    llvm_unreachable("don't know how to shift!"); // sanity check
+  }
+}
+
+// Do a wide (32-bit) shift.
+MachineBasicBlock *
+AVRTargetLowering::insertWideShift(MachineInstr &MI,
+                                   MachineBasicBlock *BB) const {
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  const DebugLoc &dl = MI.getDebugLoc();
+
+  // How much to shift to the right (meaning: a negative number indicates a left
+  // shift).
+  int64_t ShiftAmt = MI.getOperand(4).getImm();
+  ISD::NodeType Opc;
+  switch (MI.getOpcode()) {
+  case AVR::Lsl32:
+    Opc = ISD::SHL;
+    break;
+  case AVR::Lsr32:
+    Opc = ISD::SRL;
+    break;
+  case AVR::Asr32:
+    Opc = ISD::SRA;
+    break;
+  }
+
+  // Read the input registers, with the most significant register at index 0.
+  std::array<std::pair<Register, int>, 4> Registers = {
+      std::pair(MI.getOperand(3).getReg(), AVR::sub_hi),
+      std::pair(MI.getOperand(3).getReg(), AVR::sub_lo),
+      std::pair(MI.getOperand(2).getReg(), AVR::sub_hi),
+      std::pair(MI.getOperand(2).getReg(), AVR::sub_lo),
+  };
+
+  // Do the shift. The registers are modified in-place.
+  insertMultibyteShift(MI, BB, Registers, Opc, ShiftAmt);
+
+  // Combine the 8-bit registers into 16-bit register pairs.
+  // This done either from LSB to MSB or from MSB to LSB, depending on the
+  // shift. It's an optimization so that the register allocator will use the
+  // fewest movs possible (which order we use isn't a correctness issue, just an
+  // optimization issue).
+  //   - lsl prefers starting from the most significant byte (2nd case).
+  //   - lshr prefers starting from the least significant byte (1st case).
+  //   - for ashr it depends on the number of shifted bytes.
+  // Some shift operations still don't get the most optimal mov sequences even
+  // with this distinction. TODO: figure out why and try to fix it (but we're
+  // already equal to or faster than avr-gcc in all cases except ashr 8).
+  if (Opc != ISD::SHL &&
+      (Opc != ISD::SRA || (ShiftAmt < 16 || ShiftAmt >= 22))) {
+    // Use the resulting registers starting with the least significant byte.
+    BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(0).getReg())
+        .addReg(Registers[3].first, 0, Registers[3].second)
+        .addImm(AVR::sub_lo)
+        .addReg(Registers[2].first, 0, Registers[2].second)
+        .addImm(AVR::sub_hi);
+    BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(1).getReg())
+        .addReg(Registers[1].first, 0, Registers[1].second)
+        .addImm(AVR::sub_lo)
+        .addReg(Registers[0].first, 0, Registers[0].second)
+        .addImm(AVR::sub_hi);
+  } else {
+    // Use the resulting registers starting with the most significant byte.
+    BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(1).getReg())
+        .addReg(Registers[0].first, 0, Registers[0].second)
+        .addImm(AVR::sub_hi)
+        .addReg(Registers[1].first, 0, Registers[1].second)
+        .addImm(AVR::sub_lo);
+    BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(0).getReg())
+        .addReg(Registers[2].first, 0, Registers[2].second)
+        .addImm(AVR::sub_hi)
+        .addReg(Registers[3].first, 0, Registers[3].second)
+        .addImm(AVR::sub_lo);
+  }
+
+  // Remove the pseudo instruction.
+  MI.eraseFromParent();
+  return BB;
 }
 
 static bool isCopyMulResult(MachineBasicBlock::iterator const &I) {
@@ -1886,6 +2356,7 @@ MachineBasicBlock *
 AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *MBB) const {
   int Opc = MI.getOpcode();
+  const AVRSubtarget &STI = MBB->getParent()->getSubtarget<AVRSubtarget>();
 
   // Pseudo shift instructions with a non constant shift amount are expanded
   // into a loop.
@@ -1900,7 +2371,11 @@ AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AVR::Ror16:
   case AVR::Asr8:
   case AVR::Asr16:
-    return insertShift(MI, MBB);
+    return insertShift(MI, MBB, STI.hasTinyEncoding());
+  case AVR::Lsl32:
+  case AVR::Lsr32:
+  case AVR::Asr32:
+    return insertWideShift(MI, MBB);
   case AVR::MULRdRr:
   case AVR::MULSRdRr:
     return insertMul(MI, MBB);
@@ -1964,6 +2439,11 @@ AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     ++I;
   MF->insert(I, trueMBB);
   MF->insert(I, falseMBB);
+
+  // Set the call frame size on entry to the new basic blocks.
+  unsigned CallFrameSize = TII.getCallFrameSizeAt(MI);
+  trueMBB->setCallFrameSize(CallFrameSize);
+  falseMBB->setCallFrameSize(CallFrameSize);
 
   // Transfer remaining instructions and all successors of the current
   // block to the block which will contain the Phi node for the

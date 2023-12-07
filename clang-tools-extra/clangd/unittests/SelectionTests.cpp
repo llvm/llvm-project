@@ -561,6 +561,33 @@ TEST(SelectionTest, CommonAncestor) {
         [[^using enum ns::A]];
         )cpp",
        "UsingEnumDecl"},
+
+      // concepts
+      {R"cpp(
+        template <class> concept C = true;
+        auto x = [[^C<int>]];
+      )cpp",
+       "ConceptReference"},
+      {R"cpp(
+        template <class> concept C = true;
+        [[^C]] auto x = 0;
+      )cpp",
+       "ConceptReference"},
+      {R"cpp(
+        template <class> concept C = true;
+        void foo([[^C]] auto x) {}
+      )cpp",
+       "ConceptReference"},
+      {R"cpp(
+        template <class> concept C = true;
+        template <[[^C]] x> int i = 0;
+      )cpp",
+       "ConceptReference"},
+      {R"cpp(
+        namespace ns { template <class> concept C = true; }
+        auto x = [[ns::^C<int>]];
+      )cpp",
+       "ConceptReference"},
   };
 
   for (const Case &C : Cases) {
@@ -690,7 +717,7 @@ TEST(SelectionTest, PathologicalPreprocessor) {
   auto TU = TestTU::withCode(Test.code());
   TU.AdditionalFiles["Expand.inc"] = "MACRO\n";
   auto AST = TU.build();
-  EXPECT_THAT(*AST.getDiagnostics(), ::testing::IsEmpty());
+  EXPECT_THAT(AST.getDiagnostics(), ::testing::IsEmpty());
   auto T = makeSelectionTree(Case, AST);
 
   EXPECT_EQ("BreakStmt", T.commonAncestor()->kind());

@@ -8,13 +8,11 @@
 define void @foo(i8 %arg4, i32 %arg5, ptr %arg14) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0: ## %bb
-; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    andl $32, %edi
-; CHECK-NEXT:    leal 13(%rdi), %eax
-; CHECK-NEXT:    xorb $-14, %al
-; CHECK-NEXT:    addb $82, %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    movb $81, %al
+; CHECK-NEXT:    subb %dil, %al
 ; CHECK-NEXT:    testl %esi, %edi
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    movl $1, %ecx
 ; CHECK-NEXT:    cmovnel %eax, %ecx
 ; CHECK-NEXT:    xorb $81, %cl

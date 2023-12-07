@@ -16,7 +16,7 @@ define void @test_2_incoming_constants(i32 %x) {
 ; SCCP-NEXT:    br label [[EXIT]]
 ; SCCP:       exit:
 ; SCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ]
-; SCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
+; SCCP-NEXT:    [[A:%.*]] = add nuw nsw i32 [[P]], 1
 ; SCCP-NEXT:    call void @use(i1 true)
 ; SCCP-NEXT:    call void @use(i1 false)
 ; SCCP-NEXT:    ret void
@@ -29,7 +29,7 @@ define void @test_2_incoming_constants(i32 %x) {
 ; IPSCCP-NEXT:    br label [[EXIT]]
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ]
-; IPSCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
+; IPSCCP-NEXT:    [[A:%.*]] = add nuw nsw i32 [[P]], 1
 ; IPSCCP-NEXT:    call void @use(i1 true)
 ; IPSCCP-NEXT:    call void @use(i1 false)
 ; IPSCCP-NEXT:    ret void
@@ -63,7 +63,7 @@ define void @test_3_incoming_constants(i32 %x) {
 ; SCCP-NEXT:    br label [[EXIT]]
 ; SCCP:       exit:
 ; SCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ]
-; SCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
+; SCCP-NEXT:    [[A:%.*]] = add nuw nsw i32 [[P]], 1
 ; SCCP-NEXT:    call void @use(i1 true)
 ; SCCP-NEXT:    call void @use(i1 false)
 ; SCCP-NEXT:    ret void
@@ -79,7 +79,7 @@ define void @test_3_incoming_constants(i32 %x) {
 ; IPSCCP-NEXT:    br label [[EXIT]]
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ]
-; IPSCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
+; IPSCCP-NEXT:    [[A:%.*]] = add nuw nsw i32 [[P]], 1
 ; IPSCCP-NEXT:    call void @use(i1 true)
 ; IPSCCP-NEXT:    call void @use(i1 false)
 ; IPSCCP-NEXT:    ret void
@@ -123,7 +123,7 @@ define void @test_5_incoming_constants(i32 %x) {
 ; SCCP-NEXT:    br label [[EXIT]]
 ; SCCP:       exit:
 ; SCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ], [ 3, [[BB3]] ], [ 4, [[BB4]] ]
-; SCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
+; SCCP-NEXT:    [[A:%.*]] = add nuw nsw i32 [[P]], 1
 ; SCCP-NEXT:    call void @use(i1 true)
 ; SCCP-NEXT:    call void @use(i1 false)
 ; SCCP-NEXT:    ret void
@@ -145,7 +145,7 @@ define void @test_5_incoming_constants(i32 %x) {
 ; IPSCCP-NEXT:    br label [[EXIT]]
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ], [ 3, [[BB3]] ], [ 4, [[BB4]] ]
-; IPSCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
+; IPSCCP-NEXT:    [[A:%.*]] = add nuw nsw i32 [[P]], 1
 ; IPSCCP-NEXT:    call void @use(i1 true)
 ; IPSCCP-NEXT:    call void @use(i1 false)
 ; IPSCCP-NEXT:    ret void
@@ -196,7 +196,7 @@ define void @rotated_loop_2(i32 %x) {
 ; SCCP-NEXT:    br label [[EXIT]]
 ; SCCP:       exit:
 ; SCCP-NEXT:    [[P:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 3, [[BB1]] ], [ 2, [[BB2]] ], [ 5, [[BB3]] ]
-; SCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
+; SCCP-NEXT:    [[A:%.*]] = add nuw nsw i32 [[P]], 1
 ; SCCP-NEXT:    call void @use(i1 true)
 ; SCCP-NEXT:    call void @use(i1 false)
 ; SCCP-NEXT:    br label [[EXIT_1:%.*]]
@@ -217,7 +217,7 @@ define void @rotated_loop_2(i32 %x) {
 ; IPSCCP-NEXT:    br label [[EXIT]]
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 3, [[BB1]] ], [ 2, [[BB2]] ], [ 5, [[BB3]] ]
-; IPSCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
+; IPSCCP-NEXT:    [[A:%.*]] = add nuw nsw i32 [[P]], 1
 ; IPSCCP-NEXT:    call void @use(i1 true)
 ; IPSCCP-NEXT:    call void @use(i1 false)
 ; IPSCCP-NEXT:    br label [[EXIT_1:%.*]]
@@ -358,7 +358,7 @@ define void @loop_with_header_1(i32 %x) {
 ; IPSCCP-NEXT:    br i1 [[C_1]], label [[LOOP_BODY]], label [[EXIT:%.*]]
 ; IPSCCP:       loop.body:
 ; IPSCCP-NEXT:    call void @use(i1 true)
-; IPSCCP-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; IPSCCP-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; IPSCCP-NEXT:    br label [[LOOP_HEADER]]
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    ret void
@@ -447,8 +447,8 @@ define void @foo(ptr %arg) {
 ; SCCP:       bb4:
 ; SCCP-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], 3
 ; SCCP-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 3
-; SCCP-NEXT:    [[TMP7:%.*]] = sub i64 3, [[TMP6]]
-; SCCP-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP7]], 1
+; SCCP-NEXT:    [[TMP7:%.*]] = sub nuw nsw i64 3, [[TMP6]]
+; SCCP-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP7]], 1
 ; SCCP-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
 ; SCCP-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
 ; SCCP-NEXT:    br label [[BB11:%.*]]
@@ -484,8 +484,8 @@ define void @foo(ptr %arg) {
 ; IPSCCP:       bb4:
 ; IPSCCP-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], 3
 ; IPSCCP-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 3
-; IPSCCP-NEXT:    [[TMP7:%.*]] = sub i64 3, [[TMP6]]
-; IPSCCP-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP7]], 1
+; IPSCCP-NEXT:    [[TMP7:%.*]] = sub nuw nsw i64 3, [[TMP6]]
+; IPSCCP-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP7]], 1
 ; IPSCCP-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
 ; IPSCCP-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
 ; IPSCCP-NEXT:    br label [[BB11:%.*]]
@@ -601,7 +601,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; SCCP-NEXT:    br label [[BB8:%.*]]
 ; SCCP:       bb8:
 ; SCCP-NEXT:    [[TMP9:%.*]] = phi ptr [ undef, [[BB:%.*]] ], [ [[TMP17:%.*]], [[BB29:%.*]] ]
-; SCCP-NEXT:    [[TMP10:%.*]] = phi ptr [ undef, [[BB]] ], [ [[TMP18:%.*]], [[BB29]] ]
+; SCCP-NEXT:    [[TMP10:%.*]] = phi ptr [ undef, [[BB]] ], [ [[TMP17]], [[BB29]] ]
 ; SCCP-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, [[BB]] ], [ [[TMP30:%.*]], [[BB29]] ]
 ; SCCP-NEXT:    [[C_1:%.*]] = icmp slt i32 [[TMP11]], 8
 ; SCCP-NEXT:    br i1 [[C_1]], label [[BB13:%.*]], label [[BB31:%.*]]
@@ -683,7 +683,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; IPSCCP-NEXT:    br label [[BB8:%.*]]
 ; IPSCCP:       bb8:
 ; IPSCCP-NEXT:    [[TMP9:%.*]] = phi ptr [ undef, [[BB:%.*]] ], [ [[TMP17:%.*]], [[BB29:%.*]] ]
-; IPSCCP-NEXT:    [[TMP10:%.*]] = phi ptr [ undef, [[BB]] ], [ [[TMP18:%.*]], [[BB29]] ]
+; IPSCCP-NEXT:    [[TMP10:%.*]] = phi ptr [ undef, [[BB]] ], [ [[TMP17]], [[BB29]] ]
 ; IPSCCP-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, [[BB]] ], [ [[TMP30:%.*]], [[BB29]] ]
 ; IPSCCP-NEXT:    [[C_1:%.*]] = icmp slt i32 [[TMP11]], 8
 ; IPSCCP-NEXT:    br i1 [[C_1]], label [[BB13:%.*]], label [[BB31:%.*]]

@@ -9,6 +9,8 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Host/XML.h"
 
+#include "llvm/ADT/StringExtras.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -490,7 +492,7 @@ static StructuredData::ObjectSP CreatePlistValue(XMLNode node) {
   } else if (element_name == "integer") {
     uint64_t value = 0;
     node.GetElementTextAsUnsigned(value, 0, 0);
-    return StructuredData::ObjectSP(new StructuredData::Integer(value));
+    return StructuredData::ObjectSP(new StructuredData::UnsignedInteger(value));
   } else if ((element_name == "string") || (element_name == "data") ||
              (element_name == "date")) {
     std::string text;

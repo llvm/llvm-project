@@ -1,8 +1,8 @@
 ; RUN: opt %loadPolly -polly-codegen < %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-@win193 = external global [4 x [36 x double]], align 32 ; <[4 x [36 x double]]*> [#uses=3]
-@sb_sample = external global [2 x [2 x [18 x [32 x double]]]], align 32 ; <[2 x [2 x [18 x [32 x double]]]]*> [#uses=2]
+@win193 = external global [4 x [36 x double]], align 32 ; <ptr> [#uses=3]
+@sb_sample = external global [2 x [2 x [18 x [32 x double]]]], align 32 ; <ptr> [#uses=2]
 
 define void @mdct_sub48() nounwind {
 entry:
@@ -36,45 +36,45 @@ bb32:                                             ; preds = %bb27
   br label %bb37
 
 bb34:                                             ; preds = %bb35
-  %0 = getelementptr inbounds [36 x double], [36 x double]* undef, i64 0, i64 0 ; <double*> [#uses=0]
-  %1 = getelementptr inbounds [18 x [32 x double]], [18 x [32 x double]]* undef, i64 0, i64 0 ; <[32 x double]*> [#uses=1]
-  %2 = getelementptr inbounds [32 x double], [32 x double]* %1, i64 0, i64 0 ; <double*> [#uses=0]
-  %3 = getelementptr inbounds [36 x double], [36 x double]* undef, i64 0, i64 0 ; <double*> [#uses=0]
+  %0 = getelementptr inbounds [36 x double], ptr undef, i64 0, i64 0 ; <ptr> [#uses=0]
+  %1 = getelementptr inbounds [18 x [32 x double]], ptr undef, i64 0, i64 0 ; <ptr> [#uses=1]
+  %2 = getelementptr inbounds [32 x double], ptr %1, i64 0, i64 0 ; <ptr> [#uses=0]
+  %3 = getelementptr inbounds [36 x double], ptr undef, i64 0, i64 0 ; <ptr> [#uses=0]
   %4 = sub nsw i32 17, %k.4                       ; <i32> [#uses=1]
-  %5 = getelementptr inbounds [2 x [2 x [18 x [32 x double]]]], [2 x [2 x [18 x [32 x double]]]]* @sb_sample, i64 0, i64 0 ; <[2 x [18 x [32 x double]]]*> [#uses=1]
-  %6 = getelementptr inbounds [2 x [18 x [32 x double]]], [2 x [18 x [32 x double]]]* %5, i64 0, i64 0 ; <[18 x [32 x double]]*> [#uses=1]
+  %5 = getelementptr inbounds [2 x [2 x [18 x [32 x double]]]], ptr @sb_sample, i64 0, i64 0 ; <ptr> [#uses=1]
+  %6 = getelementptr inbounds [2 x [18 x [32 x double]]], ptr %5, i64 0, i64 0 ; <ptr> [#uses=1]
   %7 = sext i32 %4 to i64                         ; <i64> [#uses=1]
-  %8 = getelementptr inbounds [18 x [32 x double]], [18 x [32 x double]]* %6, i64 0, i64 %7 ; <[32 x double]*> [#uses=1]
-  %9 = getelementptr inbounds [32 x double], [32 x double]* %8, i64 0, i64 0 ; <double*> [#uses=1]
-  %10 = load double, double* %9, align 8                  ; <double> [#uses=0]
+  %8 = getelementptr inbounds [18 x [32 x double]], ptr %6, i64 0, i64 %7 ; <ptr> [#uses=1]
+  %9 = getelementptr inbounds [32 x double], ptr %8, i64 0, i64 0 ; <ptr> [#uses=1]
+  %10 = load double, ptr %9, align 8                  ; <double> [#uses=0]
   %11 = fsub double 0.000000e+00, undef           ; <double> [#uses=1]
-  %12 = getelementptr inbounds double, double* getelementptr inbounds ([4 x [36 x double]], [4 x [36 x double]]* @win193, i64 0, i64 2, i64 4), i64 0 ; <double*> [#uses=1]
-  store double %11, double* %12, align 8
+  %12 = getelementptr inbounds double, ptr getelementptr inbounds ([4 x [36 x double]], ptr @win193, i64 0, i64 2, i64 4), i64 0 ; <ptr> [#uses=1]
+  store double %11, ptr %12, align 8
   %13 = add nsw i32 %k.4, 9                       ; <i32> [#uses=1]
   %14 = add nsw i32 %k.4, 18                      ; <i32> [#uses=1]
-  %15 = getelementptr inbounds [4 x [36 x double]], [4 x [36 x double]]* @win193, i64 0, i64 0 ; <[36 x double]*> [#uses=1]
+  %15 = getelementptr inbounds [4 x [36 x double]], ptr @win193, i64 0, i64 0 ; <ptr> [#uses=1]
   %16 = sext i32 %14 to i64                       ; <i64> [#uses=1]
-  %17 = getelementptr inbounds [36 x double], [36 x double]* %15, i64 0, i64 %16 ; <double*> [#uses=1]
-  %18 = load double, double* %17, align 8                 ; <double> [#uses=0]
+  %17 = getelementptr inbounds [36 x double], ptr %15, i64 0, i64 %16 ; <ptr> [#uses=1]
+  %18 = load double, ptr %17, align 8                 ; <double> [#uses=0]
   %19 = sext i32 %k.4 to i64                      ; <i64> [#uses=1]
-  %20 = getelementptr inbounds [18 x [32 x double]], [18 x [32 x double]]* undef, i64 0, i64 %19 ; <[32 x double]*> [#uses=1]
+  %20 = getelementptr inbounds [18 x [32 x double]], ptr undef, i64 0, i64 %19 ; <ptr> [#uses=1]
   %21 = sext i32 %band.2 to i64                   ; <i64> [#uses=1]
-  %22 = getelementptr inbounds [32 x double], [32 x double]* %20, i64 0, i64 %21 ; <double*> [#uses=1]
-  %23 = load double, double* %22, align 8                 ; <double> [#uses=0]
+  %22 = getelementptr inbounds [32 x double], ptr %20, i64 0, i64 %21 ; <ptr> [#uses=1]
+  %23 = load double, ptr %22, align 8                 ; <double> [#uses=0]
   %24 = sext i32 %39 to i64                       ; <i64> [#uses=1]
-  %25 = getelementptr inbounds [4 x [36 x double]], [4 x [36 x double]]* @win193, i64 0, i64 %24 ; <[36 x double]*> [#uses=1]
-  %26 = getelementptr inbounds [36 x double], [36 x double]* %25, i64 0, i64 0 ; <double*> [#uses=1]
-  %27 = load double, double* %26, align 8                 ; <double> [#uses=0]
+  %25 = getelementptr inbounds [4 x [36 x double]], ptr @win193, i64 0, i64 %24 ; <ptr> [#uses=1]
+  %26 = getelementptr inbounds [36 x double], ptr %25, i64 0, i64 0 ; <ptr> [#uses=1]
+  %27 = load double, ptr %26, align 8                 ; <double> [#uses=0]
   %28 = sub nsw i32 17, %k.4                      ; <i32> [#uses=1]
-  %29 = getelementptr inbounds [2 x [2 x [18 x [32 x double]]]], [2 x [2 x [18 x [32 x double]]]]* @sb_sample, i64 0, i64 0 ; <[2 x [18 x [32 x double]]]*> [#uses=1]
-  %30 = getelementptr inbounds [2 x [18 x [32 x double]]], [2 x [18 x [32 x double]]]* %29, i64 0, i64 0 ; <[18 x [32 x double]]*> [#uses=1]
+  %29 = getelementptr inbounds [2 x [2 x [18 x [32 x double]]]], ptr @sb_sample, i64 0, i64 0 ; <ptr> [#uses=1]
+  %30 = getelementptr inbounds [2 x [18 x [32 x double]]], ptr %29, i64 0, i64 0 ; <ptr> [#uses=1]
   %31 = sext i32 %28 to i64                       ; <i64> [#uses=1]
-  %32 = getelementptr inbounds [18 x [32 x double]], [18 x [32 x double]]* %30, i64 0, i64 %31 ; <[32 x double]*> [#uses=1]
-  %33 = getelementptr inbounds [32 x double], [32 x double]* %32, i64 0, i64 0 ; <double*> [#uses=1]
-  %34 = load double, double* %33, align 8                 ; <double> [#uses=0]
+  %32 = getelementptr inbounds [18 x [32 x double]], ptr %30, i64 0, i64 %31 ; <ptr> [#uses=1]
+  %33 = getelementptr inbounds [32 x double], ptr %32, i64 0, i64 0 ; <ptr> [#uses=1]
+  %34 = load double, ptr %33, align 8                 ; <double> [#uses=0]
   %35 = sext i32 %13 to i64                       ; <i64> [#uses=1]
-  %36 = getelementptr inbounds double, double* getelementptr inbounds ([4 x [36 x double]], [4 x [36 x double]]* @win193, i64 0, i64 2, i64 4), i64 %35 ; <double*> [#uses=1]
-  store double 0.000000e+00, double* %36, align 8
+  %36 = getelementptr inbounds double, ptr getelementptr inbounds ([4 x [36 x double]], ptr @win193, i64 0, i64 2, i64 4), i64 %35 ; <ptr> [#uses=1]
+  store double 0.000000e+00, ptr %36, align 8
   %37 = sub nsw i32 %k.4, 1                       ; <i32> [#uses=1]
   br label %bb35
 
@@ -91,7 +91,7 @@ bb37:                                             ; preds = %bb32, %bb26
 
 bb48:                                             ; preds = %bb37, %bb9
   %band.2 = phi i32 [ %38, %bb37 ], [ 0, %bb9 ]   ; <i32> [#uses=2]
-  %39 = load i32, i32* null, align 8                   ; <i32> [#uses=1]
+  %39 = load i32, ptr null, align 8                   ; <i32> [#uses=1]
   br i1 undef, label %bb26, label %bb25
 
 bb50:                                             ; preds = %bb54

@@ -17,16 +17,14 @@
 ; SCOP:    }
 ;
 ; CHECK-LABEL: polly.preload.begin:
-; CHECK-NEXT:    %polly.access.cast.buff = bitcast i8* %buff to i16*
-; CHECK-NEXT:    %polly.access.buff = getelementptr i16, i16* %polly.access.cast.buff, i64 31
-; CHECK-NEXT:    %polly.access.buff.cast = bitcast i16* %polly.access.buff to i32*
-; CHECK-NEXT:    %polly.access.buff.load = load i32, i32* %polly.access.buff.cast, align 4
-; CHECK-NEXT:    store i32 %polly.access.buff.load, i32* %tmp1.preload.s2a
+; CHECK-NEXT:    %polly.access.buff = getelementptr i16, ptr %buff, i64 31
+; CHECK-NEXT:    %polly.access.buff.load = load i32, ptr %polly.access.buff, align 4
+; CHECK-NEXT:    store i32 %polly.access.buff.load, ptr %tmp1.preload.s2a
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @sudecrypt(i8* %buff) #0 {
+define void @sudecrypt(ptr %buff) #0 {
 entry:
   br i1 undef, label %cleanup, label %if.end
 
@@ -37,9 +35,8 @@ if.then.5:                                        ; preds = %if.end
   unreachable
 
 if.end.6:                                         ; preds = %if.end
-  %add.ptr = getelementptr inbounds i8, i8* %buff, i64 62
-  %tmp = bitcast i8* %add.ptr to i32*
-  %tmp1 = load i32, i32* %tmp, align 4, !tbaa !1
+  %add.ptr = getelementptr inbounds i8, ptr %buff, i64 62
+  %tmp1 = load i32, ptr %add.ptr, align 4, !tbaa !1
   br i1 false, label %if.then.13, label %switch.early.test
 
 switch.early.test:                                ; preds = %if.end.6

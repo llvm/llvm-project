@@ -131,8 +131,16 @@ TEST(DumpDataExtractorTest, Formats) {
   // set of bytes to match the 10 byte format but then if the test runs on a
   // machine where we don't use 10 it'll break.
 
+  // Test printable characters.
   TestDump(llvm::StringRef("aardvark"), lldb::Format::eFormatCString,
            "\"aardvark\"");
+  // Test unprintable characters.
+  TestDump(llvm::StringRef("\xcf\xfa\xed\xfe\f"), lldb::Format::eFormatCString,
+           "\"\\xcf\\xfa\\xed\\xfe\\f\"");
+  // Test a mix of printable and unprintable characters.
+  TestDump(llvm::StringRef("\xcf\xfa\ffoo"), lldb::Format::eFormatCString,
+           "\"\\xcf\\xfa\\ffoo\"");
+
   TestDump<uint16_t>(99, lldb::Format::eFormatDecimal, "99");
   // Just prints as a signed integer.
   TestDump(-1, lldb::Format::eFormatEnum, "-1");

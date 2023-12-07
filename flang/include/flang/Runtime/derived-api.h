@@ -37,6 +37,11 @@ void RTNAME(Initialize)(
 // storage.
 void RTNAME(Destroy)(const Descriptor &);
 
+/// Deallocates any allocatable/automatic components.
+/// Does not deallocate the descriptor's storage.
+/// Does not perform any finalization.
+void RTNAME(DestroyWithoutFinalization)(const Descriptor &);
+
 // Intrinsic or defined assignment, with scalar expansion but not type
 // conversion.
 void RTNAME(Assign)(const Descriptor &, const Descriptor &,
@@ -45,6 +50,12 @@ void RTNAME(Assign)(const Descriptor &, const Descriptor &,
 // Perform the test of the CLASS IS type guard statement of the SELECT TYPE
 // construct.
 bool RTNAME(ClassIs)(const Descriptor &, const typeInfo::DerivedType &);
+
+// Perform the test of the SAME_TYPE_AS intrinsic.
+bool RTNAME(SameTypeAs)(const Descriptor &, const Descriptor &);
+
+// Perform the test of the EXTENDS_TYPE_OF intrinsic.
+bool RTNAME(ExtendsTypeOf)(const Descriptor &, const Descriptor &);
 
 } // extern "C"
 } // namespace Fortran::runtime

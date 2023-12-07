@@ -78,7 +78,7 @@ define i32 @test_duplicate_successors_phi_3(i1 %c1, ptr %p, i32 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[SWITCH:%.*]], label [[SWITCH_1:%.*]]
 ; CHECK:       switch:
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range !0
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    switch i32 [[X]], label [[SWITCH_DEFAULT:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[SWITCH_DEFAULT]]
 ; CHECK-NEXT:    i32 1, label [[SWITCH_0:%.*]]
@@ -118,7 +118,7 @@ switch.1:
 ; TODO: Determine that the default destination is dead.
 define i32 @test_local_range(ptr %p) {
 ; CHECK-LABEL: @test_local_range(
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range !0
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    switch i32 [[X]], label [[SWITCH_DEFAULT:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[SWITCH_0:%.*]]
 ; CHECK-NEXT:    i32 1, label [[SWITCH_1:%.*]]
@@ -160,7 +160,7 @@ switch.3:
 ; TODO: Determine that case i3 is dead, even though the edge is shared?
 define i32 @test_duplicate_successors(ptr %p) {
 ; CHECK-LABEL: @test_duplicate_successors(
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range !0
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    switch i32 [[X]], label [[SWITCH_DEFAULT:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[SWITCH_0:%.*]]
 ; CHECK-NEXT:    i32 1, label [[SWITCH_0]]
@@ -205,7 +205,7 @@ define internal i32 @test_ip_range(i32 %x) {
 ; CHECK-NEXT:    i32 3, label [[SWITCH_3:%.*]]
 ; CHECK-NEXT:    i32 1, label [[SWITCH_1:%.*]]
 ; CHECK-NEXT:    i32 2, label [[SWITCH_2:%.*]]
-; CHECK-NEXT:    ], !prof !1
+; CHECK-NEXT:    ], !prof [[PROF1:![0-9]+]]
 ; CHECK:       switch.default:
 ; CHECK-NEXT:    ret i32 -1
 ; CHECK:       switch.1:
@@ -248,6 +248,59 @@ define void @call_test_ip_range() {
   call i32 @test_ip_range(i32 3)
   ret void
 }
+
+define i32 @test_switch_range_may_include_undef(i1 %c.1, i1 %c.2, i32 %x) {
+; CHECK-LABEL: @test_switch_range_may_include_undef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN_1:%.*]], label [[ELSE_1:%.*]]
+; CHECK:       then.1:
+; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[SWITCH:%.*]], label [[ELSE_2:%.*]]
+; CHECK:       else.1:
+; CHECK-NEXT:    br label [[SWITCH]]
+; CHECK:       else.2:
+; CHECK-NEXT:    br label [[SWITCH]]
+; CHECK:       switch:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[THEN_1]] ], [ 2, [[ELSE_1]] ], [ undef, [[ELSE_2]] ]
+; CHECK-NEXT:    switch i32 [[P]], label [[SWITCH_DEFAULT:%.*]] [
+; CHECK-NEXT:    i32 0, label [[END_1:%.*]]
+; CHECK-NEXT:    i32 3, label [[END_2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       switch.default:
+; CHECK-NEXT:    ret i32 -1
+; CHECK:       end.1:
+; CHECK-NEXT:    ret i32 10
+; CHECK:       end.2:
+; CHECK-NEXT:    ret i32 20
+;
+entry:
+  br i1 %c.1, label %then.1, label %else.1
+
+then.1:
+  br i1 %c.2, label %switch, label %else.2
+
+else.1:
+  br label %switch
+
+else.2:
+  br label %switch
+
+switch:
+  %p = phi i32 [ 0, %then.1 ], [ 2, %else.1 ], [ undef, %else.2 ]
+  switch i32 %p, label %switch.default [
+  i32 0, label %end.1
+  i32 3, label %end.2
+  ]
+
+switch.default:
+  ret i32 -1
+
+end.1:
+  ret i32 10
+
+end.2:
+  ret i32 20
+}
+
 
 declare void @llvm.assume(i1)
 

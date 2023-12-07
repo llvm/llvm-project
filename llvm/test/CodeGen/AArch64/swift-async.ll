@@ -5,7 +5,7 @@
 ; Important details in prologue:
 ;   * x22 is stored just below x29
 ;   * Enough stack space is allocated for everything
-define swifttailcc void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
+define swifttailcc void @simple(ptr swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: simple:
 ; CHECK: orr x29, x29, #0x100000000000000
 ; CHECK: sub sp, sp, #32
@@ -32,7 +32,7 @@ define swifttailcc void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
   ret void
 }
 
-define swifttailcc void @more_csrs(i8* swiftasync %ctx) "frame-pointer"="all" {
+define swifttailcc void @more_csrs(ptr swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: more_csrs:
 ; CHECK: orr x29, x29, #0x100000000000000
 ; CHECK: str x23, [sp, #-32]!
@@ -60,7 +60,7 @@ define swifttailcc void @more_csrs(i8* swiftasync %ctx) "frame-pointer"="all" {
   ret void
 }
 
-define swifttailcc void @locals(i8* swiftasync %ctx) "frame-pointer"="all" {
+define swifttailcc void @locals(ptr swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: locals:
 ; CHECK: orr x29, x29, #0x100000000000000
 ; CHECK: sub sp, sp, #64
@@ -87,11 +87,11 @@ define swifttailcc void @locals(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: and x29, x29, #0xefffffffffffffff
 ; CHECK: add sp, sp, #64
   %var = alloca i32, i32 10
-  call void @bar(i32* %var)
+  call void @bar(ptr %var)
   ret void
 }
 
-define swifttailcc void @use_input_context(i8* swiftasync %ctx, i8** %ptr) "frame-pointer"="all" {
+define swifttailcc void @use_input_context(ptr swiftasync %ctx, ptr %ptr) "frame-pointer"="all" {
 ; CHECK-LABEL: use_input_context:
 
 ; CHECK-NOAUTH: str x22, [sp
@@ -100,11 +100,11 @@ define swifttailcc void @use_input_context(i8* swiftasync %ctx, i8** %ptr) "fram
 ; CHECK-NOT: x22
 ; CHECK: str x22, [x0]
 
-  store i8* %ctx, i8** %ptr
+  store ptr %ctx, ptr %ptr
   ret void
 }
 
-define swifttailcc i8** @context_in_func() "frame-pointer"="non-leaf" {
+define swifttailcc ptr @context_in_func() "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: context_in_func:
 
 ; CHECK-NOAUTH: str xzr, [sp, #8]
@@ -114,27 +114,27 @@ define swifttailcc i8** @context_in_func() "frame-pointer"="non-leaf" {
 ; CHECK-AUTH: pacdb x17, x16
 ; CHECK-AUTH: str x17, [sp, #8]
 
-  %ptr = call i8** @llvm.swift.async.context.addr()
-  ret i8** %ptr
+  %ptr = call ptr @llvm.swift.async.context.addr()
+  ret ptr %ptr
 }
 
-define swifttailcc void @write_frame_context(i8* swiftasync %ctx, i8* %newctx) "frame-pointer"="non-leaf" {
+define swifttailcc void @write_frame_context(ptr swiftasync %ctx, ptr %newctx) "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: write_frame_context:
 ; CHECK: sub x[[ADDR:[0-9]+]], x29, #8
 ; CHECK: str x0, [x[[ADDR]]]
-  %ptr = call i8** @llvm.swift.async.context.addr()
-  store i8* %newctx, i8** %ptr
+  %ptr = call ptr @llvm.swift.async.context.addr()
+  store ptr %newctx, ptr %ptr
   ret void
 }
 
-define swifttailcc void @simple_fp_elim(i8* swiftasync %ctx) "frame-pointer"="non-leaf" {
+define swifttailcc void @simple_fp_elim(ptr swiftasync %ctx) "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: simple_fp_elim:
 ; CHECK-NOT: orr x29, x29, #0x100000000000000
 
   ret void
 }
 
-define swifttailcc void @large_frame(i8* swiftasync %ctx) "frame-pointer"="all" {
+define swifttailcc void @large_frame(ptr swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: large_frame:
 ; CHECK: str x28, [sp, #-32]!
 ; CHECK: stp x29, x30, [sp, #16]
@@ -152,7 +152,7 @@ define swifttailcc void @large_frame(i8* swiftasync %ctx) "frame-pointer"="all" 
 
 ; Important point is that there is just one 8-byte gap in the CSR region (right
 ; now just above d8) to realign the stack.
-define swifttailcc void @two_unpaired_csrs(i8* swiftasync) "frame-pointer"="all" {
+define swifttailcc void @two_unpaired_csrs(ptr swiftasync) "frame-pointer"="all" {
 ; CHECK-LABEL: two_unpaired_csrs:
 ; CHECK: str d8, [sp, #-48]!
 ; CHECK: str x19, [sp, #16]
@@ -167,8 +167,8 @@ define swifttailcc void @two_unpaired_csrs(i8* swiftasync) "frame-pointer"="all"
 ; CHECK: .cfi_offset b8, -48
 
   call void asm "","~{x19},~{d8}"()
-  call swifttailcc void @bar(i32* undef)
+  call swifttailcc void @bar(ptr undef)
   ret void
 }
-declare swifttailcc void @bar(i32*)
-declare i8** @llvm.swift.async.context.addr()
+declare swifttailcc void @bar(ptr)
+declare ptr @llvm.swift.async.context.addr()

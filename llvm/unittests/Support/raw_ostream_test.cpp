@@ -504,6 +504,31 @@ TEST(raw_ostreamTest, writeToOutputFile) {
   checkFileData(Path, "HelloWorld");
 }
 
+#ifndef _WIN32
+TEST(raw_ostreamTest, filePermissions) {
+  // Set umask to be permissive of all permissions.
+  unsigned OldMask = ::umask(0);
+
+  llvm::unittest::TempDir RootTestDirectory("writToOutput", /*Unique*/ true);
+  SmallString<128> Path(RootTestDirectory.path());
+  sys::path::append(Path, "test.txt");
+
+  ASSERT_THAT_ERROR(writeToOutput(Path,
+                                  [](raw_ostream &Out) -> Error {
+                                    Out << "HelloWorld";
+                                    return Error::success();
+                                  }),
+                    Succeeded());
+
+  ErrorOr<llvm::sys::fs::perms> Perms = llvm::sys::fs::getPermissions(Path);
+  ASSERT_TRUE(Perms) << "should be able to get permissions";
+  // Verify the permission bits set by writeToOutput are read and write only.
+  EXPECT_EQ(Perms.get(), llvm::sys::fs::all_read | llvm::sys::fs::all_write);
+
+  ::umask(OldMask);
+}
+#endif
+
 TEST(raw_ostreamTest, writeToNonexistingPath) {
   StringRef FileName = "/_bad/_path";
   std::string ErrorMessage = toString(createFileError(

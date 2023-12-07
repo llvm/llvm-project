@@ -8,13 +8,12 @@ else()
   # Until the minimum CMAKE version is 3.18
 
   include(CheckCXXCompilerFlag)
-  include(CMakePushCheckState)
 
   # cmake builtin compatible, except we assume lang is C or CXX
   function(llvm_check_linker_flag lang flag out_var)
     cmake_policy(PUSH)
     cmake_policy(SET CMP0056 NEW)
-    cmake_push_check_state()
+    set(_CMAKE_EXE_LINKER_FLAGS_SAVE ${CMAKE_EXE_LINKER_FLAGS})
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${flag}")
     if("${lang}" STREQUAL "C")
       check_c_compiler_flag("" ${out_var})
@@ -23,7 +22,7 @@ else()
     else()
       message(FATAL_ERROR "\"${lang}\" is not C or CXX")
     endif()
-    cmake_pop_check_state()
+    set(CMAKE_EXE_LINKER_FLAGS ${_CMAKE_EXE_LINKER_FLAGS_SAVE})
     cmake_policy(POP)
   endfunction()
 endif()

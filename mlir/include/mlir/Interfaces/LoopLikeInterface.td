@@ -49,6 +49,19 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
+        Promotes the loop body to its containing block if the loop is known to
+        have a single iteration. Returns "success" if the promotion was
+        successful.
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"promoteIfSingleIteration",
+      /*args=*/(ins "::mlir::RewriterBase &":$rewriter),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
+    >,
+    InterfaceMethod<[{
         If there is a single induction variable return it, otherwise return
         std::nullopt.
       }],
@@ -97,6 +110,13 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
   ];
+
+  let extraClassDeclaration = [{
+    /// Returns if a block is inside a loop (within the current function). This
+    /// can either be because the block is nested inside a LoopLikeInterface, or
+    /// because the control flow graph is cyclic
+    static bool blockIsInLoop(Block *block);
+  }];
 }
 
 #endif // MLIR_INTERFACES_LOOPLIKEINTERFACE

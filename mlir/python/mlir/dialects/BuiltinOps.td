@@ -9,7 +9,6 @@
 #ifndef PYTHON_BINDINGS_BUILTIN_OPS
 #define PYTHON_BINDINGS_BUILTIN_OPS
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/IR/BuiltinOps.td"
 
 #endif

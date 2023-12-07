@@ -37,4 +37,5 @@ add_llvm_component_library(LLVMDebugInfoDWARF
   BinaryFormat
   Object
   Support
+  TargetParser
   )

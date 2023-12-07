@@ -28,58 +28,55 @@
 #include "test_allocator.h"
 
 template <class T>
-struct some_alloc
-{
-    typedef T value_type;
+struct some_alloc {
+  typedef T value_type;
 
-    some_alloc() {}
-    some_alloc(const some_alloc&);
-    T *allocate(size_t);
-    void deallocate(void*, unsigned) {}
-    typedef std::true_type propagate_on_container_swap;
+  some_alloc() {}
+  some_alloc(const some_alloc&);
+  T* allocate(std::size_t);
+  void deallocate(void*, unsigned) {}
+  typedef std::true_type propagate_on_container_swap;
 };
 
 template <class T>
-struct some_alloc2
-{
-    typedef T value_type;
+struct some_alloc2 {
+  typedef T value_type;
 
-    some_alloc2() {}
-    some_alloc2(const some_alloc2&);
-    T *allocate(size_t);
-    void deallocate(void*, unsigned) {}
+  some_alloc2() {}
+  some_alloc2(const some_alloc2&);
+  T* allocate(std::size_t);
+  void deallocate(void*, unsigned) {}
 
-    typedef std::false_type propagate_on_container_swap;
-    typedef std::true_type is_always_equal;
+  typedef std::false_type propagate_on_container_swap;
+  typedef std::true_type is_always_equal;
 };
 
-int main(int, char**)
-{
-    {
-        typedef std::string C;
-        static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
-    }
+int main(int, char**) {
+  {
+    typedef std::string C;
+    static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+  }
 #if defined(_LIBCPP_VERSION)
-    {
-        typedef std::basic_string<char, std::char_traits<char>, test_allocator<char>> C;
-        static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
-    }
+  {
+    typedef std::basic_string<char, std::char_traits<char>, test_allocator<char>> C;
+    static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+  }
 #endif // _LIBCPP_VERSION
-    {
-        typedef std::basic_string<char, std::char_traits<char>, some_alloc<char>> C;
+  {
+    typedef std::basic_string<char, std::char_traits<char>, some_alloc<char>> C;
 #if TEST_STD_VER >= 14
     //  In C++14, if POCS is set, swapping the allocator is required not to throw
-        static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+    static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
 #else
-        static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+    static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
 #endif
-    }
+  }
 #if TEST_STD_VER >= 14
-    {
-        typedef std::basic_string<char, std::char_traits<char>, some_alloc2<char>> C;
+  {
+    typedef std::basic_string<char, std::char_traits<char>, some_alloc2<char>> C;
     //  if the allocators are always equal, then the swap can be noexcept
-        static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
-    }
+    static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+  }
 #endif
 
   return 0;

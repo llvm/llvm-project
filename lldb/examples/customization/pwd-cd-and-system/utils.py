@@ -9,6 +9,7 @@ import subprocess
 
 class Holder:
     """Holds the _prev_dir_ class attribute for chdir() function."""
+
     _prev_dir_ = None
 
     @classmethod
@@ -25,8 +26,8 @@ def chdir(debugger, args, result, dict):
     You can also issue 'cd -' to change to the previous working directory."""
     new_dir = args.strip()
     if not new_dir:
-        new_dir = os.path.expanduser('~')
-    elif new_dir == '-':
+        new_dir = os.path.expanduser("~")
+    elif new_dir == "-":
         if not Holder.prev_dir():
             # Bad directory, not changing.
             print("bad directory, not changing")
@@ -42,10 +43,7 @@ def chdir(debugger, args, result, dict):
 def system(debugger, command_line, result, dict):
     """Execute the command (a string) in a subshell."""
     args = shlex.split(command_line)
-    process = subprocess.Popen(
-        args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
+    process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
     retcode = process.poll()
     if output and error:

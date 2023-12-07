@@ -107,8 +107,8 @@ entry:
   %mul = mul i32 %and, 125613361
   %shr = lshr i32 %mul, 27
   %idxprom = zext i32 %shr to i64
-  %arrayidx = getelementptr inbounds [32 x i8], [32 x i8]* @ctz7.table, i64 0, i64 %idxprom
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [32 x i8], ptr @ctz7.table, i64 0, i64 %idxprom
+  %0 = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %0 to i32
   ret i32 %conv
 }
@@ -129,8 +129,8 @@ entry:
   %mul = mul i32 %and, 72416175
   %shr = lshr i32 %mul, 26
   %idxprom = zext i32 %shr to i64
-  %arrayidx = getelementptr inbounds [64 x i16], [64 x i16]* @ctz2.table, i64 0, i64 %idxprom
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds [64 x i16], ptr @ctz2.table, i64 0, i64 %idxprom
+  %0 = load i16, ptr %arrayidx, align 2
   %conv = sext i16 %0 to i32
   ret i32 %conv
 }
@@ -144,7 +144,6 @@ define i32 @ctz3(i32 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[TMP0]], [[IF_END]] ], [ 32, [[ENTRY:%.*]] ]
@@ -160,8 +159,8 @@ if.end:                                           ; preds = %entry
   %mul = mul i32 %and, 81224991
   %shr = lshr i32 %mul, 27
   %idxprom = zext i32 %shr to i64
-  %arrayidx = getelementptr inbounds [32 x i32], [32 x i32]* @ctz3.table, i64 0, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [32 x i32], ptr @ctz3.table, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   br label %return
 
 return:                                           ; preds = %entry, %if.end
@@ -185,8 +184,8 @@ entry:
   %and = and i64 %sub, %b
   %mul = mul i64 %and, 283881067100198605
   %shr = lshr i64 %mul, 58
-  %arrayidx = getelementptr inbounds [64 x i32], [64 x i32]* @table, i64 0, i64 %shr
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [64 x i32], ptr @table, i64 0, i64 %shr
+  %0 = load i32, ptr %arrayidx, align 4
   ret i32 %0
 }
 
@@ -208,8 +207,8 @@ entry:
   %mul = mul i32 %and, 81224991
   %shr = lshr i32 %mul, 27
   %idxprom = zext i32 %shr to i64
-  %arrayidx = getelementptr inbounds [32 x i8], [32 x i8]* @ctz5.table, i64 0, i64 %idxprom
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [32 x i8], ptr @ctz5.table, i64 0, i64 %idxprom
+  %0 = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %0 to i32
   ret i32 %conv
 }
@@ -230,8 +229,8 @@ entry:
   %and = and i64 %add, %n
   %mul = mul i64 %and, 571347909858961602
   %shr = lshr i64 %mul, 58
-  %arrayidx = getelementptr inbounds [64 x i32], [64 x i32]* @ctz6.table, i64 0, i64 %shr
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [64 x i32], ptr @ctz6.table, i64 0, i64 %shr
+  %0 = load i32, ptr %arrayidx, align 4
   ret i32 %0
 }
 
@@ -251,7 +250,7 @@ entry:
   %mul = mul i32 %and, 162449982
   %shr = lshr i32 %mul, 27
   %idxprom = zext i32 %shr to i64
-  %arrayidx = getelementptr inbounds [32 x i32], [32 x i32]* @ctz8.table, i64 0, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [32 x i32], ptr @ctz8.table, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   ret i32 %0
 }

@@ -18,6 +18,7 @@
 
 namespace llvm {
 void reduceMetadataDeltaPass(TestRunner &Test);
+void reduceNamedMetadataDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif

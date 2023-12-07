@@ -10,7 +10,7 @@
 #define _LIBCPP___CONCEPTS_DESTRUCTIBLE_H
 
 #include <__config>
-#include <type_traits>
+#include <__type_traits/is_nothrow_destructible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -18,14 +18,14 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [concept.destructible]
 
-template<class _Tp>
+template <class _Tp>
 concept destructible = is_nothrow_destructible_v<_Tp>;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -18,9 +18,13 @@
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Debug.h"
 #include <numeric>
+#include <optional>
 
-#define DEBUG_TYPE "vector-unrolling"
+#define DEBUG_TYPE "vector-unroll"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -30,7 +34,7 @@ using namespace mlir::vector;
 static SmallVector<int64_t> getVectorOffset(ArrayRef<int64_t> ratioStrides,
                                             int64_t index,
                                             ArrayRef<int64_t> targetShape) {
-  return computeElementwiseMul(delinearize(ratioStrides, index), targetShape);
+  return computeElementwiseMul(delinearize(index, ratioStrides), targetShape);
 }
 
 /// A functor that accomplishes the same thing as `getVectorOffset` but
@@ -117,7 +121,8 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
     auto expr = getAffineDimExpr(0, builder.getContext()) +
                 getAffineConstantExpr(elementOffsets[dim.index()], ctx);
     auto map = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, expr);
-    slicedIndices[pos] = builder.create<AffineApplyOp>(loc, map, indices[pos]);
+    slicedIndices[pos] =
+        builder.create<affine::AffineApplyOp>(loc, map, indices[pos]);
   }
   return slicedIndices;
 }
@@ -134,26 +139,49 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
 
 /// Return the target shape for unrolling for the given `op`. Return
 /// std::nullopt if the op shouldn't be or cannot be unrolled.
-static Optional<SmallVector<int64_t>>
+static std::optional<SmallVector<int64_t>>
 getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
-  if (options.filterConstraint && failed(options.filterConstraint(op)))
+  LDBG("");
+  LDBG("Get unroll shape for op " << op->getName().getStringRef());
+  if (options.filterConstraint && failed(options.filterConstraint(op))) {
+    LDBG("--no filter constraint -> BAIL");
     return std::nullopt;
+  }
   assert(options.nativeShape &&
          "vector unrolling expects the native shape or native"
          "shape call back function to be set");
   auto unrollableVectorOp = dyn_cast<VectorUnrollOpInterface>(op);
-  if (!unrollableVectorOp)
+  if (!unrollableVectorOp) {
+    LDBG("--not an unrollable op -> BAIL");
     return std::nullopt;
+  }
   auto maybeUnrollShape = unrollableVectorOp.getShapeForUnroll();
-  if (!maybeUnrollShape)
+  if (!maybeUnrollShape) {
+    LDBG("--could not get shape of op " << *op << " -> BAIL");
     return std::nullopt;
-  Optional<SmallVector<int64_t>> targetShape = options.nativeShape(op);
-  if (!targetShape)
+  }
+  LLVM_DEBUG(
+      llvm::interleaveComma(*maybeUnrollShape, DBGS() << "--vector op shape: ");
+      llvm::dbgs() << "\n";);
+
+  std::optional<SmallVector<int64_t>> targetShape = options.nativeShape(op);
+  if (!targetShape) {
+    LDBG("--no unrolling target shape defined " << *op << "-> SKIP");
     return std::nullopt;
+  }
+  LLVM_DEBUG(llvm::interleaveComma(*targetShape, DBGS() << "--target shape: ");
+             llvm::dbgs() << "\n";);
+
   auto maybeShapeRatio = computeShapeRatio(*maybeUnrollShape, *targetShape);
-  if (!maybeShapeRatio ||
-      llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; }))
+  if (!maybeShapeRatio) {
+    LDBG("--could not compute integral shape ratio -> BAIL");
     return std::nullopt;
+  }
+  if (llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; })) {
+    LDBG("--no unrolling needed -> SKIP");
+    return std::nullopt;
+  }
+  LDBG("--found an integral shape ratio to unroll to -> SUCCESS");
   return targetShape;
 }
 
@@ -163,7 +191,8 @@ getUnrollOrder(unsigned numLoops, Operation *op,
   SmallVector<int64_t> loopOrder =
       llvm::to_vector(llvm::seq<int64_t>(0, static_cast<int64_t>(numLoops)));
   if (options.traversalOrderCallback != nullptr) {
-    Optional<SmallVector<int64_t>> order = options.traversalOrderCallback(op);
+    std::optional<SmallVector<int64_t>> order =
+        options.traversalOrderCallback(op);
     if (order) {
       loopOrder = std::move(*order);
     }
@@ -313,7 +342,7 @@ struct UnrollContractionPattern
     auto targetShape = getTargetShape(options, contractOp);
     if (!targetShape)
       return failure();
-    auto dstVecType = contractOp.getResultType().cast<VectorType>();
+    auto dstVecType = cast<VectorType>(contractOp.getResultType());
     SmallVector<int64_t> originalSize = *contractOp.getShapeForUnroll();
 
     Location loc = contractOp.getLoc();
@@ -349,20 +378,12 @@ struct UnrollContractionPattern
       SmallVector<int64_t> lhsOffets =
           applyPermutationMap(lhsPermutationMap, ArrayRef<int64_t>(offsets));
       extractOperand(0, contractOp.getLhs(), lhsPermutationMap, lhsOffets);
-      // If there is a mask associated to lhs, extract it as well.
-      if (slicesOperands.size() > 3)
-        extractOperand(3, contractOp.getMasks()[0], lhsPermutationMap,
-                       lhsOffets);
 
       // Extract the new rhs operand.
       AffineMap rhsPermutationMap = contractOp.getIndexingMapsArray()[1];
       SmallVector<int64_t> rhsOffets =
           applyPermutationMap(rhsPermutationMap, ArrayRef<int64_t>(offsets));
       extractOperand(1, contractOp.getRhs(), rhsPermutationMap, rhsOffets);
-      // If there is a mask associated to rhs, extract it as well.
-      if (slicesOperands.size() > 4)
-        extractOperand(4, contractOp.getMasks()[1], rhsPermutationMap,
-                       rhsOffets);
 
       AffineMap accPermutationMap = contractOp.getIndexingMapsArray()[2];
       SmallVector<int64_t> accOffets =
@@ -413,7 +434,7 @@ struct UnrollMultiReductionPattern
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
-    Optional<SmallVector<int64_t>> targetShape =
+    std::optional<SmallVector<int64_t>> targetShape =
         getTargetShape(options, reductionOp);
     if (!targetShape)
       return failure();
@@ -496,7 +517,7 @@ struct UnrollElementwisePattern : public RewritePattern {
     auto targetShape = getTargetShape(options, op);
     if (!targetShape)
       return failure();
-    auto dstVecType = op->getResult(0).getType().cast<VectorType>();
+    auto dstVecType = cast<VectorType>(op->getResult(0).getType());
     SmallVector<int64_t> originalSize =
         *cast<VectorUnrollOpInterface>(op).getShapeForUnroll();
     SmallVector<int64_t> ratio = *computeShapeRatio(originalSize, *targetShape);
@@ -517,7 +538,7 @@ struct UnrollElementwisePattern : public RewritePattern {
           getVectorOffset(ratioStrides, i, *targetShape);
       SmallVector<Value> extractOperands;
       for (OpOperand &operand : op->getOpOperands()) {
-        auto vecType = operand.get().getType().template dyn_cast<VectorType>();
+        auto vecType = dyn_cast<VectorType>(operand.get().getType());
         if (!vecType) {
           extractOperands.push_back(operand.get());
           continue;
@@ -548,7 +569,7 @@ struct UnrollReductionPattern : public OpRewritePattern<vector::ReductionOp> {
 
   LogicalResult matchAndRewrite(vector::ReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
-    Optional<SmallVector<int64_t>> targetShape =
+    std::optional<SmallVector<int64_t>> targetShape =
         getTargetShape(options, reductionOp);
     if (!targetShape)
       return failure();
@@ -591,23 +612,23 @@ private:
   const vector::UnrollVectorOptions options;
 };
 
-struct UnrollTranposePattern : public OpRewritePattern<vector::TransposeOp> {
-  UnrollTranposePattern(MLIRContext *context,
-                        const vector::UnrollVectorOptions &options,
-                        PatternBenefit benefit = 1)
+struct UnrollTransposePattern : public OpRewritePattern<vector::TransposeOp> {
+  UnrollTransposePattern(MLIRContext *context,
+                         const vector::UnrollVectorOptions &options,
+                         PatternBenefit benefit = 1)
       : OpRewritePattern<vector::TransposeOp>(context, benefit),
         options(options) {}
 
-  LogicalResult matchAndRewrite(vector::TransposeOp tranposeOp,
+  LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
-    if (tranposeOp.getResultType().getRank() == 0)
+    if (transposeOp.getResultVectorType().getRank() == 0)
       return failure();
-    auto targetShape = getTargetShape(options, tranposeOp);
+    auto targetShape = getTargetShape(options, transposeOp);
     if (!targetShape)
       return failure();
-    auto originalVectorType = tranposeOp.getResultType();
+    auto originalVectorType = transposeOp.getResultVectorType();
     SmallVector<int64_t> strides(targetShape->size(), 1);
-    Location loc = tranposeOp.getLoc();
+    Location loc = transposeOp.getLoc();
     ArrayRef<int64_t> originalSize = originalVectorType.getShape();
     SmallVector<int64_t> ratio = *computeShapeRatio(originalSize, *targetShape);
     int64_t sliceCount = computeMaxLinearIndex(ratio);
@@ -615,7 +636,7 @@ struct UnrollTranposePattern : public OpRewritePattern<vector::TransposeOp> {
     Value result = rewriter.create<arith::ConstantOp>(
         loc, originalVectorType, rewriter.getZeroAttr(originalVectorType));
     SmallVector<int64_t> permutation;
-    tranposeOp.getTransp(permutation);
+    transposeOp.getTransp(permutation);
 
     // Stride of the ratios, this gives us the offsets of sliceCount in a basis
     // of multiples of the targetShape.
@@ -626,18 +647,74 @@ struct UnrollTranposePattern : public OpRewritePattern<vector::TransposeOp> {
       SmallVector<int64_t> permutedOffsets(elementOffsets.size());
       SmallVector<int64_t> permutedShape(elementOffsets.size());
       // Compute the source offsets and shape.
-      for (auto &indices : llvm::enumerate(permutation)) {
+      for (auto indices : llvm::enumerate(permutation)) {
         permutedOffsets[indices.value()] = elementOffsets[indices.index()];
         permutedShape[indices.value()] = (*targetShape)[indices.index()];
       }
       Value slicedOperand = rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, tranposeOp.getVector(), permutedOffsets, permutedShape, strides);
-      Value tranposedSlice =
+          loc, transposeOp.getVector(), permutedOffsets, permutedShape,
+          strides);
+      Value transposedSlice =
           rewriter.create<vector::TransposeOp>(loc, slicedOperand, permutation);
       result = rewriter.create<vector::InsertStridedSliceOp>(
-          loc, tranposedSlice, result, elementOffsets, strides);
+          loc, transposedSlice, result, elementOffsets, strides);
     }
-    rewriter.replaceOp(tranposeOp, result);
+    rewriter.replaceOp(transposeOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
+struct UnrollGatherPattern : public OpRewritePattern<vector::GatherOp> {
+  UnrollGatherPattern(MLIRContext *context,
+                      const vector::UnrollVectorOptions &options,
+                      PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::GatherOp>(context, benefit), options(options) {
+  }
+
+  LogicalResult matchAndRewrite(vector::GatherOp gatherOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType sourceVectorType = gatherOp.getVectorType();
+    if (sourceVectorType.getRank() == 0)
+      return failure();
+    auto targetShape = getTargetShape(options, gatherOp);
+    if (!targetShape)
+      return failure();
+    SmallVector<int64_t> strides(targetShape->size(), 1);
+    Location loc = gatherOp.getLoc();
+    ArrayRef<int64_t> originalSize = gatherOp.getVectorType().getShape();
+
+    // Prepare the result vector;
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, sourceVectorType, rewriter.getZeroAttr(sourceVectorType));
+    auto targetType =
+        VectorType::get(*targetShape, sourceVectorType.getElementType());
+
+    SmallVector<int64_t> loopOrder =
+        getUnrollOrder(originalSize.size(), gatherOp, options);
+    DecomposeShapeIterator indexToOffsets(originalSize, *targetShape,
+                                          loopOrder);
+    for (int64_t i = 0, e = indexToOffsets.maxIndex(); i < e; ++i) {
+      // To get the unrolled gather, extract the same slice based on the
+      // decomposed shape from each of the index, mask, and pass-through
+      // vectors.
+      SmallVector<int64_t> elementOffsets = indexToOffsets.getVectorOffset(i);
+      Value indexSubVec = rewriter.create<vector::ExtractStridedSliceOp>(
+          loc, gatherOp.getIndexVec(), elementOffsets, *targetShape, strides);
+      Value maskSubVec = rewriter.create<vector::ExtractStridedSliceOp>(
+          loc, gatherOp.getMask(), elementOffsets, *targetShape, strides);
+      Value passThruSubVec = rewriter.create<vector::ExtractStridedSliceOp>(
+          loc, gatherOp.getPassThru(), elementOffsets, *targetShape, strides);
+      auto slicedGather = rewriter.create<vector::GatherOp>(
+          loc, targetType, gatherOp.getBase(), gatherOp.getIndices(),
+          indexSubVec, maskSubVec, passThruSubVec);
+
+      result = rewriter.create<vector::InsertStridedSliceOp>(
+          loc, slicedGather, result, elementOffsets, strides);
+    }
+    rewriter.replaceOp(gatherOp, result);
     return success();
   }
 
@@ -653,5 +730,6 @@ void mlir::vector::populateVectorUnrollPatterns(
   patterns.add<UnrollTransferReadPattern, UnrollTransferWritePattern,
                UnrollContractionPattern, UnrollElementwisePattern,
                UnrollReductionPattern, UnrollMultiReductionPattern,
-               UnrollTranposePattern>(patterns.getContext(), options, benefit);
+               UnrollTransposePattern, UnrollGatherPattern>(
+      patterns.getContext(), options, benefit);
 }

@@ -46,17 +46,13 @@ namespace {
 /// types and the function declaration into a module if they're not used, and
 /// avoids constructing the type more than once if it's used more than once.
 class LazyRuntimeFunction {
-  CodeGenModule *CGM;
-  llvm::FunctionType *FTy;
-  const char *FunctionName;
-  llvm::FunctionCallee Function;
+  CodeGenModule *CGM = nullptr;
+  llvm::FunctionType *FTy = nullptr;
+  const char *FunctionName = nullptr;
+  llvm::FunctionCallee Function = nullptr;
 
 public:
-  /// Constructor leaves this class uninitialized, because it is intended to
-  /// be used as a field in another class and not all of the types that are
-  /// used as arguments will necessarily be available at construction time.
-  LazyRuntimeFunction()
-      : CGM(nullptr), FunctionName(nullptr), Function(nullptr) {}
+  LazyRuntimeFunction() = default;
 
   /// Initialises the lazy function with the name, return type, and the types
   /// of the arguments.
@@ -1064,7 +1060,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       // Hash.  Not currently initialised by the compiler.
       Fields.addInt(Int32Ty, 0);
       // pointer to the data string.
-      auto Arr = llvm::makeArrayRef(&ToBuf[0], ToPtr+1);
+      auto Arr = llvm::ArrayRef(&ToBuf[0], ToPtr + 1);
       auto *C = llvm::ConstantDataArray::get(VMContext, Arr);
       auto *Buffer = new llvm::GlobalVariable(TheModule, C->getType(),
           /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage, C, ".str");
@@ -3851,9 +3847,9 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
     llvm::Type *moduleEltTys[] = {
       LongTy, LongTy, PtrToInt8Ty, symtab->getType(), IntTy
     };
-    llvm::StructType *moduleTy =
-      llvm::StructType::get(CGM.getLLVMContext(),
-         makeArrayRef(moduleEltTys).drop_back(unsigned(RuntimeVersion < 10)));
+    llvm::StructType *moduleTy = llvm::StructType::get(
+        CGM.getLLVMContext(),
+        ArrayRef(moduleEltTys).drop_back(unsigned(RuntimeVersion < 10)));
 
     ConstantInitBuilder builder(CGM);
     auto module = builder.beginStruct(moduleTy);
@@ -3864,8 +3860,7 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
 
     // The path to the source file where this module was declared
     SourceManager &SM = CGM.getContext().getSourceManager();
-    Optional<FileEntryRef> mainFile =
-        SM.getFileEntryRefForID(SM.getMainFileID());
+    OptionalFileEntryRef mainFile = SM.getFileEntryRefForID(SM.getMainFileID());
     std::string path =
         (mainFile->getDir().getName() + "/" + mainFile->getName()).str();
     module.add(MakeConstantString(path, ".objc_source_file_name"));
@@ -4128,9 +4123,9 @@ llvm::GlobalVariable *CGObjCGNU::ObjCIvarOffsetVariable(
   // when linked against code which isn't (most of the time).
   llvm::GlobalVariable *IvarOffsetPointer = TheModule.getNamedGlobal(Name);
   if (!IvarOffsetPointer)
-    IvarOffsetPointer = new llvm::GlobalVariable(TheModule,
-            llvm::Type::getInt32PtrTy(VMContext), false,
-            llvm::GlobalValue::ExternalLinkage, nullptr, Name);
+    IvarOffsetPointer = new llvm::GlobalVariable(
+        TheModule, llvm::PointerType::getUnqual(VMContext), false,
+        llvm::GlobalValue::ExternalLinkage, nullptr, Name);
   return IvarOffsetPointer;
 }
 
@@ -4174,10 +4169,11 @@ llvm::Value *CGObjCGNU::EmitIvarOffset(CodeGenFunction &CGF,
         CGF.CGM.getTarget().getTriple().isKnownWindowsMSVCEnvironment())
       return CGF.Builder.CreateZExtOrBitCast(
           CGF.Builder.CreateAlignedLoad(
-              Int32Ty, CGF.Builder.CreateAlignedLoad(
-                           llvm::Type::getInt32PtrTy(VMContext),
-                           ObjCIvarOffsetVariable(Interface, Ivar),
-                           CGF.getPointerAlign(), "ivar"),
+              Int32Ty,
+              CGF.Builder.CreateAlignedLoad(
+                  llvm::PointerType::getUnqual(VMContext),
+                  ObjCIvarOffsetVariable(Interface, Ivar),
+                  CGF.getPointerAlign(), "ivar"),
               CharUnits::fromQuantity(4)),
           PtrDiffTy);
     std::string name = "__objc_ivar_offset_value_" +

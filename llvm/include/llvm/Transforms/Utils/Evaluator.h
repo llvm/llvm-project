@@ -55,15 +55,15 @@ class Evaluator {
     ~MutableValue() { clear(); }
 
     Type *getType() const {
-      if (auto *C = Val.dyn_cast<Constant *>())
+      if (auto *C = dyn_cast_if_present<Constant *>(Val))
         return C->getType();
-      return Val.get<MutableAggregate *>()->Ty;
+      return cast<MutableAggregate *>(Val)->Ty;
     }
 
     Constant *toConstant() const {
-      if (auto *C = Val.dyn_cast<Constant *>())
+      if (auto *C = dyn_cast_if_present<Constant *>(Val))
         return C;
-      return Val.get<MutableAggregate *>()->toConstant();
+      return cast<MutableAggregate *>(Val)->toConstant();
     }
 
     Constant *read(Type *Ty, APInt Offset, const DataLayout &DL) const;

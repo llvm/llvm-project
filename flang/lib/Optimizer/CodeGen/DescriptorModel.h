@@ -22,9 +22,10 @@
 #ifndef OPTIMIZER_DESCRIPTOR_MODEL_H
 #define OPTIMIZER_DESCRIPTOR_MODEL_H
 
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/descriptor.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <tuple>
 

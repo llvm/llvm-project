@@ -48,7 +48,18 @@ namespace clang {
   enum {
     LastNEONBuiltin = NEON::FirstTSBuiltin - 1,
 #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BI##ID,
 #include "clang/Basic/BuiltinsSVE.def"
+    FirstTSBuiltin,
+  };
+  }
+
+  namespace SME {
+  enum {
+    LastSVEBuiltin = SVE::FirstTSBuiltin - 1,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BI##ID,
+#include "clang/Basic/BuiltinsSME.def"
     FirstTSBuiltin,
   };
   }
@@ -60,6 +71,8 @@ namespace clang {
     LastNEONBuiltin = NEON::FirstTSBuiltin - 1,
     FirstSVEBuiltin = NEON::FirstTSBuiltin,
     LastSVEBuiltin = SVE::FirstTSBuiltin - 1,
+    FirstSMEBuiltin = SVE::FirstTSBuiltin,
+    LastSMEBuiltin = SME::FirstTSBuiltin - 1,
   #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
   #include "clang/Basic/BuiltinsAArch64.def"
     LastTSBuiltin
@@ -243,10 +256,10 @@ namespace clang {
     };
 
     SVETypeFlags(uint64_t F) : Flags(F) {
-      EltTypeShift = llvm::countTrailingZeros(EltTypeMask);
-      MemEltTypeShift = llvm::countTrailingZeros(MemEltTypeMask);
-      MergeTypeShift = llvm::countTrailingZeros(MergeTypeMask);
-      SplatOperandMaskShift = llvm::countTrailingZeros(SplatOperandMask);
+      EltTypeShift = llvm::countr_zero(EltTypeMask);
+      MemEltTypeShift = llvm::countr_zero(MemEltTypeMask);
+      MergeTypeShift = llvm::countr_zero(MergeTypeMask);
+      SplatOperandMaskShift = llvm::countr_zero(SplatOperandMask);
     }
 
     EltType getEltType() const {
@@ -288,10 +301,14 @@ namespace clang {
     bool isInsertOp1SVALL() const { return Flags & IsInsertOp1SVALL; }
     bool isGatherPrefetch() const { return Flags & IsGatherPrefetch; }
     bool isReverseUSDOT() const { return Flags & ReverseUSDOT; }
+    bool isReverseMergeAnyBinOp() const { return Flags & ReverseMergeAnyBinOp; }
+    bool isReverseMergeAnyAccOp() const { return Flags & ReverseMergeAnyAccOp; }
     bool isUndef() const { return Flags & IsUndef; }
     bool isTupleCreate() const { return Flags & IsTupleCreate; }
     bool isTupleGet() const { return Flags & IsTupleGet; }
     bool isTupleSet() const { return Flags & IsTupleSet; }
+    bool isReadZA() const { return Flags & IsReadZA; }
+    bool isWriteZA() const { return Flags & IsWriteZA; }
 
     uint64_t getBits() const { return Flags; }
     bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }

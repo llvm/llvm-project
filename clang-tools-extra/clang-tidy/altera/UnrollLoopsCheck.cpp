@@ -13,13 +13,11 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include <math.h>
+#include <cmath>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace altera {
+namespace clang::tidy::altera {
 
 UnrollLoopsCheck::UnrollLoopsCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -27,14 +25,13 @@ UnrollLoopsCheck::UnrollLoopsCheck(StringRef Name, ClangTidyContext *Context)
 
 void UnrollLoopsCheck::registerMatchers(MatchFinder *Finder) {
   const auto HasLoopBound = hasDescendant(
-      varDecl(allOf(matchesName("__end*"),
-                    hasDescendant(integerLiteral().bind("cxx_loop_bound")))));
+      varDecl(matchesName("__end*"),
+              hasDescendant(integerLiteral().bind("cxx_loop_bound"))));
   const auto CXXForRangeLoop =
       cxxForRangeStmt(anyOf(HasLoopBound, unless(HasLoopBound)));
   const auto AnyLoop = anyOf(forStmt(), whileStmt(), doStmt(), CXXForRangeLoop);
   Finder->addMatcher(
-      stmt(allOf(AnyLoop, unless(hasDescendant(stmt(AnyLoop))))).bind("loop"),
-      this);
+      stmt(AnyLoop, unless(hasDescendant(stmt(AnyLoop)))).bind("loop"), this);
 }
 
 void UnrollLoopsCheck::check(const MatchFinder::MatchResult &Result) {
@@ -174,7 +171,7 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
   const Stmt *Initializer = ForLoop->getInit();
   const Expr *Conditional = ForLoop->getCond();
   const Expr *Increment = ForLoop->getInc();
-  int InitValue;
+  int InitValue = 0;
   // If the loop variable value isn't known, we can't know the loop bounds.
   if (const auto *InitDeclStatement = dyn_cast<DeclStmt>(Initializer)) {
     if (const auto *VariableDecl =
@@ -186,12 +183,12 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
     }
   }
 
-  int EndValue;
+  int EndValue = 0;
   const auto *BinaryOp = cast<BinaryOperator>(Conditional);
   if (!extractValue(EndValue, BinaryOp, Context))
     return true;
 
-  double Iterations;
+  double Iterations = 0.0;
 
   // If increment is unary and not one of ++, --, we can't know the loop bounds.
   if (const auto *Op = dyn_cast<UnaryOperator>(Increment)) {
@@ -206,7 +203,7 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
   // If increment is binary and not one of +, -, *, /, we can't know the loop
   // bounds.
   if (const auto *Op = dyn_cast<BinaryOperator>(Increment)) {
-    int ConstantValue;
+    int ConstantValue = 0;
     if (!extractValue(ConstantValue, Op, Context))
       return true;
     switch (Op->getOpcode()) {
@@ -217,10 +214,12 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
       Iterations = ceil(float(InitValue - EndValue) / ConstantValue);
       break;
     case (BO_MulAssign):
-      Iterations = 1 + (log(EndValue) - log(InitValue)) / log(ConstantValue);
+      Iterations = 1 + (log((double)EndValue) - log((double)InitValue)) /
+                           log((double)ConstantValue);
       break;
     case (BO_DivAssign):
-      Iterations = 1 + (log(InitValue) - log(EndValue)) / log(ConstantValue);
+      Iterations = 1 + (log((double)InitValue) - log((double)EndValue)) /
+                           log((double)ConstantValue);
       break;
     default:
       // All other operators are not handled; assume large bounds.
@@ -249,7 +248,7 @@ bool UnrollLoopsCheck::extractValue(int &Value, const BinaryOperator *Op,
 }
 
 bool UnrollLoopsCheck::exprHasLargeNumIterations(const Expr *Expression,
-                                                 const ASTContext *Context) {
+                                                 const ASTContext *Context) const {
   Expr::EvalResult Result;
   if (Expression->EvaluateAsRValue(Result, *Context)) {
     if (!Result.Val.isInt())
@@ -267,6 +266,4 @@ void UnrollLoopsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "MaxLoopIterations", MaxLoopIterations);
 }
 
-} // namespace altera
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::altera

@@ -12,8 +12,7 @@
 #include "AvoidSpinlockCheck.h"
 #include "DispatchOnceNonstaticCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace darwin {
 
 class DarwinModule : public ClangTidyModule {
@@ -36,5 +35,4 @@ static ClangTidyModuleRegistry::Add<darwin::DarwinModule>
 // and thus register the DarwinModule.
 volatile int DarwinModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

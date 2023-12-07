@@ -190,7 +190,7 @@ static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,
   // the FuncOp.
   if (emitter.shouldDeclareVariablesAtTop()) {
     // Skip the assignment if the emitc.constant has no value.
-    if (auto oAttr = value.dyn_cast<emitc::OpaqueAttr>()) {
+    if (auto oAttr = dyn_cast<emitc::OpaqueAttr>(value)) {
       if (oAttr.getValue().empty())
         return success();
     }
@@ -201,7 +201,7 @@ static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,
   }
 
   // Emit a variable declaration for an emitc.constant op without value.
-  if (auto oAttr = value.dyn_cast<emitc::OpaqueAttr>()) {
+  if (auto oAttr = dyn_cast<emitc::OpaqueAttr>(value)) {
     if (oAttr.getValue().empty())
       // The semicolon gets printed by the emitOperation function.
       return emitter.emitVariableDeclaration(result,
@@ -244,6 +244,82 @@ static LogicalResult printOperation(CppEmitter &emitter,
   Attribute value = constantOp.getValueAttr();
 
   return printConstantOp(emitter, operation, value);
+}
+
+static LogicalResult printBinaryOperation(CppEmitter &emitter,
+                                          Operation *operation,
+                                          StringRef binaryOperator) {
+  raw_ostream &os = emitter.ostream();
+
+  if (failed(emitter.emitAssignPrefix(*operation)))
+    return failure();
+  os << emitter.getOrCreateName(operation->getOperand(0));
+  os << " " << binaryOperator;
+  os << " " << emitter.getOrCreateName(operation->getOperand(1));
+
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::AddOp addOp) {
+  Operation *operation = addOp.getOperation();
+
+  return printBinaryOperation(emitter, operation, "+");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::DivOp divOp) {
+  Operation *operation = divOp.getOperation();
+
+  return printBinaryOperation(emitter, operation, "/");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::MulOp mulOp) {
+  Operation *operation = mulOp.getOperation();
+
+  return printBinaryOperation(emitter, operation, "*");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::RemOp remOp) {
+  Operation *operation = remOp.getOperation();
+
+  return printBinaryOperation(emitter, operation, "%");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::SubOp subOp) {
+  Operation *operation = subOp.getOperation();
+
+  return printBinaryOperation(emitter, operation, "-");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::CmpOp cmpOp) {
+  Operation *operation = cmpOp.getOperation();
+
+  StringRef binaryOperator;
+
+  switch (cmpOp.getPredicate()) {
+  case emitc::CmpPredicate::eq:
+    binaryOperator = "==";
+    break;
+  case emitc::CmpPredicate::ne:
+    binaryOperator = "!=";
+    break;
+  case emitc::CmpPredicate::lt:
+    binaryOperator = "<";
+    break;
+  case emitc::CmpPredicate::le:
+    binaryOperator = "<=";
+    break;
+  case emitc::CmpPredicate::gt:
+    binaryOperator = ">";
+    break;
+  case emitc::CmpPredicate::ge:
+    binaryOperator = ">=";
+    break;
+  case emitc::CmpPredicate::three_way:
+    binaryOperator = "<=>";
+    break;
+  }
+
+  return printBinaryOperation(emitter, operation, binaryOperator);
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -333,7 +409,7 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
   os << callOp.getCallee();
 
   auto emitArgs = [&](Attribute attr) -> LogicalResult {
-    if (auto t = attr.dyn_cast<IntegerAttr>()) {
+    if (auto t = dyn_cast<IntegerAttr>(attr)) {
       // Index attributes are treated specially as operand index.
       if (t.getType().isIndex()) {
         int64_t idx = t.getInt();
@@ -670,7 +746,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
       // When generating code for an scf.for op, printing a trailing semicolon
       // is handled within the printOperation function.
       bool trailingSemicolon =
-          !isa<scf::IfOp, scf::ForOp, cf::CondBranchOp>(op);
+          !isa<cf::CondBranchOp, emitc::LiteralOp, scf::IfOp, scf::ForOp>(op);
 
       if (failed(emitter.emitOperation(
               op, /*trailingSemicolon=*/trailingSemicolon)))
@@ -689,6 +765,8 @@ CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop)
 
 /// Return the existing or a new name for a Value.
 StringRef CppEmitter::getOrCreateName(Value val) {
+  if (auto literal = dyn_cast_if_present<emitc::LiteralOp>(val.getDefiningOp()))
+    return literal.getValue();
   if (!valueMapper.count(val))
     valueMapper.insert(val, formatv("v{0}", ++valueInScopeCount.top()));
   return *valueMapper.begin(val);
@@ -759,11 +837,11 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
   };
 
   // Print floating point attributes.
-  if (auto fAttr = attr.dyn_cast<FloatAttr>()) {
+  if (auto fAttr = dyn_cast<FloatAttr>(attr)) {
     printFloat(fAttr.getValue());
     return success();
   }
-  if (auto dense = attr.dyn_cast<DenseFPElementsAttr>()) {
+  if (auto dense = dyn_cast<DenseFPElementsAttr>(attr)) {
     os << '{';
     interleaveComma(dense, os, [&](const APFloat &val) { printFloat(val); });
     os << '}';
@@ -771,21 +849,19 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
   }
 
   // Print integer attributes.
-  if (auto iAttr = attr.dyn_cast<IntegerAttr>()) {
-    if (auto iType = iAttr.getType().dyn_cast<IntegerType>()) {
+  if (auto iAttr = dyn_cast<IntegerAttr>(attr)) {
+    if (auto iType = dyn_cast<IntegerType>(iAttr.getType())) {
       printInt(iAttr.getValue(), shouldMapToUnsigned(iType.getSignedness()));
       return success();
     }
-    if (auto iType = iAttr.getType().dyn_cast<IndexType>()) {
+    if (auto iType = dyn_cast<IndexType>(iAttr.getType())) {
       printInt(iAttr.getValue(), false);
       return success();
     }
   }
-  if (auto dense = attr.dyn_cast<DenseIntElementsAttr>()) {
-    if (auto iType = dense.getType()
-                         .cast<TensorType>()
-                         .getElementType()
-                         .dyn_cast<IntegerType>()) {
+  if (auto dense = dyn_cast<DenseIntElementsAttr>(attr)) {
+    if (auto iType = dyn_cast<IntegerType>(
+            cast<TensorType>(dense.getType()).getElementType())) {
       os << '{';
       interleaveComma(dense, os, [&](const APInt &val) {
         printInt(val, shouldMapToUnsigned(iType.getSignedness()));
@@ -793,10 +869,8 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
       os << '}';
       return success();
     }
-    if (auto iType = dense.getType()
-                         .cast<TensorType>()
-                         .getElementType()
-                         .dyn_cast<IndexType>()) {
+    if (auto iType = dyn_cast<IndexType>(
+            cast<TensorType>(dense.getType()).getElementType())) {
       os << '{';
       interleaveComma(dense, os,
                       [&](const APInt &val) { printInt(val, false); });
@@ -806,13 +880,13 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
   }
 
   // Print opaque attributes.
-  if (auto oAttr = attr.dyn_cast<emitc::OpaqueAttr>()) {
+  if (auto oAttr = dyn_cast<emitc::OpaqueAttr>(attr)) {
     os << oAttr.getValue();
     return success();
   }
 
   // Print symbolic reference attributes.
-  if (auto sAttr = attr.dyn_cast<SymbolRefAttr>()) {
+  if (auto sAttr = dyn_cast<SymbolRefAttr>(attr)) {
     if (sAttr.getNestedReferences().size() > 1)
       return emitError(loc, "attribute has more than 1 nested reference");
     os << sAttr.getRootReference().getValue();
@@ -820,7 +894,7 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
   }
 
   // Print type attributes.
-  if (auto type = attr.dyn_cast<TypeAttr>())
+  if (auto type = dyn_cast<TypeAttr>(attr))
     return emitType(loc, type.getValue());
 
   return emitError(loc, "cannot emit attribute: ") << attr;
@@ -934,8 +1008,9 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
-          .Case<emitc::ApplyOp, emitc::CallOp, emitc::CastOp, emitc::ConstantOp,
-                emitc::IncludeOp, emitc::VariableOp>(
+          .Case<emitc::AddOp, emitc::ApplyOp, emitc::CallOp, emitc::CastOp,
+                emitc::CmpOp, emitc::ConstantOp, emitc::DivOp, emitc::IncludeOp,
+                emitc::MulOp, emitc::RemOp, emitc::SubOp, emitc::VariableOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::ConstantOp, func::FuncOp, func::ReturnOp>(
@@ -946,18 +1021,23 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           // Arithmetic ops.
           .Case<arith::ConstantOp>(
               [&](auto op) { return printOperation(*this, op); })
+          .Case<emitc::LiteralOp>([&](auto op) { return success(); })
           .Default([&](Operation *) {
             return op.emitOpError("unable to find printer for op");
           });
 
   if (failed(status))
     return failure();
+
+  if (isa<emitc::LiteralOp>(op))
+    return success();
+
   os << (trailingSemicolon ? ";\n" : "\n");
   return success();
 }
 
 LogicalResult CppEmitter::emitType(Location loc, Type type) {
-  if (auto iType = type.dyn_cast<IntegerType>()) {
+  if (auto iType = dyn_cast<IntegerType>(type)) {
     switch (iType.getWidth()) {
     case 1:
       return (os << "bool"), success();
@@ -973,7 +1053,7 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
       return emitError(loc, "cannot emit integer type ") << type;
     }
   }
-  if (auto fType = type.dyn_cast<FloatType>()) {
+  if (auto fType = dyn_cast<FloatType>(type)) {
     switch (fType.getWidth()) {
     case 32:
       return (os << "float"), success();
@@ -983,9 +1063,9 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
       return emitError(loc, "cannot emit float type ") << type;
     }
   }
-  if (auto iType = type.dyn_cast<IndexType>())
+  if (auto iType = dyn_cast<IndexType>(type))
     return (os << "size_t"), success();
-  if (auto tType = type.dyn_cast<TensorType>()) {
+  if (auto tType = dyn_cast<TensorType>(type)) {
     if (!tType.hasRank())
       return emitError(loc, "cannot emit unranked tensor type");
     if (!tType.hasStaticShape())
@@ -1001,13 +1081,13 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
     os << ">";
     return success();
   }
-  if (auto tType = type.dyn_cast<TupleType>())
+  if (auto tType = dyn_cast<TupleType>(type))
     return emitTupleType(loc, tType.getTypes());
-  if (auto oType = type.dyn_cast<emitc::OpaqueType>()) {
+  if (auto oType = dyn_cast<emitc::OpaqueType>(type)) {
     os << oType.getValue();
     return success();
   }
-  if (auto pType = type.dyn_cast<emitc::PointerType>()) {
+  if (auto pType = dyn_cast<emitc::PointerType>(type)) {
     if (failed(emitType(loc, pType.getPointee())))
       return failure();
     os << "*";

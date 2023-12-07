@@ -353,7 +353,7 @@ class SizeClassAllocator32 {
     DCHECK_GT(max_count, 0);
     TransferBatch *b = nullptr;
     constexpr uptr kShuffleArraySize = 48;
-    uptr shuffle_array[kShuffleArraySize];
+    UNINITIALIZED uptr shuffle_array[kShuffleArraySize];
     uptr count = 0;
     for (uptr i = region; i < region + n_chunks * size; i += size) {
       shuffle_array[count++] = i;

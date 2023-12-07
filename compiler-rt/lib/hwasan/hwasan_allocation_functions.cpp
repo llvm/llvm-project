@@ -16,14 +16,25 @@
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
+#include "sanitizer_common/sanitizer_mallinfo.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
-
-#if !SANITIZER_FUCHSIA
 
 using namespace __hwasan;
 
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
   static bool UseImpl() { return !hwasan_inited; }
+  static void OnAllocate(const void *ptr, uptr size) {
+#  if CAN_SANITIZE_LEAKS
+    // Suppress leaks from dlerror(). Previously dlsym hack on global array was
+    // used by leak sanitizer as a root region.
+    __lsan_register_root_region(ptr, size);
+#  endif
+  }
+  static void OnFree(const void *ptr, uptr size) {
+#  if CAN_SANITIZE_LEAKS
+    __lsan_unregister_root_region(ptr, size);
+#  endif
+  }
 };
 
 extern "C" {
@@ -143,12 +154,19 @@ void *__sanitizer_malloc(uptr size) {
 
 }  // extern "C"
 
-#if HWASAN_WITH_INTERCEPTORS
+#if HWASAN_WITH_INTERCEPTORS || SANITIZER_FUCHSIA
+#if SANITIZER_FUCHSIA
+// Fuchsia does not use WRAP/wrappers used for the interceptor infrastructure.
+#  define INTERCEPTOR_ALIAS(RET, FN, ARGS...)                                 \
+    extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE RET FN( \
+        ARGS) ALIAS(__sanitizer_##FN)
+#else
 #  define INTERCEPTOR_ALIAS(RET, FN, ARGS...)                                 \
     extern "C" SANITIZER_INTERFACE_ATTRIBUTE RET WRAP(FN)(ARGS)               \
-        ALIAS("__sanitizer_" #FN);                                            \
+        ALIAS(__sanitizer_##FN);                                              \
     extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE RET FN( \
-        ARGS) ALIAS("__sanitizer_" #FN)
+        ARGS) ALIAS(__sanitizer_##FN)
+#endif
 
 INTERCEPTOR_ALIAS(int, posix_memalign, void **memptr, SIZE_T alignment,
                   SIZE_T size);
@@ -171,5 +189,3 @@ INTERCEPTOR_ALIAS(int, mallopt, int cmd, int value);
 INTERCEPTOR_ALIAS(void, malloc_stats, void);
 #  endif
 #endif  // #if HWASAN_WITH_INTERCEPTORS
-
-#endif  // SANITIZER_FUCHSIA

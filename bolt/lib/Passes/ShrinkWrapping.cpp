@@ -16,6 +16,7 @@
 #include "bolt/Passes/MCF.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include <numeric>
+#include <optional>
 #include <stack>
 
 #define DEBUG_TYPE "shrinkwrapping"
@@ -123,8 +124,7 @@ void CalleeSavedAnalysis::analyzeRestores() {
   // Now compute all restores of these callee-saved regs
   for (BinaryBasicBlock &BB : BF) {
     const MCInst *Prev = nullptr;
-    for (auto I = BB.rbegin(), E = BB.rend(); I != E; ++I) {
-      MCInst &Inst = *I;
+    for (MCInst &Inst : llvm::reverse(BB)) {
       if (ErrorOr<const FrameIndexEntry &> FIE = FA.getFIEFor(Inst)) {
         if (!FIE->IsLoad || !CalleeSaved[FIE->RegOrImm]) {
           Prev = &Inst;
@@ -263,19 +263,9 @@ void StackLayoutModifier::checkStackPointerRestore(MCInst &Point) {
     return;
   // Check if the definition of SP comes from FP -- in this case, this
   // value may need to be updated depending on our stack layout changes
-  const MCInstrDesc &InstInfo = BC.MII->get(Point.getOpcode());
-  unsigned NumDefs = InstInfo.getNumDefs();
-  bool UsesFP = false;
-  for (unsigned I = NumDefs, E = MCPlus::getNumPrimeOperands(Point); I < E;
-       ++I) {
-    MCOperand &Operand = Point.getOperand(I);
-    if (!Operand.isReg())
-      continue;
-    if (Operand.getReg() == BC.MIB->getFramePointer()) {
-      UsesFP = true;
-      break;
-    }
-  }
+  bool UsesFP = llvm::any_of(BC.MIB->useOperands(Point), [&](MCOperand &Op) {
+    return Op.isReg() && Op.getReg() == BC.MIB->getFramePointer();
+  });
   if (!UsesFP)
     return;
 
@@ -320,8 +310,7 @@ void StackLayoutModifier::classifyStackAccesses() {
 
   for (BinaryBasicBlock &BB : BF) {
     const MCInst *Prev = nullptr;
-    for (auto I = BB.rbegin(), E = BB.rend(); I != E; ++I) {
-      MCInst &Inst = *I;
+    for (MCInst &Inst : llvm::reverse(BB)) {
       checkFramePointerInitialization(Inst);
       checkStackPointerRestore(Inst);
       ErrorOr<const FrameIndexEntry &> FIEX = FA.getFIEFor(Inst);
@@ -627,8 +616,7 @@ bool StackLayoutModifier::insertRegion(ProgramPoint P, int64_t RegionSz) {
 void StackLayoutModifier::performChanges() {
   std::set<uint32_t> ModifiedCFIIndices;
   for (BinaryBasicBlock &BB : BF) {
-    for (auto I = BB.rbegin(), E = BB.rend(); I != E; ++I) {
-      MCInst &Inst = *I;
+    for (MCInst &Inst : llvm::reverse(BB)) {
       if (BC.MIB->hasAnnotation(Inst, "AccessesDeletedPos")) {
         assert(BC.MIB->isPop(Inst) || BC.MIB->isPush(Inst));
         BC.MIB->removeAnnotation(Inst, "AccessesDeletedPos");
@@ -1123,13 +1111,13 @@ SmallVector<ProgramPoint, 4> ShrinkWrapping::fixPopsPlacements(
         continue;
       }
     }
-    for (auto RIt = BB->rbegin(), End = BB->rend(); RIt != End; ++RIt) {
-      if (SPT.getStateBefore(*RIt)->first == SaveOffset) {
-        BitVector BV = *RI.getStateAt(*RIt);
+    for (MCInst &Inst : llvm::reverse(*BB)) {
+      if (SPT.getStateBefore(Inst)->first == SaveOffset) {
+        BitVector BV = *RI.getStateAt(Inst);
         BV &= UsesByReg[CSR];
         if (!BV.any()) {
           Found = true;
-          PP = &*RIt;
+          PP = &Inst;
           break;
         }
       }
@@ -1151,8 +1139,7 @@ void ShrinkWrapping::scheduleOldSaveRestoresRemoval(unsigned CSR,
 
   for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     std::vector<MCInst *> CFIs;
-    for (auto I = BB->rbegin(), E = BB->rend(); I != E; ++I) {
-      MCInst &Inst = *I;
+    for (MCInst &Inst : llvm::reverse(*BB)) {
       if (BC.MIB->isCFI(Inst)) {
         // Delete all offset CFIs related to this CSR
         if (SLM.getOffsetCFIReg(Inst) == CSR) {
@@ -1355,8 +1342,7 @@ void ShrinkWrapping::moveSaveRestores() {
           if (Item.Action == WorklistItem::InsertPushOrPop)
             Item.Action = WorklistItem::InsertLoadOrStore;
       }
-      for (auto I = BB.rbegin(), E = BB.rend(); I != E; ++I) {
-        MCInst &Inst = *I;
+      for (MCInst &Inst : llvm::reverse(BB)) {
         auto TodoList = BC.MIB->tryGetAnnotationAs<std::vector<WorklistItem>>(
             Inst, getAnnotationIndex());
         if (!TodoList)
@@ -1432,8 +1418,7 @@ bool ShrinkWrapping::foldIdenticalSplitEdges() {
     BinaryBasicBlock &BB = *Iter;
     if (!BB.getName().startswith(".LSplitEdge"))
       continue;
-    for (auto RIter = BF.rbegin(); RIter != BF.rend(); ++RIter) {
-      BinaryBasicBlock &RBB = *RIter;
+    for (BinaryBasicBlock &RBB : llvm::reverse(BF)) {
       if (&RBB == &BB)
         break;
       if (!RBB.getName().startswith(".LSplitEdge") || !RBB.isValid() ||
@@ -1465,7 +1450,7 @@ class PredictiveStackPointerTracking
   decltype(ShrinkWrapping::Todo) &TodoMap;
   DataflowInfoManager &Info;
 
-  Optional<unsigned> AnnotationIndex;
+  std::optional<unsigned> AnnotationIndex;
 
 protected:
   void compNextAux(const MCInst &Point,
@@ -1542,8 +1527,7 @@ void ShrinkWrapping::insertUpdatedCFI(unsigned CSR, int SPValPush,
                                       int SPValPop) {
   MCInst *SavePoint = nullptr;
   for (BinaryBasicBlock &BB : BF) {
-    for (auto InstIter = BB.rbegin(), EndIter = BB.rend(); InstIter != EndIter;
-         ++InstIter) {
+    for (MCInst &Inst : llvm::reverse(BB)) {
       int32_t SrcImm = 0;
       MCPhysReg Reg = 0;
       MCPhysReg StackPtrReg = 0;
@@ -1554,13 +1538,13 @@ void ShrinkWrapping::insertUpdatedCFI(unsigned CSR, int SPValPush,
       bool IsSimple = false;
       bool IsStoreFromReg = false;
       uint8_t Size = 0;
-      if (!BC.MIB->isStackAccess(*InstIter, IsLoad, IsStore, IsStoreFromReg,
-                                 Reg, SrcImm, StackPtrReg, StackOffset, Size,
+      if (!BC.MIB->isStackAccess(Inst, IsLoad, IsStore, IsStoreFromReg, Reg,
+                                 SrcImm, StackPtrReg, StackOffset, Size,
                                  IsSimple, IsIndexed))
         continue;
       if (Reg != CSR || !IsStore || !IsSimple)
         continue;
-      SavePoint = &*InstIter;
+      SavePoint = &Inst;
       break;
     }
     if (SavePoint)
@@ -1976,7 +1960,7 @@ bool ShrinkWrapping::perform(bool HotOnly) {
     for (const auto &Instr : *BB) {
       if (BC.MIB->isPseudo(Instr))
         continue;
-      if (BC.MIB->isStore(Instr))
+      if (BC.MIB->mayStore(Instr))
         TotalStoreInstrs += BBExecCount;
       TotalInstrs += BBExecCount;
     }

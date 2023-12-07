@@ -2,9 +2,9 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define void @ptr_arg_in_regs(i32* %p) {entry: ret void}
-  define void @ptr_arg_on_stack(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i32* %p) {entry: ret void}
-  define void @ret_ptr(i8* %p) {entry: ret void}
+  define void @ptr_arg_in_regs(ptr %p) {entry: ret void}
+  define void @ptr_arg_on_stack(i32 %x1, i32 %x2, i32 %x3, i32 %x4, ptr %p) {entry: ret void}
+  define void @ret_ptr(ptr %p) {entry: ret void}
 
 ...
 ---

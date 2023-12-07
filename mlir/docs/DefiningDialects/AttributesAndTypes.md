@@ -48,6 +48,10 @@ describes the process for defining both Attributes and Types side-by-side with
 examples for both. If necessary, a section will explicitly call out any
 distinct differences.
 
+One difference is that generating C++ classes from declarative TableGen 
+definitions will require adding additional targets to your `CMakeLists.txt`.
+This is not necessary for custom types. The details are outlined further below.
+
 ### Adding a new Attribute or Type definition
 
 As described above, C++ Attribute and Type objects in MLIR are value-typed and
@@ -167,6 +171,26 @@ respectively. In the examples above, this was the `name` template parameter that
 was provided to `MyDialect_Attr` and `MyDialect_Type`. For the definitions we
 added above, we would get C++ classes named `IntegerType` and `IntegerAttr`
 respectively. This can be explicitly overridden via the `cppClassName` field.
+
+### CMake Targets
+
+If you added your dialect using `add_mlir_dialect()` in your `CMakeLists.txt`,
+the above mentioned classes will automatically get generated for custom 
+_types_. They will be output in a file named `<Your Dialect>Types.h.inc`. 
+
+To also generate the classes for custom _attributes_, you will need to add
+two additional TableGen targets to your `CMakeLists.txt`: 
+
+```cmake
+mlir_tablegen(<Your Dialect>AttrDefs.h.inc -gen-attrdef-decls 
+              -attrdefs-dialect=<Your Dialect>)
+mlir_tablegen(<Your Dialect>AttrDefs.cpp.inc -gen-attrdef-defs 
+              -attrdefs-dialect=<Your Dialect>)
+add_public_tablegen_target(<Your Dialect>AttrDefsIncGen)
+```
+
+The generated `<Your Dialect>AttrDefs.h.inc` will need to be included whereever
+you are referencing the custom attribute types.
 
 ### Documentation
 
@@ -866,8 +890,24 @@ The `custom` directive `custom<Foo>($foo)` will in the parser and printer
 respectively generate calls to:
 
 ```c++
-LogicalResult parseFoo(AsmParser &parser, FailureOr<int> &foo);
+LogicalResult parseFoo(AsmParser &parser, int &foo);
 void printFoo(AsmPrinter &printer, int foo);
+```
+
+As you can see, by default parameters are passed into the parse function by 
+reference. This is only possible if the C++ type is default constructible.
+If the C++ type is not default constructible, the parameter is wrapped in a
+`FailureOr`. Therefore, given the following definition: 
+
+```tablegen
+let parameters = (ins "NotDefaultConstructible":$foobar);
+let assemblyFormat = "custom<Fizz>($foobar)";
+```
+
+It will generate calls expecting the following signature for `parseFizz`:
+
+```c++
+LogicalResult parseFizz(AsmParser &parser, FailureOr<NotDefaultConstructible> &foobar);
 ```
 
 A previously bound variable can be passed as a parameter to a `custom` directive
@@ -876,7 +916,7 @@ the first directive. The second directive references it and expects the
 following printer and parser signatures:
 
 ```c++
-LogicalResult parseBar(AsmParser &parser, FailureOr<int> &bar, int foo);
+LogicalResult parseBar(AsmParser &parser, int &bar, int foo);
 void printBar(AsmPrinter &printer, int bar, int foo);
 ```
 
@@ -885,8 +925,7 @@ is that the parameter for the parser must use the storage type of the parameter.
 For example, `StringRefParameter` expects the parser and printer signatures as:
 
 ```c++
-LogicalResult parseStringParam(AsmParser &parser,
-                               FailureOr<std::string> &value);
+LogicalResult parseStringParam(AsmParser &parser, std::string &value);
 void printStringParam(AsmPrinter &printer, StringRef value);
 ```
 

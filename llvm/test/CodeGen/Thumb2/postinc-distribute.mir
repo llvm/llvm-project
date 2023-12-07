@@ -2,31 +2,31 @@
 # RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp -run-pass arm-prera-ldst-opt %s -o - -verify-machineinstrs | FileCheck %s
 
 --- |
-  define i32* @t2LDRi12(i32* %x, i32 %y) { unreachable }
-  define i32* @t2LDRHi12(i32* %x, i32 %y) { unreachable }
-  define i32* @t2LDRSHi12(i32* %x, i32 %y) { unreachable }
-  define i32* @t2LDRBi12(i32* %x, i32 %y) { unreachable }
-  define i32* @t2LDRSBi12(i32* %x, i32 %y) { unreachable }
-  define i32* @t2STRi12(i32* %x, i32 %y) { unreachable }
-  define i32* @t2STRHi12(i32* %x, i32 %y) { unreachable }
-  define i32* @t2STRBi12(i32* %x, i32 %y) { unreachable }
+  define ptr @t2LDRi12(ptr %x, i32 %y) { unreachable }
+  define ptr @t2LDRHi12(ptr %x, i32 %y) { unreachable }
+  define ptr @t2LDRSHi12(ptr %x, i32 %y) { unreachable }
+  define ptr @t2LDRBi12(ptr %x, i32 %y) { unreachable }
+  define ptr @t2LDRSBi12(ptr %x, i32 %y) { unreachable }
+  define ptr @t2STRi12(ptr %x, i32 %y) { unreachable }
+  define ptr @t2STRHi12(ptr %x, i32 %y) { unreachable }
+  define ptr @t2STRBi12(ptr %x, i32 %y) { unreachable }
 
-  define i32* @storedadd(i32* %x, i32 %y) { unreachable }
-  define i32* @minsize2(i32* %x, i32 %y) minsize optsize { unreachable }
-  define i32* @minsize3(i32* %x, i32 %y) minsize optsize { unreachable }
+  define ptr @storedadd(ptr %x, i32 %y) { unreachable }
+  define ptr @minsize2(ptr %x, i32 %y) minsize optsize { unreachable }
+  define ptr @minsize3(ptr %x, i32 %y) minsize optsize { unreachable }
 
-  define i32* @t2LDRi12_posoff(i32* %x, i32 %y) { unreachable }
-  define i32* @t2LDRHi12_posoff(i32* %x, i32 %y) { unreachable }
-  define i32* @t2LDRBi12_posoff(i32* %x, i32 %y) { unreachable }
-  define i32* @t2STRi12_posoff(i32* %x, i32 %y) { unreachable }
-  define i32* @t2STRHi12_posoff(i32* %x, i32 %y) { unreachable }
-  define i32* @t2STRBi12_posoff(i32* %x, i32 %y) { unreachable }
-  define i32* @t2LDRi12_negoff(i32* %x, i32 %y) { unreachable }
-  define i32* @t2LDRHi12_negoff(i32* %x, i32 %y) { unreachable }
-  define i32* @t2LDRBi12_negoff(i32* %x, i32 %y) { unreachable }
-  define i32* @t2STRi12_negoff(i32* %x, i32 %y) { unreachable }
-  define i32* @t2STRHi12_negoff(i32* %x, i32 %y) { unreachable }
-  define i32* @t2STRBi12_negoff(i32* %x, i32 %y) { unreachable }
+  define ptr @t2LDRi12_posoff(ptr %x, i32 %y) { unreachable }
+  define ptr @t2LDRHi12_posoff(ptr %x, i32 %y) { unreachable }
+  define ptr @t2LDRBi12_posoff(ptr %x, i32 %y) { unreachable }
+  define ptr @t2STRi12_posoff(ptr %x, i32 %y) { unreachable }
+  define ptr @t2STRHi12_posoff(ptr %x, i32 %y) { unreachable }
+  define ptr @t2STRBi12_posoff(ptr %x, i32 %y) { unreachable }
+  define ptr @t2LDRi12_negoff(ptr %x, i32 %y) { unreachable }
+  define ptr @t2LDRHi12_negoff(ptr %x, i32 %y) { unreachable }
+  define ptr @t2LDRBi12_negoff(ptr %x, i32 %y) { unreachable }
+  define ptr @t2STRi12_negoff(ptr %x, i32 %y) { unreachable }
+  define ptr @t2STRHi12_negoff(ptr %x, i32 %y) { unreachable }
+  define ptr @t2STRBi12_negoff(ptr %x, i32 %y) { unreachable }
 
 ...
 ---
@@ -366,8 +366,7 @@ body:             |
     ; CHECK: liveins: $r0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK-NEXT: [[t2LDRi12_:%[0-9]+]]:rgpr = t2LDRi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK-NEXT: [[t2LDRi12_1:%[0-9]+]]:rgpr = t2LDRi12 [[COPY]], 4, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: [[t2LDRDi8_:%[0-9]+]]:rgpr, [[t2LDRDi8_1:%[0-9]+]]:rgpr = t2LDRDi8 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s32))
     ; CHECK-NEXT: [[t2ADDri:%[0-9]+]]:rgpr = nuw t2ADDri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
     ; CHECK-NEXT: [[t2LDRi8_:%[0-9]+]]:rgpr = t2LDRi8 [[COPY]], -8, 14 /* CC::al */, $noreg :: (load (s32))
     ; CHECK-NEXT: $r0 = COPY [[t2ADDri]]
@@ -575,8 +574,7 @@ body:             |
     ; CHECK: liveins: $r0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK-NEXT: [[t2LDRi12_:%[0-9]+]]:rgpr = t2LDRi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s32))
-    ; CHECK-NEXT: [[t2LDRi12_1:%[0-9]+]]:rgpr = t2LDRi12 [[COPY]], 4, 14 /* CC::al */, $noreg :: (load (s32))
+    ; CHECK-NEXT: [[t2LDRDi8_:%[0-9]+]]:rgpr, [[t2LDRDi8_1:%[0-9]+]]:rgpr = t2LDRDi8 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load (s32))
     ; CHECK-NEXT: [[t2SUBri:%[0-9]+]]:rgpr = nuw t2SUBri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
     ; CHECK-NEXT: [[t2LDRi8_:%[0-9]+]]:rgpr = t2LDRi8 [[COPY]], -8, 14 /* CC::al */, $noreg :: (load (s32))
     ; CHECK-NEXT: $r0 = COPY [[t2SUBri]]

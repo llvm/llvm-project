@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple i686-pc-windows-msvc19.0.24213 -gcodeview -debug-info-kind=limited -std=c++14 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple i686-pc-windows-msvc19.0.24213 -gcodeview -debug-info-kind=limited -std=c++14 %s -o - | FileCheck %s
 // PR33997.
 struct WithDtor {
   ~WithDtor();
@@ -21,9 +21,7 @@ B::B() : Forward(WithDtor()) {}
 
 // CHECK: define{{.*}}A
 // CHECK-NOT: {{ ret }}
-// CHECK: store %class.Forward* %
-// CHECK-SAME: %class.Forward** %
-// CHECK-SAME: !dbg ![[INL:[0-9]+]]
+// CHECK: store ptr %{{.*}}, ptr %{{.*}}, !dbg ![[INL:[0-9]+]]
 
 // CHECK: ![[INL]] = !DILocation(line: 10, column: 15, scope: ![[SP:[0-9]+]], inlinedAt:
 // CHECK: ![[SP]] = distinct !DISubprogram(name: "Base", {{.*}} DISPFlagDefinition

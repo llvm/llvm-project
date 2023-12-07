@@ -265,3 +265,50 @@ static_assert(__is_trivially_constructible(C), "");
 static_assert(__is_trivially_constructible(D), "");
 
 }
+
+namespace GH60697 {
+
+template <class T>
+struct X {
+    X() requires false = default;
+};
+static_assert(!__is_trivial(X<int>));
+
+template <class T>
+struct S {
+    S() requires(__is_trivially_constructible(T)) = default;
+
+    S() requires(!__is_trivially_constructible(T) &&
+                  __is_constructible(T)) {}
+
+    T t;
+};
+
+struct D {
+    D(int i) : i(i) {}
+    int i;
+};
+static_assert(!__is_trivially_constructible(D));
+static_assert(!__is_constructible(D));
+static_assert(!__is_trivial(D));
+
+static_assert(!__is_trivially_constructible(S<D>));
+static_assert(!__is_constructible(S<D>));
+
+static_assert(__is_trivial(S<int>));
+static_assert(!__is_trivial(S<D>));
+
+}
+
+namespace GH62555 {
+
+template <bool B>
+struct ExplicitTemplateArgs {
+    ExplicitTemplateArgs(ExplicitTemplateArgs&&) = default;
+    ExplicitTemplateArgs(ExplicitTemplateArgs<false>&&) requires B {};
+};
+
+static_assert(__is_trivially_copyable(ExplicitTemplateArgs<false>));
+static_assert(__is_trivially_copyable(ExplicitTemplateArgs<true>));
+
+}

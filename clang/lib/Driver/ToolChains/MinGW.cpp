@@ -135,7 +135,7 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("arm64pe");
     break;
   default:
-    llvm_unreachable("Unsupported target architecture.");
+    D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str();
   }
 
   Arg *SubsysArg =
@@ -169,6 +169,10 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
 
+  if (!Args.hasFlag(options::OPT_fauto_import, options::OPT_fno_auto_import,
+                    true))
+    CmdArgs.push_back("--disable-auto-import");
+
   if (Arg *A = Args.getLastArg(options::OPT_mguard_EQ)) {
     StringRef GuardArgs = A->getValue();
     if (GuardArgs == "none")
@@ -192,13 +196,22 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   } else
     CmdArgs.push_back(OutputFile);
 
-  Args.AddAllArgs(CmdArgs, options::OPT_e);
   // FIXME: add -N, -n flags
   Args.AddLastArg(CmdArgs, options::OPT_r);
   Args.AddLastArg(CmdArgs, options::OPT_s);
   Args.AddLastArg(CmdArgs, options::OPT_t);
   Args.AddAllArgs(CmdArgs, options::OPT_u_Group);
   Args.AddLastArg(CmdArgs, options::OPT_Z_Flag);
+
+  // Add asan_dynamic as the first import lib before other libs. This allows
+  // asan to be initialized as early as possible to increase its instrumentation
+  // coverage to include other user DLLs which has not been built with asan.
+  if (Sanitize.needsAsanRt() && !Args.hasArg(options::OPT_nostdlib) &&
+      !Args.hasArg(options::OPT_nodefaultlibs)) {
+    // MinGW always links against a shared MSVCRT.
+    CmdArgs.push_back(
+        TC.getCompilerRTArgString(Args, "asan_dynamic", ToolChain::FT_Shared));
+  }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
     if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_mdll)) {
@@ -228,6 +241,12 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("-L" + CRTPath));
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+
+  if (D.isUsingLTO()) {
+    assert(!Inputs.empty() && "Must have at least one input.");
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs[0],
+                  D.getLTOMode() == LTOK_Thin);
+  }
 
   if (C.getDriver().IsFlangMode()) {
     addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
@@ -346,6 +365,15 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileUTF8(),
                                          Exec, CmdArgs, Inputs, Output));
+}
+
+static bool isCrossCompiling(const llvm::Triple &T, bool RequireArchMatch) {
+  llvm::Triple HostTriple(llvm::Triple::normalize(LLVM_HOST_TRIPLE));
+  if (HostTriple.getOS() != llvm::Triple::Win32)
+    return true;
+  if (RequireArchMatch && HostTriple.getArch() != T.getArch())
+    return true;
+  return false;
 }
 
 // Simplified from Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple.
@@ -487,14 +515,18 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
   getFilePaths().push_back(
       (Base + SubdirName + llvm::sys::path::get_separator() + "mingw/lib").str());
 
-  getFilePaths().push_back(Base + "lib");
+  // Only include <base>/lib if we're not cross compiling (not even for
+  // windows->windows to a different arch), or if the sysroot has been set
+  // (where we presume the user has pointed it at an arch specific
+  // subdirectory).
+  if (!::isCrossCompiling(getTriple(), /*RequireArchMatch=*/true) ||
+      getDriver().SysRoot.size())
+    getFilePaths().push_back(Base + "lib");
 
   NativeLLVMSupport =
       Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER)
           .equals_insensitive("lld");
 }
-
-bool toolchains::MinGW::IsIntegratedAssemblerDefault() const { return true; }
 
 Tool *toolchains::MinGW::getTool(Action::ActionClass AC) const {
   switch (AC) {
@@ -649,7 +681,13 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   addSystemInclude(DriverArgs, CC1Args,
                    Base + SubdirName + llvm::sys::path::get_separator() + "usr/include");
 
-  addSystemInclude(DriverArgs, CC1Args, Base + "include");
+  // Only include <base>/include if we're not cross compiling (but do allow it
+  // if we're on Windows and building for Windows on another architecture),
+  // or if the sysroot has been set (where we presume the user has pointed it
+  // at an arch specific subdirectory).
+  if (!::isCrossCompiling(getTriple(), /*RequireArchMatch=*/false) ||
+      getDriver().SysRoot.size())
+    addSystemInclude(DriverArgs, CC1Args, Base + "include");
 }
 
 void toolchains::MinGW::addClangTargetOptions(
@@ -670,6 +708,9 @@ void toolchains::MinGW::addClangTargetOptions(
           << A->getSpelling() << GuardArgs;
     }
   }
+
+  if (Arg *A = DriverArgs.getLastArgNoClaim(options::OPT_mthreads))
+    A->ignoreTargetSpecific();
 }
 
 void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(

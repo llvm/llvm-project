@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-- -run-pass=liveintervals,dead-mi-elimination,simple-register-coalescing -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn-- -run-pass=liveintervals,dead-mi-elimination,register-coalescer -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 
 # This is used to fail verififcation if MachineDCE tracks LIS.
 

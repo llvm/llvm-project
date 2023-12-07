@@ -2,6 +2,7 @@ add_llvm_component_library(LLVMMSP430AsmParser
   MSP430AsmParser.cpp
 
   LINK_COMPONENTS
+  CodeGenTypes
   MC
   MCParser
   MSP430Desc
@@ -10,4 +11,4 @@ add_llvm_component_library(LLVMMSP430AsmParser
 
   ADD_TO_COMPONENT
   MSP430
-)
+  )

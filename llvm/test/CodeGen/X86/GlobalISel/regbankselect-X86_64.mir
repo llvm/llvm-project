@@ -66,59 +66,59 @@
     ret <4 x float> %ret
   }
 
-  define i8 @test_load_i8(i8* %p1) {
-    %r = load i8, i8* %p1
+  define i8 @test_load_i8(ptr %p1) {
+    %r = load i8, ptr %p1
     ret i8 %r
   }
 
-  define i16 @test_load_i16(i16* %p1) {
-    %r = load i16, i16* %p1
+  define i16 @test_load_i16(ptr %p1) {
+    %r = load i16, ptr %p1
     ret i16 %r
   }
 
-  define i32 @test_load_i32(i32* %p1) {
-    %r = load i32, i32* %p1
+  define i32 @test_load_i32(ptr %p1) {
+    %r = load i32, ptr %p1
     ret i32 %r
   }
 
-  define i64 @test_load_i64(i64* %p1) {
-    %r = load i64, i64* %p1
+  define i64 @test_load_i64(ptr %p1) {
+    %r = load i64, ptr %p1
     ret i64 %r
   }
 
-  define float @test_load_float(float* %p1) {
-    %r = load float, float* %p1
+  define float @test_load_float(ptr %p1) {
+    %r = load float, ptr %p1
     ret float %r
   }
 
-  define double @test_load_double(double* %p1) {
-    %r = load double, double* %p1
+  define double @test_load_double(ptr %p1) {
+    %r = load double, ptr %p1
     ret double %r
   }
 
-  define <4 x i32> @test_load_v4i32(<4 x i32>* %p1) {
-    %r = load <4 x i32>, <4 x i32>* %p1, align 16
+  define <4 x i32> @test_load_v4i32(ptr %p1) {
+    %r = load <4 x i32>, ptr %p1, align 16
     ret <4 x i32> %r
   }
 
-  define i32* @test_store_i32(i32 %val, i32* %p1) {
-    store i32 %val, i32* %p1
-    ret i32* %p1
+  define ptr @test_store_i32(i32 %val, ptr %p1) {
+    store i32 %val, ptr %p1
+    ret ptr %p1
   }
 
-  define i64* @test_store_i64(i64 %val, i64* %p1) {
-    store i64 %val, i64* %p1
-    ret i64* %p1
+  define ptr @test_store_i64(i64 %val, ptr %p1) {
+    store i64 %val, ptr %p1
+    ret ptr %p1
   }
 
-  define float* @test_store_float(float %val, float* %p1) {
-    store float %val, float* %p1
-    ret float* %p1
+  define ptr @test_store_float(float %val, ptr %p1) {
+    store float %val, ptr %p1
+    ret ptr %p1
   }
 
-  define double* @test_store_double(double %val, double* %p1) {
-    store double %val, double* %p1
-    ret double* %p1
+  define ptr @test_store_double(double %val, ptr %p1) {
+    store double %val, ptr %p1
+    ret ptr %p1
   }
 
   define void @constInt_check() {
@@ -130,8 +130,8 @@
   }
 
   define void @test_gep() {
-    %p1 = getelementptr i32, i32* undef, i32 5
-    %p2 = getelementptr i32, i32* undef, i64 5
+    %p1 = getelementptr i32, ptr undef, i32 5
+    %p2 = getelementptr i32, ptr undef, i64 5
     ret void
   }
 
@@ -177,9 +177,9 @@
 
   @g_int = global i32 0, align 4
 
-  define i32* @test_global_ptrv() {
+  define ptr @test_global_ptrv() {
   entry:
-    ret i32* @g_int
+    ret ptr @g_int
   }
 
   define i8 @test_undef() {

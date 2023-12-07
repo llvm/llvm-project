@@ -13,6 +13,7 @@ static_library("readability") {
   ]
   sources = [
     "AvoidConstParamsInDecls.cpp",
+    "AvoidUnconditionalPreprocessorIfCheck.cpp",
     "BracesAroundStatementsCheck.cpp",
     "ConstReturnTypeCheck.cpp",
     "ContainerContainsCheck.cpp",
@@ -36,6 +37,7 @@ static_library("readability") {
     "NamedParameterCheck.cpp",
     "NamespaceCommentCheck.cpp",
     "NonConstParameterCheck.cpp",
+    "OperatorsRepresentationCheck.cpp",
     "QualifiedAutoCheck.cpp",
     "ReadabilityTidyModule.cpp",
     "RedundantAccessSpecifiersCheck.cpp",
@@ -47,6 +49,7 @@ static_library("readability") {
     "RedundantSmartptrGetCheck.cpp",
     "RedundantStringCStrCheck.cpp",
     "RedundantStringInitCheck.cpp",
+    "ReferenceToConstructedTemporaryCheck.cpp",
     "SimplifyBooleanExprCheck.cpp",
     "SimplifySubscriptExprCheck.cpp",
     "StaticAccessedThroughInstanceCheck.cpp",

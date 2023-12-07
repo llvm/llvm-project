@@ -1,7 +1,7 @@
 ; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers | FileCheck -DPTR=32 %s
 ; RUN: llc < %s --mtriple=wasm64-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers | FileCheck -DPTR=64 %s
 
-declare void @somefunc(i32*)
+declare void @somefunc(ptr)
 
 ; CHECK-LABEL: underalign:
 ; CHECK:      global.get $push[[L1:.+]]=, __stack_pointer{{$}}
@@ -19,7 +19,7 @@ declare void @somefunc(i32*)
 define void @underalign() {
 entry:
   %underaligned = alloca i32, align 8
-  call void @somefunc(i32* %underaligned)
+  call void @somefunc(ptr %underaligned)
   ret void
 }
 
@@ -40,7 +40,7 @@ entry:
 define void @overalign() {
 entry:
   %overaligned = alloca i32, align 32
-  call void @somefunc(i32* %overaligned)
+  call void @somefunc(ptr %overaligned)
   ret void
 }
 
@@ -64,8 +64,8 @@ define void @over_and_normal_align() {
 entry:
   %over = alloca i32, align 32
   %normal = alloca i32
-  call void @somefunc(i32* %over)
-  call void @somefunc(i32* %normal)
+  call void @somefunc(ptr %over)
+  call void @somefunc(ptr %normal)
   ret void
 }
 
@@ -83,7 +83,7 @@ entry:
 define void @dynamic_overalign(i32 %num) {
 entry:
   %dynamic = alloca i32, i32 %num, align 32
-  call void @somefunc(i32* %dynamic)
+  call void @somefunc(ptr %dynamic)
   ret void
 }
 
@@ -108,8 +108,8 @@ define void @overalign_and_dynamic(i32 %num) {
 entry:
   %over = alloca i32, align 32
   %dynamic = alloca i32, i32 %num
-  call void @somefunc(i32* %over)
-  call void @somefunc(i32* %dynamic)
+  call void @somefunc(ptr %over)
+  call void @somefunc(ptr %dynamic)
   ret void
 }
 
@@ -140,8 +140,8 @@ entry:
   %over = alloca i32, align 32
   %dynamic = alloca i32, i32 %num
   %static = alloca i32
-  call void @somefunc(i32* %over)
-  call void @somefunc(i32* %dynamic)
-  call void @somefunc(i32* %static)
+  call void @somefunc(ptr %over)
+  call void @somefunc(ptr %dynamic)
+  call void @somefunc(ptr %static)
   ret void
 }

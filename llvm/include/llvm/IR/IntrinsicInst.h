@@ -154,7 +154,6 @@ static inline bool isDbgInfoIntrinsic(Intrinsic::ID ID) {
   switch (ID) {
   case Intrinsic::dbg_declare:
   case Intrinsic::dbg_value:
-  case Intrinsic::dbg_addr:
   case Intrinsic::dbg_label:
   case Intrinsic::dbg_assign:
     return true;
@@ -177,57 +176,122 @@ public:
   /// @}
 };
 
+// Iterator for ValueAsMetadata that internally uses direct pointer iteration
+// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the
+// ValueAsMetadata .
+class location_op_iterator
+    : public iterator_facade_base<location_op_iterator,
+                                  std::bidirectional_iterator_tag, Value *> {
+  PointerUnion<ValueAsMetadata *, ValueAsMetadata **> I;
+
+public:
+  location_op_iterator(ValueAsMetadata *SingleIter) : I(SingleIter) {}
+  location_op_iterator(ValueAsMetadata **MultiIter) : I(MultiIter) {}
+
+  location_op_iterator(const location_op_iterator &R) : I(R.I) {}
+  location_op_iterator &operator=(const location_op_iterator &R) {
+    I = R.I;
+    return *this;
+  }
+  bool operator==(const location_op_iterator &RHS) const { return I == RHS.I; }
+  const Value *operator*() const {
+    ValueAsMetadata *VAM = isa<ValueAsMetadata *>(I)
+                               ? cast<ValueAsMetadata *>(I)
+                               : *cast<ValueAsMetadata **>(I);
+    return VAM->getValue();
+  };
+  Value *operator*() {
+    ValueAsMetadata *VAM = isa<ValueAsMetadata *>(I)
+                               ? cast<ValueAsMetadata *>(I)
+                               : *cast<ValueAsMetadata **>(I);
+    return VAM->getValue();
+  }
+  location_op_iterator &operator++() {
+    if (isa<ValueAsMetadata *>(I))
+      I = cast<ValueAsMetadata *>(I) + 1;
+    else
+      I = cast<ValueAsMetadata **>(I) + 1;
+    return *this;
+  }
+  location_op_iterator &operator--() {
+    if (isa<ValueAsMetadata *>(I))
+      I = cast<ValueAsMetadata *>(I) - 1;
+    else
+      I = cast<ValueAsMetadata **>(I) - 1;
+    return *this;
+  }
+};
+
+/// Lightweight class that wraps the location operand metadata of a debug
+/// intrinsic. The raw location may be a ValueAsMetadata, an empty MDTuple,
+/// or a DIArgList.
+class RawLocationWrapper {
+  Metadata *RawLocation = nullptr;
+
+public:
+  RawLocationWrapper() = default;
+  explicit RawLocationWrapper(Metadata *RawLocation)
+      : RawLocation(RawLocation) {
+    // Allow ValueAsMetadata, empty MDTuple, DIArgList.
+    assert(RawLocation && "unexpected null RawLocation");
+    assert(isa<ValueAsMetadata>(RawLocation) || isa<DIArgList>(RawLocation) ||
+           (isa<MDNode>(RawLocation) &&
+            !cast<MDNode>(RawLocation)->getNumOperands()));
+  }
+  Metadata *getRawLocation() const { return RawLocation; }
+  /// Get the locations corresponding to the variable referenced by the debug
+  /// info intrinsic.  Depending on the intrinsic, this could be the
+  /// variable's value or its address.
+  iterator_range<location_op_iterator> location_ops() const;
+  Value *getVariableLocationOp(unsigned OpIdx) const;
+  unsigned getNumVariableLocationOps() const {
+    if (hasArgList())
+      return cast<DIArgList>(getRawLocation())->getArgs().size();
+    return 1;
+  }
+  bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
+  bool isKillLocation(const DIExpression *Expression) const {
+    // Check for "kill" sentinel values.
+    // Non-variadic: empty metadata.
+    if (!hasArgList() && isa<MDNode>(getRawLocation()))
+      return true;
+    // Variadic: empty DIArgList with empty expression.
+    if (getNumVariableLocationOps() == 0 && !Expression->isComplex())
+      return true;
+    // Variadic and non-variadic: Interpret expressions using undef or poison
+    // values as kills.
+    return any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
+  }
+
+  friend bool operator==(const RawLocationWrapper &A,
+                         const RawLocationWrapper &B) {
+    return A.RawLocation == B.RawLocation;
+  }
+  friend bool operator!=(const RawLocationWrapper &A,
+                         const RawLocationWrapper &B) {
+    return !(A == B);
+  }
+  friend bool operator>(const RawLocationWrapper &A,
+                        const RawLocationWrapper &B) {
+    return A.RawLocation > B.RawLocation;
+  }
+  friend bool operator>=(const RawLocationWrapper &A,
+                         const RawLocationWrapper &B) {
+    return A.RawLocation >= B.RawLocation;
+  }
+  friend bool operator<(const RawLocationWrapper &A,
+                        const RawLocationWrapper &B) {
+    return A.RawLocation < B.RawLocation;
+  }
+  friend bool operator<=(const RawLocationWrapper &A,
+                         const RawLocationWrapper &B) {
+    return A.RawLocation <= B.RawLocation;
+  }
+};
+
 /// This is the common base class for debug info intrinsics for variables.
 class DbgVariableIntrinsic : public DbgInfoIntrinsic {
 public:
-  // Iterator for ValueAsMetadata that internally uses direct pointer iteration
-  // over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the
-  // ValueAsMetadata .
-  class location_op_iterator
-      : public iterator_facade_base<location_op_iterator,
-                                    std::bidirectional_iterator_tag, Value *> {
-    PointerUnion<ValueAsMetadata *, ValueAsMetadata **> I;
-
-  public:
-    location_op_iterator(ValueAsMetadata *SingleIter) : I(SingleIter) {}
-    location_op_iterator(ValueAsMetadata **MultiIter) : I(MultiIter) {}
-
-    location_op_iterator(const location_op_iterator &R) : I(R.I) {}
-    location_op_iterator &operator=(const location_op_iterator &R) {
-      I = R.I;
-      return *this;
-    }
-    bool operator==(const location_op_iterator &RHS) const {
-      return I == RHS.I;
-    }
-    const Value *operator*() const {
-      ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
-                                 ? I.get<ValueAsMetadata *>()
-                                 : *I.get<ValueAsMetadata **>();
-      return VAM->getValue();
-    };
-    Value *operator*() {
-      ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
-                                 ? I.get<ValueAsMetadata *>()
-                                 : *I.get<ValueAsMetadata **>();
-      return VAM->getValue();
-    }
-    location_op_iterator &operator++() {
-      if (I.is<ValueAsMetadata *>())
-        I = I.get<ValueAsMetadata *>() + 1;
-      else
-        I = I.get<ValueAsMetadata **>() + 1;
-      return *this;
-    }
-    location_op_iterator &operator--() {
-      if (I.is<ValueAsMetadata *>())
-        I = I.get<ValueAsMetadata *>() - 1;
-      else
-        I = I.get<ValueAsMetadata **>() - 1;
-      return *this;
-    }
-  };
-
   /// Get the locations corresponding to the variable referenced by the debug
   /// info intrinsic.  Depending on the intrinsic, this could be the
   /// variable's value or its address.
@@ -252,37 +316,32 @@ public:
   }
 
   unsigned getNumVariableLocationOps() const {
-    if (hasArgList())
-      return cast<DIArgList>(getRawLocation())->getArgs().size();
-    return 1;
+    return getWrappedLocation().getNumVariableLocationOps();
   }
 
-  bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
+  bool hasArgList() const { return getWrappedLocation().hasArgList(); }
 
-  /// Does this describe the address of a local variable. True for dbg.addr and
-  /// dbg.declare, but not dbg.value, which describes its value, or dbg.assign,
-  /// which describes a combination of the variable's value and address.
+  /// Does this describe the address of a local variable. True for dbg.declare,
+  /// but not dbg.value, which describes its value, or dbg.assign, which
+  /// describes a combination of the variable's value and address.
   bool isAddressOfVariable() const {
-    return getIntrinsicID() != Intrinsic::dbg_value &&
-           getIntrinsicID() != Intrinsic::dbg_assign;
+    return getIntrinsicID() == Intrinsic::dbg_declare;
   }
 
-  void setUndef() {
+  void setKillLocation() {
     // TODO: When/if we remove duplicate values from DIArgLists, we don't need
     // this set anymore.
     SmallPtrSet<Value *, 4> RemovedValues;
     for (Value *OldValue : location_ops()) {
       if (!RemovedValues.insert(OldValue).second)
         continue;
-      Value *Undef = UndefValue::get(OldValue->getType());
-      replaceVariableLocationOp(OldValue, Undef);
+      Value *Poison = PoisonValue::get(OldValue->getType());
+      replaceVariableLocationOp(OldValue, Poison);
     }
   }
 
-  bool isUndef() const {
-    return (getNumVariableLocationOps() == 0 &&
-            !getExpression()->isComplex()) ||
-           any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
+  bool isKillLocation() const {
+    return getWrappedLocation().isKillLocation(getExpression());
   }
 
   DILocalVariable *getVariable() const {
@@ -295,6 +354,10 @@ public:
 
   Metadata *getRawLocation() const {
     return cast<MetadataAsValue>(getArgOperand(0))->getMetadata();
+  }
+
+  RawLocationWrapper getWrappedLocation() const {
+    return RawLocationWrapper(getRawLocation());
   }
 
   Metadata *getRawVariable() const {
@@ -321,13 +384,25 @@ public:
     return getExpression()->getFragmentInfo();
   }
 
+  /// Get the FragmentInfo for the variable if it exists, otherwise return a
+  /// FragmentInfo that covers the entire variable if the variable size is
+  /// known, otherwise return a zero-sized fragment.
+  DIExpression::FragmentInfo getFragmentOrEntireVariable() const {
+    DIExpression::FragmentInfo VariableSlice(0, 0);
+    // Get the fragment or variable size, or zero.
+    if (auto Sz = getFragmentSizeInBits())
+      VariableSlice.SizeInBits = *Sz;
+    if (auto Frag = getExpression()->getFragmentInfo())
+      VariableSlice.OffsetInBits = Frag->OffsetInBits;
+    return VariableSlice;
+  }
+
   /// \name Casting methods
   /// @{
   static bool classof(const IntrinsicInst *I) {
     switch (I->getIntrinsicID()) {
     case Intrinsic::dbg_declare:
     case Intrinsic::dbg_value:
-    case Intrinsic::dbg_addr:
     case Intrinsic::dbg_assign:
       return true;
     default:
@@ -363,25 +438,6 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
   /// @}
-};
-
-/// This represents the llvm.dbg.addr instruction.
-class DbgAddrIntrinsic : public DbgVariableIntrinsic {
-public:
-  Value *getAddress() const {
-    assert(getNumVariableLocationOps() == 1 &&
-           "dbg.addr must have exactly 1 location operand.");
-    return getVariableLocationOp(0);
-  }
-
-  /// \name Casting methods
-  /// @{
-  static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::dbg_addr;
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
 };
 
 /// This represents the llvm.dbg.value instruction.
@@ -440,6 +496,13 @@ public:
   }
   void setAssignId(DIAssignID *New);
   void setAddress(Value *V);
+  /// Kill the address component.
+  void setKillAddress();
+  /// Check whether this kills the address component. This doesn't take into
+  /// account the position of the intrinsic, therefore a returned value of false
+  /// does not guarentee the address is a valid location for the variable at the
+  /// intrinsic's position in IR.
+  bool isKillAddress() const;
   void setValue(Value *V);
   /// \name Casting methods
   /// @{
@@ -533,8 +596,17 @@ public:
     return getFunctionalOpcodeForVP(getIntrinsicID());
   }
 
+  // Equivalent non-predicated constrained ID
+  std::optional<unsigned> getConstrainedIntrinsicID() const {
+    return getConstrainedIntrinsicIDForVP(getIntrinsicID());
+  }
+
   // Equivalent non-predicated opcode
   static std::optional<unsigned> getFunctionalOpcodeForVP(Intrinsic::ID ID);
+
+  // Equivalent non-predicated constrained ID
+  static std::optional<unsigned>
+  getConstrainedIntrinsicIDForVP(Intrinsic::ID ID);
 };
 
 /// This represents vector predication reduction intrinsics.
@@ -831,6 +903,7 @@ public:
 
   /// FIXME: Remove this function once transition to Align is over.
   /// Use getDestAlign() instead.
+  LLVM_DEPRECATED("Use getDestAlign() instead", "getDestAlign")
   unsigned getDestAlignment() const {
     if (auto MA = getParamAlign(ARG_DEST))
       return MA->value();
@@ -891,6 +964,7 @@ public:
 
   /// FIXME: Remove this function once transition to Align is over.
   /// Use getSourceAlign() instead.
+  LLVM_DEPRECATED("Use getSourceAlign() instead", "getSourceAlign")
   unsigned getSourceAlignment() const {
     if (auto MA = BaseCL::getParamAlign(ARG_SOURCE))
       return MA->value();
@@ -907,17 +981,13 @@ public:
     BaseCL::setArgOperand(ARG_SOURCE, Ptr);
   }
 
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes MaybeAlign instead of this one.
-  void setSourceAlignment(unsigned Alignment) {
-    setSourceAlignment(MaybeAlign(Alignment));
-  }
   void setSourceAlignment(MaybeAlign Alignment) {
     BaseCL::removeParamAttr(ARG_SOURCE, Attribute::Alignment);
     if (Alignment)
       BaseCL::addParamAttr(ARG_SOURCE, Attribute::getWithAlignment(
                                            BaseCL::getContext(), *Alignment));
   }
+
   void setSourceAlignment(Align Alignment) {
     BaseCL::removeParamAttr(ARG_SOURCE, Attribute::Alignment);
     BaseCL::addParamAttr(ARG_SOURCE, Attribute::getWithAlignment(
@@ -1350,7 +1420,8 @@ public:
 class InstrProfIncrementInst : public InstrProfInstBase {
 public:
   static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::instrprof_increment;
+    return I->getIntrinsicID() == Intrinsic::instrprof_increment ||
+           I->getIntrinsicID() == Intrinsic::instrprof_increment_step;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
@@ -1363,6 +1434,17 @@ class InstrProfIncrementInstStep : public InstrProfIncrementInst {
 public:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::instrprof_increment_step;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This represents the llvm.instrprof.timestamp intrinsic.
+class InstrProfTimestampInst : public InstrProfInstBase {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::instrprof_timestamp;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));

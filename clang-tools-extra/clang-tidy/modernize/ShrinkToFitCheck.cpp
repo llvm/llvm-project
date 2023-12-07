@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 void ShrinkToFitCheck::registerMatchers(MatchFinder *Finder) {
   // Swap as a function need not to be considered, because rvalue can not
@@ -75,6 +73,4 @@ void ShrinkToFitCheck::check(const MatchFinder::MatchResult &Result) {
       << Hint;
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

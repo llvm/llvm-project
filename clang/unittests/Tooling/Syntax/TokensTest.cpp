@@ -29,7 +29,6 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -37,13 +36,14 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include <cassert>
 #include <cstdlib>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <string>
 
@@ -114,7 +114,7 @@ public:
 
     private:
       TokenBuffer &Result;
-      llvm::Optional<TokenCollector> Collector;
+      std::optional<TokenCollector> Collector;
     };
 
     constexpr const char *FileName = "./input.cpp";
@@ -191,7 +191,7 @@ public:
                                  llvm::ArrayRef<T> Range, Eq F) {
     assert(Subrange.size() >= 1);
     if (Range.size() < Subrange.size())
-      return llvm::makeArrayRef(Range.end(), Range.end());
+      return llvm::ArrayRef(Range.end(), Range.end());
     for (auto Begin = Range.begin(), Last = Range.end() - Subrange.size();
          Begin <= Last; ++Begin) {
       auto It = Begin;
@@ -200,10 +200,10 @@ public:
         if (!F(*ItSub, *It))
           goto continue_outer;
       }
-      return llvm::makeArrayRef(Begin, It);
+      return llvm::ArrayRef(Begin, It);
     continue_outer:;
     }
-    return llvm::makeArrayRef(Range.end(), Range.end());
+    return llvm::ArrayRef(Range.end(), Range.end());
   }
 
   /// Finds a subrange in \p Tokens that match the tokens specified in \p Query.
@@ -222,15 +222,14 @@ public:
       return Q == T.text(*SourceMgr);
     };
     // Find a match.
-    auto Found =
-        findSubrange(llvm::makeArrayRef(QueryTokens), Tokens, TextMatches);
+    auto Found = findSubrange(llvm::ArrayRef(QueryTokens), Tokens, TextMatches);
     if (Found.begin() == Tokens.end()) {
       ADD_FAILURE() << "could not find the subrange for " << Query;
       std::abort();
     }
     // Check that the match is unique.
-    if (findSubrange(llvm::makeArrayRef(QueryTokens),
-                     llvm::makeArrayRef(Found.end(), Tokens.end()), TextMatches)
+    if (findSubrange(llvm::ArrayRef(QueryTokens),
+                     llvm::ArrayRef(Found.end(), Tokens.end()), TextMatches)
             .begin() != Tokens.end()) {
       ADD_FAILURE() << "match is not unique for " << Query;
       std::abort();
@@ -770,12 +769,15 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
   // Critical cases for mapping of Prev/Next in spelledForExpandedSlow.
   recordTokens(R"cpp(
     #define ID(X) X
-    ID(prev ID(good))
+    ID(prev good)
+    ID(prev ID(good2))
     #define LARGE ID(prev ID(bad))
     LARGE
   )cpp");
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good")),
               ValueIs(SameRange(findSpelled("good"))));
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good2")),
+              ValueIs(SameRange(findSpelled("good2"))));
   EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("bad")), std::nullopt);
 
   recordTokens(R"cpp(
@@ -786,19 +788,32 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
     LARGE
   )cpp");
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good")),
-            ValueIs(SameRange(findSpelled("good"))));
+              ValueIs(SameRange(findSpelled("good"))));
   EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("bad")), std::nullopt);
 
   recordTokens(R"cpp(
     #define ID(X) X
     #define ID2(X, Y) X Y
-    ID2(prev, ID(good))
+    ID2(prev, good)
+    ID2(prev, ID(good2))
     #define LARGE ID2(prev, bad)
     LARGE
   )cpp");
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good")),
-            ValueIs(SameRange(findSpelled("good"))));
+              ValueIs(SameRange(findSpelled("good"))));
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good2")),
+              ValueIs(SameRange(findSpelled("good2"))));
   EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("bad")), std::nullopt);
+
+  // Prev from macro body.
+  recordTokens(R"cpp(
+    #define ID(X) X
+    #define ID2(X, Y) X prev ID(Y)
+    ID2(not_prev, good)
+  )cpp");
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good")),
+              ValueIs(SameRange(findSpelled("good"))));
+  EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("prev good")), std::nullopt);
 }
 
 TEST_F(TokenBufferTest, ExpandedTokensForRange) {
@@ -838,10 +853,10 @@ TEST_F(TokenBufferTest, ExpansionsOverlapping) {
       Buffer.expansionStartingAt(Foo2.data()),
       ValueIs(IsExpansion(SameRange(Foo2.drop_back()),
                           SameRange(findExpanded("3 + 4 2").drop_back()))));
-  EXPECT_THAT(Buffer.expansionsOverlapping(
-                  llvm::makeArrayRef(Foo1.begin(), Foo2.end())),
-              ElementsAre(IsExpansion(SameRange(Foo1.drop_back()), _),
-                          IsExpansion(SameRange(Foo2.drop_back()), _)));
+  EXPECT_THAT(
+      Buffer.expansionsOverlapping(llvm::ArrayRef(Foo1.begin(), Foo2.end())),
+      ElementsAre(IsExpansion(SameRange(Foo1.drop_back()), _),
+                  IsExpansion(SameRange(Foo2.drop_back()), _)));
 
   // Function-like macro expansions.
   recordTokens(R"cpp(
@@ -866,7 +881,7 @@ TEST_F(TokenBufferTest, ExpansionsOverlapping) {
   for (const auto &T : ID2.drop_front())
     EXPECT_EQ(Buffer.expansionStartingAt(&T), std::nullopt);
 
-  EXPECT_THAT(Buffer.expansionsOverlapping(llvm::makeArrayRef(
+  EXPECT_THAT(Buffer.expansionsOverlapping(llvm::ArrayRef(
                   findSpelled("1 + 2").data(), findSpelled("4").data())),
               ElementsAre(IsExpansion(SameRange(ID1), _),
                           IsExpansion(SameRange(ID2), _)));

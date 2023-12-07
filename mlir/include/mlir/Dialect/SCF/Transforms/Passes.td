@@ -24,7 +24,7 @@ def SCFForLoopCanonicalization
     : Pass<"scf-for-loop-canonicalization"> {
   let summary = "Canonicalize operations within scf.for loop bodies";
   let constructor = "mlir::createSCFForLoopCanonicalizationPass()";
-  let dependentDialects = ["AffineDialect", "tensor::TensorDialect",
+  let dependentDialects = ["affine::AffineDialect", "tensor::TensorDialect",
                            "memref::MemRefDialect"];
 }
 
@@ -37,7 +37,7 @@ def SCFForLoopPeeling : Pass<"scf-for-loop-peeling"> {
            "Do not peel loops inside of the last, partial iteration of another "
            "already peeled loop.">
   ];
-  let dependentDialects = ["AffineDialect"];
+  let dependentDialects = ["affine::AffineDialect"];
 }
 
 def SCFForLoopSpecialization : Pass<"scf-for-loop-specialization"> {
@@ -50,9 +50,38 @@ def SCFParallelLoopFusion : Pass<"scf-parallel-loop-fusion"> {
   let constructor = "mlir::createParallelLoopFusionPass()";
 }
 
-def SCFParallelLoopCollapsing : Pass<"scf-parallel-loop-collapsing"> {
-  let summary = "Collapse parallel loops to use less induction variables";
-  let constructor = "mlir::createParallelLoopCollapsingPass()";
+def TestSCFParallelLoopCollapsing : Pass<"test-scf-parallel-loop-collapsing"> {
+  let summary = "Test parallel loops collapsing transformation";
+  let constructor = "mlir::createTestSCFParallelLoopCollapsingPass()";
+  let description = [{
+      This pass is purely for testing the scf::collapseParallelLoops
+      transformation. The transformation does not have opinions on how a
+      parallel loop should be collapsed, so this pass is structured for the
+      common case on GPUs of collapsing to a 3d parallel loop. 3 lists can be
+      provided to collapsed-indices-{0,1,2} to represent how the loop should be
+      collapsed and must reference evrey iterator in the original parallel loop.
+
+    ```mlir
+    # Before:
+    scf.parallel (%arg0, %arg1)
+                 = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+      "test.sink"(%5, %3) : (index, index) -> ()
+      scf.yield
+    }
+
+    # After:
+    scf.parallel (%arg0) = (%c0) to (%c4) step (%c1) {
+      %0 = arith.remsi %arg0, %c2 : index
+      %1 = arith.divsi %arg0, %c2 : index
+      %2 = arith.muli %0, %c7 : index
+      %3 = arith.addi %2, %c3 : index
+      %4 = arith.muli %1, %c7 : index
+      %5 = arith.addi %4, %c3 : index
+      "test.sink"(%5, %3) : (index, index) -> ()
+    }
+    ```
+  }];
+
   let options = [
     ListOption<"clCollapsedIndices0", "collapsed-indices-0", "unsigned",
                "Which loop indices to combine 0th loop index">,
@@ -80,7 +109,7 @@ def SCFParallelLoopTiling : Pass<"scf-parallel-loop-tiling"> {
            "Perform tiling with fixed upper bound with inbound check "
            "inside the internal loops">
   ];
-  let dependentDialects = ["AffineDialect"];
+  let dependentDialects = ["affine::AffineDialect"];
 }
 
 def SCFForLoopRangeFolding : Pass<"scf-for-loop-range-folding"> {

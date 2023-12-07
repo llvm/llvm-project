@@ -13,10 +13,9 @@ package(default_visibility = ["//visibility:public"])
             "CodeGen/MLIR/include/**",
             "CodeGen/CPP/include/**",
         ]) + [
-            "//mlir/test:lit_data",
+            "//mlir:OpBaseTdFiles",
             "//mlir:mlir-pdll",
-            "//mlir:include/mlir/IR/OpBase.td",
-            "//mlir:include/mlir/IR/DialectBase.td",
+            "//mlir/test:lit_data",
         ],
     )
     for src in glob(

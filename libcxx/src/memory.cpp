@@ -25,8 +25,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-const allocator_arg_t allocator_arg = allocator_arg_t();
-
 bad_weak_ptr::~bad_weak_ptr() noexcept {}
 
 const char*
@@ -151,7 +149,7 @@ static constinit __libcpp_mutex_t mut_back[__sp_mut_count] =
     _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER
 };
 
-_LIBCPP_CONSTEXPR __sp_mut::__sp_mut(void* p) noexcept
+constexpr __sp_mut::__sp_mut(void* p) noexcept
    : __lx_(p)
 {
 }

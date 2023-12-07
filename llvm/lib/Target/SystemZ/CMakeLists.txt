@@ -43,6 +43,7 @@ add_llvm_target(SystemZCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   MC
   Scalar
@@ -51,6 +52,7 @@ add_llvm_target(SystemZCodeGen
   SystemZDesc
   SystemZInfo
   Target
+  TargetParser
 
   ADD_TO_COMPONENT
   SystemZ

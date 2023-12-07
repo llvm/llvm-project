@@ -8,12 +8,12 @@
 ; GFX9:  v_mov_b32_e32 [[C2:v[0-9]+]], 0xe7
 ; GFX9:  v_add_co_u32_e32 v{{[0-9]+}}, vcc, 0x80992bff, v{{[0-9]+}}
 ; GFX9:  v_addc_co_u32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, [[C2]], vcc
-define amdgpu_kernel void @test_add_lit(i64 addrspace(1)* %p) {
+define amdgpu_kernel void @test_add_lit(ptr addrspace(1) %p) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %ptr = getelementptr inbounds i64, i64 addrspace(1)* %p, i32 %id
-  %load = load i64, i64 addrspace(1)* %ptr, align 8
+  %ptr = getelementptr inbounds i64, ptr addrspace(1) %p, i32 %id
+  %load = load i64, ptr addrspace(1) %ptr, align 8
   %add = add nsw i64 %load, 994294967295
-  store i64 %add, i64 addrspace(1)* %ptr, align 8
+  store i64 %add, ptr addrspace(1) %ptr, align 8
   ret void
 }
 
@@ -21,16 +21,16 @@ define amdgpu_kernel void @test_add_lit(i64 addrspace(1)* %p) {
 ; GFX10: v_cndmask_b32_e32 v{{[0-9]+}}, 0x3039, v{{[0-9]+}}, vcc_lo
 ; GFX9:  v_mov_b32_e32 [[C:v[0-9]+]], 0x3039
 ; GFX9:  v_cndmask_b32_e32 v{{[0-9]+}}, [[C]], v{{[0-9]+}}, vcc
-define amdgpu_kernel void @test_cndmask_lit(i32 addrspace(1)* %p) {
+define amdgpu_kernel void @test_cndmask_lit(ptr addrspace(1) %p) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %n = add nuw nsw i32 %id, 1
-  %p1 = getelementptr inbounds i32, i32 addrspace(1)* %p, i32 %id
-  %v1 = load i32, i32 addrspace(1)* %p1, align 4
-  %p2 = getelementptr inbounds i32, i32 addrspace(1)* %p, i32 %n
-  %v2 = load i32, i32 addrspace(1)* %p2, align 4
+  %p1 = getelementptr inbounds i32, ptr addrspace(1) %p, i32 %id
+  %v1 = load i32, ptr addrspace(1) %p1, align 4
+  %p2 = getelementptr inbounds i32, ptr addrspace(1) %p, i32 %n
+  %v2 = load i32, ptr addrspace(1) %p2, align 4
   %cmp = icmp sgt i32 %v1, 0
   %sel = select i1 %cmp, i32 12345, i32 %v2
-  store i32 %sel, i32 addrspace(1)* %p1, align 4
+  store i32 %sel, ptr addrspace(1) %p1, align 4
   ret void
 }
 
@@ -40,9 +40,9 @@ define amdgpu_kernel void @test_cndmask_lit(i32 addrspace(1)* %p) {
 ; GFX9-DAG: v_mov_b32_e32 [[C2:v[0-9]+]], 0xddd5
 ; GFX9-DAG: s_movk_i32 [[C1:s[0-9]+]], 0x3039
 ; GFX9:     v_bfe_u32 v{{[0-9]+}}, [[C1]], v{{[0-9]+}}, [[C2]]
-define amdgpu_kernel void @test_bfe_2lit_s(i32 addrspace(1)* %p, i32 %src) {
+define amdgpu_kernel void @test_bfe_2lit_s(ptr addrspace(1) %p, i32 %src) {
   %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 12345, i32 %src, i32 56789)
-  store i32 %bfe, i32 addrspace(1)* %p, align 4
+  store i32 %bfe, ptr addrspace(1) %p, align 4
   ret void
 }
 
@@ -52,12 +52,12 @@ define amdgpu_kernel void @test_bfe_2lit_s(i32 addrspace(1)* %p, i32 %src) {
 ; GFX9-DAG: v_mov_b32_e32 [[C2:v[0-9]+]], 0xddd5
 ; GFX9-DAG: s_movk_i32 [[C1:s[0-9]+]], 0x3039
 ; GFX9:     v_bfe_u32 v{{[0-9]+}}, [[C1]], v{{[0-9]+}}, [[C2]]
-define amdgpu_kernel void @test_bfe_2lit_v(i32 addrspace(1)* %p) {
+define amdgpu_kernel void @test_bfe_2lit_v(ptr addrspace(1) %p) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %ptr = getelementptr inbounds i32, i32 addrspace(1)* %p, i32 %id
-  %load = load i32, i32 addrspace(1)* %ptr, align 4
+  %ptr = getelementptr inbounds i32, ptr addrspace(1) %p, i32 %id
+  %load = load i32, ptr addrspace(1) %ptr, align 4
   %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 12345, i32 %load, i32 56789)
-  store i32 %bfe, i32 addrspace(1)* %ptr, align 4
+  store i32 %bfe, ptr addrspace(1) %ptr, align 4
   ret void
 }
 

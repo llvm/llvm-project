@@ -9,11 +9,12 @@ from lldbsuite.test import lldbutil
 
 
 class TestNestedClassWithParentInAnotherCU(TestBase):
-
     def test_nested_class_with_parent_in_another_cu(self):
         self.main_source_file = lldb.SBFileSpec("main.cpp")
         self.build()
-        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(self, "// break here", self.main_source_file)
+        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
+            self, "// break here", self.main_source_file
+        )
         frame = thread.GetSelectedFrame()
         # Parse the DIEs of the parent classes and the nested classes from
         # other.cpp's CU.

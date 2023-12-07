@@ -6396,6 +6396,10 @@ def VGETLNi32 : NVGetLane<{1,1,1,0,0,0,?,1}, 0b1011, 0b00,
                 Requires<[HasFPRegs, HasFastVGETLNi32]> {
   let Inst{21} = lane{0};
 }
+// VGETLNi32 is also legal as just vmov r0,d0[0] without the .32 suffix
+def : InstAlias<"vmov${p} $R, $V$lane",
+    (VGETLNi32 GPR:$R, DPR:$V, VectorIndex32:$lane, pred:$p), 0>,
+    Requires<VGETLNi32.Predicates>;
 let Predicates = [HasNEON] in {
 // def VGETLNf32: see FMRDH and FMRDL in ARMInstrVFP.td
 def : Pat<(ARMvgetlanes (v16i8 QPR:$src), imm:$lane),
@@ -6538,6 +6542,10 @@ def VSETLNi32 : NVSetLane<{1,1,1,0,0,0,?,0}, 0b1011, 0b00, (outs DPR:$V),
   let isInsertSubreg = 1;
 }
 }
+// VSETLNi32 is also legal as just vmov d0[0],r0 without the .32 suffix
+def : InstAlias<"vmov${p} $V$lane, $R",
+    (VSETLNi32 DPR:$V, GPR:$R, VectorIndex32:$lane, pred:$p), 0>,
+    Requires<VSETLNi32.Predicates>;
 
 // TODO: for odd lanes we could optimize this a bit by using the VINS
 // FullFP16 instruction when it is available
@@ -7992,28 +8000,25 @@ multiclass Lengthen_HalfDouble_Big_Endian<string DestLanes, string DestTy, strin
                    (!cast<PatFrag>("extloadv" # SrcTy) addrmode6:$addr)),
          (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn1Lanes # Insn1Ty)
-            (!cast<Instruction>("VREV16d8")
-             (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
+             (VREV16d8 (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
              dsub_0)),
-          dsub_0)>,
+           dsub_0)>,
              Requires<[HasNEON]>;
   def _Z   : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
                    (!cast<PatFrag>("zextloadv" # SrcTy) addrmode6:$addr)),
          (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn1Lanes # Insn1Ty)
-            (!cast<Instruction>("VREV16d8")
-             (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
+             (VREV16d8 (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
              dsub_0)),
-          dsub_0)>,
+           dsub_0)>,
              Requires<[HasNEON]>;
   def _S   : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
                    (!cast<PatFrag>("sextloadv" # SrcTy) addrmode6:$addr)),
          (EXTRACT_SUBREG (!cast<Instruction>("VMOVLsv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLsv" # Insn1Lanes # Insn1Ty)
-            (!cast<Instruction>("VREV16d8")
-             (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
+             (VREV16d8 (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
              dsub_0)),
-          dsub_0)>,
+           dsub_0)>,
              Requires<[HasNEON]>;
 }
 
@@ -8066,17 +8071,17 @@ let Predicates = [HasNEON,IsLE] in {
 let Predicates = [HasNEON,IsBE] in {
   def : Pat<(v2i64 (extloadvi8 addrmode6:$addr)),
         (VMOVLuv2i64 (EXTRACT_SUBREG (VMOVLuv4i32 (EXTRACT_SUBREG (VMOVLuv8i16
-           (!cast<Instruction>("VREV16d8")
+           (VREV16d8
              (VLD1LNd16 addrmode6:$addr,
                         (f64 (IMPLICIT_DEF)), (i32 0)))), dsub_0)), dsub_0))>;
   def : Pat<(v2i64 (zextloadvi8 addrmode6:$addr)),
         (VMOVLuv2i64 (EXTRACT_SUBREG (VMOVLuv4i32 (EXTRACT_SUBREG (VMOVLuv8i16
-           (!cast<Instruction>("VREV16d8")
+           (VREV16d8
              (VLD1LNd16 addrmode6:$addr,
                         (f64 (IMPLICIT_DEF)), (i32 0)))), dsub_0)), dsub_0))>;
   def : Pat<(v2i64 (sextloadvi8 addrmode6:$addr)),
         (VMOVLsv2i64 (EXTRACT_SUBREG (VMOVLsv4i32 (EXTRACT_SUBREG (VMOVLsv8i16
-           (!cast<Instruction>("VREV16d8")
+           (VREV16d8
              (VLD1LNd16 addrmode6:$addr,
                         (f64 (IMPLICIT_DEF)), (i32 0)))), dsub_0)), dsub_0))>;
 }

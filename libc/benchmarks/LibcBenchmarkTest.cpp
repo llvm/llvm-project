@@ -8,12 +8,12 @@
 
 #include "LibcBenchmark.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <chrono>
 #include <limits>
+#include <optional>
 #include <queue>
 #include <vector>
 
@@ -78,7 +78,7 @@ protected:
 private:
   DummyParameterProvider ParameterProvider;
   static char DummyFunction(char Payload) { return Payload; }
-  llvm::Optional<std::queue<Duration>> MaybeTimepoints;
+  std::optional<std::queue<Duration>> MaybeTimepoints;
 };
 
 TEST_F(LibcBenchmark, MaxSamplesReached) {

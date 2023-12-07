@@ -24,13 +24,15 @@ def libc_test(name, srcs, libc_function_deps, deps = [], **kwargs):
       deps: The list of other libraries to be linked in to the test target.
       **kwargs: Attributes relevant for a cc_test. For example, name, srcs.
     """
+    all_function_deps = libc_function_deps + ["//libc:errno"]
     native.cc_test(
         name = name,
         srcs = srcs,
-        deps = [d + INTERNAL_SUFFIX for d in libc_function_deps] + [
+        deps = [d + INTERNAL_SUFFIX for d in all_function_deps] + [
             "//libc:libc_root",
-            "//libc/utils/UnitTest:LibcUnitTest",
+            "//libc/test/UnitTest:LibcUnitTest",
         ] + deps,
         features = ["-link_llvmlibc"],  # Do not link libllvmlibc.a
+        linkstatic = 1,
         **kwargs
     )

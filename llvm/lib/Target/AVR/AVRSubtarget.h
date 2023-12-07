@@ -61,28 +61,13 @@ public:
                                                 const TargetMachine &TM);
 
   // Subtarget feature getters.
-  // See AVR.td for details.
-  bool hasSRAM() const { return m_hasSRAM; }
-  bool hasJMPCALL() const { return m_hasJMPCALL; }
-  bool hasIJMPCALL() const { return m_hasIJMPCALL; }
-  bool hasEIJMPCALL() const { return m_hasEIJMPCALL; }
-  bool hasADDSUBIW() const { return m_hasADDSUBIW; }
-  bool hasSmallStack() const { return m_hasSmallStack; }
-  bool hasMOVW() const { return m_hasMOVW; }
-  bool hasLPM() const { return m_hasLPM; }
-  bool hasLPMX() const { return m_hasLPMX; }
-  bool hasELPM() const { return m_hasELPM; }
-  bool hasELPMX() const { return m_hasELPMX; }
-  bool hasSPM() const { return m_hasSPM; }
-  bool hasSPMX() const { return m_hasSPMX; }
-  bool hasDES() const { return m_hasDES; }
-  bool supportsRMW() const { return m_supportsRMW; }
-  bool supportsMultiplication() const { return m_supportsMultiplication; }
-  bool hasBREAK() const { return m_hasBREAK; }
-  bool hasTinyEncoding() const { return m_hasTinyEncoding; }
-  bool hasMemMappedGPR() const { return m_hasMemMappedGPR; }
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  bool GETTER() const { return ATTRIBUTE; }
+#include "AVRGenSubtargetInfo.inc"
 
   uint8_t getIORegisterOffset() const { return hasMemMappedGPR() ? 0x20 : 0x0; }
+
+  bool enableSubRegLiveness() const override { return true; }
 
   /// Gets the ELF architecture for the e_flags field
   /// of an ELF object file.
@@ -112,33 +97,12 @@ public:
 
 private:
   /// The ELF e_flags architecture.
-  unsigned ELFArch;
+  unsigned ELFArch = 0;
 
   // Subtarget feature settings
-  // See AVR.td for details.
-  bool m_hasSRAM;
-  bool m_hasJMPCALL;
-  bool m_hasIJMPCALL;
-  bool m_hasEIJMPCALL;
-  bool m_hasADDSUBIW;
-  bool m_hasSmallStack;
-  bool m_hasMOVW;
-  bool m_hasLPM;
-  bool m_hasLPMX;
-  bool m_hasELPM;
-  bool m_hasELPMX;
-  bool m_hasSPM;
-  bool m_hasSPMX;
-  bool m_hasDES;
-  bool m_supportsRMW;
-  bool m_supportsMultiplication;
-  bool m_hasBREAK;
-  bool m_hasTinyEncoding;
-  bool m_hasMemMappedGPR;
-
-  // Dummy member, used by FeatureSet's. We cannot have a SubtargetFeature with
-  // no variable, so we instead bind pseudo features to this variable.
-  bool m_FeatureSetDummy;
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  bool ATTRIBUTE = DEFAULT;
+#include "AVRGenSubtargetInfo.inc"
 
   AVRInstrInfo InstrInfo;
   AVRFrameLowering FrameLowering;

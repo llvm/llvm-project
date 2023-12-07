@@ -19,8 +19,8 @@ entry:
   %mul = mul i32 %and, 125613361
   %shr = lshr i32 %mul, 27
   %idxprom = zext i32 %shr to i64
-  %arrayidx = getelementptr inbounds [32 x i8], [32 x i8]* @ctz1.table, i64 0, i64 %idxprom
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [32 x i8], ptr @ctz1.table, i64 0, i64 %idxprom
+  %0 = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %0 to i32
   ret i32 %conv
 }

@@ -28,7 +28,7 @@ struct AtExitUnit {
   constexpr AtExitUnit(AtExitCallback *c, void *p) : callback(c), payload(p) {}
 };
 
-#ifdef LLVM_LIBC_PUBLIC_PACKAGING
+#ifdef LIBC_COPT_PUBLIC_PACKAGING
 using ExitCallbackList = cpp::ReverseOrderBlockStore<AtExitUnit, 32>;
 #else
 // BlockStore uses dynamic memory allocation. To avoid dynamic memory
@@ -40,7 +40,7 @@ using ExitCallbackList = cpp::ReverseOrderBlockStore<AtExitUnit, 32>;
 // deps also (some of which are not yet available in LLVM libc) into the
 // integration tests.
 using ExitCallbackList = FixedVector<AtExitUnit, CALLBACK_LIST_SIZE_FOR_TESTS>;
-#endif // LLVM_LIBC_PUBLIC_PACKAGING
+#endif // LIBC_COPT_PUBLIC_PACKAGING
 
 constinit ExitCallbackList exit_callbacks;
 
@@ -67,13 +67,9 @@ void call_exit_callbacks() {
 } // namespace internal
 
 static int add_atexit_unit(const AtExitUnit &unit) {
-  // TODO: Use the return value of push_back and bubble it to the public
-  // function as error return value. Note that a BlockStore push_back can
-  // fail because of allocation failure. Likewise, a FixedVector push_back
-  // can fail when it is full.
-  handler_list_mtx.lock();
-  exit_callbacks.push_back(unit);
-  handler_list_mtx.unlock();
+  MutexLock lock(&handler_list_mtx);
+  if (!exit_callbacks.push_back(unit))
+    return -1;
   return 0;
 }
 

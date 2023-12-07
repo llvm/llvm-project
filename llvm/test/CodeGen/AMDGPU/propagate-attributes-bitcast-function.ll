@@ -10,13 +10,13 @@
 define void @foo1(i32 %x) #1 {
 entry:
   %cc = icmp eq i32 %x, 0
-  store volatile i1 %cc, i1* undef
+  store volatile i1 %cc, ptr undef
   ret void
 }
 
 define amdgpu_kernel void @kernel1(float %x) #0 {
 entry:
-  call void bitcast (void (i32)* @foo1 to void (float)*)(float %x)
+  call void @foo1(float %x)
   ret void
 }
 

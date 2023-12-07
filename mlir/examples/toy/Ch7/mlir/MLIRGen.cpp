@@ -26,6 +26,7 @@
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
+#include <optional>
 
 using namespace mlir::toy;
 using namespace toy;
@@ -34,7 +35,6 @@ using llvm::ArrayRef;
 using llvm::cast;
 using llvm::dyn_cast;
 using llvm::isa;
-using llvm::makeArrayRef;
 using llvm::ScopedHashTableScope;
 using llvm::SmallVector;
 using llvm::StringRef;
@@ -271,7 +271,7 @@ private:
   }
 
   /// Return the numeric member index of the given struct access expression.
-  llvm::Optional<size_t> getMemberIndex(BinaryExprAST &accessOp) {
+  std::optional<size_t> getMemberIndex(BinaryExprAST &accessOp) {
     assert(accessOp.getOp() == '.' && "expected access operation");
 
     // Lookup the struct node for the LHS.
@@ -313,7 +313,7 @@ private:
 
     // If this is an access operation, handle it immediately.
     if (binop.getOp() == '.') {
-      llvm::Optional<size_t> accessIndex = getMemberIndex(binop);
+      std::optional<size_t> accessIndex = getMemberIndex(binop);
       if (!accessIndex) {
         emitError(location, "invalid access into struct expression");
         return nullptr;
@@ -363,8 +363,8 @@ private:
     }
 
     // Otherwise, this return operation has zero operands.
-    builder.create<ReturnOp>(location, expr ? makeArrayRef(expr)
-                                            : ArrayRef<mlir::Value>());
+    builder.create<ReturnOp>(location,
+                             expr ? ArrayRef(expr) : ArrayRef<mlir::Value>());
     return mlir::success();
   }
 
@@ -401,7 +401,7 @@ private:
 
     // This is the actual attribute that holds the list of values for this
     // tensor literal.
-    return mlir::DenseElementsAttr::get(dataType, llvm::makeArrayRef(data));
+    return mlir::DenseElementsAttr::get(dataType, llvm::ArrayRef(data));
   }
   mlir::DenseElementsAttr getConstantAttr(NumberExprAST &lit) {
     // The type of this attribute is tensor of 64-bit floating-point with no
@@ -412,7 +412,7 @@ private:
     // This is the actual attribute that holds the list of values for this
     // tensor literal.
     return mlir::DenseElementsAttr::get(dataType,
-                                        llvm::makeArrayRef(lit.getValue()));
+                                        llvm::ArrayRef(lit.getValue()));
   }
   /// Emit a constant for a struct literal. It will be emitted as an array of
   /// other literals in an Attribute attached to a `toy.struct_constant`

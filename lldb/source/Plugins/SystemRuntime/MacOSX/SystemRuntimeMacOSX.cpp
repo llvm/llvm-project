@@ -220,8 +220,7 @@ void SystemRuntimeMacOSX::AddThreadExtendedInfoPacketHints(
 }
 
 bool SystemRuntimeMacOSX::SafeToCallFunctionsOnThisThread(ThreadSP thread_sp) {
-  if (thread_sp && thread_sp->GetStackFrameCount() > 0 &&
-      thread_sp->GetFrameWithConcreteFrameIndex(0)) {
+  if (thread_sp && thread_sp->GetFrameWithConcreteFrameIndex(0)) {
     const SymbolContext sym_ctx(
         thread_sp->GetFrameWithConcreteFrameIndex(0)->GetSymbolContext(
             eSymbolContextSymbol));
@@ -414,12 +413,12 @@ void SystemRuntimeMacOSX::ReadLibdispatchTSDIndexes() {
         }
 #endif
 
-    TypeSystemClang *ast_ctx =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(m_process->GetTarget());
     if (m_dispatch_tsd_indexes_addr != LLDB_INVALID_ADDRESS) {
       CompilerType uint16 =
-          ast_ctx->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 16);
-      CompilerType dispatch_tsd_indexes_s = ast_ctx->CreateRecordType(
+          scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 16);
+      CompilerType dispatch_tsd_indexes_s = scratch_ts_sp->CreateRecordType(
           nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
           "__lldb_dispatch_tsd_indexes_s", clang::TTK_Struct,
           lldb::eLanguageTypeC);
@@ -443,13 +442,13 @@ void SystemRuntimeMacOSX::ReadLibdispatchTSDIndexes() {
                                         dispatch_tsd_indexes_s);
 
       m_libdispatch_tsd_indexes.dti_version =
-          struct_reader.GetField<uint16_t>(ConstString("dti_version"));
+          struct_reader.GetField<uint16_t>("dti_version");
       m_libdispatch_tsd_indexes.dti_queue_index =
-          struct_reader.GetField<uint16_t>(ConstString("dti_queue_index"));
+          struct_reader.GetField<uint16_t>("dti_queue_index");
       m_libdispatch_tsd_indexes.dti_voucher_index =
-          struct_reader.GetField<uint16_t>(ConstString("dti_voucher_index"));
+          struct_reader.GetField<uint16_t>("dti_voucher_index");
       m_libdispatch_tsd_indexes.dti_qos_class_index =
-          struct_reader.GetField<uint16_t>(ConstString("dti_qos_class_index"));
+          struct_reader.GetField<uint16_t>("dti_qos_class_index");
     }
   }
 }

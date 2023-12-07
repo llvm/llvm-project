@@ -1,8 +1,8 @@
 import lit
 import lit.formats
 
-CUSTOM_PASS = lit.Test.ResultCode('CUSTOM_PASS', 'My Passed', False)
-CUSTOM_FAILURE = lit.Test.ResultCode('CUSTOM_FAILURE', 'My Failed', True)
+CUSTOM_PASS = lit.Test.ResultCode("CUSTOM_PASS", "My Passed", False)
+CUSTOM_FAILURE = lit.Test.ResultCode("CUSTOM_FAILURE", "My Failed", True)
 
 
 class MyFormat(lit.formats.ShTest):

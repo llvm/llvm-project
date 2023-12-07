@@ -8,22 +8,18 @@ define void @foo(<3 x float> %in, ptr nocapture %out) nounwind {
 ; SSE2-LABEL: foo:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    shll $8, %ecx
-; SSE2-NEXT:    orl %eax, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm0
-; SSE2-NEXT:    movl $65280, %eax # imm = 0xFF00
-; SSE2-NEXT:    orl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    pinsrw $1, %eax, %xmm0
-; SSE2-NEXT:    movd %xmm0, (%rdi)
+; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
+; SSE2-NEXT:    movl %eax, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: foo:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE41-NEXT:    packusdw %xmm0, %xmm0
+; SSE41-NEXT:    packuswb %xmm0, %xmm0
 ; SSE41-NEXT:    movl $255, %eax
 ; SSE41-NEXT:    pinsrb $3, %eax, %xmm0
 ; SSE41-NEXT:    movd %xmm0, (%rdi)
@@ -32,7 +28,8 @@ define void @foo(<3 x float> %in, ptr nocapture %out) nounwind {
 ; AVX-LABEL: foo:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    movl $255, %eax
 ; AVX-NEXT:    vpinsrb $3, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdi)
@@ -828,4 +825,20 @@ define i32 @PR46586(ptr %p, <4 x i32> %v) {
   %t34 = urem <4 x i32> %t33, %v
   %t35 = extractelement <4 x i32> %t34, i32 3
   ret i32 %t35
+}
+
+define void @pr59781(ptr %in, ptr %out) {
+; CHECK-LABEL: pr59781:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    movzbl 2(%rdi), %ecx
+; CHECK-NEXT:    shlq $16, %rcx
+; CHECK-NEXT:    orq %rax, %rcx
+; CHECK-NEXT:    movq %rcx, (%rsi)
+; CHECK-NEXT:    retq
+  %bf.load = load i24, ptr %in, align 8
+  %conv = zext i24 %bf.load to i64
+  %splat.splatinsert = insertelement <1 x i64> zeroinitializer, i64 %conv, i64 0
+  store <1 x i64> %splat.splatinsert, ptr %out, align 8
+  ret void
 }

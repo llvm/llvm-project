@@ -26,6 +26,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -77,7 +78,8 @@ void NonnullGlobalConstantsChecker::checkLocation(SVal location, bool isLoad,
 
   if (isGlobalConstString(location)) {
     SVal V = State->getSVal(location.castAs<Loc>());
-    Optional<DefinedOrUnknownSVal> Constr = V.getAs<DefinedOrUnknownSVal>();
+    std::optional<DefinedOrUnknownSVal> Constr =
+        V.getAs<DefinedOrUnknownSVal>();
 
     if (Constr) {
 
@@ -91,7 +93,7 @@ void NonnullGlobalConstantsChecker::checkLocation(SVal location, bool isLoad,
 /// \param V loaded lvalue.
 /// \return whether @c val is a string-like const global.
 bool NonnullGlobalConstantsChecker::isGlobalConstString(SVal V) const {
-  Optional<loc::MemRegionVal> RegionVal = V.getAs<loc::MemRegionVal>();
+  std::optional<loc::MemRegionVal> RegionVal = V.getAs<loc::MemRegionVal>();
   if (!RegionVal)
     return false;
   auto *Region = dyn_cast<VarRegion>(RegionVal->getAsRegion());

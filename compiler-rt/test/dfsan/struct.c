@@ -1,7 +1,5 @@
 // RUN: %clang_dfsan %s -O1 -o %t && %run %t
 // RUN: %clang_dfsan %s -O0 -DO0 -o %t && %run %t
-//
-// REQUIRES: x86_64-target-arch
 
 #include <assert.h>
 #include <sanitizer/dfsan_interface.h>

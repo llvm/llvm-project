@@ -101,6 +101,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/StringExtras.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -300,7 +301,7 @@ getFuchsiaHandleSymbols(QualType QT, SVal Arg, ProgramStateRef State) {
       }
     } else {
       assert(PtrToHandleLevel == 1);
-      if (Optional<Loc> ArgLoc = Arg.getAs<Loc>()) {
+      if (std::optional<Loc> ArgLoc = Arg.getAs<Loc>()) {
         SymbolRef Sym = State->getSVal(*ArgLoc).getAsSymbol();
         if (Sym) {
           return {Sym};
@@ -380,7 +381,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
     SymbolRef RetSym = Call.getReturnValue().getAsSymbol();
     Notes.push_back([RetSym, FuncDecl](BugReport &BR) -> std::string {
       auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-      if (auto IsInteresting = PathBR->getInterestingnessKind(RetSym)) {
+      if (PathBR->getInterestingnessKind(RetSym)) {
         std::string SBuf;
         llvm::raw_string_ostream OS(SBuf);
         OS << "Function '" << FuncDecl->getDeclName()
@@ -396,7 +397,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
     SymbolRef RetSym = Call.getReturnValue().getAsSymbol();
     Notes.push_back([RetSym, FuncDecl](BugReport &BR) -> std::string {
       auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-      if (auto IsInteresting = PathBR->getInterestingnessKind(RetSym)) {
+      if (PathBR->getInterestingnessKind(RetSym)) {
         std::string SBuf;
         llvm::raw_string_ostream OS(SBuf);
         OS << "Function '" << FuncDecl->getDeclName()
@@ -430,7 +431,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
         } else {
           Notes.push_back([Handle, ParamDiagIdx](BugReport &BR) -> std::string {
             auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-            if (auto IsInteresting = PathBR->getInterestingnessKind(Handle)) {
+            if (PathBR->getInterestingnessKind(Handle)) {
               std::string SBuf;
               llvm::raw_string_ostream OS(SBuf);
               OS << "Handle released through " << ParamDiagIdx
@@ -444,7 +445,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
       } else if (hasFuchsiaAttr<AcquireHandleAttr>(PVD)) {
         Notes.push_back([Handle, ParamDiagIdx](BugReport &BR) -> std::string {
           auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-          if (auto IsInteresting = PathBR->getInterestingnessKind(Handle)) {
+          if (PathBR->getInterestingnessKind(Handle)) {
             std::string SBuf;
             llvm::raw_string_ostream OS(SBuf);
             OS << "Handle allocated through " << ParamDiagIdx
@@ -458,7 +459,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
       } else if (hasFuchsiaUnownedAttr<AcquireHandleAttr>(PVD)) {
         Notes.push_back([Handle, ParamDiagIdx](BugReport &BR) -> std::string {
           auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-          if (auto IsInteresting = PathBR->getInterestingnessKind(Handle)) {
+          if (PathBR->getInterestingnessKind(Handle)) {
             std::string SBuf;
             llvm::raw_string_ostream OS(SBuf);
             OS << "Unowned handle allocated through " << ParamDiagIdx
@@ -652,10 +653,11 @@ void FuchsiaHandleChecker::reportBug(SymbolRef Sym, ExplodedNode *ErrorNode,
   if (Type.isSuppressOnSink()) {
     const ExplodedNode *AcquireNode = getAcquireSite(ErrorNode, Sym, C);
     if (AcquireNode) {
+      const Stmt *S = AcquireNode->getStmtForDiagnostics();
+      assert(S && "Statement cannot be null.");
       PathDiagnosticLocation LocUsedForUniqueing =
           PathDiagnosticLocation::createBegin(
-              AcquireNode->getStmtForDiagnostics(), C.getSourceManager(),
-              AcquireNode->getLocationContext());
+              S, C.getSourceManager(), AcquireNode->getLocationContext());
 
       R = std::make_unique<PathSensitiveBugReport>(
           Type, Msg, ErrorNode, LocUsedForUniqueing,
@@ -685,11 +687,10 @@ void FuchsiaHandleChecker::printState(raw_ostream &Out, ProgramStateRef State,
 
   if (!StateMap.isEmpty()) {
     Out << Sep << "FuchsiaHandleChecker :" << NL;
-    for (HStateMapTy::iterator I = StateMap.begin(), E = StateMap.end(); I != E;
-         ++I) {
-      I.getKey()->dumpToStream(Out);
+    for (const auto &[Sym, HandleState] : StateMap) {
+      Sym->dumpToStream(Out);
       Out << " : ";
-      I.getData().dump(Out);
+      HandleState.dump(Out);
       Out << NL;
     }
   }

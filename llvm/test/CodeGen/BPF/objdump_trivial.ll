@@ -10,9 +10,9 @@ define void @foo(i32 %a) {
 %b = icmp sgt i32 %a, -1
 br i1 %b, label %x, label %y
 x:
-call void inttoptr (i64 1 to void ()*)()
+call void inttoptr (i64 1 to ptr)()
 ret void
 y:
-call void inttoptr (i64 2 to void ()*)()
+call void inttoptr (i64 2 to ptr)()
 ret void
 }

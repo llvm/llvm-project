@@ -13,6 +13,7 @@
 #include "bolt/Passes/TailDuplication.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include <queue>
 
 #include <numeric>
 
@@ -606,7 +607,7 @@ void TailDuplication::runOnFunction(BinaryFunction &Function) {
     if (BlocksToDuplicate.empty())
       continue;
 
-    // Apply the the duplication
+    // Apply the duplication
     ModifiedFunction = true;
     DuplicationsDynamicCount += BB->getExecutionCount();
     auto DuplicatedBlocks = duplicateBlocks(*BB, BlocksToDuplicate);

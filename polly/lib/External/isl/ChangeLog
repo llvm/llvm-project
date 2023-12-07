@@ -1,3 +1,10 @@
+version: 0.25
+date: Sat 02 Jul 2022 11:14:57 AM CEST
+changes:
+	- support (type safe) user object on id in bindings
+	- more exports to (templated C++) bindings
+	- add some convenience functions
+---
 version: 0.24
 date: Sun 25 Apr 2021 03:56:37 PM CEST
 changes:

@@ -18,6 +18,7 @@
 #include <numeric>
 
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 using namespace presburger;
@@ -82,7 +83,7 @@ static void normalizeDivisionByGCD(MutableArrayRef<MPInt> dividend,
 ///     4q - i - j + 2 >= 0                       <-- Lower bound for 'q'
 ///    -4q + i + j     >= 0                       <-- Tight upper bound for 'q'
 ///
-/// To extract floor divisions with tighter bounds, we assume that that the
+/// To extract floor divisions with tighter bounds, we assume that the
 /// constraints are of the form:
 ///     c <= expr - divisior * var <= divisor - 1, where 0 <= c <= divisor - 1
 /// Rearranging, we have:
@@ -377,11 +378,11 @@ SmallVector<MPInt, 8> presburger::getComplementIneq(ArrayRef<MPInt> ineq) {
   return coeffs;
 }
 
-SmallVector<Optional<MPInt>, 4>
+SmallVector<std::optional<MPInt>, 4>
 DivisionRepr::divValuesAt(ArrayRef<MPInt> point) const {
   assert(point.size() == getNumNonDivs() && "Incorrect point size");
 
-  SmallVector<Optional<MPInt>, 4> divValues(getNumDivs(), std::nullopt);
+  SmallVector<std::optional<MPInt>, 4> divValues(getNumDivs(), std::nullopt);
   bool changed = true;
   while (changed) {
     changed = false;
@@ -436,6 +437,7 @@ void DivisionRepr::removeDuplicateDivs(
   // variable at position `i` only depends on local variables at position <
   // `i`. This would make sure that all divisions depending on other local
   // variables that can be merged, are merged.
+  normalizeDivs();
   for (unsigned i = 0; i < getNumDivs(); ++i) {
     // Check if a division representation exists for the `i^th` local var.
     if (denoms[i] == 0)
@@ -468,6 +470,14 @@ void DivisionRepr::removeDuplicateDivs(
       // Since `j` can never be zero, we do not need to worry about overflows.
       --j;
     }
+  }
+}
+
+void DivisionRepr::normalizeDivs() {
+  for (unsigned i = 0, e = getNumDivs(); i < e; ++i) {
+    if (getDenom(i) == 0 || getDividend(i).empty())
+      continue;
+    normalizeDiv(getDividend(i), getDenom(i));
   }
 }
 

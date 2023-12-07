@@ -168,9 +168,10 @@ func.func @test_callchain(%m0: memref<f32>, %arg: f32) {
 // CHECK-LABEL: test_tag: zero
 // CHECK: result #0: [c]
 // CHECK-LABEL: test_tag: init
-// CHECK: result #0: [a b]
+// CHECK: result #0: [a b c]
 // CHECK-LABEL: test_tag: condition
 // CHECK: operand #0: [brancharg0]
+// CHECK: operand #2: [a b c]
 func.func @test_while(%m0: memref<i32>, %init : i32, %cond: i1) {
   %zero = arith.constant {tag = "zero"} 0 : i32
   %init2 = arith.addi %init, %init {tag = "init"} : i32
@@ -181,9 +182,35 @@ func.func @test_while(%m0: memref<i32>, %init : i32, %cond: i1) {
    ^bb0(%arg1: i32, %arg2: i32):
     memref.store %arg1, %m0[] {tag_name = "c"} : memref<i32>
     %res = arith.addi %arg2, %arg2 : i32
-    scf.yield %arg1, %res: i32, i32
+    scf.yield %res, %res: i32, i32
   }
   memref.store %1, %m0[] {tag_name = "b"} : memref<i32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_tag: zero
+// CHECK: result #0: []
+// CHECK-LABEL: test_tag: one
+// CHECK: result #0: [a]
+// CHECK-LABEL: test_tag: condition
+// CHECK: operand #0: [brancharg0]
+//
+// The important thing to note in this test is that the sparse backward dataflow
+// analysis framework also works on complex region branch ops like this one
+// where the number of operands in the `scf.yield` op don't match the number of
+// results in the parent op.
+func.func @test_complex_while(%m0: memref<i32>, %cond: i1) {
+  %zero = arith.constant {tag = "zero"} 0 : i32
+  %one = arith.constant {tag = "one"} 1 : i32
+  %0 = scf.while (%arg1 = %zero, %arg2 = %one) : (i32, i32) -> (i32) {
+    scf.condition(%cond) {tag = "condition"} %arg2 : i32
+  } do {
+   ^bb0(%arg1: i32):
+    scf.yield %arg1, %arg1: i32, i32
+  }
+  memref.store %0, %m0[] {tag_name = "a"} : memref<i32>
   return
 }
 
@@ -244,5 +271,36 @@ func.func @test_switch(%arg0 : index, %m0: memref<i32>) {
   }
   memref.store %0, %m0[] {tag_name = "a"} : memref<i32>
   memref.store %1, %m0[] {tag_name = "b"} : memref<i32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @decl(i64)
+// CHECK-LABEL: llvm.func @func(%arg0: i64) {
+// CHECK-NEXT:  llvm.call @decl(%arg0) : (i64) -> ()
+// CHECK-NEXT:  llvm.return
+
+llvm.func @decl(i64)
+
+llvm.func @func(%lb : i64) -> () {
+  llvm.call @decl(%lb) : (i64) -> ()
+  llvm.return
+}
+
+// -----
+
+func.func private @callee(%arg0 : i32, %arg1 : i32) -> i32 {
+  func.return %arg0 : i32
+}
+
+// CHECK-LABEL: test_tag: a
+// CHECK-LABEL:  operand #0: [b]
+// CHECK-LABEL:  operand #1: []
+// CHECK-LABEL:  operand #2: [callarg2]
+// CHECK-LABEL:  result #0: [b]
+func.func @test_call_on_device(%arg0: i32, %arg1: i32, %device: i32, %m0: memref<i32>) {
+  %0 = test.call_on_device @callee(%arg0, %arg1), %device {tag = "a"} : (i32, i32, i32) -> (i32)
+  memref.store %0, %m0[] {tag_name = "b"} : memref<i32>
   return
 }

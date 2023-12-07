@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <optional>
 #include <utility>
 
 #include "mlir/Analysis/SliceAnalysis.h"
@@ -27,7 +28,7 @@ using namespace mlir;
 using namespace mlir::linalg;
 
 FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
-    PatternRewriter &b, LinalgOp op,
+    RewriterBase &b, LinalgOp op,
     const ControlSplitReductionFn &controlSplitReductionFn, bool useAlloc) {
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(op);
@@ -41,15 +42,16 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
 
   SmallVector<unsigned> dims;
   op.getReductionDims(dims);
-  assert(dims.size() == 1);
+
+  if (dims.size() != 1)
+    return b.notifyMatchFailure(op, "needs a single reduction dimension");
   unsigned reductionDim = dims[0];
   if (control.innerParallel) {
     insertSplitDimension = reductionDim + 1;
   }
   SmallVector<int64_t, 4> loopRanges = op.getStaticLoopRanges();
   int64_t reductionDimSize = loopRanges[reductionDim];
-  if (reductionDimSize == ShapedType::kDynamic ||
-      reductionDimSize % ratio != 0)
+  if (reductionDimSize == ShapedType::kDynamic || reductionDimSize % ratio != 0)
     return b.notifyMatchFailure(
         op, "Reduction dimension not divisible by split ratio");
   if (op.getNumDpsInits() != 1)
@@ -64,7 +66,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     return b.notifyMatchFailure(op, "Cannot match the reduction pattern");
 
   Operation *reductionOp = combinerOps[0];
-  Optional<Attribute> identity = getNeutralElement(reductionOp);
+  std::optional<TypedAttr> identity = arith::getNeutralElement(reductionOp);
   if (!identity.has_value())
     return b.notifyMatchFailure(op, "Unknown identity value for the reduction");
 
@@ -84,19 +86,22 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
         if (control.innerParallel) {
           newShape.push_back(op.getShape(operand)[idx] / ratio); // reduce
           newShape.push_back(ratio); // parallel (insert)
-          exprs.push_back(b.getAffineDimExpr(dim < insertSplitDimension? dim : dim + 1));
+          exprs.push_back(
+              b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
           exprs.push_back(b.getAffineDimExpr(insertSplitDimension));
         } else {
           newShape.push_back(ratio); // parallel (insert)
           newShape.push_back(op.getShape(operand)[idx] / ratio); // reduce
           exprs.push_back(b.getAffineDimExpr(insertSplitDimension));
-          exprs.push_back(b.getAffineDimExpr(dim < insertSplitDimension? dim : dim + 1));
+          exprs.push_back(
+              b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
         }
         reassociation.push_back({index++, index++});
         continue;
       }
       newShape.push_back(op.getShape(operand)[idx]);
-      exprs.push_back(b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
+      exprs.push_back(
+          b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
       reassociation.push_back({index++});
     }
     newMaps.push_back(
@@ -108,7 +113,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     }
     Type newType = RankedTensorType::get(
         newShape,
-        operand->get().getType().cast<RankedTensorType>().getElementType());
+        cast<RankedTensorType>(operand->get().getType()).getElementType());
     Value newInput = b.create<tensor::ExpandShapeOp>(
         loc, newType, operand->get(), reassociation);
     newInputs.push_back(newInput);
@@ -151,10 +156,11 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   newMaps.push_back(AffineMap::get(oldOutputMap.getNumDims() + 1, 0, outputExpr,
                                    op.getContext()));
   SmallVector<utils::IteratorType> newIteratorTypes;
-  for (auto &it : llvm::enumerate(op.getIteratorTypesArray())) {
-    if (insertSplitDimension == it.index())
+  for (auto [index, iteratorType] :
+       llvm::enumerate(op.getIteratorTypesArray())) {
+    if (insertSplitDimension == index)
       newIteratorTypes.push_back(utils::IteratorType::parallel);
-    newIteratorTypes.push_back(it.value());
+    newIteratorTypes.push_back(iteratorType);
   }
   if (insertSplitDimension == op.getIteratorTypesArray().size()) {
     newIteratorTypes.push_back(utils::IteratorType::parallel);
@@ -233,7 +239,7 @@ static AffineMap insertParallelDim(LinalgOp op, OpOperand &opOperand,
 
 /// Core rewrite implementation.
 FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
-    PatternRewriter &b, LinalgOp op,
+    RewriterBase &b, LinalgOp op,
     const ControlSplitReductionFn &controlSplitReductionFn, bool useAlloc) {
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(op);
@@ -266,9 +272,10 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   if (!matchReduction(op.getRegionOutputArgs(), 0, combinerOps))
     return b.notifyMatchFailure(op, "cannot match a reduction pattern");
 
-  SmallVector<Attribute> neutralElements;
+  SmallVector<TypedAttr> neutralElements;
   for (Operation *reductionOp : combinerOps) {
-    Optional<Attribute> neutralElement = getNeutralElement(reductionOp);
+    std::optional<TypedAttr> neutralElement =
+        arith::getNeutralElement(reductionOp);
     if (!neutralElement.has_value())
       return b.notifyMatchFailure(op, "cannot find neutral element.");
     neutralElements.push_back(*neutralElement);
@@ -303,7 +310,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   fillOps.reserve(op.getNumDpsInits());
   for (auto it : llvm::zip(op.getDpsInitOperands(), neutralElements)) {
     Value rankedTensor = std::get<0>(it)->get();
-    auto t = rankedTensor.getType().cast<RankedTensorType>();
+    auto t = cast<RankedTensorType>(rankedTensor.getType());
     RankedTensorType newT = RankedTensorType::Builder(t).insertDim(
         reductionDimSize / splitFactor, insertSplitDimension);
     SmallVector<Value> dims =
@@ -377,7 +384,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
                            combinerOps)) {
     Value reindexedOutput = std::get<0>(it);
     Value originalOutput = std::get<1>(it)->get();
-    auto originalOutputType = originalOutput.getType().cast<RankedTensorType>();
+    auto originalOutputType = cast<RankedTensorType>(originalOutput.getType());
     Operation *combinerOp = std::get<2>(it);
 
     AffineMap map = b.getMultiDimIdentityMap(originalOutputType.getRank() + 1);

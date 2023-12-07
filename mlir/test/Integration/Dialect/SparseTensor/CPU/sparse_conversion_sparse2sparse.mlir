@@ -1,48 +1,63 @@
-// Force this file to use the kDirect method for sparse2sparse.
-// DEFINE: %{option} = "enable-runtime-library=true s2s-strategy=2"
-// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
-// DEFINE: mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{command}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
+// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true s2s-strategy=2
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = "enable-runtime-library=false s2s-strategy=2"
-// RUN: %{command}
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false s2s-strategy=2
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false s2s-strategy=2 vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
-// RUN: %{command}
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false s2s-strategy=2 vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with direct IR generation and VLA vectorization.
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #Tensor1 = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "dense", "compressed" ]
+  lvlTypes = [ "dense", "dense", "compressed" ]
 }>
 
 // NOTE: dense after compressed is not currently supported for the target
 // of direct-sparse2sparse conversion.  (It's fine for the source though.)
 #Tensor2 = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed", "dense" ]
+  lvlTypes = [ "dense", "compressed", "dense" ]
 }>
 
 #Tensor3 = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "dense", "compressed" ],
-  dimOrdering = affine_map<(i,j,k) -> (i,k,j)>
+  lvlTypes = [ "dense", "dense", "compressed" ],
+  dimToLvl = affine_map<(i,j,k) -> (i,k,j)>
 }>
 
 #SingletonTensor1 = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed", "singleton" ]
+  lvlTypes = [ "dense", "compressed", "singleton" ]
 }>
 
 // This also checks the compressed->dense conversion (when there are zeros).
 #SingletonTensor2 = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "dense", "singleton" ]
+  lvlTypes = [ "dense", "dense", "singleton" ]
 }>
 
 // This also checks the singleton->compressed conversion.
 #SingletonTensor3 = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "dense", "compressed" ]
+  lvlTypes = [ "dense", "dense", "compressed" ]
 }>
 
 module {

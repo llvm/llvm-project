@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- \
-// RUN:   -config="{CheckOptions: [{key: readability-uppercase-literal-suffix.IgnoreMacros, value: false}]}" \
+// RUN:   -config="{CheckOptions: {readability-uppercase-literal-suffix.IgnoreMacros: false}}" \
 // RUN:   -- -I %S
 
 void macros() {

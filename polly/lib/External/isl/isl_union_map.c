@@ -208,6 +208,18 @@ int isl_union_map_find_dim_by_name(__isl_keep isl_union_map *umap,
 	return isl_space_find_dim_by_name(umap->dim, type, name);
 }
 
+/* Return the position of the parameter with id "id" in "umap".
+ * Return -1 if no such dimension can be found.
+ */
+static int isl_union_map_find_dim_by_id(__isl_keep isl_union_map *umap,
+	enum isl_dim_type type, __isl_keep isl_id *id)
+{
+	isl_space *space;
+
+	space = isl_union_map_peek_space(umap);
+	return isl_space_find_dim_by_id(space, type, id);
+}
+
 __isl_give isl_space *isl_union_set_get_space(__isl_keep isl_union_set *uset)
 {
 	return isl_union_map_get_space(uset);
@@ -285,12 +297,11 @@ __isl_give isl_union_map *isl_union_map_align_params(
 	__isl_take isl_union_map *umap, __isl_take isl_space *model)
 {
 	struct isl_union_align data = { NULL, NULL };
+	isl_space *space;
 	isl_bool equal_params;
 
-	if (!umap || !model)
-		goto error;
-
-	equal_params = isl_space_has_equal_params(umap->dim, model);
+	space = isl_union_map_peek_space(umap);
+	equal_params = isl_space_has_equal_params(space, model);
 	if (equal_params < 0)
 		goto error;
 	if (equal_params) {
@@ -298,13 +309,13 @@ __isl_give isl_union_map *isl_union_map_align_params(
 		return umap;
 	}
 
-	data.exp = isl_parameter_alignment_reordering(umap->dim, model);
+	data.exp = isl_parameter_alignment_reordering(space, model);
 	if (!data.exp)
 		goto error;
 
 	data.res = isl_union_map_alloc(isl_reordering_get_space(data.exp),
 					umap->table.n);
-	if (isl_hash_table_foreach(umap->dim->ctx, &umap->table,
+	if (isl_hash_table_foreach(isl_union_map_get_ctx(umap), &umap->table,
 					&align_entry, &data) < 0)
 		goto error;
 
@@ -1639,6 +1650,40 @@ error:
 	isl_union_map_free(umap2);
 	isl_union_map_free(data.res);
 	return NULL;
+}
+
+/* Intersect each map in "umap" in a space [A -> B] -> C
+ * with the corresponding set in "domain" in the space A and
+ * collect the results.
+ */
+__isl_give isl_union_map *
+isl_union_map_intersect_domain_wrapped_domain_union_set(
+	__isl_take isl_union_map *umap, __isl_take isl_union_set *domain)
+{
+	struct isl_bin_op_control control = {
+		.filter = &isl_map_domain_is_wrapping,
+		.match_space = &isl_space_domain_wrapped_domain,
+		.fn_map = &isl_map_intersect_domain_wrapped_domain,
+	};
+
+	return gen_bin_op(umap, domain, &control);
+}
+
+/* Intersect each map in "umap" in a space A -> [B -> C]
+ * with the corresponding set in "domain" in the space B and
+ * collect the results.
+ */
+__isl_give isl_union_map *
+isl_union_map_intersect_range_wrapped_domain_union_set(
+	__isl_take isl_union_map *umap, __isl_take isl_union_set *domain)
+{
+	struct isl_bin_op_control control = {
+		.filter = &isl_map_range_is_wrapping,
+		.match_space = &isl_space_range_wrapped_domain,
+		.fn_map = &isl_map_intersect_range_wrapped_domain,
+	};
+
+	return gen_bin_op(umap, domain, &control);
 }
 
 __isl_give isl_union_map *isl_union_map_apply_range(
@@ -3985,6 +4030,7 @@ __isl_give isl_union_map *isl_union_map_project_out(
 #undef TYPE
 #define TYPE	isl_union_map
 #include "isl_project_out_all_params_templ.c"
+#include "isl_project_out_param_templ.c"
 
 /* Turn the "n" dimensions of type "type", starting at "first"
  * into existentially quantified variables.

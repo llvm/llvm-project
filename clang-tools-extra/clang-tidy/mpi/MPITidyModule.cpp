@@ -12,8 +12,7 @@
 #include "BufferDerefCheck.h"
 #include "TypeMismatchCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace mpi {
 
 class MPIModule : public ClangTidyModule {
@@ -34,5 +33,4 @@ static ClangTidyModuleRegistry::Add<mpi::MPIModule>
 // and thus register the MPIModule.
 volatile int MPIModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

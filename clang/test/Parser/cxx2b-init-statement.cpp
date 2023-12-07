@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected -std=c++2b -Wall %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected -std=c++23 -Wall %s
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,expected-cxx20 -std=c++20 -Wall %s
 
 namespace ns {
@@ -7,13 +7,13 @@ namespace ns {
 }
 void f() {
 
-    for (using foo = int;true;); //expected-cxx20-warning {{alias declaration in this context is a C++2b extension}}
+    for (using foo = int;true;); //expected-cxx20-warning {{alias declaration in this context is a C++23 extension}}
 
-    switch(using foo = int; 0) { //expected-cxx20-warning {{alias declaration in this context is a C++2b extension}}
+    switch(using foo = int; 0) { //expected-cxx20-warning {{alias declaration in this context is a C++23 extension}}
         case 0: break;
     }
 
-    if(using foo = int; false) {} //expected-cxx20-warning {{alias declaration in this context is a C++2b extension}}
+    if(using foo = int; false) {} //expected-cxx20-warning {{alias declaration in this context is a C++23 extension}}
 
 
     if (using enum ns::e; false){}  // expected-error {{expected '='}}

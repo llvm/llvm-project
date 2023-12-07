@@ -10,7 +10,7 @@ Building libc++
 .. _build instructions:
 
 The instructions on this page are aimed at vendors who ship libc++ as part of an
-operating system distribution, a toolchain or similar shipping vehicules. If you
+operating system distribution, a toolchain or similar shipping vehicles. If you
 are a user merely trying to use libc++ in your program, you most likely want to
 refer to your vendor's documentation, or to the general documentation for using
 libc++ :ref:`here <using-libcxx>`.
@@ -210,15 +210,6 @@ libc++ specific options
   **Default**: ``ON``
 
   Toggle the installation of the libc++ headers.
-
-.. option:: LIBCXX_ENABLE_ASSERTIONS:BOOL
-
-  **Default**: ``OFF``
-
-  Build libc++ with assertions enabled in the compiled library, and enable assertions
-  by default when building user code as well. Assertions can be turned off by users
-  by defining ``_LIBCPP_ENABLE_ASSERTIONS=0``. For details, see
-  :ref:`the documentation <assertions-mode>`.
 
 .. option:: LIBCXX_ENABLE_SHARED:BOOL
 

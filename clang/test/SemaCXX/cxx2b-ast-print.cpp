@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -ast-print %s | FileCheck %s
 
 template <template <class...> class C>
 void test_auto_expr(long long y, auto &&z) {

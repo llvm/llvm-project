@@ -17,7 +17,6 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Host/Time.h"
-#include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -27,6 +26,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include <algorithm>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -123,7 +123,7 @@ bool lldb_private::formatters::WCharStringSummaryProvider(
     return false;
 
   // Safe to pass nullptr for exe_scope here.
-  llvm::Optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
+  std::optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
   if (!size)
     return false;
   const uint32_t wchar_size = *size;
@@ -183,7 +183,7 @@ bool lldb_private::formatters::WCharSummaryProvider(
     return false;
 
     // Safe to pass nullptr for exe_scope here.
-  llvm::Optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
+  std::optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
   if (!size)
     return false;
   const uint32_t wchar_size = *size;

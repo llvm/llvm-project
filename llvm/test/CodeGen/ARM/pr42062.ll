@@ -2,9 +2,9 @@
 ; RUN: llc -o - %s 2>&1 | FileCheck %s --implicit-check-not=error
 target triple = "thumbv8m.base-arm-none-eabi"
 @foo = external global i8
-declare i32 @bar(i8* nocapture, i32, i32, i8* nocapture)
+declare i32 @bar(ptr nocapture, i32, i32, ptr nocapture)
 
-define void @food(i8* %a) #0 {
+define void @food(ptr %a) #0 {
 ; CHECK-LABEL: food:
 ; CHECK:    mov [[ARG0:r[4-7]]], r0
 ; CHECK-NEXT:    movs r1, #8
@@ -29,9 +29,9 @@ define void @food(i8* %a) #0 {
 ; CHECK:         [[BAR_ADDR]]:
 ; CHECK-NEXT:    .long bar
 entry:
-  %0 = tail call i32 @bar(i8* %a, i32 8, i32 1, i8* nonnull @foo)
-  %1 = tail call i32 @bar(i8* %a, i32 9, i32 0, i8* nonnull @foo)
-  %2 = tail call i32 @bar(i8* %a, i32 7, i32 2, i8* nonnull @foo)
+  %0 = tail call i32 @bar(ptr %a, i32 8, i32 1, ptr nonnull @foo)
+  %1 = tail call i32 @bar(ptr %a, i32 9, i32 0, ptr nonnull @foo)
+  %2 = tail call i32 @bar(ptr %a, i32 7, i32 2, ptr nonnull @foo)
   ret void
 }
 attributes #0 = { minsize "target-cpu"="cortex-m23" }

@@ -15,12 +15,13 @@
 #include "lldb/Core/dwarf.h"
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/StringExtras.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb_private::postfix;
 using namespace lldb_private::dwarf;
 
-static llvm::Optional<BinaryOpNode::OpType>
+static std::optional<BinaryOpNode::OpType>
 GetBinaryOpType(llvm::StringRef token) {
   if (token.size() != 1)
     return std::nullopt;
@@ -35,7 +36,7 @@ GetBinaryOpType(llvm::StringRef token) {
   return std::nullopt;
 }
 
-static llvm::Optional<UnaryOpNode::OpType>
+static std::optional<UnaryOpNode::OpType>
 GetUnaryOpType(llvm::StringRef token) {
   if (token == "^")
     return UnaryOpNode::Deref;

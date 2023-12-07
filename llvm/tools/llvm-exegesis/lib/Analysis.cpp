@@ -28,7 +28,7 @@ enum EscapeTag { kEscapeCsv, kEscapeHtml, kEscapeHtmlString };
 template <EscapeTag Tag> void writeEscaped(raw_ostream &OS, const StringRef S);
 
 template <> void writeEscaped<kEscapeCsv>(raw_ostream &OS, const StringRef S) {
-  if (!llvm::is_contained(S, kCsvSep)) {
+  if (!S.contains(kCsvSep)) {
     OS << S;
   } else {
     // Needs escaping.
@@ -71,7 +71,7 @@ void writeEscaped<kEscapeHtmlString>(raw_ostream &OS, const StringRef S) {
 template <EscapeTag Tag>
 static void
 writeClusterId(raw_ostream &OS,
-               const InstructionBenchmarkClustering::ClusterId &CID) {
+               const BenchmarkClustering::ClusterId &CID) {
   if (CID.isNoise())
     writeEscaped<Tag>(OS, "[noise]");
   else if (CID.isError())
@@ -102,12 +102,11 @@ template <typename EscapeTag, EscapeTag Tag>
 void Analysis::writeSnippet(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
                             const char *Separator) const {
   SmallVector<std::string, 3> Lines;
-  const auto &SI = State_.getSubtargetInfo();
   // Parse the asm snippet and print it.
   while (!Bytes.empty()) {
     MCInst MI;
     uint64_t MISize = 0;
-    if (!Disasm_->getInstruction(MI, MISize, Bytes, 0, nulls())) {
+    if (!DisasmHelper_->decodeInst(MI, MISize, Bytes)) {
       writeEscaped<Tag>(OS, join(Lines, Separator));
       writeEscaped<Tag>(OS, Separator);
       writeEscaped<Tag>(OS, "[error decoding asm snippet]");
@@ -115,7 +114,7 @@ void Analysis::writeSnippet(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
     }
     SmallString<128> InstPrinterStr; // FIXME: magic number.
     raw_svector_ostream OSS(InstPrinterStr);
-    InstPrinter_->printInst(&MI, 0, "", SI, OSS);
+    DisasmHelper_->printInst(&MI, OSS);
     Bytes = Bytes.drop_front(MISize);
     Lines.emplace_back(InstPrinterStr.str().trim());
   }
@@ -126,7 +125,7 @@ void Analysis::writeSnippet(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
 // point coordinates (measurements).
 void Analysis::printInstructionRowCsv(const size_t PointId,
                                       raw_ostream &OS) const {
-  const InstructionBenchmark &Point = Clustering_.getPoints()[PointId];
+  const Benchmark &Point = Clustering_.getPoints()[PointId];
   writeClusterId<kEscapeCsv>(OS, Clustering_.getClusterIdForPoint(PointId));
   OS << kCsvSep;
   writeSnippet<EscapeTag, kEscapeCsv>(OS, Point.AssembledSnippet, "; ");
@@ -153,7 +152,7 @@ void Analysis::printInstructionRowCsv(const size_t PointId,
 }
 
 Analysis::Analysis(const LLVMState &State,
-                   const InstructionBenchmarkClustering &Clustering,
+                   const BenchmarkClustering &Clustering,
                    double AnalysisInconsistencyEpsilon,
                    bool AnalysisDisplayUnstableOpcodes)
     : Clustering_(Clustering), State_(State),
@@ -163,21 +162,7 @@ Analysis::Analysis(const LLVMState &State,
   if (Clustering.getPoints().empty())
     return;
 
-  MCTargetOptions MCOptions;
-  const auto &TM = State.getTargetMachine();
-  const auto &Triple = TM.getTargetTriple();
-  AsmInfo_.reset(TM.getTarget().createMCAsmInfo(State_.getRegInfo(),
-                                                Triple.str(), MCOptions));
-  InstPrinter_.reset(TM.getTarget().createMCInstPrinter(
-      Triple, 0 /*default variant*/, *AsmInfo_, State_.getInstrInfo(),
-      State_.getRegInfo()));
-
-  Context_ = std::make_unique<MCContext>(
-      Triple, AsmInfo_.get(), &State_.getRegInfo(), &State_.getSubtargetInfo());
-  Disasm_.reset(TM.getTarget().createMCDisassembler(State_.getSubtargetInfo(),
-                                                    *Context_));
-  assert(Disasm_ && "cannot create MCDisassembler. missing call to "
-                    "InitializeXXXTargetDisassembler ?");
+  DisasmHelper_ = std::make_unique<DisassemblerHelper>(State);
 }
 
 template <>
@@ -215,7 +200,7 @@ Analysis::makePointsPerSchedClass() const {
   std::unordered_map<unsigned, size_t> SchedClassIdToIndex;
   const auto &Points = Clustering_.getPoints();
   for (size_t PointId = 0, E = Points.size(); PointId < E; ++PointId) {
-    const InstructionBenchmark &Point = Points[PointId];
+    const Benchmark &Point = Points[PointId];
     if (!Point.Error.empty())
       continue;
     assert(!Point.Key.Instructions.empty());
@@ -270,17 +255,17 @@ static void writeLatencySnippetHtml(raw_ostream &OS,
   }
 }
 
-void Analysis::printPointHtml(const InstructionBenchmark &Point,
+void Analysis::printPointHtml(const Benchmark &Point,
                               llvm::raw_ostream &OS) const {
   OS << "<li><span class=\"mono\" title=\"";
   writeSnippet<EscapeTag, kEscapeHtmlString>(OS, Point.AssembledSnippet, "\n");
   OS << "\">";
   switch (Point.Mode) {
-  case InstructionBenchmark::Latency:
+  case Benchmark::Latency:
     writeLatencySnippetHtml(OS, Point.Key.Instructions, State_.getInstrInfo());
     break;
-  case InstructionBenchmark::Uops:
-  case InstructionBenchmark::InverseThroughput:
+  case Benchmark::Uops:
+  case Benchmark::InverseThroughput:
     writeParallelSnippetHtml(OS, Point.Key.Instructions, State_.getInstrInfo());
     break;
   default:
@@ -334,7 +319,7 @@ void Analysis::printSchedClassClustersHtml(
 }
 
 void Analysis::SchedClassCluster::addPoint(
-    size_t PointId, const InstructionBenchmarkClustering &Clustering) {
+    size_t PointId, const BenchmarkClustering &Clustering) {
   PointIds.push_back(PointId);
   const auto &Point = Clustering.getPoints()[PointId];
   if (ClusterId.isUndef())
@@ -346,10 +331,10 @@ void Analysis::SchedClassCluster::addPoint(
 
 bool Analysis::SchedClassCluster::measurementsMatch(
     const MCSubtargetInfo &STI, const ResolvedSchedClass &RSC,
-    const InstructionBenchmarkClustering &Clustering,
+    const BenchmarkClustering &Clustering,
     const double AnalysisInconsistencyEpsilonSquared_) const {
   assert(!Clustering.getPoints().empty());
-  const InstructionBenchmark::ModeE Mode = Clustering.getPoints()[0].Mode;
+  const Benchmark::ModeE Mode = Clustering.getPoints()[0].Mode;
 
   if (!Centroid.validate(Mode))
     return false;
@@ -405,7 +390,7 @@ void Analysis::printSchedClassDescHtml(const ResolvedSchedClass &RSC,
       OS << "<li><span class=\"mono\">";
       writeEscaped<kEscapeHtml>(OS,
                                 SM.getProcResource(WPR.ProcResourceIdx)->Name);
-      OS << "</span>: " << WPR.Cycles << "</li>";
+      OS << "</span>: " << WPR.ReleaseAtCycle << "</li>";
     }
     OS << "</ul></td>";
     // Idealized port pressure.
@@ -427,7 +412,7 @@ void Analysis::printSchedClassDescHtml(const ResolvedSchedClass &RSC,
 }
 
 void Analysis::printClusterRawHtml(
-    const InstructionBenchmarkClustering::ClusterId &Id, StringRef display_name,
+    const BenchmarkClustering::ClusterId &Id, StringRef display_name,
     llvm::raw_ostream &OS) const {
   const auto &Points = Clustering_.getPoints();
   const auto &Cluster = Clustering_.getCluster(Id);
@@ -589,7 +574,7 @@ Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
     OS << "</div>";
   }
 
-  printClusterRawHtml(InstructionBenchmarkClustering::ClusterId::noise(),
+  printClusterRawHtml(BenchmarkClustering::ClusterId::noise(),
                       "[noise]", OS);
 
   OS << "</body></html>";

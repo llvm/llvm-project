@@ -17,12 +17,12 @@
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::wasm;
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 OutStruct out;
 
@@ -107,7 +107,8 @@ void DylinkSection::writeBody() {
       LLVM_DEBUG(llvm::dbgs() << "export info: " << toString(*sym) << "\n");
       StringRef name = sym->getName();
       if (auto *f = dyn_cast<DefinedFunction>(sym)) {
-        if (Optional<StringRef> exportName = f->function->getExportName()) {
+        if (std::optional<StringRef> exportName =
+                f->function->getExportName()) {
           name = *exportName;
         }
       }
@@ -483,16 +484,31 @@ void GlobalSection::writeBody() {
     WasmGlobalType type{itype, mutable_};
     writeGlobalType(os, type);
 
-    if (config->extendedConst && config->isPic && !sym->isTLS() &&
-        isa<DefinedData>(sym)) {
+    bool useExtendedConst = false;
+    uint32_t globalIdx;
+    int64_t offset;
+    if (config->extendedConst && config->isPic) {
+      if (auto *d = dyn_cast<DefinedData>(sym)) {
+        if (!sym->isTLS()) {
+          globalIdx = WasmSym::memoryBase->getGlobalIndex();
+          offset = d->getVA();
+          useExtendedConst = true;
+        }
+      } else if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
+        if (!sym->isStub) {
+          globalIdx = WasmSym::tableBase->getGlobalIndex();
+          offset = f->getTableIndex();
+          useExtendedConst = true;
+        }
+      }
+    }
+    if (useExtendedConst) {
       // We can use an extended init expression to add a constant
-      // offset of __memory_base.
-      auto *d = cast<DefinedData>(sym);
+      // offset of __memory_base/__table_base.
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "global get");
-      writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
-                   "literal (global index)");
-      if (d->getVA()) {
-        writePtrConst(os, d->getVA(), is64, "offset");
+      writeUleb128(os, globalIdx, "literal (global index)");
+      if (offset) {
+        writePtrConst(os, offset, is64, "offset");
         writeU8(os, is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD, "add");
       }
       writeU8(os, WASM_OPCODE_END, "opcode:end");
@@ -668,7 +684,7 @@ void LinkingSection::writeBody() {
     writeUleb128(sub.os, dataSegments.size(), "num data segments");
     for (const OutputSegment *s : dataSegments) {
       writeStr(sub.os, s->name, "segment name");
-      writeUleb128(sub.os, Log2(s->alignment), "alignment");
+      writeUleb128(sub.os, s->alignment, "alignment");
       writeUleb128(sub.os, s->linkingFlags, "flags");
     }
     sub.writeTo(os);
@@ -763,6 +779,15 @@ unsigned NameSection::numNamedDataSegments() const {
 
 // Create the custom "name" section containing debug symbol names.
 void NameSection::writeBody() {
+  {
+    SubSection sub(WASM_NAMES_MODULE);
+    StringRef moduleName = config->soName;
+    if (config->soName.empty())
+      moduleName = llvm::sys::path::filename(config->outputFile);
+    writeStr(sub.os, moduleName, "module name");
+    sub.writeTo(bodyOutputStream);
+  }
+
   unsigned count = numNamedFunctions();
   if (count) {
     SubSection sub(WASM_NAMES_FUNCTION);
@@ -886,5 +911,39 @@ void RelocSection::writeBody() {
   sec->writeRelocations(bodyOutputStream);
 }
 
-} // namespace wasm
-} // namespace lld
+static size_t getHashSize() {
+  switch (config->buildId) {
+  case BuildIdKind::Fast:
+  case BuildIdKind::Uuid:
+    return 16;
+  case BuildIdKind::Sha1:
+    return 20;
+  case BuildIdKind::Hexstring:
+    return config->buildIdVector.size();
+  case BuildIdKind::None:
+    return 0;
+  }
+  llvm_unreachable("build id kind not implemented");
+}
+
+BuildIdSection::BuildIdSection()
+    : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, buildIdSectionName),
+      hashSize(getHashSize()) {}
+
+void BuildIdSection::writeBody() {
+  LLVM_DEBUG(llvm::dbgs() << "BuildId writebody\n");
+  // Write hash size
+  auto &os = bodyOutputStream;
+  writeUleb128(os, hashSize, "build id size");
+  writeBytes(os, std::vector<char>(hashSize, ' ').data(), hashSize,
+             "placeholder");
+}
+
+void BuildIdSection::writeBuildId(llvm::ArrayRef<uint8_t> buf) {
+  assert(buf.size() == hashSize);
+  LLVM_DEBUG(dbgs() << "buildid write " << buf.size() << " "
+                    << hashPlaceholderPtr << '\n');
+  memcpy(hashPlaceholderPtr, buf.data(), hashSize);
+}
+
+} // namespace wasm::lld

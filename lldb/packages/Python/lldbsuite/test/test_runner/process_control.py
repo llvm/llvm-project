@@ -42,7 +42,9 @@ class CommunicatorThread(threading.Thread):
             if self.output_file:
                 self.output_file.write(
                     "exception while using communicate() for pid: {}\n".format(
-                        exception))
+                        exception
+                    )
+                )
         finally:
             # Signal that the thread's run is complete.
             self.event.set()
@@ -70,23 +72,22 @@ def timeout_to_seconds(timeout):
             if units is None:
                 # default is seconds.  No conversion necessary.
                 return value
-            elif units == 's':
+            elif units == "s":
                 # Seconds.  No conversion necessary.
                 return value
-            elif units == 'm':
+            elif units == "m":
                 # Value is in minutes.
                 return 60.0 * value
-            elif units == 'h':
+            elif units == "h":
                 # Value is in hours.
                 return (60.0 * 60.0) * value
-            elif units == 'd':
+            elif units == "d":
                 # Value is in days.
                 return 24 * (60.0 * 60.0) * value
             else:
                 raise Exception("unexpected units value '{}'".format(units))
         else:
-            raise Exception("could not parse TIMEOUT spec '{}'".format(
-                timeout))
+            raise Exception("could not parse TIMEOUT spec '{}'".format(timeout))
 
 
 class ProcessHelper(object):
@@ -306,7 +307,8 @@ class UnixProcessHelper(ProcessHelper):
             stderr=subprocess.PIPE,
             universal_newlines=True,  # Elicits automatic byte -> string decoding in Py3
             close_fds=True,
-            preexec_fn=preexec_func)
+            preexec_fn=preexec_func,
+        )
 
         # Remember whether we're using process groups for this
         # process.
@@ -345,7 +347,9 @@ class UnixProcessHelper(ProcessHelper):
                     log_file.write(
                         "requested to terminate pid {} but it has already "
                         "terminated, returncode {}".format(
-                            popen_process.pid, popen_process.returncode))
+                            popen_process.pid, popen_process.returncode
+                        )
+                    )
                 # Move along...
                 return False
 
@@ -374,6 +378,7 @@ class UnixProcessHelper(ProcessHelper):
                 os.kill(popen_process.pid, signum)
         except OSError as error:
             import errno
+
             if error.errno == errno.ESRCH:
                 # This is okay - failed to find the process.  It may be that
                 # that the timeout pre-kill hook eliminated the process.  We'll
@@ -415,8 +420,10 @@ class UnixProcessHelper(ProcessHelper):
     @classmethod
     def _signal_names_by_number(cls):
         return dict(
-            (k, v) for v, k in reversed(sorted(signal.__dict__.items()))
-            if v.startswith('SIG') and not v.startswith('SIG_'))
+            (k, v)
+            for v, k in reversed(sorted(signal.__dict__.items()))
+            if v.startswith("SIG") and not v.startswith("SIG_")
+        )
 
     def exceptional_exit_details(self, popen_status):
         signo = -popen_status
@@ -444,7 +451,8 @@ class WindowsProcessHelper(ProcessHelper):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,  # Elicits automatic byte -> string decoding in Py3
-            creationflags=creation_flags)
+            creationflags=creation_flags,
+        )
 
     def was_hard_terminate(self, returncode):
         return returncode != 0
@@ -528,15 +536,11 @@ class ProcessDriver(object):
         if self.returncode is None:
             raise Exception(
                 "no exit status available for pid {} after the "
-                " inferior dotest.py should have completed".format(
-                    self.process.pid))
+                " inferior dotest.py should have completed".format(self.process.pid)
+            )
 
         # Notify of non-timeout exit.
-        self.on_process_exited(
-            command,
-            self.io_thread.output,
-            False,
-            self.returncode)
+        self.on_process_exited(command, self.io_thread.output, False, self.returncode)
 
     def run_command_with_timeout(self, command, timeout, want_core):
         # Figure out how many seconds our timeout description is requesting.
@@ -563,8 +567,7 @@ class ProcessDriver(object):
         # complete (i.e. the inferior process has finished).
         self.done_event.clear()
 
-        self.io_thread = CommunicatorThread(
-            self.process, self.done_event, self.write)
+        self.io_thread = CommunicatorThread(self.process, self.done_event, self.write)
         self.io_thread.start()
 
     def _attempt_soft_kill(self, want_core):
@@ -573,9 +576,8 @@ class ProcessDriver(object):
         # and/or generate a core dump).  Often the OS can't guarantee
         # that the process will really terminate after this.
         self.process_helper.soft_terminate(
-            self.process,
-            want_core=want_core,
-            log_file=self)
+            self.process, want_core=want_core, log_file=self
+        )
 
         # Now wait up to a certain timeout period for the io thread
         # to say that the communication ended.  If that wraps up
@@ -589,9 +591,12 @@ class ProcessDriver(object):
             terminated = True
             done_trying = None
         else:
-            self.write("soft kill attempt of process {} timed out "
-                       "after {} seconds\n".format(
-                           self.process.pid, self.soft_terminate_timeout))
+            self.write(
+                "soft kill attempt of process {} timed out "
+                "after {} seconds\n".format(
+                    self.process.pid, self.soft_terminate_timeout
+                )
+            )
             terminated = False
             done_trying = False
         return terminated, done_trying
@@ -599,9 +604,7 @@ class ProcessDriver(object):
     def _attempt_hard_kill(self):
         # Instruct the process to terminate and really force it to
         # happen.  Don't give the process a chance to ignore.
-        self.process_helper.hard_terminate(
-            self.process,
-            log_file=self)
+        self.process_helper.hard_terminate(self.process, log_file=self)
 
         # Reap the child process.  This should not hang as the
         # hard_kill() mechanism is supposed to really kill it.
@@ -619,7 +622,9 @@ class ProcessDriver(object):
             self.write(
                 "hard kill of process {} timed out after {} seconds waiting "
                 "for the io thread (ignoring)\n".format(
-                    self.process.pid, self.hard_terminate_timeout))
+                    self.process.pid, self.hard_terminate_timeout
+                )
+            )
 
         # Set if it terminated.  (Set up for optional improvement above).
         terminated = self.returncode is not None
@@ -661,7 +666,6 @@ class ProcessDriver(object):
             # Reap the child process here.
             self.returncode = self.process.wait()
         else:
-
             # Allow derived classes to do some work after we detected
             # a timeout but before we touch the timed-out process.
             self.on_timeout_pre_kill()
@@ -676,7 +680,8 @@ class ProcessDriver(object):
                 terminate_attempt_count += 1
                 # Attempt to terminate.
                 process_terminated, done_trying = self._attempt_termination(
-                    terminate_attempt_count, want_core)
+                    terminate_attempt_count, want_core
+                )
                 # Check if there's nothing more to try.
                 if done_trying:
                     # Break out of our termination attempt loop.
@@ -686,10 +691,8 @@ class ProcessDriver(object):
         # finished gracefully, was shut down after one or more
         # attempts, or we failed but gave it our best effort.
         self.on_process_exited(
-            command,
-            self.io_thread.output,
-            not completed_normally,
-            self.returncode)
+            command, self.io_thread.output, not completed_normally, self.returncode
+        )
 
 
 def patched_init(self, *args, **kwargs):
@@ -731,6 +734,7 @@ def patch_up_subprocess_popen():
 
     subprocess.Popen.original_poll = subprocess.Popen.poll
     subprocess.Popen.poll = patched_poll
+
 
 # Replace key subprocess.Popen() threading-unprotected methods with
 # threading-protected versions.

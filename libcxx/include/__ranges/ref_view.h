@@ -24,8 +24,9 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/is_object.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -33,7 +34,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace ranges {
   template<range _Range>
@@ -47,7 +48,7 @@ namespace ranges {
 public:
     template<class _Tp>
       requires __different_from<_Tp, ref_view> &&
-        convertible_to<_Tp, _Range&> && requires { __fun(declval<_Tp>()); }
+        convertible_to<_Tp, _Range&> && requires { __fun(std::declval<_Tp>()); }
     _LIBCPP_HIDE_FROM_ABI
     constexpr ref_view(_Tp&& __t)
       : __range_(std::addressof(static_cast<_Range&>(std::forward<_Tp>(__t))))
@@ -81,7 +82,7 @@ public:
   inline constexpr bool enable_borrowed_range<ref_view<_Tp>> = true;
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

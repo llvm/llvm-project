@@ -4,6 +4,12 @@
 // RUN: ld.lld --script %t/script %t.o -o %t2
 // RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t2 | FileCheck %s
 
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7aeb-none-linux-gnueabi -mcpu=cortex-a8 %t/test.s -o %t.o
+// RUN: ld.lld --script %t/script %t.o -o %t2
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t2 | FileCheck %s
+// RUN: ld.lld --be8 --script %t/script %t.o -o %t2
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t2 | FileCheck %s
+
 /// Test that we can reuse thunks between Arm and Thumb callers
 /// using a BL. Expect two thunks, one for far, one for far2.
 
@@ -30,10 +36,8 @@ _start:
 
 // CHECK:   00010000 <_start>:
 // CHECK-NEXT: 10000: bl      0x10010 <__ARMv7ABSLongThunk_far>
-// CHECK:   00010004 <$t.1>:
 // CHECK-NEXT: 10004: blx     0x10010 <__ARMv7ABSLongThunk_far>
 // CHECK-NEXT: 10008: bl      0x1001c <__Thumbv7ABSLongThunk_far2>
-// CHECK:   0001000c <$a.2>:
 // CHECK-NEXT: 1000c: blx     0x1001c <__Thumbv7ABSLongThunk_far2>
 // CHECK:   00010010 <__ARMv7ABSLongThunk_far>:
 // CHECK-NEXT: 10010: movw    r12, #0

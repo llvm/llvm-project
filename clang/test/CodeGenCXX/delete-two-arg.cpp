@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-linux-gnu %s -o - -emit-llvm -verify | FileCheck %s
+// RUN: %clang_cc1 -triple i686-pc-linux-gnu %s -o - -emit-llvm -verify | FileCheck %s
 // expected-no-diagnostics
 
 typedef __typeof(sizeof(int)) size_t;
@@ -11,7 +11,7 @@ namespace test1 {
     // CHECK:      load
     // CHECK-NEXT: icmp eq {{.*}}, null
     // CHECK-NEXT: br i1
-    // CHECK:      call void @_ZN5test11AdlEPvj(i8* noundef %{{.*}}, i32 noundef 4)
+    // CHECK:      call void @_ZN5test11AdlEPvj(ptr noundef %{{.*}}, i32 noundef 4)
     delete x;
   }
 }
@@ -25,35 +25,30 @@ namespace test2 {
     void operator delete[](void *, size_t);
   };
 
-  // CHECK: define{{.*}} [[A:%.*]]* @_ZN5test24testEv()
+  // CHECK: define{{.*}} ptr @_ZN5test24testEv()
   A *test() {
-    // CHECK:      [[NEW:%.*]] = call noalias noundef nonnull i8* @_Znaj(i32 noundef 44)
-    // CHECK-NEXT: [[T0:%.*]] = bitcast i8* [[NEW]] to i32*
-    // CHECK-NEXT: store i32 10, i32* [[T0]]
-    // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds i8, i8* [[NEW]], i32 4
-    // CHECK-NEXT: [[T2:%.*]] = bitcast i8* [[T1]] to [[A]]*
-    // CHECK-NEXT: ret [[A]]* [[T2]]
+    // CHECK:      [[NEW:%.*]] = call noalias noundef nonnull ptr @_Znaj(i32 noundef 44)
+    // CHECK-NEXT: store i32 10, ptr [[NEW]]
+    // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds i8, ptr [[NEW]], i32 4
+    // CHECK-NEXT: ret ptr [[T1]]
     return ::new A[10];
   }
 
   // CHECK-LABEL: define{{.*}} void @_ZN5test24testEPNS_1AE(
   void test(A *p) {
-    // CHECK:      [[P:%.*]] = alloca [[A]]*, align 4
-    // CHECK-NEXT: store [[A]]* {{%.*}}, [[A]]** [[P]], align 4
-    // CHECK-NEXT: [[T0:%.*]] = load [[A]]*, [[A]]** [[P]], align 4
-    // CHECK-NEXT: [[T1:%.*]] = icmp eq [[A]]* [[T0]], null
+    // CHECK:      [[P:%.*]] = alloca ptr, align 4
+    // CHECK-NEXT: store ptr {{%.*}}, ptr [[P]], align 4
+    // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[P]], align 4
+    // CHECK-NEXT: [[T1:%.*]] = icmp eq ptr [[T0]], null
     // CHECK-NEXT: br i1 [[T1]],
-    // CHECK:      [[T2:%.*]] = bitcast [[A]]* [[T0]] to i8*
-    // CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds i8, i8* [[T2]], i32 -4
-    // CHECK-NEXT: [[T4:%.*]] = bitcast i8* [[T3]] to i32*
-    // CHECK-NEXT: [[T5:%.*]] = load i32, i32* [[T4]]
-    // CHECK-NEXT: call void @_ZdaPv(i8* noundef [[T3]])
+    // CHECK: [[T3:%.*]] = getelementptr inbounds i8, ptr [[T0]], i32 -4
+    // CHECK-NEXT: [[T5:%.*]] = load i32, ptr [[T3]]
+    // CHECK-NEXT: call void @_ZdaPv(ptr noundef [[T3]])
     // CHECK-NEXT: br label
     ::delete[] p;
   }
 }
 
-// rdar://problem/8913519
 namespace test3 {
   struct A {
     int x;
@@ -63,8 +58,7 @@ namespace test3 {
 
   // CHECK-LABEL: define{{.*}} void @_ZN5test34testEv()
   void test() {
-    // CHECK:      [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znaj(i32 noundef 24)
-    // CHECK-NEXT: bitcast i8* [[CALL]] to i32*
+    // CHECK:      [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znaj(i32 noundef 24)
     // CHECK-NEXT: store i32 5
     (void) new B[5];
   }

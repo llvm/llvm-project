@@ -26,86 +26,114 @@
 #
 # convert_<destTypen><_sat><_roundingMode>(<sourceTypen>)
 
-types = ['char', 'uchar', 'short', 'ushort', 'int', 'uint', 'long', 'ulong', 'float', 'double']
-int_types = ['char', 'uchar', 'short', 'ushort', 'int', 'uint', 'long', 'ulong']
-unsigned_types = ['uchar', 'ushort', 'uint', 'ulong']
-float_types = ['float', 'double']
-int64_types = ['long', 'ulong']
-float64_types = ['double']
-vector_sizes = ['', '2', '3', '4', '8', '16']
-half_sizes = [('2',''), ('4','2'), ('8','4'), ('16','8')]
+types = [
+    "char",
+    "uchar",
+    "short",
+    "ushort",
+    "int",
+    "uint",
+    "long",
+    "ulong",
+    "float",
+    "double",
+]
+int_types = ["char", "uchar", "short", "ushort", "int", "uint", "long", "ulong"]
+unsigned_types = ["uchar", "ushort", "uint", "ulong"]
+float_types = ["float", "double"]
+int64_types = ["long", "ulong"]
+float64_types = ["double"]
+vector_sizes = ["", "2", "3", "4", "8", "16"]
+half_sizes = [("2", ""), ("4", "2"), ("8", "4"), ("16", "8")]
 
-saturation = ['','_sat']
-rounding_modes = ['_rtz','_rte','_rtp','_rtn']
-float_prefix = {'float':'FLT_', 'double':'DBL_'}
-float_suffix = {'float':'f', 'double':''}
+saturation = ["", "_sat"]
+rounding_modes = ["_rtz", "_rte", "_rtp", "_rtn"]
+float_prefix = {"float": "FLT_", "double": "DBL_"}
+float_suffix = {"float": "f", "double": ""}
 
-bool_type = {'char'  : 'char',
-             'uchar' : 'char',
-             'short' : 'short',
-             'ushort': 'short',
-             'int'   : 'int',
-             'uint'  : 'int',
-             'long'  : 'long',
-             'ulong' : 'long',
-             'float'  : 'int',
-             'double' : 'long'}
+bool_type = {
+    "char": "char",
+    "uchar": "char",
+    "short": "short",
+    "ushort": "short",
+    "int": "int",
+    "uint": "int",
+    "long": "long",
+    "ulong": "long",
+    "float": "int",
+    "double": "long",
+}
 
-unsigned_type = {'char'  : 'uchar',
-                 'uchar' : 'uchar',
-                 'short' : 'ushort',
-                 'ushort': 'ushort',
-                 'int'   : 'uint',
-                 'uint'  : 'uint',
-                 'long'  : 'ulong',
-                 'ulong' : 'ulong'}
+unsigned_type = {
+    "char": "uchar",
+    "uchar": "uchar",
+    "short": "ushort",
+    "ushort": "ushort",
+    "int": "uint",
+    "uint": "uint",
+    "long": "ulong",
+    "ulong": "ulong",
+}
 
-sizeof_type = {'char'  : 1, 'uchar'  : 1,
-               'short' : 2, 'ushort' : 2,
-               'int'   : 4, 'uint'   : 4,
-               'long'  : 8, 'ulong'  : 8,
-               'float' : 4, 'double' : 8}
+sizeof_type = {
+    "char": 1,
+    "uchar": 1,
+    "short": 2,
+    "ushort": 2,
+    "int": 4,
+    "uint": 4,
+    "long": 8,
+    "ulong": 8,
+    "float": 4,
+    "double": 8,
+}
 
-limit_max = {'char'  : 'CHAR_MAX',
-             'uchar' : 'UCHAR_MAX',
-             'short' : 'SHRT_MAX',
-             'ushort': 'USHRT_MAX',
-             'int'   : 'INT_MAX',
-             'uint'  : 'UINT_MAX',
-             'long'  : 'LONG_MAX',
-             'ulong' : 'ULONG_MAX'}
+limit_max = {
+    "char": "CHAR_MAX",
+    "uchar": "UCHAR_MAX",
+    "short": "SHRT_MAX",
+    "ushort": "USHRT_MAX",
+    "int": "INT_MAX",
+    "uint": "UINT_MAX",
+    "long": "LONG_MAX",
+    "ulong": "ULONG_MAX",
+}
 
-limit_min = {'char'  : 'CHAR_MIN',
-             'uchar' : '0',
-             'short' : 'SHRT_MIN',
-             'ushort': '0',
-             'int'   : 'INT_MIN',
-             'uint'  : '0',
-             'long'  : 'LONG_MIN',
-             'ulong' : '0'}
+limit_min = {
+    "char": "CHAR_MIN",
+    "uchar": "0",
+    "short": "SHRT_MIN",
+    "ushort": "0",
+    "int": "INT_MIN",
+    "uint": "0",
+    "long": "LONG_MIN",
+    "ulong": "0",
+}
+
 
 def conditional_guard(src, dst):
-  int64_count = 0
-  float64_count = 0
-  if src in int64_types:
-    int64_count = int64_count +1
-  elif src in float64_types:
-    float64_count = float64_count + 1
-  if dst in int64_types:
-    int64_count = int64_count +1
-  elif dst in float64_types:
-    float64_count = float64_count + 1
-  if float64_count > 0:
-    #In embedded profile, if cl_khr_fp64 is supported cles_khr_int64 has to be
-    print("#ifdef cl_khr_fp64")
-    return True
-  elif int64_count > 0:
-    print("#if defined cles_khr_int64 || !defined(__EMBEDDED_PROFILE__)")
-    return True
-  return False
+    int64_count = 0
+    float64_count = 0
+    if src in int64_types:
+        int64_count = int64_count + 1
+    elif src in float64_types:
+        float64_count = float64_count + 1
+    if dst in int64_types:
+        int64_count = int64_count + 1
+    elif dst in float64_types:
+        float64_count = float64_count + 1
+    if float64_count > 0:
+        # In embedded profile, if cl_khr_fp64 is supported cles_khr_int64 has to be
+        print("#ifdef cl_khr_fp64")
+        return True
+    elif int64_count > 0:
+        print("#if defined cles_khr_int64 || !defined(__EMBEDDED_PROFILE__)")
+        return True
+    return False
 
 
-print("""/* !!!! AUTOGENERATED FILE generated by convert_type.py !!!!!
+print(
+    """/* !!!! AUTOGENERATED FILE generated by convert_type.py !!!!!
 
    DON'T CHANGE THIS FILE. MAKE YOUR CHANGES TO convert_type.py AND RUN:
    $ ./generate-conversion-type-cl.sh
@@ -149,7 +177,8 @@ print("""/* !!!! AUTOGENERATED FILE generated by convert_type.py !!!!!
 #pragma OPENCL EXTENSION cles_khr_int64 : enable
 #endif
 
-""")
+"""
+)
 
 #
 # Default Conversions
@@ -178,45 +207,58 @@ print("""/* !!!! AUTOGENERATED FILE generated by convert_type.py !!!!!
 # is used, the rounding mode is ignored.
 #
 
-def generate_default_conversion(src, dst, mode):
-  close_conditional = conditional_guard(src, dst)
 
-  # scalar conversions
-  print("""_CLC_DEF _CLC_OVERLOAD
+def generate_default_conversion(src, dst, mode):
+    close_conditional = conditional_guard(src, dst)
+
+    # scalar conversions
+    print(
+        """_CLC_DEF _CLC_OVERLOAD
 {DST} convert_{DST}{M}({SRC} x)
 {{
   return ({DST})x;
 }}
-""".format(SRC=src, DST=dst, M=mode))
+""".format(
+            SRC=src, DST=dst, M=mode
+        )
+    )
 
-  # vector conversions, done through decomposition to components
-  for size, half_size in half_sizes:
-    print("""_CLC_DEF _CLC_OVERLOAD
+    # vector conversions, done through decomposition to components
+    for size, half_size in half_sizes:
+        print(
+            """_CLC_DEF _CLC_OVERLOAD
 {DST}{N} convert_{DST}{N}{M}({SRC}{N} x)
 {{
   return ({DST}{N})(convert_{DST}{H}(x.lo), convert_{DST}{H}(x.hi));
 }}
-""".format(SRC=src, DST=dst, N=size, H=half_size, M=mode))
+""".format(
+                SRC=src, DST=dst, N=size, H=half_size, M=mode
+            )
+        )
 
-  # 3-component vector conversions
-  print("""_CLC_DEF _CLC_OVERLOAD
+    # 3-component vector conversions
+    print(
+        """_CLC_DEF _CLC_OVERLOAD
 {DST}3 convert_{DST}3{M}({SRC}3 x)
 {{
   return ({DST}3)(convert_{DST}2(x.s01), convert_{DST}(x.s2));
-}}""".format(SRC=src, DST=dst, M=mode))
+}}""".format(
+            SRC=src, DST=dst, M=mode
+        )
+    )
 
-  if close_conditional:
-    print("#endif")
+    if close_conditional:
+        print("#endif")
 
 
 for src in types:
-  for dst in types:
-    generate_default_conversion(src, dst, '')
+    for dst in types:
+        generate_default_conversion(src, dst, "")
 
 for src in int_types:
-  for dst in int_types:
-    for mode in rounding_modes:
-      generate_default_conversion(src, dst, mode)
+    for dst in int_types:
+        for mode in rounding_modes:
+            generate_default_conversion(src, dst, mode)
 
 #
 # Saturated Conversions To Integers
@@ -229,97 +271,127 @@ for src in int_types:
 # conversions with saturation.
 #
 
+
 def generate_saturated_conversion(src, dst, size):
-  # Header
-  close_conditional = conditional_guard(src, dst)
-  print("""_CLC_DEF _CLC_OVERLOAD
+    # Header
+    close_conditional = conditional_guard(src, dst)
+    print(
+        """_CLC_DEF _CLC_OVERLOAD
 {DST}{N} convert_{DST}{N}_sat({SRC}{N} x)
-{{""".format(DST=dst, SRC=src, N=size))
+{{""".format(
+            DST=dst, SRC=src, N=size
+        )
+    )
 
-  # FIXME: This is a work around for lack of select function with
-  # signed third argument when the first two arguments are unsigned types.
-  # We cast to the signed type for sign-extension, then do a bitcast to
-  # the unsigned type.
-  if dst in unsigned_types:
-    bool_prefix = "as_{DST}{N}(convert_{BOOL}{N}".format(DST=dst, BOOL=bool_type[dst], N=size);
-    bool_suffix = ")"
-  else:
-    bool_prefix = "convert_{BOOL}{N}".format(BOOL=bool_type[dst], N=size);
-    bool_suffix = ""
+    # FIXME: This is a work around for lack of select function with
+    # signed third argument when the first two arguments are unsigned types.
+    # We cast to the signed type for sign-extension, then do a bitcast to
+    # the unsigned type.
+    if dst in unsigned_types:
+        bool_prefix = "as_{DST}{N}(convert_{BOOL}{N}".format(
+            DST=dst, BOOL=bool_type[dst], N=size
+        )
+        bool_suffix = ")"
+    else:
+        bool_prefix = "convert_{BOOL}{N}".format(BOOL=bool_type[dst], N=size)
+        bool_suffix = ""
 
-  # Body
-  if src == dst:
+    # Body
+    if src == dst:
 
-    # Conversion between same types
-    print("  return x;")
+        # Conversion between same types
+        print("  return x;")
 
-  elif src in float_types:
+    elif src in float_types:
 
-    # Conversion from float to int
-    print("""  {DST}{N} y = convert_{DST}{N}(x);
+        # Conversion from float to int
+        print(
+            """  {DST}{N} y = convert_{DST}{N}(x);
   y = select(y, ({DST}{N}){DST_MIN}, {BP}(x < ({SRC}{N}){DST_MIN}){BS});
   y = select(y, ({DST}{N}){DST_MAX}, {BP}(x > ({SRC}{N}){DST_MAX}){BS});
-  return y;""".format(SRC=src, DST=dst, N=size,
-      DST_MIN=limit_min[dst], DST_MAX=limit_max[dst],
-      BP=bool_prefix, BS=bool_suffix))
+  return y;""".format(
+                SRC=src,
+                DST=dst,
+                N=size,
+                DST_MIN=limit_min[dst],
+                DST_MAX=limit_max[dst],
+                BP=bool_prefix,
+                BS=bool_suffix,
+            )
+        )
 
-  else:
+    else:
 
-    # Integer to integer convesion with sizeof(src) == sizeof(dst)
-    if sizeof_type[src] == sizeof_type[dst]:
-      if src in unsigned_types:
-        print("  x = min(x, ({SRC}){DST_MAX});".format(SRC=src, DST_MAX=limit_max[dst]))
-      else:
-        print("  x = max(x, ({SRC})0);".format(SRC=src))
+        # Integer to integer convesion with sizeof(src) == sizeof(dst)
+        if sizeof_type[src] == sizeof_type[dst]:
+            if src in unsigned_types:
+                print(
+                    "  x = min(x, ({SRC}){DST_MAX});".format(
+                        SRC=src, DST_MAX=limit_max[dst]
+                    )
+                )
+            else:
+                print("  x = max(x, ({SRC})0);".format(SRC=src))
 
-    # Integer to integer conversion where sizeof(src) > sizeof(dst)
-    elif sizeof_type[src] > sizeof_type[dst]:
-      if src in unsigned_types:
-        print("  x = min(x, ({SRC}){DST_MAX});".format(SRC=src, DST_MAX=limit_max[dst]))
-      else:
-        print("  x = clamp(x, ({SRC}){DST_MIN}, ({SRC}){DST_MAX});"
-          .format(SRC=src, DST_MIN=limit_min[dst], DST_MAX=limit_max[dst]))
+        # Integer to integer conversion where sizeof(src) > sizeof(dst)
+        elif sizeof_type[src] > sizeof_type[dst]:
+            if src in unsigned_types:
+                print(
+                    "  x = min(x, ({SRC}){DST_MAX});".format(
+                        SRC=src, DST_MAX=limit_max[dst]
+                    )
+                )
+            else:
+                print(
+                    "  x = clamp(x, ({SRC}){DST_MIN}, ({SRC}){DST_MAX});".format(
+                        SRC=src, DST_MIN=limit_min[dst], DST_MAX=limit_max[dst]
+                    )
+                )
 
-    # Integer to integer conversion where sizeof(src) < sizeof(dst)
-    elif src not in unsigned_types and dst in unsigned_types:
-        print("  x = max(x, ({SRC})0);".format(SRC=src))
+        # Integer to integer conversion where sizeof(src) < sizeof(dst)
+        elif src not in unsigned_types and dst in unsigned_types:
+            print("  x = max(x, ({SRC})0);".format(SRC=src))
 
-    print("  return convert_{DST}{N}(x);".format(DST=dst, N=size))
+        print("  return convert_{DST}{N}(x);".format(DST=dst, N=size))
 
-  # Footer
-  print("}")
-  if close_conditional:
-    print("#endif")
+    # Footer
+    print("}")
+    if close_conditional:
+        print("#endif")
 
 
 for src in types:
-  for dst in int_types:
-    for size in vector_sizes:
-      generate_saturated_conversion(src, dst, size)
+    for dst in int_types:
+        for size in vector_sizes:
+            generate_saturated_conversion(src, dst, size)
 
 
 def generate_saturated_conversion_with_rounding(src, dst, size, mode):
-  # Header
-  close_conditional = conditional_guard(src, dst)
+    # Header
+    close_conditional = conditional_guard(src, dst)
 
-  # Body
-  print("""_CLC_DEF _CLC_OVERLOAD
+    # Body
+    print(
+        """_CLC_DEF _CLC_OVERLOAD
 {DST}{N} convert_{DST}{N}_sat{M}({SRC}{N} x)
 {{
   return convert_{DST}{N}_sat(x);
 }}
-""".format(DST=dst, SRC=src, N=size, M=mode))
+""".format(
+            DST=dst, SRC=src, N=size, M=mode
+        )
+    )
 
-  # Footer
-  if close_conditional:
-    print("#endif")
+    # Footer
+    if close_conditional:
+        print("#endif")
 
 
 for src in int_types:
-  for dst in int_types:
-    for size in vector_sizes:
-      for mode in rounding_modes:
-        generate_saturated_conversion_with_rounding(src, dst, size, mode)
+    for dst in int_types:
+        for size in vector_sizes:
+            for mode in rounding_modes:
+                generate_saturated_conversion_with_rounding(src, dst, size, mode)
 
 #
 # Conversions To/From Floating-Point With Rounding
@@ -335,59 +407,81 @@ for src in int_types:
 # Only conversions to integers can have saturation.
 #
 
+
 def generate_float_conversion(src, dst, size, mode, sat):
-  # Header
-  close_conditional = conditional_guard(src, dst)
-  print("""_CLC_DEF _CLC_OVERLOAD
+    # Header
+    close_conditional = conditional_guard(src, dst)
+    print(
+        """_CLC_DEF _CLC_OVERLOAD
 {DST}{N} convert_{DST}{N}{S}{M}({SRC}{N} x)
-{{""".format(SRC=src, DST=dst, N=size, M=mode, S=sat))
+{{""".format(
+            SRC=src, DST=dst, N=size, M=mode, S=sat
+        )
+    )
 
-  # Perform conversion
-  if dst in int_types:
-    if mode == '_rte':
-      print("  x = rint(x);");
-    elif mode == '_rtp':
-      print("  x = ceil(x);");
-    elif mode == '_rtn':
-      print("  x = floor(x);");
-    print("  return convert_{DST}{N}{S}(x);".format(DST=dst, N=size, S=sat))
-  elif mode == '_rte':
-    print("  return convert_{DST}{N}(x);".format(DST=dst, N=size))
-  else:
-    print("  {DST}{N} r = convert_{DST}{N}(x);".format(DST=dst, N=size))
-    print("  {SRC}{N} y = convert_{SRC}{N}(r);".format(SRC=src, N=size))
-    if mode == '_rtz':
-      if src in int_types:
-        print("  {USRC}{N} abs_x = abs(x);".format(USRC=unsigned_type[src], N=size))
-        print("  {USRC}{N} abs_y = abs(y);".format(USRC=unsigned_type[src], N=size))
-      else:
-        print("  {SRC}{N} abs_x = fabs(x);".format(SRC=src, N=size))
-        print("  {SRC}{N} abs_y = fabs(y);".format(SRC=src, N=size))
-      print("  return select(r, nextafter(r, sign(r) * ({DST}{N})-INFINITY), convert_{BOOL}{N}(abs_y > abs_x));"
-        .format(DST=dst, N=size, BOOL=bool_type[dst]))
-    if mode == '_rtp':
-      print("  return select(r, nextafter(r, ({DST}{N})INFINITY), convert_{BOOL}{N}(y < x));"
-        .format(DST=dst, N=size, BOOL=bool_type[dst]))
-    if mode == '_rtn':
-      print("  return select(r, nextafter(r, ({DST}{N})-INFINITY), convert_{BOOL}{N}(y > x));"
-        .format(DST=dst, N=size, BOOL=bool_type[dst]))
+    # Perform conversion
+    if dst in int_types:
+        if mode == "_rte":
+            print("  x = rint(x);")
+        elif mode == "_rtp":
+            print("  x = ceil(x);")
+        elif mode == "_rtn":
+            print("  x = floor(x);")
+        print("  return convert_{DST}{N}{S}(x);".format(DST=dst, N=size, S=sat))
+    elif mode == "_rte":
+        print("  return convert_{DST}{N}(x);".format(DST=dst, N=size))
+    else:
+        print("  {DST}{N} r = convert_{DST}{N}(x);".format(DST=dst, N=size))
+        print("  {SRC}{N} y = convert_{SRC}{N}(r);".format(SRC=src, N=size))
+        if mode == "_rtz":
+            if src in int_types:
+                print(
+                    "  {USRC}{N} abs_x = abs(x);".format(
+                        USRC=unsigned_type[src], N=size
+                    )
+                )
+                print(
+                    "  {USRC}{N} abs_y = abs(y);".format(
+                        USRC=unsigned_type[src], N=size
+                    )
+                )
+            else:
+                print("  {SRC}{N} abs_x = fabs(x);".format(SRC=src, N=size))
+                print("  {SRC}{N} abs_y = fabs(y);".format(SRC=src, N=size))
+            print(
+                "  return select(r, nextafter(r, sign(r) * ({DST}{N})-INFINITY), convert_{BOOL}{N}(abs_y > abs_x));".format(
+                    DST=dst, N=size, BOOL=bool_type[dst]
+                )
+            )
+        if mode == "_rtp":
+            print(
+                "  return select(r, nextafter(r, ({DST}{N})INFINITY), convert_{BOOL}{N}(y < x));".format(
+                    DST=dst, N=size, BOOL=bool_type[dst]
+                )
+            )
+        if mode == "_rtn":
+            print(
+                "  return select(r, nextafter(r, ({DST}{N})-INFINITY), convert_{BOOL}{N}(y > x));".format(
+                    DST=dst, N=size, BOOL=bool_type[dst]
+                )
+            )
 
-  # Footer
-  print("}")
-  if close_conditional:
-    print("#endif")
+    # Footer
+    print("}")
+    if close_conditional:
+        print("#endif")
 
 
 for src in float_types:
-  for dst in int_types:
-    for size in vector_sizes:
-      for mode in rounding_modes:
-        for sat in saturation:
-          generate_float_conversion(src, dst, size, mode, sat)
+    for dst in int_types:
+        for size in vector_sizes:
+            for mode in rounding_modes:
+                for sat in saturation:
+                    generate_float_conversion(src, dst, size, mode, sat)
 
 
 for src in types:
-  for dst in float_types:
-    for size in vector_sizes:
-      for mode in rounding_modes:
-        generate_float_conversion(src, dst, size, mode, '')
+    for dst in float_types:
+        for size in vector_sizes:
+            for mode in rounding_modes:
+                generate_float_conversion(src, dst, size, mode, "")

@@ -3,7 +3,6 @@
   jal a0, far_distant # CHECK: :[[@LINE]]:3: error: fixup value out of range
   jal a0, unaligned # CHECK: :[[@LINE]]:3: error: fixup value must be 2-byte aligned
 
-  beq a0, a1, distant # CHECK: :[[@LINE]]:3: error: fixup value out of range
   blt t0, t1, unaligned # CHECK: :[[@LINE]]:3: error: fixup value must be 2-byte aligned
 
   .byte 0
@@ -12,7 +11,5 @@ unaligned:
   .byte 0
   .byte 0
 
-  .space 1<<12
-distant:
   .space 1<<20
 far_distant:

@@ -13,7 +13,7 @@ define void @volatile_load_2_elts() {
 ; AVX-NEXT:    vmovaps g0(%rip), %xmm0
 ; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
 ; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2,3,4,5],ymm2[6,7]
+; AVX-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2,3],ymm2[4,5,6,7]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5],ymm2[6,7]

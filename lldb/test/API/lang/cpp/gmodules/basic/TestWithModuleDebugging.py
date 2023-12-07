@@ -6,7 +6,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestWithGmodulesDebugInfo(TestBase):
-
     @skipIf(bugnumber="llvm.org/pr36146", oslist=["linux"], archs=["i386"])
     @add_test_categories(["gmodules"])
     def test_specialized_typedef_from_pch(self):
@@ -24,24 +23,22 @@ class TestWithGmodulesDebugInfo(TestBase):
         self.assertTrue(target.IsValid(), VALID_TARGET)
 
         # Break on interesting line
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            "break here", src_file_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex("break here", src_file_spec)
         self.assertTrue(
-            breakpoint.IsValid() and breakpoint.GetNumLocations() >= 1,
-            VALID_BREAKPOINT)
+            breakpoint.IsValid() and breakpoint.GetNumLocations() >= 1, VALID_BREAKPOINT
+        )
 
         # Launch the process
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
 
         # Get the thread of the process
         self.assertState(process.GetState(), lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(
-            process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
             thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition")
+            "There should be a thread stopped due to breakpoint condition",
+        )
 
         # Get frame for current thread
         frame = thread.frames[0]
@@ -49,44 +46,33 @@ class TestWithGmodulesDebugInfo(TestBase):
         testValue = frame.EvaluateExpression("test")
         self.assertTrue(
             testValue.GetError().Success(),
-            "Test expression value invalid: %s" %
-            (testValue.GetError().GetCString()))
+            "Test expression value invalid: %s" % (testValue.GetError().GetCString()),
+        )
         self.assertEqual(
-            testValue.GetTypeName(), "IntContainer",
-            "Test expression type incorrect")
+            testValue.GetTypeName(), "IntContainer", "Test expression type incorrect"
+        )
 
         memberValue = testValue.GetChildMemberWithName("storage")
         self.assertTrue(
             memberValue.GetError().Success(),
-            "Member value missing or invalid: %s" %
-            (testValue.GetError().GetCString()))
-        self.assertEqual(
-            memberValue.GetTypeName(), "int",
-            "Member type incorrect")
-        self.assertEqual(
-            42,
-            memberValue.GetValueAsSigned(),
-            "Member value incorrect")
+            "Member value missing or invalid: %s" % (testValue.GetError().GetCString()),
+        )
+        self.assertEqual(memberValue.GetTypeName(), "int", "Member type incorrect")
+        self.assertEqual(42, memberValue.GetValueAsSigned(), "Member value incorrect")
 
         testValue = frame.EvaluateExpression("bar")
         self.assertTrue(
             testValue.GetError().Success(),
-            "Test expression value invalid: %s" %
-            (testValue.GetError().GetCString()))
+            "Test expression value invalid: %s" % (testValue.GetError().GetCString()),
+        )
         self.assertEqual(
-            testValue.GetTypeName(), "Foo::Bar",
-            "Test expression type incorrect")
+            testValue.GetTypeName(), "Foo::Bar", "Test expression type incorrect"
+        )
 
         memberValue = testValue.GetChildMemberWithName("i")
         self.assertTrue(
             memberValue.GetError().Success(),
-            "Member value missing or invalid: %s" %
-            (testValue.GetError().GetCString()))
-        self.assertEqual(
-            memberValue.GetTypeName(), "int",
-            "Member type incorrect")
-        self.assertEqual(
-            123,
-            memberValue.GetValueAsSigned(),
-            "Member value incorrect")
-
+            "Member value missing or invalid: %s" % (testValue.GetError().GetCString()),
+        )
+        self.assertEqual(memberValue.GetTypeName(), "int", "Member type incorrect")
+        self.assertEqual(123, memberValue.GetValueAsSigned(), "Member value incorrect")

@@ -1,12 +1,11 @@
 // Check that the more specific checkers report and not the generic
-// StdCLibraryFunctionArgs checker.
+// StdCLibraryFunctions checker.
 
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
-// RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:ModelPOSIX=true \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctionArgs \
 // RUN:   -analyzer-checker=alpha.unix.Stream \
+// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -triple x86_64-unknown-linux-gnu \
 // RUN:   -verify
 
@@ -15,11 +14,9 @@
 
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
-// RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:ModelPOSIX=true \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctionArgs \
-// RUN:   -analyzer-checker=alpha.unix.Stream \
-// RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:DisplayLoadedSummaries=true \
+// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -triple x86_64-unknown-linux 2>&1 | FileCheck %s
 
 // CHECK: Loaded summary for: int isalnum(int)

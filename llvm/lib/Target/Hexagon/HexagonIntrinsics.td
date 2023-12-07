@@ -356,14 +356,14 @@ defm : T_VVI_inv_pat <V6_valignbi, int_hexagon_V6_vlalignb>;
 defm : T_VVR_pat <V6_vlalignb, int_hexagon_V6_vlalignbi>;
 
 def: Pat<(int_hexagon_V6_vd0),
-         (V6_vd0)>, Requires<[HasV60, UseHVX64B]>;
+         (V6_vd0)>, Requires<[UseHVXV60, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vd0_128B ),
-         (V6_vd0)>, Requires<[HasV60, UseHVX128B]>;
+         (V6_vd0)>, Requires<[UseHVXV60, UseHVX128B]>;
 
 def: Pat<(int_hexagon_V6_vdd0),
-         (V6_vdd0)>, Requires<[HasV65, UseHVX64B]>;
+         (V6_vdd0)>, Requires<[UseHVXV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vdd0_128B),
-         (V6_vdd0)>, Requires<[HasV65, UseHVX128B]>;
+         (V6_vdd0)>, Requires<[UseHVXV65, UseHVX128B]>;
 
 
 multiclass T_VP_pat<InstHexagon MI, Intrinsic IntID> {
@@ -383,7 +383,7 @@ multiclass T_WVP_pat<InstHexagon MI, Intrinsic IntID> {
 }
 
 // These are actually only in V65.
-let Predicates = [HasV65, UseHVX] in {
+let Predicates = [UseHVXV65, UseHVX] in {
   defm: T_VP_pat<V6_vrmpyub_rtt,        int_hexagon_V6_vrmpyub_rtt>;
   defm: T_VP_pat<V6_vrmpybub_rtt,       int_hexagon_V6_vrmpybub_rtt>;
 
@@ -408,7 +408,7 @@ multiclass T_pRM_pat<InstHexagon MI, Intrinsic IntID> {
            (MI    PredRegs:$P, IntRegs:$R, ModRegs:$M)>;
 }
 
-let Predicates = [HasV62, UseHVX] in {
+let Predicates = [UseHVXV62, UseHVX] in {
   defm: T_pRI_pat<V6_vL32b_pred_ai,       int_hexagon_V6_vL32b_pred_ai>;
   defm: T_pRI_pat<V6_vL32b_npred_ai,      int_hexagon_V6_vL32b_npred_ai>;
   defm: T_pRI_pat<V6_vL32b_pred_pi,       int_hexagon_V6_vL32b_pred_pi>;
@@ -440,7 +440,7 @@ multiclass T_pRMV_pat<InstHexagon MI, Intrinsic IntID> {
            (MI    PredRegs:$P, IntRegs:$R, ModRegs:$M, HvxVR:$V)>;
 }
 
-let Predicates = [HasV60, UseHVX] in {
+let Predicates = [UseHVXV60, UseHVX] in {
   defm: T_pRIV_pat<V6_vS32b_pred_ai,      int_hexagon_V6_vS32b_pred_ai>;
   defm: T_pRIV_pat<V6_vS32b_npred_ai,     int_hexagon_V6_vS32b_npred_ai>;
   defm: T_pRIV_pat<V6_vS32b_pred_pi,      int_hexagon_V6_vS32b_pred_pi>;

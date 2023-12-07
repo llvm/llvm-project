@@ -27,7 +27,7 @@ COMPILER_RT_ABI double __floatuntidf(tu_int a) {
     return 0.0;
   const unsigned N = sizeof(tu_int) * CHAR_BIT;
   int sd = N - __clzti2(a); // number of significant digits
-  int e = sd - 1;           // exponent
+  si_int e = sd - 1;        // exponent
   if (sd > DBL_MANT_DIG) {
     //  start:  0000000000000000000001xxxxxxxxxxxxxxxxxxxxxxPQxxxxxxxxxxxxxxxxxx
     //  finish: 000000000000000000000000000000000000001xxxxxxxxxxxxxxxxxxxxxxPQR

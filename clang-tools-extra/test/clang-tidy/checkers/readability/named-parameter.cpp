@@ -131,3 +131,20 @@ void f(std::nullptr_t) {}
 typedef void (F)(int);
 F f;
 void f(int x) {}
+
+namespace issue_63056
+{
+  struct S {
+    S(const S&);
+    S(S&&);
+
+    S& operator=(const S&);
+    S& operator=(S&&);
+  };
+
+  S::S(const S&) = default;
+  S::S(S&&) = default;
+
+  S& S::operator=(const S&) = default;
+  S& S::operator=(S&&) = default;
+} // namespace issue_63056

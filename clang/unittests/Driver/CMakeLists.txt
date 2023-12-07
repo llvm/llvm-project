@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   MC
   Option
   Support
+  TargetParser
   )
 
 add_clang_unittest(ClangDriverTests
@@ -10,6 +11,7 @@ add_clang_unittest(ClangDriverTests
   DXCModeTest.cpp
   ToolChainTest.cpp
   ModuleCacheTest.cpp
+  MultilibBuilderTest.cpp
   MultilibTest.cpp
   SanitizerArgsTest.cpp
   )

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -fblocks -triple x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
-// rdar://8594790
 
 extern "C" {
 extern "C" void *_Block_copy(const void *aBlock);

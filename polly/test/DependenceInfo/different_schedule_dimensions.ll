@@ -23,7 +23,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @hoge(i32 %arg, [1024 x double]* %arg1) {
+define void @hoge(i32 %arg, ptr %arg1) {
 bb:
   br label %bb2
 
@@ -33,10 +33,9 @@ bb2:                                              ; preds = %bb
 bb3:                                              ; preds = %bb10, %bb2
   %tmp = phi i64 [ 0, %bb10 ], [ 0, %bb2 ]
   %tmp4 = icmp sgt i32 %arg, 0
-  %tmp5 = getelementptr inbounds [1024 x double], [1024 x double]* %arg1, i64 0, i64 0
-  %tmp6 = load double, double* %tmp5, align 8
+  %tmp6 = load double, ptr %arg1, align 8
   %tmp7 = fadd double undef, %tmp6
-  store double %tmp7, double* %tmp5, align 8
+  store double %tmp7, ptr %arg1, align 8
   br i1 false, label %bb8, label %bb9
 
 bb8:                                              ; preds = %bb3
@@ -47,8 +46,8 @@ bb9:                                              ; preds = %bb3
 
 bb10:                                             ; preds = %bb9, %bb8
   %tmp11 = phi double [ undef, %bb8 ], [ undef, %bb9 ]
-  %tmp12 = getelementptr inbounds [1024 x double], [1024 x double]* %arg1, i64 %tmp, i64 0
-  store double %tmp11, double* %tmp12, align 8
+  %tmp12 = getelementptr inbounds [1024 x double], ptr %arg1, i64 %tmp, i64 0
+  store double %tmp11, ptr %tmp12, align 8
   %tmp13 = add nuw nsw i64 0, 1
   %tmp14 = trunc i64 %tmp13 to i32
   br i1 false, label %bb3, label %bb15

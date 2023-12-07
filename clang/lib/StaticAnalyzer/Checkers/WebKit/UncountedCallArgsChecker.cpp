@@ -19,6 +19,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/ADT/DenseSet.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -85,7 +86,7 @@ public:
           continue; // FIXME? Should we bail?
 
         // FIXME: more complex types (arrays, references to raw pointers, etc)
-        Optional<bool> IsUncounted = isUncountedPtr(ArgType);
+        std::optional<bool> IsUncounted = isUncountedPtr(ArgType);
         if (!IsUncounted || !(*IsUncounted))
           continue;
 

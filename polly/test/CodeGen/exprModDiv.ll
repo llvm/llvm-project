@@ -18,7 +18,7 @@
 
 ; A[i % 127]
 ; CHECK:  %pexp.pdiv_r = urem i64 %polly.indvar, 127
-; CHECK:  %polly.access.A9 = getelementptr float, float* %A, i64 %pexp.pdiv_r
+; CHECK:  %polly.access.A9 = getelementptr float, ptr %A, i64 %pexp.pdiv_r
 
 ; A[floor(i / 127)]
 ;
@@ -28,33 +28,31 @@
 ;       each value of i to indeed be mapped to a value.
 ;
 ; CHECK:  %pexp.p_div_q = udiv i64 %polly.indvar, 127
-; CHECK:  %polly.access.B10 = getelementptr float, float* %B, i64 %pexp.p_div_q
+; CHECK:  %polly.access.B10 = getelementptr float, ptr %B, i64 %pexp.p_div_q
 
 ; A[p % 128]
-; CHECK:  %polly.access.A11 = getelementptr float, float* %A, i64 0
 
 ; A[p / 127]
 ; CHECK:  %pexp.div = sdiv exact i64 %p, 127
-; CHECK:  %polly.access.B12 = getelementptr float, float* %B, i64 %pexp.div
+; CHECK:  %polly.access.B12 = getelementptr float, ptr %B, i64 %pexp.div
 
 ; A[i % 128]
 ; POW2:  %pexp.pdiv_r = urem i64 %polly.indvar, 128
-; POW2:  %polly.access.A9 = getelementptr float, float* %A, i64 %pexp.pdiv_r
+; POW2:  %polly.access.A9 = getelementptr float, ptr %A, i64 %pexp.pdiv_r
 
 ; A[floor(i / 128)]
 ; POW2:  %pexp.p_div_q = udiv i64 %polly.indvar, 128
-; POW2:  %polly.access.B10 = getelementptr float, float* %B, i64 %pexp.p_div_q
+; POW2:  %polly.access.B10 = getelementptr float, ptr %B, i64 %pexp.p_div_q
 
 ; A[p % 128]
-; POW2:  %polly.access.A11 = getelementptr float, float* %A, i64 0
 
 ; A[p / 128]
 ; POW2:  %pexp.div = sdiv exact i64 %p, 128
-; POW2:  %polly.access.B12 = getelementptr float, float* %B, i64 %pexp.div
+; POW2:  %polly.access.B12 = getelementptr float, ptr %B, i64 %pexp.div
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @exprModDiv(float* %A, float* %B, float* %C, i64 %N, i64 %p) {
+define void @exprModDiv(ptr %A, ptr %B, ptr %C, i64 %N, i64 %p) {
 entry:
   br label %for.cond
 
@@ -64,22 +62,22 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %i.0
-  %tmp = load float, float* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds float, float* %B, i64 %i.0
-  %tmp1 = load float, float* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %i.0
+  %tmp = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %B, i64 %i.0
+  %tmp1 = load float, ptr %arrayidx1, align 4
   %add = fadd float %tmp, %tmp1
-  %arrayidx2 = getelementptr inbounds float, float* %A, i64 %i.0
-  %tmp2 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %A, i64 %i.0
+  %tmp2 = load float, ptr %arrayidx2, align 4
   %add3 = fadd float %add, %tmp2
   %padd = add nsw i64 %p, %i.0
-  %arrayidx4 = getelementptr inbounds float, float* %B, i64 %padd
-  %tmp3 = load float, float* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %B, i64 %padd
+  %tmp3 = load float, ptr %arrayidx4, align 4
   %add5 = fadd float %add3, %tmp3
-  %arrayidx6 = getelementptr inbounds float, float* %C, i64 %i.0
-  %tmp4 = load float, float* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds float, ptr %C, i64 %i.0
+  %tmp4 = load float, ptr %arrayidx6, align 4
   %add7 = fadd float %tmp4, %add5
-  store float %add7, float* %arrayidx6, align 4
+  store float %add7, ptr %arrayidx6, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

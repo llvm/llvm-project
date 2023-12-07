@@ -64,7 +64,7 @@ void func(int sel) {
   svint8_t __attribute__((aligned(4))) aligned_int8_2; // expected-error {{'aligned' attribute cannot be applied to sizeless type 'svint8_t'}}
   svint8_t _Alignas(int) aligned_int8_3;               // expected-error {{'_Alignas' attribute cannot be applied to sizeless type 'svint8_t'}}
 
-  int _Alignas(svint8_t) aligned_int; // expected-error {{invalid application of 'alignof' to sizeless type 'svint8_t'}}
+  int _Alignas(svint8_t) aligned_int; // expected-error {{invalid application of '_Alignas' to sizeless type 'svint8_t'}}
 
   // Using pointers to sizeless data isn't wrong here, but because the
   // type is incomplete, it doesn't provide any alignment guarantees.
@@ -83,13 +83,13 @@ void func(int sel) {
   svint8_t init_int8 = local_int8;
   svint8_t bad_init_int8 = for; // expected-error {{expected expression}}
 
-  int empty_brace_init_int = {}; // expected-error {{scalar initializer cannot be empty}}
-  svint8_t empty_brace_init_int8 = {}; // expected-error {{initializer for sizeless type 'svint8_t' (aka '__SVInt8_t') cannot be empty}}
+  int empty_brace_init_int = {};
+  svint8_t empty_brace_init_int8 = {};
   svint8_t brace_init_int8 = {local_int8};
   svint8_t bad_brace_init_int8_1 = {local_int8, 0};    // expected-warning {{excess elements in initializer for indivisible sizeless type 'svint8_t'}}
   svint8_t bad_brace_init_int8_2 = {0};                // expected-error {{incompatible type 'int'}}
   svint8_t bad_brace_init_int8_3 = {local_int16};      // expected-error {{incompatible type 'svint16_t'}}
-  svint8_t bad_brace_init_int8_4 = {[0] = local_int8}; // expected-error {{designator in initializer for indivisible sizeless type 'svint8_t'}}
+  svint8_t bad_brace_init_int8_4 = {[0] = local_int8}; // expected-error {{initialization of non-aggregate type 'svint8_t' (aka '__SVInt8_t') with a designated initializer list}}
   svint8_t bad_brace_init_int8_5 = {{local_int8}};     // expected-warning {{too many braces around initializer}}
   svint8_t bad_brace_init_int8_6 = {{local_int8, 0}};  // expected-warning {{too many braces around initializer}}
 

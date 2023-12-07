@@ -8,16 +8,16 @@ target triple = "hexagon"
 
 %struct.descr = type opaque
 
-define inreg <64 x i32> @danny(%struct.descr* %desc, i32 %xy0, i32 %xy1) #0 {
+define inreg <64 x i32> @danny(ptr %desc, i32 %xy0, i32 %xy1) #0 {
 entry:
-  %call = tail call inreg <32 x i32> @sammy(%struct.descr* %desc, i32 %xy0) #3
-  %call1 = tail call inreg <32 x i32> @kirby(%struct.descr* %desc, i32 %xy1) #3
+  %call = tail call inreg <32 x i32> @sammy(ptr %desc, i32 %xy0) #3
+  %call1 = tail call inreg <32 x i32> @kirby(ptr %desc, i32 %xy1) #3
   %0 = tail call <64 x i32> @llvm.hexagon.V6.vcombine.128B(<32 x i32> %call1, <32 x i32> %call)
   ret <64 x i32> %0
 }
 
-declare inreg <32 x i32> @sammy(%struct.descr*, i32) #1
-declare inreg <32 x i32> @kirby(%struct.descr*, i32) #1
+declare inreg <32 x i32> @sammy(ptr, i32) #1
+declare inreg <32 x i32> @kirby(ptr, i32) #1
 declare <64 x i32> @llvm.hexagon.V6.vcombine.128B(<32 x i32>, <32 x i32>) #2
 
 attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx-length128b,+hvxv60" }

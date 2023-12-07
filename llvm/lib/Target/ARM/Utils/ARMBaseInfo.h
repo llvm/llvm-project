@@ -18,7 +18,7 @@
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 
 namespace llvm {

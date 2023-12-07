@@ -235,6 +235,129 @@ entry:
   ret <16 x i8> %b
 }
 
+define arm_aapcs_vfpcc <4 x i32> @shl_v4i32(<4 x i32> %z, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: shl_v4i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i32 eq, q0, zr
+; CHECK-NEXT:    vshlt.u32 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <4 x i32> %z, zeroinitializer
+  %a = shl <4 x i32> %x, %y
+  %b = select <4 x i1> %c, <4 x i32> %a, <4 x i32> %z
+  ret <4 x i32> %b
+}
+
+define arm_aapcs_vfpcc <8 x i16> @shl_v8i16(<8 x i16> %z, <8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: shl_v8i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i16 eq, q0, zr
+; CHECK-NEXT:    vshlt.u16 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <8 x i16> %z, zeroinitializer
+  %a = shl <8 x i16> %x, %y
+  %b = select <8 x i1> %c, <8 x i16> %a, <8 x i16> %z
+  ret <8 x i16> %b
+}
+
+define arm_aapcs_vfpcc <16 x i8> @shl_v16i8(<16 x i8> %z, <16 x i8> %x, <16 x i8> %y) {
+; CHECK-LABEL: shl_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i8 eq, q0, zr
+; CHECK-NEXT:    vshlt.u8 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <16 x i8> %z, zeroinitializer
+  %a = shl <16 x i8> %x, %y
+  %b = select <16 x i1> %c, <16 x i8> %a, <16 x i8> %z
+  ret <16 x i8> %b
+}
+
+define arm_aapcs_vfpcc <4 x i32> @ashr_v4i32(<4 x i32> %z, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: ashr_v4i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vneg.s32 q2, q2
+; CHECK-NEXT:    vpt.i32 eq, q0, zr
+; CHECK-NEXT:    vshlt.s32 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <4 x i32> %z, zeroinitializer
+  %a = ashr <4 x i32> %x, %y
+  %b = select <4 x i1> %c, <4 x i32> %a, <4 x i32> %z
+  ret <4 x i32> %b
+}
+
+define arm_aapcs_vfpcc <8 x i16> @ashr_v8i16(<8 x i16> %z, <8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: ashr_v8i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vneg.s16 q2, q2
+; CHECK-NEXT:    vpt.i16 eq, q0, zr
+; CHECK-NEXT:    vshlt.s16 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <8 x i16> %z, zeroinitializer
+  %a = ashr <8 x i16> %x, %y
+  %b = select <8 x i1> %c, <8 x i16> %a, <8 x i16> %z
+  ret <8 x i16> %b
+}
+
+define arm_aapcs_vfpcc <16 x i8> @ashr_v16i8(<16 x i8> %z, <16 x i8> %x, <16 x i8> %y) {
+; CHECK-LABEL: ashr_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vneg.s8 q2, q2
+; CHECK-NEXT:    vpt.i8 eq, q0, zr
+; CHECK-NEXT:    vshlt.s8 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <16 x i8> %z, zeroinitializer
+  %a = ashr <16 x i8> %x, %y
+  %b = select <16 x i1> %c, <16 x i8> %a, <16 x i8> %z
+  ret <16 x i8> %b
+}
+
+define arm_aapcs_vfpcc <4 x i32> @lshr_v4i32(<4 x i32> %z, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: lshr_v4i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vneg.s32 q2, q2
+; CHECK-NEXT:    vpt.i32 eq, q0, zr
+; CHECK-NEXT:    vshlt.u32 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <4 x i32> %z, zeroinitializer
+  %a = lshr <4 x i32> %x, %y
+  %b = select <4 x i1> %c, <4 x i32> %a, <4 x i32> %z
+  ret <4 x i32> %b
+}
+
+define arm_aapcs_vfpcc <8 x i16> @lshr_v8i16(<8 x i16> %z, <8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: lshr_v8i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vneg.s16 q2, q2
+; CHECK-NEXT:    vpt.i16 eq, q0, zr
+; CHECK-NEXT:    vshlt.u16 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <8 x i16> %z, zeroinitializer
+  %a = lshr <8 x i16> %x, %y
+  %b = select <8 x i1> %c, <8 x i16> %a, <8 x i16> %z
+  ret <8 x i16> %b
+}
+
+define arm_aapcs_vfpcc <16 x i8> @lshr_v16i8(<16 x i8> %z, <16 x i8> %x, <16 x i8> %y) {
+; CHECK-LABEL: lshr_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vneg.s8 q2, q2
+; CHECK-NEXT:    vpt.i8 eq, q0, zr
+; CHECK-NEXT:    vshlt.u8 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <16 x i8> %z, zeroinitializer
+  %a = lshr <16 x i8> %x, %y
+  %b = select <16 x i1> %c, <16 x i8> %a, <16 x i8> %z
+  ret <16 x i8> %b
+}
+
 define arm_aapcs_vfpcc <4 x i32> @andnot_v4i32(<4 x i32> %z, <4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: andnot_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
@@ -393,6 +516,56 @@ define arm_aapcs_vfpcc <8 x half> @fmul_v8f16(<8 x half> %z, <8 x half> %x, <8 x
 entry:
   %c = fcmp oeq <8 x half> %z, zeroinitializer
   %a = fmul <8 x half> %x, %y
+  %b = select <8 x i1> %c, <8 x half> %a, <8 x half> %z
+  ret <8 x half> %b
+}
+
+define arm_aapcs_vfpcc <4 x float> @fdiv_v4f32(<4 x float> %z, <4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: fdiv_v4f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vdiv.f32 s7, s7, s11
+; CHECK-NEXT:    vcmp.f32 eq, q0, zr
+; CHECK-NEXT:    vdiv.f32 s6, s6, s10
+; CHECK-NEXT:    vdiv.f32 s5, s5, s9
+; CHECK-NEXT:    vdiv.f32 s4, s4, s8
+; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %c = fcmp oeq <4 x float> %z, zeroinitializer
+  %a = fdiv <4 x float> %x, %y
+  %b = select <4 x i1> %c, <4 x float> %a, <4 x float> %z
+  ret <4 x float> %b
+}
+
+define arm_aapcs_vfpcc <8 x half> @fdiv_v8f16(<8 x half> %z, <8 x half> %x, <8 x half> %y) {
+; CHECK-LABEL: fdiv_v8f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmovx.f16 s14, s4
+; CHECK-NEXT:    vmovx.f16 s12, s8
+; CHECK-NEXT:    vdiv.f16 s4, s4, s8
+; CHECK-NEXT:    vdiv.f16 s12, s14, s12
+; CHECK-NEXT:    vins.f16 s4, s12
+; CHECK-NEXT:    vmovx.f16 s12, s5
+; CHECK-NEXT:    vmovx.f16 s8, s9
+; CHECK-NEXT:    vdiv.f16 s5, s5, s9
+; CHECK-NEXT:    vdiv.f16 s8, s12, s8
+; CHECK-NEXT:    vmovx.f16 s12, s6
+; CHECK-NEXT:    vins.f16 s5, s8
+; CHECK-NEXT:    vmovx.f16 s8, s10
+; CHECK-NEXT:    vdiv.f16 s6, s6, s10
+; CHECK-NEXT:    vdiv.f16 s8, s12, s8
+; CHECK-NEXT:    vins.f16 s6, s8
+; CHECK-NEXT:    vmovx.f16 s10, s7
+; CHECK-NEXT:    vmovx.f16 s8, s11
+; CHECK-NEXT:    vdiv.f16 s7, s7, s11
+; CHECK-NEXT:    vdiv.f16 s8, s10, s8
+; CHECK-NEXT:    vcmp.f16 eq, q0, zr
+; CHECK-NEXT:    vins.f16 s7, s8
+; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %c = fcmp oeq <8 x half> %z, zeroinitializer
+  %a = fdiv <8 x half> %x, %y
   %b = select <8 x i1> %c, <8 x half> %a, <8 x half> %z
   ret <8 x half> %b
 }

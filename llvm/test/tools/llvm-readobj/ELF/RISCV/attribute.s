@@ -17,10 +17,10 @@
 # CHECK-OBJ-NEXT: TagName: stack_align
 # CHECK-OBJ-NEXT: Description: Stack alignment is 16-bytes
 
-.attribute  Tag_arch, "rv32i2p0_m2p0_a2p0_c2p0"
+.attribute  Tag_arch, "rv32i2p1_m2p0_a2p1_c2p0"
 # CHECK-OBJ:      Tag: 5
 # CHECK-OBJ-NEXT: TagName: arch
-# CHECK-OBJ-NEXT: Value: rv32i2p0_m2p0_a2p0_c2p0
+# CHECK-OBJ-NEXT: Value: rv32i2p1_m2p0_a2p1_c2p0
 
 .attribute  Tag_unaligned_access, 0
 # CHECK-OBJ:      Tag: 6

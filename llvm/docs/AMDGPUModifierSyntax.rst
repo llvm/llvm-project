@@ -14,7 +14,7 @@ The following notation is used throughout this document:
     Notation            Description
     =================== =============================================================
     {0..N}              Any integer value in the range from 0 to N (inclusive).
-    <x>                 Syntax and meaning of *x* is explained elsewhere.
+    <x>                 Syntax and meaning of *x* are explained elsewhere.
     =================== =============================================================
 
 .. _amdgpu_syn_modifiers:
@@ -30,7 +30,7 @@ DS Modifiers
 offset0
 ~~~~~~~
 
-Specifies first 8-bit offset, in bytes. The default value is 0.
+Specifies the first 8-bit offset, in bytes. The default value is 0.
 
 Used with DS instructions that expect two addresses.
 
@@ -55,7 +55,7 @@ Examples:
 offset1
 ~~~~~~~
 
-Specifies second 8-bit offset, in bytes. The default value is 0.
+Specifies the second 8-bit offset, in bytes. The default value is 0.
 
 Used with DS instructions that expect two addresses.
 
@@ -105,10 +105,8 @@ Examples:
 swizzle pattern
 ~~~~~~~~~~~~~~~
 
-This is a special modifier which may be used with *ds_swizzle_b32* instruction only.
+This is a special modifier that may be used with *ds_swizzle_b32* instruction only.
 It specifies a swizzle pattern in numeric or symbolic form. The default value is 0.
-
-See AMD documentation for more information.
 
     ======================================================= ===========================================================
     Syntax                                                  Description
@@ -122,7 +120,7 @@ See AMD documentation for more information.
                                                             The pattern converts a 5-bit lane *id* to another
                                                             lane *id* with which the lane interacts.
 
-                                                            *mask* is a 5 character sequence which
+                                                            The *mask* is a 5-character sequence which
                                                             specifies how to transform the bits of the
                                                             lane *id*.
 
@@ -145,7 +143,7 @@ See AMD documentation for more information.
                                                             size and must be equal to 2, 4, 8, 16 or 32.
 
                                                             The second numeric parameter is an index of the
-                                                            lane being broadcasted.
+                                                            lane being broadcast.
 
                                                             The index must not exceed group size.
     offset:swizzle(SWAP,{1..16})                            Specifies a swap mode.
@@ -157,7 +155,8 @@ See AMD documentation for more information.
                                                             Reverses the lanes for groups of 2, 4, 8, 16 or 32 lanes.
     ======================================================= ===========================================================
 
-Note: numeric values may be specified as either :ref:`integer numbers<amdgpu_synid_integer_number>` or
+Note: numeric values may be specified as either
+:ref:`integer numbers<amdgpu_synid_integer_number>` or
 :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
 
 Examples:
@@ -195,7 +194,7 @@ done
 ~~~~
 
 Specifies if this is the last export from the shader to the target. By default,
-*exp* instruction does not finish an export sequence.
+an *export* instruction does not finish an export sequence.
 
     ======================================== ================================================
     Syntax                                   Description
@@ -208,12 +207,12 @@ Specifies if this is the last export from the shader to the target. By default,
 compr
 ~~~~~
 
-Indicates if the data are compressed (data are not compressed by default).
+Indicates if the data is compressed (data is not compressed by default).
 
     ======================================== ================================================
     Syntax                                   Description
     ======================================== ================================================
-    compr                                    Data are compressed.
+    compr                                    Data is compressed.
     ======================================== ================================================
 
 .. _amdgpu_synid_vm:
@@ -221,12 +220,27 @@ Indicates if the data are compressed (data are not compressed by default).
 vm
 ~~
 
-Specifies valid mask flag state (off by default).
+Specifies if the :ref:`exec<amdgpu_synid_exec>` mask is valid for this *export* instruction
+(the mask is not valid by default).
 
     ======================================== ================================================
     Syntax                                   Description
     ======================================== ================================================
-    vm                                       Set valid mask flag.
+    vm                                       Set the flag indicating a valid
+                                             :ref:`exec<amdgpu_synid_exec>` mask.
+    ======================================== ================================================
+
+.. _amdgpu_synid_row_en:
+
+row_en
+~~~~~~
+
+Specifies whether to export one row or multiple rows of data.
+
+    ======================================== ================================================
+    Syntax                                   Description
+    ======================================== ================================================
+    row_en                                   Export multiple rows using row index from M0.
     ======================================== ================================================
 
 FLAT Modifiers
@@ -238,8 +252,6 @@ offset12
 ~~~~~~~~
 
 Specifies an immediate unsigned 12-bit offset, in bytes. The default value is 0.
-
-Cannot be used with *global/scratch* opcodes. GFX9 only.
 
     ================= ====================================================================
     Syntax            Description
@@ -262,8 +274,6 @@ offset13s
 ~~~~~~~~~
 
 Specifies an immediate signed 13-bit offset, in bytes. The default value is 0.
-
-Can be used with *global/scratch* opcodes only. GFX9 only.
 
     ===================== ====================================================================
     Syntax                Description
@@ -288,10 +298,6 @@ offset12s
 
 Specifies an immediate signed 12-bit offset, in bytes. The default value is 0.
 
-Can be used with *global/scratch* opcodes only.
-
-GFX10 only.
-
     ===================== ====================================================================
     Syntax                Description
     ===================== ====================================================================
@@ -315,10 +321,6 @@ offset11
 
 Specifies an immediate unsigned 11-bit offset, in bytes. The default value is 0.
 
-Cannot be used with *global/scratch* opcodes.
-
-GFX10 only.
-
     ================= ====================================================================
     Syntax            Description
     ================= ====================================================================
@@ -337,7 +339,7 @@ Examples:
 dlc
 ~~~
 
-See a description :ref:`here<amdgpu_synid_dlc>`. GFX10 only.
+See a description :ref:`here<amdgpu_synid_dlc>`.
 
 glc
 ~~~
@@ -347,7 +349,7 @@ See a description :ref:`here<amdgpu_synid_glc>`.
 lds
 ~~~
 
-See a description :ref:`here<amdgpu_synid_lds>`. GFX10 only.
+See a description :ref:`here<amdgpu_synid_lds>`.
 
 slc
 ~~~
@@ -387,8 +389,8 @@ MIMG Modifiers
 dmask
 ~~~~~
 
-Specifies which channels (image components) are used by the operation. By default, no channels
-are used.
+Specifies which channels (image components) are used by the operation.
+By default, no channels are used.
 
     =============== ====================================================================
     Syntax          Description
@@ -399,11 +401,11 @@ are used.
 
                     Each bit corresponds to one of 4 image components (RGBA).
 
-                    If the specified bit value is 0, the component is not used,
-                    value 1 means that the component is used.
+                    If the specified bit value is 0, the image component is not used,
+                    while value 1 means that the component is used.
     =============== ====================================================================
 
-This modifier has some limitations depending on instruction kind:
+This modifier has some limitations depending on the instruction kind:
 
     =================================================== ========================
     Instruction Kind                                    Valid dmask Values
@@ -413,6 +415,7 @@ This modifier has some limitations depending on instruction kind:
     64-bit atomic *cmpswap*                             0xF
     64-bit atomic instructions except for *cmpswap*     0x3
     *gather4*                                           0x1, 0x2, 0x4, 0x8
+    GFX11+ *msaa_load*                                  0x1, 0x2, 0x4, 0x8
     Other instructions                                  any value
     =================================================== ========================
 
@@ -434,7 +437,7 @@ Specifies whether the address is normalized or not (the address is normalized by
     ======================== ========================================
     Syntax                   Description
     ======================== ========================================
-    unorm                    Force the address to be unnormalized.
+    unorm                    Force the address to be not normalized.
     ======================== ========================================
 
 glc
@@ -454,15 +457,14 @@ r128
 
 Specifies texture resource size. The default size is 256 bits.
 
-GFX7, GFX8 and GFX10 only.
-
     =================== ================================================
     Syntax              Description
     =================== ================================================
     r128                Specifies 128 bits texture resource size.
     =================== ================================================
 
-.. WARNING:: Using this modifier should decrease *rsrc* operand size from 8 to 4 dwords, but assembler does not currently support this feature.
+.. WARNING:: Using this modifier shall decrease *rsrc* operand size from 8 to 4 dwords, \
+             but assembler does not currently support this feature.
 
 tfe
 ~~~
@@ -487,12 +489,12 @@ Specifies LOD warning status (LOD warning is disabled by default).
 da
 ~~
 
-Specifies if an array index must be sent to TA. By default, array index is not sent.
+Specifies if an array index must be sent to TA. By default, the array index is not sent.
 
     ======================================== ================================================
     Syntax                                   Description
     ======================================== ================================================
-    da                                       Send an array-index to TA.
+    da                                       Send an array index to TA.
     ======================================== ================================================
 
 .. _amdgpu_synid_d16:
@@ -500,7 +502,7 @@ Specifies if an array index must be sent to TA. By default, array index is not s
 d16
 ~~~
 
-Specifies data size: 16 or 32 bits (32 bits by default). Not supported by GFX7.
+Specifies data size: 16 or 32 bits (32 bits by default).
 
     ======================================== ================================================
     Syntax                                   Description
@@ -511,12 +513,12 @@ Specifies data size: 16 or 32 bits (32 bits by default). Not supported by GFX7.
                                              format before storing it in VGPRs.
 
                                              For stores, convert 16-bit data in VGPRs to
-                                             32 bits before going to memory.
+                                             32 bits before writing the values to memory.
 
                                              Note that GFX8.0 does not support data packing.
                                              Each 16-bit data element occupies 1 VGPR.
 
-                                             GFX8.1, GFX9 and GFX10 support data packing.
+                                             GFX8.1 and GFX9+ support data packing.
                                              Each pair of 16-bit data elements
                                              occupies 1 VGPR.
     ======================================== ================================================
@@ -526,8 +528,7 @@ Specifies data size: 16 or 32 bits (32 bits by default). Not supported by GFX7.
 a16
 ~~~
 
-Specifies size of image address components: 16 or 32 bits (32 bits by default).
-GFX9 and GFX10 only.
+Specifies the size of image address components: 16 or 32 bits (32 bits by default).
 
     ======================================== ================================================
     Syntax                                   Description
@@ -541,8 +542,6 @@ dim
 ~~~
 
 Specifies surface dimension. This is a mandatory modifier. There is no default value.
-
-GFX10 only.
 
     =============================== =========================================================
     Syntax                          Description
@@ -576,7 +575,7 @@ for compatibility with SP3 assembler:
 dlc
 ~~~
 
-See a description :ref:`here<amdgpu_synid_dlc>`. GFX10 only.
+See a description :ref:`here<amdgpu_synid_dlc>`.
 
 Miscellaneous Modifiers
 -----------------------
@@ -587,10 +586,8 @@ dlc
 ~~~
 
 Controls device level cache policy for memory operations. Used for synchronization.
-When specified, forces operation to bypass device level cache making the operation device
+When specified, forces operation to bypass device level cache, making the operation device
 level coherent. By default, instructions use device level cache.
-
-GFX10 only.
 
     ======================================== ================================================
     Syntax                                   Description
@@ -603,10 +600,11 @@ GFX10 only.
 glc
 ~~~
 
-This modifier has different meaning for loads, stores, and atomic operations.
-The default value is off (0).
+For atomic opcodes, this modifier indicates that the instruction returns the value from memory
+before the operation. For other opcodes, it is used together with :ref:`slc<amdgpu_synid_slc>`
+to specify cache policy.
 
-See AMD documentation for details.
+The default value is off (0).
 
     ======================================== ================================================
     Syntax                                   Description
@@ -624,7 +622,7 @@ Specifies where to store the result: VGPRs or LDS (VGPRs by default).
     ======================================== ===========================
     Syntax                                   Description
     ======================================== ===========================
-    lds                                      Store result in LDS.
+    lds                                      Store the result in LDS.
     ======================================== ===========================
 
 .. _amdgpu_synid_nv:
@@ -632,14 +630,13 @@ Specifies where to store the result: VGPRs or LDS (VGPRs by default).
 nv
 ~~
 
-Specifies if instruction is operating on non-volatile memory. By default, memory is volatile.
-
-GFX9 only.
+Specifies if the instruction is operating on non-volatile memory.
+By default, memory is volatile.
 
     ======================================== ================================================
     Syntax                                   Description
     ======================================== ================================================
-    nv                                       Indicates that instruction operates on
+    nv                                       Indicates that the instruction operates on
                                              non-volatile memory.
     ======================================== ================================================
 
@@ -648,9 +645,7 @@ GFX9 only.
 slc
 ~~~
 
-Specifies cache policy. The default value is off (0).
-
-See AMD documentation for details.
+Controls behavior of L2 cache. The default value is off (0).
 
     ======================================== ================================================
     Syntax                                   Description
@@ -665,8 +660,6 @@ tfe
 
 Controls access to partially resident textures. The default value is off (0).
 
-See AMD documentation for details.
-
     ======================================== ================================================
     Syntax                                   Description
     ======================================== ================================================
@@ -678,9 +671,9 @@ See AMD documentation for details.
 sc0
 ~~~
 
-For atomics, sc0 indicates that the atomic operation returns a value.
-For other opcodes is is used together with :ref:`sc1<amdgpu_synid_sc1>` to specify cache
-policy. See AMD documentation for details.
+For atomic opcodes, this modifier indicates that the instruction returns the value from memory
+before the operation. For other opcodes, it is used together with :ref:`sc1<amdgpu_synid_sc1>`
+to specify cache policy.
 
     ======================================== ================================================
     Syntax                                   Description
@@ -723,9 +716,9 @@ MUBUF/MTBUF Modifiers
 idxen
 ~~~~~
 
-Specifies whether address components include an index. By default, no components are used.
+Specifies whether address components include an index. By default, the index is not used.
 
-Can be used together with :ref:`offen<amdgpu_synid_offen>`.
+May be used together with :ref:`offen<amdgpu_synid_offen>`.
 
 Cannot be used with :ref:`addr64<amdgpu_synid_addr64>`.
 
@@ -740,9 +733,9 @@ Cannot be used with :ref:`addr64<amdgpu_synid_addr64>`.
 offen
 ~~~~~
 
-Specifies whether address components include an offset. By default, no components are used.
+Specifies whether address components include an offset. By default, the offset is not used.
 
-Can be used together with :ref:`idxen<amdgpu_synid_idxen>`.
+May be used together with :ref:`idxen<amdgpu_synid_idxen>`.
 
 Cannot be used with :ref:`addr64<amdgpu_synid_addr64>`.
 
@@ -759,7 +752,7 @@ addr64
 
 Specifies whether a 64-bit address is used. By default, no address is used.
 
-GFX7 only. Cannot be used with :ref:`offen<amdgpu_synid_offen>` and
+Cannot be used with :ref:`offen<amdgpu_synid_offen>` and
 :ref:`idxen<amdgpu_synid_idxen>` modifiers.
 
     ======================================== ================================================
@@ -808,7 +801,7 @@ See a description :ref:`here<amdgpu_synid_lds>`.
 dlc
 ~~~
 
-See a description :ref:`here<amdgpu_synid_dlc>`. GFX10 only.
+See a description :ref:`here<amdgpu_synid_dlc>`.
 
 tfe
 ~~~
@@ -827,15 +820,15 @@ The default data format is BUF_DATA_FORMAT_8.
     ========================================= ===============================================================
     Syntax                                    Description
     ========================================= ===============================================================
-    format:{0..127}                           Use format specified as either an
+    format:{0..127}                           Use a format specified as either an
                                               :ref:`integer number<amdgpu_synid_integer_number>` or an
                                               :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
     format:[<data format>]                    Use the specified data format and
                                               default numeric format.
     format:[<numeric format>]                 Use the specified numeric format and
                                               default data format.
-    format:[<data format>, <numeric format>]  Use the specified data and numeric formats.
-    format:[<numeric format>, <data format>]  Use the specified data and numeric formats.
+    format:[<data format>,<numeric format>]   Use the specified data and numeric formats.
+    format:[<numeric format>,<data format>]   Use the specified data and numeric formats.
     ========================================= ===============================================================
 
 .. _amdgpu_synid_format_data:
@@ -846,7 +839,7 @@ Supported data formats are defined in the following table:
     Syntax                                    Note
     ========================================= ===============================
     BUF_DATA_FORMAT_INVALID
-    BUF_DATA_FORMAT_8                         Default value.
+    BUF_DATA_FORMAT_8                         The default value.
     BUF_DATA_FORMAT_16
     BUF_DATA_FORMAT_8_8
     BUF_DATA_FORMAT_32
@@ -870,7 +863,7 @@ Supported numeric formats are defined below:
     ========================================= ===============================
     Syntax                                    Note
     ========================================= ===============================
-    BUF_NUM_FORMAT_UNORM                      Default value.
+    BUF_NUM_FORMAT_UNORM                      The default value.
     BUF_NUM_FORMAT_SNORM
     BUF_NUM_FORMAT_USCALED
     BUF_NUM_FORMAT_SSCALED
@@ -898,30 +891,29 @@ ufmt
 
 Specifies a unified format used by the operation.
 The default format is BUF_FMT_8_UNORM.
-GFX10 only.
 
     ========================================= ===============================================================
     Syntax                                    Description
     ========================================= ===============================================================
-    format:{0..127}                           Use unified format specified as either an
+    format:{0..127}                           Use a unified format specified as either an
                                               :ref:`integer number<amdgpu_synid_integer_number>` or an
                                               :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
-                                              Note that unified format numbers are not compatible with
+                                              Note that unified format numbers are incompatible with
                                               format numbers used for pre-GFX10 ISA.
     format:[<unified format>]                 Use the specified unified format.
     ========================================= ===============================================================
 
 Unified format is a replacement for :ref:`data<amdgpu_synid_format_data>`
 and :ref:`numeric<amdgpu_synid_format_num>` formats. For compatibility with older ISA,
-:ref:`syntax with data and numeric formats<amdgpu_synid_fmt>` is still accepted
+:ref:`the syntax with data and numeric formats<amdgpu_synid_fmt>` is still accepted
 provided that the combination of formats can be mapped to a unified format.
 
 Supported unified formats and equivalent combinations of data and numeric formats
 are defined below:
 
-    ============================== ============================== =============================
-    Syntax                         Equivalent Data Format         Equivalent Numeric Format
-    ============================== ============================== =============================
+    ============================== ============================== ============================= ============
+    Unified Format Syntax          Equivalent Data Format         Equivalent Numeric Format     Note
+    ============================== ============================== ============================= ============
     BUF_FMT_INVALID                BUF_DATA_FORMAT_INVALID        BUF_NUM_FORMAT_UNORM
 
     BUF_FMT_8_UNORM                BUF_DATA_FORMAT_8              BUF_NUM_FORMAT_UNORM
@@ -958,26 +950,26 @@ are defined below:
     BUF_FMT_16_16_SINT             BUF_DATA_FORMAT_16_16          BUF_NUM_FORMAT_SINT
     BUF_FMT_16_16_FLOAT            BUF_DATA_FORMAT_16_16          BUF_NUM_FORMAT_FLOAT
 
-    BUF_FMT_10_11_11_UNORM         BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_UNORM
-    BUF_FMT_10_11_11_SNORM         BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SNORM
-    BUF_FMT_10_11_11_USCALED       BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_USCALED
-    BUF_FMT_10_11_11_SSCALED       BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SSCALED
-    BUF_FMT_10_11_11_UINT          BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_UINT
-    BUF_FMT_10_11_11_SINT          BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SINT
+    BUF_FMT_10_11_11_UNORM         BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_UNORM          GFX10 only
+    BUF_FMT_10_11_11_SNORM         BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SNORM          GFX10 only
+    BUF_FMT_10_11_11_USCALED       BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_USCALED        GFX10 only
+    BUF_FMT_10_11_11_SSCALED       BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SSCALED        GFX10 only
+    BUF_FMT_10_11_11_UINT          BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_UINT           GFX10 only
+    BUF_FMT_10_11_11_SINT          BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SINT           GFX10 only
     BUF_FMT_10_11_11_FLOAT         BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_FLOAT
 
-    BUF_FMT_11_11_10_UNORM         BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_UNORM
-    BUF_FMT_11_11_10_SNORM         BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SNORM
-    BUF_FMT_11_11_10_USCALED       BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_USCALED
-    BUF_FMT_11_11_10_SSCALED       BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SSCALED
-    BUF_FMT_11_11_10_UINT          BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_UINT
-    BUF_FMT_11_11_10_SINT          BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SINT
+    BUF_FMT_11_11_10_UNORM         BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_UNORM          GFX10 only
+    BUF_FMT_11_11_10_SNORM         BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SNORM          GFX10 only
+    BUF_FMT_11_11_10_USCALED       BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_USCALED        GFX10 only
+    BUF_FMT_11_11_10_SSCALED       BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SSCALED        GFX10 only
+    BUF_FMT_11_11_10_UINT          BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_UINT           GFX10 only
+    BUF_FMT_11_11_10_SINT          BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SINT           GFX10 only
     BUF_FMT_11_11_10_FLOAT         BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_FLOAT
 
     BUF_FMT_10_10_10_2_UNORM       BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_UNORM
     BUF_FMT_10_10_10_2_SNORM       BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_SNORM
-    BUF_FMT_10_10_10_2_USCALED     BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_USCALED
-    BUF_FMT_10_10_10_2_SSCALED     BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_SSCALED
+    BUF_FMT_10_10_10_2_USCALED     BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_USCALED        GFX10 only
+    BUF_FMT_10_10_10_2_SSCALED     BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_SSCALED        GFX10 only
     BUF_FMT_10_10_10_2_UINT        BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_UINT
     BUF_FMT_10_10_10_2_SINT        BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_SINT
 
@@ -1013,7 +1005,7 @@ are defined below:
     BUF_FMT_32_32_32_32_UINT       BUF_DATA_FORMAT_32_32_32_32    BUF_NUM_FORMAT_UINT
     BUF_FMT_32_32_32_32_SINT       BUF_DATA_FORMAT_32_32_32_32    BUF_NUM_FORMAT_SINT
     BUF_FMT_32_32_32_32_FLOAT      BUF_DATA_FORMAT_32_32_32_32    BUF_NUM_FORMAT_FLOAT
-    ============================== ============================== =============================
+    ============================== ============================== ============================= ============
 
 Examples:
 
@@ -1033,12 +1025,12 @@ See a description :ref:`here<amdgpu_synid_glc>`.
 nv
 ~~
 
-See a description :ref:`here<amdgpu_synid_nv>`. GFX9 only.
+See a description :ref:`here<amdgpu_synid_nv>`.
 
 dlc
 ~~~
 
-See a description :ref:`here<amdgpu_synid_dlc>`. GFX10 only.
+See a description :ref:`here<amdgpu_synid_dlc>`.
 
 .. _amdgpu_synid_smem_offset20u:
 
@@ -1086,8 +1078,8 @@ Examples:
   offset:0xfffff
   offset:-x
 
-VINTRP Modifiers
-----------------
+VINTRP/VINTERP/LDSDIR Modifiers
+-------------------------------
 
 .. _amdgpu_synid_high:
 
@@ -1095,18 +1087,56 @@ high
 ~~~~
 
 Specifies which half of the LDS word to use. Low half of LDS word is used by default.
-GFX9 and GFX10 only.
 
     ======================================== ================================
     Syntax                                   Description
     ======================================== ================================
-    high                                     Use high half of LDS word.
+    high                                     Use the high half of LDS word.
     ======================================== ================================
+
+neg
+~~~
+
+See a description :ref:`here<amdgpu_synid_neg>`.
+
+.. _amdgpu_synid_wait_exp:
+
+wait_exp
+~~~~~~~~
+
+Specifies a wait on the EXP counter before issuing the current instruction.
+The counter must be less than or equal to this value before the instruction is issued.
+If set to 7, no wait is performed.
+
+The default value is zero. This is a safe value, but it may be suboptimal.
+
+    ================ ======================================================
+    Syntax           Description
+    ================ ======================================================
+    wait_exp:{0..7}  An additional wait on the EXP counter before
+                     issuing this instruction.
+    ================ ======================================================
+
+.. _amdgpu_synid_wait_vdst:
+
+wait_vdst
+~~~~~~~~~
+
+Specifies a wait on the VA_VDST counter before issuing the current instruction.
+The counter must be less than or equal to this value before the instruction is issued.
+If set to 15, no wait is performed.
+
+The default value is zero. This is a safe value, but it may be suboptimal.
+
+    ================== ======================================================
+    Syntax             Description
+    ================== ======================================================
+    wait_vdst:{0..15}  An additional wait on the VA_VDST counter before
+                       issuing this instruction.
+    ================== ======================================================
 
 DPP8 Modifiers
 --------------
-
-GFX10 only.
 
 .. _amdgpu_synid_dpp8_sel:
 
@@ -1116,11 +1146,9 @@ dpp8_sel
 Selects which lanes to pull data from, within a group of 8 lanes. This is a mandatory modifier.
 There is no default value.
 
-GFX10 only.
-
 The *dpp8_sel* modifier must specify exactly 8 values.
-First value selects which lane to read from to supply data into lane 0.
-Second value controls lane 1 and so on.
+The first value selects which lane to read from to supply data into lane 0.
+The second value controls lane 1 and so on.
 
 Each value may be specified as either
 an :ref:`integer number<amdgpu_synid_integer_number>` or
@@ -1148,42 +1176,37 @@ Controls interaction with inactive lanes for *dpp8* instructions. The default va
 
 Note: *inactive* lanes are those whose :ref:`exec<amdgpu_synid_exec>` mask bit is zero.
 
-GFX10 only.
-
     ==================================== =====================================================
     Syntax                               Description
     ==================================== =====================================================
     fi:0                                 Fetch zero when accessing data from inactive lanes.
-    fi:1                                 Fetch pre-exist values from inactive lanes.
+    fi:1                                 Fetch pre-existing values from inactive lanes.
     ==================================== =====================================================
 
-Note: numeric values may be specified as either :ref:`integer numbers<amdgpu_synid_integer_number>` or
+Note: numeric values may be specified as either
+:ref:`integer numbers<amdgpu_synid_integer_number>` or
 :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
 
 DPP Modifiers
 -------------
-
-GFX8, GFX9 and GFX10 only.
 
 .. _amdgpu_synid_dpp_ctrl:
 
 dpp_ctrl
 ~~~~~~~~
 
-Specifies how data are shared between threads. This is a mandatory modifier.
+Specifies how data is shared between threads. This is a mandatory modifier.
 There is no default value.
-
-GFX8 and GFX9 only. Use :ref:`dpp16_ctrl<amdgpu_synid_dpp16_ctrl>` for GFX10.
 
 Note: the lanes of a wavefront are organized in four *rows* and four *banks*.
 
-    ======================================== ================================================
+    ======================================== ========================================================
     Syntax                                   Description
-    ======================================== ================================================
+    ======================================== ========================================================
     quad_perm:[{0..3},{0..3},{0..3},{0..3}]  Full permute of 4 threads.
     row_mirror                               Mirror threads within row.
     row_half_mirror                          Mirror threads within 1/2 row (8 threads).
-    row_bcast:15                             Broadcast 15th thread of each row to next row.
+    row_bcast:15                             Broadcast the 15th thread of each row to the next row.
     row_bcast:31                             Broadcast thread 31 to rows 2 and 3.
     wave_shl:1                               Wavefront left shift by 1 thread.
     wave_rol:1                               Wavefront left rotate by 1 thread.
@@ -1192,7 +1215,7 @@ Note: the lanes of a wavefront are organized in four *rows* and four *banks*.
     row_shl:{1..15}                          Row shift left by 1-15 threads.
     row_shr:{1..15}                          Row shift right by 1-15 threads.
     row_ror:{1..15}                          Row rotate right by 1-15 threads.
-    ======================================== ================================================
+    ======================================== ========================================================
 
 Note: numeric values may be specified as either
 :ref:`integer numbers<amdgpu_synid_integer_number>` or
@@ -1210,27 +1233,25 @@ Examples:
 dpp16_ctrl
 ~~~~~~~~~~
 
-Specifies how data are shared between threads. This is a mandatory modifier.
+Specifies how data is shared between threads. This is a mandatory modifier.
 There is no default value.
-
-GFX10 only. Use :ref:`dpp_ctrl<amdgpu_synid_dpp_ctrl>` for GFX8 and GFX9.
 
 Note: the lanes of a wavefront are organized in four *rows* and four *banks*.
 (There are only two rows in *wave32* mode.)
 
-    ======================================== ====================================================
+    ======================================== =======================================================
     Syntax                                   Description
-    ======================================== ====================================================
+    ======================================== =======================================================
     quad_perm:[{0..3},{0..3},{0..3},{0..3}]  Full permute of 4 threads.
     row_mirror                               Mirror threads within row.
     row_half_mirror                          Mirror threads within 1/2 row (8 threads).
     row_share:{0..15}                        Share the value from the specified lane with other
                                              lanes in the row.
-    row_xmask:{0..15}                        Fetch from XOR(current lane id, specified lane id).
+    row_xmask:{0..15}                        Fetch from XOR(<current lane id>,<specified lane id>).
     row_shl:{1..15}                          Row shift left by 1-15 threads.
     row_shr:{1..15}                          Row shift right by 1-15 threads.
     row_ror:{1..15}                          Row rotate right by 1-15 threads.
-    ======================================== ====================================================
+    ======================================== =======================================================
 
 Note: numeric values may be specified as either
 :ref:`integer numbers<amdgpu_synid_integer_number>` or
@@ -1248,20 +1269,18 @@ Examples:
 dpp32_ctrl
 ~~~~~~~~~~
 
-Specifies how data are shared between threads. This is a mandatory modifier.
+Specifies how data is shared between threads. This is a mandatory modifier.
 There is no default value.
-
-May be used only with GFX90A 32-bit instructions.
 
 Note: the lanes of a wavefront are organized in four *rows* and four *banks*.
 
-    ======================================== ==================================================
+    ======================================== =========================================================
     Syntax                                   Description
-    ======================================== ==================================================
+    ======================================== =========================================================
     quad_perm:[{0..3},{0..3},{0..3},{0..3}]  Full permute of 4 threads.
     row_mirror                               Mirror threads within row.
     row_half_mirror                          Mirror threads within 1/2 row (8 threads).
-    row_bcast:15                             Broadcast 15th thread of each row to next row.
+    row_bcast:15                             Broadcast the 15th thread of each row to the next row.
     row_bcast:31                             Broadcast thread 31 to rows 2 and 3.
     wave_shl:1                               Wavefront left shift by 1 thread.
     wave_rol:1                               Wavefront left rotate by 1 thread.
@@ -1271,7 +1290,7 @@ Note: the lanes of a wavefront are organized in four *rows* and four *banks*.
     row_shr:{1..15}                          Row shift right by 1-15 threads.
     row_ror:{1..15}                          Row rotate right by 1-15 threads.
     row_newbcast:{1..15}                     Broadcast a thread within a row to the whole row.
-    ======================================== ==================================================
+    ======================================== =========================================================
 
 Note: numeric values may be specified as either
 :ref:`integer numbers<amdgpu_synid_integer_number>` or
@@ -1290,10 +1309,8 @@ Examples:
 dpp64_ctrl
 ~~~~~~~~~~
 
-Specifies how data are shared between threads. This is a mandatory modifier.
+Specifies how data is shared between threads. This is a mandatory modifier.
 There is no default value.
-
-May be used only with GFX90A 64-bit instructions.
 
 Note: the lanes of a wavefront are organized in four *rows* and four *banks*.
 
@@ -1331,10 +1348,10 @@ Note: the lanes of a wavefront are organized in four *rows* and four *banks*.
                       :ref:`integer number <amdgpu_synid_integer_number>`
                       or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 
-                      Each of 4 bits in the mask controls one row
+                      Each of the 4 bits in the mask controls one row
                       (0 - disabled, 1 - enabled).
 
-                      In *wave32* mode the values should be limited to 0..7.
+                      In *wave32* mode, the values shall be limited to {0..7}.
     ================= ====================================================================
 
 Examples:
@@ -1362,7 +1379,7 @@ Note: the lanes of a wavefront are organized in four *rows* and four *banks*.
                        :ref:`integer number <amdgpu_synid_integer_number>`
                        or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 
-                       Each of 4 bits in the mask controls one bank
+                       Each of the 4 bits in the mask controls one bank
                        (0 - disabled, 1 - enabled).
     ================== ====================================================================
 
@@ -1389,7 +1406,11 @@ invalid lanes is disabled.
 
                                              Accessing data from an invalid lane will
                                              return zero.
+
+    bound_ctrl:0 (GFX11+)                    Disables data sharing with invalid lanes.
     ======================================== ================================================
+
+.. WARNING:: For historical reasons, *bound_ctrl:0* has the same meaning as *bound_ctrl:1* for older architectures.
 
 .. _amdgpu_synid_fi16:
 
@@ -1400,24 +1421,21 @@ Controls interaction with *inactive* lanes for *dpp16* instructions. The default
 
 Note: *inactive* lanes are those whose :ref:`exec<amdgpu_synid_exec>` mask bit is zero.
 
-GFX10 only.
-
     ======================================== ==================================================
     Syntax                                   Description
     ======================================== ==================================================
     fi:0                                     Interaction with inactive lanes is controlled by
                                              :ref:`bound_ctrl<amdgpu_synid_bound_ctrl>`.
 
-    fi:1                                     Fetch pre-exist values from inactive lanes.
+    fi:1                                     Fetch pre-existing values from inactive lanes.
     ======================================== ==================================================
 
-Note: numeric values may be specified as either :ref:`integer numbers<amdgpu_synid_integer_number>` or
+Note: numeric values may be specified as either
+:ref:`integer numbers<amdgpu_synid_integer_number>` or
 :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
 
 SDWA Modifiers
 --------------
-
-GFX8, GFX9 and GFX10 only.
 
 clamp
 ~~~~~
@@ -1428,8 +1446,6 @@ omod
 ~~~~
 
 See a description :ref:`here<amdgpu_synid_omod>`.
-
-GFX9 and GFX10 only.
 
 .. _amdgpu_synid_dst_sel:
 
@@ -1512,8 +1528,6 @@ SDWA Operand Modifiers
 
 Operand modifiers are not used separately. They are applied to source operands.
 
-GFX8, GFX9 and GFX10 only.
-
 abs
 ~~~
 
@@ -1529,8 +1543,7 @@ See a description :ref:`here<amdgpu_synid_neg>`.
 sext
 ~~~~
 
-Sign-extends value of a (sub-dword) operand to fill all 32 bits.
-Has no effect for 32-bit operands.
+Sign-extends the value of a (sub-dword) integer operand to fill all 32 bits.
 
 Valid for integer operands only.
 
@@ -1559,14 +1572,12 @@ Selects the low [15:0] or high [31:16] operand bits for source and destination o
 By default, low bits are used for all operands.
 
 The number of values specified with the op_sel modifier must match the number of instruction
-operands (both source and destination). First value controls src0, second value controls src1
+operands (both source and destination). The first value controls src0, the second value controls src1
 and so on, except that the last value controls destination.
 The value 0 selects the low bits, while 1 selects the high bits.
 
-Note: op_sel modifier affects 16-bit operands only. For 32-bit operands the value specified
+Note: op_sel modifier affects 16-bit operands only. For 32-bit operands, the value specified
 by op_sel must be 0.
-
-GFX9 and GFX10 only.
 
     ======================================== ============================================================
     Syntax                                   Description
@@ -1592,18 +1603,16 @@ Examples:
 dpp_op_sel
 ~~~~~~~~~~
 
-Special version of *op_sel* used for *permlane* opcodes to specify
+This is a special version of *op_sel* used for *permlane* opcodes to specify
 dpp-like mode bits - :ref:`fi<amdgpu_synid_fi16>` and
 :ref:`bound_ctrl<amdgpu_synid_bound_ctrl>`.
 
-GFX10 only.
-
-    ======================================== ============================================================
+    ======================================== =================================================================
     Syntax                                   Description
-    ======================================== ============================================================
-    op_sel:[{0..1},{0..1}]                   First bit specifies :ref:`fi<amdgpu_synid_fi16>`, second
+    ======================================== =================================================================
+    op_sel:[{0..1},{0..1}]                   The first bit specifies :ref:`fi<amdgpu_synid_fi16>`, the second
                                              bit specifies :ref:`bound_ctrl<amdgpu_synid_bound_ctrl>`.
-    ======================================== ============================================================
+    ======================================== =================================================================
 
 Note: numeric values may be specified as either
 :ref:`integer numbers<amdgpu_synid_integer_number>` or
@@ -1623,14 +1632,12 @@ clamp
 Clamp meaning depends on instruction.
 
 For *v_cmp* instructions, clamp modifier indicates that the compare signals
-if a floating point exception occurs. By default, signaling is disabled.
-Not supported by GFX7.
+if a floating-point exception occurs. By default, signaling is disabled.
 
 For integer operations, clamp modifier indicates that the result must be clamped
 to the largest and smallest representable value. By default, there is no clamping.
-Integer clamping is not supported by GFX7.
 
-For floating point operations, clamp modifier indicates that the result must be clamped
+For floating-point operations, clamp modifier indicates that the result must be clamped
 to the range [0.0, 1.0]. By default, there is no clamping.
 
 Note: clamp modifier is applied after :ref:`output modifiers<amdgpu_synid_omod>` (if any).
@@ -1647,15 +1654,11 @@ omod
 ~~~~
 
 Specifies if an output modifier must be applied to the result.
+It is assumed that the result is a floating-point number.
+
 By default, no output modifiers are applied.
 
 Note: output modifiers are applied before :ref:`clamping<amdgpu_synid_clamp>` (if any).
-
-Output modifiers are valid for f32 and f64 floating point results only.
-They must not be used with f16.
-
-Note: *v_cvt_f16_f32* is an exception. This instruction produces f16 result
-but accepts output modifiers.
 
     ======================================== ================================================
     Syntax                                   Description
@@ -1665,7 +1668,8 @@ but accepts output modifiers.
     div:2                                    Multiply the result by 0.5.
     ======================================== ================================================
 
-Note: numeric values may be specified as either :ref:`integer numbers<amdgpu_synid_integer_number>` or
+Note: numeric values may be specified as either
+:ref:`integer numbers<amdgpu_synid_integer_number>` or
 :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
 
 Examples:
@@ -1688,7 +1692,7 @@ abs
 ~~~
 
 Computes the absolute value of its operand. Must be applied before :ref:`neg<amdgpu_synid_neg>`
-(if any). Valid for floating point operands only.
+(if any). Valid for floating-point operands only.
 
     ======================================== ====================================================
     Syntax                                   Description
@@ -1698,7 +1702,7 @@ Computes the absolute value of its operand. Must be applied before :ref:`neg<amd
     ======================================== ====================================================
 
 Note: avoid using SP3 syntax with operands specified as expressions because the trailing '|'
-may be misinterpreted. Such operands should be enclosed into additional parentheses as shown
+may be misinterpreted. Such operands should be enclosed into additional parentheses, as shown
 in examples below.
 
 Examples:
@@ -1716,25 +1720,25 @@ neg
 ~~~
 
 Computes the negative value of its operand. Must be applied after :ref:`abs<amdgpu_synid_abs>`
-(if any). Valid for floating point operands only.
+(if any). Valid for floating-point operands only.
 
     ================== ====================================================
     Syntax             Description
     ================== ====================================================
     neg(<operand>)     Get the negative value of a floating-point operand.
-                       The operand may include an optional
-                       :ref:`abs<amdgpu_synid_abs>` modifier.
+                       An optional :ref:`abs<amdgpu_synid_abs>` modifier
+                       may be applied to the operand before negation.
     -<operand>         The same as above (an SP3 syntax).
     ================== ====================================================
 
 Note: SP3 syntax is supported with limitations because of a potential ambiguity.
-Currently it is allowed in the following cases:
+Currently, it is allowed in the following cases:
 
 * Before a register.
 * Before an :ref:`abs<amdgpu_synid_abs>` modifier.
 * Before an SP3 :ref:`abs<amdgpu_synid_abs>` modifier.
 
-In all other cases "-" is handled as a part of an expression that follows the sign.
+In all other cases, "-" is handled as a part of an expression that follows the sign.
 
 Examples:
 
@@ -1748,7 +1752,7 @@ Examples:
   -abs(v5)
   -\|v5|
 
-  // Operands without negate modifiers
+  // Expressions where "-" has a different meaning
   -1
   -x+y
 
@@ -1760,19 +1764,17 @@ This section describes modifiers of *regular* VOP3P instructions.
 *v_mad_mix\** and *v_fma_mix\**
 instructions use these modifiers :ref:`in a special manner<amdgpu_synid_mad_mix>`.
 
-GFX9 and GFX10 only.
-
 .. _amdgpu_synid_op_sel:
 
 op_sel
 ~~~~~~
 
-Selects the low [15:0] or high [31:16] operand bits as input to the operation
+Selects the low [15:0] or high [31:16] operand bits as input to the operation,
 which results in the lower-half of the destination.
-By default, low bits are used for all operands.
+By default, low 16 bits are used for all operands.
 
 The number of values specified by the *op_sel* modifier must match the number of source
-operands. First value controls src0, second value controls src1 and so on.
+operands. The first value controls src0, the second value controls src1 and so on.
 
 The value 0 selects the low bits, while 1 selects the high bits.
 
@@ -1800,12 +1802,12 @@ Examples:
 op_sel_hi
 ~~~~~~~~~
 
-Selects the low [15:0] or high [31:16] operand bits as input to the operation
+Selects the low [15:0] or high [31:16] operand bits as input to the operation,
 which results in the upper-half of the destination.
-By default, high bits are used for all operands.
+By default, high 16 bits are used for all operands.
 
 The number of values specified by the *op_sel_hi* modifier must match the number of source
-operands. First value controls src0, second value controls src1 and so on.
+operands. The first value controls src0, the second value controls src1 and so on.
 
 The value 0 selects the low bits, while 1 selects the high bits.
 
@@ -1833,19 +1835,19 @@ Examples:
 neg_lo
 ~~~~~~
 
-Specifies whether to change sign of operand values selected by
+Specifies whether to change the sign of operand values selected by
 :ref:`op_sel<amdgpu_synid_op_sel>`. These values are then used
-as input to the operation which results in the upper-half of the destination.
+as input to the operation, which results in the upper-half of the destination.
 
 The number of values specified by this modifier must match the number of source
-operands. First value controls src0, second value controls src1 and so on.
+operands. The first value controls src0, the second value controls src1 and so on.
 
 The value 0 indicates that the corresponding operand value is used unmodified,
-the value 1 indicates that negative value of the operand must be used.
+the value 1 indicates that the negative value of the operand must be used.
 
 By default, operand values are used unmodified.
 
-This modifier is valid for floating point operands only.
+This modifier is valid for floating-point operands only.
 
     ================================ ==================================================================
     Syntax                           Description
@@ -1873,17 +1875,17 @@ neg_hi
 
 Specifies whether to change sign of operand values selected by
 :ref:`op_sel_hi<amdgpu_synid_op_sel_hi>`. These values are then used
-as input to the operation which results in the upper-half of the destination.
+as input to the operation, which results in the upper-half of the destination.
 
 The number of values specified by this modifier must match the number of source
-operands. First value controls src0, second value controls src1 and so on.
+operands. The first value controls src0, the second value controls src1 and so on.
 
 The value 0 indicates that the corresponding operand value is used unmodified,
-the value 1 indicates that negative value of the operand must be used.
+the value 1 indicates that the negative value of the operand must be used.
 
 By default, operand values are used unmodified.
 
-This modifier is valid for floating point operands only.
+This modifier is valid for floating-point operands only.
 
     =============================== ==================================================================
     Syntax                          Description
@@ -1920,30 +1922,28 @@ in a manner different from *regular* VOP3P instructions.
 
 See a description below.
 
-GFX9 and GFX10 only.
-
 .. _amdgpu_synid_mad_mix_op_sel:
 
 m_op_sel
 ~~~~~~~~
 
-This operand has meaning only for 16-bit source operands as indicated by
+This operand has meaning only for 16-bit source operands, as indicated by
 :ref:`m_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>`.
 It specifies to select either the low [15:0] or high [31:16] operand bits
 as input to the operation.
 
 The number of values specified by the *op_sel* modifier must match the number of source
-operands. First value controls src0, second value controls src1 and so on.
+operands. The first value controls src0, the second value controls src1 and so on.
 
 The value 0 indicates the low bits, the value 1 indicates the high 16 bits.
 
 By default, low bits are used for all operands.
 
-    =============================== ================================================
+    =============================== ===================================================
     Syntax                          Description
-    =============================== ================================================
-    op_sel:[{0..1},{0..1},{0..1}]   Select location of each 16-bit source operand.
-    =============================== ================================================
+    =============================== ===================================================
+    op_sel:[{0..1},{0..1},{0..1}]   Select the location of each 16-bit source operand.
+    =============================== ===================================================
 
 Note: numeric values may be specified as either
 :ref:`integer numbers<amdgpu_synid_integer_number>` or
@@ -1964,18 +1964,18 @@ Selects the size of source operands: either 32 bits or 16 bits.
 By default, 32 bits are used for all source operands.
 
 The number of values specified by the *op_sel_hi* modifier must match the number of source
-operands. First value controls src0, second value controls src1 and so on.
+operands. The first value controls src0, the second value controls src1 and so on.
 
 The value 0 indicates 32 bits, the value 1 indicates 16 bits.
 
 The location of 16 bits in the operand may be specified by
 :ref:`m_op_sel<amdgpu_synid_mad_mix_op_sel>`.
 
-    ======================================== ====================================
+    ======================================== ========================================
     Syntax                                   Description
-    ======================================== ====================================
-    op_sel_hi:[{0..1},{0..1},{0..1}]         Select size of each source operand.
-    ======================================== ====================================
+    ======================================== ========================================
+    op_sel_hi:[{0..1},{0..1},{0..1}]         Select the size of each source operand.
+    ======================================== ========================================
 
 Note: numeric values may be specified as either
 :ref:`integer numbers<amdgpu_synid_integer_number>` or
@@ -2004,8 +2004,6 @@ See a description :ref:`here<amdgpu_synid_clamp>`.
 
 VOP3P MFMA Modifiers
 --------------------
-
-These modifiers may only be used with GFX908 and GFX90A.
 
 .. _amdgpu_synid_cbsz:
 
@@ -2065,14 +2063,12 @@ neg
 
 Indicates operands that must be negated before the operation.
 The number of values specified by this modifier must match the number of source
-operands. First value controls src0, second value controls src1 and so on.
+operands. The first value controls src0, the second value controls src1 and so on.
 
 The value 0 indicates that the corresponding operand value is used unmodified,
 the value 1 indicates that the operand value must be negated before the operation.
 
 By default, operand values are used unmodified.
-
-This modifier is valid for floating point operands only.
 
     =============================== ==================================================================
     Syntax                          Description

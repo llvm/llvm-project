@@ -317,18 +317,17 @@ end:
   ret i128 %ret
 }
 
-; We don't hoist if one op does not dominate the other,
-; but we could hoist both ops to the common predecessor block?
+; Hoist both ops to the common predecessor block.
 
 define i32 @no_domination(i1 %cmp, i32 %a, i32 %b) {
 ; CHECK-LABEL: @no_domination(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[A]], [[B]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[DIV]], [[IF]] ], [ [[REM]], [[ELSE]] ]

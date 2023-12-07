@@ -21,9 +21,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 NarrowingConversionsCheck::NarrowingConversionsCheck(StringRef Name,
                                                      ClangTidyContext *Context)
@@ -489,7 +487,7 @@ void NarrowingConversionsCheck::handleFloatingCast(const ASTContext &Context,
       // not within destination range. We convert the value to the destination
       // type and check if the resulting value is infinity.
       llvm::APFloat Tmp = Constant.getFloat();
-      bool UnusedLosesInfo;
+      bool UnusedLosesInfo = false;
       Tmp.convert(Context.getFloatTypeSemantics(ToType->desugar()),
                   llvm::APFloatBase::rmNearestTiesToEven, &UnusedLosesInfo);
       if (Tmp.isInfinity())
@@ -511,6 +509,8 @@ void NarrowingConversionsCheck::handleBinaryOperator(const ASTContext &Context,
   const BuiltinType *LhsType = getBuiltinType(Lhs);
   const BuiltinType *RhsType = getBuiltinType(Rhs);
   if (RhsType == nullptr || LhsType == nullptr)
+    return;
+  if (LhsType == RhsType)
     return;
   if (RhsType->getKind() == BuiltinType::Bool && LhsType->isSignedInteger())
     return handleBooleanToSignedIntegral(Context, SourceLoc, Lhs, Rhs);
@@ -550,6 +550,8 @@ void NarrowingConversionsCheck::handleImplicitCast(
   const Expr &Lhs = Cast;
   const Expr &Rhs = *Cast.getSubExpr();
   if (Lhs.isInstantiationDependent() || Rhs.isInstantiationDependent())
+    return;
+  if (getBuiltinType(Lhs) == getBuiltinType(Rhs))
     return;
   if (handleConditionalOperator(Context, Lhs, Rhs))
     return;
@@ -594,6 +596,4 @@ void NarrowingConversionsCheck::check(const MatchFinder::MatchResult &Result) {
     return handleImplicitCast(*Result.Context, *Cast);
   llvm_unreachable("must be binary operator or cast expression");
 }
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

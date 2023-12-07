@@ -11,51 +11,45 @@ target triple = "thumbv7-apple-ios0.0.0"
 ; CHECK-NOT: vorr
 ; CHECK-NOT: vmov
 ; CHECK: vst2
-define void @f(float* %p, i32 %c) nounwind ssp {
+define void @f(ptr %p, i32 %c) nounwind ssp {
 entry:
-  %0 = bitcast float* %p to i8*
-  %vld2 = tail call { <4 x float>, <4 x float> } @llvm.arm.neon.vld2.v4f32.p0i8(i8* %0, i32 4)
+  %vld2 = tail call { <4 x float>, <4 x float> } @llvm.arm.neon.vld2.v4f32.p0(ptr %p, i32 4)
   %vld221 = extractvalue { <4 x float>, <4 x float> } %vld2, 1
-  %add.ptr = getelementptr inbounds float, float* %p, i32 8
-  %1 = bitcast float* %add.ptr to i8*
-  tail call void @llvm.arm.neon.vst2.p0i8.v4f32(i8* %1, <4 x float> %vld221, <4 x float> undef, i32 4)
+  %add.ptr = getelementptr inbounds float, ptr %p, i32 8
+  tail call void @llvm.arm.neon.vst2.p0.v4f32(ptr %add.ptr, <4 x float> %vld221, <4 x float> undef, i32 4)
   ret void
 }
 
 ; CHECK: f1
 ; FIXME: This function still has copies.
-define void @f1(float* %p, i32 %c) nounwind ssp {
+define void @f1(ptr %p, i32 %c) nounwind ssp {
 entry:
-  %0 = bitcast float* %p to i8*
-  %vld2 = tail call { <4 x float>, <4 x float> } @llvm.arm.neon.vld2.v4f32.p0i8(i8* %0, i32 4)
+  %vld2 = tail call { <4 x float>, <4 x float> } @llvm.arm.neon.vld2.v4f32.p0(ptr %p, i32 4)
   %vld221 = extractvalue { <4 x float>, <4 x float> } %vld2, 1
-  %add.ptr = getelementptr inbounds float, float* %p, i32 8
-  %1 = bitcast float* %add.ptr to i8*
-  %vld22 = tail call { <4 x float>, <4 x float> } @llvm.arm.neon.vld2.v4f32.p0i8(i8* %1, i32 4)
+  %add.ptr = getelementptr inbounds float, ptr %p, i32 8
+  %vld22 = tail call { <4 x float>, <4 x float> } @llvm.arm.neon.vld2.v4f32.p0(ptr %add.ptr, i32 4)
   %vld2215 = extractvalue { <4 x float>, <4 x float> } %vld22, 0
-  tail call void @llvm.arm.neon.vst2.p0i8.v4f32(i8* %1, <4 x float> %vld221, <4 x float> %vld2215, i32 4)
+  tail call void @llvm.arm.neon.vst2.p0.v4f32(ptr %add.ptr, <4 x float> %vld221, <4 x float> %vld2215, i32 4)
   ret void
 }
 
 ; CHECK: f2
 ; FIXME: This function still has copies.
-define void @f2(float* %p, i32 %c) nounwind ssp {
+define void @f2(ptr %p, i32 %c) nounwind ssp {
 entry:
-  %0 = bitcast float* %p to i8*
-  %vld2 = tail call { <4 x float>, <4 x float> } @llvm.arm.neon.vld2.v4f32.p0i8(i8* %0, i32 4)
+  %vld2 = tail call { <4 x float>, <4 x float> } @llvm.arm.neon.vld2.v4f32.p0(ptr %p, i32 4)
   %vld224 = extractvalue { <4 x float>, <4 x float> } %vld2, 1
   br label %do.body
 
 do.body:                                          ; preds = %do.body, %entry
   %qq0.0.1.0 = phi <4 x float> [ %vld224, %entry ], [ %vld2216, %do.body ]
   %c.addr.0 = phi i32 [ %c, %entry ], [ %dec, %do.body ]
-  %p.addr.0 = phi float* [ %p, %entry ], [ %add.ptr, %do.body ]
-  %add.ptr = getelementptr inbounds float, float* %p.addr.0, i32 8
-  %1 = bitcast float* %add.ptr to i8*
-  %vld22 = tail call { <4 x float>, <4 x float> } @llvm.arm.neon.vld2.v4f32.p0i8(i8* %1, i32 4)
+  %p.addr.0 = phi ptr [ %p, %entry ], [ %add.ptr, %do.body ]
+  %add.ptr = getelementptr inbounds float, ptr %p.addr.0, i32 8
+  %vld22 = tail call { <4 x float>, <4 x float> } @llvm.arm.neon.vld2.v4f32.p0(ptr %add.ptr, i32 4)
   %vld2215 = extractvalue { <4 x float>, <4 x float> } %vld22, 0
   %vld2216 = extractvalue { <4 x float>, <4 x float> } %vld22, 1
-  tail call void @llvm.arm.neon.vst2.p0i8.v4f32(i8* %1, <4 x float> %qq0.0.1.0, <4 x float> %vld2215, i32 4)
+  tail call void @llvm.arm.neon.vst2.p0.v4f32(ptr %add.ptr, <4 x float> %qq0.0.1.0, <4 x float> %vld2215, i32 4)
   %dec = add nsw i32 %c.addr.0, -1
   %tobool = icmp eq i32 %dec, 0
   br i1 %tobool, label %do.end, label %do.body
@@ -64,14 +58,14 @@ do.end:                                           ; preds = %do.body
   ret void
 }
 
-declare { <4 x float>, <4 x float> } @llvm.arm.neon.vld2.v4f32.p0i8(i8*, i32) nounwind readonly
-declare void @llvm.arm.neon.vst2.p0i8.v4f32(i8*, <4 x float>, <4 x float>, i32) nounwind
+declare { <4 x float>, <4 x float> } @llvm.arm.neon.vld2.v4f32.p0(ptr, i32) nounwind readonly
+declare void @llvm.arm.neon.vst2.p0.v4f32(ptr, <4 x float>, <4 x float>, i32) nounwind
 
 ; CHECK: f3
 ; This function has lane insertions that span basic blocks.
 ; The trivial REG_SEQUENCE lowering can't handle that, but the coalescer can.
 ;
-; void f3(float *p, float *q) {
+; void f3(ptr p, ptr q) {
 ;   float32x2_t x;
 ;   x[1] = p[3];
 ;   if (q)
@@ -83,62 +77,60 @@ declare void @llvm.arm.neon.vst2.p0i8.v4f32(i8*, <4 x float>, <4 x float>, i32) 
 ;
 ; CHECK-NOT: vmov
 ; CHECK-NOT: vorr
-define void @f3(float* %p, float* %q) nounwind ssp {
+define void @f3(ptr %p, ptr %q) nounwind ssp {
 entry:
-  %arrayidx = getelementptr inbounds float, float* %p, i32 3
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %p, i32 3
+  %0 = load float, ptr %arrayidx, align 4
   %vecins = insertelement <2 x float> undef, float %0, i32 1
-  %tobool = icmp eq float* %q, null
+  %tobool = icmp eq ptr %q, null
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:                                          ; preds = %entry
-  %1 = load float, float* %q, align 4
-  %arrayidx2 = getelementptr inbounds float, float* %q, i32 1
-  %2 = load float, float* %arrayidx2, align 4
+  %1 = load float, ptr %q, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %q, i32 1
+  %2 = load float, ptr %arrayidx2, align 4
   %add = fadd float %1, %2
   %vecins3 = insertelement <2 x float> %vecins, float %add, i32 0
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %arrayidx4 = getelementptr inbounds float, float* %p, i32 2
-  %3 = load float, float* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %p, i32 2
+  %3 = load float, ptr %arrayidx4, align 4
   %vecins5 = insertelement <2 x float> %vecins, float %3, i32 0
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
   %x.0 = phi <2 x float> [ %vecins3, %if.then ], [ %vecins5, %if.else ]
-  %add.ptr = getelementptr inbounds float, float* %p, i32 4
-  %4 = bitcast float* %add.ptr to i8*
-  tail call void @llvm.arm.neon.vst1.p0i8.v2f32(i8* %4, <2 x float> %x.0, i32 4)
+  %add.ptr = getelementptr inbounds float, ptr %p, i32 4
+  tail call void @llvm.arm.neon.vst1.p0.v2f32(ptr %add.ptr, <2 x float> %x.0, i32 4)
   ret void
 }
 
-declare void @llvm.arm.neon.vst1.p0i8.v2f32(i8*, <2 x float>, i32) nounwind
-declare <2 x float> @llvm.arm.neon.vld1.v2f32.p0i8(i8*, i32) nounwind readonly
+declare void @llvm.arm.neon.vst1.p0.v2f32(ptr, <2 x float>, i32) nounwind
+declare <2 x float> @llvm.arm.neon.vld1.v2f32.p0(ptr, i32) nounwind readonly
 
 ; CHECK: f4
 ; This function inserts a lane into a fully defined vector.
 ; The destination lane isn't read, so the subregs can coalesce.
 ; CHECK-NOT: vmov
 ; CHECK-NOT: vorr
-define void @f4(float* %p, float* %q) nounwind ssp {
+define void @f4(ptr %p, ptr %q) nounwind ssp {
 entry:
-  %0 = bitcast float* %p to i8*
-  %vld1 = tail call <2 x float> @llvm.arm.neon.vld1.v2f32.p0i8(i8* %0, i32 4)
-  %tobool = icmp eq float* %q, null
+  %vld1 = tail call <2 x float> @llvm.arm.neon.vld1.v2f32.p0(ptr %p, i32 4)
+  %tobool = icmp eq ptr %q, null
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %1 = load float, float* %q, align 4
-  %arrayidx1 = getelementptr inbounds float, float* %q, i32 1
-  %2 = load float, float* %arrayidx1, align 4
-  %add = fadd float %1, %2
+  %0 = load float, ptr %q, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %q, i32 1
+  %1 = load float, ptr %arrayidx1, align 4
+  %add = fadd float %0, %1
   %vecins = insertelement <2 x float> %vld1, float %add, i32 1
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
   %x.0 = phi <2 x float> [ %vecins, %if.then ], [ %vld1, %entry ]
-  tail call void @llvm.arm.neon.vst1.p0i8.v2f32(i8* %0, <2 x float> %x.0, i32 4)
+  tail call void @llvm.arm.neon.vst1.p0.v2f32(ptr %p, <2 x float> %x.0, i32 4)
   ret void
 }
 
@@ -151,27 +143,26 @@ if.end:                                           ; preds = %entry, %if.then
 ; We may leave the last insertelement in the if.end block.
 ; It is inserting the %add value into a dead lane, but %add causes interference
 ; in the entry block, and we don't do dead lane checks across basic blocks.
-define void @f5(float* %p, float* %q) nounwind ssp {
+define void @f5(ptr %p, ptr %q) nounwind ssp {
 entry:
-  %0 = bitcast float* %p to i8*
-  %vld1 = tail call <4 x float> @llvm.arm.neon.vld1.v4f32.p0i8(i8* %0, i32 4)
+  %vld1 = tail call <4 x float> @llvm.arm.neon.vld1.v4f32.p0(ptr %p, i32 4)
   %vecext = extractelement <4 x float> %vld1, i32 0
   %vecext1 = extractelement <4 x float> %vld1, i32 1
   %vecext2 = extractelement <4 x float> %vld1, i32 2
   %vecext3 = extractelement <4 x float> %vld1, i32 3
   %add = fadd float %vecext3, 1.000000e+00
-  %tobool = icmp eq float* %q, null
+  %tobool = icmp eq ptr %q, null
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %arrayidx = getelementptr inbounds float, float* %q, i32 1
-  %1 = load float, float* %arrayidx, align 4
-  %add4 = fadd float %vecext, %1
-  %2 = load float, float* %q, align 4
-  %add6 = fadd float %vecext1, %2
-  %arrayidx7 = getelementptr inbounds float, float* %q, i32 2
-  %3 = load float, float* %arrayidx7, align 4
-  %add8 = fadd float %vecext2, %3
+  %arrayidx = getelementptr inbounds float, ptr %q, i32 1
+  %0 = load float, ptr %arrayidx, align 4
+  %add4 = fadd float %vecext, %0
+  %1 = load float, ptr %q, align 4
+  %add6 = fadd float %vecext1, %1
+  %arrayidx7 = getelementptr inbounds float, ptr %q, i32 2
+  %2 = load float, ptr %arrayidx7, align 4
+  %add8 = fadd float %vecext2, %2
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
@@ -182,13 +173,13 @@ if.end:                                           ; preds = %entry, %if.then
   %vecinit9 = insertelement <4 x float> %vecinit, float %b.0, i32 1
   %vecinit10 = insertelement <4 x float> %vecinit9, float %c.0, i32 2
   %vecinit11 = insertelement <4 x float> %vecinit10, float %add, i32 3
-  tail call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* %0, <4 x float> %vecinit11, i32 4)
+  tail call void @llvm.arm.neon.vst1.p0.v4f32(ptr %p, <4 x float> %vecinit11, i32 4)
   ret void
 }
 
-declare <4 x float> @llvm.arm.neon.vld1.v4f32.p0i8(i8*, i32) nounwind readonly
+declare <4 x float> @llvm.arm.neon.vld1.v4f32.p0(ptr, i32) nounwind readonly
 
-declare void @llvm.arm.neon.vst1.p0i8.v4f32(i8*, <4 x float>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v4f32(ptr, <4 x float>, i32) nounwind
 
 ; CHECK: pr13999
 define void @pr13999() nounwind readonly {
@@ -216,7 +207,7 @@ loop.end:
 }
 
 ; CHECK: pr14078
-define arm_aapcs_vfpcc i32 @pr14078(i8* nocapture %arg, i8* nocapture %arg1, i32 %arg2) nounwind uwtable readonly {
+define arm_aapcs_vfpcc i32 @pr14078(ptr nocapture %arg, ptr nocapture %arg1, i32 %arg2) nounwind uwtable readonly {
 bb:
   br i1 undef, label %bb31, label %bb3
 
@@ -231,7 +222,7 @@ bb3:                                              ; preds = %bb12, %bb
   br i1 undef, label %bb10, label %bb12
 
 bb10:                                             ; preds = %bb3
-  %tmp11 = load <4 x float>, <4 x float>* undef, align 8
+  %tmp11 = load <4 x float>, ptr undef, align 8
   br label %bb12
 
 bb12:                                             ; preds = %bb10, %bb3
@@ -268,7 +259,7 @@ declare <2 x float> @baz67(<2 x float>, <2 x float>) nounwind readnone
 %struct.quux = type { <4 x float> }
 
 ; CHECK: pr14079
-define linkonce_odr arm_aapcs_vfpcc %struct.wombat.5 @pr14079(i8* nocapture %arg, i8* nocapture %arg1, i8* nocapture %arg2) nounwind uwtable inlinehint {
+define linkonce_odr arm_aapcs_vfpcc %struct.wombat.5 @pr14079(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2) nounwind uwtable inlinehint {
 bb:
   %tmp = shufflevector <2 x i64> zeroinitializer, <2 x i64> undef, <1 x i32> zeroinitializer
   %tmp3 = bitcast <1 x i64> %tmp to <2 x float>
@@ -294,7 +285,7 @@ bb:
 ; The shuffle in if.else3 must be preserved even though adjustCopiesBackFrom
 ; is tempted to remove it.
 ; CHECK: vorr d
-define internal void @adjustCopiesBackFrom(<2 x i64>* noalias nocapture sret(<2 x i64>) %agg.result, <2 x i64> %in) {
+define internal void @adjustCopiesBackFrom(ptr noalias nocapture sret(<2 x i64>) %agg.result, <2 x i64> %in) {
 entry:
   %0 = extractelement <2 x i64> %in, i32 0
   %cmp = icmp slt i64 %0, 1
@@ -313,7 +304,7 @@ if.else3:                                         ; preds = %entry
 
 if.end4:                                          ; preds = %if.else3, %if.then2
   %result.2 = phi <2 x i64> [ %2, %if.then2 ], [ %3, %if.else3 ]
-  store <2 x i64> %result.2, <2 x i64>* %agg.result, align 128
+  store <2 x i64> %result.2, ptr %agg.result, align 128
   ret void
 }
 
@@ -333,7 +324,7 @@ for.body:                                         ; preds = %for.end, %entry
   br i1 undef, label %for.body29, label %for.end
 
 for.body29:                                       ; preds = %for.body29, %for.body
-  %0 = load <2 x double>, <2 x double>* null, align 1
+  %0 = load <2 x double>, ptr null, align 1
   %splat40 = shufflevector <2 x double> %0, <2 x double> undef, <2 x i32> zeroinitializer
   %mul41 = fmul <2 x double> undef, %splat40
   %add42 = fadd <2 x double> undef, %mul41
@@ -351,7 +342,7 @@ for.end:                                          ; preds = %for.body29, %for.bo
   %add63 = fadd <2 x double> undef, %mul61
   %add64 = fadd <2 x double> undef, %add63
   %add67 = fadd <2 x double> undef, %add64
-  store <2 x double> %add67, <2 x double>* undef, align 1
+  store <2 x double> %add67, ptr undef, align 1
   br i1 undef, label %for.end70, label %for.body
 
 for.end70:                                        ; preds = %for.end, %entry

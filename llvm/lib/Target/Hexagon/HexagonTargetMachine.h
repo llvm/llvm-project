@@ -36,8 +36,6 @@ public:
   ~HexagonTargetMachine() override;
   const HexagonSubtarget *getSubtargetImpl(const Function &F) const override;
 
-  static unsigned getModuleMatchQuality(const Module &M);
-
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
@@ -45,6 +43,10 @@ public:
   HexagonTargetObjectFile *getObjFileLowering() const override {
     return static_cast<HexagonTargetObjectFile*>(TLOF.get());
   }
+
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
 };
 
 } // end namespace llvm

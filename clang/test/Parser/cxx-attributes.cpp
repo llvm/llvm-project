@@ -3,6 +3,8 @@
 // GH#58229 - rejects-valid
 __attribute__((__visibility__("default"))) [[nodiscard]] int f();
 [[nodiscard]] __attribute__((__visibility__("default"))) int f();
+extern "C" __attribute__((__visibility__("default"))) [[nodiscard]]
+int g() { return 32; }
 
 class c {
   virtual void f1(const char* a, ...)
@@ -39,7 +41,7 @@ void fn() {
   pi = &i[0];
 }
 
-[[deprecated([""])]] int WrongArgs; // expected-error {{expected variable name or 'this' in lambda capture list}}
+[[deprecated([""])]] int WrongArgs; // expected-error {{expected string literal as argument of 'deprecated' attribute}}
 [[,,,,,]] int Commas1; // ok
 [[,, maybe_unused]] int Commas2; // ok
 [[maybe_unused,,,]] int Commas3; // ok

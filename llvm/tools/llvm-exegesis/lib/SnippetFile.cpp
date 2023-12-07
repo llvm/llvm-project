@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SnippetFile.h"
+#include "BenchmarkRunner.h"
 #include "Error.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
@@ -29,10 +30,10 @@ namespace {
 // An MCStreamer that reads a BenchmarkCode definition from a file.
 class BenchmarkCodeStreamer : public MCStreamer, public AsmCommentConsumer {
 public:
-  explicit BenchmarkCodeStreamer(MCContext *Context,
-                                 const MCRegisterInfo *TheRegInfo,
-                                 BenchmarkCode *Result)
-      : MCStreamer(*Context), RegInfo(TheRegInfo), Result(Result) {}
+  explicit BenchmarkCodeStreamer(
+      MCContext *Context, const DenseMap<StringRef, unsigned> &RegNameToRegNo,
+      BenchmarkCode *Result)
+      : MCStreamer(*Context), RegNameToRegNo(RegNameToRegNo), Result(Result) {}
 
   // Implementation of the MCStreamer interface. We only care about
   // instructions.
@@ -82,6 +83,54 @@ public:
       }
       return;
     }
+    if (CommentText.consume_front("MEM-DEF")) {
+      // LLVM-EXEGESIS-MEM-DEF <name> <size> <value>
+      SmallVector<StringRef, 3> Parts;
+      CommentText.split(Parts, ' ', -1, false);
+      if (Parts.size() != 3) {
+        errs() << "invalid comment 'LLVM-EXEGESIS-MEM-DEF " << CommentText
+               << "', expected three parameters <NAME> <SIZE> <VALUE>";
+        ++InvalidComments;
+        return;
+      }
+      const StringRef HexValue = Parts[2].trim();
+      MemoryValue MemVal;
+      MemVal.SizeBytes = std::stol(Parts[1].trim().str());
+      if (HexValue.size() % 2 != 0) {
+        errs() << "invalid comment 'LLVM-EXEGESIS-MEM-DEF " << CommentText
+               << "', expected <VALUE> to contain a whole number of bytes";
+      }
+      MemVal.Value = APInt(HexValue.size() * 4, HexValue, 16);
+      MemVal.Index = Result->Key.MemoryValues.size();
+      Result->Key.MemoryValues[Parts[0].trim().str()] = MemVal;
+      return;
+    }
+    if (CommentText.consume_front("MEM-MAP")) {
+      // LLVM-EXEGESIS-MEM-MAP <value name> <address>
+      SmallVector<StringRef, 2> Parts;
+      CommentText.split(Parts, ' ', -1, false);
+      if (Parts.size() != 2) {
+        errs() << "invalid comment 'LLVM-EXEGESIS-MEM-MAP " << CommentText
+               << "', expected two parameters <VALUE NAME> <ADDRESS>";
+        ++InvalidComments;
+        return;
+      }
+      MemoryMapping MemMap;
+      MemMap.MemoryValueName = Parts[0].trim().str();
+      MemMap.Address = std::stol(Parts[1].trim().str());
+      // validate that the annotation refers to an already existing memory
+      // definition
+      auto MemValIT = Result->Key.MemoryValues.find(Parts[0].trim().str());
+      if (MemValIT == Result->Key.MemoryValues.end()) {
+        errs() << "invalid comment 'LLVM-EXEGESIS-MEM-MAP " << CommentText
+               << "', expected <VALUE NAME> to contain the name of an already "
+                  "specified memory definition";
+        ++InvalidComments;
+        return;
+      }
+      Result->Key.MemoryMappings.push_back(std::move(MemMap));
+      return;
+    }
   }
 
   unsigned numInvalidComments() const { return InvalidComments; }
@@ -99,17 +148,15 @@ private:
                     Align ByteAlignment, SMLoc Loc) override {}
 
   unsigned findRegisterByName(const StringRef RegName) const {
-    // FIXME: Can we do better than this ?
-    for (unsigned I = 0, E = RegInfo->getNumRegs(); I < E; ++I) {
-      if (RegName == RegInfo->getName(I))
-        return I;
-    }
+    auto Iter = RegNameToRegNo.find(RegName);
+    if (Iter != RegNameToRegNo.end())
+      return Iter->second;
     errs() << "'" << RegName
            << "' is not a valid register name for the target\n";
     return 0;
   }
 
-  const MCRegisterInfo *const RegInfo;
+  const DenseMap<StringRef, unsigned> &RegNameToRegNo;
   BenchmarkCode *const Result;
   unsigned InvalidComments = 0;
 };
@@ -137,7 +184,8 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
       TM.getTarget().createMCObjectFileInfo(Context, /*PIC=*/false));
   Context.setObjectFileInfo(ObjectFileInfo.get());
   Context.initInlineSourceManager();
-  BenchmarkCodeStreamer Streamer(&Context, TM.getMCRegisterInfo(), &Result);
+  BenchmarkCodeStreamer Streamer(&Context, State.getRegNameToRegNoMapping(),
+                                 &Result);
 
   std::string Error;
   raw_string_ostream ErrorStream(Error);

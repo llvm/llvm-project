@@ -7,8 +7,8 @@ declare void @dummy_filter()
 
 declare void @f(i32)
 
-;Cxx: define void @test() personality i32 (...)* @__CxxFrameHandler3 {
-;Seh: define void @test() personality i32 (...)* @__C_specific_handler {
+;Cxx: define void @test() personality ptr @__CxxFrameHandler3 {
+;Seh: define void @test() personality ptr @__C_specific_handler {
 entry:
   invoke void @f(i32 1)
           to label %invoke.cont unwind label %catch.dispatch
@@ -17,8 +17,8 @@ catch.dispatch:
   %cs1 = catchswitch within none [label %catch.body] unwind label %catch.dispatch.2
 
 catch.body:
-;Cxx: %catch = catchpad within %cs1 [i8* null, i32 u0x40, i8* null]
-;Seh: %catch = catchpad within %cs1 [void ()* @dummy_filter]
+;Cxx: %catch = catchpad within %cs1 [ptr null, i32 u0x40, ptr null]
+;Seh: %catch = catchpad within %cs1 [ptr @dummy_filter]
   invoke void @f(i32 2) [ "funclet"(token %catch) ]
           to label %unreachable unwind label %terminate
 
@@ -37,8 +37,8 @@ catch.dispatch.2:
   %cs2 = catchswitch within none [label %catch.body.2] unwind to caller
 
 catch.body.2:
-;Cxx: %catch2 = catchpad within %cs2 [i8* null, i32 u0x40, i8* null]
-;Seh: %catch2 = catchpad within %cs2 [void ()* @dummy_filter]
+;Cxx: %catch2 = catchpad within %cs2 [ptr null, i32 u0x40, ptr null]
+;Seh: %catch2 = catchpad within %cs2 [ptr @dummy_filter]
   unreachable
 }
 

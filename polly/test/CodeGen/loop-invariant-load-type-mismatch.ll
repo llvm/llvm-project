@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Just make sure this test passes correctly.
 
-define void @kernel_ludcmp(double* %b, double* %y) #0 {
+define void @kernel_ludcmp(ptr %b, ptr %y) #0 {
 entry:
   br label %entry.split
 
@@ -71,15 +71,12 @@ for.end.54:                                       ; preds = %for.cond.38.for.end
   br i1 false, label %for.body.32, label %for.cond.30.for.cond.loopexit_crit_edge
 
 for.end.65:                                       ; preds = %for.cond.loopexit
-  %tmp1 = bitcast double* %b to i64*
-  %tmp2 = load i64, i64* %tmp1, align 8, !tbaa !1
-  %tmp3 = bitcast double* %y to i64*
-  store i64 %tmp2, i64* %tmp3, align 8, !tbaa !1
+  %tmp2 = load i64, ptr %b, align 8, !tbaa !1
+  store i64 %tmp2, ptr %y, align 8, !tbaa !1
   br label %for.body.70
 
 for.body.70:                                      ; preds = %for.end.86, %for.end.65
-  %arrayidx72 = getelementptr inbounds double, double* %b, i64 0
-  %tmp4 = load double, double* %arrayidx72, align 8, !tbaa !1
+  %tmp4 = load double, ptr %b, align 8, !tbaa !1
   br i1 true, label %for.body.75.lr.ph, label %for.end.86
 
 for.body.75.lr.ph:                                ; preds = %for.body.70

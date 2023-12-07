@@ -8,6 +8,8 @@ declare <4 x float> @llvm.aarch64.neon.fmulx.v4f32(<4 x float>, <4 x float>)
 
 declare <2 x float> @llvm.aarch64.neon.fmulx.v2f32(<2 x float>, <2 x float>)
 
+declare double @llvm.aarch64.neon.fmulx.f64(double, double)
+
 declare <4 x i32> @llvm.aarch64.neon.sqrdmulh.v4i32(<4 x i32>, <4 x i32>)
 declare <4 x i32> @llvm.aarch64.neon.sqrdmulh.lane.v4i32.v2i32(<4 x i32>, <2 x i32>, i32)
 declare <4 x i32> @llvm.aarch64.neon.sqrdmulh.laneq.v4i32.v4i32(<4 x i32>, <4 x i32>, i32)
@@ -2066,6 +2068,19 @@ entry:
   ret <4 x float> %vmulx2.i
 }
 
+define <1 x double> @test_vmulx_lane_f64(<1 x double> %a, <1 x double> %v) {
+; CHECK-LABEL: test_vmulx_lane_f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmulx d0, d0, d1
+; CHECK-NEXT:    ret
+entry:
+  %vget_lane = extractelement <1 x double> %a, i64 0
+  %vget_lane3 = extractelement <1 x double> %v, i64 0
+  %vmulxd_f64.i = tail call double @llvm.aarch64.neon.fmulx.f64(double %vget_lane, double %vget_lane3)
+  %vset_lane = insertelement <1 x double> poison, double %vmulxd_f64.i, i64 0
+  ret <1 x double> %vset_lane
+}
+
 define <2 x double> @test_vmulxq_lane_f64(<2 x double> %a, <1 x double> %v) {
 ; CHECK-LABEL: test_vmulxq_lane_f64:
 ; CHECK:       // %bb.0: // %entry
@@ -2098,6 +2113,19 @@ entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %vmulx2.i = tail call <4 x float> @llvm.aarch64.neon.fmulx.v4f32(<4 x float> %a, <4 x float> %shuffle)
   ret <4 x float> %vmulx2.i
+}
+
+define <1 x double> @test_vmulx_laneq_f64(<1 x double> %a, <2 x double> %v) {
+; CHECK-LABEL: test_vmulx_laneq_f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmulx d0, d0, v1.d[1]
+; CHECK-NEXT:    ret
+entry:
+  %vget_lane = extractelement <1 x double> %a, i64 0
+  %vgetq_lane = extractelement <2 x double> %v, i64 1
+  %vmulxd_f64.i = tail call double @llvm.aarch64.neon.fmulx.f64(double %vget_lane, double %vgetq_lane)
+  %vset_lane = insertelement <1 x double> poison, double %vmulxd_f64.i, i64 0
+  ret <1 x double> %vset_lane
 }
 
 define <2 x double> @test_vmulxq_laneq_f64(<2 x double> %a, <2 x double> %v) {
@@ -3560,7 +3588,7 @@ entry:
 define <1 x double> @test_vmul_laneq_f64_0(<1 x double> %a, <2 x double> %v) {
 ; CHECK-LABEL: test_vmul_laneq_f64_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmul d0, d0, v1.d[0]
+; CHECK-NEXT:    fmul d0, d0, d1
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <1 x double> %a to <8 x i8>
@@ -3649,6 +3677,19 @@ entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> zeroinitializer
   %vmulx2.i = tail call <4 x float> @llvm.aarch64.neon.fmulx.v4f32(<4 x float> %a, <4 x float> %shuffle)
   ret <4 x float> %vmulx2.i
+}
+
+define <1 x double> @test_vmulx_laneq_f64_0(<1 x double> %a, <2 x double> %v) {
+; CHECK-LABEL: test_vmulx_laneq_f64_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmulx d0, d0, d1
+; CHECK-NEXT:    ret
+entry:
+  %vget_lane = extractelement <1 x double> %a, i64 0
+  %vgetq_lane = extractelement <2 x double> %v, i64 0
+  %vmulxd_f64.i = tail call double @llvm.aarch64.neon.fmulx.f64(double %vget_lane, double %vgetq_lane)
+  %vset_lane = insertelement <1 x double> poison, double %vmulxd_f64.i, i64 0
+  ret <1 x double> %vset_lane
 }
 
 define <2 x double> @test_vmulxq_laneq_f64_0(<2 x double> %a, <2 x double> %v) {

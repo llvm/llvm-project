@@ -16,24 +16,23 @@
   @csum_ipv6_magic_saddr = dso_local local_unnamed_addr global %struct.in6_addr zeroinitializer, align 1
   @csum_ipv6_magic_daddr = dso_local local_unnamed_addr global i32 0, align 4
   @csum_ipv6_magic_proto = dso_local local_unnamed_addr global i32 0, align 4
-  @synproxy_send_tcp_ipv6_nskb = dso_local local_unnamed_addr global %struct.sk_buff* null, align 4
+  @synproxy_send_tcp_ipv6_nskb = dso_local local_unnamed_addr global ptr null, align 4
   @synproxy_send_tcp_ipv6_fl6 = dso_local local_unnamed_addr global %struct.in6_addr zeroinitializer, align 1
 
   ; Function Attrs: nounwind uwtable
-  define dso_local void @synproxy_send_tcp_ipv6(i32 inreg %skb.coerce, %struct.ipv6hdr* inreg nocapture noundef readonly %niph) local_unnamed_addr #0 {
+  define dso_local void @synproxy_send_tcp_ipv6(i32 inreg %skb.coerce, ptr inreg nocapture noundef readonly %niph) local_unnamed_addr #0 {
   entry:
-    %0 = load i8, i8* getelementptr inbounds (%struct.in6_addr, %struct.in6_addr* @csum_ipv6_magic_saddr, i32 0, i32 0, i32 0), align 1
-    %1 = load i32, i32* @csum_ipv6_magic_daddr, align 4, !tbaa !5
-    %2 = load i32, i32* @csum_ipv6_magic_proto, align 4, !tbaa !5
+    %0 = load i8, ptr @csum_ipv6_magic_saddr, align 1
+    %1 = load i32, ptr @csum_ipv6_magic_daddr, align 4, !tbaa !5
+    %2 = load i32, ptr @csum_ipv6_magic_proto, align 4, !tbaa !5
     %3 = tail call i32 asm "", "=&r,r,r,r,r,~{dirflag},~{fpsr},~{flags}"(i8 %0, i32 %1, i32 0, i32 %2) #2, !srcloc !9
-    store i32 %3, i32* @csum_ipv6_magic_sum, align 4, !tbaa !5
-    %4 = load i8*, i8** bitcast (%struct.sk_buff** @synproxy_send_tcp_ipv6_nskb to i8**), align 4, !tbaa !10
-    %bf.load = load i8, i8* %4, align 1
+    store i32 %3, ptr @csum_ipv6_magic_sum, align 4, !tbaa !5
+    %4 = load ptr, ptr @synproxy_send_tcp_ipv6_nskb, align 4, !tbaa !10
+    %bf.load = load i8, ptr %4, align 1
     %bf.set = or i8 %bf.load, 3
-    store i8 %bf.set, i8* %4, align 1
-    %5 = bitcast %struct.ipv6hdr* %niph to i8*
-    %6 = load i8, i8* %5, align 1, !tbaa !12
-    store i8 %6, i8* getelementptr inbounds (%struct.in6_addr, %struct.in6_addr* @synproxy_send_tcp_ipv6_fl6, i32 0, i32 0, i32 0), align 1, !tbaa !12
+    store i8 %bf.set, ptr %4, align 1
+    %5 = load i8, ptr %niph, align 1, !tbaa !12
+    store i8 %5, ptr @synproxy_send_tcp_ipv6_fl6, align 1, !tbaa !12
     %skb.coerce1.sroa.0.0.insert.ext = and i32 %skb.coerce, 255
     tail call void @fl6nthsecurity_skb_classify_flow(i32 inreg %skb.coerce1.sroa.0.0.insert.ext) #3
     ret void
@@ -124,31 +123,31 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edx
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32_abcd = COPY $eax
-    ; CHECK-NEXT: [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm $noreg, 1, $noreg, @csum_ipv6_magic_saddr, $noreg :: (dereferenceable load (s8) from `i8* getelementptr inbounds (%struct.in6_addr, %struct.in6_addr* @csum_ipv6_magic_saddr, i32 0, i32 0, i32 0)`)
+    ; CHECK-NEXT: [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm $noreg, 1, $noreg, @csum_ipv6_magic_saddr, $noreg :: (dereferenceable load (s8) from @csum_ipv6_magic_saddr)
     ; CHECK-NEXT: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, @csum_ipv6_magic_daddr, $noreg :: (dereferenceable load (s32) from @csum_ipv6_magic_daddr, !tbaa !4)
     ; CHECK-NEXT: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, @csum_ipv6_magic_proto, $noreg :: (dereferenceable load (s32) from @csum_ipv6_magic_proto, !tbaa !4)
     ; CHECK-NEXT: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
     ; CHECK-NEXT: INLINEASM &"", 0 /* attdialect */, 2359307 /* regdef-ec:GR32 */, def early-clobber %2, 65545 /* reguse:GR8 */, [[MOV8rm]], 2359305 /* reguse:GR32 */, [[MOV32rm]], 2359305 /* reguse:GR32 */, [[MOV32r0_]], 2359305 /* reguse:GR32 */, [[MOV32rm1]], 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags, !8
     ; CHECK-NEXT: MOV32mr $noreg, 1, $noreg, @csum_ipv6_magic_sum, $noreg, %2 :: (store (s32) into @csum_ipv6_magic_sum, !tbaa !4)
-    ; CHECK-NEXT: [[MOV32rm2:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, @synproxy_send_tcp_ipv6_nskb, $noreg :: (dereferenceable load (s32) from `i8** bitcast (%struct.sk_buff** @synproxy_send_tcp_ipv6_nskb to i8**)`, !tbaa !9)
+    ; CHECK-NEXT: [[MOV32rm2:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, @synproxy_send_tcp_ipv6_nskb, $noreg :: (dereferenceable load (s32) from @synproxy_send_tcp_ipv6_nskb, !tbaa !9)
     ; CHECK-NEXT: OR8mi [[MOV32rm2]], 1, $noreg, 0, $noreg, 3, implicit-def dead $eflags :: (store (s8) into %ir.4), (load (s8) from %ir.4)
-    ; CHECK-NEXT: [[MOV8rm1:%[0-9]+]]:gr8 = MOV8rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s8) from %ir.5, !tbaa !11)
-    ; CHECK-NEXT: MOV8mr $noreg, 1, $noreg, @synproxy_send_tcp_ipv6_fl6, $noreg, [[MOV8rm1]] :: (store (s8) into `i8* getelementptr inbounds (%struct.in6_addr, %struct.in6_addr* @synproxy_send_tcp_ipv6_fl6, i32 0, i32 0, i32 0)`, !tbaa !11)
+    ; CHECK-NEXT: [[MOV8rm1:%[0-9]+]]:gr8 = MOV8rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s8) from %ir.niph, !tbaa !11)
+    ; CHECK-NEXT: MOV8mr $noreg, 1, $noreg, @synproxy_send_tcp_ipv6_fl6, $noreg, [[MOV8rm1]] :: (store (s8) into @synproxy_send_tcp_ipv6_fl6, !tbaa !11)
     ; CHECK-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY1]].sub_8bit
     ; CHECK-NEXT: $eax = COPY [[MOVZX32rr8_]]
     ; CHECK-NEXT: TCRETURNdi @fl6nthsecurity_skb_classify_flow, 0, csr_32, implicit $esp, implicit $ssp, implicit $eax
     %1:gr32 = COPY $edx
     %0:gr32_abcd = COPY $eax
-    %3:gr8 = MOV8rm $noreg, 1, $noreg, @csum_ipv6_magic_saddr, $noreg :: (dereferenceable load (s8) from `i8* getelementptr inbounds (%struct.in6_addr, %struct.in6_addr* @csum_ipv6_magic_saddr, i32 0, i32 0, i32 0)`)
+    %3:gr8 = MOV8rm $noreg, 1, $noreg, @csum_ipv6_magic_saddr, $noreg :: (dereferenceable load (s8) from @csum_ipv6_magic_saddr)
     %4:gr32 = MOV32rm $noreg, 1, $noreg, @csum_ipv6_magic_daddr, $noreg :: (dereferenceable load (s32) from @csum_ipv6_magic_daddr, !tbaa !5)
     %6:gr32 = MOV32rm $noreg, 1, $noreg, @csum_ipv6_magic_proto, $noreg :: (dereferenceable load (s32) from @csum_ipv6_magic_proto, !tbaa !5)
     %5:gr32 = MOV32r0 implicit-def dead $eflags
     INLINEASM &"", 0 /* attdialect */, 2359307 /* regdef-ec:GR32 */, def early-clobber %2, 65545 /* reguse:GR8 */, %3, 2359305 /* reguse:GR32 */, %4, 2359305 /* reguse:GR32 */, %5, 2359305 /* reguse:GR32 */, %6, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags, !9
     MOV32mr $noreg, 1, $noreg, @csum_ipv6_magic_sum, $noreg, %2 :: (store (s32) into @csum_ipv6_magic_sum, !tbaa !5)
-    %7:gr32 = MOV32rm $noreg, 1, $noreg, @synproxy_send_tcp_ipv6_nskb, $noreg :: (dereferenceable load (s32) from `i8** bitcast (%struct.sk_buff** @synproxy_send_tcp_ipv6_nskb to i8**)`, !tbaa !10)
+    %7:gr32 = MOV32rm $noreg, 1, $noreg, @synproxy_send_tcp_ipv6_nskb, $noreg :: (dereferenceable load (s32) from @synproxy_send_tcp_ipv6_nskb, !tbaa !10)
     OR8mi %7, 1, $noreg, 0, $noreg, 3, implicit-def dead $eflags :: (store (s8) into %ir.4), (load (s8) from %ir.4)
-    %8:gr8 = MOV8rm %1, 1, $noreg, 0, $noreg :: (load (s8) from %ir.5, !tbaa !12)
-    MOV8mr $noreg, 1, $noreg, @synproxy_send_tcp_ipv6_fl6, $noreg, %8 :: (store (s8) into `i8* getelementptr inbounds (%struct.in6_addr, %struct.in6_addr* @synproxy_send_tcp_ipv6_fl6, i32 0, i32 0, i32 0)`, !tbaa !12)
+    %8:gr8 = MOV8rm %1, 1, $noreg, 0, $noreg :: (load (s8) from %ir.niph, !tbaa !12)
+    MOV8mr $noreg, 1, $noreg, @synproxy_send_tcp_ipv6_fl6, $noreg, %8 :: (store (s8) into @synproxy_send_tcp_ipv6_fl6, !tbaa !12)
     %10:gr32 = MOVZX32rr8 %0.sub_8bit
     $eax = COPY %10
     TCRETURNdi @fl6nthsecurity_skb_classify_flow, 0, csr_32, implicit $esp, implicit $ssp, implicit $eax

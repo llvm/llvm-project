@@ -84,7 +84,6 @@ define dso_local void @test2(ptr nocapture %c, ptr nocapture readonly %a) local_
 ; P8-NEXT:    addi r4, r4, 12
 ; P8-NEXT:    lfiwzx f0, 0, r4
 ; P8-NEXT:    xxspltw vs0, vs0, 1
-; P8-NEXT:    xxswapd vs0, vs0
 ; P8-NEXT:    stxvd2x vs0, 0, r3
 ; P8-NEXT:    blr
 ;
@@ -141,7 +140,6 @@ define dso_local void @test3(ptr nocapture %c, ptr nocapture readonly %a) local_
 ; P8-NEXT:    addi r4, r4, 12
 ; P8-NEXT:    lfiwzx f0, 0, r4
 ; P8-NEXT:    xxspltw vs0, vs0, 1
-; P8-NEXT:    xxswapd vs0, vs0
 ; P8-NEXT:    stxvd2x vs0, 0, r3
 ; P8-NEXT:    blr
 ;

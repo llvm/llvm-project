@@ -21,6 +21,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
+#include <optional>
 
 namespace clang {
 
@@ -126,7 +127,7 @@ public:
   iterator end() const { return getStorage() + Bits.Data; }
 
   llvm::ArrayRef<NamedDecl*> decls() const {
-    return llvm::makeArrayRef(begin(), end());
+    return llvm::ArrayRef(begin(), end());
   }
 };
 
@@ -350,9 +351,7 @@ public:
   /// error.
   void dump() const;
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    ID.AddPointer(Storage.getOpaqueValue());
-  }
+  void Profile(llvm::FoldingSetNodeID &ID);
 
   /// Retrieve the template name as a void pointer.
   void *getAsVoidPointer() const { return Storage.getOpaqueValue(); }
@@ -379,7 +378,7 @@ class SubstTemplateTemplateParmStorage
 
   SubstTemplateTemplateParmStorage(TemplateName Replacement,
                                    Decl *AssociatedDecl, unsigned Index,
-                                   Optional<unsigned> PackIndex)
+                                   std::optional<unsigned> PackIndex)
       : UncommonTemplateNameStorage(SubstTemplateTemplateParm, Index,
                                     PackIndex ? *PackIndex + 1 : 0),
         Replacement(Replacement), AssociatedDecl(AssociatedDecl) {
@@ -395,7 +394,7 @@ public:
   /// This should match the result of `getParameter()->getIndex()`.
   unsigned getIndex() const { return Bits.Index; }
 
-  Optional<unsigned> getPackIndex() const {
+  std::optional<unsigned> getPackIndex() const {
     if (Bits.Data == 0)
       return std::nullopt;
     return Bits.Data - 1;
@@ -408,7 +407,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID, TemplateName Replacement,
                       Decl *AssociatedDecl, unsigned Index,
-                      Optional<unsigned> PackIndex);
+                      std::optional<unsigned> PackIndex);
 };
 
 inline TemplateName TemplateName::getUnderlying() const {

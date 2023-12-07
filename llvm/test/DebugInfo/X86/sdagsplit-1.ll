@@ -13,8 +13,8 @@
 ;      return 0;
 ;    }
 ;
-; CHECK-DAG: DBG_VALUE ${{[a-z]+}}, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location
-; CHECK-DAG: DBG_VALUE ${{[a-z]+}}, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 32, 32), debug-location
+; CHECK-DAG: DBG_VALUE_LIST !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 0, 32), ${{[a-z]+}}, debug-location
+; CHECK-DAG: DBG_VALUE_LIST !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 32, 32), ${{[a-z]+}}, debug-location
 
 ; ModuleID = 'sdagsplit-1.c'
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"

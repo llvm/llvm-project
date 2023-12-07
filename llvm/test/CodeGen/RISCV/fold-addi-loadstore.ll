@@ -52,7 +52,7 @@ define dso_local i64 @load_g_0() nounwind {
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i64, i64* @g_0
+  %0 = load i64, ptr @g_0
   ret i64 %0
 }
 
@@ -87,7 +87,7 @@ define dso_local i64 @load_g_1() nounwind {
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i64, i64* @g_1
+  %0 = load i64, ptr @g_1
   ret i64 %0
 }
 
@@ -122,7 +122,7 @@ define dso_local i64 @load_g_2() nounwind {
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi2)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i64, i64* @g_2
+  %0 = load i64, ptr @g_2
   ret i64 %0
 }
 
@@ -157,7 +157,7 @@ define dso_local i64 @load_g_4() nounwind {
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi3)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i64, i64* @g_4
+  %0 = load i64, ptr @g_4
   ret i64 %0
 }
 
@@ -191,7 +191,7 @@ define dso_local i64 @load_g_8() nounwind {
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi4)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i64, i64* @g_8
+  %0 = load i64, ptr @g_8
   ret i64 %0
 }
 
@@ -225,7 +225,7 @@ define dso_local i64 @load_g_16() nounwind {
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi5)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i64, i64* @g_16
+  %0 = load i64, ptr @g_16
   ret i64 %0
 }
 
@@ -260,7 +260,7 @@ define dso_local void @store_g_4() nounwind {
 ; RV64I-MEDIUM-NEXT:    sd zero, %pcrel_lo(.Lpcrel_hi6)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-   store i64 0, i64* @g_4
+   store i64 0, ptr @g_4
    ret void
 }
 
@@ -294,7 +294,7 @@ define dso_local void @store_g_8() nounwind {
 ; RV64I-MEDIUM-NEXT:    sd zero, %pcrel_lo(.Lpcrel_hi7)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-   store i64 0, i64* @g_8
+   store i64 0, ptr @g_8
    ret void
 }
 
@@ -338,9 +338,9 @@ define dso_local void @inc_g_i32() nounwind {
 ; RV64I-MEDIUM-NEXT:    sw a1, %pcrel_lo(.Lpcrel_hi8)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i32, i32* @g_4_i32
+  %0 = load i32, ptr @g_4_i32
   %inc = add i32 %0, 1
-  store i32 %inc, i32* @g_4_i32
+  store i32 %inc, ptr @g_4_i32
   br label %if.end
 
 if.end:
@@ -377,7 +377,7 @@ define dso_local i32 @load_ga() local_unnamed_addr #0 {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ga+4)
 ; RV64I-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi9)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
-  %1 = load i32, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @ga, i32 0, i32 1), align 4
+  %1 = load i32, ptr getelementptr inbounds ([2 x i32], ptr @ga, i32 0, i32 1), align 4
   ret i32 %1
 }
 
@@ -417,7 +417,7 @@ define dso_local i64 @load_ga_8() nounwind {
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi10)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i64, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @ga_8, i32 0, i32 1)
+  %0 = load i64, ptr getelementptr inbounds ([2 x i64], ptr @ga_8, i32 0, i32 1)
   ret i64 %0
 }
 
@@ -451,7 +451,7 @@ define dso_local i64 @load_ga_16() nounwind {
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi11)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i64, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @ga_16, i32 0, i32 1)
+  %0 = load i64, ptr getelementptr inbounds ([2 x i64], ptr @ga_16, i32 0, i32 1)
   ret i64 %0
 }
 
@@ -493,7 +493,7 @@ define dso_local i64 @load_tl_4() nounwind {
 ; RV64I-MEDIUM-NEXT:    ld a0, %tprel_lo(tl_4)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i64, i64* @tl_4
+  %0 = load i64, ptr @tl_4
   ret i64 %0
 }
 
@@ -528,7 +528,7 @@ define dso_local i64 @load_tl_8() nounwind {
 ; RV64I-MEDIUM-NEXT:    ld a0, %tprel_lo(tl_8)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i64, i64* @tl_8
+  %0 = load i64, ptr @tl_8
   ret i64 %0
 }
 
@@ -555,7 +555,7 @@ define dso_local i64 @load_const_ok() nounwind {
 ; RV64I-MEDIUM-NEXT:    ld a0, 2040(zero)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i64, i64* inttoptr (i32 2040 to i64*)
+  %0 = load i64, ptr inttoptr (i32 2040 to ptr)
   ret i64 %0
 }
 
@@ -584,7 +584,7 @@ define dso_local i64 @load_cost_overflow() nounwind {
 ; RV64I-MEDIUM-NEXT:    ld a0, 2044(zero)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i64, i64* inttoptr (i64 2044 to i64*)
+  %0 = load i64, ptr inttoptr (i64 2044 to ptr)
   ret i64 %0
 }
 
@@ -613,7 +613,7 @@ define dso_local i32 @load_const_medium() nounwind {
 ; RV64I-MEDIUM-NEXT:    lw a0, -16(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i32, i32* inttoptr (i64 4080 to i32*)
+  %0 = load i32, ptr inttoptr (i64 4080 to ptr)
   ret i32 %0
 }
 
@@ -647,6 +647,6 @@ define dso_local i32 @load_const_large() nounwind {
 ; RV64I-MEDIUM-NEXT:    lw a0, 0(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:
-  %0 = load i32, i32* inttoptr (i64 2147481600 to i32*)
+  %0 = load i32, ptr inttoptr (i64 2147481600 to ptr)
   ret i32 %0
 }

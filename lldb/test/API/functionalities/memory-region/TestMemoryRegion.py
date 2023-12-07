@@ -3,7 +3,6 @@ Test the 'memory region' command.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,21 +12,21 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class MemoryCommandRegion(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         TestBase.setUp(self)
         # Find the line number to break for main.c.
         self.line = line_number(
-            'main.cpp',
-            '// Run here before printing memory regions')
+            "main.cpp", "// Run here before printing memory regions"
+        )
 
     def test_help(self):
-        """ Test that help shows you must have one of address or --all, not both."""
-        self.expect("help memory region",
-            substrs=["memory region <address-expression>",
-                     "memory region -a"])
+        """Test that help shows you must have one of address or --all, not both."""
+        self.expect(
+            "help memory region",
+            substrs=["memory region <address-expression>", "memory region -a"],
+        )
 
     def setup_program(self):
         self.build()
@@ -35,7 +34,8 @@ class MemoryCommandRegion(TestBase):
         # Set breakpoint in main and run
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
         lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.line, num_expected_locations=-1, loc_exact=True)
+            self, "main.cpp", self.line, num_expected_locations=-1, loc_exact=True
+        )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
@@ -53,21 +53,27 @@ class MemoryCommandRegion(TestBase):
         # Test that the first 'memory region' command prints the usage.
         interp.HandleCommand("memory region", result)
         self.assertFalse(result.Succeeded())
-        self.assertEqual(result.GetError(),
-                    "error: 'memory region' takes one argument or \"--all\" option:\n"
-                    "Usage: memory region <address-expression> (or --all)\n")
+        self.assertEqual(
+            result.GetError(),
+            "error: 'memory region' takes one argument or \"--all\" option:\n"
+            "Usage: memory region <address-expression> (or --all)\n",
+        )
 
         # We allow --all or an address argument, not both
         interp.HandleCommand("memory region --all 0", result)
         self.assertFalse(result.Succeeded())
-        self.assertRegexpMatches(result.GetError(),
-                "The \"--all\" option cannot be used when an address argument is given")
+        self.assertRegexpMatches(
+            result.GetError(),
+            'The "--all" option cannot be used when an address argument is given',
+        )
 
         # Test that when the address fails to parse, we show an error and do not continue
         interp.HandleCommand("memory region not_an_address", result)
         self.assertFalse(result.Succeeded())
-        self.assertEqual(result.GetError(),
-                "error: invalid address argument \"not_an_address\": address expression \"not_an_address\" evaluation failed\n")
+        self.assertEqual(
+            result.GetError(),
+            'error: invalid address argument "not_an_address": address expression "not_an_address" evaluation failed\n',
+        )
 
         # Accumulate the results to compare with the --all output
         all_regions = ""
@@ -88,7 +94,10 @@ class MemoryCommandRegion(TestBase):
         # Now that we reached the end, 'memory region' should again print the usage.
         interp.HandleCommand("memory region", result)
         self.assertFalse(result.Succeeded())
-        self.assertRegexpMatches(result.GetError(), "Usage: memory region <address\-expression> \(or \-\-all\)")
+        self.assertRegexpMatches(
+            result.GetError(),
+            "Usage: memory region <address\-expression> \(or \-\-all\)",
+        )
 
         # --all should match what repeating the command gives you
         interp.HandleCommand("memory region --all", result)
@@ -124,10 +133,12 @@ class MemoryCommandRegion(TestBase):
 
                 self.assertFalse(
                     (region_base < previous_end) and (previous_base < region_end),
-                    "Unexpected overlapping memory region found.")
+                    "Unexpected overlapping memory region found.",
+                )
 
                 previous_base = region_base
                 previous_end = region_end
+
 
 class MemoryCommandRegionAll(GDBRemoteTestBase):
     NO_DEBUG_INFO_TESTCASE = True
@@ -145,22 +156,23 @@ class MemoryCommandRegionAll(GDBRemoteTestBase):
                 return ""
 
         self.server.responder = MyResponder()
-        target = self.dbg.CreateTarget('')
+        target = self.dbg.CreateTarget("")
         if self.TraceOn():
             self.runCmd("log enable gdb-remote packets")
-            self.addTearDownHook(
-                  lambda: self.runCmd("log disable gdb-remote packets"))
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
 
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateStopped])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
 
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
         interp.HandleCommand("memory region --all ", result)
         self.assertFalse(result.Succeeded())
-        self.assertEqual(result.GetError(),
-                    "error: qMemoryRegionInfo is not supported\n")
+        self.assertEqual(
+            result.GetError(), "error: qMemoryRegionInfo is not supported\n"
+        )
 
     @skipIfAsan
     def test_all_no_abi_plugin(self):
@@ -178,20 +190,22 @@ class MemoryCommandRegionAll(GDBRemoteTestBase):
                     return "start:100000000;size:fffffffeffffffff;"
 
         self.server.responder = MyResponder()
-        target = self.dbg.CreateTarget('')
+        target = self.dbg.CreateTarget("")
         if self.TraceOn():
-          self.runCmd("log enable gdb-remote packets")
-          self.addTearDownHook(
-                lambda: self.runCmd("log disable gdb-remote packets"))
+            self.runCmd("log enable gdb-remote packets")
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
 
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateStopped])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
 
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
         interp.HandleCommand("memory region --all ", result)
         self.assertTrue(result.Succeeded())
-        self.assertEqual(result.GetOutput(),
-                    "[0x0000000000000000-0x0000000100000000) ---\n"
-                    "[0x0000000100000000-0xffffffffffffffff) ---\n")
+        self.assertEqual(
+            result.GetOutput(),
+            "[0x0000000000000000-0x0000000100000000) ---\n"
+            "[0x0000000100000000-0xffffffffffffffff) ---\n",
+        )

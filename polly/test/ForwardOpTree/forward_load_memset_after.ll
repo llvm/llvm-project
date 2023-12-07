@@ -15,9 +15,9 @@
 ; }
 ;
 
-declare void @llvm.memset.p0f64.i64(double* nocapture, i8, i64, i32, i1)
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i32, i1)
 
-define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
+define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %for
 
@@ -27,18 +27,18 @@ for:
   br i1 %j.cmp, label %bodyA, label %exit
 
     bodyA:
-      %B_idx = getelementptr inbounds double, double* %B, i32 %j
-      %val = load double, double* %B_idx
+      %B_idx = getelementptr inbounds double, ptr %B, i32 %j
+      %val = load double, ptr %B_idx
       br label %bodyB
 
     bodyB:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %val, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %val, ptr %A_idx
       br label %bodyC
 
     bodyC:
-      call void @llvm.memset.p0f64.i64(double* %A, i8 0, i64 16, i32 1, i1 false)
-      call void @llvm.memset.p0f64.i64(double* %B, i8 0, i64 16, i32 1, i1 false)
+      call void @llvm.memset.p0.i64(ptr %A, i8 0, i64 16, i32 1, i1 false)
+      call void @llvm.memset.p0.i64(ptr %B, i8 0, i64 16, i32 1, i1 false)
       br label %inc
 
 inc:

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++1z
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++2b
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++17
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23
 
 // Template argument deduction with template template parameters.
 template<typename T, template<T> class A> 
@@ -137,7 +137,6 @@ namespace test2 {
   }
 }
 
-// rdar://problem/8537391
 namespace test3 {
   struct Foo {
     template <void F(char)> static inline void foo();

@@ -15,6 +15,11 @@ define dso_local i32 @_Z6answeri(i32 %0) {
 ; All we care about with this function is that LLVM doesn't crash
 ; when optimizing it.
 define void @test_alloca() {
+; CHECK-LABEL: @test_alloca(
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    call void @free(ptr [[TMP1]])
+; CHECK-NEXT:    ret void
+;
   %1 = alloca i8
   call void @free(ptr %1)
   ret void

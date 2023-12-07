@@ -1,5 +1,5 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
-// UNSUPPORTED: linux, solaris
+// UNSUPPORTED: target={{.*(linux|solaris).*}}
 
 #include <assert.h>
 #include <stdio.h>

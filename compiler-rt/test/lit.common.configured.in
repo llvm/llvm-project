@@ -49,6 +49,7 @@ set_default("have_rpc_xdr_h", @HAVE_RPC_XDR_H@)
 set_default("gwp_asan", @COMPILER_RT_HAS_GWP_ASAN_PYBOOL@)
 set_default("expensive_checks", @LLVM_ENABLE_EXPENSIVE_CHECKS_PYBOOL@)
 set_default("test_standalone_build_libs", @COMPILER_RT_TEST_STANDALONE_BUILD_LIBS_PYBOOL@)
+set_default("has_compiler_rt_libatomic", @COMPILER_RT_BUILD_STANDALONE_LIBATOMIC_PYBOOL@)
 # True iff the test suite supports ignoring the test compiler's runtime library path
 # and using `config.compiler_rt_libdir` instead. This only matters when the runtime
 # library paths differ.
@@ -65,7 +66,8 @@ elif config.android:
 else:
   set_default("target_suffix", "-%s" % config.target_arch)
 
-set_default("have_zlib", "@LLVM_ENABLE_ZLIB@")
+set_default("have_internal_symbolizer", @COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER_PYBOOL@)
+set_default("have_zlib", @ZLIB_FOUND_PYBOOL@)
 set_default("libcxx_used", "@LLVM_LIBCXX_USED@")
 
 # LLVM tools dir can be passed in lit parameters, so try to

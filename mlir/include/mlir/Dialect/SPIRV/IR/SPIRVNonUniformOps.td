@@ -124,11 +124,11 @@ def SPIRV_GroupNonUniformBroadcastOp : SPIRV_Op<"GroupNonUniformBroadcast",
     group-non-uniform-broadcast-op ::= ssa-id `=`
         `spirv.GroupNonUniformBroadcast` scope ssa_use, ssa_use
         `:` integer-float-scalar-vector-type `,` integer-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %scalar_value = ... : f32
     %vector_value = ... : vector<4xf32>
     %id = ... : i32

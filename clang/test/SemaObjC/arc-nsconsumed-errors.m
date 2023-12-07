@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fobjc-arc -verify -fblocks -triple x86_64-apple-darwin10.0.0 -DOBJCARC %s
 // RUN: %clang_cc1 -fsyntax-only -verify -fblocks -triple x86_64-apple-darwin10.0.0 %s
-// rdar://10187884
 
 #ifdef OBJCARC
 typedef void (^blk)(id arg1, __attribute((ns_consumed)) id arg2);

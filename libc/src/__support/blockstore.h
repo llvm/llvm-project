@@ -9,14 +9,11 @@
 #ifndef LLVM_LIBC_SUPPORT_BLOCKSTORE_H
 #define LLVM_LIBC_SUPPORT_BLOCKSTORE_H
 
+#include <src/__support/CPP/new.h>
+#include <src/__support/libc_assert.h>
+
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
-
-// TODO: fix our assert.h to make it useable
-#define assert(x)                                                              \
-  if (!(x))                                                                    \
-  __builtin_trap()
 
 namespace __llvm_libc {
 namespace cpp {
@@ -55,7 +52,7 @@ protected:
     Block *curr = &first;
     for (; curr->next; prev = curr, curr = curr->next)
       ;
-    assert(curr == current);
+    LIBC_ASSERT(curr == current);
     return {curr, prev};
   }
 
@@ -114,7 +111,10 @@ public:
 
   T *new_obj() {
     if (fill_count == BLOCK_SIZE) {
-      auto new_block = reinterpret_cast<Block *>(::malloc(sizeof(Block)));
+      AllocChecker ac;
+      auto new_block = new (ac) Block();
+      if (!ac)
+        return nullptr;
       if (REVERSE_ORDER) {
         new_block->next = current;
       } else {
@@ -129,9 +129,12 @@ public:
     return obj;
   }
 
-  void push_back(const T &value) {
+  [[nodiscard]] bool push_back(const T &value) {
     T *ptr = new_obj();
+    if (ptr == nullptr)
+      return false;
     *ptr = value;
+    return true;
   }
 
   T &back() {
@@ -145,15 +148,15 @@ public:
       return;
     auto [last, prev] = getLastBlocks();
     if (REVERSE_ORDER) {
-      assert(last == current);
+      LIBC_ASSERT(last == current);
       current = current->next;
     } else {
-      assert(prev->next == last);
+      LIBC_ASSERT(prev->next == last);
       current = prev;
       current->next = nullptr;
     }
     if (last != &first)
-      ::free(last);
+      delete last;
     fill_count = BLOCK_SIZE;
   }
 
@@ -182,14 +185,14 @@ void BlockStore<T, BLOCK_SIZE, REVERSE_ORDER>::destroy(
     while (current->next != nullptr) {
       auto temp = current;
       current = current->next;
-      free(temp);
+      delete temp;
     }
   } else {
     auto current = block_store->first.next;
     while (current != nullptr) {
       auto temp = current;
       current = current->next;
-      free(temp);
+      delete temp;
     }
   }
   block_store->current = nullptr;

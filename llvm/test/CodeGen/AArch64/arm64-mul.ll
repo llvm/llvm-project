@@ -111,7 +111,7 @@ entry:
 define i64 @t9(i32 %a) nounwind {
 ; CHECK-LABEL: t9:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #8896
+; CHECK-NEXT:    mov w8, #8896 // =0x22c0
 ; CHECK-NEXT:    movk w8, #2, lsl #16
 ; CHECK-NEXT:    umull x0, w0, w8
 ; CHECK-NEXT:    ret
@@ -125,11 +125,11 @@ entry:
 define i64 @t10(i32 %a) nounwind {
 ; CHECK-LABEL: t10:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #2
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x9, w0
-; CHECK-NEXT:    movk w8, #32768, lsl #16
-; CHECK-NEXT:    mul x0, x9, x8
+; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w9, #2 // =0x2
+; CHECK-NEXT:    movk w9, #32768, lsl #16
+; CHECK-NEXT:    mul x0, x8, x9
 ; CHECK-NEXT:    ret
 entry:
   %tmp1 = sext i32 %a to i64
@@ -141,7 +141,7 @@ entry:
 define i64 @t11(i64 %a) nounwind {
 ; CHECK-LABEL: t11:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #29594
+; CHECK-NEXT:    mov w8, #29594 // =0x739a
 ; CHECK-NEXT:    movk w8, #65499, lsl #16
 ; CHECK-NEXT:    smnegl x0, w0, w8
 ; CHECK-NEXT:    ret
@@ -156,7 +156,7 @@ entry:
 define i64 @t12(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: t12:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #35118
+; CHECK-NEXT:    mov w8, #35118 // =0x892e
 ; CHECK-NEXT:    movk w8, #65008, lsl #16
 ; CHECK-NEXT:    smaddl x0, w0, w8, x1
 ; CHECK-NEXT:    ret
@@ -171,7 +171,7 @@ entry:
 define i64 @t13(i32 %a, i64 %b) nounwind {
 ; CHECK-LABEL: t13:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #24910
+; CHECK-NEXT:    mov w8, #24910 // =0x614e
 ; CHECK-NEXT:    movk w8, #188, lsl #16
 ; CHECK-NEXT:    umsubl x0, w0, w8, x1
 ; CHECK-NEXT:    ret
@@ -185,7 +185,7 @@ entry:
 define i64 @t14(i32 %a, i64 %b) nounwind {
 ; CHECK-LABEL: t14:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #40626
+; CHECK-NEXT:    mov w8, #40626 // =0x9eb2
 ; CHECK-NEXT:    movk w8, #65347, lsl #16
 ; CHECK-NEXT:    smsubl x0, w0, w8, x1
 ; CHECK-NEXT:    ret

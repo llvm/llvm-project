@@ -1,4 +1,4 @@
-; RUN: opt %s -S -passes=verify -experimental-assignment-tracking 2>&1 \
+; RUN: opt %s -S -passes=verify 2>&1 \
 ; RUN: | FileCheck %s
 
 ;; Check that badly formed assignment tracking metadata is caught either
@@ -31,6 +31,9 @@ entry:
   call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !2, metadata ptr undef, metadata !DIExpression()), !dbg !13
   ; CHECK: invalid llvm.dbg.assign intrinsic address
   call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !14, metadata !3, metadata !DIExpression()), !dbg !13
+  ;; Empty metadata debug operands are allowed.
+  ; CHECK-NOT: invalid llvm.dbg.assign
+  call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !14, metadata !2, metadata !DIExpression()), !dbg !13
   ; CHECK: invalid llvm.dbg.assign intrinsic address expression
   call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !14, metadata ptr undef, metadata !2), !dbg !13
   ret void
@@ -40,7 +43,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5}
+!llvm.module.flags = !{!3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 14.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
@@ -58,3 +61,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !13 = !DILocation(line: 1, column: 1, scope: !7)
 !14 = distinct !DIAssignID()
 !15 = distinct !DISubprogram(name: "fun2", scope: !1, file: !1, line: 1, type: !8, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

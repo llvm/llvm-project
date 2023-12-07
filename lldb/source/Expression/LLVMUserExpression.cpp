@@ -9,7 +9,6 @@
 
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
@@ -23,6 +22,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
@@ -34,6 +34,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+using namespace lldb;
 using namespace lldb_private;
 
 char LLVMUserExpression::ID;
@@ -118,7 +119,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
 
     IRInterpreter::Interpret(*module, *function, args, *m_execution_unit_sp,
                              interpreter_error, function_stack_bottom,
-                             function_stack_top, exe_ctx);
+                             function_stack_top, exe_ctx, options.GetTimeout());
 
     if (!interpreter_error.Success()) {
       diagnostic_manager.Printf(eDiagnosticSeverityError,
@@ -231,7 +232,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
           eDiagnosticSeverityError,
           "Couldn't complete execution; the thread "
           "on which the expression was being run: 0x%" PRIx64
-          " exited during its execution.", 
+          " exited during its execution.",
           expr_thread_id);
       return execution_result;
     } else if (execution_result != lldb::eExpressionCompleted) {
@@ -333,7 +334,14 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
     if (m_can_interpret && m_stack_frame_bottom == LLDB_INVALID_ADDRESS) {
       Status alloc_error;
 
-      const size_t stack_frame_size = 512 * 1024;
+      size_t stack_frame_size = target->GetExprAllocSize();
+      if (stack_frame_size == 0) {
+        ABISP abi_sp;
+        if (process && (abi_sp = process->GetABI()))
+          stack_frame_size = abi_sp->GetStackFrameSize();
+        else
+          stack_frame_size = 512 * 1024;
+      }
 
       const bool zero_memory = false;
 

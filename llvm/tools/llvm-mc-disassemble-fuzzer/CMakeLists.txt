@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
     MCDisassembler
     MCParser
     Support
+    TargetParser
 )
 add_llvm_fuzzer(llvm-mc-disassemble-fuzzer
   llvm-mc-disassemble-fuzzer.cpp

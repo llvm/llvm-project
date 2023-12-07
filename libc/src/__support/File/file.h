@@ -9,7 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
 #define LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
 
+#include "src/__support/CPP/new.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "src/__support/threads/mutex.h"
 
 #include <stddef.h>
@@ -45,7 +47,6 @@ public:
   // file position indicator.
   using SeekFunc = ErrorOr<long>(File *, long, int);
   using CloseFunc = int(File *);
-  using FlushFunc = int(File *);
 
   using ModeFlags = uint32_t;
 
@@ -82,16 +83,15 @@ private:
   ReadFunc *platform_read;
   SeekFunc *platform_seek;
   CloseFunc *platform_close;
-  FlushFunc *platform_flush;
 
   Mutex mutex;
 
   // For files which are readable, we should be able to support one ungetc
   // operation even if |buf| is nullptr. So, in the constructor of File, we
   // set |buf| to point to this buffer character.
-  char ungetc_buf;
+  uint8_t ungetc_buf;
 
-  void *buf;      // Pointer to the stream buffer for buffered streams
+  uint8_t *buf;   // Pointer to the stream buffer for buffered streams
   size_t bufsize; // Size of the buffer pointed to by |buf|.
 
   // Buffering mode to used to buffer.
@@ -151,39 +151,14 @@ public:
   // is zero. This way, we will not have to employ the semantics of
   // the set_buffer method and allocate a buffer.
   constexpr File(WriteFunc *wf, ReadFunc *rf, SeekFunc *sf, CloseFunc *cf,
-                 FlushFunc *ff, void *buffer, size_t buffer_size,
-                 int buffer_mode, bool owned, ModeFlags modeflags)
+                 uint8_t *buffer, size_t buffer_size, int buffer_mode,
+                 bool owned, ModeFlags modeflags)
       : platform_write(wf), platform_read(rf), platform_seek(sf),
-        platform_close(cf), platform_flush(ff), mutex(false, false, false),
-        ungetc_buf(0), buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
-        own_buf(owned), mode(modeflags), pos(0), prev_op(FileOp::NONE),
-        read_limit(0), eof(false), err(false) {
+        platform_close(cf), mutex(false, false, false), ungetc_buf(0),
+        buf(buffer), bufsize(buffer_size), bufmode(buffer_mode), own_buf(owned),
+        mode(modeflags), pos(0), prev_op(FileOp::NONE), read_limit(0),
+        eof(false), err(false) {
     adjust_buf();
-  }
-
-  // This function helps initialize the various fields of the File data
-  // structure after a allocating memory for it via a call to malloc.
-  static void init(File *f, WriteFunc *wf, ReadFunc *rf, SeekFunc *sf,
-                   CloseFunc *cf, FlushFunc *ff, void *buffer,
-                   size_t buffer_size, int buffer_mode, bool owned,
-                   ModeFlags modeflags) {
-    Mutex::init(&f->mutex, false, false, false);
-    f->platform_write = wf;
-    f->platform_read = rf;
-    f->platform_seek = sf;
-    f->platform_close = cf;
-    f->platform_flush = ff;
-    f->buf = reinterpret_cast<uint8_t *>(buffer);
-    f->bufsize = buffer_size;
-    f->bufmode = buffer_mode;
-    f->own_buf = owned;
-    f->mode = modeflags;
-
-    f->prev_op = FileOp::NONE;
-    f->read_limit = f->pos = 0;
-    f->eof = f->err = false;
-
-    f->adjust_buf();
   }
 
   // Buffered write of |len| bytes from |data| without the file lock.
@@ -225,6 +200,35 @@ public:
     return ungetc_unlocked(c);
   }
 
+  // Does the following:
+  // 1. If in write mode, Write out any data present in the buffer.
+  // 2. Call platform_close.
+  // platform_close is expected to cleanup the complete file object.
+  int close() {
+    {
+      FileLock lock(this);
+      if (prev_op == FileOp::WRITE && pos > 0) {
+        auto buf_result = platform_write(this, buf, pos);
+        if (buf_result.has_error() || buf_result.value < pos) {
+          err = true;
+          return buf_result.error;
+        }
+      }
+    }
+
+    // If we own the buffer, delete it before calling the platform close
+    // implementation. The platform close should not need to access the buffer
+    // and we need to clean it up before the entire structure is removed.
+    if (own_buf)
+      delete buf;
+
+    // Platform close is expected to cleanup the file data structure which
+    // includes the file mutex. Hence, we call platform_close after releasing
+    // the file lock. Another thread doing file operations while a thread is
+    // closing the file is undefined behavior as per POSIX.
+    return platform_close(this);
+  }
+
   // Sets the internal buffer to |buffer| with buffering mode |mode|.
   // |size| is the size of |buffer|. If |size| is non-zero, but |buffer|
   // is nullptr, then a buffer owned by this file will be allocated.
@@ -234,11 +238,10 @@ public:
   // if:
   //   1. |buffer| is not a nullptr but |size| is zero.
   //   2. |buffer_mode| is not one of _IOLBF, IOFBF or _IONBF.
-  // In both the above cases, error returned in EINVAL.
+  //   3. If an allocation was required but the allocation failed.
+  // For cases 1 and 2, the error returned in EINVAL. For case 3, error returned
+  // is ENOMEM.
   int set_buffer(void *buffer, size_t size, int buffer_mode);
-
-  // Closes the file stream and frees up all resources owned by it.
-  int close();
 
   void lock() { mutex.lock(); }
   void unlock() { mutex.unlock(); }

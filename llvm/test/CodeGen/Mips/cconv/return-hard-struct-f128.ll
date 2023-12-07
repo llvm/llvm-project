@@ -10,7 +10,7 @@
 
 define inreg {fp128} @ret_struct_fp128() nounwind {
 entry:
-        %0 = load volatile {fp128}, {fp128}* @struct_fp128
+        %0 = load volatile {fp128}, ptr @struct_fp128
         ret {fp128} %0
 }
 

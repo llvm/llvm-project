@@ -52,7 +52,7 @@ entry:
   ret i16 %x
 }
 
-define void @test_trunc_i32_i16(i32 %v, i16 *%p) {
+define void @test_trunc_i32_i16(i32 %v, ptr %p) {
 ; CHECK-LABEL: test_trunc_i32_i16:
 ; The trunc doesn't result in any instructions, but we
 ; expect the store to be explicitly 16-bit.
@@ -60,11 +60,11 @@ define void @test_trunc_i32_i16(i32 %v, i16 *%p) {
 ; CHECK: bx lr
 entry:
   %v16 = trunc i32 %v to i16
-  store i16 %v16, i16 *%p
+  store i16 %v16, ptr %p
   ret void
 }
 
-define void @test_trunc_i32_i8(i32 %v, i8 *%p) {
+define void @test_trunc_i32_i8(i32 %v, ptr %p) {
 ; CHECK-LABEL: test_trunc_i32_i8:
 ; The trunc doesn't result in any instructions, but we
 ; expect the store to be explicitly 8-bit.
@@ -72,7 +72,7 @@ define void @test_trunc_i32_i8(i32 %v, i8 *%p) {
 ; CHECK: bx lr
 entry:
   %v8 = trunc i32 %v to i8
-  store i8 %v8, i8 *%p
+  store i8 %v8, ptr %p
   ret void
 }
 
@@ -293,33 +293,33 @@ entry:
   ret i8 %sum
 }
 
-define i32 @test_ptr_arg_in_reg(i32* %p) {
+define i32 @test_ptr_arg_in_reg(ptr %p) {
 ; CHECK-LABEL: test_ptr_arg_in_reg:
 ; CHECK: ldr r0, [r0]
 ; CHECK: bx lr
 entry:
-  %v = load i32, i32* %p
+  %v = load i32, ptr %p
   ret i32 %v
 }
 
-define i32 @test_ptr_arg_on_stack(i32 %f0, i32 %f1, i32 %f2, i32 %f3, i32* %p) {
+define i32 @test_ptr_arg_on_stack(i32 %f0, i32 %f1, i32 %f2, i32 %f3, ptr %p) {
 ; CHECK-LABEL: test_ptr_arg_on_stack:
 ; CHECK: mov r0, sp
 ; CHECK: ldr r0, [r0]
 ; CHECK: ldr r0, [r0]
 ; CHECK: bx lr
 entry:
-  %v = load i32, i32* %p
+  %v = load i32, ptr %p
   ret i32 %v
 }
 
-define i8* @test_ptr_ret(i8** %p) {
+define ptr @test_ptr_ret(ptr %p) {
 ; CHECK-LABEL: test_ptr_ret:
 ; CHECK: ldr r0, [r0]
 ; CHECK: bx lr
 entry:
-  %v = load i8*, i8** %p
-  ret i8* %v
+  %v = load ptr, ptr %p
+  ret ptr %v
 }
 
 define arm_aapcs_vfpcc float @test_float_hard(float %f0, float %f1) {
@@ -377,7 +377,7 @@ entry:
   ret i32 %r
 }
 
-define arm_aapcscc i32 @test_cmp_ptr_neq(double *%a, double *%b) {
+define arm_aapcscc i32 @test_cmp_ptr_neq(ptr %a, ptr %b) {
 ; CHECK-LABEL: test_cmp_ptr_neq:
 ; CHECK: mov [[V:r[0-9]+]], #0
 ; CHECK: cmp r0, r1
@@ -385,7 +385,7 @@ define arm_aapcscc i32 @test_cmp_ptr_neq(double *%a, double *%b) {
 ; CHECK: and r0, [[V]], #1
 ; CHECK: bx lr
 entry:
-  %v = icmp ne double * %a, %b
+  %v = icmp ne ptr %a, %b
   %r = zext i1 %v to i32
   ret i32 %r
 }
@@ -413,14 +413,14 @@ entry:
   ret i32 %r
 }
 
-define arm_aapcscc i32* @test_select_ptr(i32* %a, i32* %b, i1 %cond) {
+define arm_aapcscc ptr @test_select_ptr(ptr %a, ptr %b, i1 %cond) {
 ; CHECK-LABEL: test_select_ptr
 ; CHECK: tst r2, #1
 ; CHECK: moveq r0, r1
 ; CHECK: bx lr
 entry:
-  %r = select i1 %cond, i32* %a, i32* %b
-  ret i32* %r
+  %r = select i1 %cond, ptr %a, ptr %b
+  ret ptr %r
 }
 
 define arm_aapcscc void @test_br() {

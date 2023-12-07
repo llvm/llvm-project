@@ -108,6 +108,12 @@ function step() {
 }
 
 for arch in ${architectures}; do
+    # Construct the target-triple that we're testing for. Otherwise, the target triple is currently detected
+    # as <arch>-apple-darwin<version> instead of <arch>-apple-macosx<version>, which trips up the test suite.
+    # TODO: This shouldn't be necessary anymore if `clang -print-target-triple` behaved properly, see https://llvm.org/PR61762.
+    #       Then LLVM would guess the LLVM_DEFAULT_TARGET_TRIPLE properly and we wouldn't have to specify it.
+    target=$(xcrun clang -arch ${arch} -xc - -### 2>&1 | grep --only-matching -E '"-triple" ".+?"' | grep --only-matching -E '"[^ ]+-apple-[^ ]+?"' | tr -d '"')
+
     step "Building libc++.dylib and libc++abi.dylib for architecture ${arch}"
     mkdir -p "${build_dir}/${arch}"
     xcrun cmake -S "${llvm_root}/runtimes" \
@@ -119,7 +125,11 @@ for arch in ${architectures}; do
                 -DCMAKE_INSTALL_PREFIX="${build_dir}/${arch}-install" \
                 -DCMAKE_INSTALL_NAME_DIR="/usr/lib" \
                 -DCMAKE_OSX_ARCHITECTURES="${arch}" \
-                -DLIBCXXABI_LIBRARY_VERSION="${version}"
+                -DLIBCXXABI_LIBRARY_VERSION="${version}" \
+                -DLIBCXX_LIBRARY_VERSION="${version}" \
+                -DLIBCXX_TEST_PARAMS="target_triple=${target}" \
+                -DLIBCXXABI_TEST_PARAMS="target_triple=${target}" \
+                -DLIBUNWIND_TEST_PARAMS="target_triple=${target}"
 
     if [ "$headers_only" = true ]; then
         xcrun cmake --build "${build_dir}/${arch}" --target install-cxx-headers install-cxxabi-headers -- -v
@@ -150,6 +160,9 @@ if [ "$headers_only" != true ]; then
     universal_dylib libc++.1.dylib
     universal_dylib libc++abi.dylib
     (cd "${install_dir}/usr/lib" && ln -s "libc++.1.dylib" libc++.dylib)
+
+    experimental_libs=$(for arch in ${architectures}; do echo "${build_dir}/${arch}-install/lib/libc++experimental.a"; done)
+    xcrun lipo -create ${experimental_libs} -output "${install_dir}/usr/lib/libc++experimental.a"
 fi
 
 # Install the headers by copying the headers from one of the built architectures

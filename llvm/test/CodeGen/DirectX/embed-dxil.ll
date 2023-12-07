@@ -1,4 +1,3 @@
-; RUN: llc %s --filetype=asm -o - | FileCheck %s
 ; RUN: opt %s -dxil-embed -S -o - | FileCheck %s
 ; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
 target triple = "dxil-unknown-shadermodel6.5-library"
@@ -42,11 +41,11 @@ define i32 @add(i32 %a, i32 %b) {
 ; DXC-NEXT:       MajorVersion:    6
 ; DXC-NEXT:       MinorVersion:    5
 ; DXC-NEXT:       ShaderKind:      6
-; DXC-NEXT:       Size:            [[#div(SIZE,4) - 2]]
+; DXC-NEXT:       Size:            [[#div(SIZE,4)]]
 ; DXC-NEXT:       DXILMajorVersion: [[#]]
 ; DXC-NEXT:       DXILMinorVersion: [[#]]
-; DXC-NEXT:       DXILSize:        [[#SIZE - 32]]
+; DXC-NEXT:       DXILSize:        [[#SIZE - 24]]
 ; DXC-NEXT:       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE,
 ; DXC:      - Name:            SFI0
-; DXC-NEXT:   Size:            16
+; DXC-NEXT:   Size:            8
 ; DXC-NOT:    Flags:

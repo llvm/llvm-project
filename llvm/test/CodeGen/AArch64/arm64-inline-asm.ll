@@ -70,7 +70,7 @@ entry:
 
 ; rdar://9553599
 
-define zeroext i8 @t6(i8* %src) nounwind {
+define zeroext i8 @t6(ptr %src) nounwind {
 ; CHECK-LABEL: t6:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ; InlineAsm Start
@@ -79,11 +79,11 @@ define zeroext i8 @t6(i8* %src) nounwind {
 ; CHECK-NEXT:    and w0, w8, #0xff
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call i8 asm "ldtrb ${0:w}, [$1]", "=r,r"(i8* %src) nounwind
+  %0 = tail call i8 asm "ldtrb ${0:w}, [$1]", "=r,r"(ptr %src) nounwind
   ret i8 %0
 }
 
-define void @t7(i8* %f, i32 %g) nounwind {
+define void @t7(ptr %f, i32 %g) nounwind {
 ; CHECK-LABEL: t7:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub sp, sp, #16
@@ -95,9 +95,9 @@ define void @t7(i8* %f, i32 %g) nounwind {
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 entry:
-  %f.addr = alloca i8*, align 8
-  store i8* %f, i8** %f.addr, align 8
-  call void asm "str ${1:w}, $0", "=*Q,r"(i8** elementtype(i8*) %f.addr, i32 %g) nounwind
+  %f.addr = alloca ptr, align 8
+  store ptr %f, ptr %f.addr, align 8
+  call void asm "str ${1:w}, $0", "=*Q,r"(ptr elementtype(ptr) %f.addr, i32 %g) nounwind
   ret void
 }
 
@@ -202,7 +202,7 @@ define void @t9() nounwind {
 ; CHECK-NEXT:    ret
 entry:
   %data = alloca <2 x double>, align 16
-  %0 = load <2 x double>, <2 x double>* %data, align 16
+  %0 = load <2 x double>, ptr %data, align 16
   call void asm sideeffect "mov.2d v4, $0\0A", "w,~{v4}"(<2 x double> %0) nounwind
   ret void
 }
@@ -242,14 +242,13 @@ define void @t10() nounwind {
 entry:
   %data = alloca <2 x float>, align 8
   %a = alloca [2 x float], align 4
-  %arraydecay = getelementptr inbounds [2 x float], [2 x float]* %a, i32 0, i32 0
-  %0 = load <2 x float>, <2 x float>* %data, align 8
-  call void asm sideeffect "ldr ${1:z}, [$0]\0A", "r,w"(float* %arraydecay, <2 x float> %0) nounwind
-  call void asm sideeffect "ldr ${1:q}, [$0]\0A", "r,w"(float* %arraydecay, <2 x float> %0) nounwind
-  call void asm sideeffect "ldr ${1:d}, [$0]\0A", "r,w"(float* %arraydecay, <2 x float> %0) nounwind
-  call void asm sideeffect "ldr ${1:s}, [$0]\0A", "r,w"(float* %arraydecay, <2 x float> %0) nounwind
-  call void asm sideeffect "ldr ${1:h}, [$0]\0A", "r,w"(float* %arraydecay, <2 x float> %0) nounwind
-  call void asm sideeffect "ldr ${1:b}, [$0]\0A", "r,w"(float* %arraydecay, <2 x float> %0) nounwind
+  %0 = load <2 x float>, ptr %data, align 8
+  call void asm sideeffect "ldr ${1:z}, [$0]\0A", "r,w"(ptr %a, <2 x float> %0) nounwind
+  call void asm sideeffect "ldr ${1:q}, [$0]\0A", "r,w"(ptr %a, <2 x float> %0) nounwind
+  call void asm sideeffect "ldr ${1:d}, [$0]\0A", "r,w"(ptr %a, <2 x float> %0) nounwind
+  call void asm sideeffect "ldr ${1:s}, [$0]\0A", "r,w"(ptr %a, <2 x float> %0) nounwind
+  call void asm sideeffect "ldr ${1:h}, [$0]\0A", "r,w"(ptr %a, <2 x float> %0) nounwind
+  call void asm sideeffect "ldr ${1:b}, [$0]\0A", "r,w"(ptr %a, <2 x float> %0) nounwind
   ret void
 }
 
@@ -271,9 +270,9 @@ define void @t11() nounwind {
 ; CHECK-NEXT:    ret
 entry:
   %a = alloca i32, align 4
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   call void asm sideeffect "mov ${1:x}, ${0:x}\0A", "r,i"(i32 %0, i32 0) nounwind
-  %1 = load i32, i32* %a, align 4
+  %1 = load i32, ptr %a, align 4
   call void asm sideeffect "mov ${1:w}, ${0:w}\0A", "r,i"(i32 %1, i32 0) nounwind
   ret void
 }
@@ -290,7 +289,7 @@ define void @t12() nounwind {
 ; CHECK-NEXT:    ret
 entry:
   %data = alloca <4 x float>, align 16
-  %0 = load <4 x float>, <4 x float>* %data, align 16
+  %0 = load <4 x float>, ptr %data, align 16
   call void asm sideeffect "mov.2d v4, $0\0A", "x,~{v4}"(<4 x float> %0) nounwind
   ret void
 }
@@ -365,16 +364,16 @@ entry:
 
 ; rdar://problem/14285178
 
-define void @test_zero_reg(i32* %addr) {
+define void @test_zero_reg(ptr %addr) {
 ; CHECK-LABEL: test_zero_reg:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    USE(xzr)
 ; CHECK-NEXT:    ; InlineAsm End
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    USE(wzr)
 ; CHECK-NEXT:    ; InlineAsm End
+; CHECK-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    USE(w8)
 ; CHECK-NEXT:    ; InlineAsm End
@@ -441,7 +440,7 @@ define void @test_constraint_w(i32 %a) {
   ret void
 }
 
-define void @test_inline_modifier_a(i8* %ptr) nounwind {
+define void @test_inline_modifier_a(ptr %ptr) nounwind {
 ; CHECK-LABEL: test_inline_modifier_a:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; InlineAsm Start
@@ -449,7 +448,7 @@ define void @test_inline_modifier_a(i8* %ptr) nounwind {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    ; InlineAsm End
 ; CHECK-NEXT:    ret
-  tail call void asm sideeffect "prfm pldl1keep, ${0:a}\0A", "r"(i8* %ptr)
+  tail call void asm sideeffect "prfm pldl1keep, ${0:a}\0A", "r"(ptr %ptr)
   ret void
 }
 
@@ -464,7 +463,7 @@ define void @test_zero_address() {
 ; CHECK-NEXT:    ; InlineAsm End
 ; CHECK-NEXT:    ret
 entry:
-  tail call i32 asm sideeffect "ldr $0, $1 \0A", "=r,*Q"(i32* elementtype(i32) null)
+  tail call i32 asm sideeffect "ldr $0, $1 \0A", "=r,*Q"(ptr elementtype(i32) null)
   ret void
 }
 
@@ -480,7 +479,7 @@ define void @test_no_hash_in_lane_specifier() {
   ret void
 }
 
-define void @test_vector_too_large_r_m(<9 x float>* nocapture readonly %0) {
+define void @test_vector_too_large_r_m(ptr nocapture readonly %0) {
 ; CHECK-LABEL: test_vector_too_large_r_m:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub sp, sp, #64
@@ -488,17 +487,17 @@ define void @test_vector_too_large_r_m(<9 x float>* nocapture readonly %0) {
 ; CHECK-NEXT:    ldp q2, q1, [x0]
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ldr s0, [x0, #32]
-; CHECK-NEXT:    stp q2, q1, [sp]
 ; CHECK-NEXT:    str s0, [sp, #32]
+; CHECK-NEXT:    stp q2, q1, [sp]
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    ; InlineAsm End
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
 entry:
   %m.addr = alloca <9 x float>, align 16
-  %m = load <9 x float>, <9 x float>* %0, align 16
-  store <9 x float> %m, <9 x float>* %m.addr, align 16
-  call void asm sideeffect "", "=*r|m,0,~{memory}"(<9 x float>* elementtype(<9 x float>) nonnull %m.addr, <9 x float> %m)
+  %m = load <9 x float>, ptr %0, align 16
+  store <9 x float> %m, ptr %m.addr, align 16
+  call void asm sideeffect "", "=*r|m,0,~{memory}"(ptr elementtype(<9 x float>) nonnull %m.addr, <9 x float> %m)
   ret void
 }
 
@@ -514,6 +513,6 @@ define void @test_o_output_constraint() {
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %b = alloca i8, align 1
-  call void asm "mov $0, 7", "=*o"(i8* elementtype(i8) %b)
+  call void asm "mov $0, 7", "=*o"(ptr elementtype(i8) %b)
   ret void
 }

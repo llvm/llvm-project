@@ -11,7 +11,7 @@ int main(int argc, char **argv) {
   char a2[] = {1, static_cast<char>(2*argc), 3, 4};
   int res = memcmp(a1, a2, 4 + argc);  // BOOM
   // CHECK: AddressSanitizer: stack-buffer-overflow
-  // CHECK: {{#1.*memcmp}}
-  // CHECK: {{#2.*main}}
+  // CHECK: {{#[0-9]+ .*memcmp}}
+  // CHECK: {{#[0-9]+ .*main}}
   return res;
 }

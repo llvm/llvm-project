@@ -13,7 +13,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @foo([64 x double]* noundef %C, [64 x [64 x double]]* noundef %A, [64 x [64 x double]]* noundef %B) {
+define void @foo(ptr noundef %C, ptr noundef %A, ptr noundef %B) {
 entry:
   br label %for.cond1.preheader
 
@@ -31,15 +31,15 @@ for.cond9.preheader:                              ; preds = %for.inc27, %for.con
 
 for.body12:                                       ; preds = %for.body12, %for.cond9.preheader
   %indvars.iv = phi i64 [ 0, %for.cond9.preheader ], [ %indvars.iv.next, %for.body12 ]
-  %arrayidx16 = getelementptr inbounds [64 x [64 x double]], [64 x [64 x double]]* %A, i64 %indvars.iv49, i64 %indvars.iv41, i64 %indvars.iv
-  %i = load double, double* %arrayidx16, align 8
-  %arrayidx22 = getelementptr inbounds [64 x [64 x double]], [64 x [64 x double]]* %B, i64 %indvars.iv, i64 %indvars.iv45, i64 %indvars.iv49
-  %i1 = load double, double* %arrayidx22, align 8
+  %arrayidx16 = getelementptr inbounds [64 x [64 x double]], ptr %A, i64 %indvars.iv49, i64 %indvars.iv41, i64 %indvars.iv
+  %i = load double, ptr %arrayidx16, align 8
+  %arrayidx22 = getelementptr inbounds [64 x [64 x double]], ptr %B, i64 %indvars.iv, i64 %indvars.iv45, i64 %indvars.iv49
+  %i1 = load double, ptr %arrayidx22, align 8
   %mul = fmul fast double %i1, %i
-  %arrayidx26 = getelementptr inbounds [64 x double], [64 x double]* %C, i64 %indvars.iv49, i64 %indvars.iv45
-  %i2 = load double, double* %arrayidx26, align 8
+  %arrayidx26 = getelementptr inbounds [64 x double], ptr %C, i64 %indvars.iv49, i64 %indvars.iv45
+  %i2 = load double, ptr %arrayidx26, align 8
   %add = fadd fast double %i2, %mul
-  store double %add, double* %arrayidx26, align 8
+  store double %add, ptr %arrayidx26, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 32
   br i1 %exitcond, label %for.body12, label %for.inc27

@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=x86_64-- -run-pass=simple-register-coalescing -late-remat-update-threshold=1 -stats %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -run-pass=register-coalescer -late-remat-update-threshold=1 -stats %s -o /dev/null 2>&1 | FileCheck %s
 # Check the test will rematerialize for three copies, but will call shrinkToUses
 # only once to update live range because of late rematerialization update.
 # CHECK: 3 regalloc - Number of instructions re-materialized
@@ -37,7 +37,7 @@
   declare void @_Z3gooi(i32) local_unnamed_addr #1
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
   
   attributes #0 = { noreturn uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

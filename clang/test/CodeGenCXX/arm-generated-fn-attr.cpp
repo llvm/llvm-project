@@ -23,14 +23,12 @@ int testfn() noexcept {
 
 // CHECK: define {{.*}} @__cxx_global_var_init() [[ATTR1:#[0-9]+]]
 // CHECK: define {{.*}} @__clang_call_terminate({{.*}}) [[ATTR2:#[0-9]+]]
-// CHECK: define {{.*}} @_ZTW4var1() [[ATTR3:#[0-9]+]]
-// CHECK: define {{.*}} @_ZTW4var2() [[ATTR3]]
+// CHECK: define {{.*}} @_ZTW4var1() [[ATTR1]]
+// CHECK: define {{.*}} @_ZTW4var2() [[ATTR1]]
 // CHECK: define {{.*}} @__tls_init() [[ATTR1]]
 
 // CHECK-PACBTI: attributes [[ATTR1]] = { {{.*}}"target-features"="+armv8.1-m.main,+pacbti,+thumb-mode"{{.*}} }
 // CHECK-PACBTI: attributes [[ATTR2]] = { {{.*}}"target-features"="+armv8.1-m.main,+pacbti,+thumb-mode"{{.*}} }
-// CHECK-PACBTI: attributes [[ATTR3]] = { {{.*}}"target-features"="+armv8.1-m.main,+pacbti,+thumb-mode"{{.*}} }
 
 // CHECK-NOPACBTI: attributes [[ATTR1]] = { {{.*}}"target-features"="+armv8.1-m.main,+thumb-mode,-pacbti"{{.*}} }
 // CHECK-NOPACBTI: attributes [[ATTR2]] = { {{.*}}"target-features"="+armv8.1-m.main,+thumb-mode,-pacbti"{{.*}} }
-// CHECK-NOPACBTI: attributes [[ATTR3]] = { {{.*}}"target-features"="+armv8.1-m.main,+thumb-mode,-pacbti"{{.*}} }

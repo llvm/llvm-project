@@ -18,11 +18,11 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Replacement.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -89,7 +89,7 @@ struct MethodParameter {
     else // Could be a dynamic property or a property in a header.
       Assignee = ("self." + Name).str();
   }
-  static llvm::Optional<MethodParameter> parameterFor(const Decl &D) {
+  static std::optional<MethodParameter> parameterFor(const Decl &D) {
     if (const auto *ID = dyn_cast<ObjCIvarDecl>(&D))
       return MethodParameter(*ID);
     if (const auto *PD = dyn_cast<ObjCPropertyDecl>(&D))

@@ -2,7 +2,12 @@ add_custom_target(ClangUnitTests)
 set_target_properties(ClangUnitTests PROPERTIES FOLDER "Clang tests")
 
 if(CLANG_BUILT_STANDALONE)
-  # LLVMTestingSupport library is needed for some of the unittests.
+  # LLVMTesting* libraries are needed for some of the unittests.
+  if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Annotations
+      AND NOT TARGET LLVMTestingAnnotations)
+    add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Testing/Annotations
+      lib/Testing/Annotations)
+  endif()
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
       AND NOT TARGET LLVMTestingSupport)
     add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Testing/Support

@@ -18,10 +18,10 @@ define void @st1b(<vscale x 16 x i1> %pg, ptr %ptr, i32 %sliceidx) {
 define void @st1b_with_addr_offset(<vscale x 16 x i1> %pg, ptr %ptr, i64 %index, i32 %sliceidx) {
 ; CHECK-LABEL: st1b_with_addr_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, wzr
-; CHECK-NEXT:    mov w13, w2
-; CHECK-NEXT:    st1b {za0h.b[w12, 0]}, p0, [x0, x1]
-; CHECK-NEXT:    st1b {za0v.b[w13, 15]}, p0, [x0, x1]
+; CHECK-NEXT:    mov w13, wzr
+; CHECK-NEXT:    mov w12, w2
+; CHECK-NEXT:    st1b {za0h.b[w13, 0]}, p0, [x0, x1]
+; CHECK-NEXT:    st1b {za0v.b[w12, 15]}, p0, [x0, x1]
 ; CHECK-NEXT:    ret
   %base = getelementptr i8, ptr %ptr, i64 %index
   %tileslice = add i32 %sliceidx, 15
@@ -92,10 +92,10 @@ define void @st1w(<vscale x 4 x i1> %pg, ptr %ptr, i32 %sliceidx) {
 define void @st1w_with_addr_offset(<vscale x 4 x i1> %pg, ptr %ptr, i64 %index, i32 %sliceidx) {
 ; CHECK-LABEL: st1w_with_addr_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, wzr
-; CHECK-NEXT:    mov w13, w2
-; CHECK-NEXT:    st1w {za0h.s[w12, 0]}, p0, [x0, x1, lsl #2]
-; CHECK-NEXT:    st1w {za3v.s[w13, 3]}, p0, [x0, x1, lsl #2]
+; CHECK-NEXT:    mov w13, wzr
+; CHECK-NEXT:    mov w12, w2
+; CHECK-NEXT:    st1w {za0h.s[w13, 0]}, p0, [x0, x1, lsl #2]
+; CHECK-NEXT:    st1w {za3v.s[w12, 3]}, p0, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %base = getelementptr i32, ptr %ptr, i64 %index
   %tileslice = add i32 %sliceidx, 3
@@ -259,39 +259,40 @@ define void @str(ptr %ptr) {
 define void @str_with_off_15(ptr %ptr) {
 ; CHECK-LABEL: str_with_off_15:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, wzr
+; CHECK-NEXT:    mov w12, #15 // =0xf
 ; CHECK-NEXT:    add x8, x0, #15
 ; CHECK-NEXT:    str za[w12, 0], [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr i8, ptr %ptr, i64 15
-  call void @llvm.aarch64.sme.str(i32 0, ptr %base)
+  call void @llvm.aarch64.sme.str(i32 15, ptr %base)
   ret void;
 }
 
 define void @str_with_off_15mulvl(ptr %ptr) {
 ; CHECK-LABEL: str_with_off_15mulvl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, wzr
-; CHECK-NEXT:    str za[w12, 0], [x0, #15, mul vl]
+; CHECK-NEXT:    mov w12, #15 // =0xf
+; CHECK-NEXT:    addvl x8, x0, #15
+; CHECK-NEXT:    str za[w12, 0], [x8]
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mulvl = mul i64 %vscale, 240
   %base = getelementptr i8, ptr %ptr, i64 %mulvl
-  call void @llvm.aarch64.sme.str(i32 0, ptr %base)
+  call void @llvm.aarch64.sme.str(i32 15, ptr %base)
   ret void;
 }
 
 define void @str_with_off_16mulvl(ptr %ptr) {
 ; CHECK-LABEL: str_with_off_16mulvl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, wzr
+; CHECK-NEXT:    mov w12, #16 // =0x10
 ; CHECK-NEXT:    addvl x8, x0, #16
 ; CHECK-NEXT:    str za[w12, 0], [x8]
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mulvl = mul i64 %vscale, 256
   %base = getelementptr i8, ptr %ptr, i64 %mulvl
-  call void @llvm.aarch64.sme.str(i32 0, ptr %base)
+  call void @llvm.aarch64.sme.str(i32 16, ptr %base)
   ret void;
 }
 

@@ -24,11 +24,12 @@ JITLinkMemoryManager::InFlightAlloc::~InFlightAlloc() = default;
 BasicLayout::BasicLayout(LinkGraph &G) : G(G) {
 
   for (auto &Sec : G.sections()) {
-    // Skip empty sections.
-    if (Sec.blocks().empty())
+    // Skip empty sections, and sections with NoAlloc lifetime policies.
+    if (Sec.blocks().empty() ||
+        Sec.getMemLifetimePolicy() == orc::MemLifetimePolicy::NoAlloc)
       continue;
 
-    auto &Seg = Segments[{Sec.getMemProt(), Sec.getMemDeallocPolicy()}];
+    auto &Seg = Segments[{Sec.getMemProt(), Sec.getMemLifetimePolicy()}];
     for (auto *B : Sec.blocks())
       if (LLVM_LIKELY(!B->isZeroFill()))
         Seg.ContentBlocks.push_back(B);
@@ -89,7 +90,7 @@ BasicLayout::getContiguousPageBasedLayoutSizes(uint64_t PageSize) {
                                      inconvertibleErrorCode());
 
     uint64_t SegSize = alignTo(Seg.ContentSize + Seg.ZeroFillSize, PageSize);
-    if (AG.getMemDeallocPolicy() == orc::MemDeallocPolicy::Standard)
+    if (AG.getMemLifetimePolicy() == orc::MemLifetimePolicy::Standard)
       SegsSizes.StandardSegs += SegSize;
     else
       SegsSizes.FinalizeSegs += SegSize;
@@ -146,7 +147,7 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
                                 const JITLinkDylib *JD, SegmentMap Segments,
                                 OnCreatedFunction OnCreated) {
 
-  static_assert(orc::AllocGroup::NumGroups == 16,
+  static_assert(orc::AllocGroup::NumGroups == 32,
                 "AllocGroup has changed. Section names below must be updated");
   StringRef AGSectionNames[] = {
       "__---.standard", "__R--.standard", "__-W-.standard", "__RW-.standard",
@@ -163,12 +164,15 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
     auto &AG = KV.first;
     auto &Seg = KV.second;
 
+    assert(AG.getMemLifetimePolicy() != orc::MemLifetimePolicy::NoAlloc &&
+           "NoAlloc segments are not supported by SimpleSegmentAlloc");
+
     auto AGSectionName =
         AGSectionNames[static_cast<unsigned>(AG.getMemProt()) |
-                       static_cast<bool>(AG.getMemDeallocPolicy()) << 3];
+                       static_cast<bool>(AG.getMemLifetimePolicy()) << 3];
 
     auto &Sec = G->createSection(AGSectionName, AG.getMemProt());
-    Sec.setMemDeallocPolicy(AG.getMemDeallocPolicy());
+    Sec.setMemLifetimePolicy(AG.getMemLifetimePolicy());
 
     if (Seg.ContentSize != 0) {
       NextAddr =
@@ -236,9 +240,13 @@ public:
   IPInFlightAlloc(InProcessMemoryManager &MemMgr, LinkGraph &G, BasicLayout BL,
                   sys::MemoryBlock StandardSegments,
                   sys::MemoryBlock FinalizationSegments)
-      : MemMgr(MemMgr), G(G), BL(std::move(BL)),
+      : MemMgr(MemMgr), G(&G), BL(std::move(BL)),
         StandardSegments(std::move(StandardSegments)),
         FinalizationSegments(std::move(FinalizationSegments)) {}
+
+  ~IPInFlightAlloc() {
+    assert(!G && "InFlight alloc neither abandoned nor finalized");
+  }
 
   void finalize(OnFinalizedFunction OnFinalized) override {
 
@@ -249,7 +257,7 @@ public:
     }
 
     // Run finalization actions.
-    auto DeallocActions = runFinalizeActions(G.allocActions());
+    auto DeallocActions = runFinalizeActions(G->allocActions());
     if (!DeallocActions) {
       OnFinalized(DeallocActions.takeError());
       return;
@@ -260,6 +268,13 @@ public:
       OnFinalized(errorCodeToError(EC));
       return;
     }
+
+#ifndef NDEBUG
+    // Set 'G' to null to flag that we've been successfully finalized.
+    // This allows us to assert at destruction time that a call has been made
+    // to either finalize or abandon.
+    G = nullptr;
+#endif
 
     // Continue with finalized allocation.
     OnFinalized(MemMgr.createFinalizedAlloc(std::move(StandardSegments),
@@ -272,6 +287,14 @@ public:
       Err = joinErrors(std::move(Err), errorCodeToError(EC));
     if (auto EC = sys::Memory::releaseMappedMemory(StandardSegments))
       Err = joinErrors(std::move(Err), errorCodeToError(EC));
+
+#ifndef NDEBUG
+    // Set 'G' to null to flag that we've been successfully finalized.
+    // This allows us to assert at destruction time that a call has been made
+    // to either finalize or abandon.
+    G = nullptr;
+#endif
+
     OnAbandoned(std::move(Err));
   }
 
@@ -295,7 +318,7 @@ private:
   }
 
   InProcessMemoryManager &MemMgr;
-  LinkGraph &G;
+  LinkGraph *G;
   BasicLayout BL;
   sys::MemoryBlock StandardSegments;
   sys::MemoryBlock FinalizationSegments;
@@ -397,7 +420,7 @@ void InProcessMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
     auto &Seg = KV.second;
 
     auto &SegAddr =
-        (AG.getMemDeallocPolicy() == orc::MemDeallocPolicy::Standard)
+        (AG.getMemLifetimePolicy() == orc::MemLifetimePolicy::Standard)
             ? NextStandardSegAddr
             : NextFinalizeSegAddr;
 

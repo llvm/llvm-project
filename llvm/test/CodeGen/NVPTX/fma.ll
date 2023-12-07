@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 -fp-contract=fast -verify-machineinstrs | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 -fp-contract=fast -verify-machineinstrs | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -fp-contract=fast -verify-machineinstrs | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -fp-contract=fast -verify-machineinstrs | %ptxas-verify %}
 
 declare float @dummy_f32(float, float) #0
 declare double @dummy_f64(double, double) #0

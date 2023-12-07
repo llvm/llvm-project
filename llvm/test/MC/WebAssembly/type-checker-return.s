@@ -27,3 +27,11 @@ return_call_superfluous_return_values:
   i32.const 2
   return_call fn_void_to_void
   end_function
+
+# Unreachable code is stack-polymorphic, meaning its input and return types can
+# be anything. So the 'drop' after it doesn't cause an error.
+no_check_after_unreachable:
+  .functype no_check_after_unreachable () -> ()
+  unreachable
+  drop
+  end_function

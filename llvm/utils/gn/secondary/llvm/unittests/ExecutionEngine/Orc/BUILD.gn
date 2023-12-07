@@ -10,6 +10,7 @@ unittest("OrcJITTests") {
     "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target:NativeTarget",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [
@@ -24,6 +25,7 @@ unittest("OrcJITTests") {
     "LookupAndRecordAddrsTest.cpp",
     "MapperJITLinkMemoryManagerTest.cpp",
     "MemoryMapperTest.cpp",
+    "ObjectFormatsTest.cpp",
     "ObjectLinkingLayerTest.cpp",
     "OrcCAPITest.cpp",
     "OrcTestCommon.cpp",

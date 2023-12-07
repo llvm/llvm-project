@@ -248,6 +248,7 @@
 #include "llvm/Support/Path.h"
 #include <algorithm>
 #include <iterator>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -335,13 +336,13 @@ std::string CommandLine;
 
 // Helper function for finding the input file in an arguments list.
 static std::string findInputFile(const CommandLineArguments &CLArgs) {
-  const unsigned IncludedFlagsBitmask = options::CC1Option;
+  llvm::opt::Visibility VisibilityMask(options::CC1Option);
   unsigned MissingArgIndex, MissingArgCount;
   SmallVector<const char *, 256> Argv;
   for (auto I = CLArgs.begin(), E = CLArgs.end(); I != E; ++I)
     Argv.push_back(I->c_str());
   InputArgList Args = getDriverOptTable().ParseArgs(
-      Argv, MissingArgIndex, MissingArgCount, IncludedFlagsBitmask);
+      Argv, MissingArgIndex, MissingArgCount, VisibilityMask);
   std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
   return ModularizeUtilities::getCanonicalPath(Inputs.back());
 }
@@ -480,7 +481,7 @@ struct HeaderEntry {
 
 typedef std::vector<HeaderEntry> HeaderContents;
 
-class EntityMap : public StringMap<SmallVector<Entry, 2> > {
+class EntityMap : public std::map<std::string, SmallVector<Entry, 2>> {
 public:
   DenseMap<const FileEntry *, HeaderContents> HeaderContentMismatches;
 
@@ -935,7 +936,7 @@ int main(int Argc, const char **Argv) {
         continue;
       LocationArray::iterator FI = DI->begin();
       StringRef kindName = Entry::getKindName((Entry::EntryKind)KindIndex);
-      errs() << "error: " << kindName << " '" << E->first()
+      errs() << "error: " << kindName << " '" << E->first
              << "' defined at multiple locations:\n";
       for (LocationArray::iterator FE = DI->end(); FI != FE; ++FI) {
         errs() << "    " << FI->File->getName() << ":" << FI->Line << ":"

@@ -50,10 +50,14 @@ constexpr bool test() {
     View v = View(); // the default constructor is not explicit
     assert(v.size() == 3);
     auto it = v.begin();
-    using Pair = std::pair<const int&, const int&>;
-    assert(*it++ == Pair(buff[0], buff[0]));
-    assert(*it++ == Pair(buff[1], buff[1]));
-    assert(*it == Pair(buff[2], buff[2]));
+#ifdef _LIBCPP_VERSION // libc++ doesn't implement P2165R4 yet
+    using Value = std::pair<const int&, const int&>;
+#else
+    using Value = std::tuple<const int&, const int&>;
+#endif
+    assert(*it++ == Value(buff[0], buff[0]));
+    assert(*it++ == Value(buff[1], buff[1]));
+    assert(*it == Value(buff[2], buff[2]));
   }
 
   return true;

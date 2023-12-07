@@ -12,6 +12,7 @@
 #include "lldb/lldb-private.h"
 
 #include "lldb/Target/ExecutionContext.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -216,7 +217,7 @@ public:
 
   /// \return
   ///     The error message the cursor is pointing at.
-  virtual const char *GetError() const = 0;
+  virtual llvm::StringRef GetError() const = 0;
 
   /// \return
   ///     Whether the cursor points to an event or not.
@@ -270,7 +271,7 @@ public:
   /// \return
   ///     The approximate wall clock time for the trace item, or \a std::nullopt
   ///     if not available.
-  virtual llvm::Optional<double> GetWallClockTime() const = 0;
+  virtual std::optional<double> GetWallClockTime() const = 0;
 
   /// Get some metadata associated with a synchronization point event. As
   /// different trace technologies might have different values for this,

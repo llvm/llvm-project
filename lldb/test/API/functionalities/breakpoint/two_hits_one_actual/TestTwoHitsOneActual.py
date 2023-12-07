@@ -12,7 +12,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestTwoHitsOneActual(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
@@ -25,8 +24,9 @@ class TestTwoHitsOneActual(TestBase):
     def sample_test(self):
         """You might use the test implementation in several ways, say so here."""
 
-        (target, process, main_thread, _) = lldbutil.run_to_source_breakpoint(self,
-                                   "Set bkpt here to get started", self.main_source_file)
+        (target, process, main_thread, _) = lldbutil.run_to_source_breakpoint(
+            self, "Set bkpt here to get started", self.main_source_file
+        )
         # This is working around a separate bug.  If you hit a breakpoint and
         # run an expression and it is the first expression you've ever run, on
         # Darwin that will involve running the ObjC runtime parsing code, and we'll
@@ -37,8 +37,12 @@ class TestTwoHitsOneActual(TestBase):
         self.assertSuccess(val_obj.GetError(), "Ran our expression successfully")
         self.assertEqual(val_obj.value, "true", "Value was true.")
         # Set two breakpoints just to test the multiple location logic:
-        bkpt1 = target.BreakpointCreateBySourceRegex("Break here in the helper", self.main_source_file);
-        bkpt2 = target.BreakpointCreateBySourceRegex("Break here in the helper", self.main_source_file);
+        bkpt1 = target.BreakpointCreateBySourceRegex(
+            "Break here in the helper", self.main_source_file
+        )
+        bkpt2 = target.BreakpointCreateBySourceRegex(
+            "Break here in the helper", self.main_source_file
+        )
 
         # This one will never be hit:
         bkpt1.SetCondition("usec == 100")
@@ -57,8 +61,8 @@ class TestTwoHitsOneActual(TestBase):
             process.Continue()
             for thread in process.threads:
                 if thread.id == main_thread.id:
-                    self.assertStopReason(thread.stop_reason, lldb.eStopReasonBreakpoint)
+                    self.assertStopReason(
+                        thread.stop_reason, lldb.eStopReasonBreakpoint
+                    )
                 else:
                     self.assertStopReason(thread.stop_reason, lldb.eStopReasonNone)
-
-                

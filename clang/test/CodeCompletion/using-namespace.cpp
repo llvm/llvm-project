@@ -12,7 +12,7 @@ namespace N2 {
   
   void foo() {
     using namespace 
-    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:14:21 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):21 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
     // CHECK-CC1: I1
     // CHECK-CC1: I4
     // CHECK-CC1: I5

@@ -72,31 +72,31 @@
 # SYMBOL-NOP10-NEXT: 11: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT [<other: 0x60>] UND callee_global_TOC
 
 ## DT_PLTGOT points to .plt
-# SEC: .plt              NOBITS          0000000010030158 040158 000028 00  WA  0   0  8
-# SEC-OG: .plt              NOBITS          0000000010030148 040148 000028 00  WA  0   0  8
-# SEC: 0x0000000000000003 (PLTGOT)      0x10030158
-# SEC-OG: 0x0000000000000003 (PLTGOT)      0x10030158
+# SEC: .plt              NOBITS          0000000010030168 040168 000028 00  WA  0   0  8
+# SEC-OG: .plt              NOBITS          0000000010030158 040158 000028 00  WA  0   0  8
+# SEC: 0x0000000000000003 (PLTGOT)      0x10030168
+# SEC-OG: 0x0000000000000003 (PLTGOT)      0x10030168
 
 ## DT_PLTGOT points to .plt
-# SEC-NOP10: .plt              NOBITS          0000000010030158 040158 000028 00  WA  0   0  8
-# SEC-NOP10: 0x0000000000000003 (PLTGOT)      0x10030158
+# SEC-NOP10: .plt              NOBITS          0000000010030168 040168 000028 00  WA  0   0  8
+# SEC-NOP10: 0x0000000000000003 (PLTGOT)      0x10030168
 
 ## The first 2 entries in the .plt are reserved for the dynamic linkers
 ## usage. The JMP_SLOT relocations are stored at .plt[2], .plt[3], .plt[4].
 ## Check that we emit 3 R_PPC64_JMP_SLOT in .rela.plt.
 # REL:      .rela.plt {
-# REL-NEXT:   0x10030168 R_PPC64_JMP_SLOT callee_global_stother0 0x0
-# REL-NEXT-OG:   0x10030158 R_PPC64_JMP_SLOT callee_global_stother0 0x0
-# REL-NEXT:   0x10030170 R_PPC64_JMP_SLOT callee_global_stother1 0x0
-# REL-NEXT-OG:   0x10030160 R_PPC64_JMP_SLOT callee_global_stother1 0x0
-# REL-NEXT:   0x10030178 R_PPC64_JMP_SLOT callee_global_TOC 0x0
-# REL-NEXT-OG:   0x10030168 R_PPC64_JMP_SLOT callee_global_TOC 0x0
+# REL-NEXT:   0x10030178 R_PPC64_JMP_SLOT callee_global_stother0 0x0
+# REL-NEXT-OG:   0x10030168 R_PPC64_JMP_SLOT callee_global_stother0 0x0
+# REL-NEXT:   0x10030180 R_PPC64_JMP_SLOT callee_global_stother1 0x0
+# REL-NEXT-OG:   0x10030170 R_PPC64_JMP_SLOT callee_global_stother1 0x0
+# REL-NEXT:   0x10030188 R_PPC64_JMP_SLOT callee_global_TOC 0x0
+# REL-NEXT-OG:   0x10030178 R_PPC64_JMP_SLOT callee_global_TOC 0x0
 # REL-NEXT: }
 
 # REL-NOP10:      .rela.plt {
-# REL-NOP10-NEXT:   0x10030168 R_PPC64_JMP_SLOT callee_global_stother0 0x0
-# REL-NOP10-NEXT:   0x10030170 R_PPC64_JMP_SLOT callee_global_stother1 0x0
-# REL-NOP10-NEXT:   0x10030178 R_PPC64_JMP_SLOT callee_global_TOC 0x0
+# REL-NOP10-NEXT:   0x10030178 R_PPC64_JMP_SLOT callee_global_stother0 0x0
+# REL-NOP10-NEXT:   0x10030180 R_PPC64_JMP_SLOT callee_global_stother1 0x0
+# REL-NOP10-NEXT:   0x10030188 R_PPC64_JMP_SLOT callee_global_TOC 0x0
 # REL-NOP10-NEXT: }
 
 # CHECK-LABEL: <caller1>:
@@ -107,22 +107,22 @@
 # CHECK-NOP10:       10010000: bl 0x10010010
 # CHECK-NOP10-NEXT:  10010004: blr
 
-## .plt[2] - 0x10010010 = 0x10030168 - 0x10010010 = 0x20158 = 131416
+## .plt[2] - 0x10010010 = 0x10030178 - 0x10010010 = 0x20168 = 131432
 # CHECK-LABEL: <__plt_pcrel_callee_global_stother0>:
-# CHECK:       10010010: pld 12, 131416(0), 1
+# CHECK:       10010010: pld 12, 131432(0), 1
 # CHECK-NEXT:  10010018: mtctr 12
 # CHECK-NEXT:  1001001c: bctr
 
 ## No P10; branch to next inst to get addr
 # CHECK-NOP10-LABEL: <__plt_pcrel_callee_global_stother0>:
-# CHECK-NOP10:       10010010: mflr 0
-# CHECK-NOP10-NEXT:  10010014: bcl 20, 31, 0x10010018
-# CHECK-NOP10:       10010018: mflr 11
-# CHECK-NOP10:       1001001c: mtlr 12
-# CHECK-NOP10:       10010020: addis 12, 11, -4097
-# CHECK-NOP10:       10010024: addi  12, 12, -24
-# CHECK-NOP10-NEXT:  10010028: mtctr 12
-# CHECK-NOP10-NEXT:  1001002c: bctr
+# CHECK-NOP10:       10010010: mflr 12
+# CHECK-NOP10-NEXT:            bcl 20, 31, 0x10010018
+# CHECK-NOP10-NEXT:  10010018: mflr 11
+# CHECK-NOP10-NEXT:            mtlr 12
+# CHECK-NOP10-NEXT:            addis 12, 11, 2
+# CHECK-NOP10-NEXT:            ld 12, 352(12)
+# CHECK-NOP10-NEXT:            mtctr 12
+# CHECK-NOP10-NEXT:            bctr
 
 # CHECK-LABEL: <caller2>:
 # CHECK:       10020000: bl 0x10020010
@@ -132,22 +132,23 @@
 # CHECK-NOP10:       10020000: bl 0x10020010
 # CHECK-NOP10-NEXT:  10020004: blr
 
-## .plt[3] - 0x10020010 = 0x10030170 - 0x10020010 = 0x10160 = 65888
+## .plt[3] - 0x10020010 = 0x10030180 - 0x10020010 = 0x10170 = 65904
 # CHECK-LABEL: <__plt_pcrel_callee_global_stother1>:
-# CHECK:       10020010: pld 12, 65888(0), 1
+# CHECK:       10020010: pld 12, 65904(0), 1
 # CHECK-NEXT:  10020018: mtctr 12
 # CHECK-NEXT:  1002001c: bctr
 
 ## no P10; branch to next inst to get addr
+## .plt[3]-r11 = 0x10030170-0x10020018 = 65536*1+344
 # CHECK-NOP10-LABEL: <__plt_pcrel_callee_global_stother1>:
-# CHECK-NOP10:       10020010: mflr 0
-# CHECK-NOP10-NEXT:  10020014: bcl 20, 31, 0x10020018
+# CHECK-NOP10:       10020010: mflr 12
+# CHECK-NOP10-NEXT:            bcl 20, 31, 0x10020018
 # CHECK-NOP10-NEXT:  10020018: mflr 11
-# CHECK-NOP10-NEXT:  1002001c: mtlr 12
-# CHECK-NOP10-NEXT:  10020020: addis 12, 11, -4098
-# CHECK-NOP10-NEXT:  10020024: addi 12, 12, -24
-# CHECK-NOP10-NEXT:  10020028: mtctr 12
-# CHECK-NOP10-NEXT:  1002002c: bctr
+# CHECK-NOP10-NEXT:            mtlr 12
+# CHECK-NOP10-NEXT:            addis 12, 11, 1
+# CHECK-NOP10-NEXT:            ld 12, 360(12)
+# CHECK-NOP10-NEXT:            mtctr 12
+# CHECK-NOP10-NEXT:            bctr
 
 # CHECK-LABEL: <caller3>:
 # CHECK:       10030000: bl 0x10030010
@@ -157,22 +158,23 @@
 # CHECK-NOP10:       10030000: bl 0x10030010
 # CHECK-NOP10-NEXT:  10030004: blr
 
-## .plt[4] - 0x10030010 = 0x10030178 - 0x10030010 = 0x168 = 360
+## .plt[4] - 0x10030010 = 0x10030188 - 0x10030010 = 0x178 = 376
 # CHECK-LABEL: <__plt_pcrel_callee_global_TOC>:
-# CHECK:       10030010: pld 12, 360(0), 1
+# CHECK:       10030010: pld 12, 376(0), 1
 # CHECK-NEXT:  10030018: mtctr 12
 # CHECK-NEXT:  1003001c: bctr
 
 ## no P10; branch to next inst to get addr
+## .plt[4]-r11 = 0x10030178-0x10030018 = 65536*0+352
 # CHECK-NOP10-LABEL: <__plt_pcrel_callee_global_TOC>:
-# CHECK-NOP10-NEXT:  10030010: mflr 0
-# CHECK-NOP10-NEXT:  10030014: bcl 20, 31, 0x10030018
+# CHECK-NOP10-NEXT:  10030010: mflr 12
+# CHECK-NOP10-NEXT:            bcl 20, 31, 0x10030018
 # CHECK-NOP10-NEXT:  10030018: mflr 11
-# CHECK-NOP10-NEXT:  1003001c: mtlr 12
-# CHECK-NOP10-NEXT:  10030020: addis 12, 11, -4099
-# CHECK-NOP10-NEXT:  10030024: addi 12, 12, -24
-# CHECK-NOP10-NEXT:  10030028: mtctr 12
-# CHECK-NOP10-NEXT:  1003002c: bctr
+# CHECK-NOP10-NEXT:            mtlr 12
+# CHECK-NOP10-NEXT:            addis 12, 11, 0
+# CHECK-NOP10-NEXT:            ld 12, 368(12)
+# CHECK-NOP10-NEXT:            mtctr 12
+# CHECK-NOP10-NEXT:            bctr
 
 .ifdef AUX
 .section .text_caller1, "ax", %progbits

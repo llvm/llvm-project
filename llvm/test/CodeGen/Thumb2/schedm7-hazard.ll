@@ -7,7 +7,7 @@
 ; their latency. But will bank conflict to TCM so are scheduled in different
 ; cycles.
 
-define i32 @test(i32* %x0, i32 %y, i32 %z) {
+define i32 @test(ptr %x0, i32 %y, i32 %z) {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r3, [r0]
@@ -27,12 +27,12 @@ define i32 @test(i32* %x0, i32 %y, i32 %z) {
 ; NOBANK-NEXT:    muls r0, r1, r0
 ; NOBANK-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %x0, align 4
+  %0 = load i32, ptr %x0, align 4
   %mul3 = add nsw i32 %0, 1
   %mul = sub nsw i32 %mul3, %y
   %sub = sub nsw i32 %mul, %z
-  %arrayidx1 = getelementptr inbounds i32, i32* %x0, i32 2
-  %1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %x0, i32 2
+  %1 = load i32, ptr %arrayidx1, align 4
   %mul2 = mul nsw i32 %sub, %1
   ret i32 %mul2
 }

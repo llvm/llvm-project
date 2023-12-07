@@ -5,4 +5,4 @@ void t();
 } // namespace nn2
 } // namespace nn1
 // CHECK-FIXES: void t();
-// CHECK-FIXES-NEXT: } // namespace nn1
+// CHECK-FIXES-NEXT: } // namespace nn1::nn2

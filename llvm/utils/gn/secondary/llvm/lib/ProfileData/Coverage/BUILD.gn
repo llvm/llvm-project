@@ -5,6 +5,7 @@ static_library("Coverage") {
     "//llvm/lib/Object",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "CoverageMapping.cpp",

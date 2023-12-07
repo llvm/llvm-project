@@ -103,7 +103,7 @@ define void @f(i32 %0, i32 %1) {
   %92 = add i32 %90, %91
   %93 = add i32 %91, %92
   %94 = add i32 %92, %93
-  %95 = load i32, i32* getelementptr inbounds (%my_struct, %my_struct* @gvar, i32 0, i32 0)
+  %95 = load i32, ptr @gvar
   %96 = add i32 %1, %95
   ret void
 }

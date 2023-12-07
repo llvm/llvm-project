@@ -33,32 +33,28 @@ using namespace object;
 namespace {
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
+using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      PREFIX,      NAME,      HELPTEXT,                                        \
-      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
-      PARAM,       FLAGS,     OPT_##GROUP,                                     \
-      OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
 
-class DwarfutilOptTable : public opt::OptTable {
+class DwarfutilOptTable : public opt::GenericOptTable {
 public:
-  DwarfutilOptTable() : OptTable(InfoTable) {}
+  DwarfutilOptTable() : opt::GenericOptTable(InfoTable) {}
 };
 } // namespace
 
@@ -118,6 +114,31 @@ static Error validateAndSetOptions(opt::InputArgList &Args, Options &Options) {
       return createStringError(
           std::errc::invalid_argument,
           formatv("unknown tombstone value: '{0}'", S).str().c_str());
+  }
+
+  if (opt::Arg *LinkerKind = Args.getLastArg(OPT_linker)) {
+    StringRef S = LinkerKind->getValue();
+    if (S == "apple")
+      Options.UseLLVMDWARFLinker = false;
+    else if (S == "llvm")
+      Options.UseLLVMDWARFLinker = true;
+    else
+      return createStringError(
+          std::errc::invalid_argument,
+          formatv("unknown linker kind value: '{0}'", S).str().c_str());
+  }
+
+  if (opt::Arg *BuildAccelerator = Args.getLastArg(OPT_build_accelerator)) {
+    StringRef S = BuildAccelerator->getValue();
+
+    if (S == "none")
+      Options.AccelTableKind = DwarfUtilAccelKind::None;
+    else if (S == "DWARF")
+      Options.AccelTableKind = DwarfUtilAccelKind::DWARF;
+    else
+      return createStringError(
+          std::errc::invalid_argument,
+          formatv("unknown build-accelerator value: '{0}'", S).str().c_str());
   }
 
   if (Options.Verbose) {
@@ -420,8 +441,9 @@ static Error saveCopyOfFile(const Options &Opts, ObjectFile &InputFile) {
 }
 
 static Error applyCLOptions(const struct Options &Opts, ObjectFile &InputFile) {
-  if (Opts.DoGarbageCollection) {
-    verbose("Do garbage collection for debug info ...", Opts.Verbose);
+  if (Opts.DoGarbageCollection ||
+      Opts.AccelTableKind != DwarfUtilAccelKind::None) {
+    verbose("Do debug info linking...", Opts.Verbose);
 
     DebugInfoBits LinkedDebugInfo;
     raw_svector_ostream OutStream(LinkedDebugInfo);
@@ -458,7 +480,7 @@ int main(int Argc, char const *Argv[]) {
   DwarfutilOptTable T;
   unsigned MAI;
   unsigned MAC;
-  ArrayRef<const char *> ArgsArr = makeArrayRef(Argv + 1, Argc - 1);
+  ArrayRef<const char *> ArgsArr = ArrayRef(Argv + 1, Argc - 1);
   opt::InputArgList Args = T.ParseArgs(ArgsArr, MAI, MAC);
 
   if (Args.hasArg(OPT_help) || Args.size() == 0) {

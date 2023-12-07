@@ -15,7 +15,7 @@
 ; }
 
 
-define internal void @callee(i32 %n, double* noalias nonnull %A, i32 %i) {
+define internal void @callee(i32 %n, ptr noalias nonnull %A, i32 %i) {
 entry:
   br label %for
 
@@ -26,8 +26,8 @@ for:
 
     body:
       %idx = add i32 %i, %j
-      %arrayidx = getelementptr inbounds double, double* %A, i32 %idx
-      store double 42.0, double* %arrayidx
+      %arrayidx = getelementptr inbounds double, ptr %A, i32 %idx
+      store double 42.0, ptr %arrayidx
       br label %inc
 
 inc:
@@ -42,7 +42,7 @@ return:
 }
 
 
-define void @caller(i32 %n, double* noalias nonnull %A) {
+define void @caller(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -52,7 +52,7 @@ for:
   br i1 %i.cmp, label %body, label %exit
 
     body:
-      call void @callee(i32 %n, double* %A, i32 %i)
+      call void @callee(i32 %n, ptr %A, i32 %i)
       br label %inc
 
 inc:
@@ -69,10 +69,10 @@ return:
 
 ; EARLY-LABEL: @callee(
 ; AFTEREARLY:  polly.split_new_and_old:
-; EARLY:         store double 4.200000e+01, double* %arrayidx
+; EARLY:         store double 4.200000e+01, ptr %arrayidx
 ; EARLY-LABEL: @caller(
 ; EARLY:         call void @callee(
 
 ; LATE-LABEL: @caller(
 ; AFTERLATE:  polly.split_new_and_old:
-; LATE:          store double 4.200000e+01, double* %arrayidx
+; LATE:          store double 4.200000e+01, ptr %arrayidx

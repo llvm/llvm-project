@@ -10,7 +10,7 @@
 
 ; Some of the intrinsics lower to equivalent forms.
 
-define void @addvi_b(<16 x i8> * %ptr) {
+define void @addvi_b(ptr %ptr) {
 ; MSA-LABEL: addvi_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -26,13 +26,13 @@ define void @addvi_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.addvi.b(<16 x i8> %a, i32 25)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @andi_b(<16 x i8> * %ptr) {
+define void @andi_b(ptr %ptr) {
 ; MSA-LABEL: andi_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -48,13 +48,13 @@ define void @andi_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.andi.b(<16 x i8> %a, i32 25)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bclri_b(<16 x i8> * %ptr) {
+define void @bclri_b(ptr %ptr) {
 ; MSA-LABEL: bclri_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -70,13 +70,13 @@ define void @bclri_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.bclri.b(<16 x i8> %a, i32 3)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @binsli_b(<16 x i8> * %ptr, <16 x i8> * %ptr2) {
+define void @binsli_b(ptr %ptr, ptr %ptr2) {
 ; MSA-LABEL: binsli_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($5)
@@ -95,14 +95,14 @@ define void @binsli_b(<16 x i8> * %ptr, <16 x i8> * %ptr2) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w1, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
-  %b = load <16 x i8>, <16 x i8> * %ptr2, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
+  %b = load <16 x i8>, ptr %ptr2, align 16
   %r = call <16 x i8> @llvm.mips.binsli.b(<16 x i8> %a, <16 x i8> %b, i32 3)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @binsri_b(<16 x i8> * %ptr, <16 x i8> * %ptr2) {
+define void @binsri_b(ptr %ptr, ptr %ptr2) {
 ; MSA-LABEL: binsri_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($5)
@@ -121,14 +121,14 @@ define void @binsri_b(<16 x i8> * %ptr, <16 x i8> * %ptr2) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w1, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
-  %b = load <16 x i8>, <16 x i8> * %ptr2, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
+  %b = load <16 x i8>, ptr %ptr2, align 16
   %r = call <16 x i8> @llvm.mips.binsri.b(<16 x i8> %a, <16 x i8> %b, i32 5)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bmnzi_b(<16 x i8> * %ptr, <16 x i8> * %ptr2) {
+define void @bmnzi_b(ptr %ptr, ptr %ptr2) {
 ; MSA-LABEL: bmnzi_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($5)
@@ -147,14 +147,14 @@ define void @bmnzi_b(<16 x i8> * %ptr, <16 x i8> * %ptr2) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w1, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
-  %b = load <16 x i8>, <16 x i8> * %ptr2, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
+  %b = load <16 x i8>, ptr %ptr2, align 16
   %r = call <16 x i8> @llvm.mips.bmnzi.b(<16 x i8> %a, <16 x i8> %b, i32 25)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bmzi_b(<16 x i8> * %ptr, <16 x i8> * %ptr2) {
+define void @bmzi_b(ptr %ptr, ptr %ptr2) {
 ; MSA-LABEL: bmzi_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -173,14 +173,14 @@ define void @bmzi_b(<16 x i8> * %ptr, <16 x i8> * %ptr2) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w1, 0($2)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
-  %b = load <16 x i8>, <16 x i8> * %ptr2, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
+  %b = load <16 x i8>, ptr %ptr2, align 16
   %r = call <16 x i8> @llvm.mips.bmzi.b(<16 x i8> %a, <16 x i8> %b, i32 25)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bnegi_b(<16 x i8> * %ptr) {
+define void @bnegi_b(ptr %ptr) {
 ; MSA-LABEL: bnegi_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -196,13 +196,13 @@ define void @bnegi_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.bnegi.b(<16 x i8> %a, i32 6)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bseli_b(<16 x i8> * %ptr) {
+define void @bseli_b(ptr %ptr) {
 ; MSA-LABEL: bseli_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -218,13 +218,13 @@ define void @bseli_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.bseli.b(<16 x i8> %a, <16 x i8> %a, i32 25)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bseti_b(<16 x i8> * %ptr) {
+define void @bseti_b(ptr %ptr) {
 ; MSA-LABEL: bseti_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -240,13 +240,13 @@ define void @bseti_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.bseti.b(<16 x i8> %a, i32 5)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clei_s_b(<16 x i8> * %ptr) {
+define void @clei_s_b(ptr %ptr) {
 ; MSA-LABEL: clei_s_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -262,13 +262,13 @@ define void @clei_s_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.clei.s.b(<16 x i8> %a, i32 12)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clei_u_b(<16 x i8> * %ptr) {
+define void @clei_u_b(ptr %ptr) {
 ; MSA-LABEL: clei_u_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -284,13 +284,13 @@ define void @clei_u_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.clei.u.b(<16 x i8> %a, i32 25)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clti_s_b(<16 x i8> * %ptr) {
+define void @clti_s_b(ptr %ptr) {
 ; MSA-LABEL: clti_s_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -306,13 +306,13 @@ define void @clti_s_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.clti.s.b(<16 x i8> %a, i32 15)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clti_u_b(<16 x i8> * %ptr) {
+define void @clti_u_b(ptr %ptr) {
 ; MSA-LABEL: clti_u_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -328,13 +328,13 @@ define void @clti_u_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.clti.u.b(<16 x i8> %a, i32 25)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @ldi_b(<16 x i8> * %ptr) {
+define void @ldi_b(ptr %ptr) {
 ; MSA-LABEL: ldi_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ldi.b $w0, 3
@@ -349,11 +349,11 @@ define void @ldi_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
   %r = call <16 x i8> @llvm.mips.ldi.b(i32 3)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @maxi_s_b(<16 x i8> * %ptr) {
+define void @maxi_s_b(ptr %ptr) {
 ; MSA-LABEL: maxi_s_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -369,13 +369,13 @@ define void @maxi_s_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.maxi.s.b(<16 x i8> %a, i32 2)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @maxi_u_b(<16 x i8> * %ptr) {
+define void @maxi_u_b(ptr %ptr) {
 ; MSA-LABEL: maxi_u_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -391,13 +391,13 @@ define void @maxi_u_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.maxi.u.b(<16 x i8> %a, i32 2)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @mini_s_b(<16 x i8> * %ptr) {
+define void @mini_s_b(ptr %ptr) {
 ; MSA-LABEL: mini_s_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -413,13 +413,13 @@ define void @mini_s_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.mini.s.b(<16 x i8> %a, i32 2)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @mini_u_b(<16 x i8> * %ptr) {
+define void @mini_u_b(ptr %ptr) {
 ; MSA-LABEL: mini_u_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -435,13 +435,13 @@ define void @mini_u_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.mini.u.b(<16 x i8> %a, i32 2)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @nori_b(<16 x i8> * %ptr) {
+define void @nori_b(ptr %ptr) {
 ; MSA-LABEL: nori_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -457,13 +457,13 @@ define void @nori_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.nori.b(<16 x i8> %a, i32 25)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @ori_b(<16 x i8> * %ptr) {
+define void @ori_b(ptr %ptr) {
 ; MSA-LABEL: ori_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -479,13 +479,13 @@ define void @ori_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.ori.b(<16 x i8> %a, i32 25)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @sldi_b(<16 x i8> * %ptr) {
+define void @sldi_b(ptr %ptr) {
 ; MSA-LABEL: sldi_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -501,13 +501,13 @@ define void @sldi_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.sldi.b(<16 x i8> %a, <16 x i8> %a, i32 7)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @slli_b(<16 x i8> * %ptr) {
+define void @slli_b(ptr %ptr) {
 ; MSA-LABEL: slli_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -523,13 +523,13 @@ define void @slli_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.slli.b(<16 x i8> %a, i32 3)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @splati_b(<16 x i8> * %ptr) {
+define void @splati_b(ptr %ptr) {
 ; MSA-LABEL: splati_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -545,13 +545,13 @@ define void @splati_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.splati.b(<16 x i8> %a, i32 3)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srai_b(<16 x i8> * %ptr) {
+define void @srai_b(ptr %ptr) {
 ; MSA-LABEL: srai_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -567,13 +567,13 @@ define void @srai_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.srai.b(<16 x i8> %a, i32 3)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srari_b(<16 x i8> * %ptr) {
+define void @srari_b(ptr %ptr) {
 ; MSA-LABEL: srari_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -589,13 +589,13 @@ define void @srari_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.srari.b(<16 x i8> %a, i32 3)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srli_b(<16 x i8> * %ptr) {
+define void @srli_b(ptr %ptr) {
 ; MSA-LABEL: srli_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -611,13 +611,13 @@ define void @srli_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.srli.b(<16 x i8> %a, i32 3)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srlri_b(<16 x i8> * %ptr) {
+define void @srlri_b(ptr %ptr) {
 ; MSA-LABEL: srlri_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -633,13 +633,13 @@ define void @srlri_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.b $w0, 0($1)
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call <16 x i8> @llvm.mips.srlri.b(<16 x i8> %a, i32 3)
-  store <16 x i8> %r, <16 x i8> * %ptr, align 16
+  store <16 x i8> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @addvi_w(<4 x i32> * %ptr) {
+define void @addvi_w(ptr %ptr) {
 ; MSA-LABEL: addvi_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -655,13 +655,13 @@ define void @addvi_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.addvi.w(<4 x i32> %a, i32 25)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bclri_w(<4 x i32> * %ptr) {
+define void @bclri_w(ptr %ptr) {
 ; MSA-LABEL: bclri_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -677,13 +677,13 @@ define void @bclri_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.bclri.w(<4 x i32> %a, i32 25)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @binsli_w(<4 x i32> * %ptr, <4 x i32> * %ptr2) {
+define void @binsli_w(ptr %ptr, ptr %ptr2) {
 ; MSA-LABEL: binsli_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($5)
@@ -702,14 +702,14 @@ define void @binsli_w(<4 x i32> * %ptr, <4 x i32> * %ptr2) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w1, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
-  %b = load <4 x i32>, <4 x i32> * %ptr2, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
+  %b = load <4 x i32>, ptr %ptr2, align 16
   %r = call <4 x i32> @llvm.mips.binsli.w(<4 x i32> %a, <4 x i32> %b, i32 25)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @binsri_w(<4 x i32> * %ptr, <4 x i32> * %ptr2) {
+define void @binsri_w(ptr %ptr, ptr %ptr2) {
 ; MSA-LABEL: binsri_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($5)
@@ -728,14 +728,14 @@ define void @binsri_w(<4 x i32> * %ptr, <4 x i32> * %ptr2) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w1, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
-  %b = load <4 x i32>, <4 x i32> * %ptr2, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
+  %b = load <4 x i32>, ptr %ptr2, align 16
   %r = call <4 x i32> @llvm.mips.binsri.w(<4 x i32> %a, <4 x i32> %b, i32 25)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bnegi_w(<4 x i32> * %ptr) {
+define void @bnegi_w(ptr %ptr) {
 ; MSA-LABEL: bnegi_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -751,13 +751,13 @@ define void @bnegi_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.bnegi.w(<4 x i32> %a, i32 25)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bseti_w(<4 x i32> * %ptr) {
+define void @bseti_w(ptr %ptr) {
 ; MSA-LABEL: bseti_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -773,13 +773,13 @@ define void @bseti_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.bseti.w(<4 x i32> %a, i32 25)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clei_s_w(<4 x i32> * %ptr) {
+define void @clei_s_w(ptr %ptr) {
 ; MSA-LABEL: clei_s_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -795,13 +795,13 @@ define void @clei_s_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.clei.s.w(<4 x i32> %a, i32 14)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clei_u_w(<4 x i32> * %ptr) {
+define void @clei_u_w(ptr %ptr) {
 ; MSA-LABEL: clei_u_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -817,13 +817,13 @@ define void @clei_u_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.clei.u.w(<4 x i32> %a, i32 25)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clti_s_w(<4 x i32> * %ptr) {
+define void @clti_s_w(ptr %ptr) {
 ; MSA-LABEL: clti_s_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -839,13 +839,13 @@ define void @clti_s_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.clti.s.w(<4 x i32> %a, i32 15)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clti_u_w(<4 x i32> * %ptr) {
+define void @clti_u_w(ptr %ptr) {
 ; MSA-LABEL: clti_u_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -861,13 +861,13 @@ define void @clti_u_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.clti.u.w(<4 x i32> %a, i32 25)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @maxi_s_w(<4 x i32> * %ptr) {
+define void @maxi_s_w(ptr %ptr) {
 ; MSA-LABEL: maxi_s_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -883,13 +883,13 @@ define void @maxi_s_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.maxi.s.w(<4 x i32> %a, i32 2)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @maxi_u_w(<4 x i32> * %ptr) {
+define void @maxi_u_w(ptr %ptr) {
 ; MSA-LABEL: maxi_u_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -905,13 +905,13 @@ define void @maxi_u_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.maxi.u.w(<4 x i32> %a, i32 2)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @mini_s_w(<4 x i32> * %ptr) {
+define void @mini_s_w(ptr %ptr) {
 ; MSA-LABEL: mini_s_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -927,13 +927,13 @@ define void @mini_s_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.mini.s.w(<4 x i32> %a, i32 2)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @mini_u_w(<4 x i32> * %ptr) {
+define void @mini_u_w(ptr %ptr) {
 ; MSA-LABEL: mini_u_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -949,13 +949,13 @@ define void @mini_u_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.mini.u.w(<4 x i32> %a, i32 2)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @ldi_w(<4 x i32> * %ptr) {
+define void @ldi_w(ptr %ptr) {
 ; MSA-LABEL: ldi_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ldi.w $w0, 3
@@ -970,11 +970,11 @@ define void @ldi_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
   %r = call <4 x i32> @llvm.mips.ldi.w(i32 3)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @sldi_w(<4 x i32> * %ptr) {
+define void @sldi_w(ptr %ptr) {
 ; MSA-LABEL: sldi_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -990,13 +990,13 @@ define void @sldi_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.sldi.w(<4 x i32> %a, <4 x i32> %a, i32 2)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @slli_w(<4 x i32> * %ptr) {
+define void @slli_w(ptr %ptr) {
 ; MSA-LABEL: slli_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -1012,13 +1012,13 @@ define void @slli_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.slli.w(<4 x i32> %a, i32 3)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @splati_w(<4 x i32> * %ptr) {
+define void @splati_w(ptr %ptr) {
 ; MSA-LABEL: splati_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -1034,13 +1034,13 @@ define void @splati_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.splati.w(<4 x i32> %a, i32 3)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srai_w(<4 x i32> * %ptr) {
+define void @srai_w(ptr %ptr) {
 ; MSA-LABEL: srai_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -1056,13 +1056,13 @@ define void @srai_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.srai.w(<4 x i32> %a, i32 3)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srari_w(<4 x i32> * %ptr) {
+define void @srari_w(ptr %ptr) {
 ; MSA-LABEL: srari_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -1078,13 +1078,13 @@ define void @srari_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.srari.w(<4 x i32> %a, i32 3)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srli_w(<4 x i32> * %ptr) {
+define void @srli_w(ptr %ptr) {
 ; MSA-LABEL: srli_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -1100,13 +1100,13 @@ define void @srli_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.srli.w(<4 x i32> %a, i32 3)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srlri_w(<4 x i32> * %ptr) {
+define void @srlri_w(ptr %ptr) {
 ; MSA-LABEL: srlri_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -1122,13 +1122,13 @@ define void @srlri_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.w $w0, 0($1)
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call <4 x i32> @llvm.mips.srlri.w(<4 x i32> %a, i32 3)
-  store <4 x i32> %r, <4 x i32> * %ptr, align 16
+  store <4 x i32> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @addvi_h(<8 x i16> * %ptr) {
+define void @addvi_h(ptr %ptr) {
 ; MSA-LABEL: addvi_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1144,13 +1144,13 @@ define void @addvi_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.addvi.h(<8 x i16> %a, i32 25)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bclri_h(<8 x i16> * %ptr) {
+define void @bclri_h(ptr %ptr) {
 ; MSA-LABEL: bclri_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1166,13 +1166,13 @@ define void @bclri_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.bclri.h(<8 x i16> %a, i32 8)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @binsli_h(<8 x i16> * %ptr, <8 x i16> * %ptr2) {
+define void @binsli_h(ptr %ptr, ptr %ptr2) {
 ; MSA-LABEL: binsli_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($5)
@@ -1191,14 +1191,14 @@ define void @binsli_h(<8 x i16> * %ptr, <8 x i16> * %ptr2) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w1, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
-  %b = load <8 x i16>, <8 x i16> * %ptr2, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
+  %b = load <8 x i16>, ptr %ptr2, align 16
   %r = call <8 x i16> @llvm.mips.binsli.h(<8 x i16> %a, <8 x i16> %b, i32 8)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @binsri_h(<8 x i16> * %ptr, <8 x i16> * %ptr2) {
+define void @binsri_h(ptr %ptr, ptr %ptr2) {
 ; MSA-LABEL: binsri_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($5)
@@ -1217,14 +1217,14 @@ define void @binsri_h(<8 x i16> * %ptr, <8 x i16> * %ptr2) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w1, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
-  %b = load <8 x i16>, <8 x i16> * %ptr2, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
+  %b = load <8 x i16>, ptr %ptr2, align 16
   %r = call <8 x i16> @llvm.mips.binsri.h(<8 x i16> %a, <8 x i16> %b, i32 14)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bnegi_h(<8 x i16> * %ptr) {
+define void @bnegi_h(ptr %ptr) {
 ; MSA-LABEL: bnegi_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1240,13 +1240,13 @@ define void @bnegi_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.bnegi.h(<8 x i16> %a, i32 14)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bseti_h(<8 x i16> * %ptr) {
+define void @bseti_h(ptr %ptr) {
 ; MSA-LABEL: bseti_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1262,13 +1262,13 @@ define void @bseti_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.bseti.h(<8 x i16> %a, i32 15)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clei_s_h(<8 x i16> * %ptr) {
+define void @clei_s_h(ptr %ptr) {
 ; MSA-LABEL: clei_s_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1284,13 +1284,13 @@ define void @clei_s_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.clei.s.h(<8 x i16> %a, i32 13)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clei_u_h(<8 x i16> * %ptr) {
+define void @clei_u_h(ptr %ptr) {
 ; MSA-LABEL: clei_u_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1306,13 +1306,13 @@ define void @clei_u_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.clei.u.h(<8 x i16> %a, i32 25)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clti_s_h(<8 x i16> * %ptr) {
+define void @clti_s_h(ptr %ptr) {
 ; MSA-LABEL: clti_s_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1328,13 +1328,13 @@ define void @clti_s_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.clti.s.h(<8 x i16> %a, i32 15)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clti_u_h(<8 x i16> * %ptr) {
+define void @clti_u_h(ptr %ptr) {
 ; MSA-LABEL: clti_u_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1350,13 +1350,13 @@ define void @clti_u_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.clti.u.h(<8 x i16> %a, i32 25)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @maxi_s_h(<8 x i16> * %ptr) {
+define void @maxi_s_h(ptr %ptr) {
 ; MSA-LABEL: maxi_s_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1372,13 +1372,13 @@ define void @maxi_s_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.maxi.s.h(<8 x i16> %a, i32 2)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @maxi_u_h(<8 x i16> * %ptr) {
+define void @maxi_u_h(ptr %ptr) {
 ; MSA-LABEL: maxi_u_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1394,13 +1394,13 @@ define void @maxi_u_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.maxi.u.h(<8 x i16> %a, i32 2)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @mini_s_h(<8 x i16> * %ptr) {
+define void @mini_s_h(ptr %ptr) {
 ; MSA-LABEL: mini_s_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1416,13 +1416,13 @@ define void @mini_s_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.mini.s.h(<8 x i16> %a, i32 2)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @mini_u_h(<8 x i16> * %ptr) {
+define void @mini_u_h(ptr %ptr) {
 ; MSA-LABEL: mini_u_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1438,13 +1438,13 @@ define void @mini_u_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.mini.u.h(<8 x i16> %a, i32 2)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @ldi_h(<8 x i16> * %ptr) {
+define void @ldi_h(ptr %ptr) {
 ; MSA-LABEL: ldi_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ldi.h $w0, 3
@@ -1459,11 +1459,11 @@ define void @ldi_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
   %r = call <8 x i16> @llvm.mips.ldi.h(i32 3)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @sldi_h(<8 x i16> * %ptr) {
+define void @sldi_h(ptr %ptr) {
 ; MSA-LABEL: sldi_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1479,13 +1479,13 @@ define void @sldi_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.sldi.h(<8 x i16> %a, <8 x i16> %a, i32 3)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @slli_h(<8 x i16> * %ptr) {
+define void @slli_h(ptr %ptr) {
 ; MSA-LABEL: slli_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1501,13 +1501,13 @@ define void @slli_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.slli.h(<8 x i16> %a, i32 3)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @splati_h(<8 x i16> * %ptr) {
+define void @splati_h(ptr %ptr) {
 ; MSA-LABEL: splati_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1523,13 +1523,13 @@ define void @splati_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.splati.h(<8 x i16> %a, i32 3)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srai_h(<8 x i16> * %ptr) {
+define void @srai_h(ptr %ptr) {
 ; MSA-LABEL: srai_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1545,13 +1545,13 @@ define void @srai_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.srai.h(<8 x i16> %a, i32 3)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srari_h(<8 x i16> * %ptr) {
+define void @srari_h(ptr %ptr) {
 ; MSA-LABEL: srari_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1567,13 +1567,13 @@ define void @srari_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.srari.h(<8 x i16> %a, i32 3)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srli_h(<8 x i16> * %ptr) {
+define void @srli_h(ptr %ptr) {
 ; MSA-LABEL: srli_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1589,13 +1589,13 @@ define void @srli_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.srli.h(<8 x i16> %a, i32 3)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srlri_h(<8 x i16> * %ptr) {
+define void @srlri_h(ptr %ptr) {
 ; MSA-LABEL: srlri_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1611,13 +1611,13 @@ define void @srlri_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.h $w0, 0($1)
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call <8 x i16> @llvm.mips.srlri.h(<8 x i16> %a, i32 3)
-  store <8 x i16> %r, <8 x i16> * %ptr, align 16
+  store <8 x i16> %r, ptr %ptr, align 16
   ret void
 }
 
-define i32 @copy_s_b(<16 x i8> * %ptr) {
+define i32 @copy_s_b(ptr %ptr) {
 ; MSA-LABEL: copy_s_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -1631,11 +1631,11 @@ define i32 @copy_s_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    copy_s.b $2, $w0[1]
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call i32 @llvm.mips.copy.s.b(<16 x i8> %a, i32 1)
   ret i32 %r
 }
-define i32 @copy_s_h(<8 x i16> * %ptr) {
+define i32 @copy_s_h(ptr %ptr) {
 ; MSA-LABEL: copy_s_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1649,11 +1649,11 @@ define i32 @copy_s_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    copy_s.h $2, $w0[1]
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call i32 @llvm.mips.copy.s.h(<8 x i16> %a, i32 1)
   ret i32 %r
 }
-define i32 @copy_s_w(<4 x i32> * %ptr) {
+define i32 @copy_s_w(ptr %ptr) {
 ; MSA-LABEL: copy_s_w:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.w $w0, 0($4)
@@ -1667,11 +1667,11 @@ define i32 @copy_s_w(<4 x i32> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    copy_s.w $2, $w0[1]
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call i32 @llvm.mips.copy.s.w(<4 x i32> %a, i32 1)
   ret i32 %r
 }
-define i32 @copy_u_b(<16 x i8> * %ptr) {
+define i32 @copy_u_b(ptr %ptr) {
 ; MSA-LABEL: copy_u_b:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.b $w0, 0($4)
@@ -1685,11 +1685,11 @@ define i32 @copy_u_b(<16 x i8> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    copy_u.b $2, $w0[1]
 entry:
-  %a = load <16 x i8>, <16 x i8> * %ptr, align 16
+  %a = load <16 x i8>, ptr %ptr, align 16
   %r = call i32 @llvm.mips.copy.u.b(<16 x i8> %a, i32 1)
   ret i32 %r
 }
-define i32 @copy_u_h(<8 x i16> * %ptr) {
+define i32 @copy_u_h(ptr %ptr) {
 ; MSA-LABEL: copy_u_h:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.h $w0, 0($4)
@@ -1703,11 +1703,11 @@ define i32 @copy_u_h(<8 x i16> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    copy_u.h $2, $w0[1]
 entry:
-  %a = load <8 x i16>, <8 x i16> * %ptr, align 16
+  %a = load <8 x i16>, ptr %ptr, align 16
   %r = call i32 @llvm.mips.copy.u.h(<8 x i16> %a, i32 1)
   ret i32 %r
 }
-define i32 @copy_u_w(<4 x i32> * %ptr) {
+define i32 @copy_u_w(ptr %ptr) {
 ; MSA32-LABEL: copy_u_w:
 ; MSA32:       # %bb.0: # %entry
 ; MSA32-NEXT:    ld.w $w0, 0($4)
@@ -1727,12 +1727,12 @@ define i32 @copy_u_w(<4 x i32> * %ptr) {
 ; MSA64N64-NEXT:    jr $ra
 ; MSA64N64-NEXT:    copy_u.w $2, $w0[1]
 entry:
-  %a = load <4 x i32>, <4 x i32> * %ptr, align 16
+  %a = load <4 x i32>, ptr %ptr, align 16
   %r = call i32 @llvm.mips.copy.u.w(<4 x i32> %a, i32 1)
   ret i32 %r
 }
 
-define i64 @copy_s_d(<2 x i64> * %ptr) {
+define i64 @copy_s_d(ptr %ptr) {
 ; MSA32-LABEL: copy_s_d:
 ; MSA32:       # %bb.0: # %entry
 ; MSA32-NEXT:    ld.w $w0, 0($4)
@@ -1753,12 +1753,12 @@ define i64 @copy_s_d(<2 x i64> * %ptr) {
 ; MSA64N64-NEXT:    jr $ra
 ; MSA64N64-NEXT:    copy_s.d $2, $w0[1]
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call i64 @llvm.mips.copy.s.d(<2 x i64> %a, i32 1)
   ret i64 %r
 }
 
-define i64 @copy_u_d(<2 x i64> * %ptr) {
+define i64 @copy_u_d(ptr %ptr) {
 ; MSA32-LABEL: copy_u_d:
 ; MSA32:       # %bb.0: # %entry
 ; MSA32-NEXT:    ld.w $w0, 0($4)
@@ -1779,12 +1779,12 @@ define i64 @copy_u_d(<2 x i64> * %ptr) {
 ; MSA64N64-NEXT:    jr $ra
 ; MSA64N64-NEXT:    copy_s.d $2, $w0[1]
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call i64 @llvm.mips.copy.u.d(<2 x i64> %a, i32 1)
   ret i64 %r
 }
 
-define void @addvi_d(<2 x i64> * %ptr) {
+define void @addvi_d(ptr %ptr) {
 ; MSA-LABEL: addvi_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -1800,13 +1800,13 @@ define void @addvi_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.addvi.d(<2 x i64> %a, i32 25)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bclri_d(<2 x i64> * %ptr) {
+define void @bclri_d(ptr %ptr) {
 ; MSA-LABEL: bclri_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -1822,13 +1822,13 @@ define void @bclri_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.bclri.d(<2 x i64> %a, i32 16)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @binsli_d(<2 x i64> * %ptr, <2 x i64> * %ptr2) {
+define void @binsli_d(ptr %ptr, ptr %ptr2) {
 ; MSA-LABEL: binsli_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($5)
@@ -1847,14 +1847,14 @@ define void @binsli_d(<2 x i64> * %ptr, <2 x i64> * %ptr2) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w1, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
-  %b = load <2 x i64>, <2 x i64> * %ptr2, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
+  %b = load <2 x i64>, ptr %ptr2, align 16
   %r = call <2 x i64> @llvm.mips.binsli.d(<2 x i64> %a, <2 x i64> %b, i32 4)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @binsri_d(<2 x i64> * %ptr, <2 x i64> * %ptr2) {
+define void @binsri_d(ptr %ptr, ptr %ptr2) {
 ; MSA-LABEL: binsri_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($5)
@@ -1873,14 +1873,14 @@ define void @binsri_d(<2 x i64> * %ptr, <2 x i64> * %ptr2) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w1, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
-  %b = load <2 x i64>, <2 x i64> * %ptr2, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
+  %b = load <2 x i64>, ptr %ptr2, align 16
   %r = call <2 x i64> @llvm.mips.binsri.d(<2 x i64> %a, <2 x i64> %b, i32 5)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bnegi_d(<2 x i64> * %ptr) {
+define void @bnegi_d(ptr %ptr) {
 ; MSA-LABEL: bnegi_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -1896,13 +1896,13 @@ define void @bnegi_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.bnegi.d(<2 x i64> %a, i32 9)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @bseti_d(<2 x i64> * %ptr) {
+define void @bseti_d(ptr %ptr) {
 ; MSA-LABEL: bseti_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -1918,13 +1918,13 @@ define void @bseti_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.bseti.d(<2 x i64> %a, i32 25)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clei_s_d(<2 x i64> * %ptr) {
+define void @clei_s_d(ptr %ptr) {
 ; MSA-LABEL: clei_s_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -1940,13 +1940,13 @@ define void @clei_s_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.clei.s.d(<2 x i64> %a, i32 15)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clei_u_d(<2 x i64> * %ptr) {
+define void @clei_u_d(ptr %ptr) {
 ; MSA-LABEL: clei_u_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -1962,13 +1962,13 @@ define void @clei_u_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.clei.u.d(<2 x i64> %a, i32 25)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clti_s_d(<2 x i64> * %ptr) {
+define void @clti_s_d(ptr %ptr) {
 ; MSA-LABEL: clti_s_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -1984,13 +1984,13 @@ define void @clti_s_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.clti.s.d(<2 x i64> %a, i32 15)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @clti_u_d(<2 x i64> * %ptr) {
+define void @clti_u_d(ptr %ptr) {
 ; MSA-LABEL: clti_u_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -2006,13 +2006,13 @@ define void @clti_u_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.clti.u.d(<2 x i64> %a, i32 25)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @ldi_d(<2 x i64> * %ptr) {
+define void @ldi_d(ptr %ptr) {
 ; MSA32-LABEL: ldi_d:
 ; MSA32:       # %bb.0: # %entry
 ; MSA32-NEXT:    ldi.d $w0, 3
@@ -2033,11 +2033,11 @@ define void @ldi_d(<2 x i64> * %ptr) {
 ; MSA64N64-NEXT:    st.d $w0, 0($4)
 entry:
   %r = call <2 x i64> @llvm.mips.ldi.d(i32 3)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @maxi_s_d(<2 x i64> * %ptr) {
+define void @maxi_s_d(ptr %ptr) {
 ; MSA-LABEL: maxi_s_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -2053,13 +2053,13 @@ define void @maxi_s_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.maxi.s.d(<2 x i64> %a, i32 2)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @maxi_u_d(<2 x i64> * %ptr) {
+define void @maxi_u_d(ptr %ptr) {
 ; MSA-LABEL: maxi_u_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -2075,13 +2075,13 @@ define void @maxi_u_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.maxi.u.d(<2 x i64> %a, i32 2)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @mini_s_d(<2 x i64> * %ptr) {
+define void @mini_s_d(ptr %ptr) {
 ; MSA-LABEL: mini_s_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -2097,13 +2097,13 @@ define void @mini_s_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.mini.s.d(<2 x i64> %a, i32 2)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @mini_u_d(<2 x i64> * %ptr) {
+define void @mini_u_d(ptr %ptr) {
 ; MSA-LABEL: mini_u_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -2119,13 +2119,13 @@ define void @mini_u_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.mini.u.d(<2 x i64> %a, i32 2)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @sldi_d(<2 x i64> * %ptr) {
+define void @sldi_d(ptr %ptr) {
 ; MSA-LABEL: sldi_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -2141,13 +2141,13 @@ define void @sldi_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.sldi.d(<2 x i64> %a, <2 x i64> %a, i32 1)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @slli_d(<2 x i64> * %ptr) {
+define void @slli_d(ptr %ptr) {
 ; MSA-LABEL: slli_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -2163,13 +2163,13 @@ define void @slli_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.slli.d(<2 x i64> %a, i32 3)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srai_d(<2 x i64> * %ptr) {
+define void @srai_d(ptr %ptr) {
 ; MSA-LABEL: srai_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -2185,13 +2185,13 @@ define void @srai_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.srai.d(<2 x i64> %a, i32 3)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srari_d(<2 x i64> * %ptr) {
+define void @srari_d(ptr %ptr) {
 ; MSA-LABEL: srari_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -2207,13 +2207,13 @@ define void @srari_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.srari.d(<2 x i64> %a, i32 3)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srli_d(<2 x i64> * %ptr) {
+define void @srli_d(ptr %ptr) {
 ; MSA-LABEL: srli_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -2229,13 +2229,13 @@ define void @srli_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.srli.d(<2 x i64> %a, i32 3)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @srlri_d(<2 x i64> * %ptr) {
+define void @srlri_d(ptr %ptr) {
 ; MSA-LABEL: srlri_d:
 ; MSA:       # %bb.0: # %entry
 ; MSA-NEXT:    ld.d $w0, 0($4)
@@ -2251,13 +2251,13 @@ define void @srlri_d(<2 x i64> * %ptr) {
 ; MSA64N32-NEXT:    jr $ra
 ; MSA64N32-NEXT:    st.d $w0, 0($1)
 entry:
-  %a = load <2 x i64>, <2 x i64> * %ptr, align 16
+  %a = load <2 x i64>, ptr %ptr, align 16
   %r = call <2 x i64> @llvm.mips.srlri.d(<2 x i64> %a, i32 3)
-  store <2 x i64> %r, <2 x i64> * %ptr, align 16
+  store <2 x i64> %r, ptr %ptr, align 16
   ret void
 }
 
-define void @ld_d2(<2 x i64> * %ptr, i8 * %ldptr) {
+define void @ld_d2(ptr %ptr, ptr %ldptr) {
 ; MSA32-LABEL: ld_d2:
 ; MSA32:       # %bb.0: # %entry
 ; MSA32-NEXT:    addiu $1, $5, 4096
@@ -2281,8 +2281,8 @@ define void @ld_d2(<2 x i64> * %ptr, i8 * %ldptr) {
 ; MSA64N64-NEXT:    jr $ra
 ; MSA64N64-NEXT:    st.d $w0, 0($4)
 entry:
-  %a = call <2 x i64> @llvm.mips.ld.d(i8* %ldptr, i32 4096)
-  store <2 x i64> %a, <2 x i64> * %ptr, align 16
+  %a = call <2 x i64> @llvm.mips.ld.d(ptr %ldptr, i32 4096)
+  store <2 x i64> %a, ptr %ptr, align 16
   ret void
 }
 
@@ -2388,11 +2388,11 @@ declare i64 @llvm.mips.copy.u.d(<2 x i64>, i32)
 declare i32 @llvm.mips.copy.s.b(<16 x i8>, i32)
 declare i32 @llvm.mips.copy.u.b(<16 x i8>, i32)
 declare <16 x i8> @llvm.mips.bmzi.b(<16 x i8>, <16 x i8>, i32)
-declare <16 x i8> @llvm.mips.ld.b(i8*, i32)
-declare <8 x i16> @llvm.mips.ld.h(i8*, i32)
-declare <4 x i32> @llvm.mips.ld.w(i8*, i32)
-declare <2 x i64> @llvm.mips.ld.d(i8*, i32)
-declare void @llvm.mips.st.b(<16 x i8>, i8*, i32)
-declare void @llvm.mips.st.h(<8 x i16>, i8*, i32)
-declare void @llvm.mips.st.w(<4 x i32>, i8*, i32)
-declare void @llvm.mips.st.d(<2 x i64>, i8*, i32)
+declare <16 x i8> @llvm.mips.ld.b(ptr, i32)
+declare <8 x i16> @llvm.mips.ld.h(ptr, i32)
+declare <4 x i32> @llvm.mips.ld.w(ptr, i32)
+declare <2 x i64> @llvm.mips.ld.d(ptr, i32)
+declare void @llvm.mips.st.b(<16 x i8>, ptr, i32)
+declare void @llvm.mips.st.h(<8 x i16>, ptr, i32)
+declare void @llvm.mips.st.w(<4 x i32>, ptr, i32)
+declare void @llvm.mips.st.d(<2 x i64>, ptr, i32)

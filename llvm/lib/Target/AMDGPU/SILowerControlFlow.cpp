@@ -427,6 +427,8 @@ void SILowerControlFlow::emitLoop(MachineInstr &MI) {
       BuildMI(MBB, &MI, DL, TII->get(Andn2TermOpc), Exec)
           .addReg(Exec)
           .add(MI.getOperand(0));
+  if (LV)
+    LV->replaceKillInstruction(MI.getOperand(0).getReg(), MI, *AndN2);
 
   auto BranchPt = skipToUncondBrOrEnd(MBB, MI.getIterator());
   MachineInstr *Branch =
@@ -514,13 +516,18 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
     LV->replaceKillInstruction(DataReg, MI, *NewMI);
 
     if (SplitBB != &MBB) {
-      // Track the set of registers defined in the split block so we don't
-      // accidentally add the original block to AliveBlocks.
-      DenseSet<Register> SplitDefs;
-      for (MachineInstr &X : *SplitBB) {
-        for (MachineOperand &Op : X.operands()) {
-          if (Op.isReg() && Op.isDef() && Op.getReg().isVirtual())
-            SplitDefs.insert(Op.getReg());
+      // Track the set of registers defined in the original block so we don't
+      // accidentally add the original block to AliveBlocks. AliveBlocks only
+      // includes blocks which are live through, which excludes live outs and
+      // local defs.
+      DenseSet<Register> DefInOrigBlock;
+
+      for (MachineBasicBlock *BlockPiece : {&MBB, SplitBB}) {
+        for (MachineInstr &X : *BlockPiece) {
+          for (MachineOperand &Op : X.all_defs()) {
+            if (Op.getReg().isVirtual())
+              DefInOrigBlock.insert(Op.getReg());
+          }
         }
       }
 
@@ -532,7 +539,7 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
           VI.AliveBlocks.set(SplitBB->getNumber());
         else {
           for (MachineInstr *Kill : VI.Kills) {
-            if (Kill->getParent() == SplitBB && !SplitDefs.contains(Reg))
+            if (Kill->getParent() == SplitBB && !DefInOrigBlock.contains(Reg))
               VI.AliveBlocks.set(MBB.getNumber());
           }
         }

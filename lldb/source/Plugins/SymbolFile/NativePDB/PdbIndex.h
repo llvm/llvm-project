@@ -11,7 +11,6 @@
 
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/IntervalMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 
@@ -20,6 +19,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 
 namespace llvm {
 namespace pdb {
@@ -149,9 +149,9 @@ public:
   llvm::codeview::CVSymbol ReadSymbolRecord(PdbCompilandSymId cu_sym) const;
   llvm::codeview::CVSymbol ReadSymbolRecord(PdbGlobalSymId global) const;
 
-  llvm::Optional<uint16_t> GetModuleIndexForAddr(uint16_t segment,
-                                                 uint32_t offset) const;
-  llvm::Optional<uint16_t> GetModuleIndexForVa(lldb::addr_t va) const;
+  std::optional<uint16_t> GetModuleIndexForAddr(uint16_t segment,
+                                                uint32_t offset) const;
+  std::optional<uint16_t> GetModuleIndexForVa(lldb::addr_t va) const;
 };
 } // namespace npdb
 } // namespace lldb_private

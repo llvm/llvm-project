@@ -266,6 +266,10 @@ PWACtx SCEVAffinator::visitConstant(const SCEVConstant *Expr) {
       isl::manage(isl_pw_aff_from_aff(isl_aff_val_on_domain(ls, v))));
 }
 
+PWACtx SCEVAffinator::visitVScale(const SCEVVScale *VScale) {
+  llvm_unreachable("SCEVVScale not yet supported");
+}
+
 PWACtx SCEVAffinator::visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
   return visit(Expr->getOperand(0));
 }

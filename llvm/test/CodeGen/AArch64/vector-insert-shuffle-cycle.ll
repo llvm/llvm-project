@@ -5,7 +5,7 @@ target triple = "arm64-apple-ios13.4.0"
 
 ; Make we do not get stuck in a cycle in DAGCombiner.
 
-define void @test(i1 %c, <1 x double>* %ptr) {
+define void @test(i1 %c, ptr %ptr) {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi d0, #0000000000000000
@@ -13,23 +13,21 @@ define void @test(i1 %c, <1 x double>* %ptr) {
 ; CHECK-NEXT:  ; %bb.1: ; %bb1
 ; CHECK-NEXT:    ldr d0, [x1]
 ; CHECK-NEXT:  LBB0_2: ; %bb2
-; CHECK-NEXT:    ldr q1, [x8]
-; CHECK-NEXT:    mov.d v1[0], v0[0]
-; CHECK-NEXT:    str q1, [x8]
+; CHECK-NEXT:    str d0, [x8]
 ; CHECK-NEXT:    ret
 entry:
   br i1 %c, label %bb1, label %bb2
 
 bb1:
-  %lv1 = load <1 x double>, <1 x double>* %ptr, align 16
+  %lv1 = load <1 x double>, ptr %ptr, align 16
   br label %bb2
 
 bb2:
   %p = phi <1 x double> [ %lv1, %bb1 ], [ zeroinitializer, %entry ]
   %vecext19 = extractelement <1 x double> %p, i32 0
-  %arrayidx21 = getelementptr inbounds [4 x <4 x double>], [4 x <4 x double>]* undef, i64 0, i64 3
-  %lv2 = load <4 x double>, <4 x double>* %arrayidx21, align 16
+  %arrayidx21 = getelementptr inbounds [4 x <4 x double>], ptr undef, i64 0, i64 3
+  %lv2 = load <4 x double>, ptr %arrayidx21, align 16
   %vecins22 = insertelement <4 x double> %lv2, double %vecext19, i32 2
-  store <4 x double> %vecins22, <4 x double>* %arrayidx21, align 16
+  store <4 x double> %vecins22, ptr %arrayidx21, align 16
   ret void
 }

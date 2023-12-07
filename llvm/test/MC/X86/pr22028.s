@@ -14,7 +14,7 @@ push 65536
 //CHECK16:	pushw	$-1	                # encoding: [0x6a,0xff]
 //CHECK16:	pushw	$30                     # encoding: [0x6a,0x1e]
 //CHECK16:	pushw	$257                    # encoding: [0x68,0x01,0x01]
-//CHECK16:	pushl	$65536                  # encoding: [0x66,0x68,0x00,0x00,0x01,0x00]
+//CHECK16:	pushw	$65536                  # encoding: [0x68,0x00,0x00]
 
 //CHECK:	pushl	$0                      # encoding: [0x6a,0x00]
 //CHECK:	pushl	$-1                     # encoding: [0x6a,0xff]

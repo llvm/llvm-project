@@ -17,7 +17,8 @@ Casing types include:
  - ``CamelCase``,
  - ``camel_Snake_Back``,
  - ``Camel_Snake_Case``,
- - ``aNy_CasE``.
+ - ``aNy_CasE``,
+ - ``Leading_upper_snake_case``.
 
 It also supports a fixed prefix and suffix that will be prepended or appended
 to the identifiers, regardless of the casing.
@@ -29,6 +30,10 @@ falling back to a more generic rule if the specific case is not configured.
 The naming of virtual methods is reported where they occur in the base class,
 but not where they are overridden, as it can't be fixed locally there.
 This also applies for pseudo-override patterns like CRTP.
+
+``Leading_upper_snake_case`` is a naming convention where the first word is capitalized
+followed by lower case word(s) seperated by underscore(s) '_'. Examples include:
+Cap_snake_case, Cobra_case, Foo_bar_baz, and Master_copy_8gb.
 
 Options
 -------
@@ -2541,15 +2546,15 @@ float             f              unsigned long          ul             LONG     
 double            d              unsigned short int     usi            ULONG       ul
 char              c              unsigned short         us             ULONG32     ul32
 bool              b              unsigned int           ui             ULONG64     ul64
-_Bool             b              unsigned               u              ULONGLONG   ull
-int               i              long long int          lli            HANDLE      h
-size_t            n              long double            ld             INT         i
-short             s              long long              ll             INT8        i8
-signed            i              long int               li             INT16       i16
-unsigned          u              long                   l              INT32       i32
-long              l              ptrdiff_t              p              INT64       i64
-long long         ll                                                   UINT        ui
-unsigned long     ul                                                   UINT8       u8
+_Bool             b              unsigned char          uc             ULONGLONG   ull
+int               i              unsigned               u              HANDLE      h
+size_t            n              long long int          lli            INT         i
+short             s              long double            ld             INT8        i8
+signed            i              long long              ll             INT16       i16
+unsigned          u              long int               li             INT32       i32
+long              l              long                   l              INT64       i64
+long long         ll             ptrdiff_t              p              UINT        ui
+unsigned long     ul             void                   *none*         UINT8       u8
 long double       ld                                                   UINT16      u16
 ptrdiff_t         p                                                    UINT32      u32
 wchar_t           wc                                                   UINT64      u64
@@ -2584,9 +2589,9 @@ Options for Hungarian Notation
 - :option:`HungarianNotation.DerivedType.Pointer`
 - :option:`HungarianNotation.DerivedType.FunctionPointer`
 
-- :option:`HungarianNotation.CString.CharPrinter`
+- :option:`HungarianNotation.CString.CharPointer`
 - :option:`HungarianNotation.CString.CharArray`
-- :option:`HungarianNotation.CString.WideCharPrinter`
+- :option:`HungarianNotation.CString.WideCharPointer`
 - :option:`HungarianNotation.CString.WideCharArray`
 
 - :option:`HungarianNotation.PrimitiveType.*`
@@ -2642,7 +2647,7 @@ After:
     FUNC_PTR fnFuncPtr = NULL;
 
 
-.. option:: HungarianNotation.CString.CharPrinter
+.. option:: HungarianNotation.CString.CharPointer
 
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `sz`.
@@ -2652,7 +2657,7 @@ After:
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `sz`.
 
-.. option:: HungarianNotation.CString.WideCharPrinter
+.. option:: HungarianNotation.CString.WideCharPointer
 
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `wsz`.
@@ -2667,13 +2672,13 @@ Before:
 
 .. code-block:: c++
 
-    // CharPrinter
+    // CharPointer
     const char *NamePtr = "Name";
 
     // CharArray
     const char NameArray[] = "Name";
 
-    // WideCharPrinter
+    // WideCharPointer
     const wchar_t *WideNamePtr = L"Name";
 
     // WideCharArray
@@ -2683,13 +2688,13 @@ After:
 
 .. code-block:: c++
 
-    // CharPrinter
+    // CharPointer
     const char *szNamePtr = "Name";
 
     // CharArray
     const char szNameArray[] = "Name";
 
-    // WideCharPrinter
+    // WideCharPointer
     const wchar_t *wszWideNamePtr = L"Name";
 
     // WideCharArray

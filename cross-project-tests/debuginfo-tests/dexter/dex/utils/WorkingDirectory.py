@@ -12,14 +12,14 @@ import tempfile
 import time
 
 from dex.utils.Exceptions import Error
-from dex.utils.Warning import warn
+
 
 class WorkingDirectory(object):
     def __init__(self, context, *args, **kwargs):
         self.context = context
         self.orig_cwd = os.getcwd()
 
-        dir_ = kwargs.get('dir', None)
+        dir_ = kwargs.get("dir", None)
         if dir_ and not os.path.isdir(dir_):
             os.makedirs(dir_, exist_ok=True)
         self.path = tempfile.mkdtemp(*args, **kwargs)
@@ -31,8 +31,7 @@ class WorkingDirectory(object):
     def __exit__(self, *args):
         os.chdir(self.orig_cwd)
         if self.context.options.save_temps:
-            self.context.o.blue('"{}" left in place [--save-temps]\n'.format(
-                self.path))
+            self.context.o.blue('"{}" left in place [--save-temps]\n'.format(self.path))
             return
 
         for _ in range(100):
@@ -42,5 +41,7 @@ class WorkingDirectory(object):
             except OSError:
                 time.sleep(0.1)
 
-        warn(self.context, '"{}" left in place (couldn\'t delete)\n'.format(self.path))
+        self.context.logger.warning(
+            f'"{self.path}" left in place (couldn\'t delete)', enable_prefix=True
+        )
         return

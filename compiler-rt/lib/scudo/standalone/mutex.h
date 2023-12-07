@@ -11,6 +11,7 @@
 
 #include "atomic_helpers.h"
 #include "common.h"
+#include "thread_annotations.h"
 
 #include <string.h>
 
@@ -20,10 +21,10 @@
 
 namespace scudo {
 
-class HybridMutex {
+class CAPABILITY("mutex") HybridMutex {
 public:
-  bool tryLock();
-  NOINLINE void lock() {
+  bool tryLock() TRY_ACQUIRE(true);
+  NOINLINE void lock() ACQUIRE() {
     if (LIKELY(tryLock()))
       return;
       // The compiler may try to fully unroll the loop, ending up in a
@@ -40,9 +41,20 @@ public:
     }
     lockSlow();
   }
-  void unlock();
+  void unlock() RELEASE();
+
+  // TODO(chiahungduan): In general, we may want to assert the owner of lock as
+  // well. Given the current uses of HybridMutex, it's acceptable without
+  // asserting the owner. Re-evaluate this when we have certain scenarios which
+  // requires a more fine-grained lock granularity.
+  ALWAYS_INLINE void assertHeld() ASSERT_CAPABILITY(this) {
+    if (SCUDO_DEBUG)
+      assertHeldImpl();
+  }
 
 private:
+  void assertHeldImpl();
+
   static constexpr u8 NumberOfTries = 8U;
   static constexpr u8 NumberOfYields = 8U;
 
@@ -52,13 +64,13 @@ private:
   sync_mutex_t M = {};
 #endif
 
-  void lockSlow();
+  void lockSlow() ACQUIRE();
 };
 
-class ScopedLock {
+class SCOPED_CAPABILITY ScopedLock {
 public:
-  explicit ScopedLock(HybridMutex &M) : Mutex(M) { Mutex.lock(); }
-  ~ScopedLock() { Mutex.unlock(); }
+  explicit ScopedLock(HybridMutex &M) ACQUIRE(M) : Mutex(M) { Mutex.lock(); }
+  ~ScopedLock() RELEASE() { Mutex.unlock(); }
 
 private:
   HybridMutex &Mutex;

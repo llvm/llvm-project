@@ -48,11 +48,9 @@ class Callback {
   virtual void anchor();
 public:
   virtual ~Callback() {}
-  virtual void HandleUnreachable(UnreachableKind UK,
-                                 SourceLocation L,
-                                 SourceRange ConditionVal,
-                                 SourceRange R1,
-                                 SourceRange R2) = 0;
+  virtual void HandleUnreachable(UnreachableKind UK, SourceLocation L,
+                                 SourceRange ConditionVal, SourceRange R1,
+                                 SourceRange R2, bool HasFallThroughAttr) = 0;
 };
 
 /// ScanReachableFromBlock - Mark all blocks reachable from Start.
