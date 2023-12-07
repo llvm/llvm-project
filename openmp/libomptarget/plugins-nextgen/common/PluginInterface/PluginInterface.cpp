@@ -628,7 +628,9 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
 GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
                                  const llvm::omp::GV &OMPGridValues)
     : MemoryManager(nullptr), OMP_TeamLimit("OMP_TEAM_LIMIT"),
-      OMP_NumTeams("OMP_NUM_TEAMS_DEV_" + std::to_string(DeviceId + Plugin::get().getDeviceIdStartIndex())),
+      OMP_NumTeams(
+          "OMP_NUM_TEAMS_DEV_" +
+          std::to_string(DeviceId + Plugin::get().getDeviceIdStartIndex())),
       OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT"),
       OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG"),
       OMPX_SharedMemorySize("LIBOMPTARGET_SHARED_MEMORY_SIZE"),

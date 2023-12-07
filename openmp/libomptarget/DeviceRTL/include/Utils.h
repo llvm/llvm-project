@@ -83,12 +83,12 @@ template <typename DstTy, typename SrcTy> inline DstTy convertViaPun(SrcTy V) {
 }
 
 /// Return minimum value out of 2 value arguments provided
-template <typename Ty> const Ty& min(const Ty& a, const Ty& b) {
+template <typename Ty> const Ty &min(const Ty &a, const Ty &b) {
   return (b < a) ? b : a;
 }
 
 /// Return maxmimum value out of 2 value arguments provided
-template <typename Ty> const Ty& max(const Ty& a, const Ty& b) {
+template <typename Ty> const Ty &max(const Ty &a, const Ty &b) {
   return (b > a) ? b : a;
 }
 
