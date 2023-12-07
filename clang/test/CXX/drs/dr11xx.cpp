@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
-namespace dr1111 { // dr1111: yes
+namespace dr1111 { // dr1111: 3.2
 namespace example1 {
 template <typename> struct set;
 

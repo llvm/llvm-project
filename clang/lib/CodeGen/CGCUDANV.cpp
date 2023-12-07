@@ -1132,26 +1132,39 @@ void CGNVCUDARuntime::createOffloadingEntries() {
   for (KernelInfo &I : EmittedKernels)
     llvm::offloading::emitOffloadingEntry(
         M, KernelHandles[I.Kernel->getName()],
-        getDeviceSideName(cast<NamedDecl>(I.D)), 0,
-        DeviceVarFlags::OffloadGlobalEntry, Section);
+        getDeviceSideName(cast<NamedDecl>(I.D)), /*Flags=*/0, /*Data=*/0,
+        llvm::offloading::OffloadGlobalEntry, Section);
 
   for (VarInfo &I : DeviceVars) {
     uint64_t VarSize =
         CGM.getDataLayout().getTypeAllocSize(I.Var->getValueType());
+    int32_t Flags =
+        (I.Flags.isExtern()
+             ? static_cast<int32_t>(llvm::offloading::OffloadGlobalExtern)
+             : 0) |
+        (I.Flags.isConstant()
+             ? static_cast<int32_t>(llvm::offloading::OffloadGlobalConstant)
+             : 0) |
+        (I.Flags.isNormalized()
+             ? static_cast<int32_t>(llvm::offloading::OffloadGlobalNormalized)
+             : 0);
     if (I.Flags.getKind() == DeviceVarFlags::Variable) {
       llvm::offloading::emitOffloadingEntry(
           M, I.Var, getDeviceSideName(I.D), VarSize,
-          I.Flags.isManaged() ? DeviceVarFlags::OffloadGlobalManagedEntry
-                              : DeviceVarFlags::OffloadGlobalEntry,
-          Section);
+          (I.Flags.isManaged() ? llvm::offloading::OffloadGlobalManagedEntry
+                               : llvm::offloading::OffloadGlobalEntry) |
+              Flags,
+          /*Data=*/0, Section);
     } else if (I.Flags.getKind() == DeviceVarFlags::Surface) {
       llvm::offloading::emitOffloadingEntry(
           M, I.Var, getDeviceSideName(I.D), VarSize,
-          DeviceVarFlags::OffloadGlobalSurfaceEntry, Section);
+          llvm::offloading::OffloadGlobalSurfaceEntry | Flags,
+          I.Flags.getSurfTexType(), Section);
     } else if (I.Flags.getKind() == DeviceVarFlags::Texture) {
       llvm::offloading::emitOffloadingEntry(
           M, I.Var, getDeviceSideName(I.D), VarSize,
-          DeviceVarFlags::OffloadGlobalTextureEntry, Section);
+          llvm::offloading::OffloadGlobalTextureEntry | Flags,
+          I.Flags.getSurfTexType(), Section);
     }
   }
 }

@@ -64,7 +64,7 @@ namespace dr1903 {
   }
 }
 
-namespace dr1909 { // dr1909: yes
+namespace dr1909 { // dr1909: 3.7
   struct A {
     template<typename T> struct A {}; // expected-error {{member 'A' has the same name as its class}}
   };
@@ -79,7 +79,7 @@ namespace dr1909 { // dr1909: yes
   };
 }
 
-namespace dr1940 { // dr1940: yes
+namespace dr1940 { // dr1940: 3.5
 #if __cplusplus >= 201103L
 static union {
   static_assert(true, "");  // ok
@@ -119,7 +119,7 @@ derived d2(42, 9);
 #endif
 }
 
-namespace dr1947 { // dr1947: yes
+namespace dr1947 { // dr1947: 3.5
 #if __cplusplus >= 201402L
 unsigned o = 0'01;  // ok
 unsigned b = 0b'01; // expected-error {{invalid digit 'b' in octal constant}}
@@ -128,7 +128,7 @@ unsigned x = 0x'01; // expected-error {{invalid suffix 'x'01' on integer constan
 }
 
 #if __cplusplus >= 201103L
-// dr1948: yes
+// dr1948: 3.5
 // FIXME: This diagnostic could be improved.
 void *operator new(__SIZE_TYPE__) noexcept { return nullptr; } // expected-error{{exception specification in declaration does not match previous declaration}}
 #endif
