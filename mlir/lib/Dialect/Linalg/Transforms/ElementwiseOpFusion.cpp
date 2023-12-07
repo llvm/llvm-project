@@ -422,11 +422,6 @@ public:
       if (!controlFn(&opOperand))
         continue;
 
-      // Find the producer of the operand.
-      FailureOr<ElementwiseOpFusionResult> fusionResult =
-          fuseElementwiseOps(rewriter, &opOperand);
-      if (failed(fusionResult))
-        return rewriter.notifyMatchFailure(genericOp, "fusion failed");
       Operation *producer = opOperand.get().getDefiningOp();
 
       // Do not fuse a sparse-in/dense-out operation, as the
@@ -434,6 +429,12 @@ public:
       if (sparse_tensor::hasAnySparseOperand(producer) &&
           !sparse_tensor::hasAnySparseResult(producer))
         return failure();
+
+      // Find the producer of the operand.
+      FailureOr<ElementwiseOpFusionResult> fusionResult =
+          fuseElementwiseOps(rewriter, &opOperand);
+      if (failed(fusionResult))
+        return rewriter.notifyMatchFailure(genericOp, "fusion failed");
 
       // Perform the fusion.
       for (auto [origVal, replacement] : fusionResult->replacements) {

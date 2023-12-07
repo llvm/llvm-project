@@ -1082,12 +1082,11 @@ define void @main.158() #0 {
 ; BWON-F16C-LABEL: main.158:
 ; BWON-F16C:       # %bb.0: # %entry
 ; BWON-F16C-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; BWON-F16C-NEXT:    vucomiss %xmm0, %xmm1
-; BWON-F16C-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm1
+; BWON-F16C-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
+; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
+; BWON-F16C-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; BWON-F16C-NEXT:    vucomiss %xmm1, %xmm2
 ; BWON-F16C-NEXT:    jae .LBB20_2
 ; BWON-F16C-NEXT:  # %bb.1: # %entry
 ; BWON-F16C-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -1100,8 +1099,7 @@ define void @main.158() #0 {
 ; CHECK-I686-LABEL: main.158:
 ; CHECK-I686:       # %bb.0: # %entry
 ; CHECK-I686-NEXT:    subl $12, %esp
-; CHECK-I686-NEXT:    pxor %xmm0, %xmm0
-; CHECK-I686-NEXT:    movd %xmm0, (%esp)
+; CHECK-I686-NEXT:    movl $0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncsfhf2
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)

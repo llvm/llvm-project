@@ -156,6 +156,9 @@ C++23 Feature Support
   support for this feature is still experimental, the feature test macro ``__cpp_explicit_this_parameter``
   was not set in this version.
 
+- Added a separate warning to warn the use of attributes on lambdas as a C++23 extension
+  in previous language versions: ``-Wc++23-lambda-attributes``.
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -353,6 +356,8 @@ Improvements to Clang's diagnostics
   of a base class is not called in the constructor of its derived class.
 - Clang no longer emits ``-Wmissing-variable-declarations`` for variables declared
   with the ``register`` storage class.
+- Clang's ``-Wswitch-default`` flag now diagnoses whenever a ``switch`` statement
+  does not have a ``default`` label.
 - Clang's ``-Wtautological-negation-compare`` flag now diagnoses logical
   tautologies like ``x && !x`` and ``!x || x`` in expressions. This also
   makes ``-Winfinite-recursion`` diagnose more cases.
@@ -651,6 +656,9 @@ Bug Fixes in This Version
 - Fixed false positive error emitted by clang when performing qualified name
   lookup and the current class instantiation has dependent bases.
   Fixes (`#13826 <https://github.com/llvm/llvm-project/issues/13826>`_)
+- Fix a ``clang-17`` regression where a templated friend with constraints is not
+  properly applied when its parameters reference an enclosing non-template class.
+  Fixes (`#71595 <https://github.com/llvm/llvm-project/issues/71595>`_)
 - Fix the name of the ifunc symbol emitted for multiversion functions declared with the
   ``target_clones`` attribute. This addresses a linker error that would otherwise occur
   when these functions are referenced from other TUs.
