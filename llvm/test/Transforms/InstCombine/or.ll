@@ -1609,11 +1609,11 @@ define i8 @drop_disjoint(i8 %x) {
   ret i8 %b
 }
 
-; FIXME: We should drop disjoint here.
+; Make sure we drop disjoint when combining the Ors.
 define i32 @assoc_cast_assoc_disjoint(i16 %x) {
 ; CHECK-LABEL: @assoc_cast_assoc_disjoint(
 ; CHECK-NEXT:    [[B:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = or disjoint i32 [[B]], 65537
+; CHECK-NEXT:    [[C:%.*]] = or i32 [[B]], 65537
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %a = or i16 %x, 1
