@@ -353,6 +353,8 @@ Improvements to Clang's diagnostics
   of a base class is not called in the constructor of its derived class.
 - Clang no longer emits ``-Wmissing-variable-declarations`` for variables declared
   with the ``register`` storage class.
+- Clang's ``-Wswitch-default`` flag now diagnoses whenever a ``switch`` statement
+  does not have a ``default`` label.
 - Clang's ``-Wtautological-negation-compare`` flag now diagnoses logical
   tautologies like ``x && !x`` and ``!x || x`` in expressions. This also
   makes ``-Winfinite-recursion`` diagnose more cases.
