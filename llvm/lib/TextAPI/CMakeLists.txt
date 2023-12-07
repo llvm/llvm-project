@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMTextAPI
   PackedVersion.cpp
   Platform.cpp
   RecordsSlice.cpp
+  RecordVisitor.cpp
   Symbol.cpp
   SymbolSet.cpp
   Target.cpp
