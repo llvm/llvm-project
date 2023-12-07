@@ -2,7 +2,7 @@
 # RUN: %t.exe
 
 # REQUIRES: linux && target={{x86_64-.+}}
-# UNSUPPORTED: no-exceptions
+# UNSUPPORTED: no-exceptions || android
 
 ## Check that libc++abi works correctly when LPStart address is explicitly set
 ## to zero.
