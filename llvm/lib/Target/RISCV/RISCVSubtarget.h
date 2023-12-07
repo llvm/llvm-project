@@ -193,8 +193,8 @@ public:
   }
 
   bool hasMacroFusion() const {
-    return hasLUIADDIFusion() || hasAUIPCADDIFusion() || hasSLLISRLIFusion() ||
-           hasLDADDFusion();
+    return hasLUIADDIFusion() || hasAUIPCADDIFusion() ||
+           hasShiftedZExtFusion() || hasLDADDFusion();
   }
 
   // Vector codegen related methods.

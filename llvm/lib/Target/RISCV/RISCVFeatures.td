@@ -973,12 +973,12 @@ def TuneLUIADDIFusion
 def TuneAUIPCADDIFusion
     : SubtargetFeature<"auipc-addi-fusion", "HasAUIPCADDIFusion",
                        "true", "Enable AUIPC+ADDI macrofusion">;
-def TuneSLLISRLIFusion
-    : SubtargetFeature<"slli-srli-fusion", "HasSLLISRLIFusion",
-                       "true", "Enable SLLI+SRLI macrofusion">;
+def TuneShiftedZExtFusion
+    : SubtargetFeature<"shifted-zext-fusion", "HasShiftedZExtFusion",
+                       "true", "Enable SLLI+SRLI to be fused when computing (shifted) zero extension">;
 def TuneLDADDFusion
     : SubtargetFeature<"ld-add-fusion", "HasLDADDFusion",
-                       "true", "Enable fusion of load with the last instruction of the address calculation">;
+                       "true", "Enable LD+ADD macrofusion.">;
 
 def TuneNoDefaultUnroll
     : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
@@ -1001,7 +1001,7 @@ def TuneVeyronFusions : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "V
                                          "Ventana Veyron-Series processors",
                                          [TuneLUIADDIFusion,
                                           TuneAUIPCADDIFusion,
-                                          TuneSLLISRLIFusion,
+                                          TuneShiftedZExtFusion,
                                           TuneLDADDFusion]>;
 
 // Assume that lock-free native-width atomics are available, even if the target

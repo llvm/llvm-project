@@ -1,7 +1,7 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=riscv64-linux-gnu  -mcpu=veyron-v1 -x=mir < %s \
 # RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
-# RUN:   -mattr=+lui-addi-fusion,+auipc-addi-fusion,+slli-srli-fusion,+ld-add-fusion \
+# RUN:   -mattr=+lui-addi-fusion,+auipc-addi-fusion,+shifted-zext-fusion,+ld-add-fusion \
 # RUN:   | FileCheck %s
 
 # CHECK: lui_addi:%bb.0
@@ -14,7 +14,7 @@ body:             |
     liveins: $x10
     %1:gpr = COPY $x10
     %2:gpr = LUI 1
-    %3:gpr = ADDI %1, 2
+    %3:gpr = XORI %1, 2
     %4:gpr = ADDI %2, 3
     $x10 = COPY %3
     $x11 = COPY %4
@@ -31,7 +31,7 @@ body:             |
     liveins: $x10
     %1:gpr = COPY $x10
     %2:gpr = AUIPC 1
-    %3:gpr = ADDI %1, 2
+    %3:gpr = XORI %1, 2
     %4:gpr = ADDI %2, 3
     $x10 = COPY %3
     $x11 = COPY %4
@@ -48,7 +48,7 @@ body:             |
     liveins: $x10
     %1:gpr = COPY $x10
     %2:gpr = SLLI %1, 32
-    %3:gpr = ADDI %1, 3
+    %3:gpr = XORI %1, 3
     %4:gpr = SRLI %2, 4
     $x10 = COPY %3
     $x11 = COPY %4
@@ -65,7 +65,7 @@ body:             |
     liveins: $x10
     %1:gpr = COPY $x10
     %2:gpr = SLLI %1, 48
-    %3:gpr = ADDI %1, 3
+    %3:gpr = XORI %1, 3
     %4:gpr = SRLI %2, 48
     $x10 = COPY %3
     $x11 = COPY %4
@@ -82,7 +82,7 @@ body:             |
     liveins: $x10
     %1:gpr = COPY $x10
     %2:gpr = SLLI %1, 32
-    %3:gpr = ADDI %1, 3
+    %3:gpr = XORI %1, 3
     %4:gpr = SRLI %2, 33
     $x10 = COPY %3
     $x11 = COPY %4
@@ -99,7 +99,7 @@ body:             |
     liveins: $x10
     %1:gpr = COPY $x10
     %2:gpr = SLLI %1, 48
-    %3:gpr = ADDI %1, 3
+    %3:gpr = XORI %1, 3
     %4:gpr = SRLI %2, 4
     $x10 = COPY %3
     $x11 = COPY %4
@@ -116,7 +116,7 @@ body:             |
     liveins: $x10
     %1:gpr = COPY $x10
     %2:gpr = SLLI %1, 31
-    %3:gpr = ADDI %1, 3
+    %3:gpr = XORI %1, 3
     %4:gpr = SRLI %2, 4
     $x10 = COPY %3
     $x11 = COPY %4
@@ -133,7 +133,7 @@ body:             |
     liveins: $x10
     %1:gpr = COPY $x10
     %2:gpr = SLLI %1, 31
-    %3:gpr = ADDI %1, 3
+    %3:gpr = XORI %1, 3
     %4:gpr = SRLI %2, 48
     $x10 = COPY %3
     $x11 = COPY %4
@@ -151,7 +151,7 @@ body:             |
     %1:gpr = COPY $x10
     %2:gpr = COPY $x11
     %3:gpr = ADD %1, %2
-    %4:gpr = ADDI %2, 3
+    %4:gpr = XORI %2, 3
     %5:gpr = LD %3, 0
     $x10 = COPY %4
     $x11 = COPY %5

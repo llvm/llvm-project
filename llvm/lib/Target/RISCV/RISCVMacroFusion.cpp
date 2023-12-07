@@ -34,7 +34,9 @@ static bool checkRegisters(Register FirstDest, const MachineInstr &SecondMI) {
   return SecondMI.getOperand(0).getReg() == FirstDest;
 }
 
-// Fuse Load
+// Fuse load with add:
+// add rd, rs1, rs2
+// ld rd, 0(rd)
 static bool isLDADD(const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
   if (SecondMI.getOpcode() != RISCV::LD)
     return false;
@@ -58,16 +60,16 @@ static bool isLDADD(const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
 
 // Fuse these patterns:
 //
-// $rd = slli $rs0, 32
-// $rd = srli $rs1, x
+// slli rd, rs1, 32
+// srli rd, rd, x
 // where 0 <= x <= 32
 //
 // and
 //
-// $rd = slli $rs0, 48
-// $rd = srli $rs1, 48
-static bool isSLLISRLI(const MachineInstr *FirstMI,
-                       const MachineInstr &SecondMI) {
+// slli rd, rs1, 48
+// srli rd, rd, x
+static bool isShiftedZExt(const MachineInstr *FirstMI,
+                          const MachineInstr &SecondMI) {
   if (SecondMI.getOpcode() != RISCV::SRLI)
     return false;
 
@@ -95,6 +97,8 @@ static bool isSLLISRLI(const MachineInstr *FirstMI,
 }
 
 // Fuse AUIPC followed by ADDI
+// auipc rd, imm20
+// addi rd, rd, imm12
 static bool isAUIPCADDI(const MachineInstr *FirstMI,
                         const MachineInstr &SecondMI) {
   if (SecondMI.getOpcode() != RISCV::ADDI)
@@ -140,7 +144,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   if (ST.hasAUIPCADDIFusion() && isAUIPCADDI(FirstMI, SecondMI))
     return true;
 
-  if (ST.hasSLLISRLIFusion() && isSLLISRLI(FirstMI, SecondMI))
+  if (ST.hasShiftedZExtFusion() && isShiftedZExt(FirstMI, SecondMI))
     return true;
 
   if (ST.hasLDADDFusion() && isLDADD(FirstMI, SecondMI))
