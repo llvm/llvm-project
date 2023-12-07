@@ -213,7 +213,7 @@ void AssertEqualityAreNoexcept()
 }
 
 template <class T, class U = T>
-constexpr void AssertEqualityReturnBool()
+TEST_CONSTEXPR void AssertEqualityReturnBool()
 {
     ASSERT_SAME_TYPE(decltype(std::declval<const T&>() == std::declval<const U&>()), bool);
     ASSERT_SAME_TYPE(decltype(std::declval<const T&>() != std::declval<const U&>()), bool);
