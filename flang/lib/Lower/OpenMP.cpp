@@ -2150,13 +2150,7 @@ static void createBodyOfOp(
         firOpBuilder, eval.getNestedEvaluations());
 
   // Insert the terminator.
-  if constexpr (std::is_same_v<Op, mlir::omp::WsLoopOp> ||
-                std::is_same_v<Op, mlir::omp::SimdLoopOp>) {
-    mlir::ValueRange results;
-    firOpBuilder.create<mlir::omp::YieldOp>(loc, results);
-  } else {
-    firOpBuilder.create<mlir::omp::TerminatorOp>(loc);
-  }
+  Fortran::lower::genOpenMPTerminator(firOpBuilder, op.getOperation(), loc);
   // Reset the insert point to before the terminator.
   resetBeforeTerminator(firOpBuilder, storeOp, block);
 
