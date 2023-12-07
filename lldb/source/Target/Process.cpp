@@ -1418,7 +1418,7 @@ StateType Process::GetPrivateState() { return m_private_state.GetValue(); }
 
 void Process::SetPrivateState(StateType new_state) {
   // Use m_destructing not m_finalizing here.  If we are finalizing a process
-  // that we haven't started tearing down, we'd like to be able to nicely 
+  // that we haven't started tearing down, we'd like to be able to nicely
   // detach if asked, but that requires the event system be live.  That will
   // not be true for an in-the-middle-of-being-destructed Process, since the
   // event system relies on Process::shared_from_this, which may have already

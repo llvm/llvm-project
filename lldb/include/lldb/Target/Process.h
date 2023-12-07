@@ -559,7 +559,7 @@ public:
   /// Subclasses that override this method should always call this superclass
   /// method.
   /// If you are running Finalize in your Process subclass Destructor, pass
-  /// \btrue.  If we are in the destructor, shared_from_this will no longer
+  /// \b true.  If we are in the destructor, shared_from_this will no longer
   /// work, so we have to avoid doing anything that might trigger that.
   virtual void Finalize(bool destructing);
 
@@ -3085,7 +3085,7 @@ protected:
   // When we are "Finalizing" we need to do some cleanup.  But if the Finalize
   // call is coming in the Destructor, we can't do any actual work in the
   // process because that is likely to call "shared_from_this" which crashes
-  // if run while destructing.  We use this flag to determine that.   
+  // if run while destructing.  We use this flag to determine that.
   std::atomic<bool> m_destructing;
 
   /// Mask for code an data addresses. The default value (0) means no mask is
