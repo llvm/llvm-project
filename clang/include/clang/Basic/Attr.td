@@ -446,6 +446,7 @@ def TargetX86 : TargetArch<["x86"]>;
 def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
 def TargetWebAssembly : TargetArch<["wasm32", "wasm64"]>;
 def TargetNVPTX : TargetArch<["nvptx", "nvptx64"]>;
+def TargetAMDGPU : TargetArch<["r600", "amdgcn"]>;
 def TargetWindows : TargetSpec {
   let OSes = ["Win32"];
 }
@@ -2026,6 +2027,13 @@ def AMDGPUNumVGPR : InheritableAttr {
   let Args = [UnsignedArgument<"NumVGPR">];
   let Documentation = [AMDGPUNumSGPRNumVGPRDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+}
+
+def AMDGPULibFun : InheritableAttr, TargetSpecificAttr<TargetAMDGPU>{
+  let Spellings = [Clang<"amdgpu_lib_fun">];
+  let Documentation = [AMDGPULibFunDocs];
+  let Subjects = SubjectList<[Function]>;
+  let SimpleHandler = 1;
 }
 
 def AMDGPUKernelCall : DeclOrTypeAttr {
