@@ -18,6 +18,8 @@
 // Assume 48-bit VMA
 // REQUIRES: aarch64-target-arch
 //
+// REQUIRES: Clang
+//
 // UNSUPPORTED: android
 
 #include <assert.h>
