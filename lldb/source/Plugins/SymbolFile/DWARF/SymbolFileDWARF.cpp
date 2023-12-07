@@ -2958,7 +2958,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
 
         if (must_be_implementation &&
             type_die.Supports_DW_AT_APPLE_objc_complete_type()) {
-          bool try_resolving_type = type_die.GetAttributeValueAsUnsigned(
+          const bool try_resolving_type = type_die.GetAttributeValueAsUnsigned(
               DW_AT_APPLE_objc_complete_type, 0);
           if (!try_resolving_type)
             return true;
@@ -3124,7 +3124,7 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
 
       const dw_tag_t type_tag = type_die.Tag();
       // Resolve the type if both have the same tag or {class, struct} tags.
-      bool try_resolving_type =
+      const bool try_resolving_type =
           type_tag == tag || (IsTypeTag(type_tag) && IsTypeTag(tag));
 
       if (!try_resolving_type) {
