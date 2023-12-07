@@ -150,6 +150,24 @@ struct PluginManager {
   HostPtrToTableMapTy HostPtrToTableMap;
   std::mutex TblMapMtx; ///< For HostPtrToTableMap
 
+  // Work around for plugins that call dlopen on shared libraries that call
+  // tgt_register_lib during their initialisation. Stash the pointers in a
+  // vector until the plugins are all initialised and then register them.
+  bool delayRegisterLib(__tgt_bin_desc *Desc) {
+    if (RTLsLoaded)
+      return false;
+    DelayedBinDesc.push_back(Desc);
+    return true;
+  }
+
+  void registerDelayedLibraries() {
+    // Only called by libomptarget constructor
+    RTLsLoaded = true;
+    for (auto *Desc : DelayedBinDesc)
+      __tgt_register_lib(Desc);
+    DelayedBinDesc.clear();
+  }
+
   /// Return the number of usable devices.
   int getNumDevices() { return getExclusiveDevicesAccessor()->size(); }
 
@@ -178,6 +196,9 @@ struct PluginManager {
   void addRequirements(int64_t Flags) { Requirements.addRequirements(Flags); }
 
 private:
+  bool RTLsLoaded = false;
+  llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
+
   // List of all plugin adaptors, in use or not.
   llvm::SmallVector<std::unique_ptr<PluginAdaptorTy>> PluginAdaptors;
 
