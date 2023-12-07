@@ -19,6 +19,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_comparisons.h"
 #include "test_iterators.h"
 
 template <bool Const>
@@ -85,73 +86,42 @@ concept weakly_equality_comparable_with = requires(const T& t, const U& u) {
 };
 
 constexpr bool test() {
-  int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+  int buffer[8]                      = {1, 2, 3, 4, 5, 6, 7, 8};
+  using CrossConstComparableTakeView = std::ranges::take_view<CrossConstComparableView>;
 
   {   // Compare CI<Const> with sentinel<Const>
     { // Const == true
-      const std::ranges::take_view<CrossConstComparableView> tv(CrossConstComparableView{buffer}, 4);
-      std::same_as<bool> decltype(auto) b1 = (tv.end() == std::ranges::next(tv.begin(), 4));
-      assert(b1);
-      std::same_as<bool> decltype(auto) b2 = (std::ranges::next(tv.begin(), 4) == tv.end());
-      assert(b2);
-      std::same_as<bool> decltype(auto) b3 = (tv.end() != tv.begin());
-      assert(b3);
-      std::same_as<bool> decltype(auto) b4 = (tv.begin() != tv.end());
-      assert(b4);
-      std::same_as<bool> decltype(auto) b5 = (std::ranges::next(tv.begin(), 1) == tv.end());
-      assert(!b5);
-      std::same_as<bool> decltype(auto) b6 = (std::ranges::next(tv.begin(), 4) != tv.end());
-      assert(!b6);
+      AssertEqualityReturnBool<std::ranges::iterator_t<const CrossConstComparableTakeView>,
+                               std::ranges::sentinel_t<const CrossConstComparableTakeView>>();
+      const CrossConstComparableTakeView tv(CrossConstComparableView{buffer}, 4);
+      assert(testEquality(std::ranges::next(tv.begin(), 4), tv.end(), true));
+      assert(testEquality(tv.begin(), tv.end(), false));
     }
 
     { // Const == false
-      std::ranges::take_view<CrossConstComparableView> tv(CrossConstComparableView{buffer}, 4);
-      std::same_as<bool> decltype(auto) b1 = (tv.end() == std::ranges::next(tv.begin(), 4));
-      assert(b1);
-      std::same_as<bool> decltype(auto) b2 = (std::ranges::next(tv.begin(), 4) == tv.end());
-      assert(b2);
-      std::same_as<bool> decltype(auto) b3 = (tv.end() != tv.begin());
-      assert(b3);
-      std::same_as<bool> decltype(auto) b4 = (tv.begin() != tv.end());
-      assert(b4);
-      std::same_as<bool> decltype(auto) b5 = (std::ranges::next(tv.begin(), 2) == tv.end());
-      assert(!b5);
-      std::same_as<bool> decltype(auto) b6 = (std::ranges::next(tv.begin(), 4) != tv.end());
-      assert(!b6);
+      AssertEqualityReturnBool<std::ranges::iterator_t<CrossConstComparableTakeView>,
+                               std::ranges::sentinel_t<CrossConstComparableTakeView>>();
+      CrossConstComparableTakeView tv(CrossConstComparableView{buffer}, 4);
+      assert(testEquality(std::ranges::next(tv.begin(), 4), tv.end(), true));
+      assert(testEquality(std::ranges::next(tv.begin(), 1), tv.end(), false));
     }
   }
 
   {   // Compare CI<Const> with sentinel<!Const>
     { // Const == true
-      std::ranges::take_view<CrossConstComparableView> tv(CrossConstComparableView{buffer}, 4);
-      std::same_as<bool> decltype(auto) b1 = (tv.end() == std::ranges::next(std::as_const(tv).begin(), 4));
-      assert(b1);
-      std::same_as<bool> decltype(auto) b2 = (std::ranges::next(std::as_const(tv).begin(), 4) == tv.end());
-      assert(b2);
-      std::same_as<bool> decltype(auto) b3 = (tv.end() != std::as_const(tv).begin());
-      assert(b3);
-      std::same_as<bool> decltype(auto) b4 = (std::as_const(tv).begin() != tv.end());
-      assert(b4);
-      std::same_as<bool> decltype(auto) b5 = (std::ranges::next(std::as_const(tv).begin(), 1) == tv.end());
-      assert(!b5);
-      std::same_as<bool> decltype(auto) b6 = (std::ranges::next(std::as_const(tv).begin(), 4) != tv.end());
-      assert(!b6);
+      AssertEqualityReturnBool<std::ranges::iterator_t<const CrossConstComparableTakeView>,
+                               std::ranges::sentinel_t<CrossConstComparableTakeView>>();
+      CrossConstComparableTakeView tv(CrossConstComparableView{buffer}, 4);
+      assert(testEquality(std::ranges::next(std::as_const(tv).begin(), 4), tv.end(), true));
+      assert(testEquality(std::ranges::next(std::as_const(tv).begin(), 2), tv.end(), false));
     }
 
     { // Const == false
-      std::ranges::take_view<CrossConstComparableView> tv(CrossConstComparableView{buffer}, 4);
-      std::same_as<bool> decltype(auto) b1 = (std::as_const(tv).end() == std::ranges::next(tv.begin(), 4));
-      assert(b1);
-      std::same_as<bool> decltype(auto) b2 = (std::ranges::next(tv.begin(), 4) == std::as_const(tv).end());
-      assert(b2);
-      std::same_as<bool> decltype(auto) b3 = (std::as_const(tv).end() != tv.begin());
-      assert(b3);
-      std::same_as<bool> decltype(auto) b4 = (tv.begin() != std::as_const(tv).end());
-      assert(b4);
-      std::same_as<bool> decltype(auto) b5 = (std::ranges::next(tv.begin(), 2) == std::as_const(tv).end());
-      assert(!b5);
-      std::same_as<bool> decltype(auto) b6 = (std::ranges::next(tv.begin(), 4) != std::as_const(tv).end());
-      assert(!b6);
+      AssertEqualityReturnBool<std::ranges::iterator_t<CrossConstComparableTakeView>,
+                               std::ranges::sentinel_t<const CrossConstComparableTakeView>>();
+      CrossConstComparableTakeView tv(CrossConstComparableView{buffer}, 4);
+      assert(testEquality(std::ranges::next(tv.begin(), 4), std::as_const(tv).end(), true));
+      assert(testEquality(std::ranges::next(tv.begin(), 3), std::as_const(tv).end(), false));
     }
   }
 
