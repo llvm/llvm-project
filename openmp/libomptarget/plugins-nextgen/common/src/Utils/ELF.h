@@ -25,6 +25,11 @@ namespace elf {
 /// e_machine matches \p target_id; return zero otherwise.
 int32_t checkMachine(__tgt_device_image *Image, uint16_t TargetId);
 
+/// Returns a pointer to the given \p Symbol inside of an ELF object.
+llvm::Expected<const void *> getSymbolAddress(
+    const llvm::object::ELFObjectFile<llvm::object::ELF64LE> &ELFObj,
+    const llvm::object::ELF64LE::Sym &Symbol);
+
 /// Returns the symbol associated with the \p Name in the \p ELFObj. It will
 /// first search for the hash sections to identify symbols from the hash table.
 /// If that fails it will fall back to a linear search in the case of an

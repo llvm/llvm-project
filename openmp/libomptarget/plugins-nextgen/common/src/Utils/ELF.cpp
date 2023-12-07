@@ -261,3 +261,27 @@ utils::elf::getSymbol(const ELFObjectFile<ELF64LE> &ELFObj, StringRef Name) {
 
   return nullptr;
 }
+
+Expected<const void *> utils::elf::getSymbolAddress(
+    const object::ELFObjectFile<object::ELF64LE> &ELFObj,
+    const object::ELF64LE::Sym &Symbol) {
+  const ELFFile<ELF64LE> &ELFFile = ELFObj.getELFFile();
+
+  auto SecOrErr = ELFFile.getSection(Symbol.st_shndx);
+  if (!SecOrErr)
+    return SecOrErr.takeError();
+  const auto &Section = *SecOrErr;
+
+  // A section with SHT_NOBITS occupies no space in the file and has no offset.
+  if (Section->sh_type == ELF::SHT_NOBITS)
+    return createError(
+        "invalid sh_type for symbol lookup, cannot be SHT_NOBITS");
+
+  uint64_t Offset = Section->sh_offset - Section->sh_addr + Symbol.st_value;
+  if (Offset > ELFFile.getBufSize())
+    return createError("invalid offset [" + Twine(Offset) +
+                       "] into ELF file of size [" +
+                       Twine(ELFFile.getBufSize()) + "]");
+
+  return ELFFile.base() + Offset;
+}
