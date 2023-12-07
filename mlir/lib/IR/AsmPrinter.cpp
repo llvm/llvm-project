@@ -29,6 +29,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Verifier.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -3947,23 +3948,28 @@ void printDimensionList(OpAsmPrinter &printer, Operation *op,
 
 ParseResult parseDimensionList(OpAsmParser &parser,
                                DenseI64ArrayAttr &dimensions) {
-  bool hasOpeningSquare = succeeded(parser.parseOptionalLSquare());
-  if (hasOpeningSquare && failed(parser.parseRSquare())) {
-    return parser.emitError(parser.getCurrentLocation())
-           << "Failed parsing dimension list.";
+  // Empty list case denoted by "[]".
+  if (succeeded(parser.parseOptionalLSquare())) {
+    if (failed(parser.parseRSquare())) {
+      return parser.emitError(parser.getCurrentLocation())
+             << "Failed parsing dimension list.";
+    }
+    dimensions =
+        DenseI64ArrayAttr::get(parser.getContext(), ArrayRef<int64_t>());
+    return success();
   }
+
+  // Non-empty list case.
   SmallVector<int64_t> shapeArr;
   if (failed(parser.parseDimensionList(shapeArr, true, false))) {
     return parser.emitError(parser.getCurrentLocation())
            << "Failed parsing dimension list.";
   }
-  if (shapeArr.empty() && !hasOpeningSquare) {
+  if (shapeArr.empty()) {
     return parser.emitError(parser.getCurrentLocation())
            << "Failed parsing dimension list. Did you mean an empty list? It "
-              "must be "
-              "denoted by \"[]\".";
+              "must be denoted by \"[]\".";
   }
-
   dimensions = DenseI64ArrayAttr::get(parser.getContext(), shapeArr);
   return success();
 }

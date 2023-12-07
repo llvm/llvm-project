@@ -568,8 +568,6 @@ def FormatLiteralFollowingOptionalGroup
   let assemblyFormat = "(`(` $value^ `)`)? `:` $type attr-dict";
 }
 
-
-
 //===----------------------------------------------------------------------===//
 // AllTypesMatch type inference
 

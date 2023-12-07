@@ -14,5 +14,4 @@ module @dimension_list {
   test.custom_dimension_list_attr dimension_list = ?
   // CHECK: test.custom_dimension_list_attr dimension_list = ?x?
   test.custom_dimension_list_attr dimension_list = ?x?
-
 }
