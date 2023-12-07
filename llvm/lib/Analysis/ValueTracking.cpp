@@ -620,7 +620,7 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
   if (RHS->getType()->isPointerTy()) {
     // Handle comparison of pointer to null explicitly, as it will not be
     // covered by the m_APInt() logic below.
-    if (match(RHS, m_Zero())) {
+    if (LHS == V && match(RHS, m_Zero())) {
       switch (Pred) {
       case ICmpInst::ICMP_EQ:
         Known.setAllZero();
