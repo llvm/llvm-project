@@ -12,22 +12,20 @@
 int a __attribute((model("tiny")));    // expected-error {{code_model 'tiny' is not yet supported on this target}}
 int b __attribute((model("small")));   // expected-error {{code_model 'small' is not yet supported on this target}}
 int c __attribute((model("normal")));  // aarch64-error {{code_model 'normal' is not yet supported on this target}} \
-                                       // loongarch-no-warning \
                                        // mips64-error {{code_model 'normal' is not yet supported on this target}} \
                                        // powerpc64-error {{code_model 'normal' is not yet supported on this target}} \
                                        // riscv64-error {{code_model 'normal' is not yet supported on this target}} \
                                        // x86_64-error {{code_model 'normal' is not yet supported on this target}}
 int d __attribute((model("kernel")));  // expected-error {{code_model 'kernel' is not yet supported on this target}}
 int e __attribute((model("medium")));  // aarch64-error {{code_model 'medium' is not yet supported on this target}} \
-                                       // loongarch-no-warning \
                                        // mips64-error {{code_model 'medium' is not yet supported on this target}} \
                                        // powerpc64-error {{code_model 'medium' is not yet supported on this target}} \
                                        // riscv64-error {{code_model 'medium' is not yet supported on this target}} \
                                        // x86_64-error {{code_model 'medium' is not yet supported on this target}}
 int f __attribute((model("large")));   // expected-error {{code_model 'large' is not yet supported on this target}}
 int g __attribute((model("extreme"))); // aarch64-error {{code_model 'extreme' is not yet supported on this target}} \
-                                       // loongarch64-no-warning \
                                        // mips64-error {{code_model 'extreme' is not yet supported on this target}} \
                                        // powerpc64-error {{code_model 'extreme' is not yet supported on this target}} \
                                        // riscv64-error {{code_model 'extreme' is not yet supported on this target}} \
                                        // x86_64-error {{code_model 'extreme' is not yet supported on this target}}
+void __attribute((model("extreme"))) h() {} // expected-error {{'model' attribute only applies to global variables}}
