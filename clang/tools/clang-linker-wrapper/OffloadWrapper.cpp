@@ -385,7 +385,7 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP) {
       Builder.CreateInBoundsGEP(offloading::getEntryTy(M), Entry,
                                 {ConstantInt::get(getSizeTTy(M), 0),
                                  ConstantInt::get(Type::getInt32Ty(C), 4)});
-  auto *Data = Builder.CreateLoad(Type::getInt32Ty(C), FlagsPtr, "textype");
+  auto *Data = Builder.CreateLoad(Type::getInt32Ty(C), DataPtr, "textype");
   auto *Kind = Builder.CreateAnd(
       Flags, ConstantInt::get(Type::getInt32Ty(C), 0x7), "type");
 
