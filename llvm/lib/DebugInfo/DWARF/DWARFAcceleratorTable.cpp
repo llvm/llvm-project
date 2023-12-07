@@ -611,6 +611,10 @@ DWARFDebugNames::Entry::lookup(dwarf::Index Index) const {
   return std::nullopt;
 }
 
+bool DWARFDebugNames::Entry::hasParentInformation() const {
+  return lookup(dwarf::DW_IDX_parent).has_value();
+}
+
 std::optional<uint64_t> DWARFDebugNames::Entry::getDIEUnitOffset() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_die_offset))
     return Off->getAsReferenceUVal();
@@ -648,6 +652,17 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUIndex() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_type_unit))
     return Off->getAsUnsignedConstant();
   return std::nullopt;
+}
+
+Expected<std::optional<DWARFDebugNames::Entry>>
+DWARFDebugNames::Entry::getParentDIEEntry() const {
+  // The offset of the accelerator table entry for the parent.
+  std::optional<DWARFFormValue> ParentEntryOff = lookup(dwarf::DW_IDX_parent);
+  assert(ParentEntryOff.has_value() && "hasParentInformation() must be called");
+
+  if (ParentEntryOff->getForm() == dwarf::Form::DW_FORM_flag_present)
+    return std::nullopt;
+  return NameIdx->getEntryAtRelativeOffset(ParentEntryOff->getRawUValue());
 }
 
 void DWARFDebugNames::Entry::dump(ScopedPrinter &W) const {

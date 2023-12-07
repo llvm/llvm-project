@@ -460,6 +460,16 @@ public:
     /// Returns the Offset of the DIE within the containing CU or TU.
     std::optional<uint64_t> getDIEUnitOffset() const;
 
+    /// Returns true if this Entry has information about its parent DIE (i.e. if
+    /// it has an IDX_parent attribute)
+    bool hasParentInformation() const;
+
+    /// Returns the Entry corresponding to the parent of the DIE represented by
+    /// `this` Entry. If the parent is not in the table, nullopt is returned.
+    /// Precondition: hasParentInformation() == true.
+    /// An error is returned for ill-formed tables.
+    Expected<std::optional<DWARFDebugNames::Entry>> getParentDIEEntry() const;
+
     /// Return the Abbreviation that can be used to interpret the raw values of
     /// this Accelerator Entry.
     const Abbrev &getAbbrev() const { return *Abbr; }
@@ -608,6 +618,13 @@ public:
     }
 
     Expected<Entry> getEntry(uint64_t *Offset) const;
+
+    // Returns the Entry at the relative `Offset` from the start of the Entry
+    // pool.
+    Expected<Entry> getEntryAtRelativeOffset(uint64_t Offset) const {
+      auto OffsetFromSection = Offset + this->EntriesBase;
+      return getEntry(&OffsetFromSection);
+    }
 
     /// Look up all entries in this Name Index matching \c Key.
     iterator_range<ValueIterator> equal_range(StringRef Key) const;
