@@ -202,6 +202,19 @@ Changes to the C API
 * Added ``LLVMGetNNeg`` and ``LLVMSetNNeg`` for setting/getting the new nneg flag
   on zext instructions
 
+* Added the following functions for manipulating operand bundles, as well as
+  building ``call`` and ``invoke`` instructions that use operand bundles:
+
+  * ``LLVMBuildCall3``
+  * ``LLVMBuildInvoke3``
+  * ``LLVMCreateOperandBundle``
+  * ``LLVMDisposeOperandBundle``
+  * ``LLVMGetNumOperandBundles``
+  * ``LLVMGetOperandBundleAtIndex``
+  * ``LLVMGetNumOperandBundleArgs``
+  * ``LLVMGetOperandBundleArgAtIndex``
+  * ``LLVMGetOperandBundleTag``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
