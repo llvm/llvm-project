@@ -244,7 +244,6 @@ void MatchTable::emitDeclaration(raw_ostream &OS) const {
       Indentation -= 2;
   }
   OS << "}; // Size: " << (CurrentSize * 8) << " bytes\n";
-  ;
 }
 
 MatchTable MatchTable::buildTable(ArrayRef<Matcher *> Rules, bool WithCoverage,
