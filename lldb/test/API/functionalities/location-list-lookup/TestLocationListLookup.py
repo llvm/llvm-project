@@ -1,12 +1,14 @@
 ﻿"""Test that lldb picks the correct DWARF location list entry with a return-pc out of bounds."""
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class CppMemberLocationListLookupTestCase(TestBase):
-    def test(self):
+class LocationListLookupTestCase(TestBase):
+    @skipIf(oslist=["linux"], archs=["arm"])
+    def test_loclist(self):
         self.build()
 
         exe = self.getBuildArtifact("a.out")
