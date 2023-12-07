@@ -661,7 +661,9 @@ static bool supportsSPMDExecutionMode(CodeGenModule &CGM,
   case OMPD_target_teams_loop:
     // Whether this is true or not depends on how the directive will
     // eventually be emitted.
-    return CGM.teamsLoopCanBeParallelFor(D);
+    if (auto *TTLD = dyn_cast<OMPTargetTeamsGenericLoopDirective>(&D))
+      return TTLD->canBeParallelFor();
+    return false;
   case OMPD_parallel:
   case OMPD_for:
   case OMPD_parallel_for:

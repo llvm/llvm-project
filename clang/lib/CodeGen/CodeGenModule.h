@@ -1534,8 +1534,6 @@ public:
                                            LValueBaseInfo *BaseInfo = nullptr,
                                            TBAAAccessInfo *TBAAInfo = nullptr);
   bool stopAutoInit();
-  /// Determine if 'teams loop' can be emitted using 'parallel for'.
-  bool teamsLoopCanBeParallelFor(const OMPExecutableDirective &D);
 
   /// Print the postfix for externalized static variable or kernels for single
   /// source offloading languages CUDA and HIP. The unique postfix is created
