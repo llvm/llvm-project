@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines the TableGen definitions from which the ARM BF16 header
+//  This file defines the TableGen definitions from which the Neon header
 //  file will be generated.
 //
 //===----------------------------------------------------------------------===//
