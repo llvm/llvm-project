@@ -5,18 +5,18 @@ void func(int in);
 
 struct Foo {
   int x;
-  [[clang::noinline]] void bar(Foo *f);
+  [[clang::noinline]] void bar(char **argv);
 };
 
 int main(int argc, char **argv) {
   Foo f{.x = 5};
   std::printf("%p\n", &f.x);
-  f.bar(&f);
+  f.bar(argv);
   return f.x;
 }
 
-void Foo::bar(Foo *f) {
-  std::printf("%p %p\n", f, this);
+void Foo::bar(char **argv) {
+  std::printf("%p %p\n", argv, this);
   std::abort(); /// 'this' should be still accessible
 }
 
