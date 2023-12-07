@@ -16,11 +16,13 @@ namespace {
 
 TEST(raw_socket_streamTest, CLIENT_TO_SERVER_AND_SERVER_TO_CLIENT) {
   SmallString<100> SocketPath;
-  llvm::sys::fs::createUniquePath("test_raw_socket_stream.sock", SocketPath, true);
+  llvm::sys::fs::createUniquePath("test_raw_socket_stream.sock", SocketPath,
+                                  true);
 
   char Bytes[8];
 
-  Expected<ListeningSocket> MaybeServerListener = ListeningSocket::createUnix(SocketPath);
+  Expected<ListeningSocket> MaybeServerListener =
+      ListeningSocket::createUnix(SocketPath);
   ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded());
 
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
