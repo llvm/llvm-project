@@ -3021,9 +3021,9 @@ public:
   /// this expression is used as an lvalue, for instance in "&Arr[Idx]".
   void EmitBoundsCheck(const Expr *E, const Expr *Base, llvm::Value *Index,
                        QualType IndexType, bool Accessed);
-
-  void EmitBoundsCheck(const Expr *E, llvm::Value *Bound, llvm::Value *Index,
-                       QualType IndexType, QualType IndexedType, bool Accessed);
+  void EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
+                           llvm::Value *Index, QualType IndexType,
+                           QualType IndexedType, bool Accessed);
 
   // Find a struct's flexible array member. It may be embedded inside multiple
   // sub-structs, but must still be the last field.

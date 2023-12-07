@@ -1219,12 +1219,13 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
   llvm::Value *Bound =
       getArrayIndexingBound(*this, Base, IndexedType, StrictFlexArraysLevel);
 
-  EmitBoundsCheck(E, Bound, Index, IndexType, IndexedType, Accessed);
+  EmitBoundsCheckImpl(E, Bound, Index, IndexType, IndexedType, Accessed);
 }
 
-void CodeGenFunction::EmitBoundsCheck(const Expr *E, llvm::Value *Bound,
-                                      llvm::Value *Index, QualType IndexType,
-                                      QualType IndexedType, bool Accessed) {
+void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
+                                          llvm::Value *Index,
+                                          QualType IndexType,
+                                          QualType IndexedType, bool Accessed) {
   if (!Bound)
     return;
 
@@ -4182,17 +4183,17 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         RecordDecl *RD = ME->getMemberDecl()
                              ->getDeclContext()
                              ->getOuterLexicalRecordContext();
-        Expr *StructBase =
-            StructAccessBase(RD).Visit(const_cast<MemberExpr *>(ME));
 
-        if (StructBase && StructBase->getType()->isPointerType()) {
+        if (Expr *StructBase =
+                StructAccessBase(RD).Visit(const_cast<MemberExpr *>(ME));
+            StructBase && StructBase->getType()->isPointerType()) {
           if (const ValueDecl *VD = FindCountedByField(Array)) {
             Addr = EmitPointerWithAlignment(StructBase, &EltBaseInfo,
                                             &EltTBAAInfo);
             llvm::Value *Res =
                 EmitCountedByFieldExpr(Addr.getPointer(), RD, VD);
-            EmitBoundsCheck(E, Res, Idx, E->getIdx()->getType(),
-                            Array->getType(), Accessed);
+            EmitBoundsCheckImpl(E, Res, Idx, E->getIdx()->getType(),
+                                Array->getType(), Accessed);
           }
         }
       }
