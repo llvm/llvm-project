@@ -455,7 +455,8 @@ struct CombineTransferReadOpTranspose final
     Type resultType = op.getType();
     Operation *extOp;
     if ((extOp = source.getDefiningOp<arith::ExtSIOp>()) ||
-        (extOp = source.getDefiningOp<arith::ExtUIOp>())) {
+        (extOp = source.getDefiningOp<arith::ExtUIOp>()) ||
+        (extOp = source.getDefiningOp<arith::ExtFOp>())) {
       source = extOp->getOperand(0);
       resultType =
           VectorType::get(cast<VectorType>(resultType).getShape(),
@@ -493,8 +494,11 @@ struct CombineTransferReadOpTranspose final
       if (isa<arith::ExtSIOp>(extOp))
         result = rewriter.create<arith::ExtSIOp>(loc, op.getType(), result)
                      .getResult();
-      else
+      else if (isa<arith::ExtUIOp>(extOp))
         result = rewriter.create<arith::ExtUIOp>(loc, op.getType(), result)
+                     .getResult();
+      else
+        result = rewriter.create<arith::ExtFOp>(loc, op.getType(), result)
                      .getResult();
     }
 
