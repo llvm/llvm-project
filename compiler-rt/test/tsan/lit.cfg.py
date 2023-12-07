@@ -78,7 +78,9 @@ else:
     config.substitutions.append(("%link_libcxx_tsan", ""))
 
 config.substitutions.append(("%avx2", "-mavx2" if config.target_has_mavx2 else ""))
-config.substitutions.append(("%avx512f", "-mavx512f" if config.target_has_mavx512f else ""))
+config.substitutions.append(
+    ("%avx512f", "-mavx512f" if config.target_has_mavx512f else "")
+)
 
 def build_invocation(compile_flags):
     return " " + " ".join([config.clang] + compile_flags) + " "
