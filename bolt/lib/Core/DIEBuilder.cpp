@@ -202,7 +202,7 @@ void DIEBuilder::buildTypeUnits(const bool Init) {
                                        true);
     }
   }
-  unsigned int CUNum = getCUNum(DwarfContext, IsDWO);
+  const unsigned int CUNum = getCUNum(DwarfContext, IsDWO);
   getState().CloneUnitCtxMap.resize(CUNum);
   DWARFContext::unit_iterator_range CU4TURanges =
       IsDWO ? DwarfContext->dwo_types_section_units()

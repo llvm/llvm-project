@@ -23,18 +23,6 @@ add_libc_test(
     libc.src.__support.common
 )
 
-
-add_libc_test(
-  bit_test
-  SUITE
-    libc-support-tests
-  SRCS
-    bit_test.cpp
-  DEPENDS
-    libc.src.__support.bit
-)
-
-
 add_libc_test(
   math_extras_test
   SUITE
@@ -44,7 +32,6 @@ add_libc_test(
   DEPENDS
     libc.src.__support.math_extras
 )
-
 
 add_libc_test(
   high_precision_decimal_test
@@ -102,8 +89,11 @@ add_libc_test(
   SRCS
     uint_test.cpp
   DEPENDS
-    libc.src.__support.uint
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.properties.float
+    libc.src.__support.uint
 )
 
 add_libc_test(
@@ -124,6 +114,32 @@ add_libc_test(
     char_vector_test.cpp
   DEPENDS
     libc.src.__support.char_vector
+)
+
+add_libc_test(
+  hash_test
+  SUITE
+    libc-support-tests
+  SRCS
+    hash_test.cpp
+  DEPENDS
+    libc.src.__support.hash
+    libc.src.__support.CPP.new
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+    libc.src.string.memset
+  UNIT_TEST_ONLY
+    # Aligned Allocation is not supported in hermetic builds.
+)
+
+add_libc_test(
+  memory_size_test
+  SUITE
+    libc-support-tests
+  SRCS
+    memory_size_test.cpp
+  DEPENDS
+    libc.src.__support.memory_size
 )
 
 add_executable(
@@ -155,3 +171,4 @@ add_subdirectory(File)
 add_subdirectory(RPC)
 add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)
+add_subdirectory(HashTable)

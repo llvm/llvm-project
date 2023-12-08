@@ -11,12 +11,6 @@ package(default_visibility = ["//visibility:public"])
 licenses(["notice"])
 
 libc_test(
-    name = "bit_test",
-    srcs = ["bit_test.cpp"],
-    deps = ["//libc:__support_bit"],
-)
-
-libc_test(
     name = "math_extras_test",
     srcs = ["math_extras_test.cpp"],
     deps = ["//libc:__support_math_extras"],
@@ -80,7 +74,10 @@ libc_test(
     name = "uint_test",
     srcs = ["uint_test.cpp"],
     deps = [
+        "//libc:__support_cpp_bit",
         "//libc:__support_cpp_optional",
+        "//libc:__support_cpp_type_traits",
+        "//libc:__support_macros_properties_float",
         "//libc:__support_uint",
     ],
 )

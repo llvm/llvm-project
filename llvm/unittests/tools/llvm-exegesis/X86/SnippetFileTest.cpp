@@ -209,13 +209,14 @@ TEST_F(X86SnippetFileTest, MemoryMappingNoDefinition) {
   consumeError(std::move(Error));
 }
 
-TEST_F(X86SnippetFileTest, IncompatibleExecutorMode) {
-  auto Error = TestCommon(R"(
-    # LLVM-EXEGESIS-MEM-MAP test1 4096
-  )")
-                   .takeError();
-  EXPECT_TRUE((bool)Error);
-  consumeError(std::move(Error));
+TEST_F(X86SnippetFileTest, SnippetAddress) {
+  auto Snippets = TestCommon(R"(
+    # LLVM-EXEGESIS-SNIPPET-ADDRESS 10000
+  )");
+  ASSERT_TRUE(static_cast<bool>(Snippets));
+  EXPECT_THAT(*Snippets, SizeIs(1));
+  const auto &Snippet = (*Snippets)[0];
+  EXPECT_EQ(Snippet.Key.SnippetAddress, 0x10000);
 }
 
 } // namespace

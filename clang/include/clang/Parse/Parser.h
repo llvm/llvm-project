@@ -3538,7 +3538,13 @@ public:
 
 private:
   void ParseOpenACCDirective();
-  ExprResult ParseOpenACCRoutineName();
+  /// Helper that parses an ID Expression based on the language options.
+  ExprResult ParseOpenACCIDExpression();
+  /// Parses the variable list for the `cache` construct.
+  void ParseOpenACCCacheVarList();
+  /// Parses a single variable in a variable list for the 'cache' construct.
+  bool ParseOpenACCCacheVar();
+  bool ParseOpenACCWaitArgument();
 
 private:
   //===--------------------------------------------------------------------===//

@@ -2881,6 +2881,12 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
   }
   }
 
+  // Fallback - this is a splat if all demanded elts are the same constant.
+  if (computeKnownBits(V, DemandedElts, Depth).isConstant()) {
+    UndefElts = ~DemandedElts;
+    return true;
+  }
+
   return false;
 }
 
@@ -5718,12 +5724,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     // Skip unnecessary zext_inreg pattern:
     // (zext (trunc x)) -> x iff the upper bits are known zero.
-    // TODO: Generalize to just the MaskedValueIsZero check?
+    // TODO: Remove (zext (trunc (and x, c))) exception which some targets
+    // use to recognise zext_inreg patterns.
     if (OpOpcode == ISD::TRUNCATE) {
       SDValue OpOp = N1.getOperand(0);
       if (OpOp.getValueType() == VT) {
-        if (OpOp.getOpcode() == ISD::AssertZext ||
-            OpOp.getOpcode() == ISD::SRL) {
+        if (OpOp.getOpcode() != ISD::AND) {
           APInt HiBits = APInt::getBitsSetFrom(VT.getScalarSizeInBits(),
                                                N1.getScalarValueSizeInBits());
           if (MaskedValueIsZero(OpOp, HiBits)) {

@@ -1998,12 +1998,14 @@ def int_amdgcn_alignbyte : ClangBuiltin<"__builtin_amdgcn_alignbyte">,
   [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_mul_i24 : DefaultAttrsIntrinsic<[llvm_i32_ty],
+// mul24 intrinsics can return i32 or i64.
+// When returning i64, they're lowered to a mul24/mulhi24 pair.
+def int_amdgcn_mul_i24 : DefaultAttrsIntrinsic<[llvm_anyint_ty],
   [llvm_i32_ty, llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_mul_u24 : DefaultAttrsIntrinsic<[llvm_i32_ty],
+def int_amdgcn_mul_u24 : DefaultAttrsIntrinsic<[llvm_anyint_ty],
   [llvm_i32_ty, llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
@@ -2103,7 +2105,8 @@ def int_amdgcn_wqm_vote : Intrinsic<[llvm_i1_ty],
 def int_amdgcn_kill : Intrinsic<[], [llvm_i1_ty], [IntrNoCallback, IntrNoFree]>;
 
 def int_amdgcn_endpgm : ClangBuiltin<"__builtin_amdgcn_endpgm">,
-  Intrinsic<[], [], [IntrNoReturn, IntrCold, IntrNoMem, IntrHasSideEffects, IntrNoCallback, IntrNoFree]
+  Intrinsic<[], [], [IntrNoReturn, IntrCold, IntrNoMem, IntrHasSideEffects, IntrConvergent,
+                     IntrNoCallback, IntrNoFree]
 >;
 
 // If false, mark all active lanes as helper lanes until the end of program.

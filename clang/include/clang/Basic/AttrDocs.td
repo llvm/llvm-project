@@ -2199,6 +2199,43 @@ preserving struct or union member access debuginfo indices of this
 struct or union, similar to clang ``__builtin_preserve_access_index()``.
   }];
 }
+
+def BPFPreserveStaticOffsetDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Clang supports the ``__attribute__((preserve_static_offset))``
+attribute for the BPF target. This attribute may be attached to a
+struct or union declaration. Reading or writing fields of types having
+such annotation is guaranteed to generate LDX/ST/STX instruction with
+offset corresponding to the field.
+
+For example:
+
+.. code-block:: c
+
+  struct foo {
+    int a;
+    int b;
+  };
+
+  struct bar {
+    int a;
+    struct foo b;
+  } __attribute__((preserve_static_offset));
+
+  void buz(struct bar *g) {
+    g->b.a = 42;
+  }
+
+The assignment to ``g``'s field would produce an ST instruction with
+offset 8: ``*(u32)(r1 + 8) = 42;``.
+
+Without this attribute generated instructions might be different,
+depending on optimizations behavior. E.g. the example above could be
+rewritten as ``r1 += 8; *(u32)(r1 + 0) = 42;``.
+  }];
+}
+
 def BTFDeclTagDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -2515,6 +2552,13 @@ example, the following will emit 4 versions of the function:
     __attribute__((target_clones("arch=atom,avx2","arch=ivybridge","default")))
     void foo() {}
 
+For targets that support the GNU indirect function (IFUNC) feature, dispatch
+is performed by emitting an indirect function that is resolved to the appropriate
+target clone at load time. The indirect function is given the name the
+multiversioned function would have if it had been declared without the attribute.
+For backward compatibility with earlier Clang releases, a function alias with an
+``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
+feature and support for it may be removed in the future.
 }];
 }
 
@@ -2615,8 +2659,9 @@ An error will be given if:
   - Specified values violate subtarget specifications;
   - Specified values are not compatible with values provided through other
     attributes;
-  - The AMDGPU target backend is unable to create machine code that can meet the
-    request.
+
+The AMDGPU target backend will emit a warning whenever it is unable to
+create machine code that meets the request.
   }];
 }
 
@@ -7073,7 +7118,7 @@ Parameters annotated with `in` or with no annotation are passed by value from
 the caller to the callee.
 
 Parameters annotated with `out` are written to the argument after the callee
-returns (Note: arguments values passed into `out` parameters _are not_ copied
+returns (Note: arguments values passed into `out` parameters *are not* copied
 into the callee).
 
 Parameters annotated with `inout` are copied into the callee via a temporary,
@@ -7315,7 +7360,7 @@ this usage is debugger-dependent.
 }
 
 def CleanupDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatVariable;
   let Content = [{
 This attribute allows a function to be run when a local variable goes out of
 scope. The attribute takes the identifier of a function with a parameter type
@@ -7547,7 +7592,7 @@ For example,
   Task<int> foo() { return increment(1); } // Error. foo is not a coroutine.
 
   // Fine for a coroutine wrapper to return a CRT.
-  Task<int> [[clang::coro_wrapper]] foo() { return increment(1); }
+  [[clang::coro_wrapper]] Task<int> foo() { return increment(1); }
 
   void bar() {
     // Invalid. This intantiates a function which returns a CRT but is not marked as

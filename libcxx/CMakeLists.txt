@@ -251,14 +251,14 @@ option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
 
 # Generate and install a linker script inplace of libc++.so. The linker script
 # will link libc++ to the correct ABI library. This option is on by default
-# on UNIX platforms other than Apple unless we statically link libc++abi
-# inside libc++.so, we don't build libc++.so at all or we don't have any
-# ABI library.
+# on UNIX platforms other than Apple, and on the Fuchsia platform unless we
+# statically link libc++abi inside libc++.so, we don't build libc++.so at all
+# or we don't have any ABI library.
 if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
     OR NOT LIBCXX_ENABLE_SHARED
     OR LIBCXX_CXX_ABI STREQUAL "none")
   set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
-elseif(UNIX AND NOT APPLE)
+elseif((UNIX OR FUCHSIA) AND NOT APPLE)
   set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
 else()
   set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
@@ -621,10 +621,10 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
         append_flags(SANITIZER_FLAGS "-fsanitize-memory-track-origins")
       endif()
     elseif (USE_SANITIZER STREQUAL "Undefined")
-      append_flags(SANITIZER_FLAGS "-fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
+      append_flags(SANITIZER_FLAGS "-fsanitize=undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
     elseif (USE_SANITIZER STREQUAL "Address;Undefined" OR
             USE_SANITIZER STREQUAL "Undefined;Address")
-      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
+      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
     elseif (USE_SANITIZER STREQUAL "Thread")
       append_flags(SANITIZER_FLAGS -fsanitize=thread)
     elseif (USE_SANITIZER STREQUAL "DataFlow")
@@ -639,6 +639,8 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
 endfunction()
 
 get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
+add_library(cxx-sanitizer-flags INTERFACE)
+target_compile_options(cxx-sanitizer-flags INTERFACE ${SANITIZER_FLAGS})
 
 # Link system libraries =======================================================
 function(cxx_link_system_libraries target)
@@ -821,6 +823,7 @@ function(cxx_add_common_build_flags target)
   cxx_add_rtti_flags(${target})
   cxx_add_module_flags(${target})
   cxx_link_system_libraries(${target})
+  target_link_libraries(${target} PRIVATE cxx-sanitizer-flags)
 endfunction()
 
 #===============================================================================

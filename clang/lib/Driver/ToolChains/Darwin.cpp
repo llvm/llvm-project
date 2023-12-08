@@ -2073,7 +2073,7 @@ std::optional<DarwinPlatform> getDeploymentTargetFromTargetArg(
         continue;
       A->claim();
       // Accept a -target-variant triple when compiling code that may run on
-      // macOS or Mac Catalust.
+      // macOS or Mac Catalyst.
       if ((Triple.isMacOSX() && TVT.getOS() == llvm::Triple::IOS &&
            TVT.isMacCatalystEnvironment()) ||
           (TVT.isMacOSX() && Triple.getOS() == llvm::Triple::IOS &&
@@ -2916,6 +2916,10 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
   // to fix the same problem with C++ headers, and is generally fragile.
   if (!sdkSupportsBuiltinModules(TargetPlatform, SDKInfo))
     CC1Args.push_back("-fbuiltin-headers-in-system-modules");
+
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fdefine_target_os_macros,
+                                options::OPT_fno_define_target_os_macros))
+    CC1Args.push_back("-fdefine-target-os-macros");
 }
 
 void Darwin::addClangCC1ASTargetOptions(

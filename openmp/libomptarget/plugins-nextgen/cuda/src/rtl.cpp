@@ -20,7 +20,7 @@
 #include "Shared/Environment.h"
 
 #include "GlobalHandler.h"
-#include "OmptCallback.h"
+#include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
 
 #include "llvm/BinaryFormat/ELF.h"
@@ -1055,11 +1055,8 @@ private:
     // Perform a quick check for the named kernel in the image. The kernel
     // should be created by the 'nvptx-lower-ctor-dtor' pass.
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    GlobalTy Global(KernelName, sizeof(void *));
-    if (auto Err = Handler.getGlobalMetadataFromImage(*this, Image, Global)) {
-      consumeError(std::move(Err));
+    if (!Handler.isSymbolInImage(*this, Image, KernelName))
       return Plugin::success();
-    }
 
     // The Nvidia backend cannot handle creating the ctor / dtor array
     // automatically so we must create it ourselves. The backend will emit

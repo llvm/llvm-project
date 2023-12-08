@@ -150,8 +150,8 @@ public:
       pm.addPass(
           createSparseReinterpretMapPass(ReinterpretMapScope::kExceptGeneric));
       pm.addNestedPass<func::FuncOp>(createLowerForeachToSCFPass());
+      pm.addPass(mlir::createLoopInvariantCodeMotionPass());
       if (vectorLength > 0) {
-        pm.addPass(mlir::createLoopInvariantCodeMotionPass());
         pm.addPass(createSparseVectorizationPass(
             vectorLength, enableVLAVectorization, enableSIMDIndex32));
       }
