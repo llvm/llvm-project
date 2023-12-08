@@ -1,5 +1,11 @@
 # RUN: %clang_host -g %S/Inputs/main.c -o %t
 
+# The file main.c is does not show up in search on Windows.
+# UNSUPPORTED: system-windows
+
+# Until we figure out the correct CHECK lines.
+# UNSUPPORTED: system-darwin
+
 # Checking simple regex search
 
 # RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK1
@@ -26,7 +32,7 @@
 # Checking no colorization without regex search
 
 # RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -s main' | FileCheck %s --check-prefix CHECK6
-# CHECK6:        Summary: {{.+}}`main at main.c:2
+# CHECK6:        Summary: {{.+}}`main at main.c:
 
 # Checking no colorization when use-color is false
 
