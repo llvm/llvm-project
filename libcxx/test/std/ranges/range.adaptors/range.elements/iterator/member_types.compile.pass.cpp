@@ -65,7 +65,7 @@ static_assert(std::same_as<ElementsIter<Range<std::tuple<int>*>>::iterator_categ
                            std::random_access_iterator_tag>);
 
 using Generator = decltype(std::views::iota(0, 1) | std::views::transform([](int) {
-                             return std::pair<int, short>{1, 1};
+                             return std::pair{1, short{1}};
                            }));
 static_assert(std::ranges::random_access_range<Generator>);
 
