@@ -725,3 +725,13 @@ module {
 
 // expected-error@+1 {{record already defined}}
 !struct = !cir.struct<struct "SelfReference" {!cir.struct<struct "SelfReference" {}>}>
+
+// -----
+!s32i = !cir.int<s, 32>
+module {
+  cir.func @tmp(%arg0: f32) {
+    // expected-error@+1 {{operand #0 must be Integer type}}
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, %arg0 : f32, ["tmp"]
+    cir.return
+  }
+}
