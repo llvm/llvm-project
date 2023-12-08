@@ -37,50 +37,50 @@ static const char *const DataLayoutStringAMDGCN =
     "-ni:7:8";
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
-    llvm::AMDGPU::Generic,  // Default
-    llvm::AMDGPU::Global,   // opencl_global
-    llvm::AMDGPU::Local,    // opencl_local
-    llvm::AMDGPU::Constant, // opencl_constant
-    llvm::AMDGPU::Private,  // opencl_private
-    llvm::AMDGPU::Generic,  // opencl_generic
-    llvm::AMDGPU::Global,   // opencl_global_device
-    llvm::AMDGPU::Global,   // opencl_global_host
-    llvm::AMDGPU::Global,   // cuda_device
-    llvm::AMDGPU::Constant, // cuda_constant
-    llvm::AMDGPU::Local,    // cuda_shared
-    llvm::AMDGPU::Global,   // sycl_global
-    llvm::AMDGPU::Global,   // sycl_global_device
-    llvm::AMDGPU::Global,   // sycl_global_host
-    llvm::AMDGPU::Local,    // sycl_local
-    llvm::AMDGPU::Private,  // sycl_private
-    llvm::AMDGPU::Generic,  // ptr32_sptr
-    llvm::AMDGPU::Generic,  // ptr32_uptr
-    llvm::AMDGPU::Generic,  // ptr64
-    llvm::AMDGPU::Generic,  // hlsl_groupshared
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // Default
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // opencl_local
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // opencl_constant
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // opencl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // opencl_generic
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_device
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_host
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // cuda_device
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // cuda_constant
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // cuda_shared
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global_device
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global_host
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // sycl_local
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // sycl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_sptr
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_uptr
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
 };
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
-    llvm::AMDGPU::Private,  // Default
-    llvm::AMDGPU::Global,   // opencl_global
-    llvm::AMDGPU::Local,    // opencl_local
-    llvm::AMDGPU::Constant, // opencl_constant
-    llvm::AMDGPU::Private,  // opencl_private
-    llvm::AMDGPU::Generic,  // opencl_generic
-    llvm::AMDGPU::Global,   // opencl_global_device
-    llvm::AMDGPU::Global,   // opencl_global_host
-    llvm::AMDGPU::Global,   // cuda_device
-    llvm::AMDGPU::Constant, // cuda_constant
-    llvm::AMDGPU::Local,    // cuda_shared
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // Default
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // opencl_local
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // opencl_constant
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // opencl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // opencl_generic
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_device
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_host
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // cuda_device
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // cuda_constant
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // cuda_shared
     // SYCL address space values for this map are dummy
-    llvm::AMDGPU::Generic, // sycl_global
-    llvm::AMDGPU::Generic, // sycl_global_device
-    llvm::AMDGPU::Generic, // sycl_global_host
-    llvm::AMDGPU::Generic, // sycl_local
-    llvm::AMDGPU::Generic, // sycl_private
-    llvm::AMDGPU::Generic, // ptr32_sptr
-    llvm::AMDGPU::Generic, // ptr32_uptr
-    llvm::AMDGPU::Generic, // ptr64
-    llvm::AMDGPU::Generic, // hlsl_groupshared
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global_device
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global_host
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_local
+    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr32_sptr
+    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr32_uptr
+    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr64
+    llvm::AMDGPUAS::FLAT_ADDRESS, // hlsl_groupshared
 
 };
 } // namespace targets

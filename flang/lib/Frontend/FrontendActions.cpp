@@ -58,6 +58,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -302,7 +303,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
     originalGVOp.setValueAttr(
         builder.getIntegerAttr(int32Type, oclcABIVERsion));
     originalGVOp.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
-    originalGVOp.setAddrSpace(llvm::AMDGPU::Constant);
+    originalGVOp.setAddrSpace(llvm::AMDGPUAS::CONSTANT_ADDRESS);
     originalGVOp.setVisibility_(mlir::LLVM::Visibility::Hidden);
     return;
   }
@@ -313,7 +314,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
       /* Name */ codeObjectVersionGlobalOpName,
       /* Value */ builder.getIntegerAttr(int32Type, oclcABIVERsion));
   covInfo.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
-  covInfo.setAddrSpace(llvm::AMDGPU::Constant);
+  covInfo.setAddrSpace(llvm::AMDGPUAS::CONSTANT_ADDRESS);
   covInfo.setVisibility_(mlir::LLVM::Visibility::Hidden);
   builder.setInsertionPointToStart(mlirModule.getBody());
   builder.insert(covInfo);
