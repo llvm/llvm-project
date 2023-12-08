@@ -21,8 +21,9 @@ class FirOpBuilder;
 }
 
 namespace Fortran::semantics {
+class SemanticsContext;
 class Symbol;
-}
+} // namespace Fortran::semantics
 
 namespace Fortran::lower {
 
@@ -46,6 +47,94 @@ public:
   void instantiateVariable(Fortran::lower::AbstractConverter &converter,
                            const Fortran::lower::pft::Variable &var);
   void finalize(const Fortran::semantics::Symbol *globalOmpRequiresSymbol);
+
+private:
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPSimpleStandaloneConstruct &);
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPFlushConstruct &);
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPCancelConstruct &);
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPCancellationPointConstruct &);
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPStandaloneConstruct &);
+
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPSectionsConstruct &);
+
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPSectionConstruct &);
+
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPLoopConstruct &);
+
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPBlockConstruct &);
+
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPAtomicConstruct &);
+
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPCriticalConstruct &);
+
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPExecutableAllocate &);
+
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPAllocatorsConstruct &);
+
+  // Declarative
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPDeclarativeAllocate &);
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPDeclareReductionConstruct &);
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPDeclareSimdConstruct &);
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPDeclareTargetConstruct &);
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPRequiresConstruct &);
+  void genOMP(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::pft::Evaluation &eval,
+              Fortran::semantics::SemanticsContext &semaCtx,
+              const Fortran::parser::OpenMPThreadprivate &);
 
 private:
   // Shortcuts to call ConverterT:: functions. They can't be defined here
