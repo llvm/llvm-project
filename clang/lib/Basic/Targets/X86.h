@@ -905,7 +905,6 @@ public:
   CygwinX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_64TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
-    TLSSupported = false;
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -918,6 +917,10 @@ public:
     DefineStd(Builder, "unix", Opts);
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
+  }
+
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
   }
 };
 
