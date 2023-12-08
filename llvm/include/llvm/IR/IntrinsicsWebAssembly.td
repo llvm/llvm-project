@@ -363,4 +363,10 @@ def int_wasm_memory_storetag :
 def int_wasm_memory_storeztag :
   DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_anyint_ty], [], "llvm.wasm.memory.storeztag">;
 
+def int_wasm_memory_store1tag :
+  DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_anyint_ty], [], "llvm.wasm.memory.store1tag">;
+
+def int_wasm_memory_storez1tag :
+  DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_anyint_ty], [], "llvm.wasm.memory.storez1tag">;
+
 } // TargetPrefix = "wasm"

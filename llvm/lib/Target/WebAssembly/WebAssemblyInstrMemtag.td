@@ -59,6 +59,20 @@ defm MEMORY_STOREZTAG_A#B: I<(outs), (ins rc:$src, rc:$b16),
                     "memory.storeztag\t",
                     0xfc25>;
 
+defm MEMORY_STORE1TAG_A#B: I<(outs), (ins rc:$src, rc:$b16),
+                    (outs), (ins),
+                    [(int_wasm_memory_store1tag rc:$src, rc:$b16)],
+                    "memory.store1tag\t$src, $b16",
+                    "memory.storetag\t",
+                    0xfc26>;
+
+defm MEMORY_STOREZ1TAG_A#B: I<(outs), (ins rc:$src, rc:$b16),
+                    (outs), (ins),
+                    [(int_wasm_memory_storez1tag rc:$src, rc:$b16)],
+                    "memory.storez1tag\t$src, $b16",
+                    "memory.storez1tag\t",
+                    0xfc27>;
+
 }
 
 defm : MemoryTaggingOps<I32, "32">;
