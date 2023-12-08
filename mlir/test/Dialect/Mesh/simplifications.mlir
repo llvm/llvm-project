@@ -39,6 +39,7 @@ func.func @all_reduce_arith_addf_endomorphism_multiple_uses_of_result(
   return %2, %2 : tensor<5xf32>, tensor<5xf32>
 }
 
+// Do not simplify if there is another use of one of the all-reduces.
 // CHECK-LABEL: func.func @all_reduce_arith_addf_endomorphism_multiple_uses_of_all_reduce_result
 func.func @all_reduce_arith_addf_endomorphism_multiple_uses_of_all_reduce_result(
     // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]*]]: tensor<5xf32>
@@ -48,12 +49,12 @@ func.func @all_reduce_arith_addf_endomorphism_multiple_uses_of_all_reduce_result
   // CHECK: %[[ALL_REDUCE_0_RES:[A-Za-z0-9_]*]] = mesh.all_reduce %[[ARG0]]
   %0 = mesh.all_reduce %arg0 on @mesh0 mesh_axes = [0]
     : tensor<5xf32> -> tensor<5xf32>
+  // CHECK: %[[ALL_REDUCE_1_RES:[A-Za-z0-9_]*]] = mesh.all_reduce %[[ARG1]]
   %1 = mesh.all_reduce %arg1 on @mesh0 mesh_axes = [0]
     : tensor<5xf32> -> tensor<5xf32>
-  // CHECK: %[[ADD_RES:[A-Za-z0-9_]*]] = arith.addf %[[ARG0]], %[[ARG1]]
+  // CHECK: %[[ADD_RES:[A-Za-z0-9_]*]] = arith.addf %[[ALL_REDUCE_0_RES]], %[[ALL_REDUCE_1_RES]]
   %2 = arith.addf %0, %1 : tensor<5xf32>
-  // CHECK: %[[ALL_REDUCE_RES:[A-Za-z0-9_]*]] = mesh.all_reduce %[[ADD_RES]]
-  // CHECK: return %[[ALL_REDUCE_0_RES]], %[[ALL_REDUCE_RES]]
+  // CHECK: return %[[ALL_REDUCE_0_RES]], %[[ADD_RES]]
   return %0, %2 : tensor<5xf32>, tensor<5xf32>
 }
 
