@@ -3955,10 +3955,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
                                      StringRef FallbackStyleName,
                                      StringRef Code, llvm::vfs::FileSystem *FS,
                                      bool AllowUnknownOptions) {
-  if (!FS)
-    FS = llvm::vfs::getRealFileSystem().get();
   FormatStyle Style = getLLVMStyle(guessLanguage(FileName, Code));
-
   FormatStyle FallbackStyle = getNoStyle();
   if (!getPredefinedStyle(FallbackStyleName, Style.Language, &FallbackStyle))
     return make_string_error("Invalid fallback style: " + FallbackStyleName);
@@ -3974,13 +3971,17 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
                                AllowUnknownOptions)) {
       return make_string_error("Error parsing -style: " + ec.message());
     }
-    if (Style.InheritsParentConfig) {
-      ChildFormatTextToApply.emplace_back(
-          llvm::MemoryBuffer::getMemBuffer(StyleName, Source, false));
-    } else {
+
+    if (!Style.InheritsParentConfig)
       return Style;
-    }
+
+    ChildFormatTextToApply.emplace_back(
+        llvm::MemoryBuffer::getMemBuffer(StyleName, Source, false));
   }
+
+  if (!FS)
+    FS = llvm::vfs::getRealFileSystem().get();
+  assert(FS);
 
   // User provided clang-format file using -style=file:path/to/format/file.
   if (!Style.InheritsParentConfig &&
@@ -4015,18 +4016,12 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       return Style;
   }
 
-  // Reset possible inheritance
-  Style.InheritsParentConfig = false;
-
-  // Look for .clang-format/_clang-format file in the file's parent directories.
-  SmallString<128> UnsuitableConfigFiles;
   SmallString<128> Path(FileName);
   if (std::error_code EC = FS->makeAbsolute(Path))
     return make_string_error(EC.message());
 
-  llvm::SmallVector<std::string, 2> FilesToLookFor;
-  FilesToLookFor.push_back(".clang-format");
-  FilesToLookFor.push_back("_clang-format");
+  // Reset possible inheritance
+  Style.InheritsParentConfig = false;
 
   auto dropDiagnosticHandler = [](const llvm::SMDiagnostic &, void *) {};
 
@@ -4040,9 +4035,14 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
     }
   };
 
+  // Look for .clang-format/_clang-format file in the file's parent directories.
+  llvm::SmallVector<std::string, 2> FilesToLookFor;
+  FilesToLookFor.push_back(".clang-format");
+  FilesToLookFor.push_back("_clang-format");
+
+  SmallString<128> UnsuitableConfigFiles;
   for (StringRef Directory = Path; !Directory.empty();
        Directory = llvm::sys::path::parent_path(Directory)) {
-
     auto Status = FS->status(Directory);
     if (!Status ||
         Status->getType() != llvm::sys::fs::file_type::directory_file) {
@@ -4055,50 +4055,51 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       llvm::sys::path::append(ConfigFile, F);
       LLVM_DEBUG(llvm::dbgs() << "Trying " << ConfigFile << "...\n");
 
-      Status = FS->status(ConfigFile.str());
+      Status = FS->status(ConfigFile);
+      if (!Status ||
+          Status->getType() != llvm::sys::fs::file_type::regular_file) {
+        continue;
+      }
 
-      if (Status &&
-          (Status->getType() == llvm::sys::fs::file_type::regular_file)) {
-        llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-            loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions);
-        if (auto EC = Text.getError()) {
-          if (EC == ParseError::Unsuitable) {
-            if (!UnsuitableConfigFiles.empty())
-              UnsuitableConfigFiles.append(", ");
-            UnsuitableConfigFiles.append(ConfigFile);
-            continue;
-          }
+      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
+          loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions);
+      if (auto EC = Text.getError()) {
+        if (EC != ParseError::Unsuitable) {
           return make_string_error("Error reading " + ConfigFile + ": " +
                                    EC.message());
         }
-        LLVM_DEBUG(llvm::dbgs()
-                   << "Using configuration file " << ConfigFile << "\n");
+        if (!UnsuitableConfigFiles.empty())
+          UnsuitableConfigFiles.append(", ");
+        UnsuitableConfigFiles.append(ConfigFile);
+        continue;
+      }
 
-        if (!Style.InheritsParentConfig) {
-          if (ChildFormatTextToApply.empty())
-            return Style;
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Using configuration file " << ConfigFile << "\n");
 
+      if (!Style.InheritsParentConfig) {
+        if (!ChildFormatTextToApply.empty()) {
           LLVM_DEBUG(llvm::dbgs() << "Applying child configurations\n");
           applyChildFormatTexts(&Style);
-
-          return Style;
         }
-
-        LLVM_DEBUG(llvm::dbgs() << "Inherits parent configuration\n");
-
-        // Reset inheritance of style
-        Style.InheritsParentConfig = false;
-
-        ChildFormatTextToApply.emplace_back(std::move(*Text));
-
-        // Breaking out of the inner loop, since we don't want to parse
-        // .clang-format AND _clang-format, if both exist. Then we continue the
-        // inner loop (parent directories) in search for the parent
-        // configuration.
-        break;
+        return Style;
       }
+
+      LLVM_DEBUG(llvm::dbgs() << "Inherits parent configuration\n");
+
+      // Reset inheritance of style
+      Style.InheritsParentConfig = false;
+
+      ChildFormatTextToApply.emplace_back(std::move(*Text));
+
+      // Breaking out of the inner loop, since we don't want to parse
+      // .clang-format AND _clang-format, if both exist. Then we continue the
+      // outer loop (parent directories) in search for the parent
+      // configuration.
+      break;
     }
   }
+
   if (!UnsuitableConfigFiles.empty()) {
     return make_string_error("Configuration file(s) do(es) not support " +
                              getLanguageName(Style.Language) + ": " +
