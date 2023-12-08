@@ -109,10 +109,8 @@ LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate) {
     // Check to see if we should rehoist, i.e. if a non-constant operation was
     // inserted before this one.
     Block *opBlock = op->getBlock();
-    if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode())) {
+    if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode()))
       op->moveBefore(&opBlock->front());
-      appendFoldedLocation(op, opBlock->getParent()->getLoc());
-    }
     return failure();
   }
 
@@ -146,10 +144,8 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   // If this is a constant we unique'd, we don't need to insert, but we can
   // check to see if we should rehoist it.
   if (isFolderOwnedConstant(op)) {
-    if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode())) {
+    if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode()))
       op->moveBefore(&opBlock->front());
-      appendFoldedLocation(op, opBlock->getParent()->getLoc());
-    }
     return true;
   }
 
@@ -188,10 +184,8 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   // anything. Otherwise, we move the constant to the insertion block.
   Block *insertBlock = &insertRegion->front();
   if (opBlock != insertBlock || (&insertBlock->front() != op &&
-                                 !isFolderOwnedConstant(op->getPrevNode()))) {
+                                 !isFolderOwnedConstant(op->getPrevNode())))
     op->moveBefore(&insertBlock->front());
-    appendFoldedLocation(op, insertBlock->getParent()->getLoc());
-  }
 
   folderConstOp = op;
   referencedDialects[op].push_back(op->getDialect());
@@ -303,10 +297,8 @@ OperationFolder::processFoldResults(Operation *op,
       // with. This may not automatically happen if the operation being folded
       // was inserted before the constant within the insertion block.
       Block *opBlock = op->getBlock();
-      if (opBlock == constOp->getBlock() && &opBlock->front() != constOp) {
+      if (opBlock == constOp->getBlock() && &opBlock->front() != constOp)
         constOp->moveBefore(&opBlock->front());
-        appendFoldedLocation(constOp, opBlock->getParent()->getLoc());
-      }
 
       results.push_back(constOp->getResult(0));
       continue;
