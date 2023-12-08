@@ -4163,7 +4163,6 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       ArrayLV = EmitArraySubscriptExpr(ASE, /*Accessed*/ true);
     else
       ArrayLV = EmitLValue(Array);
-
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
     if (SanOpts.has(SanitizerKind::ArrayBounds)) {
@@ -4185,7 +4184,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
             Addr = EmitPointerWithAlignment(StructBase, &EltBaseInfo,
                                             &EltTBAAInfo);
             llvm::Value *Res =
-                EmitCountedByFieldExpr(Addr.getPointer(), RD, VD);
+                EmitCountedByFieldExprImpl(Addr.getPointer(), RD, VD);
             EmitBoundsCheckImpl(E, Res, Idx, E->getIdx()->getType(),
                                 Array->getType(), Accessed);
           }
