@@ -10,12 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Lower/OpenMP.h"
+#include "FirConverter.h"
+#include "OpenMPMixin.h"
+
 #include "DirectivesCommon.h"
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -40,6 +43,25 @@ static llvm::cl::opt<bool> treatIndexAsSection(
 using DeclareTargetCapturePair =
     std::pair<mlir::omp::DeclareTargetCaptureClause,
               Fortran::semantics::Symbol>;
+
+namespace Fortran::lower {
+
+template <>
+Fortran::lower::LoweringBridge &OpenMPMixin<FirConverter>::getBridge() {
+  return This()->FirConverter::getBridge();
+}
+template <> fir::FirOpBuilder &OpenMPMixin<FirConverter>::getBuilder() {
+  return This()->FirConverter::getBuilder();
+}
+template <>
+Fortran::lower::pft::Evaluation &OpenMPMixin<FirConverter>::getEval() {
+  return This()->FirConverter::getEval();
+}
+template <> Fortran::lower::SymMap &OpenMPMixin<FirConverter>::getSymTable() {
+  return This()->FirConverter::getSymTable();
+}
+
+} // namespace Fortran::lower
 
 //===----------------------------------------------------------------------===//
 // Common helper functions
@@ -3860,3 +3882,97 @@ void Fortran::lower::genOpenMPRequires(
     offloadMod.setRequires(mlirFlags);
   }
 }
+
+namespace Fortran::lower {
+
+template <>
+void OpenMPMixin<FirConverter>::genFIR(
+    const Fortran::parser::OpenMPConstruct &omp) {
+  mlir::OpBuilder::InsertPoint insertPt = getBuilder().saveInsertionPoint();
+  getSymTable().pushScope();
+  genOpenMPConstruct(*This(), getBridge().getSemanticsContext(), getEval(),
+                     omp);
+
+  const Fortran::parser::OpenMPLoopConstruct *ompLoop =
+      std::get_if<Fortran::parser::OpenMPLoopConstruct>(&omp.u);
+  const Fortran::parser::OpenMPBlockConstruct *ompBlock =
+      std::get_if<Fortran::parser::OpenMPBlockConstruct>(&omp.u);
+
+  // If loop is part of an OpenMP Construct then the OpenMP dialect
+  // workshare loop operation has already been created. Only the
+  // body needs to be created here and the do_loop can be skipped.
+  // Skip the number of collapsed loops, which is 1 when there is a
+  // no collapse requested.
+
+  Fortran::lower::pft::Evaluation *curEval = &getEval();
+  const Fortran::parser::OmpClauseList *loopOpClauseList = nullptr;
+  if (ompLoop) {
+    loopOpClauseList = &std::get<Fortran::parser::OmpClauseList>(
+        std::get<Fortran::parser::OmpBeginLoopDirective>(ompLoop->t).t);
+    int64_t collapseValue = Fortran::lower::getCollapseValue(*loopOpClauseList);
+
+    curEval = &curEval->getFirstNestedEvaluation();
+    for (int64_t i = 1; i < collapseValue; i++) {
+      curEval = &*std::next(curEval->getNestedEvaluations().begin());
+    }
+  }
+
+  for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
+    This()->genFIR(e);
+
+  if (ompLoop) {
+    genOpenMPReduction(*This(), *loopOpClauseList);
+  } else if (ompBlock) {
+    const auto &blockStart =
+        std::get<Fortran::parser::OmpBeginBlockDirective>(ompBlock->t);
+    const auto &blockClauses =
+        std::get<Fortran::parser::OmpClauseList>(blockStart.t);
+    genOpenMPReduction(*This(), blockClauses);
+  }
+
+  getSymTable().popScope();
+  getBuilder().restoreInsertionPoint(insertPt);
+
+  // Register if a target region was found
+  ompDeviceCodeFound =
+      ompDeviceCodeFound || Fortran::lower::isOpenMPTargetConstruct(omp);
+}
+
+template <>
+void OpenMPMixin<FirConverter>::genFIR(
+    const Fortran::parser::OpenMPDeclarativeConstruct &ompDecl) {
+  mlir::OpBuilder::InsertPoint insertPt = getBuilder().saveInsertionPoint();
+  // Register if a declare target construct intended for a target device was
+  // found
+  ompDeviceCodeFound =
+      ompDeviceCodeFound ||
+      Fortran::lower::isOpenMPDeviceDeclareTarget(*This(), getEval(), ompDecl);
+  genOpenMPDeclarativeConstruct(*This(), getEval(), ompDecl);
+  for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
+    This()->genFIR(e);
+  getBuilder().restoreInsertionPoint(insertPt);
+}
+
+template <>
+void OpenMPMixin<FirConverter>::instantiateVariable(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::pft::Variable &var) {
+  assert(var.hasSymbol() && "Expecting symbol");
+  if (var.getSymbol().test(Fortran::semantics::Symbol::Flag::OmpThreadprivate))
+    genThreadprivateOp(*This(), var);
+
+  if (var.getSymbol().test(Fortran::semantics::Symbol::Flag::OmpDeclareTarget))
+    genDeclareTargetIntGlobal(*This(), var);
+}
+
+template <>
+void OpenMPMixin<FirConverter>::finalize(
+    const Fortran::semantics::Symbol *globalOmpRequiresSymbol) {
+  // Set the module attribute related to OpenMP requires directives
+  if (ompDeviceCodeFound) {
+    genOpenMPRequires(This()->getModuleOp().getOperation(),
+                      globalOmpRequiresSymbol);
+  }
+}
+
+} // namespace Fortran::lower

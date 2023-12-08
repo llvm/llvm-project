@@ -13,6 +13,9 @@
 #ifndef FORTRAN_LOWER_FIRCONVERTER_H
 #define FORTRAN_LOWER_FIRCONVERTER_H
 
+#include "ConverterMixin.h"
+#include "OpenMPMixin.h"
+
 #include "flang/Common/Fortran.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Bridge.h"
@@ -74,7 +77,11 @@
 
 namespace Fortran::lower {
 
-class FirConverter : public Fortran::lower::AbstractConverter {
+class FirConverter : public Fortran::lower::AbstractConverter,
+                     public OpenMPMixin<FirConverter> {
+  using OpenMPBase = OpenMPMixin<FirConverter>;
+  using OpenMPBase::genFIR;
+
 public:
   explicit FirConverter(Fortran::lower::LoweringBridge &bridge)
       : Fortran::lower::AbstractConverter(bridge.getLoweringOptions()),
@@ -82,6 +89,20 @@ public:
   virtual ~FirConverter() = default;
 
   void run(Fortran::lower::pft::Program &pft);
+
+public:
+  // The interface that mixin is expecting.
+
+  Fortran::lower::LoweringBridge &getBridge() { return bridge; }
+  fir::FirOpBuilder &getBuilder() {
+    assert(builder);
+    return *builder;
+  }
+  Fortran::lower::pft::Evaluation &getEval() {
+    assert(evalPtr);
+    return *evalPtr;
+  }
+  Fortran::lower::SymMap &getSymTable() { return localSymbols; }
 
   /// The core of the conversion: take an evaluation and generate FIR for it.
   /// The generation for each individual element of PFT is done via a specific
@@ -141,8 +162,6 @@ private:
   void genFIR(const Fortran::parser::OpenACCConstruct &);
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &);
   void genFIR(const Fortran::parser::OpenACCRoutineConstruct &);
-  void genFIR(const Fortran::parser::OpenMPConstruct &);
-  void genFIR(const Fortran::parser::OpenMPDeclarativeConstruct &);
   void genFIR(const Fortran::parser::OpenStmt &);
   void genFIR(const Fortran::parser::PauseStmt &);
   void genFIR(const Fortran::parser::PointerAssignmentStmt &);
@@ -194,7 +213,6 @@ private:
   void genFIR(const Fortran::parser::IfStmt &) {}              // nop
   void genFIR(const Fortran::parser::IfThenStmt &) {}          // nop
   void genFIR(const Fortran::parser::NonLabelDoStmt &) {}      // nop
-  void genFIR(const Fortran::parser::OmpEndLoopDirective &) {} // nop
   void genFIR(const Fortran::parser::SelectTypeStmt &) {}      // nop
   void genFIR(const Fortran::parser::TypeGuardStmt &) {}       // nop
 
@@ -687,7 +705,6 @@ private:
   mlir::Location toLocation();
 
   void setCurrentEval(Fortran::lower::pft::Evaluation &eval);
-  Fortran::lower::pft::Evaluation &getEval();
 
   std::optional<Fortran::evaluate::Shape>
   getShape(const Fortran::lower::SomeExpr &expr);
@@ -730,8 +747,6 @@ private:
                                           mlir::Type eleTy);
 
   void finalizeOpenACCLowering();
-  void finalizeOpenMPLowering(
-      const Fortran::semantics::Symbol *globalOmpRequiresSymbol);
 
   //===--------------------------------------------------------------------===//
 
@@ -778,10 +793,6 @@ private:
 
   /// Deferred OpenACC routine attachment.
   Fortran::lower::AccRoutineInfoMappingList accRoutineInfos;
-
-  /// Whether an OpenMP target region or declare target function/subroutine
-  /// intended for device offloading has been detected
-  bool ompDeviceCodeFound = false;
 
   const Fortran::lower::ExprToValueMap *exprValueOverrides{nullptr};
 };
@@ -1222,11 +1233,6 @@ inline mlir::Location FirConverter::toLocation() {
 inline void
 FirConverter::setCurrentEval(Fortran::lower::pft::Evaluation &eval) {
   evalPtr = &eval;
-}
-
-inline Fortran::lower::pft::Evaluation &FirConverter::getEval() {
-  assert(evalPtr);
-  return *evalPtr;
 }
 
 std::optional<Fortran::evaluate::Shape> inline FirConverter::getShape(
