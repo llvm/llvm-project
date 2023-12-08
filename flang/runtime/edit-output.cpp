@@ -140,7 +140,7 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
     return EditBOZOutput<4>(
         io, edit, reinterpret_cast<const unsigned char *>(&n), KIND);
   case 'L':
-    return EditLogicalOutput(io, edit, *reinterpret_cast<const char *>(&n));
+    return EditLogicalOutput(io, edit, n != 0 ? true : false);
   case 'A': // legacy extension
     return EditCharacterOutput(
         io, edit, reinterpret_cast<char *>(&n), sizeof n);

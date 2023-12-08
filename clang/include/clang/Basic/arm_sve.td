@@ -1296,6 +1296,11 @@ def SVCREATE_3_BF16 : SInst<"svcreate3[_{d}]", "3ddd",  "b", MergeNone, "", [IsT
 def SVCREATE_4_BF16 : SInst<"svcreate4[_{d}]", "4dddd", "b", MergeNone, "", [IsTupleCreate]>;
 }
 
+let TargetGuard = "sve2p1" in {
+  def SVCREATE_2_B : SInst<"svcreate2[_{d}]", "2dd",   "Pc", MergeNone, "", [IsTupleCreate]>;
+  def SVCREATE_4_B : SInst<"svcreate4[_{d}]", "4dddd", "Pc", MergeNone, "", [IsTupleCreate]>;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Vector insertion and extraction
 def SVGET_2 : SInst<"svget2[_{d}]", "d2i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_1>]>;
@@ -1316,6 +1321,13 @@ def SVSET_3_BF16 : SInst<"svset3[_{d}]", "33id", "b", MergeNone, "", [IsTupleSet
 def SVSET_4_BF16 : SInst<"svset4[_{d}]", "44id", "b", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_3>]>;
 }
 
+let TargetGuard = "sve2p1" in {
+  def SVGET_2_B : SInst<"svget2[_{d}]", "d2i", "Pc", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_1>]>;
+  def SVGET_4_B : SInst<"svget4[_{d}]", "d4i", "Pc", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_3>]>;
+
+  def SVSET_2_B : SInst<"svset2[_{d}]", "22id", "Pc", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_1>]>;
+  def SVSET_4_B : SInst<"svset4[_{d}]", "44id", "Pc", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_3>]>;
+}
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 WhileGE/GT
 let TargetGuard = "sve2" in {
@@ -2134,6 +2146,24 @@ let TargetGuard = "sme2" in {
   def SVURSHL_X2 : SInst<"svrshl[_{d}_x2]", "222", "UcUsUiUl", MergeNone, "aarch64_sve_urshl_x2", [IsStreaming], []>;
   def SVSRSHL_X4 : SInst<"svrshl[_{d}_x4]", "444", "csil",     MergeNone, "aarch64_sve_srshl_x4", [IsStreaming], []>;
   def SVURSHL_X4 : SInst<"svrshl[_{d}_x4]", "444", "UcUsUiUl", MergeNone, "aarch64_sve_urshl_x4", [IsStreaming], []>;
+
+  def SVQRSHRN_X4   : SInst<"svqrshrn[_n]_{0}[_{d}_x4]", "q4i", "il",   MergeNone, "aarch64_sve_sqrshrn_x4", [IsStreaming], [ImmCheck<1, ImmCheckShiftRight, 0>]>;
+  def SVUQRSHRN_X4  : SInst<"svqrshrn[_n]_{0}[_{d}_x4]", "b4i", "UiUl", MergeNone, "aarch64_sve_uqrshrn_x4", [IsStreaming], [ImmCheck<1, ImmCheckShiftRight, 0>]>;
+
+  // SQRSHR / UQRSHR
+  def SVQRSHR_X2  : SInst<"svqrshr[_n]_{0}[_{d}_x2]", "h2i", "i",    MergeNone, "aarch64_sve_sqrshr_x2", [IsStreaming], [ImmCheck<1, ImmCheck1_16>]>;
+  def SVUQRSHR_X2 : SInst<"svqrshr[_n]_{0}[_{d}_x2]", "e2i", "Ui",   MergeNone, "aarch64_sve_uqrshr_x2", [IsStreaming], [ImmCheck<1, ImmCheck1_16>]>;
+  def SVQRSHR_X4  : SInst<"svqrshr[_n]_{0}[_{d}_x4]", "q4i", "il",   MergeNone, "aarch64_sve_sqrshr_x4", [IsStreaming], [ImmCheck<1, ImmCheckShiftRight, 0>]>;
+  def SVUQRSHR_X4 : SInst<"svqrshr[_n]_{0}[_{d}_x4]", "b4i", "UiUl", MergeNone, "aarch64_sve_uqrshr_x4", [IsStreaming], [ImmCheck<1, ImmCheckShiftRight, 0>]>;
+
+  // SQRSHRU
+  def SVSQRSHRU_X2 : SInst<"svqrshru[_n]_{0}[_{d}_x2]", "e2i", "i",  MergeNone, "aarch64_sve_sqrshru_x2", [IsStreaming], [ImmCheck<1, ImmCheck1_16>]>;
+  def SVSQRSHRU_X4 : SInst<"svqrshru[_n]_{0}[_{d}_x4]", "b4i", "il", MergeNone, "aarch64_sve_sqrshru_x4", [IsStreaming], [ImmCheck<1, ImmCheckShiftRight, 0>]>;
+
+  def SVSQRSHRUN_X4 : SInst<"svqrshrun[_n]_{0}[_{d}_x4]", "b4i", "il", MergeNone, "aarch64_sve_sqrshrun_x4", [IsStreaming], [ImmCheck<1, ImmCheckShiftRight, 0>]>;
+
+  def REINTERPRET_SVBOOL_TO_SVCOUNT : Inst<"svreinterpret[_c]", "}P", "Pc", MergeNone, "", [IsStreamingCompatible], []>;
+  def REINTERPRET_SVCOUNT_TO_SVBOOL : Inst<"svreinterpret[_b]", "P}", "Pc", MergeNone, "", [IsStreamingCompatible], []>;
 }
 
 let TargetGuard = "sve2p1" in {

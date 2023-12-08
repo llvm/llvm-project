@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangTidyHICPPModule
   ExceptionBaseclassCheck.cpp
   HICPPTidyModule.cpp
+  IgnoredRemoveResultCheck.cpp
   MultiwayPathsCoveredCheck.cpp
   NoAssemblerCheck.cpp
   SignedBitwiseCheck.cpp
