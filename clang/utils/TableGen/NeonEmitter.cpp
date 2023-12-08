@@ -593,7 +593,7 @@ public:
   // Emit arm_bf16.h.inc
   void runBF16(raw_ostream &o);
 
-  void runVectorType(raw_ostream &o);
+  void runVectorTypes(raw_ostream &o);
 
   // Emit all the __builtin prototypes used in arm_neon.h, arm_fp16.h and
   // arm_bf16.h
@@ -2539,7 +2539,7 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
   OS << "#endif /* __ARM_FP16_H */\n";
 }
 
-void NeonEmitter::runVectorType(raw_ostream &OS) {
+void NeonEmitter::runVectorTypes(raw_ostream &OS) {
   OS << "/*===---- arm_vector_types - ARM vector type "
         "------===\n"
         " *\n"
@@ -2666,7 +2666,7 @@ void clang::EmitNeonSema(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 void clang::EmitVectorTypes(RecordKeeper &Records, raw_ostream &OS) {
-  NeonEmitter(Records).runVectorType(OS);
+  NeonEmitter(Records).runVectorTypes(OS);
 }
 
 void clang::EmitNeonTest(RecordKeeper &Records, raw_ostream &OS) {
