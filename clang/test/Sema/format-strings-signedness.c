@@ -1,15 +1,10 @@
-// RUN: %clang_cc1 -std=c11 -fsyntax-only -verify -Wformat -Wformat-signedness %s
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -verify -Wformat -Wformat-signedness %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -std=c11 -fsyntax-only -verify -Wformat -Wformat-signedness %s
 
 #include <limits.h>
 
 int printf(const char *restrict format, ...);
 int scanf(const char * restrict, ...);
-
-enum foo {
-    minus_one = -1,
-    int_val = INT_MAX,
-    unsigned_val = (unsigned)INT_MIN
-};
 
 void test_printf_bool(_Bool x)
 {
@@ -70,12 +65,53 @@ void test_printf_unsigned_long_long(unsigned long long x)
     printf("%llx", x); // no-warning
 }
 
-void test_printf_enum(enum foo x)
+enum enum_int {
+    minus_1 = -1
+};
+
+void test_printf_enum_int(enum enum_int x)
+{
+    printf("%d", x); // no-warning
+    printf("%u", x); // expected-warning{{format specifies type 'unsigned int' but the argument has underlying type 'int'}}
+    printf("%x", x); // expected-warning{{format specifies type 'unsigned int' but the argument has underlying type 'int'}}
+}
+
+#ifndef _WIN32 // Disabled due to enums have different underlying type on _WIN32
+enum enum_unsigned {
+    zero = 0
+};
+
+void test_printf_enum_unsigned(enum enum_unsigned x)
+{
+    printf("%d", x); // expected-warning{{format specifies type 'int' but the argument has underlying type 'unsigned int'}}
+    printf("%u", x); // no-warning
+    printf("%x", x); // no-warning
+}
+
+enum enum_long {
+    minus_one = -1,
+    int_val = INT_MAX,
+    unsigned_val = (unsigned)INT_MIN
+};
+
+void test_printf_enum_long(enum enum_long x)
 {
     printf("%ld", x); // no-warning
     printf("%lu", x); // expected-warning{{format specifies type 'unsigned long' but the argument has underlying type 'long'}}
     printf("%lx", x); // expected-warning{{format specifies type 'unsigned long' but the argument has underlying type 'long'}}
 }
+
+enum enum_unsigned_long {
+    uint_max_plus = (unsigned long)UINT_MAX+1,
+};
+
+void test_printf_enum_unsigned_long(enum enum_unsigned_long x)
+{
+    printf("%ld", x); // expected-warning{{format specifies type 'long' but the argument has underlying type 'unsigned long'}}
+    printf("%lu", x); // no-warning
+    printf("%lx", x); // no-warning
+}
+#endif
 
 void test_scanf_char(char *y) {
   scanf("%c", y); // no-warning
@@ -121,8 +157,28 @@ void test_scanf_unsigned_longlong(unsigned long long *x) {
   scanf("%llx", x); // no-warning
 }
 
-void test_scanf_enum(enum foo *x) {
-  scanf("%ld", x); // no-warning
-  scanf("%lu", x); // expected-warning{{format specifies type 'unsigned long *' but the argument has type 'enum foo *'}}
-  scanf("%lx", x); // expected-warning{{format specifies type 'unsigned long *' but the argument has type 'enum foo *'}}
+void test_scanf_enum_int(enum enum_int *x) {
+  scanf("%d", x); // no-warning
+  scanf("%u", x); // expected-warning{{format specifies type 'unsigned int *' but the argument has type 'enum enum_int *'}}
+  scanf("%x", x); // expected-warning{{format specifies type 'unsigned int *' but the argument has type 'enum enum_int *'}}
 }
+
+#ifndef _WIN32 // Disabled due to enums have different underlying type on _WIN32
+void test_scanf_enum_unsigned(enum enum_unsigned *x) {
+  scanf("%d", x); // expected-warning{{format specifies type 'int *' but the argument has type 'enum enum_unsigned *'}}
+  scanf("%u", x); // no-warning
+  scanf("%x", x); // no-warning
+}
+
+void test_scanf_enum_long(enum enum_long *x) {
+  scanf("%ld", x); // no-warning
+  scanf("%lu", x); // expected-warning{{format specifies type 'unsigned long *' but the argument has type 'enum enum_long *'}}
+  scanf("%lx", x); // expected-warning{{format specifies type 'unsigned long *' but the argument has type 'enum enum_long *'}}
+}
+
+void test_scanf_enum_unsigned_long(enum enum_unsigned_long *x) {
+  scanf("%ld", x); // expected-warning{{format specifies type 'long *' but the argument has type 'enum enum_unsigned_long *'}}
+  scanf("%lu", x); // no-warning
+  scanf("%lx", x); // no-warning
+}
+#endif
