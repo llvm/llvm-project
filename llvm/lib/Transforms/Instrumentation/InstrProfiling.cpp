@@ -49,7 +49,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -1295,7 +1294,6 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc) {
         *M, ValuesTy, false, Linkage, Constant::getNullValue(ValuesTy),
         getVarName(Inc, getInstrProfValuesVarPrefix(), Renamed));
     ValuesVar->setVisibility(Visibility);
-    setGlobalVariableLargeSection(TT, *ValuesVar);
     ValuesVar->setSection(
         getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
     ValuesVar->setAlignment(Align(8));
@@ -1424,7 +1422,6 @@ void InstrProfiling::emitVNodes() {
   auto *VNodesVar = new GlobalVariable(
       *M, VNodesTy, false, GlobalValue::PrivateLinkage,
       Constant::getNullValue(VNodesTy), getInstrProfVNodesVarName());
-  setGlobalVariableLargeSection(TT, *VNodesVar);
   VNodesVar->setSection(
       getInstrProfSectionName(IPSK_vnodes, TT.getObjectFormat()));
   VNodesVar->setAlignment(M->getDataLayout().getABITypeAlign(VNodesTy));
@@ -1452,7 +1449,6 @@ void InstrProfiling::emitNameData() {
                                 GlobalValue::PrivateLinkage, NamesVal,
                                 getInstrProfNamesVarName());
   NamesSize = CompressedNameStr.size();
-  setGlobalVariableLargeSection(TT, *NamesVar);
   NamesVar->setSection(
       getInstrProfSectionName(IPSK_name, TT.getObjectFormat()));
   // On COFF, it's important to reduce the alignment down to 1 to prevent the
