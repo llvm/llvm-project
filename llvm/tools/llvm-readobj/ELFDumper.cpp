@@ -5353,7 +5353,7 @@ static bool printAArch64Note(raw_ostream &OS, uint32_t NoteType,
       support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 0);
   uint64_t Version =
       support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
-  OS << format("platform 0x%x, version 0x%x", Platform, Version);
+  OS << format("platform 0x%" PRIx64 ", version 0x%" PRIx64, Platform, Version);
 
   if (Desc.size() > 16)
     OS << ", additional info 0x"
