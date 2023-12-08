@@ -1443,7 +1443,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
       for (const auto &Capture : Intro.Captures) {
         if (Capture.Id == TP->getIdentifier()) {
           Diag(Capture.Loc, diag::err_template_param_shadow) << Capture.Id;
-          Diag(TP->getLocation(), diag::note_template_param_here);
+          NoteTemplateParameterLocation(*TP);
         }
       }
     }

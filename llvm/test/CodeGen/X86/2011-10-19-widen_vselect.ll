@@ -50,13 +50,12 @@ define void @zero_test() {
 ; X86-LABEL: zero_test:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    xorps %xmm0, %xmm0
-; X86-NEXT:    movlps %xmm0, (%eax)
+; X86-NEXT:    movsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: zero_test:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorps %xmm0, %xmm0
-; X64-NEXT:    movlps %xmm0, (%rax)
+; X64-NEXT:    movq $0, (%rax)
 ; X64-NEXT:    retq
 entry:
   %0 = select <2 x i1> undef, <2 x float> undef, <2 x float> zeroinitializer

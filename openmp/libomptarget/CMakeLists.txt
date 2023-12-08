@@ -24,7 +24,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 
-if(LLVM_LIBRARY_OUTPUT_INTDIR)
+if(NOT LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBOMPTARGET_INTDIR ${LIBOMPTARGET_LIBRARY_DIR})
 else()
   set(LIBOMPTARGET_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
@@ -158,10 +158,6 @@ else()
   message(" ====== WARNING! no LLVM found! some libomptarget components may be skipped")
 endif()
 
-# Build target agnostic offloading library.
-set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-add_subdirectory(${LIBOMPTARGET_SRC_DIR})
-
 # Definitions for testing, for reuse when testing libomptarget-nvptx.
 set(LIBOMPTARGET_OPENMP_HEADER_FOLDER "${LIBOMP_INCLUDE_DIR}" CACHE STRING
   "Path to folder containing omp.h")
@@ -186,6 +182,10 @@ add_subdirectory(hostexec)
 add_subdirectory(tools)
 set(PREP_TOOL $<TARGET_FILE:prep-libomptarget-bc>)
 add_subdirectory(DeviceRTL)
+
+# Build target agnostic offloading library.
+set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_subdirectory(${LIBOMPTARGET_SRC_DIR})
 
 # Add tests.
 add_subdirectory(test)
