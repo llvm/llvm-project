@@ -4762,8 +4762,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString(
           "-mprintf-kind=" +
           Args.getLastArgValue(options::OPT_mprintf_kind_EQ)));
-      // Force compiler error on invalid conversion specifiers
-      CmdArgs.push_back(Args.MakeArgString("-Werror=format-invalid-specifier"));
     }
   }
 

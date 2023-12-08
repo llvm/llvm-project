@@ -36,14 +36,15 @@ static Value *fitArgInto64Bits(IRBuilder<> &Builder, Value *Arg,
     if (IntTy->getBitWidth() < 64) {
       return Builder.CreateZExt(Arg, Builder.getInt64Ty());
     }
+    return Arg;
   }
 
   if (Ty->isFloatingPointTy()) {
     if (DL.getTypeAllocSize(Ty) < 8)
       Arg = Builder.CreateFPExt(Arg, Builder.getDoubleTy());
-    if (IsBuffered)
-      return Arg;
-    return Builder.CreateBitCast(Arg, Int64Ty);
+
+    return IsBuffered ? Arg :
+                        Builder.CreateBitCast(Arg, Int64Ty);
   }
 
   // The cast is necessary for the hostcall case 
@@ -53,7 +54,7 @@ static Value *fitArgInto64Bits(IRBuilder<> &Builder, Value *Arg,
     return Builder.CreatePtrToInt(Arg, Int64Ty);
   }
 
-  return Arg;
+  llvm_unreachable("unexpected type");
 }
 
 static Value *callPrintfBegin(IRBuilder<> &Builder, Value *Version) {
@@ -175,11 +176,23 @@ static Value *appendString(IRBuilder<> &Builder, Value *Desc, Value *Arg,
 }
 
 static Value *appendVectorArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
-                              bool IsLast, bool IsBuffered) {
-  assert(Arg->getType()->isVectorTy() && "incorrect append* function");
-  auto VectorTy = cast<FixedVectorType>(Arg->getType());
+                              bool IsLast, bool IsBuffered, uint VecSize) {
   auto Zero = Builder.getInt64(0);
-  for (unsigned int i = 0; i < VectorTy->getNumElements() - 1; i++) {
+
+  if (auto VectorTy = dyn_cast<FixedVectorType>(Arg->getType())) {
+  if (VecSize != VectorTy->getNumElements()) {
+    // A mismatch between size specified in specifier and the
+    // vector argument size. push a splat vector of zeros onto buffer
+    // eg. printf("%v4d", (1, 2))
+    Arg = ConstantDataVector::getSplat(VecSize, ConstantInt::get(Builder.getInt64Ty(), 0U));
+   }
+  }
+  else {
+    // Format specifier is fine but arg is not a fixed vector
+    // eg. printf("%v4d", 1)
+    Arg = ConstantDataVector::getSplat(VecSize, ConstantInt::get(Builder.getInt64Ty(), 0U));
+  }
+  for (unsigned int i = 0; i < VecSize - 1; i++) {
     auto Val = Builder.CreateExtractElement(Arg, i);
     Desc = callAppendArgs(Builder, Desc, 1,
                           fitArgInto64Bits(Builder, Val, IsBuffered), Zero,
@@ -187,35 +200,97 @@ static Value *appendVectorArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
   }
 
   Value *Val =
-      Builder.CreateExtractElement(Arg, VectorTy->getNumElements() - 1);
+      Builder.CreateExtractElement(Arg, VecSize - 1);
   return callAppendArgs(Builder, Desc, 1,
                         fitArgInto64Bits(Builder, Val, IsBuffered), Zero, Zero,
                         Zero, Zero, Zero, Zero, IsLast);
 }
 
 static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
-                         bool SpecIsCString, bool IsVector, bool IsLast,
-                         bool IsBuffered) {
+                         bool SpecIsCString, bool IsLast,
+                         bool IsBuffered, uint VecSize) {
   if (SpecIsCString && isa<PointerType>(Arg->getType())) {
     return appendString(Builder, Desc, Arg, IsLast);
   }
 
-  if (IsVector) {
-    return appendVectorArg(Builder, Desc, Arg, IsLast, IsBuffered);
-  } 
-    
+  if (VecSize) {
+    return appendVectorArg(Builder, Desc, Arg, IsLast, IsBuffered, VecSize);
+  }
+
+  if (Arg->getType()->isVectorTy()) {
+    // Argument is a vector but format does not specify it.
+    // Frontend already would have printed a warning here,
+    // Just send a zero and let runtime handle the printing.
+    // printf("%hf", (3.12, 2.34))
+    Arg = ConstantInt::get(Builder.getInt64Ty(), 0U);
+  }
+
   // If the format specifies a string but the argument is not, the frontend
   // will have printed a warning. We just rely on undefined behaviour and send
   // the argument anyway.
   return appendArg(Builder, Desc, Arg, IsLast, IsBuffered);
 }
 
-// Scan the format string to locate all specifiers and OCL vectors,
+// Find the vector size specified in format string, only sizes
+// valid are 2, 4, 6, 8 and 16. Remaining cases are considered
+// to be invalid and function returns zero.
+
+static uint getSizeFromVectorSpec(StringRef Spec) {
+  size_t size = Spec.size() - 1; // Spec length excluding '%' character
+  size_t curPos = Spec.size();
+  size_t pos = curPos;
+  uint VecLen = 0;
+
+  if (size >= 3) {
+    size = 0;
+    // no length modifiers in Spec.
+    if (Spec[curPos - 3] == 'v') {
+      size = 2;
+    }
+    // length modifiers are "h" or "l"
+    else if (Spec[curPos - 4] == 'v') {
+      size = 3;
+    }
+    // length modifier is "hh" or "hl"
+    else if ((curPos >= 5) && (Spec[curPos - 5] == 'v')) {
+      size = 4;
+    }
+
+    if (size > 0) {
+      curPos = size;
+      pos -= curPos;
+
+      // Get vector size
+      VecLen = Spec[pos++] - '0';
+      // vector printing supports only 2, 3, 4, 8 and 16 wide vectors
+      switch (VecLen) {
+        case 1:
+          if ((Spec[pos++] - '0') == 6) {
+            VecLen = 16;
+          } else {
+            VecLen = 0;
+          }
+          break;
+        case 2:
+        case 3:
+        case 4:
+        case 8:
+          break;
+        default:
+          VecLen = 0;
+          break;
+      }
+    }
+  }
+  return VecLen;
+}
+
+// Scan the format string to locate all specifiers,
 // and mark the ones that specify a string/vector,
 // i.e, the "%s" specifier with optional '*' characters
 // or "%v" specifier.
 static void locateCStringsAndVectors(SparseBitVector<8> &BV,
-                                     SparseBitVector<8> &OV, StringRef Str) {
+                                     SparseBitVector<8> &OV, StringRef Str, SmallVectorImpl<uint>& VecSizes) {
   static const char ConvSpecifiers[] = "diouxXfFeEgGaAcspn";
   size_t SpecPos = 0;
   // Skip the first argument, the format string.
@@ -231,8 +306,10 @@ static void locateCStringsAndVectors(SparseBitVector<8> &BV,
       return;
     auto Spec = Str.slice(SpecPos, SpecEnd + 1);
 
-    if ((Spec.find("v")) != StringRef::npos)
+    if (auto Val = getSizeFromVectorSpec(Spec)) {
       OV.set(ArgIdx);
+      VecSizes.push_back(Val);
+    }
 
     ArgIdx += Spec.count('*');
     if (Str[SpecEnd] == 's') {
@@ -261,12 +338,13 @@ static Value *callBufferedPrintfStart(
     IRBuilder<> &Builder, ArrayRef<Value *> Args, Value *Fmt,
     bool isConstFmtStr, SparseBitVector<8> &SpecIsCString,
     SparseBitVector<8> &OCLVectors, SmallVectorImpl<StringData> &StringContents,
-    Value *&ArgSize) {
+    SmallVectorImpl<uint>& VecSizes, Value *&ArgSize) {
   Module *M = Builder.GetInsertBlock()->getModule();
   Value *NonConstStrLen = nullptr;
   Value *LenWithNull = nullptr;
   Value *LenWithNullAligned = nullptr;
   Value *TempAdd = nullptr;
+  uint VecIdx = 0;
 
   // First 4 bytes to be reserved for control dword
   size_t BufSize = 4;
@@ -317,10 +395,21 @@ static Value *callBufferedPrintfStart(
     } else {
       int AllocSize = 0;
       if (OCLVectors.test(i)) {
-        auto VecArg = cast<FixedVectorType>(Args[i]->getType());
-        AllocSize = VecArg->getNumElements() * 8;
-      } else
-        AllocSize = M->getDataLayout().getTypeAllocSize(Args[i]->getType());
+        AllocSize = VecSizes[VecIdx] * 8;
+        VecIdx++;
+      } else {
+        if (Args[i]->getType()->isVectorTy()) {
+          // Argument is a vector but format does not specify it or is invalid.
+          // Frontend already would have printed a warning here,
+          // We send a 64 bit zero and let runtime handle the printing.
+          // eg. printf("%f", (3.12, 2.34))
+          // eg. printf("%v5d" (1,2,3,4,5)) -> invalid since OpenCL spec
+          //                                   only supports vec sizes 2,3,4,8 and 16
+          AllocSize = 8;
+        }
+        else
+          AllocSize = M->getDataLayout().getTypeAllocSize(Args[i]->getType());
+      }
       // We end up expanding non string arguments to 8 bytes
       // (args smaller than 8 bytes)
       BufSize += std::max(AllocSize, 8);
@@ -397,7 +486,8 @@ static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
 static void callBufferedPrintfArgPush(
     IRBuilder<> &Builder, ArrayRef<Value *> Args, Value *PtrToStore,
     SparseBitVector<8> &SpecIsCString, SparseBitVector<8> &OCLVectors,
-    SmallVectorImpl<StringData> &StringContents, bool IsConstFmtStr) {
+    SmallVectorImpl<StringData> &StringContents, SmallVectorImpl<uint>& VecSizes,
+    bool IsConstFmtStr) {
   Module *M = Builder.GetInsertBlock()->getModule();
   const DataLayout &DL = M->getDataLayout();
   auto StrIt = StringContents.begin();
@@ -430,16 +520,43 @@ static void callBufferedPrintfArgPush(
       }
     } else {
       if (OCLVectors.test(i)) {
-        auto VectorTy = cast<FixedVectorType>(Args[i]->getType());
-        Value *VecArg = Args[i];
-        for (unsigned int Num = 0; Num < VectorTy->getNumElements(); Num++) {
+        Value *VecArg = nullptr;
+        auto VecIdx = 0;
+        auto VectorTy = dyn_cast<FixedVectorType>(Args[i]->getType());
+        if (VectorTy &&
+           (VecSizes[VecIdx] == VectorTy->getNumElements())) {
+            VecArg = Args[i];
+        }
+        else {
+          // mismatch between size specified in specifier and the
+          // vector argument size.
+          //    eg. printf("%v4d", (1, 2))
+          //            or
+          // Arg not a fixed vector/vector spec invalid
+          //    eg. printf("%v4d", 2)
+          // In either case, send a splat of zeros.
+          VecArg = ConstantDataVector::getSplat(VecSizes[VecIdx], 
+                                   ConstantInt::get(Builder.getInt64Ty(), 0U));
+        }
+
+        for (unsigned int Num = 0; Num < VecSizes[VecIdx]; Num++) {
           auto Val = Builder.CreateExtractElement(VecArg, Num);
           WhatToStore.push_back(
               fitArgInto64Bits(Builder, Val, /*IsBuffered*/ true));
         }
-      } else
+        VecIdx++;
+      } else {
+        auto Arg = Args[i];
+        if (Arg->getType()->isVectorTy()) {
+          // Argument is a vector but format does not specify it.
+          // Frontend already would have printed a warning here,
+          // We send a 64 bit zero and let runtime handle the printing.
+          // printf("%hf", (3.12, 2.34))
+          Arg = ConstantInt::get(Builder.getInt64Ty(), 0U);
+        }
         WhatToStore.push_back(
-            fitArgInto64Bits(Builder, Args[i], /*IsBuffered*/ true));
+            fitArgInto64Bits(Builder, Arg, /*IsBuffered*/ true));
+      }
     }
 
     for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
@@ -468,9 +585,10 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
   SparseBitVector<8> SpecIsCString;
   SparseBitVector<8> OCLVectors;
   bool IsConstFmtStr = !FmtStr.empty();
+  SmallVector<uint, 8> VecSizes;
 
   if (IsConstFmtStr)
-    locateCStringsAndVectors(SpecIsCString, OCLVectors, FmtStr);
+    locateCStringsAndVectors(SpecIsCString, OCLVectors, FmtStr, VecSizes);
 
   if (IsBuffered) {
     SmallVector<StringData, 8> StringContents;
@@ -482,7 +600,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
     Value *ArgSize = nullptr;
     Value *Ptr = callBufferedPrintfStart(Builder, Args, Fmt, IsConstFmtStr,
                                          SpecIsCString, OCLVectors,
-                                         StringContents, ArgSize);
+                                         StringContents, VecSizes, ArgSize);
 
     // The buffered version still follows OpenCL printf standards for
     // printf return value, i.e 0 on success, -1 on failure.
@@ -546,7 +664,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
 
     // Push The printf arguments onto buffer
     callBufferedPrintfArgPush(Builder, Args, Ptr, SpecIsCString, OCLVectors,
-                              StringContents, IsConstFmtStr);
+                              StringContents, VecSizes, IsConstFmtStr);
 
     // End block, returns -1 on failure
     BranchInst::Create(End, ArgPush);
@@ -560,12 +678,14 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
   // FIXME: This invokes hostcall once for each argument. We can pack up to
   // seven scalar printf arguments in a single hostcall. See the signature of
   // callAppendArgs().
+  uint VecIdx = 0;
   for (unsigned int i = 1; i != NumOps; ++i) {
     bool IsLast = i == NumOps - 1;
     bool IsCString = SpecIsCString.test(i);
     bool IsVector = OCLVectors.test(i);
-    Desc = processArg(Builder, Desc, Args[i], IsCString, IsVector, IsLast,
-                      IsBuffered);
+    Desc = processArg(Builder, Desc, Args[i], IsCString, IsLast,
+                      IsBuffered, IsVector ? VecSizes[VecIdx] : 0);
+    if (IsVector) VecIdx++;
   }
 
   return Builder.CreateTrunc(Desc, Builder.getInt32Ty());
