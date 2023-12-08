@@ -217,4 +217,82 @@ module {
   // MLIR-NEXT:     llvm.br ^bb6
   // MLIR-NEXT:   ^bb6:
   // MLIR-NEXT:     llvm.return
+
+  // test corner case 
+  // while (1) {
+  //     break;
+  // }
+  cir.func @whileCornerCase() {
+    cir.scope {
+      cir.loop while(cond : {
+        %0 = cir.const(#cir.int<1> : !s32i) : !s32i
+        %1 = cir.cast(int_to_bool, %0 : !s32i), !cir.bool
+        cir.brcond %1 ^bb1, ^bb2
+      ^bb1:  // pred: ^bb0
+        cir.yield continue
+      ^bb2:  // pred: ^bb0
+        cir.yield
+      }, step : {
+        cir.yield
+      }) {
+        cir.yield break
+      }
+    }
+    cir.return
+  }
+  //      MLIR: llvm.func @whileCornerCase()
+  //      MLIR:   %0 = llvm.mlir.constant(1 : i32) : i32
+  // MLIR-NEXT:   %1 = llvm.mlir.constant(0 : i32) : i32
+  // MLIR-NEXT:   %2 = llvm.icmp "ne" %0, %1 : i32
+  // MLIR-NEXT:   %3 = llvm.zext %2 : i1 to i8
+  // MLIR-NEXT:   %4 = llvm.trunc %3 : i8 to i
+  // MLIR-NEXT:   llvm.cond_br %4, ^bb3, ^bb4
+  // MLIR-NEXT: ^bb3:  // pred: ^bb2
+  // MLIR-NEXT:   llvm.br ^bb5
+  // MLIR-NEXT: ^bb4:  // pred: ^bb2
+  // MLIR-NEXT:   llvm.br ^bb6
+  // MLIR-NEXT: ^bb5:  // pred: ^bb3
+  // MLIR-NEXT:   llvm.br ^bb6
+  // MLIR-NEXT: ^bb6:  // 2 preds: ^bb4, ^bb5
+  // MLIR-NEXT:   llvm.br ^bb7
+  // MLIR-NEXT: ^bb7:  // pred: ^bb6
+  // MLIR-NEXT:   llvm.return
+
+  // test corner case - no fails during the lowering
+  // for (;;) {
+  //     break;
+  // }
+  cir.func @forCornerCase() {
+    cir.scope {
+      cir.loop for(cond : {
+        cir.yield continue
+      }, step : {
+        cir.yield
+      }) {
+        cir.scope {
+          cir.yield break
+        }
+        cir.yield
+      }
+    }
+    cir.return
+  }
+//      MLIR: llvm.func @forCornerCase()
+//      MLIR:     llvm.br ^bb1
+// MLIR-NEXT:   ^bb1:  // pred: ^bb0
+// MLIR-NEXT:     llvm.br ^bb2
+// MLIR-NEXT:   ^bb2:  // 2 preds: ^bb1, ^bb6
+// MLIR-NEXT:     llvm.br ^bb3
+// MLIR-NEXT:   ^bb3:  // pred: ^bb2
+// MLIR-NEXT:     llvm.br ^bb4
+// MLIR-NEXT:   ^bb4:  // pred: ^bb3
+// MLIR-NEXT:     llvm.br ^bb7
+// MLIR-NEXT:   ^bb5:  // no predecessors
+// MLIR-NEXT:     llvm.br ^bb6
+// MLIR-NEXT:   ^bb6:  // pred: ^bb5
+// MLIR-NEXT:     llvm.br ^bb2
+// MLIR-NEXT:   ^bb7:  // pred: ^bb4
+// MLIR-NEXT:     llvm.br ^bb8
+// MLIR-NEXT:   ^bb8:  // pred: ^bb7
+// MLIR-NEXT:     llvm.return
 }
