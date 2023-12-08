@@ -38,7 +38,7 @@ TEST(LlvmLibcUIntClassTest, BitCastToFromDouble) {
   static_assert(sizeof(LL_UInt64) == sizeof(double));
   const double inf = HUGE_VAL;
   const double max = DBL_MAX;
-  const double array[] = {0.0f, 0.1f, 1.0f, max, inf};
+  const double array[] = {0.0, 0.1, 1.0, max, inf};
   for (double value : array) {
     LL_UInt64 back = cpp::bit_cast<LL_UInt64>(value);
     double forth = cpp::bit_cast<double>(back);
