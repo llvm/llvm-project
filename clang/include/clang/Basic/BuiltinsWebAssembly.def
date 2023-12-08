@@ -27,6 +27,9 @@ BUILTIN(__builtin_wasm_memory_grow, "zIiz", "n")
 
 // Memory Tagging
 BUILTIN(__builtin_wasm_memory_randomtag, "v*v*", "n")
+BUILTIN(__builtin_wasm_memory_loadtag, "v*v*", "n")
+BUILTIN(__builtin_wasm_memory_storetag, "vv*z", "n")
+BUILTIN(__builtin_wasm_memory_storeztag, "vv*z", "n")
 
 // Thread-local storage
 TARGET_BUILTIN(__builtin_wasm_tls_size, "z", "nc", "bulk-memory")
