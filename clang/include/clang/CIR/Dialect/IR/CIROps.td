@@ -2386,4 +2386,40 @@ def ZeroInitConstOp : CIR_Op<"llvmir.zeroinit", [Pure]>,
   let hasVerifier = 0;
 }
 
+def AsmATT : I32EnumAttrCase<"x86_att", 0>;
+def AsmIntel : I32EnumAttrCase<"x86_intel", 1>;
+
+def AsmFlavor : I32EnumAttr<
+  "AsmDialect",
+  "ATT or Intel",
+  [AsmATT, AsmIntel]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
+  let description = [{
+    The `cir.asm` operation represents C/C++ asm inline.
+
+    Example:
+    ```C++
+    __asm__ volatile("xyz" : : : );
+    ```
+
+    ```
+    ```mlir
+    cir.asm(x86_att, {"xyz"}) -> !void
+    ```
+  }];
+
+  let results = (outs Optional<AnyType>:$res);
+
+  let arguments = (
+    ins StrAttr:$asm_string,
+        AsmFlavor:$asm_flavor);
+
+  let assemblyFormat = [{
+    `(`$asm_flavor`,` `{` $asm_string `}` `)` attr-dict `:` type($res)
+   }];
+}
+
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIROPS

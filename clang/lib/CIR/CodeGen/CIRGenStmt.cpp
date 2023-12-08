@@ -157,6 +157,7 @@ mlir::LogicalResult CIRGenFunction::buildStmt(const Stmt *S,
   // When implemented, GCCAsmStmtClass should fall-through to MSAsmStmtClass.
   case Stmt::GCCAsmStmtClass:
   case Stmt::MSAsmStmtClass:
+    return buildAsmStmt(cast<AsmStmt>(*S));
   case Stmt::CapturedStmtClass:
   case Stmt::ObjCAtTryStmtClass:
   case Stmt::ObjCAtThrowStmtClass:
