@@ -784,10 +784,13 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
-    case GIM_CheckConstantInt: {
+    case GIM_CheckConstantInt:
+    case GIM_CheckConstantInt8: {
+      const bool IsInt8 = (MatcherOpcode == GIM_CheckConstantInt8);
+
       uint64_t InsnID = readULEB();
       uint64_t OpIdx = readULEB();
-      uint64_t Value = readU64();
+      uint64_t Value = IsInt8 ? (int64_t)readS8() : readU64();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIM_CheckConstantInt(MIs["
                              << InsnID << "]->getOperand(" << OpIdx
@@ -1157,11 +1160,14 @@ bool GIMatchTableExecutor::executeMatchTable(
       MI->setFlags(MI->getFlags() | State.MIs[OldInsnID]->getFlags());
       break;
     }
+    case GIR_AddSimpleTempRegister:
     case GIR_AddTempRegister:
     case GIR_AddTempSubRegister: {
       uint64_t InsnID = readULEB();
       uint64_t TempRegID = readULEB();
-      uint16_t TempRegFlags = readU16();
+      uint16_t TempRegFlags = 0;
+      if (MatcherOpcode != GIR_AddSimpleTempRegister)
+        TempRegFlags = readU16();
       uint16_t SubReg = 0;
       if (MatcherOpcode == GIR_AddTempSubRegister)
         SubReg = readU16();
@@ -1179,9 +1185,11 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
+    case GIR_AddImm8:
     case GIR_AddImm: {
+      const bool IsAdd8 = (MatcherOpcode == GIR_AddImm8);
       uint64_t InsnID = readULEB();
-      uint64_t Imm = readU64();
+      uint64_t Imm = IsAdd8 ? (int64_t)readS8() : readU64();
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
       OutMIs[InsnID].addImm(Imm);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),

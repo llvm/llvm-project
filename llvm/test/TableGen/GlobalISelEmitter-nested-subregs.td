@@ -45,9 +45,9 @@ def A0  : RegisterClass<"MyTarget", [i32], 32, (add a0)>;
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/2,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::INSERT_SUBREG),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
-// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/1, /*TempRegFlags*/GIMT_Encode2(0),
+// CHECK-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/1,
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/1, // src
-// CHECK-NEXT: GIR_AddImm, /*InsnID*/1, /*Imm*/GIMT_Encode8(3),
+// CHECK-NEXT: GIR_AddImm8, /*InsnID*/1, /*Imm*/3,
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/0, GIMT_Encode2(MyTarget::A0RegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/1, GIMT_Encode2(MyTarget::A0RegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/2, GIMT_Encode2(MyTarget::A0bRegClassID),
