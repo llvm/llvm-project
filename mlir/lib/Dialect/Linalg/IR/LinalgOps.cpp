@@ -1673,6 +1673,119 @@ LogicalResult ReduceOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// DepthwiseConv1DOp
+//===----------------------------------------------------------------------===//
+
+void DepthwiseConv1DOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                                      ArrayRef<NamedAttribute> attrs) {
+  assert(block.getNumArguments() == 3 &&
+         "DepthwiseConv1DOp regionBuilder expects 3 (>=0) args");
+  RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
+  SmallVector<Value> yields;
+
+  Value value1 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
+                         block.getArgument(0));
+  Value value2 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
+                         block.getArgument(1));
+  Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2);
+  Value value4 =
+      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), value3);
+  yields.push_back(value4);
+  helper.yieldOutputs(yields);
+}
+
+void DepthwiseConv1DOp::build(
+    OpBuilder &builder, OperationState &result, ValueRange inputs,
+    ValueRange inits, bool channel_first,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild,
+    ArrayRef<NamedAttribute> attributes) {
+  build(builder, result, TypeRange{}, inputs, inits, channel_first);
+  result.addAttribute(getChannelFirstAttrName(result.name),
+                      builder.getBoolAttr(channel_first));
+  result.addAttributes(attributes);
+
+  // Add output types for `RankedTensorType` output arguments.
+  for (Value init : inits) {
+    Type initType = init.getType();
+    if (llvm::isa<RankedTensorType>(initType))
+      result.addTypes(initType);
+  }
+
+  if (bodyBuild)
+    buildGenericRegion(builder, result.location, *result.regions.front(),
+                       inputs, inits, bodyBuild);
+}
+
+SmallVector<utils::IteratorType> DepthwiseConv1DOp::getIteratorTypesArray() {
+  return SmallVector<utils::IteratorType>{
+      utils::IteratorType::parallel, utils::IteratorType::parallel,
+      utils::IteratorType::parallel, utils::IteratorType::reduction};
+  ;
+}
+
+ArrayAttr DepthwiseConv1DOp::getIndexingMaps() {
+  ArrayAttr cached = getOperation()->getAttrOfType<ArrayAttr>(LinalgDialect::kMemoizedIndexingMapsAttrName);
+  if (cached)
+    return cached;
+
+  MLIRContext *context = getContext();
+  SmallVector<AffineExpr> symbolBindings(
+      {getAffineSymbolExpr(0, context), getAffineSymbolExpr(1, context),
+       getAffineSymbolExpr(2, context), getAffineConstantExpr(1, context),
+       getAffineSymbolExpr(4, context), getAffineConstantExpr(1, context)});
+  // Don't actually do something stupid like this
+  SmallVector<StringRef> rawStrings =
+      (getChannelFirst())
+          ? SmallVector<StringRef>({
+                "affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] "
+                "-> (d0, d2, d1 * s3 + d3 * s5)>",
+                "affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] "
+                "-> (d2, d3)>",
+                "affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] "
+                "-> (d0, d2, d1)>",
+            })
+          : SmallVector<StringRef>({
+                "affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] "
+                "-> (d0, d1 * s3 + d3 * s5, d2)>",
+                "affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] "
+                "-> (d3, d2)>",
+                "affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] "
+                "-> (d0, d1, d2)>",
+            });
+  SmallVector<AffineMap> maps(llvm::map_range(rawStrings, [&](StringRef &m) {
+    return simplifyAffineMap(
+        llvm::cast<AffineMapAttr>(parseAttribute(m, context))
+            .getValue()
+            .replaceDimsAndSymbols({}, symbolBindings, 4, 0));
+  }));
+
+  cached = Builder(context).getAffineMapArrayAttr(maps);
+  getOperation()->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
+  return cached;
+}
+
+void DepthwiseConv1DOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
+                        getDpsInits());
+}
+
+ParseResult DepthwiseConv1DOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
+  return parseNamedStructuredOp(parser, result, getNumRegionArgs(),
+                                getRegionBuilder());
+}
+
+void DepthwiseConv1DOp::print(OpAsmPrinter &p) {
+  printNamedStructuredOp(p, getOperation(), getDpsInputs(), getDpsInits());
+}
+
+LogicalResult DepthwiseConv1DOp::verify() { return success(); }
+
+//===----------------------------------------------------------------------===//
 // TransposeOp
 //===----------------------------------------------------------------------===//
 

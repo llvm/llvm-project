@@ -384,6 +384,70 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// DepthwiseConv1DOp op.
+//===----------------------------------------------------------------------===//
+
+def DepthwiseConv1DOp : LinalgStructuredBase_Op<"depthwise_conv_1d",
+  [AttrSizedOperandSegments, LinalgConvolutionOpInterface]> {
+    
+  let summary = [{
+    Performs 1-D depthwise convolution with switchable channel position; either first or last.
+  }];
+  let description = [{
+
+    Channel position is determined by the `BoolAttr` `channel_first`. If true,
+    layout is
+
+    Input: `NCW`
+    Kernel: `CW`
+
+    otherwise
+
+    Input: `NWC`
+    Kernel: `WC`
+
+
+  }];
+
+    let arguments = (ins
+      Variadic<TensorOrMemref>:$inputs,
+      Variadic<TensorOrMemref>:$inits,
+      DefaultValuedOptionalAttr<BoolAttr, "true">:$channel_first
+    );
+    let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+    let regions = (region AnyRegion:$region);
+
+    let builders = [
+      OpBuilder<(ins "ValueRange":$inputs, "ValueRange":$inits,
+        "bool":$channel_first,
+        "function_ref<void(OpBuilder &, Location, ValueRange)>",
+        CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
+    ];
+    let hasCustomAssemblyFormat = 1;
+    let hasVerifier = 1;
+
+    let extraClassDeclaration = structuredOpsBaseDecls # [{
+      // Declare functions necessary for LinalgStructuredInterface.
+      SmallVector<utils::IteratorType> getIteratorTypesArray();
+      ArrayAttr getIndexingMaps();
+      std::string getLibraryCallName() {
+        return "op_has_no_registered_library_name";
+      }
+
+      static void regionBuilder(ImplicitLocOpBuilder &b,
+                              Block &block, ArrayRef<NamedAttribute> attrs);
+
+      // Implement functions necessary for DestinationStyleOpInterface.
+      static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
+                                mlir::ArrayRef<mlir::NamedAttribute>)>
+      getRegionBuilder() {
+        return regionBuilder;
+      }
+      static unsigned getNumRegionArgs() { return 3; }
+      MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
+    }];
+}
 
 //===----------------------------------------------------------------------===//
 // Transpose op.
