@@ -1858,11 +1858,18 @@ static void diagnoseAutoModuleImport(
 // path to the file, build a properly-cased replacement in the vector,
 // and return true if the replacement should be suggested.
 static bool trySimplifyPath(SmallVectorImpl<StringRef> &Components,
-                            StringRef RealPathName) {
+                            StringRef RealPathName,
+                            llvm::sys::path::Style Separator) {
   auto RealPathComponentIter = llvm::sys::path::rbegin(RealPathName);
   auto RealPathComponentEnd = llvm::sys::path::rend(RealPathName);
   int Cnt = 0;
   bool SuggestReplacement = false;
+
+  auto IsSep = [Separator](StringRef Component) {
+    return Component.size() == 1 &&
+           llvm::sys::path::is_separator(Component[0], Separator);
+  };
+
   // Below is a best-effort to handle ".." in paths. It is admittedly
   // not 100% correct in the presence of symlinks.
   for (auto &Component : llvm::reverse(Components)) {
@@ -1872,10 +1879,11 @@ static bool trySimplifyPath(SmallVectorImpl<StringRef> &Components,
     } else if (Cnt) {
       --Cnt;
     } else if (RealPathComponentIter != RealPathComponentEnd) {
-      if (Component != *RealPathComponentIter) {
-        // If these path components differ by more than just case, then we
-        // may be looking at symlinked paths. Bail on this diagnostic to avoid
-        // noisy false positives.
+      if (!IsSep(Component) && !IsSep(*RealPathComponentIter) &&
+          Component != *RealPathComponentIter) {
+        // If these non-separator path components differ by more than just case,
+        // then we may be looking at symlinked paths. Bail on this diagnostic to
+        // avoid noisy false positives.
         SuggestReplacement =
             RealPathComponentIter->equals_insensitive(Component);
         if (!SuggestReplacement)
@@ -2450,7 +2458,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     }
 #endif
 
-    if (trySimplifyPath(Components, RealPathName)) {
+    if (trySimplifyPath(Components, RealPathName, BackslashStyle)) {
       SmallString<128> Path;
       Path.reserve(Name.size()+2);
       Path.push_back(isAngled ? '<' : '"');
