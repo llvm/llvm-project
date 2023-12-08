@@ -8727,6 +8727,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // constants. Insertion into a zero vector is handled as a special-case
   // somewhere below here.
   if (NumConstants == NumElems - 1 && NumNonZero != 1 &&
+      FrozenUndefMask.isZero() &&
       (isOperationLegalOrCustom(ISD::INSERT_VECTOR_ELT, VT) ||
        isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE, VT))) {
     // Create an all-constant vector. The variable element in the old
@@ -48706,7 +48707,7 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
   if (useVPTERNLOG(Subtarget, VT)) {
     // Emit a VPTERNLOG node directly - 0xCA is the imm code for A?B:C.
     // VPTERNLOG is only available as vXi32/64-bit types.
-    MVT OpSVT = EltSizeInBits == 32 ? MVT::i32 : MVT::i64;
+    MVT OpSVT = EltSizeInBits <= 32 ? MVT::i32 : MVT::i64;
     MVT OpVT =
         MVT::getVectorVT(OpSVT, VT.getSizeInBits() / OpSVT.getSizeInBits());
     SDValue A = DAG.getBitcast(OpVT, N0.getOperand(1));
@@ -49885,8 +49886,8 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
           User->getValueSizeInBits(0).getFixedValue() >
               RegVT.getFixedSizeInBits()) {
         if (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
-            cast<MemIntrinsicSDNode>(User)->getBasePtr() == Ptr &&
-            cast<MemIntrinsicSDNode>(User)->getMemoryVT().getSizeInBits() ==
+            cast<MemSDNode>(User)->getBasePtr() == Ptr &&
+            cast<MemSDNode>(User)->getMemoryVT().getSizeInBits() ==
                 MemVT.getSizeInBits()) {
           SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
                                              RegVT.getSizeInBits());
@@ -49914,7 +49915,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
         if (ISD::isNormalLoad(User)) {
           // See if we are loading a constant that matches in the lower
           // bits of a longer constant (but from a different constant pool ptr).
-          SDValue UserPtr = cast<LoadSDNode>(User)->getBasePtr();
+          SDValue UserPtr = cast<MemSDNode>(User)->getBasePtr();
           const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
           const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
           if (LdC && UserC && UserPtr != Ptr &&
@@ -54481,6 +54482,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   SDValue Op0 = Ops[0];
   bool IsSplat = llvm::all_equal(Ops);
   unsigned NumOps = Ops.size();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Repeated subvectors.
   if (IsSplat &&
@@ -54488,25 +54490,6 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     // If this broadcast is inserted into both halves, use a larger broadcast.
     if (Op0.getOpcode() == X86ISD::VBROADCAST)
       return DAG.getNode(Op0.getOpcode(), DL, VT, Op0.getOperand(0));
-
-    // If this simple subvector or scalar/subvector broadcast_load is inserted
-    // into both halves, use a larger broadcast_load. Update other uses to use
-    // an extracted subvector.
-    if (ISD::isNormalLoad(Op0.getNode()) ||
-        Op0.getOpcode() == X86ISD::VBROADCAST_LOAD ||
-        Op0.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD) {
-      auto *Mem = cast<MemSDNode>(Op0);
-      unsigned Opc = Op0.getOpcode() == X86ISD::VBROADCAST_LOAD
-                         ? X86ISD::VBROADCAST_LOAD
-                         : X86ISD::SUBV_BROADCAST_LOAD;
-      if (SDValue BcastLd =
-              getBROADCAST_LOAD(Opc, DL, VT, Mem->getMemoryVT(), Mem, 0, DAG)) {
-        SDValue BcastSrc =
-            extractSubVector(BcastLd, 0, DAG, DL, Op0.getValueSizeInBits());
-        DAG.ReplaceAllUsesOfValueWith(Op0, BcastSrc);
-        return BcastLd;
-      }
-    }
 
     // concat_vectors(movddup(x),movddup(x)) -> broadcast(x)
     if (Op0.getOpcode() == X86ISD::MOVDDUP && VT == MVT::v4f64 &&
@@ -54956,7 +54939,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         if (SelVT.getVectorElementType() == MVT::i1) {
           SelVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
                                    NumOps * SelVT.getVectorNumElements());
-          if (DAG.getTargetLoweringInfo().isTypeLegal(SelVT))
+          if (TLI.isTypeLegal(SelVT))
             return DAG.getNode(Op0.getOpcode(), DL, VT,
                                ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
                                ConcatSubOperand(VT, Ops, 1),
@@ -54970,7 +54953,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           IsConcatFree(VT, Ops, 1) && IsConcatFree(VT, Ops, 2)) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
         SelVT = SelVT.getDoubleNumVectorElementsVT(*DAG.getContext());
-        if (DAG.getTargetLoweringInfo().isTypeLegal(SelVT))
+        if (TLI.isTypeLegal(SelVT))
           return DAG.getNode(Op0.getOpcode(), DL, VT,
                              ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
                              ConcatSubOperand(VT, Ops, 1),
@@ -54991,6 +54974,28 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       if (SDValue Ld =
               EltsFromConsecutiveLoads(VT, Ops, DL, DAG, Subtarget, false))
         return Ld;
+    }
+  }
+
+  // If this simple subvector or scalar/subvector broadcast_load is inserted
+  // into both halves, use a larger broadcast_load. Update other uses to use
+  // an extracted subvector.
+  if (IsSplat &&
+      (VT.is256BitVector() || (VT.is512BitVector() && Subtarget.hasAVX512()))) {
+    if (ISD::isNormalLoad(Op0.getNode()) ||
+        Op0.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+        Op0.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD) {
+      auto *Mem = cast<MemSDNode>(Op0);
+      unsigned Opc = Op0.getOpcode() == X86ISD::VBROADCAST_LOAD
+                         ? X86ISD::VBROADCAST_LOAD
+                         : X86ISD::SUBV_BROADCAST_LOAD;
+      if (SDValue BcastLd =
+              getBROADCAST_LOAD(Opc, DL, VT, Mem->getMemoryVT(), Mem, 0, DAG)) {
+        SDValue BcastSrc =
+            extractSubVector(BcastLd, 0, DAG, DL, Op0.getValueSizeInBits());
+        DAG.ReplaceAllUsesOfValueWith(Op0, BcastSrc);
+        return BcastLd;
+      }
     }
   }
 

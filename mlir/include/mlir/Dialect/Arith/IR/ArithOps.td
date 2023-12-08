@@ -195,6 +195,12 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
 def Arith_AddIOp : Arith_TotalIntBinaryOp<"addi", [Commutative]> {
   let summary = "integer addition operation";
   let description = [{
+    Performs N-bit addition on the operands. The operands are interpreted as 
+    unsigned bitvectors. The result is represented by a bitvector containing the 
+    mathematical value of the addition modulo 2^n, where `n` is the bitwidth. 
+    Because `arith` integers use a two's complement representation, this operation 
+    is applicable on both signed and unsigned integer operands.
+
     The `addi` operation takes two operands and returns one result, each of
     these is required to be the same type. This type may be an integer scalar type, 
     a vector whose element type is integer, or a tensor of integers. It has no 
@@ -230,7 +236,7 @@ def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
   let description = [{
     Performs (N+1)-bit addition on zero-extended operands. Returns two results:
     the N-bit sum (same type as both operands), and the overflow bit
-    (boolean-like), where`1` indicates unsigned addition overflow, while `0`
+    (boolean-like), where `1` indicates unsigned addition overflow, while `0`
     indicates no overflow.
 
     Example:
@@ -276,6 +282,18 @@ def Arith_SubIOp : Arith_TotalIntBinaryOp<"subi"> {
   let summary = [{
     Integer subtraction operation.
   }];
+  let description = [{
+    Performs N-bit subtraction on the operands. The operands are interpreted as unsigned 
+    bitvectors. The result is represented by a bitvector containing the mathematical 
+    value of the subtraction modulo 2^n, where `n` is the bitwidth. Because `arith` 
+    integers use a two's complement representation, this operation is applicable on 
+    both signed and unsigned integer operands.
+
+    The `subi` operation takes two operands and returns one result, each of
+    these is required to be the same type. This type may be an integer scalar type, 
+    a vector whose element type is integer, or a tensor of integers. It has no 
+    standard attributes.
+  }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
@@ -287,6 +305,18 @@ def Arith_SubIOp : Arith_TotalIntBinaryOp<"subi"> {
 def Arith_MulIOp : Arith_TotalIntBinaryOp<"muli", [Commutative]> {
   let summary = [{
     Integer multiplication operation.
+  }];
+  let description = [{
+    Performs N-bit multiplication on the operands. The operands are interpreted as 
+    unsigned bitvectors. The result is represented by a bitvector containing the 
+    mathematical value of the multiplication modulo 2^n, where `n` is the bitwidth. 
+    Because `arith` integers use a two's complement representation, this operation is 
+    applicable on both signed and unsigned integer operands.
+
+    The `muli` operation takes two operands and returns one result, each of
+    these is required to be the same type. This type may be an integer scalar type, 
+    a vector whose element type is integer, or a tensor of integers. It has no 
+    standard attributes.    
   }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
