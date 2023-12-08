@@ -114,13 +114,12 @@ public:
     lldb::ValueObjectSP value_sp = m_valobj_sp;
 
     Target *target = value_sp->GetTargetSP().get();
-    // If this ValueObject holds an error, then it is valuable for that.
-    if (value_sp->GetError().Fail())
-      return value_sp;
-
-    if (!target)
+    if (!target) {
+      // If we can't get the target, the error might still be useful:
+      if (value_sp->CheckError().Fail())
+        return value_sp;      
       return ValueObjectSP();
-
+    }
     lock = std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
 
     ProcessSP process_sp(value_sp->GetProcessSP());
@@ -128,7 +127,13 @@ public:
       // We don't allow people to play around with ValueObject if the process
       // is running. If you want to look at values, pause the process, then
       // look.
+      // However, if this VO already had an error, then that is worth showing
+      // the user.  However, we can't update it so use CheckError not GetError.
       error.SetErrorString("process must be stopped.");
+
+      if (value_sp->CheckError().Fail())
+        return value_sp;
+
       return ValueObjectSP();
     }
 

@@ -458,7 +458,12 @@ public:
   virtual bool GetDeclaration(Declaration &decl);
 
   // The functions below should NOT be modified by subclasses
+  // This gets the current error for this ValueObject, it may update the value
+  // to ensure that the error is up to date.
   const Status &GetError();
+  
+  // Check the current error state without updating the value:
+  const Status &CheckError() { return m_error; }
 
   ConstString GetName() const { return m_name; }
 
