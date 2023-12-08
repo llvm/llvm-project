@@ -34,6 +34,7 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   s.erase(5);
   LIBCPP_ASSERT(is_string_asan_correct(s));
   test(s);
+  LIBCPP_ASSERT(is_string_asan_correct(s));
 
   s.assign(100, 'a');
   s.erase(50);

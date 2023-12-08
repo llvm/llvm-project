@@ -47,9 +47,10 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   test(s);
 
   s.assign(100, 'a');
-  for (int i = 0; i <= 90; ++i)
-    s.erase(91 - 2 * (i / 2));
-  test(s);
+  for (int i = 0; i <= 9; ++i) {
+    s.erase(90 - 10 * i);
+    test(s);
+  }
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {

@@ -38,6 +38,7 @@ constexpr void test_appending(std::size_t k, size_t N, size_t new_capacity) {
   const S expected = S(k, 'a') + S(N - k, 'b');
   assert(s == expected);
   assert(s.c_str()[N] == '\0');
+  LIBCPP_ASSERT(is_string_asan_correct(s));
 }
 
 template <class S>
@@ -56,6 +57,7 @@ constexpr void test_truncating(std::size_t o, size_t N) {
   const S expected = S(N - 1, 'a') + S(1, 'b');
   assert(s == expected);
   assert(s.c_str()[N] == '\0');
+  LIBCPP_ASSERT(is_string_asan_correct(s));
 }
 
 template <class String>
