@@ -887,8 +887,8 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
   for (unsigned index = 0; index < ATTR_max; ++index) {
     o.indent(i * 2);
 
-    if ((index & ATTR_EVEX) && (index & ATTR_64BIT) &&
-        (index & ATTR_OPSIZE) && (index & ATTR_ADSIZE))
+    if ((index & ATTR_EVEX) && (index & ATTR_64BIT) && (index & ATTR_OPSIZE) &&
+        (index & ATTR_ADSIZE))
       o << "IC_EVEX_OPSIZE_ADSIZE";
     else if ((index & ATTR_EVEX) || (index & ATTR_VEX) || (index & ATTR_VEXL)) {
       if (index & ATTR_EVEX)
