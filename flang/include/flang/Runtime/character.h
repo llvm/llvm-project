@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// character.h
+// Defines a utility function for copying and padding characters
 #ifndef CHARACTER_H
 #define CHARACTER_H
 
 #include <algorithm>
 #include <cstddef>
-#include <string.h>
+#include <cstring>
 
 template <typename TO, typename FROM>
 void CopyAndPad(
@@ -26,9 +26,9 @@ void CopyAndPad(
       to[j] = static_cast<TO>(' ');
     }
   } else if (toChars <= fromChars) {
-    memcpy(to, from, toChars * sizeof(TO));
+    std::memcpy(to, from, toChars * sizeof(TO));
   } else {
-    memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
+    std::memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
     for (std::size_t j{fromChars}; j < toChars; ++j) {
       to[j] = static_cast<TO>(' ');
     }
