@@ -33,6 +33,22 @@
 
 /lldb/ @JDevlieghere
 
+# Linalg in MLIR.
+/mlir/include/mlir/Dialect/Linalg @dcaballe
+/mlir/lib/Dialect/Linalg @dcaballe
+
+# Vector in MLIR.
+/mlir/**/*AMX* @dcaballe
+/mlir/**/*Neon* @banach-space @dcaballe
+/mlir/**/*SME* @banach-space @dcaballe
+/mlir/**/*SVE* @banach-space @dcaballe
+/mlir/**/*VectorInterfaces* @dcaballe
+/mlir/**/*VectorToSCF* @banach-space @dcaballe
+/mlir/**/*VectorToLLVM* @banach-space @dcaballe
+/mlir/**/*X86Vector* @dcaballe
+/mlir/include/mlir/Dialect/Vector @dcaballe
+/mlir/lib/Dialect/Vector @dcaballe
+
 /mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar
 
 /mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar
