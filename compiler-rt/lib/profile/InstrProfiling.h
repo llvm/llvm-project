@@ -55,7 +55,7 @@ int __llvm_profile_is_continuous_mode_enabled(void);
 void __llvm_profile_enable_continuous_mode(void);
 
 /*!
- * \brief Enable continuous mode.
+ * \brief Disable continuous mode.
  *
  */
 void __llvm_profile_disable_continuous_mode(void);

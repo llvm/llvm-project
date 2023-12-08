@@ -15,7 +15,7 @@
 int f() { return 0; }
 
 int main(int argc, char **argv) {
-  FILE* File = fopen("default.profraw", "w");
+  FILE *File = fopen("default.profraw", "w");
   f();
   return 0;
 }
