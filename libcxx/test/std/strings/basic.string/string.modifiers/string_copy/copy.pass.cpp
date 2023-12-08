@@ -102,6 +102,8 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   test(S("abcdefghijklmnopqrst"), s, 20, 0);
   test(S("abcdefghijklmnopqrst"), s, 20, 1);
   test(S("abcdefghijklmnopqrst"), s, 21, 0);
+  test(S("abcdefghijklmnopqrstabcdefghijklmnopqrst"), s, 40, 1);
+  test(S("abcdefghijklmnopqrstabcdefghijklmnopqrst"), s, 40, 0);
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {

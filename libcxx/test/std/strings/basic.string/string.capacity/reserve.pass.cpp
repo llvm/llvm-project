@@ -39,6 +39,7 @@ template <class S>
 void test_string() {
   test<S>(0, 0);
   test<S>(10, 5);
+  test<S>(100, 5);
   test<S>(100, 50);
 }
 
