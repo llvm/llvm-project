@@ -6,7 +6,7 @@
 // RUN: rm -rf %t.dir && mkdir -p %t.dir && cd %t.dir
 // RUN: %clang -fprofile-instr-generate -fcoverage-mapping -mllvm -runtime-counter-relocation=true -o %t.exe %s
 // RUN: env LLVM_PROFILE_FILE="incorrect-profile-name%m%c%c.profraw" %run %t.exe
-// RUN: ls -l default.profraw | FileCheck %s
+// RUN: ls -l | FileCheck %s
 
 // CHECK:     default.profraw
 // CHECK-NOT: incorrect-profile-name.profraw
