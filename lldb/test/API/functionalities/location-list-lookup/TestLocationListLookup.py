@@ -7,16 +7,11 @@ from lldbsuite.test import lldbutil
 
 
 class LocationListLookupTestCase(TestBase):
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
     @skipIf(oslist=["linux"], archs=["arm"])
     def test_loclist(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
 
-        # Create a target by the debugger.
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
         self.dbg.SetAsync(False)
@@ -27,12 +22,15 @@ class LocationListLookupTestCase(TestBase):
         self.assertTrue(process.IsValid())
         self.assertTrue(process.is_stopped)
 
-        # Find `main` on the stack, then
-        # find `argv` local variable, then
-        # check that we can read the c-string in argv[0]
+        # Find `bar` on the stack, then
+        # make sure we can read out the local
+        # variables (with both `frame var` and `expr`)
         for f in process.GetSelectedThread().frames:
-            if f.GetDisplayFunctionName() == "main":
+            if f.GetDisplayFunctionName().startswith("Foo::bar"):
                 argv = f.GetValueForVariablePath("argv").GetChildAtIndex(0)
                 strm = lldb.SBStream()
                 argv.GetDescription(strm)
                 self.assertNotEqual(strm.GetData().find("a.out"), -1)
+
+                process.GetSelectedThread().SetSelectedFrame(f.idx)
+                self.expect_expr("this", result_type="Foo *")
