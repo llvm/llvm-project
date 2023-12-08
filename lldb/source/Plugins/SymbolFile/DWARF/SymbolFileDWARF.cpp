@@ -130,11 +130,12 @@ public:
   }
 };
 
-bool IsTypeTag(llvm::dwarf::Tag Tag) {
+} // namespace
+
+bool IsStructOrClassTag(llvm::dwarf::Tag Tag) {
   return Tag == llvm::dwarf::Tag::DW_TAG_class_type ||
          Tag == llvm::dwarf::Tag::DW_TAG_structure_type;
 }
-} // namespace
 
 static PluginProperties &GetGlobalPluginProperties() {
   static PluginProperties g_settings;
@@ -2953,7 +2954,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
       type_name, must_be_implementation, [&](DWARFDIE type_die) {
         // Don't try and resolve the DIE we are looking for with the DIE
         // itself!
-        if (type_die == die || !IsTypeTag(type_die.Tag()))
+        if (type_die == die || !IsStructOrClassTag(type_die.Tag()))
           return true;
 
         if (must_be_implementation &&
@@ -3125,7 +3126,8 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
       const dw_tag_t type_tag = type_die.Tag();
       // Resolve the type if both have the same tag or {class, struct} tags.
       const bool try_resolving_type =
-          type_tag == tag || (IsTypeTag(type_tag) && IsTypeTag(tag));
+          type_tag == tag ||
+          (IsStructOrClassTag(type_tag) && IsStructOrClassTag(tag));
 
       if (!try_resolving_type) {
         if (log) {
