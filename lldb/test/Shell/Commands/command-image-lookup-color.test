@@ -1,5 +1,8 @@
 # RUN: %clang_host -g %S/Inputs/main.c -o %t
 
+# The file main.c is does not show up in search on Windows.
+# UNSUPPORTED: system-windows
+
 # Checking simple regex search
 
 # RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s ma' | FileCheck %s --check-prefix CHECK1
