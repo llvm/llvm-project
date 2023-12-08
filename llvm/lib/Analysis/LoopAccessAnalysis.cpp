@@ -348,6 +348,9 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
     const Loop *StartARLoop = SrcStartAR->getLoop();
     if (StartARLoop == SinkStartAR->getLoop() &&
         StartARLoop == InnerLoop->getParentLoop() &&
+        // If the diff check would already be loop invariant (due to the
+        // recurrences being the same), then we should still prefer the diff
+        // check instead. That's because these checks are cheaper.
         SrcStartAR->getStepRecurrence(*SE) !=
             SinkStartAR->getStepRecurrence(*SE)) {
       LLVM_DEBUG(dbgs() << "LAA: Not creating diff runtime check, since these "
