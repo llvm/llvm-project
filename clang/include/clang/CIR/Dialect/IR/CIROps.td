@@ -2189,11 +2189,11 @@ def MemCpyOp : CIR_Op<"libc.memcpy"> {
 //===----------------------------------------------------------------------===//
 
 def MemChrOp : CIR_Op<"libc.memchr"> {
-  let arguments = (ins Arg<CIR_PointerType, "", [MemRead]>:$src,
+  let arguments = (ins Arg<VoidPtr, "", [MemRead]>:$src,
                        UInt32:$pattern,
                        CIR_IntType:$len);
   let summary = "libc's `memchr`";
-  let results = (outs Res<CIR_PointerType, "">:$result);
+  let results = (outs Res<VoidPtr, "">:$result);
 
   let description = [{
     Search for `pattern` in data range from `src` to `src` + `len`.
@@ -2209,10 +2209,10 @@ def MemChrOp : CIR_Op<"libc.memchr"> {
 
   let assemblyFormat = [{
     `(`
-      $src `:` qualified(type($src))
+      $src
       `,` $pattern
       `,` $len `:` type($len)
-    `)` `->` qualified(type($result)) attr-dict
+    `)` attr-dict
   }];
   let hasVerifier = 0;
 }

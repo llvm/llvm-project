@@ -220,4 +220,17 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
   }];
 }
 
+// Constraints
+
+// Pointer to void
+def VoidPtr : Type<
+    And<[
+      CPred<"$_self.isa<::mlir::cir::PointerType>()">,
+      CPred<"$_self.cast<::mlir::cir::PointerType>().getPointee().isa<::mlir::cir::VoidType>()">,
+    ]>, "void*">,
+    BuildableType<
+      "mlir::cir::PointerType::get($_builder.getContext(),"
+      "mlir::cir::VoidType::get($_builder.getContext()))"> {
+}
+
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

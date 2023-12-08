@@ -5,7 +5,7 @@
 !u64i = !cir.int<u, 64>
 module {
   cir.func @f(%src : !voidptr, %pattern : !u32i, %len : !u64i) -> !voidptr {
-    %ptr = cir.libc.memchr(%src : !voidptr, %pattern, %len : !u64i) -> !voidptr
+    %ptr = cir.libc.memchr(%src, %pattern, %len : !u64i)
     cir.return %ptr : !voidptr
   }
 }
