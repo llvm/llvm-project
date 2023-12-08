@@ -502,7 +502,7 @@ template <class ELFT> void elf::createSyntheticSections() {
     add(*in.ppc64LongBranchTarget);
   }
 
-  if (config->emachine == EM_RISCV && config->riscvTbljal){
+  if (config->emachine == EM_RISCV && config->riscvTbljal) {
     in.riscvTableJumpSection = std::make_unique<TableJumpSection>();
 
     Symbol *s = symtab.addSymbol(Defined{
@@ -510,7 +510,6 @@ template <class ELFT> void elf::createSyntheticSections() {
         /*value=*/0, /*size=*/0, in.riscvTableJumpSection.get()});
     s->isUsedInRegularObj = true;
   }
-    
 
   in.gotPlt = std::make_unique<GotPltSection>();
   add(*in.gotPlt);
