@@ -2243,3 +2243,19 @@ let TargetGuard = "sme2" in {
   def SVQCVTN_U16_U64_X4 : SInst<"svqcvtn_u16[_{d}_x4]", "b4.d", "Ul", MergeNone, "aarch64_sve_uqcvtn_x4", [IsStreaming], []>;
   def SVQCVTN_U16_S64_X4 : SInst<"svqcvtn_u16[_{d}_x4]", "b4.d", "l", MergeNone, "aarch64_sve_sqcvtun_x4", [IsStreaming], []>;
 }
+
+//
+// Multi-vector zip/unzip
+//
+
+let TargetGuard = "sme2" in {
+  def SVZIP_X2  : SInst<"svzip[_{d}_x2]",  "22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zip_x2",  [IsStreaming], []>;
+  def SVZIPQ_X2 : SInst<"svzipq[_{d}_x2]", "22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zipq_x2", [IsStreaming], []>;
+  def SVZIP_X4  : SInst<"svzip[_{d}_x4]",  "44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zip_x4",  [IsStreaming], []>;
+  def SVZIPQ_X4 : SInst<"svzipq[_{d}_x4]", "44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zipq_x4", [IsStreaming], []>;
+
+  def SVUZP_X2  : SInst<"svuzp[_{d}_x2]",  "22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzp_x2",  [IsStreaming], []>;
+  def SVUZPQ_X2 : SInst<"svuzpq[_{d}_x2]", "22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzpq_x2", [IsStreaming], []>;
+  def SVUZP_X4  : SInst<"svuzp[_{d}_x4]",  "44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzp_x4",  [IsStreaming], []>;
+  def SVUZPQ_X4 : SInst<"svuzpq[_{d}_x4]", "44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzpq_x4", [IsStreaming], []>;
+}
