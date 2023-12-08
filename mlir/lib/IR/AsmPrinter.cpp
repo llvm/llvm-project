@@ -16,7 +16,9 @@
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -27,6 +29,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Verifier.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -44,6 +47,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
+#include <type_traits>
 
 #include <optional>
 #include <tuple>
@@ -424,6 +428,8 @@ public:
   LogicalResult pushCyclicPrinting(const void *opaquePointer);
 
   void popCyclicPrinting();
+
+  void printDimensionList(ArrayRef<int64_t> shape);
 
 protected:
   void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
@@ -1860,6 +1866,20 @@ private:
   // Allow direct access to the impl fields.
   friend AsmState;
 };
+
+template <typename Range>
+void printDimensionList(raw_ostream &stream, Range &&shape) {
+  llvm::interleave(
+      shape, stream,
+      [&stream](const auto &dimSize) {
+        if (ShapedType::isDynamic(dimSize))
+          stream << "?";
+        else
+          stream << dimSize;
+      },
+      "x");
+}
+
 } // namespace detail
 } // namespace mlir
 
@@ -2576,13 +2596,9 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       })
       .Case<RankedTensorType>([&](RankedTensorType tensorTy) {
         os << "tensor<";
-        for (int64_t dim : tensorTy.getShape()) {
-          if (ShapedType::isDynamic(dim))
-            os << '?';
-          else
-            os << dim;
+        printDimensionList(tensorTy.getShape());
+        if (!tensorTy.getShape().empty())
           os << 'x';
-        }
         printType(tensorTy.getElementType());
         // Only print the encoding attribute value if set.
         if (tensorTy.getEncoding()) {
@@ -2598,13 +2614,9 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       })
       .Case<MemRefType>([&](MemRefType memrefTy) {
         os << "memref<";
-        for (int64_t dim : memrefTy.getShape()) {
-          if (ShapedType::isDynamic(dim))
-            os << '?';
-          else
-            os << dim;
+        printDimensionList(memrefTy.getShape());
+        if (!memrefTy.getShape().empty())
           os << 'x';
-        }
         printType(memrefTy.getElementType());
         MemRefLayoutAttrInterface layout = memrefTy.getLayout();
         if (!llvm::isa<AffineMapAttr>(layout) || !layout.isIdentity()) {
@@ -2735,6 +2747,10 @@ LogicalResult AsmPrinter::Impl::pushCyclicPrinting(const void *opaquePointer) {
 
 void AsmPrinter::Impl::popCyclicPrinting() { state.popCyclicPrinting(); }
 
+void AsmPrinter::Impl::printDimensionList(ArrayRef<int64_t> shape) {
+  detail::printDimensionList(os, shape);
+}
+
 //===--------------------------------------------------------------------===//
 // AsmPrinter
 //===--------------------------------------------------------------------===//
@@ -2798,6 +2814,10 @@ void AsmPrinter::printSymbolName(StringRef symbolRef) {
 void AsmPrinter::printResourceHandle(const AsmDialectResourceHandle &resource) {
   assert(impl && "expected AsmPrinter::printResourceHandle to be overriden");
   impl->printResourceHandle(resource);
+}
+
+void AsmPrinter::printDimensionList(ArrayRef<int64_t> shape) {
+  detail::printDimensionList(getStream(), shape);
 }
 
 LogicalResult AsmPrinter::pushCyclicPrinting(const void *opaquePointer) {
@@ -3911,3 +3931,47 @@ void Block::printAsOperand(raw_ostream &os, AsmState &state) {
   OperationPrinter printer(os, state.getImpl());
   printer.printBlockName(this);
 }
+
+//===--------------------------------------------------------------------===//
+// Custom printers
+//===--------------------------------------------------------------------===//
+namespace mlir {
+
+void printDimensionList(OpAsmPrinter &printer, Operation *op,
+                        ArrayRef<int64_t> dimensions) {
+  if (dimensions.empty())
+    printer << "[";
+  printer.printDimensionList(dimensions);
+  if (dimensions.empty())
+    printer << "]";
+}
+
+ParseResult parseDimensionList(OpAsmParser &parser,
+                               DenseI64ArrayAttr &dimensions) {
+  // Empty list case denoted by "[]".
+  if (succeeded(parser.parseOptionalLSquare())) {
+    if (failed(parser.parseRSquare())) {
+      return parser.emitError(parser.getCurrentLocation())
+             << "Failed parsing dimension list.";
+    }
+    dimensions =
+        DenseI64ArrayAttr::get(parser.getContext(), ArrayRef<int64_t>());
+    return success();
+  }
+
+  // Non-empty list case.
+  SmallVector<int64_t> shapeArr;
+  if (failed(parser.parseDimensionList(shapeArr, true, false))) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "Failed parsing dimension list.";
+  }
+  if (shapeArr.empty()) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "Failed parsing dimension list. Did you mean an empty list? It "
+              "must be denoted by \"[]\".";
+  }
+  dimensions = DenseI64ArrayAttr::get(parser.getContext(), shapeArr);
+  return success();
+}
+
+} // namespace mlir
