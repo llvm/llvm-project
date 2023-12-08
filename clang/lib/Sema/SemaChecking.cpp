@@ -12711,15 +12711,15 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
           Name = CastTyName;
         unsigned Diag;
         switch (Match) {
-          default:
-            Diag = diag::warn_format_argument_needs_cast;
-            break;
-          case analyze_format_string::ArgType::NoMatchPedantic:
-            Diag = diag::warn_format_argument_needs_cast_pedantic;
-            break;
-          case analyze_format_string::ArgType::NoMatchSignedness:
-            Diag = diag::warn_format_argument_needs_cast_signedness;
-            break;
+        default:
+          Diag = diag::warn_format_argument_needs_cast;
+          break;
+        case analyze_format_string::ArgType::NoMatchPedantic:
+          Diag = diag::warn_format_argument_needs_cast_pedantic;
+          break;
+        case analyze_format_string::ArgType::NoMatchSignedness:
+          Diag = diag::warn_format_argument_needs_cast_signedness;
+          break;
         }
         EmitFormatDiagnostic(S.PDiag(Diag) << Name << IntendedTy << IsEnum
                                            << E->getSourceRange(),
@@ -12729,13 +12729,13 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         // In this case, the expression could be printed using a different
         // specifier, but we've decided that the specifier is probably correct
         // and we should cast instead. Just use the normal warning message.
-        unsigned Diag = Match == ArgType::NoMatchSignedness
-          ? diag::warn_format_conversion_argument_type_mismatch_signedness
-          : diag::warn_format_conversion_argument_type_mismatch;
+        unsigned Diag =
+            Match == ArgType::NoMatchSignedness
+                ? diag::warn_format_conversion_argument_type_mismatch_signedness
+                : diag::warn_format_conversion_argument_type_mismatch;
         EmitFormatDiagnostic(
-            S.PDiag(Diag)
-                << AT.getRepresentativeTypeName(S.Context) << ExprTy << IsEnum
-                << E->getSourceRange(),
+            S.PDiag(Diag) << AT.getRepresentativeTypeName(S.Context) << ExprTy
+                          << IsEnum << E->getSourceRange(),
             E->getBeginLoc(), /*IsStringLocation*/ false, SpecRange, Hints);
       }
     }
@@ -12976,15 +12976,15 @@ bool CheckScanfHandler::HandleScanfSpecifier(
                                  S.getLangOpts(), S.Context);
   unsigned Diag;
   switch (Match) {
-    default:
-      Diag = diag::warn_format_conversion_argument_type_mismatch;
-      break;
-    case analyze_format_string::ArgType::NoMatchPedantic:
-      Diag = diag::warn_format_conversion_argument_type_mismatch_pedantic;
-      break;
-    case analyze_format_string::ArgType::NoMatchSignedness:
-      Diag = diag::warn_format_conversion_argument_type_mismatch_signedness;
-      break;
+  default:
+    Diag = diag::warn_format_conversion_argument_type_mismatch;
+    break;
+  case analyze_format_string::ArgType::NoMatchPedantic:
+    Diag = diag::warn_format_conversion_argument_type_mismatch_pedantic;
+    break;
+  case analyze_format_string::ArgType::NoMatchSignedness:
+    Diag = diag::warn_format_conversion_argument_type_mismatch_signedness;
+    break;
   }
 
   if (Success) {
