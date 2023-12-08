@@ -4215,6 +4215,13 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
     if (SanOpts.has(SanitizerKind::ArrayBounds)) {
+      // If the array being accessed has a "counted_by" attribute, generate
+      // bounds checking code. The "count" field is at the top level of the
+      // struct or in an anonymous struct, that's also at the top level. Future
+      // expansions may allow the "count" to reside at any place in the struct,
+      // but the value of "counted_by" will be a "simple" path to the count,
+      // i.e. "a.b.count", so we shouldn't need the full force of EmitLValue or
+      // similar to emit the correct GEP.
       const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
           getLangOpts().getStrictFlexArraysLevel();
 
