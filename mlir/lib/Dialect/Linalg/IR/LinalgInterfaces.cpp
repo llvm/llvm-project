@@ -638,29 +638,34 @@ enum class MatchConvolutionResult {
 };
 } // namespace mlir::linalg::detail
 
-DenseIntElementsAttr mlir::linalg::detail::getStridesAttr(DepthwiseConvolutionOpInterface op) {
+DenseIntElementsAttr
+mlir::linalg::detail::getStridesAttr(DepthwiseConvolutionOpInterface op) {
   auto maybeStridesAttr = op.getStridesAttr();
   maybeStridesAttr.dump();
   if (!maybeStridesAttr) {
     OpBuilder builder(op.getContext());
-    int64_t numSpatialDims = op.image().getType().cast<ShapedType>().getRank() - 2;
+    int64_t numSpatialDims =
+        op.image().getType().cast<ShapedType>().getRank() - 2;
     auto type = RankedTensorType::get({static_cast<int64_t>(numSpatialDims)},
-                                    builder.getI64Type());
+                                      builder.getI64Type());
     SmallVector<int64_t> strides(numSpatialDims, 1);
     return DenseIntElementsAttr::get(type, strides);
   }
   return op.getStridesAttr();
 }
 
-DenseIntElementsAttr mlir::linalg::detail::getDilationsAttr(DepthwiseConvolutionOpInterface op) {
+DenseIntElementsAttr
+mlir::linalg::detail::getDilationsAttr(DepthwiseConvolutionOpInterface op) {
   return op.getDilationsAttr();
 }
 
-BoolAttr mlir::linalg::detail::getChannelFirstAttr(DepthwiseConvolutionOpInterface op) {
+BoolAttr
+mlir::linalg::detail::getChannelFirstAttr(DepthwiseConvolutionOpInterface op) {
   return op.getChannelFirstAttr();
 }
 
-ArrayAttr mlir::linalg::detail::getIndexingMaps(DepthwiseConvolutionOpInterface op) {
+ArrayAttr
+mlir::linalg::detail::getIndexingMaps(DepthwiseConvolutionOpInterface op) {
   ArrayAttr cached = op->getAttrOfType<ArrayAttr>(
       LinalgDialect::kMemoizedIndexingMapsAttrName);
   if (cached)
@@ -670,16 +675,23 @@ ArrayAttr mlir::linalg::detail::getIndexingMaps(DepthwiseConvolutionOpInterface 
   auto numSpatial = op.image().getType().cast<ShapedType>().getRank() - 2;
   // Domain: (n, w, c, kw)
   AffineExpr n = getAffineDimExpr(0, ctx);
-  SmallVector<AffineExpr> s(llvm::map_range(llvm::seq<int64_t>(1, numSpatial + 1), [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
+  SmallVector<AffineExpr> s(
+      llvm::map_range(llvm::seq<int64_t>(1, numSpatial + 1),
+                      [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
   AffineExpr c = getAffineDimExpr(numSpatial + 1, ctx);
-  SmallVector<AffineExpr> ks(llvm::map_range(llvm::seq<int64_t>(numSpatial + 2, 2 * (numSpatial + 1)), [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
+  SmallVector<AffineExpr> ks(
+      llvm::map_range(llvm::seq<int64_t>(numSpatial + 2, 2 * (numSpatial + 1)),
+                      [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
   // Temp subsitute for channel position attr
-  int64_t channelPos = (op.getChannelFirstAttr().getValue()) ? 1 : numSpatial + 1;
-  
+  int64_t channelPos =
+      (op.getChannelFirstAttr().getValue()) ? 1 : numSpatial + 1;
+
   // Initialze operand accesses in nw order and insert c according to channel
   // position
   SmallVector<AffineExpr> inExprs = {n}, outExprs = {n};
-  for (const auto &[sp, ksp, st, di] : llvm::zip(s, ks, op.getStridesAttr().getValues<int64_t>(), op.getDilationsAttr().getValues<int64_t>())) {
+  for (const auto &[sp, ksp, st, di] :
+       llvm::zip(s, ks, op.getStridesAttr().getValues<int64_t>(),
+                 op.getDilationsAttr().getValues<int64_t>())) {
     inExprs.push_back(sp * st + ksp * di);
     outExprs.push_back(sp);
   }
@@ -689,11 +701,10 @@ ArrayAttr mlir::linalg::detail::getIndexingMaps(DepthwiseConvolutionOpInterface 
       channelPos == 0 ? kExprs.begin() : kExprs.begin() + channelPos - 1, c);
   outExprs.insert(outExprs.begin() + channelPos, c);
 
-
   cached = Builder(ctx).getAffineMapArrayAttr(
-      {AffineMap::get(4, 0, inExprs, ctx),
-       AffineMap::get(4, 0, kExprs, ctx),
-       AffineMap::get(4, 0, outExprs, ctx)});
+      {AffineMap::get(2 + 2 * numSpatial, 0, inExprs, ctx),
+       AffineMap::get(2 + 2 * numSpatial, 0, kExprs, ctx),
+       AffineMap::get(2 + 2 * numSpatial, 0, outExprs, ctx)});
   op->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
   return cached;
 }

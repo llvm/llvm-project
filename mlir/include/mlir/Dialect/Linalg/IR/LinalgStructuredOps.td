@@ -385,7 +385,7 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
 }
 
 //===----------------------------------------------------------------------===//
-// DepthwiseConv1DOp op.
+// DepthwiseConvNDOp ops.
 //===----------------------------------------------------------------------===//
 
 def DepthwiseConv1DOp : LinalgStructuredBase_Op<"depthwise_conv_1d",
@@ -418,6 +418,73 @@ def DepthwiseConv1DOp : LinalgStructuredBase_Op<"depthwise_conv_1d",
       DefaultValuedAttr<RankedI64ElementsAttr<[1]>,
         "{ static_cast<int64_t>(1) }">:$strides,
       DefaultValuedAttr<RankedI64ElementsAttr<[1]>,
+        "{ static_cast<int64_t>(1) }">:$dilations
+    );
+    let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+    let regions = (region AnyRegion:$region);
+
+    let builders = [
+      OpBuilder<(ins "ValueRange":$inputs, "ValueRange":$inits,
+        "bool":$channel_first,
+        "function_ref<void(OpBuilder &, Location, ValueRange)>",
+        CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
+    ];
+    let hasCustomAssemblyFormat = 1;
+    let hasVerifier = 1;
+
+    let extraClassDeclaration = structuredOpsBaseDecls # [{
+      // Declare functions necessary for LinalgStructuredInterface.
+      SmallVector<utils::IteratorType> getIteratorTypesArray();
+      // Figure out how to get implementation in `LinalgDepthwiseConvolutionOpInterface` working 
+      ArrayAttr getIndexingMaps() { return detail::getIndexingMaps(*this); };
+      std::string getLibraryCallName() {
+        return "op_has_no_registered_library_name";
+      }
+
+      static void regionBuilder(ImplicitLocOpBuilder &b,
+                              Block &block, ArrayRef<NamedAttribute> attrs);
+
+      // Implement functions necessary for DestinationStyleOpInterface.
+      static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
+                                mlir::ArrayRef<mlir::NamedAttribute>)>
+      getRegionBuilder() {
+        return regionBuilder;
+      }
+      static unsigned getNumRegionArgs() { return 3; }
+      MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
+    }];
+}
+
+def DepthwiseConv2DOp : LinalgStructuredBase_Op<"depthwise_conv_2d",
+  [AttrSizedOperandSegments, LinalgDepthwiseConvolutionOpInterface]> {
+    
+  let summary = [{
+    Performs 2-D depthwise convolution with switchable channel position; either first or last.
+  }];
+  let description = [{
+    Domain: N, OH, OW, C, KH, KW
+
+    Layout of operands is determined by the `channel_first` `BoolAttr`:
+
+    `channel_first == true`:
+      Input: `NCHW`
+      Kernel: `CHW`
+      Output: `NCHW`
+
+    `channel_first == false`:
+      Input: `NHWC`
+      Kernel: `HWC`
+      Output: `NHWC`
+
+  }];
+
+    let arguments = (ins
+      Variadic<TensorOrMemref>:$inputs,
+      Variadic<TensorOrMemref>:$inits,
+      DefaultValuedAttr<BoolAttr, "true">:$channel_first,
+      DefaultValuedAttr<RankedI64ElementsAttr<[2]>,
+        "{ static_cast<int64_t>(1) }">:$strides,
+      DefaultValuedAttr<RankedI64ElementsAttr<[2]>,
         "{ static_cast<int64_t>(1) }">:$dilations
     );
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
