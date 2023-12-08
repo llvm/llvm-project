@@ -431,9 +431,9 @@ define i1 @test60_extra_use_const_operands_inbounds(ptr %foo, i64 %i, i64 %j) {
 define i1 @test60_extra_use_const_operands_no_inbounds(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60_extra_use_const_operands_no_inbounds(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[FOO:%.*]], i64 1
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i16, ptr [[FOO]], i64 [[J:%.*]]
 ; CHECK-NEXT:    call void @use(ptr [[GEP1]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    [[GEP2_IDX_MASK:%.*]] = and i64 [[J:%.*]], 9223372036854775807
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[GEP2_IDX_MASK]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr i32, ptr %foo, i64 1
