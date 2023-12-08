@@ -20808,6 +20808,10 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_clz_64:
   case RISCV::BI__builtin_riscv_ctz_32:
   case RISCV::BI__builtin_riscv_ctz_64:
+  case RISCV::BI__builtin_riscv_mopr_32:
+  case RISCV::BI__builtin_riscv_mopr_64:
+  case RISCV::BI__builtin_riscv_moprr_32:
+  case RISCV::BI__builtin_riscv_moprr_64:
   case RISCV::BI__builtin_riscv_clmul_32:
   case RISCV::BI__builtin_riscv_clmul_64:
   case RISCV::BI__builtin_riscv_clmulh_32:
@@ -20848,6 +20852,36 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       return Result;
     }
 
+    // Zimop
+    case RISCV::BI__builtin_riscv_mopr_32:
+    case RISCV::BI__builtin_riscv_mopr_64: {
+      unsigned N = cast<ConstantInt>(Ops[1])->getZExtValue();
+      Function *F = nullptr;
+      if (N <= 1) {
+        F = CGM.getIntrinsic(Intrinsic::riscv_mopr0 + N, {ResultType});
+      } else if (N >= 10 && N <= 19) {
+        F = CGM.getIntrinsic(Intrinsic::riscv_mopr10 + N - 10, {ResultType});
+      } else if (N == 2) {
+        F = CGM.getIntrinsic(Intrinsic::riscv_mopr2, {ResultType});
+      } else if (N >= 20 && N <= 29) {
+        F = CGM.getIntrinsic(Intrinsic::riscv_mopr20 + N - 20, {ResultType});
+      } else if (N == 3) {
+        F = CGM.getIntrinsic(Intrinsic::riscv_mopr3, {ResultType});
+      } else if (N >= 30 && N <= 31) {
+        F = CGM.getIntrinsic(Intrinsic::riscv_mopr30 + N - 30, {ResultType});
+      } else if (N >= 4 && N <= 9) {
+        F = CGM.getIntrinsic(Intrinsic::riscv_mopr4 + N - 4, {ResultType});
+      } else {
+        llvm_unreachable("unexpected builtin ID");
+      }
+      return Builder.CreateCall(F, {Ops[0]}, "");
+    }
+    case RISCV::BI__builtin_riscv_moprr_32:
+    case RISCV::BI__builtin_riscv_moprr_64: {
+      unsigned N = cast<ConstantInt>(Ops[2])->getZExtValue();
+      Function *F = CGM.getIntrinsic(Intrinsic::riscv_moprr0 + N, {ResultType});
+      return Builder.CreateCall(F, {Ops[0], Ops[1]}, "");
+    }
     // Zbc
     case RISCV::BI__builtin_riscv_clmul_32:
     case RISCV::BI__builtin_riscv_clmul_64:

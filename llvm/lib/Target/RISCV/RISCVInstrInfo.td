@@ -90,6 +90,14 @@ def riscv_add_tprel : SDNode<"RISCVISD::ADD_TPREL",
                                                   SDTCisSameAs<0, 3>,
                                                   SDTCisInt<0>]>>;
 
+foreach i = 0...31 in {
+  defvar riscvisd_moprx = "RISCVISD::MOPR"#i;
+  def riscv_mopr#i : SDNode<riscvisd_moprx,  SDTIntUnaryOp>;
+}
+foreach i = 0...7 in {
+  defvar riscvisd_moprrx = "RISCVISD::MOPRR"#i;
+  def riscv_moprr#i : SDNode<riscvisd_moprrx,  SDTIntBinOp>;
+}
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
@@ -597,6 +605,16 @@ class Priv_rr<string opcodestr, bits<7> funct7>
   let rd = 0;
 }
 
+class RVMopr<bits<7> imm7, bits<5> imm5, bits<3> funct3,
+             RISCVOpcode opcode, string opcodestr>
+    : RVInstIMopr<imm7, imm5, funct3, opcode, (outs GPR:$rd), (ins GPR:$rs1),
+                   opcodestr, "$rd, $rs1">;
+
+class RVMoprr<bits<4> imm4, bits<3> imm3, bits<3> funct3,
+             RISCVOpcode opcode, string opcodestr>
+    : RVInstRMoprr<imm4, imm3, funct3, opcode, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                   opcodestr, "$rd, $rs1, $rs2">;
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -785,6 +803,22 @@ def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">,
             Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
 } // IsSignExtendingOpW = 1
 } // Predicates = [IsRV64]
+
+// Zimop instructions
+
+foreach i = 0...31 in {
+    let Predicates = [HasStdExtZimop] in {
+    def MOPR#i : RVMopr<0b1000111, i, 0b100, OPC_SYSTEM, "mop.r."#i>,
+                Sched<[WriteMOPR, ReadMOPR]>;
+    } // Predicates = [HasStdExtZimop]
+}
+
+foreach i = 0...7 in {
+    let Predicates = [HasStdExtZimop] in {
+    def MOPRR#i : RVMoprr<0b1001, i, 0b100, OPC_SYSTEM, "mop.rr."#i>,
+                Sched<[WriteMOPR, ReadMOPR, ReadMOPR]>;
+    } // Predicates = [HasStdExtZimop]
+}
 
 //===----------------------------------------------------------------------===//
 // Privileged instructions
@@ -1549,6 +1583,25 @@ def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
 let Predicates = [HasStdExtC, OptForMinSize] in {
   def : SelectCompressOpt<SETEQ>;
   def : SelectCompressOpt<SETNE>;
+}
+
+// Zimop instructions
+foreach i = 0...31 in {
+    defvar moprx = !cast<Instruction>("MOPR"#i);
+    defvar riscv_moprx = !cast<SDNode>("riscv_mopr"#i);
+    let Predicates = [HasStdExtZimop] in {
+    def : Pat<(XLenVT (riscv_moprx (XLenVT GPR:$rs1))),
+              (moprx GPR:$rs1)>;
+    } // Predicates = [HasStdExtZimop]
+}
+
+foreach i = 0...7 in {
+    defvar moprrx = !cast<Instruction>("MOPRR"#i);
+    defvar riscv_moprrx = !cast<SDNode>("riscv_moprr"#i);
+    let Predicates = [HasStdExtZimop] in {
+    def : Pat<(XLenVT (riscv_moprrx (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+              (moprrx GPR:$rs1, GPR:$rs2)>;
+    } // Predicates = [HasStdExtZimop]
 }
 
 /// Branches and jumps

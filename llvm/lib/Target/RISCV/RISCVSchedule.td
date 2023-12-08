@@ -112,6 +112,9 @@ def WriteFST16        : SchedWrite;    // Floating point sp store
 def WriteFST32        : SchedWrite;    // Floating point sp store
 def WriteFST64        : SchedWrite;    // Floating point dp store
 
+// Zimop extension.
+def WriteMOPR     : SchedWrite;
+
 // short forward branch for Bullet
 def WriteSFB        : SchedWrite;
 def ReadSFBJmp      : SchedRead;
@@ -201,6 +204,9 @@ def ReadFClass16         : SchedRead;
 def ReadFClass32         : SchedRead;
 def ReadFClass64         : SchedRead;
 
+// Zimop extension.
+def ReadMOPR     : SchedRead;
+
 multiclass UnsupportedSchedZfh {
 let Unsupported = true in {
 def : WriteRes<WriteFAdd16, []>;
@@ -269,6 +275,14 @@ def : ReadAdvance<ReadFRoundF32, 0>;
 def : ReadAdvance<ReadFRoundF64, 0>;
 def : ReadAdvance<ReadFRoundF16, 0>;
 } // Unsupported = true
+}
+
+multiclass UnsupportedSchedZimop {
+let Unsupported = true in {
+def : WriteRes<WriteMOPR, []>;
+
+def : ReadAdvance<ReadMOPR, 0>;
+}
 }
 
 // Include the scheduler resources for other instruction extensions.
