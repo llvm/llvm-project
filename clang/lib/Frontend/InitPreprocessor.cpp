@@ -1351,6 +1351,15 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (TI.getTriple().isOSBinFormatELF())
     Builder.defineMacro("__ELF__");
 
+  // Target OS macro definitions.
+  if (PPOpts.DefineTargetOSMacros) {
+    const llvm::Triple &Triple = TI.getTriple();
+#define TARGET_OS(Name, Predicate)                                             \
+  Builder.defineMacro(#Name, (Predicate) ? "1" : "0");
+#include "clang/Basic/TargetOSMacros.def"
+#undef TARGET_OS
+  }
+
   // Get other target #defines.
   TI.getTargetDefines(LangOpts, Builder);
 }
