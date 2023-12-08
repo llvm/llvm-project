@@ -868,13 +868,12 @@ supported for the ``amdgcn`` target.
 **Buffer Strided Pointer**
   The buffer index pointer is an experimental address space. It is supposed to
   model a 128-bit buffer descriptor and a 32-bit offset, like the **Buffer Fat
-  Pointer**. Additionally, it contains an index into the descriptor, which
+  Pointer**. Additionally, it contains an index into the buffer, which
   allows the direct addressing of structured elements.
 
   The buffer descriptor must be *raw*:
-  the stride is the size of a structured element, the "add tid" flag must be 0, the
-  swizzle eneable bits must be off, and the extent (NumRecords) must be measured in
-  elements.
+  the stride is the size of a structured element, the "add tid" flag must be 0,
+  and the swizzle enable bits must be off.
 
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
