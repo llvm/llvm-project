@@ -2,13 +2,12 @@ import lldb
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
-import os
 import unittest2
-
 
 class TestSwiftSystemFramework(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     @swiftTest
     @skipIf(oslist=no_match(["macosx"]))
@@ -22,16 +21,7 @@ class TestSwiftSystemFramework(lldbtest.TestBase):
         self.runCmd('log enable lldb types -f "%s"' % log)
         self.expect("settings set target.use-all-compiler-flags true")
         self.expect("expression -- 0")
-        pos = 0
-        neg = 0
-        import io
-        with open(log, "r", encoding='utf-8') as logfile:
-            for line in logfile:
-                if "-- rejecting framework path " in line:
-                    pos += 1
-                elif ("reflection metadata" not in line) and \
-                     ("/System/Library/Frameworks" in line):
-                    neg += 1
-
-        self.assertGreater(pos, 0, "sanity check failed")
-        self.assertEqual(neg, 0, "found /System/Library/Frameworks in log")
+        self.filecheck('platform shell cat "%s"' % log, __file__)
+#       CHECK: SwiftASTContextForExpressions{{.*}}-- rejecting framework path
+#       CHECK: SwiftASTContextForExpressions{{.*}}LogConfiguration()
+#       CHECK-NOT: LogConfiguration(){{.*}}/System/Library/Frameworks
