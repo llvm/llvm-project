@@ -204,6 +204,9 @@ C Language Changes
   number of elements in the flexible array member. This information can improve
   the results of the array bound sanitizer and the
   ``__builtin_dynamic_object_size`` builtin.
+- Enums will now be represented in TBAA metadata using their actual underlying
+  integer type. Previously they were treated as chars, which meant they could
+  alias with all other types.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
