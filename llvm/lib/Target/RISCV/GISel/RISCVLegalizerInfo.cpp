@@ -406,7 +406,7 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   LLT AddrTy = MIRBuilder.getMRI()->getType(MI.getOperand(0).getReg());
   auto FINAddr = MIRBuilder.buildFrameIndex(AddrTy, FI);
   assert(MI.hasOneMemOperand());
-  MIRBuilder.buildStore(MI.getOperand(0).getReg(), FINAddr,
+  MIRBuilder.buildStore(FINAddr, MI.getOperand(0).getReg(),
                         *MI.memoperands()[0]);
   MI.eraseFromParent();
   return true;
