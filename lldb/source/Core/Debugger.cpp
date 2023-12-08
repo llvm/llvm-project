@@ -453,6 +453,18 @@ llvm::StringRef Debugger::GetAutosuggestionAnsiSuffix() const {
       idx, g_debugger_properties[idx].default_cstr_value);
 }
 
+llvm::StringRef Debugger::GetRegexMatchAnsiPrefix() const {
+  const uint32_t idx = ePropertyShowRegexMatchAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetRegexMatchAnsiSuffix() const {
+  const uint32_t idx = ePropertyShowRegexMatchAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
 bool Debugger::GetShowDontUsePoHint() const {
   const uint32_t idx = ePropertyShowDontUsePoHint;
   return GetPropertyAtIndexAs<bool>(
