@@ -57,7 +57,7 @@ extern "C" {
 
 namespace foo_alias = foo;
 
-using namespace foo;
+//removing using namespace foo;
 
 namespace foo_alias2 = foo;
 
