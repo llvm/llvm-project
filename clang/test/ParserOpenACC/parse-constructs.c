@@ -61,7 +61,7 @@ void func() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc enter
   for(;;){}
-  // expected-error@+3{{invalid OpenACC directive 'exit }'}}
+  // expected-error@+3{{expected identifier}}
   // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc exit }

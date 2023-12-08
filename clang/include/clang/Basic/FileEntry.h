@@ -394,6 +394,7 @@ class FileEntry {
 
 public:
   ~FileEntry();
+  LLVM_DEPRECATED("Use FileEntryRef::getName() instead.", "")
   StringRef getName() const { return LastRef->getName(); }
 
   StringRef tryGetRealPathName() const { return RealPathName; }

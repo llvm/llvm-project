@@ -14,7 +14,7 @@ namespace std {
 }
 
 #if __cplusplus >= 201103L
-namespace dr1305 { // dr1305: yes
+namespace dr1305 { // dr1305: 3.0
 struct Incomplete; // expected-note {{forward declaration of 'dr1305::Incomplete'}}
 struct Complete {};
 
@@ -297,7 +297,7 @@ namespace dr1346 { // dr1346: 3.5
 #endif
 }
 
-namespace dr1347 { // dr1347: yes
+namespace dr1347 { // dr1347: 3.1
   auto x = 5, *y = &x; // expected-error 0-1{{extension}}
   auto z = y, *q = y; // expected-error {{'auto' deduced as 'int *' in declaration of 'z' and deduced as 'int' in declaration of 'q'}} expected-error 0-1{{extension}}
 #if __cplusplus >= 201103L
@@ -306,7 +306,7 @@ namespace dr1347 { // dr1347: yes
 #endif
 }
 
-namespace dr1358 { // dr1358: yes
+namespace dr1358 { // dr1358: 3.1
 #if __cplusplus >= 201103L
   struct Lit { constexpr operator int() const { return 0; } };
   struct NonLit { NonLit(); operator int(); }; // expected-note 2{{no constexpr constructors}}

@@ -81,15 +81,15 @@ program p
       ! CHECK:     }
       ! CHECK:     %[[V_208:[0-9]+]] = fir.load %[[V_17]] : !fir.ref<f32>
       ! CHECK:     %[[V_209:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
-      ! CHECK:     %[[V_210:[0-9]+]] = arith.cmpf olt, %[[V_208]], %[[V_209]] : f32
+      ! CHECK:     %[[V_210:[0-9]+]] = arith.cmpf olt, %[[V_208]], %[[V_209]] {{.*}} : f32
       ! CHECK:     %[[V_211:[0-9]+]] = fir.if %[[V_210]] -> (f32) {
       ! CHECK:       fir.result %[[V_209]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_208]], %[[V_209]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_208]], %[[V_209]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_208]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_208]], %[[V_209]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_208]], %[[V_209]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_208]]) <{bit = 960 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_208]], %[[V_209]] : f32
@@ -140,15 +140,15 @@ program p
       ! CHECK:     %[[V_274:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
       ! CHECK:     %[[V_275:[0-9]+]] = math.copysign %[[V_273]], %cst{{[_0-9]*}} fastmath<contract> : f32
       ! CHECK:     %[[V_276:[0-9]+]] = math.copysign %[[V_274]], %cst{{[_0-9]*}} fastmath<contract> : f32
-      ! CHECK:     %[[V_277:[0-9]+]] = arith.cmpf olt, %[[V_275]], %[[V_276]] : f32
+      ! CHECK:     %[[V_277:[0-9]+]] = arith.cmpf olt, %[[V_275]], %[[V_276]] {{.*}} : f32
       ! CHECK:     %[[V_278:[0-9]+]] = fir.if %[[V_277]] -> (f32) {
       ! CHECK:       fir.result %[[V_274]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_275]], %[[V_276]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_275]], %[[V_276]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_273]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_275]], %[[V_276]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_275]], %[[V_276]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_273]]) <{bit = 960 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_273]], %[[V_274]] : f32
@@ -197,22 +197,22 @@ program p
       ! CHECK:     }
       ! CHECK:     %[[V_334:[0-9]+]] = fir.load %[[V_17]] : !fir.ref<f32>
       ! CHECK:     %[[V_335:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
-      ! CHECK:     %[[V_336:[0-9]+]] = arith.cmpf olt, %[[V_334]], %[[V_335]] : f32
+      ! CHECK:     %[[V_336:[0-9]+]] = arith.cmpf olt, %[[V_334]], %[[V_335]] {{.*}} : f32
       ! CHECK:     %[[V_337:[0-9]+]] = fir.if %[[V_336]] -> (f32) {
       ! CHECK:       fir.result %[[V_335]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_334]], %[[V_335]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_334]], %[[V_335]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_334]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_334]], %[[V_335]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_334]], %[[V_335]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_334]]) <{bit = 960 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_334]], %[[V_335]] : f32
       ! CHECK:           fir.result %[[V_697]] : f32
       ! CHECK:         } else {
-      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_334]], %[[V_334]] : f32
-      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_335]], %[[V_335]] : f32
+      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_334]], %[[V_334]] {{.*}} : f32
+      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_335]], %[[V_335]] {{.*}} : f32
       ! CHECK:           %[[V_698:[0-9]+]] = fir.coordinate_of %[[V_92]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
       ! CHECK:           %[[V_699:[0-9]+]] = fir.load %[[V_698]] : !fir.ref<i32>
       ! CHECK:           %[[V_700:[0-9]+]] = arith.bitcast %[[V_699]] : i32 to f32
@@ -260,22 +260,22 @@ program p
       ! CHECK:     %[[V_394:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
       ! CHECK:     %[[V_395:[0-9]+]] = math.copysign %[[V_393]], %cst{{[_0-9]*}} fastmath<contract> : f32
       ! CHECK:     %[[V_396:[0-9]+]] = math.copysign %[[V_394]], %cst{{[_0-9]*}} fastmath<contract> : f32
-      ! CHECK:     %[[V_397:[0-9]+]] = arith.cmpf olt, %[[V_395]], %[[V_396]] : f32
+      ! CHECK:     %[[V_397:[0-9]+]] = arith.cmpf olt, %[[V_395]], %[[V_396]] {{.*}} : f32
       ! CHECK:     %[[V_398:[0-9]+]] = fir.if %[[V_397]] -> (f32) {
       ! CHECK:       fir.result %[[V_394]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_395]], %[[V_396]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_395]], %[[V_396]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_393]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_395]], %[[V_396]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_395]], %[[V_396]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_393]]) <{bit = 960 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_393]], %[[V_394]] : f32
       ! CHECK:           fir.result %[[V_697]] : f32
       ! CHECK:         } else {
-      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_393]], %[[V_393]] : f32
-      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_394]], %[[V_394]] : f32
+      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_393]], %[[V_393]] {{.*}} : f32
+      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_394]], %[[V_394]] {{.*}} : f32
       ! CHECK:           %[[V_698:[0-9]+]] = fir.coordinate_of %[[V_92]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
       ! CHECK:           %[[V_699:[0-9]+]] = fir.load %[[V_698]] : !fir.ref<i32>
       ! CHECK:           %[[V_700:[0-9]+]] = arith.bitcast %[[V_699]] : i32 to f32
@@ -321,15 +321,15 @@ program p
       ! CHECK:     }
       ! CHECK:     %[[V_454:[0-9]+]] = fir.load %[[V_17]] : !fir.ref<f32>
       ! CHECK:     %[[V_455:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
-      ! CHECK:     %[[V_456:[0-9]+]] = arith.cmpf olt, %[[V_454]], %[[V_455]] : f32
+      ! CHECK:     %[[V_456:[0-9]+]] = arith.cmpf olt, %[[V_454]], %[[V_455]] {{.*}} : f32
       ! CHECK:     %[[V_457:[0-9]+]] = fir.if %[[V_456]] -> (f32) {
       ! CHECK:       fir.result %[[V_454]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_454]], %[[V_455]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_454]], %[[V_455]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_455]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_454]], %[[V_455]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_454]], %[[V_455]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_454]]) <{bit = 60 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_454]], %[[V_455]] : f32
@@ -380,15 +380,15 @@ program p
       ! CHECK:     %[[V_514:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
       ! CHECK:     %[[V_515:[0-9]+]] = math.copysign %[[V_513]], %cst{{[_0-9]*}} fastmath<contract> : f32
       ! CHECK:     %[[V_516:[0-9]+]] = math.copysign %[[V_514]], %cst{{[_0-9]*}} fastmath<contract> : f32
-      ! CHECK:     %[[V_517:[0-9]+]] = arith.cmpf olt, %[[V_515]], %[[V_516]] : f32
+      ! CHECK:     %[[V_517:[0-9]+]] = arith.cmpf olt, %[[V_515]], %[[V_516]] {{.*}} : f32
       ! CHECK:     %[[V_518:[0-9]+]] = fir.if %[[V_517]] -> (f32) {
       ! CHECK:       fir.result %[[V_513]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_515]], %[[V_516]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_515]], %[[V_516]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_514]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_515]], %[[V_516]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_515]], %[[V_516]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_513]]) <{bit = 60 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_513]], %[[V_514]] : f32
@@ -437,22 +437,22 @@ program p
       ! CHECK:     }
       ! CHECK:     %[[V_574:[0-9]+]] = fir.load %[[V_17]] : !fir.ref<f32>
       ! CHECK:     %[[V_575:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
-      ! CHECK:     %[[V_576:[0-9]+]] = arith.cmpf olt, %[[V_574]], %[[V_575]] : f32
+      ! CHECK:     %[[V_576:[0-9]+]] = arith.cmpf olt, %[[V_574]], %[[V_575]] {{.*}} : f32
       ! CHECK:     %[[V_577:[0-9]+]] = fir.if %[[V_576]] -> (f32) {
       ! CHECK:       fir.result %[[V_574]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_574]], %[[V_575]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_574]], %[[V_575]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_575]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_574]], %[[V_575]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_574]], %[[V_575]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_574]]) <{bit = 60 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_574]], %[[V_575]] : f32
       ! CHECK:           fir.result %[[V_697]] : f32
       ! CHECK:         } else {
-      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_574]], %[[V_574]] : f32
-      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_575]], %[[V_575]] : f32
+      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_574]], %[[V_574]] {{.*}} : f32
+      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_575]], %[[V_575]] {{.*}} : f32
       ! CHECK:           %[[V_698:[0-9]+]] = fir.coordinate_of %[[V_92]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
       ! CHECK:           %[[V_699:[0-9]+]] = fir.load %[[V_698]] : !fir.ref<i32>
       ! CHECK:           %[[V_700:[0-9]+]] = arith.bitcast %[[V_699]] : i32 to f32
@@ -500,22 +500,22 @@ program p
       ! CHECK:     %[[V_634:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f32>
       ! CHECK:     %[[V_635:[0-9]+]] = math.copysign %[[V_633]], %cst{{[_0-9]*}} fastmath<contract> : f32
       ! CHECK:     %[[V_636:[0-9]+]] = math.copysign %[[V_634]], %cst{{[_0-9]*}} fastmath<contract> : f32
-      ! CHECK:     %[[V_637:[0-9]+]] = arith.cmpf olt, %[[V_635]], %[[V_636]] : f32
+      ! CHECK:     %[[V_637:[0-9]+]] = arith.cmpf olt, %[[V_635]], %[[V_636]] {{.*}} : f32
       ! CHECK:     %[[V_638:[0-9]+]] = fir.if %[[V_637]] -> (f32) {
       ! CHECK:       fir.result %[[V_633]] : f32
       ! CHECK:     } else {
-      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_635]], %[[V_636]] : f32
+      ! CHECK:       %[[V_692:[0-9]+]] = arith.cmpf ogt, %[[V_635]], %[[V_636]] {{.*}} : f32
       ! CHECK:       %[[V_693:[0-9]+]] = fir.if %[[V_692]] -> (f32) {
       ! CHECK:         fir.result %[[V_634]] : f32
       ! CHECK:       } else {
-      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_635]], %[[V_636]] : f32
+      ! CHECK:         %[[V_694:[0-9]+]] = arith.cmpf oeq, %[[V_635]], %[[V_636]] {{.*}} : f32
       ! CHECK:         %[[V_695:[0-9]+]] = fir.if %[[V_694]] -> (f32) {
       ! CHECK:           %[[V_696:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_633]]) <{bit = 60 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_697:[0-9]+]] = arith.select %[[V_696]], %[[V_633]], %[[V_634]] : f32
       ! CHECK:           fir.result %[[V_697]] : f32
       ! CHECK:         } else {
-      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_633]], %[[V_633]] : f32
-      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_634]], %[[V_634]] : f32
+      ! CHECK:           %[[V_696:[0-9]+]] = arith.cmpf ord, %[[V_633]], %[[V_633]] {{.*}} : f32
+      ! CHECK:           %[[V_697:[0-9]+]] = arith.cmpf ord, %[[V_634]], %[[V_634]] {{.*}} : f32
       ! CHECK:           %[[V_698:[0-9]+]] = fir.coordinate_of %[[V_92]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
       ! CHECK:           %[[V_699:[0-9]+]] = fir.load %[[V_698]] : !fir.ref<i32>
       ! CHECK:           %[[V_700:[0-9]+]] = arith.bitcast %[[V_699]] : i32 to f32

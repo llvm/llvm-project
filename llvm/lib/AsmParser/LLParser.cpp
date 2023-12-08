@@ -8622,9 +8622,9 @@ static void resolveFwdRef(ValueInfo *Fwd, ValueInfo &Resolved) {
 
 /// Stores the given Name/GUID and associated summary into the Index.
 /// Also updates any forward references to the associated entry ID.
-void LLParser::addGlobalValueToIndex(
+bool LLParser::addGlobalValueToIndex(
     std::string Name, GlobalValue::GUID GUID, GlobalValue::LinkageTypes Linkage,
-    unsigned ID, std::unique_ptr<GlobalValueSummary> Summary) {
+    unsigned ID, std::unique_ptr<GlobalValueSummary> Summary, LocTy Loc) {
   // First create the ValueInfo utilizing the Name or GUID.
   ValueInfo VI;
   if (GUID != 0) {
@@ -8634,7 +8634,9 @@ void LLParser::addGlobalValueToIndex(
     assert(!Name.empty());
     if (M) {
       auto *GV = M->getNamedValue(Name);
-      assert(GV);
+      if (!GV)
+        return error(Loc, "Reference to undefined global \"" + Name + "\"");
+
       VI = Index->getOrInsertValueInfo(GV);
     } else {
       assert(
@@ -8682,6 +8684,8 @@ void LLParser::addGlobalValueToIndex(
       NumberedValueInfos.resize(ID + 1);
     NumberedValueInfos[ID] = VI;
   }
+
+  return false;
 }
 
 /// parseSummaryIndexFlags
@@ -8728,6 +8732,7 @@ bool LLParser::parseGVEntry(unsigned ID) {
       parseToken(lltok::lparen, "expected '(' here"))
     return true;
 
+  LocTy Loc = Lex.getLoc();
   std::string Name;
   GlobalValue::GUID GUID = 0;
   switch (Lex.getKind()) {
@@ -8757,9 +8762,8 @@ bool LLParser::parseGVEntry(unsigned ID) {
     // an external definition. We pass ExternalLinkage since that is only
     // used when the GUID must be computed from Name, and in that case
     // the symbol must have external linkage.
-    addGlobalValueToIndex(Name, GUID, GlobalValue::ExternalLinkage, ID,
-                          nullptr);
-    return false;
+    return addGlobalValueToIndex(Name, GUID, GlobalValue::ExternalLinkage, ID,
+                                 nullptr, Loc);
   }
 
   // Have a list of summaries
@@ -8800,6 +8804,7 @@ bool LLParser::parseGVEntry(unsigned ID) {
 ///         [',' OptionalRefs]? ')'
 bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
                                     unsigned ID) {
+  LocTy Loc = Lex.getLoc();
   assert(Lex.getKind() == lltok::kw_function);
   Lex.Lex();
 
@@ -8876,10 +8881,9 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
 
   FS->setModulePath(ModulePath);
 
-  addGlobalValueToIndex(Name, GUID, (GlobalValue::LinkageTypes)GVFlags.Linkage,
-                        ID, std::move(FS));
-
-  return false;
+  return addGlobalValueToIndex(Name, GUID,
+                               (GlobalValue::LinkageTypes)GVFlags.Linkage, ID,
+                               std::move(FS), Loc);
 }
 
 /// VariableSummary
@@ -8887,6 +8891,7 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
 ///         [',' OptionalRefs]? ')'
 bool LLParser::parseVariableSummary(std::string Name, GlobalValue::GUID GUID,
                                     unsigned ID) {
+  LocTy Loc = Lex.getLoc();
   assert(Lex.getKind() == lltok::kw_variable);
   Lex.Lex();
 
@@ -8934,10 +8939,9 @@ bool LLParser::parseVariableSummary(std::string Name, GlobalValue::GUID GUID,
   GS->setModulePath(ModulePath);
   GS->setVTableFuncs(std::move(VTableFuncs));
 
-  addGlobalValueToIndex(Name, GUID, (GlobalValue::LinkageTypes)GVFlags.Linkage,
-                        ID, std::move(GS));
-
-  return false;
+  return addGlobalValueToIndex(Name, GUID,
+                               (GlobalValue::LinkageTypes)GVFlags.Linkage, ID,
+                               std::move(GS), Loc);
 }
 
 /// AliasSummary
@@ -8984,10 +8988,9 @@ bool LLParser::parseAliasSummary(std::string Name, GlobalValue::GUID GUID,
     AS->setAliasee(AliaseeVI, Summary);
   }
 
-  addGlobalValueToIndex(Name, GUID, (GlobalValue::LinkageTypes)GVFlags.Linkage,
-                        ID, std::move(AS));
-
-  return false;
+  return addGlobalValueToIndex(Name, GUID,
+                               (GlobalValue::LinkageTypes)GVFlags.Linkage, ID,
+                               std::move(AS), Loc);
 }
 
 /// Flag
@@ -9096,7 +9099,8 @@ bool LLParser::parseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
 /// OptionalCalls
 ///   := 'calls' ':' '(' Call [',' Call]* ')'
 /// Call ::= '(' 'callee' ':' GVReference
-///            [( ',' 'hotness' ':' Hotness | ',' 'relbf' ':' UInt32 )]? ')'
+///            [( ',' 'hotness' ':' Hotness | ',' 'relbf' ':' UInt32 )]?
+///            [ ',' 'tail' ]? ')'
 bool LLParser::parseOptionalCalls(std::vector<FunctionSummary::EdgeTy> &Calls) {
   assert(Lex.getKind() == lltok::kw_calls);
   Lex.Lex();
@@ -9121,23 +9125,39 @@ bool LLParser::parseOptionalCalls(std::vector<FunctionSummary::EdgeTy> &Calls) {
 
     CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
     unsigned RelBF = 0;
-    if (EatIfPresent(lltok::comma)) {
-      // Expect either hotness or relbf
-      if (EatIfPresent(lltok::kw_hotness)) {
+    unsigned HasTailCall = false;
+
+    // parse optional fields
+    while (EatIfPresent(lltok::comma)) {
+      switch (Lex.getKind()) {
+      case lltok::kw_hotness:
+        Lex.Lex();
         if (parseToken(lltok::colon, "expected ':'") || parseHotness(Hotness))
           return true;
-      } else {
-        if (parseToken(lltok::kw_relbf, "expected relbf") ||
-            parseToken(lltok::colon, "expected ':'") || parseUInt32(RelBF))
+        break;
+      case lltok::kw_relbf:
+        Lex.Lex();
+        if (parseToken(lltok::colon, "expected ':'") || parseUInt32(RelBF))
           return true;
+        break;
+      case lltok::kw_tail:
+        Lex.Lex();
+        if (parseToken(lltok::colon, "expected ':'") || parseFlag(HasTailCall))
+          return true;
+        break;
+      default:
+        return error(Lex.getLoc(), "expected hotness, relbf, or tail");
       }
     }
+    if (Hotness != CalleeInfo::HotnessType::Unknown && RelBF > 0)
+      return tokError("Expected only one of hotness or relbf");
     // Keep track of the Call array index needing a forward reference.
     // We will save the location of the ValueInfo needing an update, but
     // can only do so once the std::vector is finalized.
     if (VI.getRef() == FwdVIRef)
       IdToIndexMap[GVId].push_back(std::make_pair(Calls.size(), Loc));
-    Calls.push_back(FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, RelBF)});
+    Calls.push_back(
+        FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, HasTailCall, RelBF)});
 
     if (parseToken(lltok::rparen, "expected ')' in call"))
       return true;

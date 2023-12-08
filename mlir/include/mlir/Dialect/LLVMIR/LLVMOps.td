@@ -55,6 +55,26 @@ class LLVM_IntArithmeticOp<string mnemonic, string instName,
     $res = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
   }];
 }
+class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
+                                   list<Trait> traits = []> :
+    LLVM_ArithmeticOpBase<AnyInteger, mnemonic, instName,
+    !listconcat([DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)> {
+  dag iofArg = (
+    ins DefaultValuedAttr<LLVM_IntegerOverflowFlagsAttr, "{}">:$overflowFlags);
+  let arguments = !con(commonArgs, iofArg);
+  string mlirBuilder = [{
+    auto op = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
+    moduleImport.setIntegerOverflowFlagsAttr(inst, op);
+    $res = op;
+  }];
+  let assemblyFormat = [{
+    $lhs `,` $rhs (`overflow` `` $overflowFlags^)?
+    custom<LLVMOpAttrs>(attr-dict) `:` type($res)
+  }];
+  string llvmBuilder =
+    "$res = builder.Create" # instName #
+    "($lhs, $rhs, /*Name=*/\"\", op.hasNoUnsignedWrap(), op.hasNoSignedWrap());";
+}
 class LLVM_FloatArithmeticOp<string mnemonic, string instName,
                              list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<LLVM_AnyFloat, mnemonic, instName,
@@ -90,9 +110,11 @@ class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
 }
 
 // Integer binary operations.
-def LLVM_AddOp : LLVM_IntArithmeticOp<"add", "Add", [Commutative]>;
-def LLVM_SubOp : LLVM_IntArithmeticOp<"sub", "Sub">;
-def LLVM_MulOp : LLVM_IntArithmeticOp<"mul", "Mul", [Commutative]>;
+def LLVM_AddOp : LLVM_IntArithmeticOpWithOverflowFlag<"add", "Add",
+    [Commutative]>;
+def LLVM_SubOp : LLVM_IntArithmeticOpWithOverflowFlag<"sub", "Sub", []>;
+def LLVM_MulOp : LLVM_IntArithmeticOpWithOverflowFlag<"mul", "Mul",
+    [Commutative]>;
 def LLVM_UDivOp : LLVM_IntArithmeticOp<"udiv", "UDiv">;
 def LLVM_SDivOp : LLVM_IntArithmeticOp<"sdiv", "SDiv">;
 def LLVM_URemOp : LLVM_IntArithmeticOp<"urem", "URem">;
@@ -102,7 +124,7 @@ def LLVM_OrOp : LLVM_IntArithmeticOp<"or", "Or"> {
   let hasFolder = 1;
 }
 def LLVM_XOrOp : LLVM_IntArithmeticOp<"xor", "Xor">;
-def LLVM_ShlOp : LLVM_IntArithmeticOp<"shl", "Shl"> {
+def LLVM_ShlOp : LLVM_IntArithmeticOpWithOverflowFlag<"shl", "Shl", []> {
   let hasFolder = 1;
 }
 def LLVM_LShrOp : LLVM_IntArithmeticOp<"lshr", "LShr">;

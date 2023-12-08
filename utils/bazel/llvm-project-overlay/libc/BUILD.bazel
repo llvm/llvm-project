@@ -451,6 +451,7 @@ libc_support_library(
     hdrs = ["src/__support/UInt.h"],
     deps = [
         ":__support_cpp_array",
+        ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_optional",
         ":__support_cpp_type_traits",

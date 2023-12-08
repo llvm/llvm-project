@@ -646,7 +646,7 @@ inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
 inline Block &createPointerJumpStubBlock(LinkGraph &G, Section &StubSection,
                                          Symbol &PointerSymbol) {
   auto &B = G.createContentBlock(StubSection, PointerJumpStubContent,
-                                 orc::ExecutorAddr(~uint64_t(11)), 1, 0);
+                                 orc::ExecutorAddr(~uint64_t(11)), 4, 0);
   B.addEdge(Page21, 0, PointerSymbol, 0);
   B.addEdge(PageOffset12, 4, PointerSymbol, 0);
   return B;
