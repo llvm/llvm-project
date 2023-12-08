@@ -24,6 +24,8 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; NONE-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX]], [[N_MOD_VF]]
 ; NONE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; NONE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; NONE-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
+; NONE-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
 ; NONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NONE:       vector.body:
 ; NONE-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
@@ -31,8 +33,6 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; NONE-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP4]]
 ; NONE-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP5]], i32 0
 ; NONE-NEXT:    store <vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP6]], align 4
-; NONE-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; NONE-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
 ; NONE-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], [[TMP8]]
 ; NONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT2]], [[N_VEC]]
 ; NONE-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -71,6 +71,8 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; DATA-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; DATA-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; DATA-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
+; DATA-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 4
 ; DATA-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DATA:       vector.body:
 ; DATA-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
@@ -79,8 +81,6 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP9]]
 ; DATA-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP10]], i32 0
 ; DATA-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP11]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
-; DATA-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
-; DATA-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 4
 ; DATA-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP13]]
 ; DATA-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], [[N_VEC]]
 ; DATA-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -121,6 +121,8 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT4]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; DATA_NO_LANEMASK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
+; DATA_NO_LANEMASK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 4
 ; DATA_NO_LANEMASK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DATA_NO_LANEMASK:       vector.body:
 ; DATA_NO_LANEMASK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT6:%.*]], [[VECTOR_BODY]] ]
@@ -134,8 +136,6 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP9]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP13]], i32 0
 ; DATA_NO_LANEMASK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT5]], ptr [[TMP14]], i32 4, <vscale x 4 x i1> [[TMP12]])
-; DATA_NO_LANEMASK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; DATA_NO_LANEMASK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 4
 ; DATA_NO_LANEMASK-NEXT:    [[INDEX_NEXT6]] = add i64 [[INDEX1]], [[TMP16]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC]]
 ; DATA_NO_LANEMASK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -174,6 +174,8 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
 ; DATA_AND_CONTROL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; DATA_AND_CONTROL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; DATA_AND_CONTROL-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
+; DATA_AND_CONTROL-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 4
 ; DATA_AND_CONTROL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DATA_AND_CONTROL:       vector.body:
 ; DATA_AND_CONTROL-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
@@ -182,8 +184,6 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP9]]
 ; DATA_AND_CONTROL-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP10]], i32 0
 ; DATA_AND_CONTROL-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP11]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
-; DATA_AND_CONTROL-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
-; DATA_AND_CONTROL-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 4
 ; DATA_AND_CONTROL-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP13]]
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT2]], i64 [[UMAX]])
 ; DATA_AND_CONTROL-NEXT:    [[TMP14:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
@@ -225,6 +225,8 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
+; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 4
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DATA_AND_CONTROL_NO_RT_CHECK:       vector.body:
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
@@ -233,8 +235,6 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP10]]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP11]], i32 0
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP12]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 4
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP14]]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[TMP9]])
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP15:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)

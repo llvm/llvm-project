@@ -40,6 +40,11 @@ namespace clang {
 ///   Update getAsString.
 ///
 enum class SyncScope {
+  SystemScope,
+  DeviceScope,
+  WorkgroupScope,
+  WavefrontScope,
+  SingleScope,
   HIPSingleThread,
   HIPWavefront,
   HIPWorkgroup,
@@ -54,6 +59,16 @@ enum class SyncScope {
 
 inline llvm::StringRef getAsString(SyncScope S) {
   switch (S) {
+  case SyncScope::SystemScope:
+    return "system_scope";
+  case SyncScope::DeviceScope:
+    return "device_scope";
+  case SyncScope::WorkgroupScope:
+    return "workgroup_scope";
+  case SyncScope::WavefrontScope:
+    return "wavefront_scope";
+  case SyncScope::SingleScope:
+    return "single_scope";
   case SyncScope::HIPSingleThread:
     return "hip_singlethread";
   case SyncScope::HIPWavefront:
@@ -77,7 +92,7 @@ inline llvm::StringRef getAsString(SyncScope S) {
 }
 
 /// Defines the kind of atomic scope models.
-enum class AtomicScopeModelKind { None, OpenCL, HIP };
+enum class AtomicScopeModelKind { None, OpenCL, HIP, Generic };
 
 /// Defines the interface for synch scope model.
 class AtomicScopeModel {
@@ -205,6 +220,56 @@ public:
   }
 };
 
+/// Defines the generic atomic scope model.
+class AtomicScopeGenericModel : public AtomicScopeModel {
+public:
+  /// The enum values match predefined built-in macros __ATOMIC_SCOPE_*.
+  enum ID {
+    System = 0,
+    Device = 1,
+    Workgroup = 2,
+    Wavefront = 3,
+    Single = 4,
+    Last = Single
+  };
+
+  AtomicScopeGenericModel() = default;
+
+  SyncScope map(unsigned S) const override {
+    switch (static_cast<ID>(S)) {
+    case Device:
+      return SyncScope::DeviceScope;
+    case System:
+      return SyncScope::SystemScope;
+    case Workgroup:
+      return SyncScope::WorkgroupScope;
+    case Wavefront:
+      return SyncScope::WavefrontScope;
+    case Single:
+      return SyncScope::SingleScope;
+    }
+    llvm_unreachable("Invalid language sync scope value");
+  }
+
+  bool isValid(unsigned S) const override {
+    return S >= static_cast<unsigned>(System) &&
+           S <= static_cast<unsigned>(Last);
+  }
+
+  ArrayRef<unsigned> getRuntimeValues() const override {
+    static_assert(Last == Single, "Does not include all sync scopes");
+    static const unsigned Scopes[] = {
+        static_cast<unsigned>(Device), static_cast<unsigned>(System),
+        static_cast<unsigned>(Workgroup), static_cast<unsigned>(Wavefront),
+        static_cast<unsigned>(Single)};
+    return llvm::ArrayRef(Scopes);
+  }
+
+  unsigned getFallBackValue() const override {
+    return static_cast<unsigned>(System);
+  }
+};
+
 inline std::unique_ptr<AtomicScopeModel>
 AtomicScopeModel::create(AtomicScopeModelKind K) {
   switch (K) {
@@ -214,6 +279,8 @@ AtomicScopeModel::create(AtomicScopeModelKind K) {
     return std::make_unique<AtomicScopeOpenCLModel>();
   case AtomicScopeModelKind::HIP:
     return std::make_unique<AtomicScopeHIPModel>();
+  case AtomicScopeModelKind::Generic:
+    return std::make_unique<AtomicScopeGenericModel>();
   }
   llvm_unreachable("Invalid atomic scope model kind");
 }
