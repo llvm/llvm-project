@@ -307,3 +307,106 @@ void test_cvt_sr_pk_bf16_f32(global short2* out, float a, float b, short2 sr)
 {
   *out = __builtin_amdgcn_cvt_sr_pk_bf16_f32(a, b, sr);
 }
+
+// CHECK-LABEL: @test_pk_add_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x i16> [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    store <2 x i16> [[B:%.*]], ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.amdgcn.pk.add.bf16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x i16> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_pk_add_bf16(global short2* out, short2 a, short2 b)
+{
+  *out = __builtin_amdgcn_pk_add_bf16(a, b);
+}
+
+// CHECK-LABEL: @test_pk_mul_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x i16> [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    store <2 x i16> [[B:%.*]], ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.amdgcn.pk.mul.bf16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x i16> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_pk_mul_bf16(global short2* out, short2 a, short2 b)
+{
+  *out = __builtin_amdgcn_pk_mul_bf16(a, b);
+}
+
+// CHECK-LABEL: @test_pk_max_num_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x i16> [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    store <2 x i16> [[B:%.*]], ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.amdgcn.pk.max.num.bf16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x i16> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_pk_max_num_bf16(global short2* out, short2 a, short2 b)
+{
+  *out = __builtin_amdgcn_pk_max_num_bf16(a, b);
+}
+
+// CHECK-LABEL: @test_pk_min_num_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x i16> [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    store <2 x i16> [[B:%.*]], ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.amdgcn.pk.min.num.bf16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x i16> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_pk_min_num_bf16(global short2* out, short2 a, short2 b)
+{
+  *out = __builtin_amdgcn_pk_min_num_bf16(a, b);
+}
+
+// CHECK-LABEL: @test_pk_fma_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x i16> [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    store <2 x i16> [[B:%.*]], ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    store <2 x i16> [[C:%.*]], ptr addrspace(5) [[C_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i16>, ptr addrspace(5) [[C_ADDR]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i16> @llvm.amdgcn.pk.fma.bf16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]], <2 x i16> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x i16> [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_pk_fma_bf16(global short2* out, short2 a, short2 b, short2 c)
+{
+  *out = __builtin_amdgcn_pk_fma_bf16(a, b, c);
+}
