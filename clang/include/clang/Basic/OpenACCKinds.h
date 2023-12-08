@@ -69,6 +69,19 @@ enum class OpenACCAtomicKind {
   Capture,
   Invalid,
 };
+
+// Represents the kind of an OpenACC clause.
+enum class OpenACCClauseKind {
+  Finalize,
+  IfPresent,
+  Seq,
+  Independent,
+  Auto,
+  Worker,
+  Vector,
+  NoHost,
+  Invalid,
+};
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_OPENACCKINDS_H
