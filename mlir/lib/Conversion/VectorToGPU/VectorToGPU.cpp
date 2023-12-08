@@ -303,8 +303,9 @@ static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
 /// `getSlice`. In scf.for we only want to include as part of the slice elements
 /// that are part of the use/def chain.
 static SetVector<Operation *>
-getSliceContract(Operation *op, BackwardSliceOptions backwardSliceOptions,
-                 ForwardSliceOptions forwardSliceOptions) {
+getSliceContract(Operation *op,
+                 const BackwardSliceOptions &backwardSliceOptions,
+                 const ForwardSliceOptions &forwardSliceOptions) {
   SetVector<Operation *> slice;
   slice.insert(op);
   unsigned currentIndex = 0;
@@ -557,7 +558,7 @@ convertTransferReadOp(RewriterBase &rewriter, vector::TransferReadOp op,
   auto elType = op.getVectorType().getElementType();
   const char *fragType = inferFragType(op);
   if (op->hasOneUse()) {
-    auto user = *op->user_begin();
+    auto *user = *op->user_begin();
     // Infer the signedness of the mma type from the integer extend.
     bool isSignedExtend = isa<arith::ExtSIOp>(user);
     if (isSignedExtend || isa<arith::ExtUIOp>(user)) {
