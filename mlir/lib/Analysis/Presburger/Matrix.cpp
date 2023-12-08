@@ -551,10 +551,6 @@ Fraction FracMatrix::determinant(FracMatrix *inverse) const {
 }
 
 FracMatrix FracMatrix::gramSchmidt() const {
-  bool linIndep =
-      (nRows < nColumns) || (nRows == nColumns && determinant() != 0);
-  assert(linIndep && "the vectors must be linearly independent!");
-
   // Create a copy of the argument to store
   // the orthogonalised version.
   FracMatrix orth(*this);
@@ -565,8 +561,10 @@ FracMatrix FracMatrix::gramSchmidt() const {
   // of any of the previous vectors.
   for (unsigned i = 1, e = getNumRows(); i < e; i++) {
     for (unsigned j = 0; j < i; j++) {
+      Fraction jDotProd = dotProduct(orth.getRow(j), orth.getRow(j));
+      assert(jDotProd != 0 && "linearly dependent vectors passed to gramSchmidt()!");
       Fraction projectionScale = dotProduct(orth.getRow(i), orth.getRow(j)) /
-                                 dotProduct(orth.getRow(j), orth.getRow(j));
+                                 jDotProd;
       orth.addToRow(j, i, -projectionScale);
     }
   }
