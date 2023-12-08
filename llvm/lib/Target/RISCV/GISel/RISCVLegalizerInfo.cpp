@@ -85,8 +85,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalIf(all(
           typeInSet(0, AllVecTys),
           LegalityPredicate([=, &ST](const LegalityQuery &Query) {
-						return ST.hasVInstructions() &&
-                   (Query.Types[0].getScalarSizeInBits() != 64 || ST.hasVInstructionsI64()) &&
+            return ST.hasVInstructions() &&
+                   (Query.Types[0].getScalarSizeInBits() != 64 ||
+                    ST.hasVInstructionsI64()) &&
                    (Query.Types[0].getElementCount().getKnownMinValue() != 1 ||
                     ST.getELen() == 64);
           })))
