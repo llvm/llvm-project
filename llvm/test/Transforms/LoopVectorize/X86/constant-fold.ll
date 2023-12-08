@@ -13,7 +13,7 @@
 define void @f1() {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  bb1:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -27,20 +27,7 @@ define void @f1() {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[BB3:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 2, [[MIDDLE_BLOCK]] ], [ 0, [[BB1:%.*]] ]
-; CHECK-NEXT:    br label [[BB2:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    [[C_1_0:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[_TMP9:%.*]], [[BB2]] ]
-; CHECK-NEXT:    [[_TMP1:%.*]] = zext i16 0 to i64
-; CHECK-NEXT:    [[_TMP2:%.*]] = getelementptr [1 x %rec8], ptr @a, i16 0, i64 [[_TMP1]]
-; CHECK-NEXT:    [[_TMP6:%.*]] = sext i16 [[C_1_0]] to i64
-; CHECK-NEXT:    [[_TMP7:%.*]] = getelementptr [2 x ptr], ptr @b, i16 0, i64 [[_TMP6]]
-; CHECK-NEXT:    store ptr [[_TMP2]], ptr [[_TMP7]], align 8
-; CHECK-NEXT:    [[_TMP9]] = add nsw i16 [[C_1_0]], 1
-; CHECK-NEXT:    [[_TMP11:%.*]] = icmp slt i16 [[_TMP9]], 2
-; CHECK-NEXT:    br i1 [[_TMP11]], label [[BB2]], label [[BB3]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
 ;

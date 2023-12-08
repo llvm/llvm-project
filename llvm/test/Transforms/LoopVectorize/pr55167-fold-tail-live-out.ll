@@ -4,7 +4,7 @@
 define i32 @test(i32 %a, i1 %c.1, i1 %c.2 ) #0 {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
@@ -36,33 +36,9 @@ define i32 @test(i32 %a, i1 %c.1, i1 %c.2 ) #0 {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[PREDPHI5]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PREDPHI7]])
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 182, [[MIDDLE_BLOCK]] ], [ 6, [[BB:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 35902, [[BB]] ], [ [[TMP10]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[V_2:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[P_2:%.*]], [[LOOP_LATCH]] ]
-; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_LATCH]], label [[BODY_1:%.*]]
-; CHECK:       body.1:
-; CHECK-NEXT:    [[V_2_ADD:%.*]] = add i32 [[V_2]], 10
-; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[BODY_2:%.*]]
-; CHECK:       body.2:
-; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[V_2_ADD]], 20
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A]], 1
-; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD_1]], [[XOR]]
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[P_1:%.*]] = phi i32 [ [[IV]], [[LOOP_HEADER]] ], [ 9, [[BODY_1]] ], [ 9, [[BODY_2]] ]
-; CHECK-NEXT:    [[P_2]] = phi i32 [ [[V_2]], [[LOOP_HEADER]] ], [ [[V_2_ADD]], [[BODY_1]] ], [ [[ADD_2]], [[BODY_2]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp ult i32 [[IV]], 181
-; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_HEADER]], label [[EXIT]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[E_1:%.*]] = phi i32 [ [[P_1]], [[LOOP_LATCH]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[E_2:%.*]] = phi i32 [ [[P_2]], [[LOOP_LATCH]] ], [ [[TMP10]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_1]], [[E_2]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 bb:

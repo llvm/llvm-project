@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx13.0.0"
 define void @test_pr59090(ptr %l_out, ptr noalias %b) #0 {
 ; CHECK-LABEL: @test_pr59090(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -77,23 +77,7 @@ define void @test_pr59090(ptr %l_out, ptr noalias %b) #0 {
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10008
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10008, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_MUL:%.*]] = mul nuw i64 [[IV]], 6
-; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    store i8 [[L]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    [[ARRAYIDX77:%.*]] = getelementptr i8, ptr [[L_OUT]], i64 [[IV_MUL]]
-; CHECK-NEXT:    store i8 0, ptr [[ARRAYIDX77]], align 1, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    [[ADD_2:%.*]] = add i64 [[IV_MUL]], 2
-; CHECK-NEXT:    [[ARRAYIDX97:%.*]] = getelementptr i8, ptr [[L_OUT]], i64 [[ADD_2]]
-; CHECK-NEXT:    store i8 0, ptr [[ARRAYIDX97]], align 1, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV]], 10000
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

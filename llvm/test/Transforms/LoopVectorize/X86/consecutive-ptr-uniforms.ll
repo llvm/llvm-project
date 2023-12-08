@@ -81,7 +81,7 @@ attributes #0 = { "target-cpu"="knl" }
 ;
 ; FORCE-LABEL: @PR40816(
 ; FORCE-NEXT:  entry:
-; FORCE-NEXT:    br i1 false, label {{%.*}}, label [[VECTOR_PH:%.*]]
+; FORCE-NEXT:    br label [[VECTOR_PH:%.*]]
 ; FORCE:       vector.ph:
 ; FORCE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FORCE:       vector.body:

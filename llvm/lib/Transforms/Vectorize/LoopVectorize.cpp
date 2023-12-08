@@ -80,6 +80,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/DemandedBits.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -607,6 +608,29 @@ public:
   /// preheader block has been executed. Note that this always holds the trip
   /// count of the original loop for both main loop and epilogue vectorization.
   void setTripCount(Value *TC) { TripCount = TC; }
+
+  BasicBlock *getMiddleBlock() { return LoopMiddleBlock; }
+
+  BasicBlock *getMinIterBlock() {
+    return LoopBypassBlocks.size() == 1 ? LoopBypassBlocks[0] : nullptr;
+  }
+
+  bool isOriginalLoopDead() {
+    auto *MinIter = getMinIterBlock();
+    if (!MinIter)
+      return false;
+    {
+      auto BI = cast<BranchInst>(MinIter->getTerminator());
+      if (!BI->isConditional() ||
+          BI->getCondition() !=
+              ConstantInt::get(BI->getCondition()->getType(), 0))
+        return false;
+    }
+    auto *BI = cast<BranchInst>(LoopMiddleBlock->getTerminator());
+    return BI->isConditional() &&
+           BI->getCondition() ==
+               ConstantInt::get(BI->getCondition()->getType(), 1);
+  }
 
 protected:
   friend class LoopVectorizationPlanner;
@@ -10151,6 +10175,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   bool DisableRuntimeUnroll = false;
   MDNode *OrigLoopID = L->getLoopID();
+
+  bool IsOriginalLoopDead = false;
+  BasicBlock *MiddleBlock = nullptr;
+  BasicBlock *MinIterBlock = nullptr;
   {
     using namespace ore;
     if (!VectorizeLoop) {
@@ -10268,6 +10296,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
 
+        IsOriginalLoopDead = LB.isOriginalLoopDead();
+        MiddleBlock = LB.getMiddleBlock();
+        MinIterBlock = LB.getMinIterBlock();
+
         // Add metadata to disable runtime unrolling a scalar loop when there
         // are no runtime checks about strides and memory. A scalar loop that is
         // rarely used is not worth unrolling.
@@ -10295,7 +10327,36 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     Hints.setAlreadyVectorized();
   }
 
-  assert(!verifyFunction(*L->getHeader()->getParent(), &dbgs()));
+  if (IsOriginalLoopDead) {
+    auto *Br = cast<BranchInst>(MiddleBlock->getTerminator());
+    for (PHINode &PN : L->getExitBlock()->phis()) {
+      for (unsigned I = 0; I != PN.getNumIncomingValues(); ++I) {
+        if (LI->getLoopFor(PN.getIncomingBlock(I)) != L)
+          continue;
+        PN.setIncomingValue(I, UndefValue::get(PN.getType()));
+      }
+    }
+
+    formDedicatedExitBlocks(L, DT, LI, nullptr, true);
+    deleteDeadLoop(L, DT, SE, LI);
+    BasicBlock *PH = Br->getSuccessor(1);
+    BasicBlock *Exit = PH->getSingleSuccessor();
+
+    BranchInst::Create(Br->getSuccessor(0), MiddleBlock);
+    Br->eraseFromParent();
+
+    auto *Br2 = cast<BranchInst>(MinIterBlock->getTerminator());
+    BranchInst::Create(Br2->getSuccessor(1), MinIterBlock);
+    Br2->eraseFromParent();
+
+    LI->removeBlock(PH);
+    LI->removeBlock(Exit);
+
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    DeleteDeadBlocks({PH, Exit}, &DTU);
+  }
+
+  assert(!verifyFunction(*F, &dbgs()));
   return true;
 }
 
