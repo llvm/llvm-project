@@ -7047,7 +7047,7 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
         Value *InvOp1 = getFreelyInverted(Op1, Op1->hasOneUse(), &Builder);
         assert(InvOp0 && InvOp1 &&
                "Mismatch between isFreeToInvert and getFreelyInverted");
-        return new ICmpInst(I.getSwappedPredicate(Pred), InvOp0, InvOp1);
+        return new ICmpInst(I.getSwappedPredicate(), InvOp0, InvOp1);
       }
     }
 
