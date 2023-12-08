@@ -897,11 +897,17 @@ Arm and AArch64 Support
 
 - New AArch64 asm constraints have been added for r8-r11(Uci) and r12-r15(Ucj).
 
-  Support has been added for the following processors (-mcpu identifiers in parenthesis):
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
-  * Arm Cortex-A520 (cortex-a520).
-  * Arm Cortex-A720 (cortex-a720).
-  * Arm Cortex-X4 (cortex-x4).
+  For Arm:
+
+  * Cortex-M52 (cortex-m52).
+
+  For AArch64:
+
+  * Cortex-A520 (cortex-a520).
+  * Cortex-A720 (cortex-a720).
+  * Cortex-X4 (cortex-x4).
 
 Android Support
 ^^^^^^^^^^^^^^^
