@@ -408,8 +408,15 @@ public:
   lowerNestedBreakContinue(mlir::Region &loopBody, mlir::Block *exitBlock,
                            mlir::Block *continueBlock,
                            mlir::ConversionPatternRewriter &rewriter) const {
+    // top-level yields are lowered in matchAndRewrite
+    auto isNested = [&](mlir::Operation *op) {
+      return op->getParentRegion() != &loopBody;
+    };
 
     auto processBreak = [&](mlir::Operation *op) {
+      if (!isNested(op))
+        return mlir::WalkResult::advance();
+
       if (isa<mlir::cir::LoopOp, mlir::cir::SwitchOp>(
               *op)) // don't process breaks in nested loops and switches
         return mlir::WalkResult::skip();
@@ -421,6 +428,9 @@ public:
     };
 
     auto processContinue = [&](mlir::Operation *op) {
+      if (!isNested(op))
+        return mlir::WalkResult::advance();
+
       if (isa<mlir::cir::LoopOp>(
               *op)) // don't process continues in nested loops
         return mlir::WalkResult::skip();
@@ -490,7 +500,10 @@ public:
 
     // Branch from body to condition or to step on for-loop cases.
     rewriter.setInsertionPoint(bodyYield);
-    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(bodyYield, &stepBlock);
+    auto bodyYieldDest = bodyYield.getKind() == mlir::cir::YieldOpKind::Break
+                             ? continueBlock
+                             : &stepBlock;
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(bodyYield, bodyYieldDest);
 
     // Is a for loop: branch from step to condition.
     if (kind == LoopKind::For) {
@@ -822,11 +835,15 @@ public:
     // Stack restore before leaving the body region.
     rewriter.setInsertionPointToEnd(afterBody);
     auto yieldOp = cast<mlir::cir::YieldOp>(afterBody->getTerminator());
-    auto branchOp = rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
-        yieldOp, yieldOp.getArgs(), continueBlock);
 
-    // // Insert stack restore before jumping out of the body of the region.
-    rewriter.setInsertionPoint(branchOp);
+    if (!isLoopYield(yieldOp)) {
+      auto branchOp = rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+          yieldOp, yieldOp.getArgs(), continueBlock);
+
+      // // Insert stack restore before jumping out of the body of the region.
+      rewriter.setInsertionPoint(branchOp);
+    }
+
     // TODO(CIR): stackrestore?
     // rewriter.create<mlir::LLVM::StackRestoreOp>(loc, stackSaveOp);
 
