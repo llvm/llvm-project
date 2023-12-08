@@ -89,11 +89,8 @@ add_libc_test(
   SRCS
     uint_test.cpp
   DEPENDS
-    libc.src.__support.CPP.bit
-    libc.src.__support.CPP.optional
-    libc.src.__support.CPP.type_traits
-    libc.src.__support.macros.properties.float
     libc.src.__support.uint
+    libc.src.__support.CPP.optional
 )
 
 add_libc_test(
