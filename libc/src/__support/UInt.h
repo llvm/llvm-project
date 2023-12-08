@@ -25,13 +25,12 @@
 
 namespace LIBC_NAMESPACE::cpp {
 
-// BigInt has the same semantics as the 'standard integer types' and can be
-// safely 'bit_cast'ed to compatible types.
 template <size_t Bits, bool Signed> struct BigInt {
+
   static_assert(Bits > 0 && Bits % 64 == 0,
                 "Number of bits in BigInt should be a multiple of 64.");
   LIBC_INLINE_VAR static constexpr size_t WORDCOUNT = Bits / 64;
-  uint64_t val[WORDCOUNT];
+  uint64_t val[WORDCOUNT]{};
 
   LIBC_INLINE_VAR static constexpr uint64_t MASK32 = 0xFFFFFFFFu;
 
@@ -159,7 +158,7 @@ template <size_t Bits, bool Signed> struct BigInt {
 
   LIBC_INLINE constexpr BigInt<Bits, Signed>
   operator+(const BigInt<Bits, Signed> &other) const {
-    BigInt<Bits, Signed> result(0);
+    BigInt<Bits, Signed> result;
     SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       s = add_with_carry(val[i], other.val[i], s.carry);
@@ -172,7 +171,7 @@ template <size_t Bits, bool Signed> struct BigInt {
   // it will always use the constexpr version of add_with_carry.
   LIBC_INLINE constexpr BigInt<Bits, Signed>
   operator+(BigInt<Bits, Signed> &&other) const {
-    BigInt<Bits, Signed> result(0);
+    BigInt<Bits, Signed> result;
     SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       s = add_with_carry_const(val[i], other.val[i], s.carry);
@@ -200,7 +199,7 @@ template <size_t Bits, bool Signed> struct BigInt {
 
   LIBC_INLINE BigInt<Bits, Signed>
   operator-(const BigInt<Bits, Signed> &other) const {
-    BigInt<Bits, Signed> result(0);
+    BigInt<Bits, Signed> result;
     DiffBorrow<uint64_t> d{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       d = sub_with_borrow(val[i], other.val[i], d.borrow);
@@ -211,7 +210,7 @@ template <size_t Bits, bool Signed> struct BigInt {
 
   LIBC_INLINE constexpr BigInt<Bits, Signed>
   operator-(BigInt<Bits, Signed> &&other) const {
-    BigInt<Bits, Signed> result(0);
+    BigInt<Bits, Signed> result;
     DiffBorrow<uint64_t> d{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       d = sub_with_borrow_const(val[i], other.val[i], d.borrow);
@@ -691,7 +690,7 @@ template <size_t Bits, bool Signed> struct BigInt {
 
   LIBC_INLINE constexpr BigInt<Bits, Signed>
   operator&(const BigInt<Bits, Signed> &other) const {
-    BigInt<Bits, Signed> result(0);
+    BigInt<Bits, Signed> result;
     for (size_t i = 0; i < WORDCOUNT; ++i)
       result.val[i] = val[i] & other.val[i];
     return result;
@@ -706,7 +705,7 @@ template <size_t Bits, bool Signed> struct BigInt {
 
   LIBC_INLINE constexpr BigInt<Bits, Signed>
   operator|(const BigInt<Bits, Signed> &other) const {
-    BigInt<Bits, Signed> result(0);
+    BigInt<Bits, Signed> result;
     for (size_t i = 0; i < WORDCOUNT; ++i)
       result.val[i] = val[i] | other.val[i];
     return result;
@@ -721,7 +720,7 @@ template <size_t Bits, bool Signed> struct BigInt {
 
   LIBC_INLINE constexpr BigInt<Bits, Signed>
   operator^(const BigInt<Bits, Signed> &other) const {
-    BigInt<Bits, Signed> result(0);
+    BigInt<Bits, Signed> result;
     for (size_t i = 0; i < WORDCOUNT; ++i)
       result.val[i] = val[i] ^ other.val[i];
     return result;
@@ -735,7 +734,7 @@ template <size_t Bits, bool Signed> struct BigInt {
   }
 
   LIBC_INLINE constexpr BigInt<Bits, Signed> operator~() const {
-    BigInt<Bits, Signed> result(0);
+    BigInt<Bits, Signed> result;
     for (size_t i = 0; i < WORDCOUNT; ++i)
       result.val[i] = ~val[i];
     return result;
