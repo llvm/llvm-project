@@ -54482,6 +54482,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   SDValue Op0 = Ops[0];
   bool IsSplat = llvm::all_equal(Ops);
   unsigned NumOps = Ops.size();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Repeated subvectors.
   if (IsSplat &&
@@ -54938,7 +54939,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         if (SelVT.getVectorElementType() == MVT::i1) {
           SelVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
                                    NumOps * SelVT.getVectorNumElements());
-          if (DAG.getTargetLoweringInfo().isTypeLegal(SelVT))
+          if (TLI.isTypeLegal(SelVT))
             return DAG.getNode(Op0.getOpcode(), DL, VT,
                                ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
                                ConcatSubOperand(VT, Ops, 1),
@@ -54952,7 +54953,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           IsConcatFree(VT, Ops, 1) && IsConcatFree(VT, Ops, 2)) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
         SelVT = SelVT.getDoubleNumVectorElementsVT(*DAG.getContext());
-        if (DAG.getTargetLoweringInfo().isTypeLegal(SelVT))
+        if (TLI.isTypeLegal(SelVT))
           return DAG.getNode(Op0.getOpcode(), DL, VT,
                              ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
                              ConcatSubOperand(VT, Ops, 1),
