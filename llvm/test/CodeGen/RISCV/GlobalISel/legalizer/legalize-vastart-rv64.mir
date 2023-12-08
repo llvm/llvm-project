@@ -20,7 +20,7 @@ body:             |
     ; RV64-NEXT: {{  $}}
     ; RV64-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
     ; RV64-NEXT: [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    ; RV64-NEXT: G_STORE [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0) :: (store (s64))
+    ; RV64-NEXT: G_STORE [[FRAME_INDEX1]](p0), [[FRAME_INDEX]](p0) :: (store (s64))
     ; RV64-NEXT: PseudoRET
     %8:_(p0) = G_FRAME_INDEX %stack.0
     G_VASTART %8(p0) :: (store (s64))
