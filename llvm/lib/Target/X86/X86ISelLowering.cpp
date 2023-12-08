@@ -8727,6 +8727,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // constants. Insertion into a zero vector is handled as a special-case
   // somewhere below here.
   if (NumConstants == NumElems - 1 && NumNonZero != 1 &&
+      FrozenUndefMask.isZero() &&
       (isOperationLegalOrCustom(ISD::INSERT_VECTOR_ELT, VT) ||
        isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE, VT))) {
     // Create an all-constant vector. The variable element in the old
