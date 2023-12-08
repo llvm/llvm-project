@@ -385,8 +385,8 @@ define dso_local i32 @load_forced_small_data() #0 {
 ;
 ; MEDIUM-STATIC-LABEL: load_forced_small_data:
 ; MEDIUM-STATIC:       # %bb.0:
-; MEDIUM-STATIC-NEXT:    movl $forced_small_data, %eax
-; MEDIUM-STATIC-NEXT:    movl 8(%rax), %eax
+; MEDIUM-STATIC-NEXT:    movl $forced_small_data+8, %eax
+; MEDIUM-STATIC-NEXT:    movl (%rax), %eax
 ; MEDIUM-STATIC-NEXT:    retq
 ;
 ; LARGE-STATIC-LABEL: load_forced_small_data:
@@ -402,14 +402,12 @@ define dso_local i32 @load_forced_small_data() #0 {
 ;
 ; MEDIUM-SMALL-DATA-PIC-LABEL: load_forced_small_data:
 ; MEDIUM-SMALL-DATA-PIC:       # %bb.0:
-; MEDIUM-SMALL-DATA-PIC-NEXT:    leaq forced_small_data(%rip), %rax
-; MEDIUM-SMALL-DATA-PIC-NEXT:    movl 8(%rax), %eax
+; MEDIUM-SMALL-DATA-PIC-NEXT:    movl forced_small_data+8(%rip), %eax
 ; MEDIUM-SMALL-DATA-PIC-NEXT:    retq
 ;
 ; MEDIUM-PIC-LABEL: load_forced_small_data:
 ; MEDIUM-PIC:       # %bb.0:
-; MEDIUM-PIC-NEXT:    leaq forced_small_data(%rip), %rax
-; MEDIUM-PIC-NEXT:    movl 8(%rax), %eax
+; MEDIUM-PIC-NEXT:    movl forced_small_data+8(%rip), %eax
 ; MEDIUM-PIC-NEXT:    retq
 ;
 ; LARGE-PIC-LABEL: load_forced_small_data:
@@ -497,7 +495,8 @@ define dso_local ptr @lea_forced_large_data() #0 {
 define dso_local i32 @load_forced_large_data() #0 {
 ; SMALL-STATIC-LABEL: load_forced_large_data:
 ; SMALL-STATIC:       # %bb.0:
-; SMALL-STATIC-NEXT:    movl forced_large_data+8(%rip), %eax
+; SMALL-STATIC-NEXT:    movl $8, %eax
+; SMALL-STATIC-NEXT:    movl forced_large_data(%rax), %eax
 ; SMALL-STATIC-NEXT:    retq
 ;
 ; MEDIUM-STATIC-LABEL: load_forced_large_data:
@@ -515,7 +514,8 @@ define dso_local i32 @load_forced_large_data() #0 {
 ; SMALL-PIC-LABEL: load_forced_large_data:
 ; SMALL-PIC:       # %bb.0:
 ; SMALL-PIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
-; SMALL-PIC-NEXT:    movl forced_large_data@GOTOFF+8(%rax), %eax
+; SMALL-PIC-NEXT:    movl $8, %ecx
+; SMALL-PIC-NEXT:    movl forced_large_data@GOTOFF(%rax,%rcx), %eax
 ; SMALL-PIC-NEXT:    retq
 ;
 ; MEDIUM-SMALL-DATA-PIC-LABEL: load_forced_large_data:
@@ -580,8 +580,7 @@ define dso_local i32 @load_global_data() #0 {
 ;
 ; MEDIUM-SMALL-DATA-PIC-LABEL: load_global_data:
 ; MEDIUM-SMALL-DATA-PIC:       # %bb.0:
-; MEDIUM-SMALL-DATA-PIC-NEXT:    leaq global_data(%rip), %rax
-; MEDIUM-SMALL-DATA-PIC-NEXT:    movl 8(%rax), %eax
+; MEDIUM-SMALL-DATA-PIC-NEXT:    movl global_data+8(%rip), %eax
 ; MEDIUM-SMALL-DATA-PIC-NEXT:    retq
 ;
 ; MEDIUM-PIC-LABEL: load_global_data:

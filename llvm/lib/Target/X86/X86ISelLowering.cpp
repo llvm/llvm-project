@@ -2674,34 +2674,35 @@ SDValue X86TargetLowering::getReturnAddressFrameIndex(SelectionDAG &DAG) const {
   return DAG.getFrameIndex(ReturnAddrIndex, getPointerTy(DAG.getDataLayout()));
 }
 
-bool X86::isOffsetSuitableForCodeModel(int64_t Offset, CodeModel::Model M,
-                                       bool hasSymbolicDisplacement) {
+bool X86::isOffsetSuitableForCodeModel(int64_t Offset, const TargetMachine &TM,
+                                       const GlobalValue *GV,
+                                       bool HasSymbolicDisplacement) {
   // Offset should fit into 32 bit immediate field.
   if (!isInt<32>(Offset))
     return false;
 
   // If we don't have a symbolic displacement - we don't have any extra
   // restrictions.
-  if (!hasSymbolicDisplacement)
+  if (!HasSymbolicDisplacement)
     return true;
 
-  // FIXME: Some tweaks might be needed for medium code model.
-  if (M != CodeModel::Small && M != CodeModel::Kernel)
+  // We can fold offsets in cases where we have a 64-bit relocation, but it
+  // doesn't really help.
+  if (TM.getCodeModel() == CodeModel::Large ||
+      (GV && TM.isLargeGlobalValue(GV)))
     return false;
-
-  // For small code model we assume that latest object is 16MB before end of 31
-  // bits boundary. We may also accept pretty large negative constants knowing
-  // that all objects are in the positive half of address space.
-  if (M == CodeModel::Small && Offset < 16*1024*1024)
-    return true;
 
   // For kernel code model we know that all object resist in the negative half
   // of 32bits address space. We may not accept negative offsets, since they may
   // be just off and we may accept pretty large positive ones.
-  if (M == CodeModel::Kernel && Offset >= 0)
-    return true;
+  if (TM.getCodeModel() == CodeModel::Kernel)
+    return Offset >= 0;
 
-  return false;
+  // For other non-large code models we assume that latest small object is 16MB
+  // before end of 31 bits boundary. We may also accept pretty large negative
+  // constants knowing that all objects are in the positive half of address
+  // space.
+  return Offset < 16 * 1024 * 1024;
 }
 
 /// Return true if the condition is an signed comparison operation.
@@ -18442,7 +18443,6 @@ SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
   bool HasPICReg = isGlobalRelativeToPICBase(OpFlags);
   bool NeedsLoad = isGlobalStubReference(OpFlags);
 
-  CodeModel::Model M = DAG.getTarget().getCodeModel();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Result;
 
@@ -18454,7 +18454,8 @@ SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
     // relocation will compute to a negative value, which is invalid.
     int64_t GlobalOffset = 0;
     if (OpFlags == X86II::MO_NO_FLAG && Offset >= 0 &&
-        X86::isOffsetSuitableForCodeModel(Offset, M, true)) {
+        X86::isOffsetSuitableForCodeModel(Offset, getTargetMachine(), GV,
+                                          true)) {
       std::swap(GlobalOffset, Offset);
     }
     Result = DAG.getTargetGlobalAddress(GV, dl, PtrVT, GlobalOffset, OpFlags);
@@ -33518,8 +33519,9 @@ bool X86TargetLowering::isLegalAddressingMode(const DataLayout &DL,
   CodeModel::Model M = getTargetMachine().getCodeModel();
 
   // X86 allows a sign-extended 32-bit immediate field as a displacement.
-  if (!X86::isOffsetSuitableForCodeModel(AM.BaseOffs, M, AM.BaseGV != nullptr))
-    return false;
+  if (!X86::isOffsetSuitableForCodeModel(AM.BaseOffs, getTargetMachine(),
+                                         AM.BaseGV, AM.BaseGV != nullptr))
+  return false;
 
   if (AM.BaseGV) {
     unsigned GVFlags = Subtarget.classifyGlobalReference(AM.BaseGV);
