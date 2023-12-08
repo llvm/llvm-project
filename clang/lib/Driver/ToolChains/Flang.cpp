@@ -768,11 +768,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back(Input.getFilename());
 
-  // Get the name of this executable. The `getClangProgramPath` hook predates
-  // Flang, hence the name assumes that it's a Clang program. In practice, it
-  // can be any program (e.g. a Flang program) implemented in terms of
-  // `clangDriver`.
-  const char *Exec = D.getClangProgramPath();
+  const char *Exec = Args.MakeArgString(D.GetProgramPath("flang", TC));
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileUTF8(),
                                          Exec, CmdArgs, Inputs, Output));
