@@ -16,8 +16,6 @@ body:   |
     PseudoRET implicit %2
 ...
 ---
-...
----
 name:  test_nxv4s8
 body:   |
   bb.0.entry:
