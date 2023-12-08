@@ -340,8 +340,14 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
       auto *Phi = State.get(getOperand(0), 0);
       // The loop step is equal to the vectorization factor (num of SIMD
       // elements) times the unroll factor (num of SIMD instructions).
-      Value *Step =
-          createStepForVF(Builder, Phi->getType(), State.VF, State.UF);
+      Value *Step;
+      {
+        BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+        IRBuilder<> PHBuilder(VectorPH->getTerminator());
+        // Step is loop-invariant, calls to vscale will be placed in the
+        // preheader.
+        Step = createStepForVF(PHBuilder, Phi->getType(), State.VF, State.UF);
+      }
       return Builder.CreateAdd(Phi, Step, Name, hasNoUnsignedWrap(),
                                hasNoSignedWrap());
     }
