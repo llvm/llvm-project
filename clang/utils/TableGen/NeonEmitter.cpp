@@ -2665,7 +2665,7 @@ void clang::EmitNeonSema(RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runHeader(OS);
 }
 
-void clang::EmitVectorType(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitVectorTypes(RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runVectorType(OS);
 }
 
