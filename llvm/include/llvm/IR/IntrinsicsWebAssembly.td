@@ -348,4 +348,13 @@ def int_wasm_tls_base :
 def int_wasm_memory_randomtag :
   DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty], [], "llvm.wasm.memory.randomtag">;
 
+def int_wasm_memory_loadtag :
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty], [], "llvm.wasm.memory.loadtag">;
+
+def int_wasm_memory_storetag :
+  DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_anyint_ty], [], "llvm.wasm.memory.storetag">;
+
+def int_wasm_memory_storeztag :
+  DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_anyint_ty], [], "llvm.wasm.memory.storeztag">;
+
 } // TargetPrefix = "wasm"
