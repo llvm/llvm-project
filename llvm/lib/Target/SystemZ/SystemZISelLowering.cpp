@@ -4361,8 +4361,8 @@ SDValue SystemZTargetLowering::lowerATOMIC_STORE(SDValue Op,
 // Prepare for a Compare And Swap for a subword operation. This needs to be
 // done in memory with 4 bytes at natural alignment.
 static void getCSAddressAndShifts(SDValue Addr, SelectionDAG &DAG, SDLoc DL,
-                                 SDValue &AlignedAddr, SDValue &BitShift,
-                                 SDValue &NegBitShift) {
+                                  SDValue &AlignedAddr, SDValue &BitShift,
+                                  SDValue &NegBitShift) {
   EVT PtrVT = Addr.getValueType();
   EVT WideVT = MVT::i32;
 
