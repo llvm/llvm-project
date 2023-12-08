@@ -50,8 +50,8 @@ GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
 Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
 
 // Place global in a large section for x86-64 ELF binaries to mitigate
-// relocation pressure. Should typically be used for metadata globals that
-// aren't directly accessed in the module.
+// relocation overflow pressure. This can be be used for metadata globals that
+// aren't directly accessed by code, which has no performance impact.
 void setGlobalVariableLargeSection(Triple &TargetTriple, GlobalVariable &GV);
 
 // Insert GCOV profiling instrumentation

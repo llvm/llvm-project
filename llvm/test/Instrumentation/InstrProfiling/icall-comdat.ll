@@ -16,8 +16,8 @@
 ; RUN: opt %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefix=ALIGN
 
 ;; Check that globals have the proper code model.
-; RUN: opt %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefix=X8664-CODEMODEL
-; RUN: opt %s -mtriple=powerpc-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefix=PPC-CODEMODEL
+; RUN: opt %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefixes=CODEMODEL,CODEMODEL-X8664
+; RUN: opt %s -mtriple=powerpc-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefixes=CODEMODEL,CODEMODEL-PPC
 
 @__profn_foo = private constant [3 x i8] c"foo"
 @__profn_bar = private constant [3 x i8] c"bar"
@@ -79,12 +79,23 @@ attributes #0 = { nounwind }
 ; ALIGN: @__llvm_prf_vnodes = private global {{.*}} section "__llvm_prf_vnds",{{.*}} align 8
 ; ALIGN: @__llvm_prf_nm = private constant {{.*}} section "__llvm_prf_names",{{.*}} align 1
 
-; X8664-CODEMODEL-NOT: @__profc_foo = {{.*}}, code_model "large"
-; X8664-CODEMODEL:     @__profvp_foo = {{.*}}, code_model "large"
-; X8664-CODEMODEL-NOT: @__profd_foo = {{.*}}, code_model "large"
-; X8664-CODEMODEL-NOT: @__profc_bar = {{.*}}, code_model "large"
-; X8664-CODEMODEL:     @__profvp_bar = {{.*}}, code_model "large"
-; X8664-CODEMODEL-NOT: @__profd_bar = {{.*}}, code_model "large"
-; X8664-CODEMODEL:     @__llvm_prf_vnodes = {{.*}}, code_model "large"
-; X8664-CODEMODEL:     @__llvm_prf_nm = {{.*}}, code_model "large"
-; PPC-CODEMODEL-NOT: code_model "large"
+; CODEMODEL: @__profc_foo =
+; CODEMODEL-NOT: code_model "large"
+; CODEMODEL: @__profvp_foo =
+; CODEMODEL-X8664-SAME: code_model "large"
+; CODEMODEL-PPC-NOT: code_model
+; CODEMODEL: @__profd_foo =
+; CODEMODEL-NOT: code_model "large"
+; CODEMODEL: @__profc_bar =
+; CODEMODEL-NOT: code_model "large"
+; CODEMODEL: @__profvp_bar =
+; CODEMODEL-X8664-SAME: code_model "large"
+; CODEMODEL-PPC-NOT: code_model
+; CODEMODEL: @__profd_bar =
+; CODEMODEL-NOT: code_model "large"
+; CODEMODEL: @__llvm_prf_vnodes =
+; CODEMODEL-X8664-SAME: code_model "large"
+; CODEMODEL-PPC-NOT: code_model
+; CODEMODEL: @__llvm_prf_nm =
+; CODEMODEL-X8664-SAME: code_model "large"
+; CODEMODEL-PPC-NOT: code_model
