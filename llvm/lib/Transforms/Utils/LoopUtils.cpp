@@ -1413,6 +1413,36 @@ static bool checkIsIndPhi(PHINode *Phi, Loop *L, ScalarEvolution *SE,
   return InductionDescriptor::isInductionPHI(Phi, L, SE, ID);
 }
 
+void llvm::addDebugValuesToLoopVariable(Loop *L, Value *ExitValue,
+                                        PHINode *PN) {
+  SmallVector<BasicBlock *> ExitBlocks;
+  L->getExitBlocks(ExitBlocks);
+  SmallVector<DbgVariableIntrinsic *> DbgUsers;
+  findDbgUsers(DbgUsers, PN);
+  for (auto *DebugUser : DbgUsers) {
+    // Skip debug-users with variadic variable locations; they will not,
+    // get updated, which is fine as that is the existing behaviour.
+    if (DebugUser->hasArgList())
+      continue;
+    for (BasicBlock *Exit : ExitBlocks) {
+      auto *Cloned = cast<DbgVariableIntrinsic>(DebugUser->clone());
+      Cloned->replaceVariableLocationOp(0u, ExitValue);
+      Cloned->insertBefore(Exit->getFirstNonPHI());
+    }
+  }
+}
+
+void llvm::addDebugValuesToLoopVariable(Loop *L, ScalarEvolution *SE,
+                                        PHINode *PN) {
+  if (!PN)
+    return;
+  const SCEV *PNSCEV = SE->getSCEVAtScope(PN, L->getParentLoop());
+  if (auto *Const = dyn_cast<SCEVConstant>(PNSCEV)) {
+    Value *FinalIVValue = Const->getValue();
+    addDebugValuesToLoopVariable(L, FinalIVValue, PN);
+  }
+}
+
 int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
                                 ScalarEvolution *SE,
                                 const TargetTransformInfo *TTI,
@@ -1554,6 +1584,21 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
           (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
           &*Inst->getParent()->getFirstInsertionPt() : Inst;
         RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost);
+
+        // Add debug values if the PN is a induction variable.
+        PHINode *IndVar = L->getInductionVariable(*SE);
+        for (Value *V : PN->incoming_values())
+          if (V == IndVar) {
+            if (BasicBlock *Successor = ExitBB->getSingleSuccessor()) {
+              SmallVector<DbgVariableIntrinsic *> DbgUsers;
+              findDbgUsers(DbgUsers, V);
+              for (auto *DebugUser : DbgUsers) {
+                auto *Cloned = cast<DbgVariableIntrinsic>(DebugUser->clone());
+                Cloned->replaceVariableLocationOp(0u, PN);
+                Cloned->insertBefore(Successor->getFirstNonPHI());
+              }
+            }
+          }
       }
     }
   }
@@ -1612,39 +1657,25 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
     // Replace PN with ExitVal if that is legal and does not break LCSSA.
     if (PN->getNumIncomingValues() == 1 &&
         LI->replacementPreservesLCSSAForm(PN, ExitVal)) {
+      addDebugValuesToLoopVariable(L, ExitVal, PN);
       PN->replaceAllUsesWith(ExitVal);
       PN->eraseFromParent();
     }
   }
 
+  // If there are no PHIs to be rewritten then there are no loop live-out
+  // values, try to rewrite variables corresponding to the induction variable
+  // with their constant exit-values if we computed any. Otherwise debug-info
+  // will completely forget that this loop happened.
+  if (RewritePhiSet.empty()) {
+    // The loop exit value has been updated; insert the debug location
+    // for the given the induction variable with its final value.
+    addDebugValuesToLoopVariable(L, SE, L->getInductionVariable(*SE));
+  }
+
   // The insertion point instruction may have been deleted; clear it out
   // so that the rewriter doesn't trip over it later.
   Rewriter.clearInsertPoint();
-
-  // The loop exit values have been updated; insert the debug location
-  // for the induction variable with its final value.
-  if (PHINode *IndVar = L->getInductionVariable(*SE)) {
-    const SCEV *IndVarSCEV = SE->getSCEVAtScope(IndVar, L->getParentLoop());
-    if (isa<SCEVConstant>(IndVarSCEV)) {
-      Value *FinalIVValue = cast<SCEVConstant>(IndVarSCEV)->getValue();
-      SmallVector<DbgVariableIntrinsic *> DbgUsers;
-      SmallVector<DbgVariableIntrinsic *> DbgUsersCloned;
-      findDbgUsers(DbgUsers, IndVar);
-      for (auto &DebugUser : DbgUsers) {
-        auto *Cloned = cast<DbgVariableIntrinsic>(DebugUser->clone());
-        Cloned->replaceVariableLocationOp(static_cast<unsigned>(0),
-                                          FinalIVValue);
-        DbgUsersCloned.push_back(Cloned);
-      }
-
-      SmallVector<BasicBlock *> ExitBlocks;
-      L->getExitBlocks(ExitBlocks);
-      for (BasicBlock *Exit : ExitBlocks)
-        for (auto &DebugUser : DbgUsersCloned)
-          DebugUser->insertBefore(Exit->getFirstNonPHI());
-    }
-  }
-
   return NumReplaced;
 }
 

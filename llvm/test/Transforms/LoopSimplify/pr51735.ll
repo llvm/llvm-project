@@ -1,8 +1,7 @@
 ; RUN: opt -passes=indvars -S -o - < %s | FileCheck %s
 
-; Missing local variable 'Index' after loop 'Induction Variable Elimination'.
-; When adding a breakpoint at line 11, LLDB does not have information on
-; the variable. But it has info on 'Var' and 'End'.
+; Make sure that when we delete the loop in the code below, that the variable
+; Index has the 777 value.
 
 ;  1	__attribute__((optnone)) int nop() {
 ;  2	  return 0;
@@ -21,12 +20,12 @@
 ; 15	  bar();
 ; 16	}
 
-; CHECK: for.cond: {{.*}}
+; CHECK: for.cond:
 ; CHECK:   call void @llvm.dbg.value(metadata i32 poison, metadata ![[DBG:[0-9]+]], {{.*}}
-; CHECK:   call void @llvm.dbg.value(metadata i32 poison, metadata ![[DBG:[0-9]+]], {{.*}}
+; CHECK:   call void @llvm.dbg.value(metadata i32 poison, metadata ![[DBG]], {{.*}}
 ; CHECK:   br i1 false, label %for.cond, label %for.end, {{.*}}
-; CHECK: for.end: {{.*}}
-; CHECK:   call void @llvm.dbg.value(metadata i32 777, metadata ![[DBG:[0-9]+]], {{.*}}
+; CHECK: for.end:
+; CHECK:   call void @llvm.dbg.value(metadata i32 777, metadata ![[DBG]], {{.*}}
 ; CHECK-DAG: ![[DBG]] = !DILocalVariable(name: "Index"{{.*}})
 
 define dso_local void @_Z3barv() local_unnamed_addr #1 !dbg !15 {
