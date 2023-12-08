@@ -85,14 +85,16 @@ public:
   bool allowFP16Math() const;
   bool hasMaskOperator() const { return PTXVersion >= 71; }
   bool hasNoReturn() const { return SmVersion >= 30 && PTXVersion >= 64; }
-  unsigned int getSmVersion() const { return FullSmVersion / 10; }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
-  std::string getTargetName() const { return TargetName; }
-
+  unsigned int getSmVersion() const { return getFullSmVersion() / 10; }
   // GPUs with "a" suffix have include architecture-accelerated features that
   // are supported on the specified architecture only, hence such targets do not
-  // follow the onion layer model.
+  // follow the onion layer model. hasAAFeatures() allows distinguishing such
+  // GPU variants from the base GPU architecture.
+  // - 0 represents base GPU model,
+  // - non-zero value identifies particular architecture-accelerated variant.
   bool hasAAFeatures() const { return getFullSmVersion() % 10; }
+  std::string getTargetName() const { return TargetName; }
 
   // Get maximum value of required alignments among the supported data types.
   // From the PTX ISA doc, section 8.2.3:
