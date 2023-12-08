@@ -2827,7 +2827,6 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
   // The PC might contain an invalid address if the unwind info is bad, so
   // directly accessing it could cause a segfault. Use pipe/write/read to
   // read the memory safely instead.
-  uint16_t inst;
   int pipefd[2];
   if (pipe2(pipefd, O_CLOEXEC | O_NONBLOCK) == -1)
     return false;
