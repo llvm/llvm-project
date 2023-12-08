@@ -84,6 +84,7 @@ OpenACCAtomicKind getOpenACCAtomicKind(Token Tok) {
 }
 
 enum class OpenACCSpecialTokenKind {
+  ReadOnly,
   DevNum,
   Queues,
 };
@@ -93,6 +94,8 @@ bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
     return false;
 
   switch (Kind) {
+  case OpenACCSpecialTokenKind::ReadOnly:
+    return Tok.getIdentifierInfo()->isStr("readonly");
   case OpenACCSpecialTokenKind::DevNum:
     return Tok.getIdentifierInfo()->isStr("devnum");
   case OpenACCSpecialTokenKind::Queues:
@@ -422,8 +425,7 @@ void Parser::ParseOpenACCCacheVarList() {
   // specifications.  First, see if we have `readonly:`, else we back-out and
   // treat it like the beginning of a reference to a potentially-existing
   // `readonly` variable.
-  if (getCurToken().is(tok::identifier) &&
-      getCurToken().getIdentifierInfo()->isStr("readonly") &&
+  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::ReadOnly, Tok) &&
       NextToken().is(tok::colon)) {
     // Consume both tokens.
     ConsumeToken();
