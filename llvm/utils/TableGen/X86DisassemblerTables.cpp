@@ -112,7 +112,6 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_64BIT_ADSIZE:
     return (noPrefix && inheritsFrom(child, IC_64BIT_OPSIZE_ADSIZE, noPrefix));
   case IC_64BIT_OPSIZE_ADSIZE:
-  case IC_EVEX_OPSIZE_ADSIZE:
     return false;
   case IC_XD:
     return inheritsFrom(child, IC_64BIT_XD);
@@ -214,6 +213,8 @@ static inline bool inheritsFrom(InstructionContext child,
            (WIG && inheritsFrom(child, IC_EVEX_W_OPSIZE)) ||
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L_OPSIZE)) ||
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE));
+  case IC_EVEX_OPSIZE_ADSIZE:
+    return false;
   case IC_EVEX_K:
     return (VEX_LIG && WIG && inheritsFrom(child, IC_EVEX_L_W_K)) ||
            (VEX_LIG && WIG && inheritsFrom(child, IC_EVEX_L2_W_K)) ||
