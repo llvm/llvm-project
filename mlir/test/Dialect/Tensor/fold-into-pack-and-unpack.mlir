@@ -115,6 +115,8 @@ func.func @pad_pack_different_padding_value(%src: tensor<16641x16xf32>) -> tenso
 // CHECK:         tensor.pad
 // CHECK:         tensor.pack
 
+// -----
+
 func.func @linalg_transpose_tensor_pack_fold(%arg0: tensor<56x57x1x64xf32>) -> tensor<1x2x56x57x32xf32> {
   %0 = tensor.empty() : tensor<1x56x57x64xf32>
   %transposed = linalg.transpose
