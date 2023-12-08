@@ -147,10 +147,10 @@ static Value genSparseReducedAffineCond(OpBuilder &builder, Location loc,
 
 // Helper functions that load/store into the position buffer for slice-driven
 // loops.
-// The sliced pointer buffer is orgnized as:
-// [[pLo0, pLo1, pLo2, ...],
-//  [pHi0, pHi1, pHi2, ...],
-//  [pNx0, pNx1, pNx2, ...]]
+// The sliced pointer buffer is organized as:
+//     [[pLo0, pLo1, pLo2, ...],
+//      [pHi0, pHi1, pHi2, ...],
+//      [pNx0, pNx1, pNx2, ...]]
 static Value allocSlicePosBuf(OpBuilder &builder, Location loc,
                               Value tupleCnt) {
   Value bufSz = MULI(tupleCnt, C_IDX(kSliceIterWidth));
